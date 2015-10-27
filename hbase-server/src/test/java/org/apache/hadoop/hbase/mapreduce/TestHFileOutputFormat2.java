@@ -506,6 +506,7 @@ public class TestHFileOutputFormat2  {
     } finally {
       testDir.getFileSystem(conf).delete(testDir, true);
       util.deleteTable(TABLE_NAME);
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -968,6 +969,7 @@ public class TestHFileOutputFormat2  {
       // Generate two bulk load files
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       for (int i = 0; i < 2; i++) {
         Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
@@ -1009,6 +1011,7 @@ public class TestHFileOutputFormat2  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -1050,6 +1053,7 @@ public class TestHFileOutputFormat2  {
       // Generate a bulk load file with more rows
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       RegionLocator regionLocator = conn.getRegionLocator(TABLE_NAME);
       runIncrementalPELoad(conf, table.getTableDescriptor(), regionLocator, testDir);
@@ -1089,6 +1093,7 @@ public class TestHFileOutputFormat2  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }

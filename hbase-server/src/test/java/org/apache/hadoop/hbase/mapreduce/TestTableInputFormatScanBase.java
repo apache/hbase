@@ -86,10 +86,13 @@ public abstract class TestTableInputFormatScanBase {
     // create and fill table
     table = TEST_UTIL.createMultiRegionTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
     TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
+    // start MR cluster
+    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 

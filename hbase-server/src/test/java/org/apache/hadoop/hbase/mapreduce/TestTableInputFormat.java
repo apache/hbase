@@ -85,10 +85,12 @@ public class TestTableInputFormat {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
+    mrCluster = UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

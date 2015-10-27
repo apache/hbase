@@ -405,6 +405,7 @@ public class TestHFileOutputFormat  {
       assertEquals("HFOF should not touch actual table",
           0, util.countRows(table));
 
+
       // Make sure that a directory was created for every CF
       int dir = 0;
       for (FileStatus f : testDir.getFileSystem(conf).listStatus(testDir)) {
@@ -930,6 +931,7 @@ public class TestHFileOutputFormat  {
       // Generate two bulk load files
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       for (int i = 0; i < 2; i++) {
         Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
@@ -968,6 +970,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -1044,6 +1047,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
