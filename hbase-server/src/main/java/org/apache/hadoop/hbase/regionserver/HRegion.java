@@ -1637,7 +1637,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           // We no longer need to cancel the request on the way out of this
           // method because Store#compact will clean up unconditionally
           requestNeedsCancellation = false;
-          store.compact(compaction);
+          store.compact(compaction, user);
         } catch (InterruptedIOException iioe) {
           String msg = "compaction interrupted";
           LOG.info(msg, iioe);
