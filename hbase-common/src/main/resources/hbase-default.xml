@@ -1686,4 +1686,18 @@ possible configurations would overwhelm and obscure the important.
       The max number of threads used in MobCompactor.
     </description>
   </property>
+  <property>
+    <name>hbase.snapshot.master.timeout.millis</name>
+    <value>300000</value>
+    <description>
+       Timeout for master for the snapshot procedure execution
+    </description>
+   </property>
+     <property>
+    <name>hbase.snapshot.region.timeout</name>
+    <value>300000</value>
+    <description>
+       Timeout for regionservers to keep threads in snapshot request pool waiting
+    </description>
+   </property>
 </configuration>
