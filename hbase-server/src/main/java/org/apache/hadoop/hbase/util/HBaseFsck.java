@@ -3417,7 +3417,7 @@ public class HBaseFsck extends Configured implements Closeable {
               || hri.isMetaRegion())) {
             return true;
           }
-          PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
+          PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(result);
           for (HRegionLocation h : rl.getRegionLocations()) {
             if (h == null || h.getRegionInfo() == null) {
               continue;
@@ -3440,7 +3440,7 @@ public class HBaseFsck extends Configured implements Closeable {
               throw new IOException("Two entries in hbase:meta are same " + previous);
             }
           }
-          PairOfSameType<HRegionInfo> mergeRegions = HRegionInfo.getMergeRegions(result);
+          PairOfSameType<HRegionInfo> mergeRegions = MetaTableAccessor.getMergeRegions(result);
           for (HRegionInfo mergeRegion : new HRegionInfo[] {
               mergeRegions.getFirst(), mergeRegions.getSecond() }) {
             if (mergeRegion != null) {

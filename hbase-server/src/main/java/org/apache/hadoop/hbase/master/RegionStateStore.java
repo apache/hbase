@@ -65,9 +65,9 @@ public class RegionStateStore {
   /**
    * Returns the {@link ServerName} from catalog table {@link Result}
    * where the region is transitioning. It should be the same as
-   * {@link HRegionInfo#getServerName(Result)} if the server is at OPEN state.
+   * {@link MetaTableAccessor#getServerName(Result,int)} if the server is at OPEN state.
    * @param r Result to pull the transitioning server name from
-   * @return A ServerName instance or {@link HRegionInfo#getServerName(Result)}
+   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
    * if necessary fields not found or empty.
    */
   static ServerName getRegionServer(final Result r, int replicaId) {

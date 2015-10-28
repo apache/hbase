@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -490,7 +491,7 @@ public class TestMasterTransitions {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     ResultScanner s = meta.getScanner(scan);
     for (Result r = null; (r = s.next()) != null;) {
-      HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
+      HRegionInfo hri = MetaTableAccessor.getHRegionInfo(r);
       if (hri == null) break;
       if (!hri.getTable().equals(TABLENAME)) {
         continue;

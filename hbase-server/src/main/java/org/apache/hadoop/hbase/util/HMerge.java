@@ -259,7 +259,7 @@ class HMerge {
         if (results == null) {
           return null;
         }
-        HRegionInfo region = HRegionInfo.getHRegionInfo(results);
+        HRegionInfo region = MetaTableAccessor.getHRegionInfo(results);
         if (region == null) {
           throw new NoSuchElementException("meta region entry missing " +
               Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
@@ -293,7 +293,7 @@ class HMerge {
           currentRow = metaScanner.next();
           continue;
         }
-        HRegionInfo region = HRegionInfo.getHRegionInfo(currentRow);
+        HRegionInfo region = MetaTableAccessor.getHRegionInfo(currentRow);
         if (!region.getTable().equals(this.tableName)) {
           currentRow = metaScanner.next();
           continue;

@@ -113,8 +113,8 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> getMergedRegionsAndSplitParents()
-      throws IOException {
+  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+    getMergedRegionsAndSplitParents() throws IOException {
     return getMergedRegionsAndSplitParents(null);
   }
 
@@ -128,8 +128,8 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> getMergedRegionsAndSplitParents(
-      final TableName tableName) throws IOException {
+  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+    getMergedRegionsAndSplitParents(final TableName tableName) throws IOException {
     final boolean isTableSpecified = (tableName != null);
     // TODO: Only works with single hbase:meta region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
@@ -145,7 +145,7 @@ public class CatalogJanitor extends ScheduledChore {
       public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
-        HRegionInfo info = HRegionInfo.getHRegionInfo(r);
+        HRegionInfo info = MetaTableAccessor.getHRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (isTableSpecified
             && info.getTable().compareTo(tableName) > 0) {
@@ -225,10 +225,9 @@ public class CatalogJanitor extends ScheduledChore {
       int mergeCleaned = 0;
       Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
       for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
-        HRegionInfo regionA = HRegionInfo.getHRegionInfo(e.getValue(),
-            HConstants.MERGEA_QUALIFIER);
-        HRegionInfo regionB = HRegionInfo.getHRegionInfo(e.getValue(),
-            HConstants.MERGEB_QUALIFIER);
+        PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
+        HRegionInfo regionA = p.getFirst();
+        HRegionInfo regionB = p.getSecond();
         if (regionA == null || regionB == null) {
           LOG.warn("Unexpected references regionA="
               + (regionA == null ? "null" : regionA.getRegionNameAsString())
@@ -255,8 +254,10 @@ public class CatalogJanitor extends ScheduledChore {
             cleanParent(e.getKey(), e.getValue())) {
           splitCleaned++;
         } else {
-          // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
-          PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(e.getValue());
+          // We could not clean the parent, so it's daughters should not be
+          // cleaned either (HBASE-6160)
+          PairOfSameType<HRegionInfo> daughters =
+              MetaTableAccessor.getDaughterRegions(e.getValue());
           parentNotCleaned.add(daughters.getFirst().getEncodedName());
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
         }
@@ -322,7 +323,7 @@ public class CatalogJanitor extends ScheduledChore {
       return result;
     }
     // Run checks on each daughter split.
-    PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowContent);
+    PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {

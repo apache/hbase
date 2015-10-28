@@ -2091,6 +2091,7 @@ public class HBaseAdmin implements Admin {
         compact(master, getMobRegionInfo(tableName), major, columnFamily);
         break;
       case NORMAL:
+      default:
         ZooKeeperWatcher zookeeper = null;
         try {
           checkTableExists(tableName);
@@ -2685,7 +2686,7 @@ public class HBaseAdmin implements Admin {
       MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
         public boolean visit(Result data) throws IOException {
-          HRegionInfo info = HRegionInfo.getHRegionInfo(data);
+          HRegionInfo info = MetaTableAccessor.getHRegionInfo(data);
           if (info == null) {
             LOG.warn("No serialized HRegionInfo in " + data);
             return true;
@@ -4371,6 +4372,7 @@ public class HBaseAdmin implements Admin {
         }
         break;
       case NORMAL:
+      default:
         ZooKeeperWatcher zookeeper =
                 new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
                         new ThrowableAbortable());

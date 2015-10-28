@@ -2333,7 +2333,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      HRegionInfo info = HRegionInfo.getHRegionInfo(result);
+      HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
       if (info == null) {
         LOG.error("No region info for row " + Bytes.toString(result.getRow()));
         // TODO figure out what to do for this new hosed case.

@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -41,8 +40,6 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
 /**
@@ -839,7 +836,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * @return Comparator to use comparing {@link KeyValue}s.
-   * @deprecated This method should not have been here.  Use Region#getCellComparator()
+   * @deprecated Use Region#getCellComparator().  deprecated for hbase 2.0, remove for hbase 3.0
    */
   @Deprecated
   public KVComparator getComparator() {
@@ -1093,119 +1090,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         throw new RuntimeException(e);
       }
     }
-  }
-
-  /**
-   * Extract a HRegionInfo and ServerName from catalog table {@link Result}.
-   * @param r Result to pull from
-   * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
-   * (or null for server address if no address set in hbase:meta).
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static Pair<HRegionInfo, ServerName> getHRegionInfoAndServerName(final Result r) {
-    HRegionInfo info =
-      getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
-    ServerName sn = getServerName(r);
-    return new Pair<HRegionInfo, ServerName>(info, sn);
-  }
-
-  /**
-   * Returns HRegionInfo object from the column
-   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog
-   * table Result.
-   * @param data a Result object from the catalog table scan
-   * @return HRegionInfo or null
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static HRegionInfo getHRegionInfo(Result data) {
-    return getHRegionInfo(data, HConstants.REGIONINFO_QUALIFIER);
-  }
-
-  /**
-   * Returns the daughter regions by reading the corresponding columns of the catalog table
-   * Result.
-   * @param data a Result object from the catalog table scan
-   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
-   * parent
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
-    HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
-    HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
-
-    return new PairOfSameType<HRegionInfo>(splitA, splitB);
-  }
-
-  /**
-   * Returns the merge regions by reading the corresponding columns of the catalog table
-   * Result.
-   * @param data a Result object from the catalog table scan
-   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
-   * parent
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
-    HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
-    HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
-
-    return new PairOfSameType<HRegionInfo>(mergeA, mergeB);
-  }
-
-  /**
-   * Returns the HRegionInfo object from the column {@link HConstants#CATALOG_FAMILY} and
-   * <code>qualifier</code> of the catalog table result.
-   * @param r a Result object from the catalog table scan
-   * @param qualifier Column family qualifier -- either
-   * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
-   * {@link HConstants#REGIONINFO_QUALIFIER}.
-   * @return An HRegionInfo instance or null.
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
-    Cell cell = r.getColumnLatestCell(
-        HConstants.CATALOG_FAMILY, qualifier);
-    if (cell == null) return null;
-    return parseFromOrNull(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-  }
-
-  /**
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static ServerName getServerName(final Result r) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-    if (cell == null || cell.getValueLength() == 0) return null;
-    String hostAndPort = Bytes.toString(
-        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-    cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-      HConstants.STARTCODE_QUALIFIER);
-    if (cell == null || cell.getValueLength() == 0) return null;
-    try {
-      return ServerName.valueOf(hostAndPort,
-          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-    } catch (IllegalArgumentException e) {
-      LOG.error("Ignoring invalid region for server " + hostAndPort + "; cell=" + cell, e);
-      return null;
-    }
-  }
-
-  /**
-   * The latest seqnum that the server writing to meta observed when opening the region.
-   * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
-   * @param r Result to pull the seqNum from
-   * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
-   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
-   */
-  @Deprecated
-  public static long getSeqNumDuringOpen(final Result r) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
-    if (cell == null || cell.getValueLength() == 0) return HConstants.NO_SEQNUM;
-    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**

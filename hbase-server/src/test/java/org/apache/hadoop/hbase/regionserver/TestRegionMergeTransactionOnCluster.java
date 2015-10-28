@@ -224,10 +224,9 @@ public class TestRegionMergeTransactionOnCluster {
           HConstants.MERGEB_QUALIFIER) != null);
 
       // merging regions' directory are in the file system all the same
-      HRegionInfo regionA = HRegionInfo.getHRegionInfo(mergedRegionResult,
-          HConstants.MERGEA_QUALIFIER);
-      HRegionInfo regionB = HRegionInfo.getHRegionInfo(mergedRegionResult,
-          HConstants.MERGEB_QUALIFIER);
+      PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(mergedRegionResult);
+      HRegionInfo regionA = p.getFirst();
+      HRegionInfo regionB = p.getSecond();
       FileSystem fs = master.getMasterFileSystem().getFileSystem();
       Path rootDir = master.getMasterFileSystem().getRootDir();
 

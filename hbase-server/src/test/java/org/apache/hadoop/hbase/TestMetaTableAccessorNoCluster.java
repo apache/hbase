@@ -85,29 +85,29 @@ public class TestMetaTableAccessorNoCluster {
 
   @Test
   public void testGetHRegionInfo() throws IOException {
-    assertNull(HRegionInfo.getHRegionInfo(new Result()));
+    assertNull(MetaTableAccessor.getHRegionInfo(new Result()));
 
     List<Cell> kvs = new ArrayList<Cell>();
     Result r = Result.create(kvs);
-    assertNull(HRegionInfo.getHRegionInfo(r));
+    assertNull(MetaTableAccessor.getHRegionInfo(r));
 
     byte [] f = HConstants.CATALOG_FAMILY;
     // Make a key value that doesn't have the expected qualifier.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.SERVER_QUALIFIER, f));
     r = Result.create(kvs);
-    assertNull(HRegionInfo.getHRegionInfo(r));
+    assertNull(MetaTableAccessor.getHRegionInfo(r));
     // Make a key that does not have a regioninfo value.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER, f));
-    HRegionInfo hri = HRegionInfo.getHRegionInfo(Result.create(kvs));
+    HRegionInfo hri = MetaTableAccessor.getHRegionInfo(Result.create(kvs));
     assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER,
       HRegionInfo.FIRST_META_REGIONINFO.toByteArray()));
-    hri = HRegionInfo.getHRegionInfo(Result.create(kvs));
+    hri = MetaTableAccessor.getHRegionInfo(Result.create(kvs));
     assertNotNull(hri);
     assertTrue(hri.equals(HRegionInfo.FIRST_META_REGIONINFO));
   }

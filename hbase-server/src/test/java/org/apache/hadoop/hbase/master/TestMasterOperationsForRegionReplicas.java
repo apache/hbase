@@ -291,7 +291,7 @@ public class TestMasterOperationsForRegionReplicas {
     Visitor visitor = new Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        if (HRegionInfo.getHRegionInfo(r).getTable().equals(table)) count.incrementAndGet();
+        if (MetaTableAccessor.getHRegionInfo(r).getTable().equals(table)) count.incrementAndGet();
         return true;
       }
     };

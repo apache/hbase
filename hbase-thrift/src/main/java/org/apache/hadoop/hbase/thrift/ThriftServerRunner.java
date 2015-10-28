@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -1682,7 +1683,7 @@ public class ThriftServerRunner implements Runnable {
         }
 
         // find region start and end keys
-        HRegionInfo regionInfo = HRegionInfo.getHRegionInfo(startRowResult);
+        HRegionInfo regionInfo = MetaTableAccessor.getHRegionInfo(startRowResult);
         if (regionInfo == null) {
           throw new IOException("HRegionInfo REGIONINFO was null or " +
                                 " empty in Meta for row="
@@ -1696,7 +1697,7 @@ public class ThriftServerRunner implements Runnable {
         region.version = HREGION_VERSION; // version not used anymore, PB encoding used.
 
         // find region assignment to server
-        ServerName serverName = HRegionInfo.getServerName(startRowResult);
+        ServerName serverName = MetaTableAccessor.getServerName(startRowResult, 0);
         if (serverName != null) {
           region.setServerName(Bytes.toBytes(serverName.getHostname()));
           region.port = serverName.getPort();

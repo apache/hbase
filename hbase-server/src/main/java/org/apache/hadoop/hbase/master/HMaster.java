@@ -1949,7 +1949,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           if (data == null || data.size() <= 0) {
             return true;
           }
-          Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(data);
+          Pair<HRegionInfo, ServerName> pair =
+              new Pair(MetaTableAccessor.getHRegionInfo(data),
+                  MetaTableAccessor.getServerName(data,0));
           if (pair == null) {
             return false;
           }
