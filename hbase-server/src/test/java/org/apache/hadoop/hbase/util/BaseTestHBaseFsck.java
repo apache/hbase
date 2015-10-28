@@ -498,7 +498,8 @@ public class BaseTestHBaseFsck {
 
       // fix hole
       assertErrors(
-          doFsck(conf, false, true, false, false, false, false, false, false, false, false, null),
+          doFsck(conf, false, true, false, false, false, false, false, false, false, false, false,
+            null),
           new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
               ERROR_CODE.NOT_IN_META_OR_DEPLOYED });
 

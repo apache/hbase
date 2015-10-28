@@ -125,11 +125,12 @@ public class ReplicationAdmin implements Closeable {
     try {
       zkw = createZooKeeperWatcher();
       try {
-        this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf, this.connection);
-        this.replicationPeers.init();
         this.replicationQueuesClient =
             ReplicationFactory.getReplicationQueuesClient(zkw, conf, this.connection);
         this.replicationQueuesClient.init();
+        this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf,
+          this.replicationQueuesClient, this.connection);
+        this.replicationPeers.init();
       } catch (Exception exception) {
         if (zkw != null) {
           zkw.close();
@@ -187,7 +188,7 @@ public class ReplicationAdmin implements Closeable {
     this.replicationPeers.addPeer(id,
       new ReplicationPeerConfig().setClusterKey(clusterKey), tableCFs);
   }
-
+  
   /**
    * Add a new remote slave cluster for replication.
    * @param id a short name that identifies the cluster

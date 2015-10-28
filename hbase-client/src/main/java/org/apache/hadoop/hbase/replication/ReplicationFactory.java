@@ -42,7 +42,12 @@ public class ReplicationFactory {
 
   public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
       Abortable abortable) {
-    return new ReplicationPeersZKImpl(zk, conf, abortable);
+    return getReplicationPeers(zk, conf, null, abortable);
+  }
+  
+  public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
+      final ReplicationQueuesClient queuesClient, Abortable abortable) {
+    return new ReplicationPeersZKImpl(zk, conf, queuesClient, abortable);
   }
 
   public static ReplicationTracker getReplicationTracker(ZooKeeperWatcher zookeeper,

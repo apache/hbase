@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
+import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
@@ -246,6 +247,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
+  private boolean fixReplication = false; // fix undeleted replication queues for removed peer
   private boolean fixAny = false; // Set to true if any of the fix is required.
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
@@ -702,6 +704,8 @@ public class HBaseFsck extends Configured implements Closeable {
 
     checkAndFixTableLocks();
 
+    checkAndFixReplication();
+    
     // Remove the hbck lock
     unlockHbck();
 
@@ -3257,11 +3261,28 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixTableLocks() throws IOException {
-    TableLockChecker checker = new TableLockChecker(createZooKeeperWatcher(), errors);
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    TableLockChecker checker = new TableLockChecker(zkw, errors);
     checker.checkTableLocks();
 
     if (this.fixTableLocks) {
       checker.fixExpiredTableLocks();
+    }
+    zkw.close();
+  }
+  
+  private void checkAndFixReplication() throws IOException {
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    try {
+      ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+      checker.checkUnDeletedQueues();
+
+      if (checker.hasUnDeletedQueues() && this.fixReplication) {
+        checker.fixUnDeletedQueues();
+        setShouldRerun();
+      }
+    } finally {
+      zkw.close();
     }
   }
 
@@ -3801,7 +3822,7 @@ public class HBaseFsck extends Configured implements Closeable {
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
       WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR, ORPHAN_TABLE_STATE,
-      NO_TABLE_STATE
+      NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE
     }
     void clear();
     void report(String message);
@@ -4202,6 +4223,14 @@ public class HBaseFsck extends Configured implements Closeable {
     fixTableLocks = shouldFix;
     fixAny |= shouldFix;
   }
+  
+  /**
+   * Set replication fix mode.
+   */
+  public void setFixReplication(boolean shouldFix) {
+    fixReplication = shouldFix;
+    fixAny |= shouldFix;
+  }
 
   /**
    * Check if we should rerun fsck again. This checks if we've tried to
@@ -4462,6 +4491,10 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("  Table lock options");
     out.println("   -fixTableLocks    Deletes table locks held for a long time (hbase.table.lock.expire.ms, 10min by default)");
 
+    out.println("");
+    out.println(" Replication options");
+    out.println("   -fixReplication   Deletes replication queues for removed peers");
+    
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
 
@@ -4647,6 +4680,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setRegionBoundariesCheck();
       } else if (cmd.equals("-fixTableLocks")) {
         setFixTableLocks(true);
+      } else if (cmd.equals("-fixReplication")) {
+        setFixReplication(true);
       } else if (cmd.startsWith("-")) {
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Unrecognized option:" + cmd);
         return printUsageAndExit();
