@@ -28,6 +28,7 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -43,7 +44,9 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 /**
  * A base class for a test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -52,7 +55,8 @@ import org.junit.Test;
  * implementations.
  */
 public abstract class TestTableMapReduceBase {
-
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   protected static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");

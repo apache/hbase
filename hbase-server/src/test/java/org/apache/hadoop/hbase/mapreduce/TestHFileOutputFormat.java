@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -85,8 +86,10 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 /**
@@ -97,6 +100,8 @@ import org.mockito.Mockito;
  */
 @Category(LargeTests.class)
 public class TestHFileOutputFormat  {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   private final static int ROWSPERSPLIT = 1024;
 
   private static final byte[][] FAMILIES
@@ -112,13 +117,12 @@ public class TestHFileOutputFormat  {
   /**
    * Simple mapper that makes KeyValue output.
    */
-  static class RandomKVGeneratingMapper
-  extends Mapper<NullWritable, NullWritable,
-                 ImmutableBytesWritable, KeyValue> {
+  static class RandomKVGeneratingMapper extends
+      Mapper<NullWritable, NullWritable, ImmutableBytesWritable, KeyValue> {
 
     private int keyLength;
-    private static final int KEYLEN_DEFAULT=10;
-    private static final String KEYLEN_CONF="randomkv.key.length";
+    private static final int KEYLEN_DEFAULT = 10;
+    private static final String KEYLEN_CONF = "randomkv.key.length";
 
     private int valLength;
     private static final int VALLEN_DEFAULT=10;
