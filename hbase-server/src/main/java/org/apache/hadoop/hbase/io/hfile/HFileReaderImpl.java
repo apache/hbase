@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -930,7 +929,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // TODO : reduce the varieties of KV here. Check if based on a boolean
         // we can handle the 'no tags' case.
         if (currTagsLen > 0) {
-          if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
+          if (this.curBlock.usesSharedMemory()) {
             ret = new ShareableMemoryKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
               + blockBuffer.position(), getCellBufSize(), seqId);
           } else {
@@ -938,7 +937,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
                     + blockBuffer.position(), cellBufSize, seqId);
           }
         } else {
-          if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
+          if (this.curBlock.usesSharedMemory()) {
             ret = new ShareableMemoryNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
                     + blockBuffer.position(), getCellBufSize(), seqId);
           } else {
@@ -948,11 +947,31 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
-        if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
-          ret = new ShareableMemoryOffheapKeyValue(buf, buf.position(), cellBufSize,
-            currTagsLen > 0, seqId);
+        if (buf.isDirect()) {
+          if (this.curBlock.usesSharedMemory()) {
+            ret = new ShareableMemoryOffheapKeyValue(buf, buf.position(), cellBufSize,
+                currTagsLen > 0, seqId);
+          } else {
+            ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0, seqId);
+          }
         } else {
-          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0, seqId);
+          if (this.curBlock.usesSharedMemory()) {
+            if (currTagsLen > 0) {
+              ret = new ShareableMemoryKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
+                  cellBufSize, seqId);
+            } else {
+              ret = new ShareableMemoryNoTagsKeyValue(buf.array(),
+                  buf.arrayOffset() + buf.position(), cellBufSize, seqId);
+            }
+          } else {
+            if (currTagsLen > 0) {
+              ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
+                  cellBufSize, seqId);
+            } else {
+              ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
+                  cellBufSize, seqId);
+            }
+          }
         }
       }
       return ret;
