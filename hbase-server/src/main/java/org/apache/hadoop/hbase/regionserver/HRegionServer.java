@@ -52,6 +52,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
 
+import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -602,12 +603,14 @@ public class HRegionServer extends HasThread implements
     this.walRoller = new LogRoller(this, this);
     this.choreService = new ChoreService(getServerName().toString());
 
-    Signal.handle(new Signal("HUP"), new SignalHandler() {
-      public void handle(Signal signal) {
-        getConfiguration().reloadConfiguration();
-        configurationManager.notifyAllObservers(getConfiguration());
-      }
-    });
+    if (!SystemUtils.IS_OS_WINDOWS) {
+      Signal.handle(new Signal("HUP"), new SignalHandler() {
+        public void handle(Signal signal) {
+          getConfiguration().reloadConfiguration();
+          configurationManager.notifyAllObservers(getConfiguration());
+        }
+      });
+    }
   }
 
   /*
