@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,7 +39,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,6 +57,8 @@ import static org.junit.Assert.assertTrue;
  * Base set of tests and setup for input formats touching multiple tables.
  */
 public abstract class MultiTableInputFormatTestBase {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final String TABLE_NAME = "scantest";
