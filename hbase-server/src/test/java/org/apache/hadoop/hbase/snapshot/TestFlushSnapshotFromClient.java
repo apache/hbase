@@ -54,6 +54,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -165,7 +166,7 @@ public class TestFlushSnapshotFromClient {
    * Test snapshotting a table that is online without flushing
    * @throws Exception
    */
-  @Test(timeout=30000)
+  @Ignore ("Flakey test") @Test(timeout=30000)
   public void testSkipFlushTableSnapshot() throws Exception {
     Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
