@@ -129,6 +129,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
+import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
@@ -251,6 +252,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
   private boolean fixTableZNodes = false; // fix table Znodes which are orphaned
+  private boolean fixReplication = false; // fix undeleted replication queues for removed peer
   private boolean fixAny = false; // Set to true if any of the fix is required.
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
@@ -715,6 +717,8 @@ public class HBaseFsck extends Configured implements Closeable {
     // Check (and fix if requested) orphaned table ZNodes
     checkAndFixOrphanedTableZNodes();
 
+    checkAndFixReplication();
+    
     // Remove the hbck lock
     unlockHbck();
 
@@ -3231,6 +3235,21 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
+  private void checkAndFixReplication() throws IOException {
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    try {
+      ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+      checker.checkUnDeletedQueues();
+
+      if (checker.hasUnDeletedQueues() && this.fixReplication) {
+        checker.fixUnDeletedQueues();
+        setShouldRerun();
+      }
+    } finally {
+      zkw.close();
+    }
+  }
+
   /**
    * Check whether a orphaned table ZNode exists and fix it if requested.
    * @throws IOException
@@ -3817,7 +3836,8 @@ public class HBaseFsck extends Configured implements Closeable {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR,
+      UNDELETED_REPLICATION_QUEUE
     }
     void clear();
     void report(String message);
@@ -4218,6 +4238,14 @@ public class HBaseFsck extends Configured implements Closeable {
     fixTableLocks = shouldFix;
     fixAny |= shouldFix;
   }
+  
+  /**
+   * Set replication fix mode.
+   */
+  public void setFixReplication(boolean shouldFix) {
+    fixReplication = shouldFix;
+    fixAny |= shouldFix;
+  }
 
   /**
    * Set orphaned table ZNodes fix mode.
@@ -4492,6 +4520,10 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("  Table Znode options");
     out.println("   -fixOrphanedTableZnodes    Set table state in ZNode to disabled if table does not exists");
 
+    out.println("");
+    out.println(" Replication options");
+    out.println("   -fixReplication   Deletes replication queues for removed peers");
+    
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
 
@@ -4678,6 +4710,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setRegionBoundariesCheck();
       } else if (cmd.equals("-fixTableLocks")) {
         setFixTableLocks(true);
+      } else if (cmd.equals("-fixReplication")) {
+        setFixReplication(true);
       } else if (cmd.equals("-fixOrphanedTableZnodes")) {
         setFixTableZNodes(true);
       } else if (cmd.startsWith("-")) {
