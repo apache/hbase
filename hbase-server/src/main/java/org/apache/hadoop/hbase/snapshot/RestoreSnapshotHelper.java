@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -40,7 +41,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -183,7 +182,7 @@ public class RestoreSnapshotHelper {
       return null;
     }
 
-    RestoreMetaChanges metaChanges = new RestoreMetaChanges(parentsMap);
+    RestoreMetaChanges metaChanges = new RestoreMetaChanges(tableDesc, parentsMap);
 
     // Take a copy of the manifest.keySet() since we are going to modify
     // this instance, by removing the regions already present in the restore dir.
@@ -245,13 +244,19 @@ public class RestoreSnapshotHelper {
    */
   public static class RestoreMetaChanges {
     private final Map<String, Pair<String, String> > parentsMap;
+    private final HTableDescriptor htd;
 
     private List<HRegionInfo> regionsToRestore = null;
     private List<HRegionInfo> regionsToRemove = null;
     private List<HRegionInfo> regionsToAdd = null;
 
-    RestoreMetaChanges(final Map<String, Pair<String, String> > parentsMap) {
+    RestoreMetaChanges(HTableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
       this.parentsMap = parentsMap;
+      this.htd = htd;
+    }
+
+    public HTableDescriptor getTableDescriptor() {
+      return htd;
     }
 
     /**
@@ -477,13 +482,12 @@ public class RestoreSnapshotHelper {
    * @return The set of files in the specified family directory.
    */
   private Set<String> getTableRegionFamilyFiles(final Path familyDir) throws IOException {
-    Set<String> familyFiles = new HashSet<String>();
-
     FileStatus[] hfiles = FSUtils.listStatus(fs, familyDir);
-    if (hfiles == null) return familyFiles;
+    if (hfiles == null) return Collections.emptySet();
 
-    for (FileStatus hfileRef: hfiles) {
-      String hfileName = hfileRef.getPath().getName();
+    Set<String> familyFiles = new HashSet<String>(hfiles.length);
+    for (int i = 0; i < hfiles.length; ++i) {
+      String hfileName = hfiles[i].getPath().getName();
       familyFiles.add(hfileName);
     }
 
@@ -667,7 +671,11 @@ public class RestoreSnapshotHelper {
    * @return the new HRegion instance
    */
   public HRegionInfo cloneRegionInfo(final HRegionInfo snapshotRegionInfo) {
-    HRegionInfo regionInfo = new HRegionInfo(tableDesc.getTableName(),
+    return cloneRegionInfo(tableDesc.getTableName(), snapshotRegionInfo);
+  }
+
+  public static HRegionInfo cloneRegionInfo(TableName tableName, HRegionInfo snapshotRegionInfo) {
+    HRegionInfo regionInfo = new HRegionInfo(tableName,
                       snapshotRegionInfo.getStartKey(), snapshotRegionInfo.getEndKey(),
                       snapshotRegionInfo.isSplit(), snapshotRegionInfo.getRegionId());
     regionInfo.setOffline(snapshotRegionInfo.isOffline());
@@ -682,38 +690,14 @@ public class RestoreSnapshotHelper {
     FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regionDirs == null) return null;
 
-    List<HRegionInfo> regions = new LinkedList<HRegionInfo>();
-    for (FileStatus regionDir: regionDirs) {
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir.getPath());
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionDirs.length);
+    for (int i = 0; i < regionDirs.length; ++i) {
+      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDirs[i].getPath());
       regions.add(hri);
     }
     LOG.debug("found " + regions.size() + " regions for table=" +
         tableDesc.getTableName().getNameAsString());
     return regions;
-  }
-
-  /**
-   * Create a new table descriptor cloning the snapshot table schema.
-   *
-   * @param snapshotTableDescriptor
-   * @param tableName
-   * @return cloned table descriptor
-   * @throws IOException
-   */
-  public static HTableDescriptor cloneTableSchema(final HTableDescriptor snapshotTableDescriptor,
-      final TableName tableName) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for (HColumnDescriptor hcd: snapshotTableDescriptor.getColumnFamilies()) {
-      htd.addFamily(hcd);
-    }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        snapshotTableDescriptor.getValues().entrySet()) {
-      htd.setValue(e.getKey(), e.getValue());
-    }
-    for (Map.Entry<String, String> e: snapshotTableDescriptor.getConfiguration().entrySet()) {
-      htd.setConfiguration(e.getKey(), e.getValue());
-    }
-    return htd;
   }
 
   /**
@@ -725,8 +709,8 @@ public class RestoreSnapshotHelper {
    * @param snapshotName
    * @throws IOException
    */
-  public static void copySnapshotForScanner(Configuration conf, FileSystem fs, Path rootDir,
-      Path restoreDir, String snapshotName) throws IOException {
+  public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
+      Path rootDir, Path restoreDir, String snapshotName) throws IOException {
     // ensure that restore dir is not under root dir
     if (!restoreDir.getFileSystem(conf).getUri().equals(rootDir.getFileSystem(conf).getUri())) {
       throw new IllegalArgumentException("Filesystems for restore directory and HBase root directory " +
@@ -749,11 +733,12 @@ public class RestoreSnapshotHelper {
     // in the base hbase root dir.
     RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf, fs,
       manifest, manifest.getTableDescriptor(), restoreDir, monitor, status, false);
-    helper.restoreHdfsRegions(); // TODO: parallelize.
+    RestoreMetaChanges metaChanges = helper.restoreHdfsRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Restored table dir:" + restoreDir);
       FSUtils.logFileSystemState(fs, restoreDir, LOG);
     }
+    return metaChanges;
   }
 }

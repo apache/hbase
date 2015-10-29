@@ -371,8 +371,21 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param desc The descriptor.
    */
   public HTableDescriptor(final HTableDescriptor desc) {
+    this(desc.name, desc);
+  }
+
+  /**
+   * Construct a table descriptor by cloning the descriptor passed as a parameter
+   * but using a different table name.
+   * <p>
+   * Makes a deep copy of the supplied descriptor.
+   * Can make a modifiable descriptor from an UnmodifyableHTableDescriptor.
+   * @param name Table name.
+   * @param desc The descriptor.
+   */
+  public HTableDescriptor(final TableName name, final HTableDescriptor desc) {
     super();
-    setName(desc.name);
+    setName(name);
     setMetaFlags(this.name);
     for (HColumnDescriptor c: desc.families.values()) {
       this.families.put(c.getName(), new HColumnDescriptor(c));

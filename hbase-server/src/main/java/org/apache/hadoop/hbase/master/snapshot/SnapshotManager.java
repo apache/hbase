@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
@@ -741,7 +740,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
       }
     } else {
-      HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc, tableName);
+      HTableDescriptor htd = new HTableDescriptor(tableName, snapshotTableDesc);
       if (cpHost != null) {
         cpHost.preCloneSnapshot(reqSnapshot, htd);
       }
@@ -761,7 +760,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       }
     }
   }
-  
+
   private void checkAndUpdateNamespaceQuota(SnapshotManifest manifest, TableName tableName)
       throws IOException {
     if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
