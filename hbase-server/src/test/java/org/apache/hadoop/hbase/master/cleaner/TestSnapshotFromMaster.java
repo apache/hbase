@@ -22,9 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +37,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
@@ -381,17 +378,7 @@ public class TestSnapshotFromMaster {
   private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
       FileSystem fs, TableName tableName) throws IOException {
     Path tableArchive = FSUtils.getTableDir(archiveDir, tableName);
-    Path[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
-    List<String> files = new ArrayList<String>(archivedHFiles.length);
-    LOG.debug("Have archived hfiles: " + tableArchive);
-    for (Path file : archivedHFiles) {
-      LOG.debug(file);
-      files.add(file.getName());
-    }
-    // sort the archived files
-
-    Collections.sort(files);
-    return files;
+    return SnapshotTestingUtils.listHFileNames(fs, tableArchive);
   }
 
   /**

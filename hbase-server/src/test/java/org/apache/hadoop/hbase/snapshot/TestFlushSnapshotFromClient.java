@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -140,8 +139,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
@@ -154,14 +152,10 @@ public class TestFlushSnapshotFromClient {
       snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-        admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
   }
 
    /**
@@ -180,8 +174,7 @@ public class TestFlushSnapshotFromClient {
     }
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
@@ -194,14 +187,10 @@ public class TestFlushSnapshotFromClient {
         snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-        admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -223,8 +212,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
@@ -242,14 +230,10 @@ public class TestFlushSnapshotFromClient {
       snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-        admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
   }
 
   @Test (timeout=300000)
@@ -296,8 +280,8 @@ public class TestFlushSnapshotFromClient {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
     LOG.info(" === Async Snapshot Completed ===");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+
     // make sure we get the snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
   }
@@ -497,7 +481,7 @@ public class TestFlushSnapshotFromClient {
     }
 
     // dump for debugging
-    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
     List<SnapshotDescription> taken = admin.listSnapshots();
     int takenSize = taken.size();
@@ -519,10 +503,6 @@ public class TestFlushSnapshotFromClient {
     assertTrue("We expect at least 1 snapshot of table2 ", t2SnapshotsCount > 0);
 
     UTIL.deleteTable(TABLE2_NAME);
-  }
-
-  private void logFSTree(Path root) throws IOException {
-    FSUtils.logFileSystemState(UTIL.getDFSCluster().getFileSystem(), root, LOG);
   }
 
   private void waitRegionsAfterMerge(final long numRegionsAfterMerge)

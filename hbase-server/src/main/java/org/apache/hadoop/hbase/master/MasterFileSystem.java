@@ -694,4 +694,8 @@ public class MasterFileSystem {
   public RecoveryMode getLogRecoveryMode() {
     return this.splitLogManager.getRecoveryMode();
   }
+
+  public void logFileSystemState(Log log) throws IOException {
+    FSUtils.logFileSystemState(fs, rootdir, log);
+  }
 }
