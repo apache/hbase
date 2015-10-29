@@ -176,33 +176,16 @@ public final class SnapshotManifest {
       monitor.rethrowException();
 
       Path storePath = MobUtils.getMobFamilyPath(mobRegionPath, hcd.getNameAsString());
-      if (!fs.exists(storePath)) {
-        continue;
-      }
-      FileStatus[] stats = fs.listStatus(storePath);
-      if (stats == null) {
-        continue;
-      }
-      List<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>();
-      for (FileStatus stat : stats) {
-        storeFiles.add(new StoreFileInfo(conf, fs, stat));
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding snapshot references for " + storeFiles + " mob files");
-      }
-
-      // 2.2. iterate through all the mob files and create "references".
-      for (int i = 0, sz = storeFiles.size(); i < sz; i++) {
-        StoreFileInfo storeFile = storeFiles.get(i);
-        monitor.rethrowException();
-
-        // create "reference" to this store file.
+      List<StoreFileInfo> storeFiles = getStoreFiles(storePath);
+      if (storeFiles == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding reference for mob file (" + (i + 1) + "/" + sz + "): "
-            + storeFile.getPath());
+          LOG.debug("No mob files under family: " + hcd.getNameAsString());
         }
-        visitor.storeFile(regionData, familyData, storeFile);
+        continue;
       }
+
+      addReferenceFiles(visitor, regionData, familyData, storeFiles, true);
+
       visitor.familyClose(regionData, familyData);
     }
     visitor.regionClose(regionData);
@@ -286,20 +269,11 @@ public final class SnapshotManifest {
           if (isMobRegion) {
             Path regionPath = MobUtils.getMobRegionPath(conf, regionInfo.getTable());
             Path storePath = MobUtils.getMobFamilyPath(regionPath, familyName);
-            if (!fs.exists(storePath)) {
-              continue;
-            }
-            FileStatus[] stats = fs.listStatus(storePath);
-            if (stats == null) {
-              continue;
-            }
-            storeFiles = new ArrayList<StoreFileInfo>();
-            for (FileStatus stat : stats) {
-              storeFiles.add(new StoreFileInfo(conf, fs, stat));
-            }
+            storeFiles = getStoreFiles(storePath);
           } else {
             storeFiles = regionFs.getStoreFiles(familyName);
           }
+
           if (storeFiles == null) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("No files under family: " + familyName);
@@ -308,21 +282,9 @@ public final class SnapshotManifest {
           }
 
           // 2.1. build the snapshot reference for the store
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
-          }
+          // iterate through all the store's files and create "references".
+          addReferenceFiles(visitor, regionData, familyData, storeFiles, false);
 
-          // 2.2. iterate through all the store's files and create "references".
-          int i = 0;
-          int sz = storeFiles.size();
-          for (StoreFileInfo storeFile: storeFiles) {
-            monitor.rethrowException();
-
-            // create "reference" to this store file.
-            LOG.debug("Adding reference for file (" + (++i) + "/" + sz + "): "
-                + storeFile.getPath());
-            visitor.storeFile(regionData, familyData, storeFile);
-          }
           visitor.familyClose(regionData, familyData);
         }
       }
@@ -332,6 +294,38 @@ public final class SnapshotManifest {
       if (!isMobRegion) {
         throw e;
       }
+    }
+  }
+
+  private List<StoreFileInfo> getStoreFiles(Path storeDir) throws IOException {
+    FileStatus[] stats = FSUtils.listStatus(fs, storeDir);
+    if (stats == null) return null;
+
+    ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(stats.length);
+    for (int i = 0; i < stats.length; ++i) {
+      storeFiles.add(new StoreFileInfo(conf, fs, stats[i]));
+    }
+    return storeFiles;
+  }
+
+  private void addReferenceFiles(RegionVisitor visitor, Object regionData, Object familyData,
+      Collection<StoreFileInfo> storeFiles, boolean isMob) throws IOException {
+    final String fileType = isMob ? "mob file" : "hfile";
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("Adding snapshot references for %s %ss", storeFiles, fileType));
+    }
+
+    int i = 0;
+    int sz = storeFiles.size();
+    for (StoreFileInfo storeFile: storeFiles) {
+      monitor.rethrowException();
+
+      LOG.debug(String.format("Adding reference for %s (%d/%d): %s",
+          fileType, ++i, sz, storeFile.getPath()));
+
+      // create "reference" to this store file.
+      visitor.storeFile(regionData, familyData, storeFile);
     }
   }
 

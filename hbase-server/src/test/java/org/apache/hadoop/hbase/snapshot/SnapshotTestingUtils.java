@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -147,6 +147,14 @@ public class SnapshotTestingUtils {
       Admin admin, byte[] snapshot, TableName tableName) throws IOException {
     return assertOneSnapshotThatMatches(admin, Bytes.toString(snapshot),
         tableName);
+  }
+
+  public static void confirmSnapshotValid(HBaseTestingUtility testUtil,
+      SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
+      throws IOException {
+    MasterFileSystem mfs = testUtil.getHBaseCluster().getMaster().getMasterFileSystem();
+    confirmSnapshotValid(snapshotDescriptor, tableName, family,
+        mfs.getRootDir(), testUtil.getHBaseAdmin(), mfs.getFileSystem());
   }
 
   /**
@@ -335,28 +343,18 @@ public class SnapshotTestingUtils {
    * @return array of the current HFiles in the table (could be a zero-length array)
    * @throws IOException on unexecpted error reading the FS
    */
-  public static Path[] listHFiles(final FileSystem fs, final Path tableDir)
+  public static ArrayList<String> listHFileNames(final FileSystem fs, final Path tableDir)
       throws IOException {
-    final ArrayList<Path> hfiles = new ArrayList<Path>();
+    final ArrayList<String> hfiles = new ArrayList<String>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       @Override
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {
-        hfiles.add(new Path(tableDir, new Path(region, new Path(family, hfileName))));
+        hfiles.add(hfileName);
       }
     });
-    return hfiles.toArray(new Path[hfiles.size()]);
-  }
-
-  public static String[] listHFileNames(final FileSystem fs, final Path tableDir)
-      throws IOException {
-    Path[] files = listHFiles(fs, tableDir);
-    String[] names = new String[files.length];
-    for (int i = 0; i < files.length; ++i) {
-      names[i] = files[i].getName();
-    }
-    Arrays.sort(names);
-    return names;
+    Collections.sort(hfiles);
+    return hfiles;
   }
 
   /**

@@ -88,25 +88,6 @@ public class MobSnapshotTestingUtils {
   /**
    * Return the number of rows in the given table.
    */
-  public static int countMobRows(final Table table) throws IOException {
-    Scan scan = new Scan();
-    ResultScanner results = table.getScanner(scan);
-    int count = 0;
-    for (Result res : results) {
-      count++;
-      List<Cell> cells = res.listCells();
-      for (Cell cell : cells) {
-        // Verify the value
-        Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
-      }
-    }
-    results.close();
-    return count;
-  }
-
-  /**
-   * Return the number of rows in the given table.
-   */
   public static int countMobRows(final Table table, final byte[]... families)
       throws IOException {
     Scan scan = new Scan();

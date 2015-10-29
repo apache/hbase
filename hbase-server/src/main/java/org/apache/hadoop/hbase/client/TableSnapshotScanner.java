@@ -34,11 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -49,8 +45,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <p>
  * This also allows one to run the scan from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool, 
- * to a pure-hdfs cluster, and this scanner can be used to 
+ * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool,
+ * to a pure-hdfs cluster, and this scanner can be used to
  * run the scan directly over the snapshot files. The snapshot should not be deleted while there
  * are open scanners reading from snapshot files.
  *
@@ -125,23 +121,14 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   }
 
   private void init() throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
+    final RestoreSnapshotHelper.RestoreMetaChanges meta =
+      RestoreSnapshotHelper.copySnapshotForScanner(
+        conf, fs, rootDir, restoreDir, snapshotName);
+    final List<HRegionInfo> restoredRegions = meta.getRegionsToAdd();
 
-    // load table descriptor
-    htd = manifest.getTableDescriptor();
-
-    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null) {
-      throw new IllegalArgumentException("Snapshot seems empty");
-    }
-
-    regions = new ArrayList<HRegionInfo>(regionManifests.size());
-    for (SnapshotRegionManifest regionManifest : regionManifests) {
-      // load region descriptor
-      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
-
+    htd = meta.getTableDescriptor();
+    regions = new ArrayList<HRegionInfo>(restoredRegions.size());
+    for (HRegionInfo hri: restoredRegions) {
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
           hri.getStartKey(), hri.getEndKey())) {
         regions.add(hri);
@@ -150,11 +137,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
     // sort for regions according to startKey.
     Collections.sort(regions);
-
     initScanMetrics(scan);
-
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs,
-      rootDir, restoreDir, snapshotName);
   }
 
   @Override
@@ -184,7 +167,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         if (result == null) {
           currentRegionScanner.close();
           currentRegionScanner = null;
-        }        
+        }
       }
     }
   }

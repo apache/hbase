@@ -27,14 +27,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -208,8 +206,7 @@ public class TestRestoreFlushSnapshotFromClient {
   //  Helpers
   // ==========================================================================
   private void logFSTree() throws IOException {
-    MasterFileSystem mfs = UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    FSUtils.logFileSystemState(mfs.getFileSystem(), mfs.getRootDir(), LOG);
+    UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
   }
 
   protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
