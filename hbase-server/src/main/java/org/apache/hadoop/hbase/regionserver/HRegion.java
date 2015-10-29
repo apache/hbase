@@ -2484,18 +2484,18 @@ public class HRegion implements HeapSize { // , Writable{
 
         // If we haven't got any rows in our batch, we should block to
         // get the next one.
-        boolean shouldBlock = numReadyToWrite == 0;
         RowLock rowLock = null;
         try {
-          rowLock = getRowLockInternal(mutation.getRow(), shouldBlock);
+          rowLock = getRowLockInternal(mutation.getRow(), true);
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
             + Bytes.toStringBinary(mutation.getRow()), ioe);
+          throw ioe;
         }
         if (rowLock == null) {
           // We failed to grab another lock
-          assert !shouldBlock : "Should never fail to get lock when blocking";
-          break; // stop acquiring more rows for this batch
+          throw new IOException("Failed getting lock in batch put, row=" +
+              Bytes.toStringBinary(mutation.getRow()));
         } else {
           acquiredRowLocks.add(rowLock);
         }
