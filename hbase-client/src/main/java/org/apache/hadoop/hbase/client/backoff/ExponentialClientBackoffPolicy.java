@@ -70,6 +70,9 @@ public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
 
     // Factor in heap occupancy
     float heapOccupancy = regionStats.getHeapOccupancyPercent() / 100.0f;
+
+    // Factor in compaction pressure, 1.0 means heavy compaction pressure
+    float compactionPressure = regionStats.getCompactionPressure() / 100.0f;
     if (heapOccupancy >= heapOccupancyLowWatermark) {
       // If we are higher than the high watermark, we are already applying max
       // backoff and cannot scale more (see scale() below)
@@ -80,7 +83,7 @@ public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
           scale(heapOccupancy, heapOccupancyLowWatermark, heapOccupancyHighWatermark,
               0.1, 1.0));
     }
-
+    percent = Math.max(percent, compactionPressure);
     // square the percent as a value less than 1. Closer we move to 100 percent,
     // the percent moves to 1, but squaring causes the exponential curve
     double multiplier = Math.pow(percent, 4.0);
