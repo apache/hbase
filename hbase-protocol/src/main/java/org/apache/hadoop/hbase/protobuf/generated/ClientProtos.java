@@ -27621,6 +27621,24 @@ public final class ClientProtos {
      * </pre>
      */
     int getHeapOccupancy();
+
+    // optional int32 compactionPressure = 3 [default = 0];
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    boolean hasCompactionPressure();
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    int getCompactionPressure();
   }
   /**
    * Protobuf type {@code hbase.pb.RegionLoadStats}
@@ -27686,6 +27704,11 @@ public final class ClientProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               heapOccupancy_ = input.readInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              compactionPressure_ = input.readInt32();
               break;
             }
           }
@@ -27778,9 +27801,34 @@ public final class ClientProtos {
       return heapOccupancy_;
     }
 
+    // optional int32 compactionPressure = 3 [default = 0];
+    public static final int COMPACTIONPRESSURE_FIELD_NUMBER = 3;
+    private int compactionPressure_;
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    public boolean hasCompactionPressure() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    public int getCompactionPressure() {
+      return compactionPressure_;
+    }
+
     private void initFields() {
       memstoreLoad_ = 0;
       heapOccupancy_ = 0;
+      compactionPressure_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -27800,6 +27848,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeInt32(2, heapOccupancy_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt32(3, compactionPressure_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -27816,6 +27867,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(2, heapOccupancy_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, compactionPressure_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -27850,6 +27905,11 @@ public final class ClientProtos {
         result = result && (getHeapOccupancy()
             == other.getHeapOccupancy());
       }
+      result = result && (hasCompactionPressure() == other.hasCompactionPressure());
+      if (hasCompactionPressure()) {
+        result = result && (getCompactionPressure()
+            == other.getCompactionPressure());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -27870,6 +27930,10 @@ public final class ClientProtos {
       if (hasHeapOccupancy()) {
         hash = (37 * hash) + HEAPOCCUPANCY_FIELD_NUMBER;
         hash = (53 * hash) + getHeapOccupancy();
+      }
+      if (hasCompactionPressure()) {
+        hash = (37 * hash) + COMPACTIONPRESSURE_FIELD_NUMBER;
+        hash = (53 * hash) + getCompactionPressure();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -27989,6 +28053,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         heapOccupancy_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
+        compactionPressure_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -28025,6 +28091,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.heapOccupancy_ = heapOccupancy_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.compactionPressure_ = compactionPressure_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -28046,6 +28116,9 @@ public final class ClientProtos {
         }
         if (other.hasHeapOccupancy()) {
           setHeapOccupancy(other.getHeapOccupancy());
+        }
+        if (other.hasCompactionPressure()) {
+          setCompactionPressure(other.getCompactionPressure());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -28172,6 +28245,55 @@ public final class ClientProtos {
       public Builder clearHeapOccupancy() {
         bitField0_ = (bitField0_ & ~0x00000002);
         heapOccupancy_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 compactionPressure = 3 [default = 0];
+      private int compactionPressure_ ;
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public boolean hasCompactionPressure() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public int getCompactionPressure() {
+        return compactionPressure_;
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public Builder setCompactionPressure(int value) {
+        bitField0_ |= 0x00000004;
+        compactionPressure_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public Builder clearCompactionPressure() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        compactionPressure_ = 0;
         onChanged();
         return this;
       }
@@ -33441,38 +33563,39 @@ public final class ClientProtos {
       "essorServiceCall\"k\n\014RegionAction\022)\n\006regi" +
       "on\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\016\n\006a" +
       "tomic\030\002 \001(\010\022 \n\006action\030\003 \003(\0132\020.hbase.pb.A" +
-      "ction\"D\n\017RegionLoadStats\022\027\n\014memstoreLoad" +
-      "\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\"\332\001\n\021" +
-      "ResultOrException\022\r\n\005index\030\001 \001(\r\022 \n\006resu" +
-      "lt\030\002 \001(\0132\020.hbase.pb.Result\022*\n\texception\030" +
-      "\003 \001(\0132\027.hbase.pb.NameBytesPair\022:\n\016servic" +
-      "e_result\030\004 \001(\0132\".hbase.pb.CoprocessorSer" +
-      "viceResult\022,\n\tloadStats\030\005 \001(\0132\031.hbase.pb",
-      ".RegionLoadStats\"x\n\022RegionActionResult\0226" +
-      "\n\021resultOrException\030\001 \003(\0132\033.hbase.pb.Res" +
-      "ultOrException\022*\n\texception\030\002 \001(\0132\027.hbas" +
-      "e.pb.NameBytesPair\"x\n\014MultiRequest\022,\n\014re" +
-      "gionAction\030\001 \003(\0132\026.hbase.pb.RegionAction" +
-      "\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tcondition\030\003 \001(\0132" +
-      "\023.hbase.pb.Condition\"\\\n\rMultiResponse\0228\n" +
-      "\022regionActionResult\030\001 \003(\0132\034.hbase.pb.Reg" +
-      "ionActionResult\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Co" +
-      "nsistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\203\004\n\r",
-      "ClientService\0222\n\003Get\022\024.hbase.pb.GetReque" +
-      "st\032\025.hbase.pb.GetResponse\022;\n\006Mutate\022\027.hb" +
-      "ase.pb.MutateRequest\032\030.hbase.pb.MutateRe" +
-      "sponse\0225\n\004Scan\022\025.hbase.pb.ScanRequest\032\026." +
-      "hbase.pb.ScanResponse\022P\n\rBulkLoadHFile\022\036" +
-      ".hbase.pb.BulkLoadHFileRequest\032\037.hbase.p" +
-      "b.BulkLoadHFileResponse\022X\n\013ExecService\022#" +
-      ".hbase.pb.CoprocessorServiceRequest\032$.hb" +
-      "ase.pb.CoprocessorServiceResponse\022d\n\027Exe" +
-      "cRegionServerService\022#.hbase.pb.Coproces",
-      "sorServiceRequest\032$.hbase.pb.Coprocessor" +
-      "ServiceResponse\0228\n\005Multi\022\026.hbase.pb.Mult" +
-      "iRequest\032\027.hbase.pb.MultiResponseBB\n*org" +
-      ".apache.hadoop.hbase.protobuf.generatedB" +
-      "\014ClientProtosH\001\210\001\001\240\001\001"
+      "ction\"c\n\017RegionLoadStats\022\027\n\014memstoreLoad" +
+      "\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022c" +
+      "ompactionPressure\030\003 \001(\005:\0010\"\332\001\n\021ResultOrE" +
+      "xception\022\r\n\005index\030\001 \001(\r\022 \n\006result\030\002 \001(\0132" +
+      "\020.hbase.pb.Result\022*\n\texception\030\003 \001(\0132\027.h" +
+      "base.pb.NameBytesPair\022:\n\016service_result\030" +
+      "\004 \001(\0132\".hbase.pb.CoprocessorServiceResul",
+      "t\022,\n\tloadStats\030\005 \001(\0132\031.hbase.pb.RegionLo" +
+      "adStats\"x\n\022RegionActionResult\0226\n\021resultO" +
+      "rException\030\001 \003(\0132\033.hbase.pb.ResultOrExce" +
+      "ption\022*\n\texception\030\002 \001(\0132\027.hbase.pb.Name" +
+      "BytesPair\"x\n\014MultiRequest\022,\n\014regionActio" +
+      "n\030\001 \003(\0132\026.hbase.pb.RegionAction\022\022\n\nnonce" +
+      "Group\030\002 \001(\004\022&\n\tcondition\030\003 \001(\0132\023.hbase.p" +
+      "b.Condition\"\\\n\rMultiResponse\0228\n\022regionAc" +
+      "tionResult\030\001 \003(\0132\034.hbase.pb.RegionAction" +
+      "Result\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consistency",
+      "\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\203\004\n\rClientSer" +
+      "vice\0222\n\003Get\022\024.hbase.pb.GetRequest\032\025.hbas" +
+      "e.pb.GetResponse\022;\n\006Mutate\022\027.hbase.pb.Mu" +
+      "tateRequest\032\030.hbase.pb.MutateResponse\0225\n" +
+      "\004Scan\022\025.hbase.pb.ScanRequest\032\026.hbase.pb." +
+      "ScanResponse\022P\n\rBulkLoadHFile\022\036.hbase.pb" +
+      ".BulkLoadHFileRequest\032\037.hbase.pb.BulkLoa" +
+      "dHFileResponse\022X\n\013ExecService\022#.hbase.pb" +
+      ".CoprocessorServiceRequest\032$.hbase.pb.Co" +
+      "processorServiceResponse\022d\n\027ExecRegionSe",
+      "rverService\022#.hbase.pb.CoprocessorServic" +
+      "eRequest\032$.hbase.pb.CoprocessorServiceRe" +
+      "sponse\0228\n\005Multi\022\026.hbase.pb.MultiRequest\032" +
+      "\027.hbase.pb.MultiResponseBB\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\014ClientPr" +
+      "otosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -33634,7 +33757,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_RegionLoadStats_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionLoadStats_descriptor,
-              new java.lang.String[] { "MemstoreLoad", "HeapOccupancy", });
+              new java.lang.String[] { "MemstoreLoad", "HeapOccupancy", "CompactionPressure", });
           internal_static_hbase_pb_ResultOrException_descriptor =
             getDescriptor().getMessageTypes().get(23);
           internal_static_hbase_pb_ResultOrException_fieldAccessorTable = new

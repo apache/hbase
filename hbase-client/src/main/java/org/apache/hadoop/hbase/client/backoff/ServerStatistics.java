@@ -57,10 +57,12 @@ public class ServerStatistics {
   public static class RegionStatistics {
     private int memstoreLoad = 0;
     private int heapOccupancy = 0;
+    private int compactionPressure = 0;
 
     public void update(ClientProtos.RegionLoadStats currentStats) {
       this.memstoreLoad = currentStats.getMemstoreLoad();
       this.heapOccupancy = currentStats.getHeapOccupancy();
+      this.compactionPressure = currentStats.getCompactionPressure();
     }
 
     public int getMemstoreLoadPercent(){
@@ -70,5 +72,10 @@ public class ServerStatistics {
     public int getHeapOccupancyPercent(){
       return this.heapOccupancy;
     }
+
+    public int getCompactionPressure() {
+      return compactionPressure;
+    }
+
   }
 }
