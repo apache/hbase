@@ -399,6 +399,8 @@ message RegionLoadStats {
   // Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
   // We can move this to "ServerLoadStats" should we develop them.
   optional int32 heapOccupancy = 2 [default = 0];
+  // Compaction pressure. Guaranteed to be positive, between 0 and 100.
+  optional int32 compactionPressure = 3 [default = 0];
 }
 
 /**

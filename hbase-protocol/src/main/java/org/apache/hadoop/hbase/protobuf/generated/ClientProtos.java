@@ -27621,6 +27621,24 @@ public final class ClientProtos {
      * </pre>
      */
     int getHeapOccupancy();
+
+    // optional int32 compactionPressure = 3 [default = 0];
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    boolean hasCompactionPressure();
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    int getCompactionPressure();
   }
   /**
    * Protobuf type {@code RegionLoadStats}
@@ -27686,6 +27704,11 @@ public final class ClientProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               heapOccupancy_ = input.readInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              compactionPressure_ = input.readInt32();
               break;
             }
           }
@@ -27778,9 +27801,34 @@ public final class ClientProtos {
       return heapOccupancy_;
     }
 
+    // optional int32 compactionPressure = 3 [default = 0];
+    public static final int COMPACTIONPRESSURE_FIELD_NUMBER = 3;
+    private int compactionPressure_;
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    public boolean hasCompactionPressure() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+     *
+     * <pre>
+     * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+     * </pre>
+     */
+    public int getCompactionPressure() {
+      return compactionPressure_;
+    }
+
     private void initFields() {
       memstoreLoad_ = 0;
       heapOccupancy_ = 0;
+      compactionPressure_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -27800,6 +27848,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeInt32(2, heapOccupancy_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt32(3, compactionPressure_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -27816,6 +27867,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(2, heapOccupancy_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, compactionPressure_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -27850,6 +27905,11 @@ public final class ClientProtos {
         result = result && (getHeapOccupancy()
             == other.getHeapOccupancy());
       }
+      result = result && (hasCompactionPressure() == other.hasCompactionPressure());
+      if (hasCompactionPressure()) {
+        result = result && (getCompactionPressure()
+            == other.getCompactionPressure());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -27870,6 +27930,10 @@ public final class ClientProtos {
       if (hasHeapOccupancy()) {
         hash = (37 * hash) + HEAPOCCUPANCY_FIELD_NUMBER;
         hash = (53 * hash) + getHeapOccupancy();
+      }
+      if (hasCompactionPressure()) {
+        hash = (37 * hash) + COMPACTIONPRESSURE_FIELD_NUMBER;
+        hash = (53 * hash) + getCompactionPressure();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -27989,6 +28053,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         heapOccupancy_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
+        compactionPressure_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -28025,6 +28091,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.heapOccupancy_ = heapOccupancy_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.compactionPressure_ = compactionPressure_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -28046,6 +28116,9 @@ public final class ClientProtos {
         }
         if (other.hasHeapOccupancy()) {
           setHeapOccupancy(other.getHeapOccupancy());
+        }
+        if (other.hasCompactionPressure()) {
+          setCompactionPressure(other.getCompactionPressure());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -28172,6 +28245,55 @@ public final class ClientProtos {
       public Builder clearHeapOccupancy() {
         bitField0_ = (bitField0_ & ~0x00000002);
         heapOccupancy_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 compactionPressure = 3 [default = 0];
+      private int compactionPressure_ ;
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public boolean hasCompactionPressure() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public int getCompactionPressure() {
+        return compactionPressure_;
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public Builder setCompactionPressure(int value) {
+        bitField0_ |= 0x00000004;
+        compactionPressure_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 compactionPressure = 3 [default = 0];</code>
+       *
+       * <pre>
+       * Compaction pressure. Guaranteed to be positive, between 0 and 100.
+       * </pre>
+       */
+      public Builder clearCompactionPressure() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        compactionPressure_ = 0;
         onChanged();
         return this;
       }
@@ -33431,33 +33553,34 @@ public final class ClientProtos {
       "call\030\004 \001(\0132\027.CoprocessorServiceCall\"Y\n\014R" +
       "egionAction\022 \n\006region\030\001 \002(\0132\020.RegionSpec" +
       "ifier\022\016\n\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007." +
-      "Action\"D\n\017RegionLoadStats\022\027\n\014memstoreLoa" +
-      "d\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\"\266\001\n" +
-      "\021ResultOrException\022\r\n\005index\030\001 \001(\r\022\027\n\006res" +
-      "ult\030\002 \001(\0132\007.Result\022!\n\texception\030\003 \001(\0132\016." +
-      "NameBytesPair\0221\n\016service_result\030\004 \001(\0132\031." +
-      "CoprocessorServiceResult\022#\n\tloadStats\030\005 " +
-      "\001(\0132\020.RegionLoadStats\"f\n\022RegionActionRes",
-      "ult\022-\n\021resultOrException\030\001 \003(\0132\022.ResultO" +
-      "rException\022!\n\texception\030\002 \001(\0132\016.NameByte" +
-      "sPair\"f\n\014MultiRequest\022#\n\014regionAction\030\001 " +
-      "\003(\0132\r.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022\035" +
-      "\n\tcondition\030\003 \001(\0132\n.Condition\"S\n\rMultiRe" +
-      "sponse\022/\n\022regionActionResult\030\001 \003(\0132\023.Reg" +
-      "ionActionResult\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Co" +
-      "nsistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\205\003\n\r" +
-      "ClientService\022 \n\003Get\022\013.GetRequest\032\014.GetR" +
-      "esponse\022)\n\006Mutate\022\016.MutateRequest\032\017.Muta",
-      "teResponse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanR" +
-      "esponse\022>\n\rBulkLoadHFile\022\025.BulkLoadHFile" +
-      "Request\032\026.BulkLoadHFileResponse\022F\n\013ExecS" +
-      "ervice\022\032.CoprocessorServiceRequest\032\033.Cop" +
-      "rocessorServiceResponse\022R\n\027ExecRegionSer" +
-      "verService\022\032.CoprocessorServiceRequest\032\033" +
-      ".CoprocessorServiceResponse\022&\n\005Multi\022\r.M" +
-      "ultiRequest\032\016.MultiResponseBB\n*org.apach" +
-      "e.hadoop.hbase.protobuf.generatedB\014Clien" +
-      "tProtosH\001\210\001\001\240\001\001"
+      "Action\"c\n\017RegionLoadStats\022\027\n\014memstoreLoa" +
+      "d\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022" +
+      "compactionPressure\030\003 \001(\005:\0010\"\266\001\n\021ResultOr" +
+      "Exception\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\013" +
+      "2\007.Result\022!\n\texception\030\003 \001(\0132\016.NameBytes" +
+      "Pair\0221\n\016service_result\030\004 \001(\0132\031.Coprocess" +
+      "orServiceResult\022#\n\tloadStats\030\005 \001(\0132\020.Reg",
+      "ionLoadStats\"f\n\022RegionActionResult\022-\n\021re" +
+      "sultOrException\030\001 \003(\0132\022.ResultOrExceptio" +
+      "n\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"f\n\014" +
+      "MultiRequest\022#\n\014regionAction\030\001 \003(\0132\r.Reg" +
+      "ionAction\022\022\n\nnonceGroup\030\002 \001(\004\022\035\n\tconditi" +
+      "on\030\003 \001(\0132\n.Condition\"S\n\rMultiResponse\022/\n" +
+      "\022regionActionResult\030\001 \003(\0132\023.RegionAction" +
+      "Result\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consistency" +
+      "\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\205\003\n\rClientSer" +
+      "vice\022 \n\003Get\022\013.GetRequest\032\014.GetResponse\022)",
+      "\n\006Mutate\022\016.MutateRequest\032\017.MutateRespons" +
+      "e\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResponse\022>" +
+      "\n\rBulkLoadHFile\022\025.BulkLoadHFileRequest\032\026" +
+      ".BulkLoadHFileResponse\022F\n\013ExecService\022\032." +
+      "CoprocessorServiceRequest\032\033.CoprocessorS" +
+      "erviceResponse\022R\n\027ExecRegionServerServic" +
+      "e\022\032.CoprocessorServiceRequest\032\033.Coproces" +
+      "sorServiceResponse\022&\n\005Multi\022\r.MultiReque" +
+      "st\032\016.MultiResponseBB\n*org.apache.hadoop." +
+      "hbase.protobuf.generatedB\014ClientProtosH\001",
+      "\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -33619,7 +33742,7 @@ public final class ClientProtos {
           internal_static_RegionLoadStats_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoadStats_descriptor,
-              new java.lang.String[] { "MemstoreLoad", "HeapOccupancy", });
+              new java.lang.String[] { "MemstoreLoad", "HeapOccupancy", "CompactionPressure", });
           internal_static_ResultOrException_descriptor =
             getDescriptor().getMessageTypes().get(23);
           internal_static_ResultOrException_fieldAccessorTable = new

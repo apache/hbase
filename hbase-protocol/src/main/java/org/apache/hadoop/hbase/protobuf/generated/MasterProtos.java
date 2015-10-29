@@ -52797,7 +52797,6 @@ public final class MasterProtos {
        * <pre>
        **
        * Turn region normalizer on or off.
-       * If synchronous is true, it waits until current balance() call, if outstanding, to return.
        * </pre>
        */
       public abstract void setNormalizerRunning(
@@ -54239,7 +54238,6 @@ public final class MasterProtos {
      * <pre>
      **
      * Turn region normalizer on or off.
-     * If synchronous is true, it waits until current balance() call, if outstanding, to return.
      * </pre>
      */
     public abstract void setNormalizerRunning(
