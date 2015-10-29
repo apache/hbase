@@ -18,7 +18,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import javax.annotation.Nullable;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
@@ -30,10 +33,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -46,7 +52,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsckRepair;
@@ -57,14 +63,20 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 /**
  * Tests the scenarios where replicas are enabled for the meta table
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestMetaWithReplicas {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).
+      withLookingForStuckThread(true).
+      build();
   private static final Log LOG = LogFactory.getLog(TestMetaWithReplicas.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

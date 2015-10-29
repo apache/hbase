@@ -25,15 +25,15 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -45,15 +45,20 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 /**
  * Test restore snapshots from the client
  */
 @Category(LargeTests.class)
 public class TestRestoreSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotFromClient.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder()
+      .withTimeout(this.getClass())
+      .withLookingForStuckThread(true)
+      .build();
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
