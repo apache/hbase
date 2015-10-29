@@ -112,20 +112,44 @@ public class TestClientExponentialBackoff {
     ServerStatistics stats = new ServerStatistics();
     long backoffTime;
 
-    update(stats, 0, 95);
+    update(stats, 0, 95, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Heap occupancy at low watermark had no effect", backoffTime > 0);
 
     long previous = backoffTime;
-    update(stats, 0, 96);
+    update(stats, 0, 96, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Increase above low watermark should have increased backoff",
       backoffTime > previous);
 
-    update(stats, 0, 98);
+    update(stats, 0, 98, 0);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertEquals("We should be using max backoff when at high watermark", backoffTime,
       ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF);
+  }
+
+  @Test
+  public void testCompactionPressurePolicy() {
+    Configuration conf = new Configuration(false);
+    ExponentialClientBackoffPolicy backoff = new ExponentialClientBackoffPolicy(conf);
+
+    ServerStatistics stats = new ServerStatistics();
+    long backoffTime;
+
+    update(stats, 0, 0, 0);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertTrue("Compaction pressure has no effect", backoffTime == 0);
+
+        long previous = backoffTime;
+    update(stats, 0, 0, 50);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertTrue("Compaction pressure should be bigger",
+            backoffTime > previous);
+
+    update(stats, 0, 0, 100);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertEquals("under heavy compaction pressure", backoffTime,
+            ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF);
   }
 
   private void update(ServerStatistics stats, int load) {
@@ -135,10 +159,12 @@ public class TestClientExponentialBackoff {
     stats.update(regionname, stat);
   }
 
-  private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy) {
+  private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy,
+                      int compactionPressure) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
         .setMemstoreLoad(memstoreLoad)
         .setHeapOccupancy(heapOccupancy)
+        .setCompactionPressure(compactionPressure)
             .build();
     stats.update(regionname, stat);
   }

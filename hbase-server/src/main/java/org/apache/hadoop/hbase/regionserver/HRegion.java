@@ -5183,6 +5183,8 @@ public class HRegion implements HeapSize { // , Writable{
     stats.setMemstoreLoad((int) (Math.min(100, (this.memstoreSize.get() * 100) / this
         .memstoreFlushSize)));
     stats.setHeapOccupancy((int)rsServices.getHeapMemoryManager().getHeapOccupancyPercent()*100);
+    stats.setCompactionPressure((int)rsServices.getCompactionPressure()*100 > 100 ? 100 :
+                (int)rsServices.getCompactionPressure()*100);
     return stats.build();
   }
 
