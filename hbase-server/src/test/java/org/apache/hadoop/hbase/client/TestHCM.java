@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -85,7 +85,7 @@ import com.google.common.collect.Lists;
 /**
  * This class is for testing HBaseConnectionManager features
  */
-@Category({MediumTests.class})
+@Category({LargeTests.class})
 public class TestHCM {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder()
       .withTimeout(this.getClass())
@@ -139,7 +139,7 @@ public class TestHCM {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
@@ -203,7 +203,7 @@ public class TestHCM {
    * Naive test to check that HConnection#getAdmin returns a properly constructed HBaseAdmin object
    * @throws IOException Unable to construct admin
    */
-  @Test (timeout=120000)
+  @Test
   public void testAdminFactory() throws IOException {
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Admin admin = con1.getAdmin();
@@ -277,12 +277,12 @@ public class TestHCM {
    * Test that we can handle connection close: it will trigger a retry, but the calls will
    *  finish.
    */
-  @Test (timeout=120000)
+  @Test
   public void testConnectionCloseAllowsInterrupt() throws Exception {
     testConnectionClose(true);
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testConnectionNotAllowsInterrupt() throws Exception {
     testConnectionClose(false);
   }
@@ -295,7 +295,7 @@ public class TestHCM {
    * succeeds. But the client won't wait that much, because 20 + 20 > 30, so the client
    * timeouted when the server answers.
    */
-  @Test (timeout=120000)
+  @Test
   public void testOperationTimeout() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
@@ -413,7 +413,7 @@ public class TestHCM {
   /**
    * Test that connection can become idle without breaking everything.
    */
-  @Test (timeout=120000)
+  @Test
   public void testConnectionIdle() throws Exception {
     TableName tableName = TableName.valueOf("HCM-testConnectionIdle");
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
@@ -474,7 +474,7 @@ public class TestHCM {
      *  notification.
      * @throws Exception
      */
-  @Test (timeout=120000)
+  @Test
   public void testConnectionCut() throws Exception {
 
     TableName tableName = TableName.valueOf("HCM-testConnectionCut");
@@ -572,7 +572,7 @@ public class TestHCM {
    * that we really delete it.
    * @throws Exception
    */
-  @Test (timeout=120000)
+  @Test
   public void testRegionCaching() throws Exception{
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAM_NAM).close();
     Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
@@ -760,7 +760,7 @@ public class TestHCM {
    * Test that Connection or Pool are not closed when managed externally
    * @throws Exception
    */
-  @Test (timeout=120000)
+  @Test
   public void testConnectionManagement() throws Exception{
     Table table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -779,7 +779,7 @@ public class TestHCM {
   /**
    * Test that stale cache updates don't override newer cached values.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testCacheSeqNums() throws Exception{
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME2, FAM_NAM);
     Put put = new Put(ROW);
@@ -822,7 +822,7 @@ public class TestHCM {
     table.close();
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testClosing() throws Exception {
     Configuration configuration =
       new Configuration(TEST_UTIL.getConfiguration());
@@ -850,7 +850,7 @@ public class TestHCM {
    * Trivial test to verify that nobody messes with
    * {@link ConnectionFactory#createConnection(Configuration)}
    */
-  @Test (timeout=120000)
+  @Test
   public void testCreateConnection() throws Exception {
     Configuration configuration = TEST_UTIL.getConfiguration();
     Connection c1 = ConnectionFactory.createConnection(configuration);
@@ -865,7 +865,7 @@ public class TestHCM {
    *  ZooKeeper quorum set. Other stuff like master address will be read
    *  from ZK by the client.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testConnection() throws Exception{
     // We create an empty config and add the ZK address.
     Configuration c = new Configuration();
@@ -892,7 +892,7 @@ public class TestHCM {
     return prevNumRetriesVal;
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testMulti() throws Exception {
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
      try {
@@ -1073,7 +1073,7 @@ public class TestHCM {
       Math.abs(actual - expected) <= (0.01f * jitterBase));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -1096,4 +1096,3 @@ public class TestHCM {
     connection.close();
   }
 }
-
