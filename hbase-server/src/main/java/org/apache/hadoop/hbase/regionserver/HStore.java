@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -655,7 +654,7 @@ public class HStore implements Store {
   }
 
   @Override
-  public Pair<Long, Cell> add(final Cell cell) {
+  public long add(final Cell cell) {
     lock.readLock().lock();
     try {
        return this.memstore.add(cell);
