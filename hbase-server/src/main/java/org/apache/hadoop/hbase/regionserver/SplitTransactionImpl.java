@@ -214,6 +214,11 @@ public class SplitTransactionImpl implements SplitTransaction {
   private static IOException closedByOtherException = new IOException(
       "Failed to close region: already closed by another thread");
 
+  /* package */PairOfSameType<Region> createDaughters(final Server server,
+      final RegionServerServices services) throws IOException {
+    return createDaughters(server, services, null);
+  }
+
   /**
    * Prepare the regions and region files.
    * @param server Hosting server instance.  Can be null when testing (won't try
@@ -577,6 +582,13 @@ public class SplitTransactionImpl implements SplitTransaction {
     transition(SplitTransactionPhase.COMPLETED);
 
     return regions;
+  }
+
+  @Deprecated
+  public PairOfSameType<Region> stepsAfterPONR(final Server server,
+      final RegionServerServices services, final PairOfSameType<Region> regions)
+      throws IOException {
+    return stepsAfterPONR(server, services, regions, null);
   }
 
   public PairOfSameType<Region> stepsAfterPONR(final Server server,
