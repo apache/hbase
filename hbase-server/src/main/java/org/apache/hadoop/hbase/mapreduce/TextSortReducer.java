@@ -181,7 +181,7 @@ public class TextSortReducer extends
                 parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
                 parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
                 parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
             kvs.add(kv);
             curSize += kv.heapSize();
           }

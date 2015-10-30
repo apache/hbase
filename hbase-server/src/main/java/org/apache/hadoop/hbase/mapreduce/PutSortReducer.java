@@ -65,7 +65,7 @@ public class PutSortReducer extends
         Put p = iter.next();
         for (List<Cell> cells: p.getFamilyCellMap().values()) {
           for (Cell cell: cells) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
             map.add(kv);
             curSize += kv.heapSize();
           }

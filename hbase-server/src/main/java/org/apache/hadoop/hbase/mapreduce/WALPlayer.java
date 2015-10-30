@@ -100,7 +100,7 @@ public class WALPlayer extends Configured implements Tool {
         // skip all other tables
         if (Bytes.equals(table, key.getTablename().getName())) {
           for (Cell cell : value.getCells()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
             if (WALEdit.isMetaEditFamily(kv.getFamily())) continue;
             context.write(new ImmutableBytesWritable(kv.getRow()), kv);
           }

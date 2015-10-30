@@ -41,8 +41,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -111,7 +109,7 @@ public class Import {
             // skip if we filtered it out
             if (kv == null) continue;
             // TODO get rid of ensureKeyValue
-            context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+            context.write(row, KeyValueUtil.ensureKeyValueTypeForMR(convertKv(kv, cfRenameMap)));
           }
         }
       } catch (InterruptedException e) {
