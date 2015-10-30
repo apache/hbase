@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * The MemStore holds in-memory modifications to the Store. Modifications are {@link Cell}s.
@@ -68,10 +67,9 @@ public interface MemStore extends HeapSize {
   /**
    * Write an update
    * @param cell
-   * @return approximate size of the passed KV and the newly added KV which maybe different from the
-   *         passed in KV.
+   * @return approximate size of the passed cell.
    */
-  Pair<Long, Cell> add(final Cell cell);
+  long add(final Cell cell);
 
   /**
    * @return Oldest timestamp of all the Cells in the MemStore

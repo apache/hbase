@@ -3686,15 +3686,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       int listSize = cells.size();
       for (int i=0; i < listSize; i++) {
         Cell cell = cells.get(i);
-        if (cell.getSequenceId() == 0) {
+        if (cell.getSequenceId() == 0 || isInReplay) {
           CellUtil.setSequenceId(cell, mvccNum);
         }
-        Pair<Long, Cell> ret = store.add(cell);
-        size += ret.getFirst();
-        if(isInReplay) {
-          // set memstore newly added cells with replay mvcc number
-          CellUtil.setSequenceId(ret.getSecond(), mvccNum);
-        }
+        size += store.add(cell);
       }
     }
 
@@ -4937,7 +4932,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return True if we should flush.
    */
   protected boolean restoreEdit(final Store s, final Cell cell) {
-    long kvSize = s.add(cell).getFirst();
+    long kvSize = s.add(cell);
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetRegionReplayEditsSize(getRegionInfo().getRegionName(), kvSize);
     }
@@ -6829,8 +6824,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 checkFamily(CellUtil.cloneFamily(cell));
                 // unreachable
               }
-              Pair<Long, Cell> ret = store.add(cell);
-              addedSize += ret.getFirst();
+              addedSize += store.add(cell);
             }
           }
 
@@ -7168,8 +7162,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 // otherwise keep older versions around
                 for (Cell cell: entry.getValue()) {
                   CellUtil.setSequenceId(cell, writeEntry.getWriteNumber());
-                  Pair<Long, Cell> ret = store.add(cell);
-                  size += ret.getFirst();
+                  size += store.add(cell);
                   doRollBackMemstore = true;
                 }
               }
@@ -7399,8 +7392,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 // otherwise keep older versions around
                 for (Cell cell : entry.getValue()) {
                   CellUtil.setSequenceId(cell, writeEntry.getWriteNumber());
-                  Pair<Long, Cell> ret = store.add(cell);
-                  size += ret.getFirst();
+                  size += store.add(cell);
                   doRollBackMemstore = true;
                 }
               }

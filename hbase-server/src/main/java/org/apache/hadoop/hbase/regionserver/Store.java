@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -127,9 +126,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   /**
    * Adds a value to the memstore
    * @param cell
-   * @return memstore size delta &amp; newly added KV which maybe different than the passed in KV
+   * @return memstore size delta
    */
-  Pair<Long, Cell> add(Cell cell);
+  long add(Cell cell);
 
   /**
    * When was the last edit done in the memstore
