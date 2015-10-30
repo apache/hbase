@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -350,9 +349,8 @@ public class HFileBlockIndex {
           if (index == -1) {
             // This has to be changed
             // For now change this to key value
-            KeyValue kv = KeyValueUtil.ensureKeyValue(key);
             throw new IOException("The key "
-                + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
+                + CellUtil.getCellKeyAsString(key)
                 + " is before the" + " first key of the non-root index block " + block);
           }
 

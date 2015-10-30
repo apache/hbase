@@ -172,12 +172,12 @@ public class MemStoreWrapper {
   }
 
   /**
-   * Adds a KeyValue into the memstore.
-   * @param kv The KeyValue to be added.
+   * Adds a Cell into the memstore.
+   * @param cell The Cell to be added.
    * @throws IOException
    */
-  public void addToMemstore(KeyValue kv) throws IOException {
-    memstore.add(kv);
+  public void addToMemstore(Cell cell) throws IOException {
+    memstore.add(cell);
     // flush the memstore if it's full.
     flushMemStoreIfNecessary();
   }

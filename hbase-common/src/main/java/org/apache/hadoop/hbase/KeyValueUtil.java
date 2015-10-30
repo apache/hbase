@@ -437,14 +437,28 @@ public class KeyValueUtil {
   /*************** misc **********************************/
   /**
    * @param cell
-   * @return <code>cell</code> if it is an instance of {@link KeyValue} else we will return a
-   * new {@link KeyValue} instance made from <code>cell</code>
+   * @return <code>cell</code> if it is an object of class {@link KeyValue} else we will return a
+   *         new {@link KeyValue} instance made from <code>cell</code> Note: Even if the cell is an
+   *         object of any of the subclass of {@link KeyValue}, we will create a new
+   *         {@link KeyValue} object wrapping same buffer. This API is used only with MR based tools
+   *         which expect the type to be exactly KeyValue. That is the reason for doing this way.
    * @deprecated without any replacement.
    */
   @Deprecated
   public static KeyValue ensureKeyValue(final Cell cell) {
     if (cell == null) return null;
-    return cell instanceof KeyValue? (KeyValue)cell: copyToNewKeyValue(cell);
+    if (cell instanceof KeyValue) {
+      if (cell.getClass().getName().equals(KeyValue.class.getName())) {
+        return (KeyValue) cell;
+      }
+      // Cell is an Object of any of the sub classes of KeyValue. Make a new KeyValue wrapping the
+      // same byte[]
+      KeyValue kv = (KeyValue) cell;
+      KeyValue newKv = new KeyValue(kv.bytes, kv.offset, kv.length);
+      newKv.setSequenceId(kv.getSequenceId());
+      return newKv;
+    }
+    return copyToNewKeyValue(cell);
   }
 
   @Deprecated

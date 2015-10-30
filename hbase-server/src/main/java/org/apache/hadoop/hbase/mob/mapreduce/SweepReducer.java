@@ -331,13 +331,13 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       }
       // write the hfile name
       writer.append(mobFileName.getFileName(), MobConstants.EMPTY_STRING);
-      Set<KeyValue> kvs = new HashSet<KeyValue>();
+      Set<Cell> kvs = new HashSet<Cell>();
       for (KeyValue kv : values) {
         if (kv.getValueLength() > Bytes.SIZEOF_INT) {
           mobFileStat.addValidSize(Bytes.toInt(kv.getValueArray(), kv.getValueOffset(),
               Bytes.SIZEOF_INT));
         }
-        kvs.add(kv.createKeyOnly(false));
+        kvs.add(kv);
       }
       // If the mob file is a invalid one or a small one, merge it into new/bigger ones.
       if (mobFileStat.needClean() || (mergeSmall && mobFileStat.needMerge())) {
@@ -351,11 +351,9 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
           scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY));
           Cell cell;
           while (null != (cell = scanner.next())) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            KeyValue keyOnly = kv.createKeyOnly(false);
-            if (kvs.contains(keyOnly)) {
+            if (kvs.contains(cell)) {
               // write the KeyValue existing in HBase to the memstore.
-              memstore.addToMemstore(kv);
+              memstore.addToMemstore(cell);
               memstoreUpdated = true;
             }
           }
