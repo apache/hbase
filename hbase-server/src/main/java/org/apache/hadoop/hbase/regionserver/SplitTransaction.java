@@ -279,6 +279,12 @@ public class SplitTransaction {
    *    Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
    */
+  @Deprecated
+  /* package */PairOfSameType<HRegion> createDaughters(final Server server,
+      final RegionServerServices services) throws IOException {
+     return createDaughters(server, services, null);
+  }
+
   /* package */PairOfSameType<HRegion> createDaughters(final Server server,
       final RegionServerServices services, User user) throws IOException {
     LOG.info("Starting split of region " + this.parent);
@@ -739,6 +745,13 @@ public class SplitTransaction {
       }
     }
     return stepsAfterPONR(server, services, regions, user);
+  }
+
+  @Deprecated
+  public PairOfSameType<HRegion> stepsAfterPONR(final Server server,
+      final RegionServerServices services, final PairOfSameType<HRegion> regions)
+      throws IOException {
+     return stepsAfterPONR(server, services, regions, null);
   }
 
   public PairOfSameType<HRegion> stepsAfterPONR(final Server server,
