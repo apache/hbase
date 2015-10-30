@@ -21,14 +21,27 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 
+import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
+
 
 public class SplitAllRegionOfTableAction extends Action {
+  private static final int DEFAULT_MAX_SPLITS = 3;
+  private static final String MAX_SPLIT_KEY = "hbase.chaosmonkey.action.maxFullTableSplits";
+
   private final TableName tableName;
+  private int maxFullTableSplits = DEFAULT_MAX_SPLITS;
+  private int splits = 0;
 
   public SplitAllRegionOfTableAction(TableName tableName) {
     this.tableName = tableName;
   }
 
+
+  public void init(ActionContext context) throws IOException {
+    super.init(context);
+    this.maxFullTableSplits = getConf().getInt(MAX_SPLIT_KEY, DEFAULT_MAX_SPLITS);
+  }
 
   @Override
   public void perform() throws Exception {
@@ -38,7 +51,16 @@ public class SplitAllRegionOfTableAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Performing action: Split all regions of  " + tableName);
-    admin.split(tableName);
+
+
+    // Don't always split. This should allow splitting of a full table later in the run
+    if (ThreadLocalRandom.current().nextDouble()
+        < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)) {
+      splits++;
+      LOG.info("Performing action: Split all regions of  " + tableName);
+      admin.split(tableName);
+    } else {
+      LOG.info("Skipping split of all regions.");
+    }
   }
 }
