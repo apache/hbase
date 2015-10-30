@@ -207,7 +207,7 @@ public class Import {
             // skip if we filtered it out
             if (kv == null) continue;
             // TODO get rid of ensureKeyValue
-            KeyValue ret = KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap));
+            KeyValue ret = KeyValueUtil.ensureKeyValueTypeForMR(convertKv(kv, cfRenameMap));
             context.write(new KeyValueWritableComparable(ret.createKeyOnly(false)), ret); 
           }
         }
@@ -270,7 +270,7 @@ public class Import {
             // skip if we filtered it out
             if (kv == null) continue;
             // TODO get rid of ensureKeyValue
-            context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+            context.write(row, KeyValueUtil.ensureKeyValueTypeForMR(convertKv(kv, cfRenameMap)));
           }
         }
       } catch (InterruptedException e) {

@@ -154,9 +154,7 @@ public class TestWALPlayer {
 
     WALEdit value = mock(WALEdit.class);
     ArrayList<Cell> values = new ArrayList<Cell>();
-    KeyValue kv1 = mock(KeyValue.class);
-    when(kv1.getFamily()).thenReturn(Bytes.toBytes("family"));
-    when(kv1.getRow()).thenReturn(Bytes.toBytes("row"));
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("q"));
     values.add(kv1);
     when(value.getCells()).thenReturn(values);
     mapper.setup(context);

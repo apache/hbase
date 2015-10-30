@@ -68,7 +68,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
           List<Cell> cells = familyMap.get(entry.getKey());
           List<Cell> kvs = (cells != null) ? (List<Cell>) cells : null;
           for (Cell cell : entry.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
             curSize += kv.heapSize();
             if (kvs != null) {
               kvs.add(kv);
