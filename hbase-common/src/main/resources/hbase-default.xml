@@ -923,6 +923,17 @@ possible configurations would overwhelm and obscure the important.
       authentication, and will abort the connection.</description>
   </property>
   <property>
+    <name>hbase.ipc.server.fallback-to-simple-auth-allowed</name>
+    <value>false</value>
+    <description>When a server is configured to require secure connections, it will
+      reject connection attempts from clients using SASL SIMPLE (unsecure) authentication.
+      This setting allows secure servers to accept SASL SIMPLE connections from clients
+      when the client requests.  When false (the default), the server will not allow the fallback
+      to SIMPLE authentication, and will reject the connection.  WARNING: This setting should ONLY
+      be used as a temporary measure while converting clients over to secure authentication.  It
+      MUST BE DISABLED for secure operation.</description>
+  </property>
+  <property>
     <name>hbase.coprocessor.enabled</name>
     <value>true</value>
     <description>Enables or disables coprocessor loading. If 'false'

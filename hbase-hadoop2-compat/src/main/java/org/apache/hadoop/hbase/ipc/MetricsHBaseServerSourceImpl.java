@@ -36,6 +36,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableCounterLong authorizationFailures;
   private final MutableCounterLong authenticationSuccesses;
   private final MutableCounterLong authenticationFailures;
+  private final MutableCounterLong authenticationFallbacks;
   private final MutableCounterLong sentBytes;
   private final MutableCounterLong receivedBytes;
 
@@ -85,6 +86,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0L);
     this.authenticationFailures = this.getMetricsRegistry().newCounter(AUTHENTICATION_FAILURES_NAME,
         AUTHENTICATION_FAILURES_DESC, 0L);
+    this.authenticationFallbacks = this.getMetricsRegistry().newCounter(
+        AUTHENTICATION_FALLBACKS_NAME, AUTHENTICATION_FALLBACKS_DESC, 0L);
     this.sentBytes = this.getMetricsRegistry().newCounter(SENT_BYTES_NAME,
         SENT_BYTES_DESC, 0L);
     this.receivedBytes = this.getMetricsRegistry().newCounter(RECEIVED_BYTES_NAME,
@@ -114,6 +117,11 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void authenticationFailure() {
     authenticationFailures.incr();
+  }
+
+  @Override
+  public void authenticationFallback() {
+    authenticationFallbacks.incr();
   }
 
   @Override
