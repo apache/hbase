@@ -876,6 +876,7 @@ public class HRegionServer extends HasThread implements
   private void registerConfigurationObservers() {
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.rpcServices);
   }
 
   /**

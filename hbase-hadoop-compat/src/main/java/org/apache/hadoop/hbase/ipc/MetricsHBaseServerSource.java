@@ -34,6 +34,9 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String AUTHENTICATION_FAILURES_NAME = "authenticationFailures";
   String AUTHENTICATION_FAILURES_DESC =
       "Number of authentication failures.";
+  String AUTHENTICATION_FALLBACKS_NAME = "authenticationFallbacks";
+  String AUTHENTICATION_FALLBACKS_DESC =
+      "Number of fallbacks to insecure authentication.";
   String SENT_BYTES_NAME = "sentBytes";
   String SENT_BYTES_DESC = "Number of bytes sent.";
   String RECEIVED_BYTES_NAME = "receivedBytes";
@@ -79,6 +82,8 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void authenticationSuccess();
 
   void authenticationFailure();
+
+  void authenticationFallback();
 
   void exception();
 

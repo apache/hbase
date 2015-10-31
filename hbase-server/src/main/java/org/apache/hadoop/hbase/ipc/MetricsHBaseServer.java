@@ -53,6 +53,10 @@ public class MetricsHBaseServer {
     source.authenticationSuccess();
   }
 
+  void authenticationFallback() {
+    source.authenticationFallback();
+  }
+
   void sentBytes(long count) {
     source.sentBytes(count);
   }

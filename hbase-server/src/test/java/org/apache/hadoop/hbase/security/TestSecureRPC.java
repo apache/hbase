@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileF
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
 import java.io.File;
@@ -100,8 +101,18 @@ public class TestSecureRPC {
   }
 
   @Test
+  public void testRpcWithInsecureFallback() throws Exception {
+    testRpcFallbackToSimpleAuth(RpcClientImpl.class);
+  }
+
+  @Test
   public void testAsyncRpc() throws Exception {
     testRpcCallWithEnabledKerberosSaslAuth(AsyncRpcClient.class);
+  }
+
+  @Test
+  public void testAsyncRpcWithInsecureFallback() throws Exception {
+    testRpcFallbackToSimpleAuth(AsyncRpcClient.class);
   }
 
   private void testRpcCallWithEnabledKerberosSaslAuth(Class<? extends RpcClient> rpcImplClass)
@@ -109,11 +120,7 @@ public class TestSecureRPC {
     String krbKeytab = getKeytabFileForTesting();
     String krbPrincipal = getPrincipalForTesting();
 
-    Configuration cnf = new Configuration();
-    cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(cnf);
-    UserGroupInformation.loginUserFromKeytab(krbPrincipal, krbKeytab);
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    UserGroupInformation ugi = loginKerberosPrincipal(krbKeytab, krbPrincipal);
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
     // check that the login user is okay:
@@ -121,8 +128,28 @@ public class TestSecureRPC {
     assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
     assertEquals(krbPrincipal, ugi.getUserName());
 
+    Configuration clientConf = getSecuredConfiguration();
+    callRpcService(rpcImplClass, User.create(ugi2), clientConf, false);
+  }
+
+  private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
+      throws Exception {
+    Configuration cnf = new Configuration();
+    cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(cnf);
+    UserGroupInformation.loginUserFromKeytab(krbPrincipal, krbKeytab);
+    return UserGroupInformation.getLoginUser();
+  }
+
+  private void callRpcService(Class<? extends RpcClient> rpcImplClass, User clientUser,
+                              Configuration clientConf, boolean allowInsecureFallback)
+      throws Exception {
+    Configuration clientConfCopy = new Configuration(clientConf);
+    clientConfCopy.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcImplClass.getName());
+
     Configuration conf = getSecuredConfiguration();
-    conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcImplClass.getName());
+    conf.setBoolean(RpcServer.FALLBACK_TO_INSECURE_CLIENT_AUTH, allowInsecureFallback);
+
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
         .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
@@ -140,7 +167,7 @@ public class TestSecureRPC {
             conf, new FifoRpcScheduler(conf, 1));
     rpcServer.start();
     RpcClient rpcClient =
-        RpcClientFactory.createClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+        RpcClientFactory.createClient(clientConfCopy, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       InetSocketAddress address = rpcServer.getListenerAddress();
       if (address == null) {
@@ -149,7 +176,7 @@ public class TestSecureRPC {
       BlockingRpcChannel channel =
           rpcClient.createBlockingRpcChannel(
             ServerName.valueOf(address.getHostName(), address.getPort(),
-            System.currentTimeMillis()), User.getCurrent(), 5000);
+            System.currentTimeMillis()), clientUser, 5000);
       TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
           TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);
       List<Integer> results = new ArrayList<Integer>();
@@ -162,5 +189,27 @@ public class TestSecureRPC {
       rpcClient.close();
       rpcServer.stop();
     }
+  }
+
+  public void testRpcFallbackToSimpleAuth(Class<? extends RpcClient> rpcImplClass) throws Exception {
+    String krbKeytab = getKeytabFileForTesting();
+    String krbPrincipal = getPrincipalForTesting();
+
+    UserGroupInformation ugi = loginKerberosPrincipal(krbKeytab, krbPrincipal);
+    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertEquals(krbPrincipal, ugi.getUserName());
+
+    String clientUsername = "testuser";
+    UserGroupInformation clientUgi = UserGroupInformation.createUserForTesting(clientUsername,
+        new String[]{clientUsername});
+
+    // check that the client user is insecure
+    assertNotSame(ugi, clientUgi);
+    assertEquals(AuthenticationMethod.SIMPLE, clientUgi.getAuthenticationMethod());
+    assertEquals(clientUsername, clientUgi.getUserName());
+
+    Configuration clientConf = new Configuration();
+    clientConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
+    callRpcService(rpcImplClass, User.create(clientUgi), clientConf, true);
   }
 }
