@@ -26,11 +26,11 @@ Alter namespace properties.
 
 To add/modify a property:
 
-  hbase> alter_namespace 'ns1', {METHOD => 'set', 'PROERTY_NAME' => 'PROPERTY_VALUE'}
+  hbase> alter_namespace 'ns1', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
 
 To delete a property:
 
-  hbase> alter_namespace 'ns1', {METHOD => 'unset', NAME=>'PROERTY_NAME'}
+  hbase> alter_namespace 'ns1', {METHOD => 'unset', NAME=>'PROPERTY_NAME'}
 EOF
       end
 
