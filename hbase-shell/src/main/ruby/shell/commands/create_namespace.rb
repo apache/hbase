@@ -27,7 +27,7 @@ and optionally a dictionary of namespace configuration.
 Examples:
 
   hbase> create_namespace 'ns1'
-  hbase> create_namespace 'ns1', {'PROERTY_NAME'=>'PROPERTY_VALUE'}
+  hbase> create_namespace 'ns1', {'PROPERTY_NAME'=>'PROPERTY_VALUE'}
 EOF
       end
 
