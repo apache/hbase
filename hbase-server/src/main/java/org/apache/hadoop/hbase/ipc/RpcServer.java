@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
@@ -156,7 +157,7 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
-public class RpcServer implements RpcServerInterface {
+public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   // LOG is being used in CallRunner and the log level is being changed in tests
   public static final Log LOG = LogFactory.getLog(RpcServer.class);
   private static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
@@ -166,6 +167,12 @@ public class RpcServer implements RpcServerInterface {
   private boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
+
+  /**
+   * Whether we allow a fallback to SIMPLE auth for insecure clients when security is enabled.
+   */
+  public static final String FALLBACK_TO_INSECURE_CLIENT_AUTH =
+          "hbase.ipc.server.fallback-to-simple-auth-allowed";
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -276,6 +283,7 @@ public class RpcServer implements RpcServerInterface {
 
   private final BoundedByteBufferPool reservoir;
 
+  private volatile boolean allowFallbackToSimpleAuth;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -1253,6 +1261,9 @@ public class RpcServer implements RpcServerInterface {
     private final Call saslCall =
       new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
 
+    // was authentication allowed with a fallback to simple auth
+    private boolean authenticatedWithFallback;
+
     public UserGroupInformation attemptingUser = null; // user name before auth
     protected User user = null;
     protected UserGroupInformation ugi = null;
@@ -1329,19 +1340,21 @@ public class RpcServer implements RpcServerInterface {
 
     private UserGroupInformation getAuthorizedUgi(String authorizedId)
         throws IOException {
+      UserGroupInformation authorizedUgi;
       if (authMethod == AuthMethod.DIGEST) {
         TokenIdentifier tokenId = HBaseSaslRpcServer.getIdentifier(authorizedId,
             secretManager);
-        UserGroupInformation ugi = tokenId.getUser();
-        if (ugi == null) {
+        authorizedUgi = tokenId.getUser();
+        if (authorizedUgi == null) {
           throw new AccessDeniedException(
               "Can't retrieve username from tokenIdentifier.");
         }
-        ugi.addTokenIdentifier(tokenId);
-        return ugi;
+        authorizedUgi.addTokenIdentifier(tokenId);
       } else {
-        return UserGroupInformation.createRemoteUser(authorizedId);
+        authorizedUgi = UserGroupInformation.createRemoteUser(authorizedId);
       }
+      authorizedUgi.setAuthenticationMethod(authMethod.authenticationMethod.getAuthMethod());
+      return authorizedUgi;
     }
 
     private void saslReadAndProcess(byte[] saslToken) throws IOException,
@@ -1520,10 +1533,15 @@ public class RpcServer implements RpcServerInterface {
         return doBadPreambleHandling(msg, new BadAuthException(msg));
       }
       if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-        AccessDeniedException ae = new AccessDeniedException("Authentication is required");
-        setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-        responder.doRespond(authFailedCall);
-        throw ae;
+        if (allowFallbackToSimpleAuth) {
+          metrics.authenticationFallback();
+          authenticatedWithFallback = true;
+        } else {
+          AccessDeniedException ae = new AccessDeniedException("Authentication is required");
+          setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
+          responder.doRespond(authFailedCall);
+          throw ae;
+        }
       }
       if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
         doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
@@ -1670,6 +1688,12 @@ public class RpcServer implements RpcServerInterface {
         if (ugi != null) {
           ugi.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
         }
+        // audit logging for SASL authenticated users happens in saslReadAndProcess()
+        if (authenticatedWithFallback) {
+          LOG.warn("Allowed fallback to SIMPLE auth for " + ugi
+              + " connecting from " + getHostAddress());
+        }
+        AUDITLOG.info(AUTH_SUCCESSFUL_FOR + ugi);
       } else {
         // user is authenticated
         ugi.setAuthenticationMethod(authMethod.authenticationMethod);
@@ -2024,8 +2048,29 @@ public class RpcServer implements RpcServerInterface {
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);
     }
+    initReconfigurable(conf);
+
     this.scheduler = scheduler;
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    initReconfigurable(newConf);
+  }
+
+  private void initReconfigurable(Configuration confToLoad) {
+    this.allowFallbackToSimpleAuth = confToLoad.getBoolean(FALLBACK_TO_INSECURE_CLIENT_AUTH, false);
+    if (isSecurityEnabled && allowFallbackToSimpleAuth) {
+      LOG.warn("********* WARNING! *********");
+      LOG.warn("This server is configured to allow connections from INSECURE clients");
+      LOG.warn("(" + FALLBACK_TO_INSECURE_CLIENT_AUTH + " = true).");
+      LOG.warn("While this option is enabled, client identities cannot be secured, and user");
+      LOG.warn("impersonation is possible!");
+      LOG.warn("For secure operation, please disable SIMPLE authentication as soon as possible,");
+      LOG.warn("by setting " + FALLBACK_TO_INSECURE_CLIENT_AUTH + " = false in hbase-site.xml");
+      LOG.warn("****************************");
+    }
   }
 
   /**

@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
@@ -192,7 +193,8 @@ import com.google.protobuf.TextFormat;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class RSRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction {
+    AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
+    ConfigurationObserver {
   protected static final Log LOG = LogFactory.getLog(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
@@ -980,6 +982,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     isa = new InetSocketAddress(initialIsa.getHostName(), address.getPort());
     rpcServer.setErrorHandler(this);
     rs.setName(name);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    if (rpcServer instanceof ConfigurationObserver) {
+      ((ConfigurationObserver)rpcServer).onConfigurationChange(newConf);
+    }
   }
 
   protected PriorityFunction createPriority() {
