@@ -31,23 +31,23 @@ There are currently 2 thrift server implementations in HBase, the packages:
 <ul>
   <li>org.apache.hadoop.hbase.thrift: This may one day be marked as depreceated.</li>
   <li>org.apache.hadoop.hbase.thrift2: i.e. this package. This is intended to closely match to the HTable interface and
-  to one day supercede the older thrift (the old thrift mimics an API HBase no longer has).</li>  
+  to one day supercede the older thrift (the old thrift mimics an API HBase no longer has).</li>
 </ul>
 
 <h2><a name="whatisthrift">What is Thrift?</a></h2>
 
-  
-<p>"Thrift is a software framework for scalable cross-language services 
+
+<p>"Thrift is a software framework for scalable cross-language services
 development. It combines a software stack with a code generation engine to
 build services that work efficiently and seamlessly between C++, Java, Python,
 PHP, Ruby, Erlang, Perl, Haskell, C#, Cocoa, JavaScript, Node.js, Smalltalk,
 and OCaml. Originally developed at Facebook, Thrift was open sourced in April
 2007 and entered the Apache Incubator in May, 2008".
-From http://thrift.apache.org/</p> 
+From http://thrift.apache.org/</p>
 
 <h2><a name="description">Description</a></h2>
 
-<p>The <a href="generated/THBaseService.Iface.html">HBase API</a> is defined in the
+<p>The HBase API is defined in the
 file hbase.thrift. A server-side implementation of the API is in
 <code>org.apache.hadoop.hbase.thrift2.ThriftHBaseServiceHandler</code> with the
 server boiler plate in <code>org.apache.hadoop.hbase.thrift2.ThriftServer</code>.
