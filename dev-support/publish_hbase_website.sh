@@ -90,7 +90,7 @@ if [ -z "$SVN_DIR" ]; then
   SVN_DIR="$HOME/svn/hbase.apache.org/trunk"
 fi
 
-export MAVEN_OPTS=${MAVEN_OPTS:-"-Xmx3g -XX:MaxPermSize=256m"}
+export MAVEN_OPTS=${MAVEN_OPTS:-"-Xmx3g"}
 
 cd $GIT_DIR
 
