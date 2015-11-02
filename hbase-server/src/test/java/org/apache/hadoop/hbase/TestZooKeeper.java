@@ -135,7 +135,7 @@ public class TestZooKeeper {
 
 
   /**
-   * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
+   * See HBASE-1232 and http://hbase.apache.org/book.html#trouble.zookeeper.
    * @throws IOException
    * @throws InterruptedException
    */

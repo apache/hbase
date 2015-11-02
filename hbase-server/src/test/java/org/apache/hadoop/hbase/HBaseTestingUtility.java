@@ -2590,7 +2590,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Expire a ZooKeeper session as recommended in ZooKeeper documentation
-   * http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A4
+   * http://hbase.apache.org/book.html#trouble.zookeeper
    * There are issues when doing this:
    * [1] http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html
    * [2] https://issues.apache.org/jira/browse/ZOOKEEPER-1105

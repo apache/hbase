@@ -126,7 +126,7 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
     </div>
     <div class="row">
         <section>
-            <a href="http://wiki.apache.org/hadoop/Hbase/ThriftApi">Apache HBase Wiki on Thrift</a>
+            <a href="http://hbase.apache.org/book.html#thrift">Apache HBase Reference Guide chapter on Thrift</a>
         </section>
     </div>
 </div>

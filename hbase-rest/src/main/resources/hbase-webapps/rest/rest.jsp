@@ -105,7 +105,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
     <div class="row">
 
     <section>
-<a href="http://wiki.apache.org/hadoop/Hbase/Stargate">Apache HBase Wiki on REST</a>
+<a href="http://hbase.apache.org/book.html#_rest">Apache HBase documentation about REST</a>
     </section>
     </div>
 </div>

@@ -39,7 +39,7 @@
 # Extra Java runtime options.
 # Below are what we set by default.  May only work with SUN JVM.
 # For more on why as well as other possible settings,
-# see http://wiki.apache.org/hadoop/PerformanceTuning
+# see http://hbase.apache.org/book.html#performance
 export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 
 # Configure PermSize. Only needed in JDK7. You can safely remove it for JDK8+

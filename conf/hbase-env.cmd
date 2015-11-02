@@ -37,7 +37,7 @@
 @rem Extra Java runtime options.
 @rem Below are what we set by default.  May only work with SUN JVM.
 @rem For more on why as well as other possible settings,
-@rem see http://wiki.apache.org/hadoop/PerformanceTuning
+@rem see http://hbase.apache.org/book.html#performance
 @rem JDK6 on Windows has a known bug for IPv6, use preferIPv4Stack unless JDK7.
 @rem @rem See TestIPv6NIOServerSocketChannel.
 set HBASE_OPTS="-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"

@@ -150,7 +150,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           <div class="alert alert-error">
           Your current JVM version <% System.getProperty("java.version") %> is known to be
           unstable with HBase. Please see the
-          <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
+          <a href="http://hbase.apache.org/book.html#trouble.log.gc">HBase Reference Guide</a>
           for details.
           </div>
         </%if>
