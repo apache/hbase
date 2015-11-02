@@ -292,6 +292,12 @@ public class RegionMergeTransaction {
     return mergedRegion;
   }
 
+  @Deprecated
+  public void stepsAfterPONR(final Server server, final RegionServerServices services,
+      final HRegion mergedRegion) throws IOException {
+    stepsAfterPONR(server, services, mergedRegion, null);
+  }
+
   public void stepsAfterPONR(final Server server, final RegionServerServices services,
       final HRegion mergedRegion, User user) throws IOException {
     openMergedRegion(server, services, mergedRegion);
