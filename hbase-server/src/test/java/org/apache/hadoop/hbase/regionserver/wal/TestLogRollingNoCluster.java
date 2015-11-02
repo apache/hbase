@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -32,7 +34,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -40,13 +41,17 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TestRule;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test many concurrent appenders to an WAL while rolling the log.
  */
-@Category(SmallTests.class)
+@Category({MediumTests.class})
 public class TestLogRollingNoCluster {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] EMPTY_1K_ARRAY = new byte[1024];
   private static final int THREAD_COUNT = 100; // Spin up this many threads
@@ -66,7 +71,7 @@ public class TestLogRollingNoCluster {
     FSUtils.setRootDir(conf, dir);
     final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(new byte[]{}, null);
-    
+
     Appender [] appenders = null;
 
     final int count = THREAD_COUNT;

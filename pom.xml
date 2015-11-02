@@ -487,6 +487,7 @@
           </dependencies>
           <!-- Generic testing configuration for all packages -->
           <configuration>
+            <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
@@ -1180,7 +1181,8 @@
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
     <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-    <surefire.secondPartForkCount>2</surefire.secondPartForkCount>
+    <!--'C' in means multiply by the CPU count-->
+    <surefire.secondPartForkCount>1C</surefire.secondPartForkCount>
     <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
@@ -2204,27 +2206,7 @@
          See as well the properties of the project for the values
          when no profile is active.     -->
     <profile>
-      <!-- Use it to launch the tests without parallelisation -->
-      <id>nonParallelTests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-      </properties>
-    </profile>
-    <profile>
-      <!-- Use it to launch the tests in parallel in the same JVM  -->
-      <id>parallelTests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-      </properties>
-    </profile>
-    <profile>
-      <!-- Use it to launch the tests in the same JVM  -->
+      <!-- Use it to launch all tests in the same JVM  -->
       <id>singleJVMTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -2298,7 +2280,7 @@
       </activation>
       <properties>
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-        <surefire.secondPartForkCount>5</surefire.secondPartForkCount>
+        <surefire.secondPartForkCount>1C</surefire.secondPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
