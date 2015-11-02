@@ -523,6 +523,13 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           // Always add these families. Just skip writing to them when we do not test per CF flush.
           htd.addFamily(new HColumnDescriptor(BIG_FAMILY_NAME));
           htd.addFamily(new HColumnDescriptor(TINY_FAMILY_NAME));
+          // if -DuseMob=true force all data through mob path.
+          if (conf.getBoolean("useMob", false)) {
+            for (HColumnDescriptor hcd : htd.getColumnFamilies() ) {
+              hcd.setMobEnabled(true);
+              hcd.setMobThreshold(4);
+            }
+          }
 
           // If we want to pre-split compute how many splits.
           if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
@@ -1616,6 +1623,19 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" loop       Program to Loop through Generator and Verify steps");
     System.err.println(" clean      Program to clean all left over detritus.");
     System.err.println(" search     Search for missing keys.");
+    System.err.println("");
+    System.err.println("General options:");
+    System.err.println(" -D"+ TABLE_NAME_KEY+ "=<tableName>");
+    System.err.println("    Run using the <tableName> as the tablename.  Defaults to "
+        + DEFAULT_TABLE_NAME);
+    System.err.println(" -D"+ HBaseTestingUtility.REGIONS_PER_SERVER_KEY+ "=<# regions>");
+    System.err.println("    Create table with presplit regions per server.  Defaults to "
+        + HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+
+    System.err.println(" -DuseMob=<true|false>");
+    System.err.println("    Create table so that the mob read/write path is forced.  " +
+        "Defaults to false");
+
     System.err.flush();
   }
 
