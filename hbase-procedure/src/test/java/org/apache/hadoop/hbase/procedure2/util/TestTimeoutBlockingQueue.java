@@ -22,23 +22,24 @@ package org.apache.hadoop.hbase.procedure2.util;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Rule;
-import org.junit.rules.TestRule;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-@Category({MediumTests.class})
+@Category(SmallTests.class)
 public class TestTimeoutBlockingQueue {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-     withLookingForStuckThread(true).build();
+  private static final Log LOG = LogFactory.getLog(TestTimeoutBlockingQueue.class);
+
   static class TestObject {
     private long timeout;
     private int seqId;

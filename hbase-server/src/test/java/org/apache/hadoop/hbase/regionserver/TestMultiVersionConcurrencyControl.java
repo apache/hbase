@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
+import junit.framework.TestCase;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
+
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * This is a hammer test that verifies MultiVersionConcurrencyControl in a
  * multiple writer single reader scenario.
  */
-@Category({MediumTests.class})
-public class TestMultiVersionConcurrencyControl {
+@Category(SmallTests.class)
+public class TestMultiVersionConcurrencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;
     final MultiVersionConcurrencyControl mvcc;
@@ -46,6 +46,7 @@ public class TestMultiVersionConcurrencyControl {
     public boolean failed = false;
 
     public void run() {
+      AtomicLong startPoint = new AtomicLong();
       while (!finished.get()) {
         MultiVersionConcurrencyControl.WriteEntry e =
             mvcc.begin();
@@ -123,9 +124,9 @@ public class TestMultiVersionConcurrencyControl {
     }
 
     // check failure.
-    Assert.assertFalse(readerFailed.get());
+    assertFalse(readerFailed.get());
     for (int i = 0; i < n; ++i) {
-      Assert.assertTrue(statuses[i].get());
+      assertTrue(statuses[i].get());
     }
   }
 }
