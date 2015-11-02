@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
@@ -43,7 +42,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -67,8 +66,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Category(MediumTests.class)
 public class TestAsyncProcess {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
   private final static Log LOG = LogFactory.getLog(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
@@ -386,6 +383,9 @@ public class TestAsyncProcess {
     }
 
   }
+
+  @Rule
+  public Timeout timeout = Timeout.millis(10000); // 10 seconds max per method tested
 
   @Test
   public void testSubmit() throws Exception {

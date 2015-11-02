@@ -19,8 +19,9 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.testclassification.MetricsTests;
+import org.apache.hadoop.hbase.master.MetricsMasterSource;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -34,5 +35,6 @@ public class TestMetricsMasterSourceFactory {
   public void testGetInstanceNoHadoopCompat() throws Exception {
     //This should throw an exception because there is no compat lib on the class path.
     CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class);
+
   }
 }
