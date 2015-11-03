@@ -836,7 +836,7 @@ checkLineLengths () {
 zombieCount() {
   # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can
   # be identified as hbase in a process listing.
-  echo `jps -v | grep surefirebooter | grep '-Dhbase.test' | wc -l`
+  echo `jps -v | grep surefirebooter | grep -e '-Dhbase.test' | wc -l`
 }
 
 ###############################################################################
@@ -872,8 +872,9 @@ runTests () {
     {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
     BAD=0
   fi
-  # NOTE!!!! The below code has been copied and pasted up into jenkins as an after-task
-  # for trunk builds. Make sure to update it too if you change the below.
+  # NOTE!!!! The below code has been copied and pasted up into jenkins as an post-build task.
+  # Make sure to update it too if you change the below (Or extract below into script to checkout
+  # to run post-build)
   ZOMBIE_TESTS_COUNT=`zombieCount`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     # It seems sometimes the tests are not dying immediately. Let's give them 30s
@@ -882,16 +883,14 @@ runTests () {
     ZOMBIE_TESTS_COUNT=`zombieCount`
     if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
       echo "There appear to be $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
-      echo "************ zombies jps listing"
-      jps -v | grep surefirebooter | grep '-Dhbase.test'
+      jps -v | grep surefirebooter | grep -e '-Dhbase.test'
       echo "************ BEGIN zombies jstack extract"
       # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can be identified as hbase in a process listing.
-      ZB_STACK=`jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
-      jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack
+      ZB_STACK=`jps -v | grep surefirebooter | grep -e '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
       echo "************ END  zombies jstack extract"
       JIRA_COMMENT="$JIRA_COMMENT
 
-     {color:red}-1 core zombie tests{color}.  There are possible ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
+      {color:red}-1 core zombie tests{color}.  There are possible ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
       BAD=1
     else
       echo "We're ok: there is no zombie test, but some tests took some time to stop"
