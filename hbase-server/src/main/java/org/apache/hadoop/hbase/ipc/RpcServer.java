@@ -162,6 +162,12 @@ public class RpcServer implements RpcServerInterface {
   public static final byte CURRENT_VERSION = 0;
 
   /**
+   * Whether we allow a fallback to SIMPLE auth for insecure clients when security is enabled.
+   */
+  public static final String FALLBACK_TO_INSECURE_CLIENT_AUTH =
+          "hbase.ipc.server.fallback-to-simple-auth-allowed";
+
+  /**
    * How many calls/handler are allowed in the queue.
    */
   static final int DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER = 10;
@@ -271,6 +277,7 @@ public class RpcServer implements RpcServerInterface {
 
   private final BoundedByteBufferPool reservoir;
 
+  private boolean allowFallbackToSimpleAuth;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -1230,6 +1237,9 @@ public class RpcServer implements RpcServerInterface {
     private final Call saslCall =
       new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
 
+    // was authentication allowed with a fallback to simple auth
+    private boolean authenticatedWithFallback;
+
     public UserGroupInformation attemptingUser = null; // user name before auth
 
     public Connection(SocketChannel channel, long lastContact) {
@@ -1302,19 +1312,21 @@ public class RpcServer implements RpcServerInterface {
 
     private UserGroupInformation getAuthorizedUgi(String authorizedId)
         throws IOException {
+      UserGroupInformation authorizedUgi;
       if (authMethod == AuthMethod.DIGEST) {
         TokenIdentifier tokenId = HBaseSaslRpcServer.getIdentifier(authorizedId,
             secretManager);
-        UserGroupInformation ugi = tokenId.getUser();
-        if (ugi == null) {
+        authorizedUgi = tokenId.getUser();
+        if (authorizedUgi == null) {
           throw new AccessDeniedException(
               "Can't retrieve username from tokenIdentifier.");
         }
-        ugi.addTokenIdentifier(tokenId);
-        return ugi;
+        authorizedUgi.addTokenIdentifier(tokenId);
       } else {
-        return UserGroupInformation.createRemoteUser(authorizedId);
+        authorizedUgi = UserGroupInformation.createRemoteUser(authorizedId);
       }
+      authorizedUgi.setAuthenticationMethod(authMethod.authenticationMethod.getAuthMethod());
+      return authorizedUgi;
     }
 
     private void saslReadAndProcess(byte[] saslToken) throws IOException,
@@ -1514,10 +1526,15 @@ public class RpcServer implements RpcServerInterface {
             return doBadPreambleHandling(msg, new BadAuthException(msg));
           }
           if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessDeniedException ae = new AccessDeniedException("Authentication is required");
-            setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-            responder.doRespond(authFailedCall);
-            throw ae;
+            if (allowFallbackToSimpleAuth) {
+              metrics.authenticationFallback();
+              authenticatedWithFallback = true;
+            } else {
+              AccessDeniedException ae = new AccessDeniedException("Authentication is required");
+              setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
+              responder.doRespond(authFailedCall);
+              throw ae;
+            }
           }
           if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
             doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
@@ -1617,6 +1634,12 @@ public class RpcServer implements RpcServerInterface {
         if (user != null) {
           user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
         }
+        // audit logging for SASL authenticated users happens in saslReadAndProcess()
+        if (authenticatedWithFallback) {
+          LOG.warn("Allowed fallback to SIMPLE auth for " + user
+              + " connecting from " + getHostAddress());
+        }
+        AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod.authenticationMethod);
@@ -1979,6 +2002,18 @@ public class RpcServer implements RpcServerInterface {
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);
     }
+    this.allowFallbackToSimpleAuth = conf.getBoolean(FALLBACK_TO_INSECURE_CLIENT_AUTH, false);
+    if (isSecurityEnabled && allowFallbackToSimpleAuth) {
+      LOG.warn("********* WARNING! *********");
+      LOG.warn("This server is configured to allow connections from INSECURE clients");
+      LOG.warn("(" + FALLBACK_TO_INSECURE_CLIENT_AUTH + " = true).");
+      LOG.warn("While this option is enabled, client identities cannot be secured, and user");
+      LOG.warn("impersonation is possible!");
+      LOG.warn("For secure operation, please disable SIMPLE authentication as soon as possible,");
+      LOG.warn("by setting " + FALLBACK_TO_INSECURE_CLIENT_AUTH + " = false in hbase-site.xml");
+      LOG.warn("****************************");
+    }
+
     this.scheduler = scheduler;
     this.scheduler.init(new RpcSchedulerContext(this));
   }
