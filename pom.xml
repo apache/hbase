@@ -2754,6 +2754,9 @@
           <javadocDir>${project.reporting.outputDirectory}/devapidocs</javadocDir>
           <testJavadocDir>${project.reporting.outputDirectory}/testdevapidocs</testJavadocDir>
           <destDir>${project.reporting.outputDirectory}/xref</destDir>
+          <excludes>
+            <exclude>**/generated/*</exclude>
+          </excludes>
         </configuration>
       </plugin>
 
@@ -2767,7 +2770,6 @@
             <id>devapi</id>
             <reports>
               <report>aggregate</report>
-              <report>test-aggregate</report>
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
@@ -2778,7 +2780,8 @@
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>
@@ -2814,13 +2817,14 @@
             <configuration>
               <destDir>testdevapidocs</destDir>
               <name>Developer API</name>
-              <description>The full HBase API, including private and unstable APIs</description>
+              <description>The full HBase API test code, including private and unstable APIs</description>
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>
@@ -2869,7 +2873,7 @@
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
               <excludePackageNames>
-                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
@@ -2877,11 +2881,8 @@
                 <!-- include ONLY dependencies I control -->
                 <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
               </dependencySourceIncludes>
-              <outputDirectory>${project.reporting.outputDirectory}/devapidocs</outputDirectory>
-              <name>Developer API</name>
-              <description>The full HBase API, including private and unstable APIs</description>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
-              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>
@@ -2909,6 +2910,7 @@
               <inherited>false</inherited>
             </configuration>
           </reportSet>
+          <!-- User Test API -->
           <reportSet>
             <id>testuserapi</id>
             <reports>
@@ -2928,7 +2930,7 @@
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
               <excludePackageNames>
-                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
@@ -2936,11 +2938,8 @@
                 <!-- include ONLY dependencies I control -->
                 <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
               </dependencySourceIncludes>
-              <outputDirectory>${project.reporting.outputDirectory}/devapidocs</outputDirectory>
-              <name>Developer API</name>
-              <description>The full HBase API, including private and unstable APIs</description>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
-              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>

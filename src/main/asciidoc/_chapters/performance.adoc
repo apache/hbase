@@ -196,7 +196,8 @@ tableDesc.addFamily(cfDesc);
 ----
 ====
 
-See the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
+See the API documentation for
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
 
 [[perf.rs.memstore.size]]
 === `hbase.regionserver.global.memstore.size`

@@ -282,7 +282,7 @@ under the License.
     use HBase a map-reduce data source to overcome traditional query speed limits
     in MySQL.</dd>
 
-  <dt><a href=">http://www.tokenizer.org">Shopping Engine at Tokenizer</a></dt>
+  <dt><a href="http://www.tokenizer.org">Shopping Engine at Tokenizer</a></dt>
   <dd>Shopping Engine at Tokenizer is a web crawler; it uses HBase to store URLs
     and Outlinks (AnchorText + LinkedURL): more than a billion. It was initially
     designed as Nutch-Hadoop extension, then (due to very specific 'shopping'

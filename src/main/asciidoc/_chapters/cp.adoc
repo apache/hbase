@@ -515,8 +515,7 @@ To implement this functionality we will take the help of Observer Coprocessor.
 Following are the implementation steps:
 
 . Write a class that extends the
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver]
 class.
 
 . Override the 'preGetOp()' method (Note that 'preGet()' method is now deprecated). The reason for

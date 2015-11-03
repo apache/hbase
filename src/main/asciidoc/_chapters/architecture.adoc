@@ -138,7 +138,10 @@ A region with an empty start key is the first region in a table.
 If a region has both an empty start and an empty end key, it is the only region in the table
 ====
 
-In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29[Writables] utility.
+In the (hopefully unlikely) event that programmatic processing of catalog metadata
+is required, see the
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29[Writables]
+utility.
 
 [[arch.catalog.startup]]
 === Startup Sequencing
@@ -235,11 +238,11 @@ Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/C
 [[client.writebuffer]]
 === WriteBuffer and Batch Methods
 
-In HBase 1.0 and later, link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
+In HBase 1.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
 
 Before a `Table` or `HTable` instance is discarded, invoke either `close()` or `flushCommits()`, so `Put`s will not be lost.
 
-For additional information on write durability, review the link:../acid-semantics.html[ACID semantics] page.
+For additional information on write durability, review the link:/acid-semantics.html[ACID semantics] page.
 
 For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch%28java.util.List%29[batch] methods on Table.
 
@@ -759,7 +762,7 @@ When we go to look for a cached block, we look first in L1 and if none found, th
 Let us call this deploy format, _Raw L1+L2_.
 
 Other BucketCache configs include: specifying a location to persist cache to across restarts, how many threads to use writing the cache, etc.
-See the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig.html] class for configuration options and descriptions.
+See the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig.html] class for configuration options and descriptions.
 
 
 
@@ -1368,8 +1371,10 @@ The RegionServer splits a region, offlines the split region and then adds the da
 See <<disable.splitting>> for how to manually manage splits (and for why you might do this).
 
 ==== Custom Split Policies
-You can override the default split policy using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+). Typically a custom split policy should extend
-HBase's default split policy: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
+You can override the default split policy using a custom
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+).
+Typically a custom split policy should extend HBase's default split policy:
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
 
 The policy can set globally through the HBase configuration or on a per-table
 basis.
@@ -1388,7 +1393,7 @@ basis.
 HTableDescriptor tableDesc = new HTableDescriptor("test");
 tableDesc.setValue(HTableDescriptor.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName());
 tableDesc.addFamily(new HColumnDescriptor(Bytes.toBytes("cf1")));
-admin.createTable(tableDesc);              
+admin.createTable(tableDesc);
 ----
 
 [source]
@@ -1398,7 +1403,10 @@ hbase> create 'test', {METHOD => 'table_att', CONFIG => {'SPLIT_POLICY' => 'org.
 {NAME => 'cf1'}
 ----
 
-The default split policy can be overwritten using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy(HBase 0.94+)]. Typically a custom split policy should extend HBase's default split policy: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
+The default split policy can be overwritten using a custom
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html
+[RegionSplitPolicy(HBase 0.94+)]. Typically a custom split policy should extend HBase's default split policy:
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
 
 The policy can be set globally through the HBaseConfiguration used or on a per table basis:
 [source,java]
@@ -1445,9 +1453,15 @@ Using a Custom Algorithm::
   The RegionSplitter tool is provided with HBase, and uses a _SplitAlgorithm_ to determine split points for you.
   As parameters, you give it the algorithm, desired number of regions, and column families.
   It includes two split algorithms.
-  The first is the `link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html[HexStringSplit]` algorithm, which assumes the row keys are hexadecimal strings.
-  The second, `link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html[UniformSplit]`, assumes the row keys are random byte arrays.
-  You will probably need to develop your own `link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.SplitAlgorithm.html[SplitAlgorithm]`, using the provided ones as models.
+  The first is the
+  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html[HexStringSplit]`
+  algorithm, which assumes the row keys are hexadecimal strings.
+  The second,
+  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html[UniformSplit]`,
+  assumes the row keys are random byte arrays.
+  You will probably need to develop your own
+  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.SplitAlgorithm.html[SplitAlgorithm]`,
+  using the provided ones as models.
 
 === Online Region Merges
 

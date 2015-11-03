@@ -552,7 +552,7 @@ hash-joins). So which is the best approach? It depends on what you are trying to
 
 == ACID
 
-See link:http://hbase.apache.org/acid-semantics.html[ACID Semantics].
+See link:/acid-semantics.html[ACID Semantics].
 Lars Hofhansl has also written a note on link:http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html[ACID in HBase].
 
 ifdef::backend-docbook[]
