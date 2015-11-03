@@ -1100,6 +1100,7 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.5</jruby.version>
     <junit.version>4.11</junit.version>
+    <hamcrest.version>1.3</hamcrest.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
@@ -2606,76 +2607,213 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
 
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.6.1</version>
-        <configuration>
-          <docfilessubdirs>true</docfilessubdirs>
-        </configuration>
+        <version>2.10.3</version>
         <reportSets>
+          <!-- Dev API -->
           <reportSet>
-            <id>default</id>
+            <id>devapi</id>
             <reports>
-              <report>javadoc</report>
+              <report>aggregate</report>
+              <report>test-aggregate</report>
             </reports>
+            <configuration>
+              <destDir>devapidocs</destDir>
+              <name>Developer API</name>
+              <description>The full HBase API, including private and unstable APIs</description>
+              <sourceFileExcludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/protobuf/*</exclude>
+                <exclude>**/*.scala</exclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
+              <quiet>true</quiet>
+              <linksource>true</linksource>
+              <sourcetab>2</sourcetab>
+              <validateLinks>true</validateLinks>
+              <fixClassComment>true</fixClassComment>
+              <fixFieldComment>true</fixFieldComment>
+              <fixMethodComment>true</fixMethodComment>
+              <fixTags>all</fixTags>
+              <notimestamp>true</notimestamp>
+              <!-- Pass some options straight to the javadoc executable since it is easier -->
+              <additionalJOption>-J-Xmx2G</additionalJOption>
+              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
+              <additionalDependencies>
+                <additionalDependency>
+                  <groupId>org.mockito</groupId>
+                  <artifactId>mockito-all</artifactId>
+                  <version>${mockito-all.version}</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.hamcrest</groupId>
+                  <artifactId>hamcrest-core</artifactId>
+                  <version>${hamcrest.version}</version>
+                </additionalDependency>
+              </additionalDependencies>
+              <inherited>false</inherited>
+            </configuration>
+          </reportSet>
+          <reportSet>
+            <id>testdevapi</id>
+            <reports>
+              <report>test-aggregate</report>
+            </reports>
+            <configuration>
+              <destDir>testdevapidocs</destDir>
+              <name>Developer API</name>
+              <description>The full HBase API, including private and unstable APIs</description>
+              <sourceFileExcludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/protobuf/*</exclude>
+                <exclude>**/*.scala</exclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
+              <quiet>true</quiet>
+              <linksource>true</linksource>
+              <sourcetab>2</sourcetab>
+              <validateLinks>true</validateLinks>
+              <fixClassComment>true</fixClassComment>
+              <fixFieldComment>true</fixFieldComment>
+              <fixMethodComment>true</fixMethodComment>
+              <fixTags>all</fixTags>
+              <notimestamp>true</notimestamp>
+              <!-- Pass some options straight to the javadoc executable since it is easier -->
+              <additionalJOption>-J-Xmx2G</additionalJOption>
+              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
+              <additionalDependencies>
+                <additionalDependency>
+                  <groupId>org.mockito</groupId>
+                  <artifactId>mockito-all</artifactId>
+                  <version>${mockito-all.version}</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.hamcrest</groupId>
+                  <artifactId>hamcrest-core</artifactId>
+                  <version>${hamcrest.version}</version>
+                </additionalDependency>
+              </additionalDependencies>
+              <inherited>false</inherited>
+            </configuration>
+          </reportSet>
+
+          <!-- User API -->
+          <reportSet>
+            <id>userapi</id>
+            <reports>
+              <report>aggregate</report>
+            </reports>
+            <configuration>
+              <destDir>apidocs</destDir>
+              <name>User API</name>
+              <description>The HBase Application Programmer's API</description>
+              <excludePackageNames>
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+              </excludePackageNames>
+              <!-- switch on dependency-driven aggregation -->
+              <includeDependencySources>false</includeDependencySources>
+              <dependencySourceIncludes>
+                <!-- include ONLY dependencies I control -->
+                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
+                </dependencySourceIncludes>
+              <outputDirectory>${project.reporting.outputDirectory}/devapidocs</outputDirectory>
+              <name>Developer API</name>
+              <description>The full HBase API, including private and unstable APIs</description>
+              <sourceFilesExclude>**/generated/*</sourceFilesExclude>
+              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <quiet>true</quiet>
+              <linksource>true</linksource>
+              <sourcetab>2</sourcetab>
+              <validateLinks>true</validateLinks>
+              <fixClassComment>true</fixClassComment>
+              <fixFieldComment>true</fixFieldComment>
+              <fixMethodComment>true</fixMethodComment>
+              <fixTags>all</fixTags>
+              <notimestamp>true</notimestamp>
+              <!-- Pass some options straight to the javadoc executable since it is easier -->
+              <additionalJOption>-J-Xmx2G</additionalJOption>
+              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
+              <additionalDependencies>
+                <additionalDependency>
+                  <groupId>org.mockito</groupId>
+                  <artifactId>mockito-all</artifactId>
+                  <version>${mockito-all.version}</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.hamcrest</groupId>
+                  <artifactId>hamcrest-core</artifactId>
+                  <version>${hamcrest.version}</version>
+                </additionalDependency>
+              </additionalDependencies>
+              <inherited>false</inherited>
+            </configuration>
+          </reportSet>
+          <reportSet>
+            <id>testuserapi</id>
+            <reports>
+              <report>test-aggregate</report>
+            </reports>
+            <configuration>
+              <destDir>testapidocs</destDir>
+              <name>User API</name>
+              <description>The HBase Application Programmer's API</description>
+              <excludePackageNames>
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+              </excludePackageNames>
+              <!-- switch on dependency-driven aggregation -->
+              <includeDependencySources>false</includeDependencySources>
+              <dependencySourceIncludes>
+                <!-- include ONLY dependencies I control -->
+                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
+              </dependencySourceIncludes>
+              <outputDirectory>${project.reporting.outputDirectory}/devapidocs</outputDirectory>
+              <name>Developer API</name>
+              <description>The full HBase API, including private and unstable APIs</description>
+              <sourceFilesExclude>**/generated/*</sourceFilesExclude>
+              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <quiet>true</quiet>
+              <linksource>true</linksource>
+              <sourcetab>2</sourcetab>
+              <validateLinks>true</validateLinks>
+              <fixClassComment>true</fixClassComment>
+              <fixFieldComment>true</fixFieldComment>
+              <fixMethodComment>true</fixMethodComment>
+              <fixTags>all</fixTags>
+              <notimestamp>true</notimestamp>
+              <!-- Pass some options straight to the javadoc executable since it is easier -->
+              <additionalJOption>-J-Xmx2G</additionalJOption>
+              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
+              <additionalDependencies>
+                <additionalDependency>
+                  <groupId>org.mockito</groupId>
+                  <artifactId>mockito-all</artifactId>
+                  <version>${mockito-all.version}</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.hamcrest</groupId>
+                  <artifactId>hamcrest-core</artifactId>
+                  <version>${hamcrest.version}</version>
+                </additionalDependency>
+              </additionalDependencies>
+              <inherited>false</inherited>
+            </configuration>
           </reportSet>
         </reportSets>
-        <!--
-          This is probably not needed, given the smallness of the HBase source code, but left here in case
-          <minmemory>128m</minmemory>
-          <maxmemory>1024m</maxmemory>
-        -->
       </plugin>
-      <!--Disabled for now.
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.3</version>
-      </plugin>
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
-      <!-- Disabled for now
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>jdepend-maven-plugin</artifactId>
-        <version>2.0-beta-2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-changes-plugin</artifactId>
         <version>2.3</version>
         <configuration>
-          <issueLinkTemplate>%URL%/browse/%ISSUE%</issueLinkTemplate>
+          <aggregate>true</aggregate>
+          <test-aggregate>true</test-aggregate>
+          <linkJavadoc>true</linkJavadoc>
+          <javadocDir>${project.reporting.outputDirectory}/devapidocs</javadocDir>
+          <testJavadocDir>${project.reporting.outputDirectory}/testdevapidocs</testJavadocDir>
+          <destDir>${project.reporting.outputDirectory}/xref</destDir>
         </configuration>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>changes-report</report>
-            </reports>
-          </reportSet>
-        </reportSets>
       </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <version>2.6.3</version>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>taglist-maven-plugin</artifactId>
-        <version>2.4</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.5</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
-      -->
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
