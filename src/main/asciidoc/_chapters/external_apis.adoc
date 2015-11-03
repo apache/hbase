@@ -636,17 +636,6 @@ To use Scala with HBase, your CLASSPATH must include HBase's classpath as well a
 the Scala JARs required by your code. First, use the following command on a server
 running the HBase RegionServer process, to get HBase's classpath.
 
-[[jython]]
-== Jython
-
-
-=== Setting the Classpath
-
-To use Jython with HBase, your CLASSPATH must include HBase's classpath as well as
-`jython.jar`. First, use the following command on a server running the HBase RegionServer
-process, to get HBase's classpath.
->>>>>>> HBASE-14638 Move Jython info from the Wiki to the Ref Guide
-
 [source, bash]
 ----
 $ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
@@ -655,7 +644,6 @@ $ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'pr
 ----
 
 Set the `$CLASSPATH` environment variable to include the path you found in the previous
-<<<<<<< 12a718d0ca507c911f589d2926cfc408e4155b0e
 step, plus the path of `scala-library.jar` and each additional Scala-related JAR needed for
 your project.
 
@@ -712,8 +700,27 @@ val result=table.get(theget)
 val value=result.value()
 println(Bytes.toString(value))
 ----
-=======
-step, plus the path to `jython.jar`.
+
+[[jython]]
+== Jython
+
+
+=== Setting the Classpath
+
+To use Jython with HBase, your CLASSPATH must include HBase's classpath as well as
+the Jython JARs required by your code. First, use the following command on a server
+running the HBase RegionServer process, to get HBase's classpath.
+
+[source, bash]
+----
+$ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
+
+/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64
+----
+
+Set the `$CLASSPATH` environment variable to include the path you found in the previous
+step, plus the path to `jython.jar` and each additional Jython-related JAR needed for
+your project.
 
 [source, bash]
 ----
