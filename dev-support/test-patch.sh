@@ -884,7 +884,6 @@ runTests () {
     if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
       echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
       echo "************ zombies jps listing"
-      jps -v
       jps -v | grep surefirebooter | grep '-Dhbase.test'
       echo "************ BEGIN zombies jstack extract"
       # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can
@@ -896,10 +895,6 @@ runTests () {
 
      {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
       BAD=1
-      # Killing these zombies
-      echo 'Killing ZOMBIES!!!'
-      jps -v
-      jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs kill -9
     else
       echo "We're ok: there is no zombie test, but some tests took some time to stop"
     fi
