@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 /**
  * A Callable<T> that will be retried.  If {@link #call(int)} invocation throws exceptions,
  * we will call {@link #throwable(Throwable, boolean)} with whatever the exception was.
- * @param <T>
+ * @param <T> result class from executing <tt>this</tt>
  */
 @InterfaceAudience.Private
 public interface RetryingCallable<T> {
