@@ -873,27 +873,25 @@ runTests () {
     BAD=0
   fi
   # NOTE!!!! The below code has been copied and pasted up into jenkins as an after-task
-  # for trunk builds. Make sure to update it too if you change the below (or refactor)
-  # all this so can be called by test-patch and from jenkins as a script.
+  # for trunk builds. Make sure to update it too if you change the below.
   ZOMBIE_TESTS_COUNT=`zombieCount`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-    #It seems sometimes the tests are not dying immediately. Let's give them 30s
+    # It seems sometimes the tests are not dying immediately. Let's give them 30s
     echo "Suspicious java process found - waiting 30s to see if there are just slow to stop"
     sleep 30
     ZOMBIE_TESTS_COUNT=`zombieCount`
     if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-      echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
+      echo "There appear to be $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
       echo "************ zombies jps listing"
       jps -v | grep surefirebooter | grep '-Dhbase.test'
       echo "************ BEGIN zombies jstack extract"
-      # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can
-      # be identified as hbase in a process listing.
+      # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can be identified as hbase in a process listing.
       ZB_STACK=`jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
       jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack
       echo "************ END  zombies jstack extract"
       JIRA_COMMENT="$JIRA_COMMENT
 
-     {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
+     {color:red}-1 core zombie tests{color}.  There are possible ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
       BAD=1
     else
       echo "We're ok: there is no zombie test, but some tests took some time to stop"
