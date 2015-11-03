@@ -1325,7 +1325,7 @@ public class RpcServer implements RpcServerInterface {
       } else {
         authorizedUgi = UserGroupInformation.createRemoteUser(authorizedId);
       }
-      authorizedUgi.setAuthenticationMethod(authMethod.authenticationMethod.getAuthMethod());
+      authorizedUgi.setAuthenticationMethod(authMethod.authenticationMethod);
       return authorizedUgi;
     }
 
