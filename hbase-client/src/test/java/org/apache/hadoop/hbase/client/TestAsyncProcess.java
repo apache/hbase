@@ -41,7 +41,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -824,5 +827,42 @@ public class TestAsyncProcess {
     p.add(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
 
     return p;
+  }
+
+  static class MyThreadPoolExecutor extends ThreadPoolExecutor {
+    public MyThreadPoolExecutor(int coreThreads, int maxThreads, long keepAliveTime,
+        TimeUnit timeunit, BlockingQueue<Runnable> blockingqueue) {
+      super(coreThreads, maxThreads, keepAliveTime, timeunit, blockingqueue);
+    }
+
+    @Override
+    public Future submit(Runnable runnable) {
+      throw new OutOfMemoryError("OutOfMemory error thrown by means");
+    }
+  }
+
+  static class AsyncProcessForThrowableCheck extends AsyncProcess {
+    public AsyncProcessForThrowableCheck(HConnection hc, Configuration conf, ExecutorService pool) {
+      super(hc, DUMMY_TABLE, pool, null, conf, new RpcRetryingCallerFactory(conf),
+          new RpcControllerFactory(conf));
+    }
+  }
+
+  @Test
+  public void testUncheckedException() throws Exception {
+    // Test the case pool.submit throws unchecked exception
+    HConnection hc = createHConnection();
+    MyThreadPoolExecutor myPool =
+        new MyThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>(200));
+    Configuration myConf = new Configuration(conf);
+    myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    AsyncProcess ap = new AsyncProcessForThrowableCheck(hc, myConf, myPool);
+
+    List<Put> puts = new ArrayList<Put>();
+    puts.add(createPut(1, true));
+
+    ap.submit(puts, false, null);
+    Assert.assertTrue(puts.isEmpty());
   }
 }
