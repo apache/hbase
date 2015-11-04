@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,7 +39,7 @@ import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,12 +47,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.junit.Assert.*;
+import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestRpcClientLeaks {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
 
   public static class MyRpcClientImpl extends RpcClientImpl {
     public static List<Socket> savedSockets = Lists.newArrayList();
@@ -114,4 +119,3 @@ public class TestRpcClientLeaks {
     }
   }
 }
-

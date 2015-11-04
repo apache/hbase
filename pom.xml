@@ -564,6 +564,7 @@
           </dependencies>
           <!-- Generic testing configuration for all packages -->
           <configuration>
+            <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
@@ -2282,27 +2283,7 @@
          See as well the properties of the project for the values
          when no profile is active.     -->
     <profile>
-      <!-- Use it to launch the tests without parallelisation -->
-      <id>nonParallelTests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-      </properties>
-    </profile>
-    <profile>
-      <!-- Use it to launch the tests in parallel in the same JVM  -->
-      <id>parallelTests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
-      </properties>
-    </profile>
-    <profile>
-      <!-- Use it to launch the tests in the same JVM  -->
+      <!-- Use it to launch all tests in the same JVM  -->
       <id>singleJVMTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
