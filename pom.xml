@@ -909,7 +909,7 @@
             <goals>
               <goal>transform</goal>
             </goals>
-            <phase>pre-site</phase>
+            <phase>site</phase>
           </execution>
         </executions>
         <configuration>
@@ -963,54 +963,6 @@
         <configuration>
           <configLocation>hbase/checkstyle.xml</configLocation>
           <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <!--$NO-MVN-MAN-VER$ -->
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <id>copy-htaccess</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>post-site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
-                  <includes>
-                    <include>.htaccess</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <!-- needed to make the redirect above work -->
-          <execution>
-            <id>copy-empty-book-dir</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>post-site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
-                  <includes>
-                    <include>book/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <escapeString>\</escapeString>
         </configuration>
       </plugin>
       <plugin>
@@ -1089,6 +1041,54 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <!--$NO-MVN-MAN-VER$ -->
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>copy-htaccess</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <includes>
+                    <include>.htaccess</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- needed to make the redirect above work -->
+          <execution>
+            <id>copy-empty-book-dir</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <includes>
+                    <include>book/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <escapeString>\</escapeString>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>${maven.antrun.version}</version>
         <inherited>false</inherited>
@@ -1096,7 +1096,7 @@
         <executions>
           <execution>
             <id>rename-pdf</id>
-            <phase>post-site</phase>
+            <phase>site</phase>
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf" />
