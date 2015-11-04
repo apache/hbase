@@ -49,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
  *
  * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an
  * associated row.
- * @deprecated use WALKey
+ * @deprecated use WALKey.  as of 2.0.  Remove in 3.0
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 @Deprecated

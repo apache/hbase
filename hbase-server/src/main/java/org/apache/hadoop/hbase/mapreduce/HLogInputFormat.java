@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 /**
  * Simple {@link InputFormat} for {@link org.apache.hadoop.hbase.wal.WAL} 
  * files.
- * @deprecated use {@link WALInputFormat}
+ * @deprecated use {@link WALInputFormat}.  Remove in hadoop 3.0
  */
 @Deprecated
 @InterfaceAudience.Public

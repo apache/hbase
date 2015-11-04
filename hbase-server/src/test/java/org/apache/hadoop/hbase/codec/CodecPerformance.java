@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CodecPerformance {
-  /** @deprecated LOG variable would be made private. */
+  /** @deprecated LOG variable would be made private. since 1.2, remove in 3.0 */
   @Deprecated
   public static final Log LOG = LogFactory.getLog(CodecPerformance.class);
 

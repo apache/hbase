@@ -32,7 +32,7 @@ import org.apache.hadoop.mapreduce.Reducer;
  * Reads in all KeyValues from passed Iterator, sorts them, then emits
  * KeyValues in sorted order.  If lots of columns per row, it will use lots of
  * memory sorting.
- * @see HFileOutputFormat
+ * @see HFileOutputFormat2
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

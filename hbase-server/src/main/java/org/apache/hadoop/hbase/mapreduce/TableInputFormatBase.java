@@ -344,11 +344,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
   }
 
-  /**
-   * @deprecated mistakenly made public in 0.98.7. scope will change to package-private
-   */
-  @Deprecated
-  public String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
+  String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
       String ipAddressString = null;
@@ -558,16 +554,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * Allows subclasses to get the {@link Table}.
-   *
-   * @deprecated use {@link #getTable()}
-   */
-  @Deprecated
-  protected HTable getHTable() {
-    return (HTable) this.getTable();
-  }
-
-  /**
    * Allows subclasses to get the {@link RegionLocator}.
    */
   protected RegionLocator getRegionLocator() {
@@ -595,24 +581,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       throw new IllegalStateException(NOT_INITIALIZED);
     }
     return admin;
-  }
-
-  /**
-   * Allows subclasses to set the {@link HTable}.
-   *
-   * Will attempt to reuse the underlying Connection for our own needs, including
-   * retreiving an Admin interface to the HBase cluster.
-   *
-   * @param table  The table to get the data from.
-   * @throws IOException 
-   * @deprecated Use {@link #initializeTable(Connection, TableName)} instead.
-   */
-  @Deprecated
-  protected void setHTable(HTable table) throws IOException {
-    this.table = table;
-    this.connection = table.getConnection();
-    this.regionLocator = table.getRegionLocator();
-    this.admin = this.connection.getAdmin();
   }
 
   /**

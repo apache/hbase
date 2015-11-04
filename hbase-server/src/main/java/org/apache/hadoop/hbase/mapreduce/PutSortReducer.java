@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  * Reads in all Puts from passed Iterator, sorts them, then emits
  * Puts in sorted order.  If lots of columns per row, it will use lots of
  * memory sorting.
- * @see HFileOutputFormat
+ * @see HFileOutputFormat2
  * @see KeyValueSortReducer
  */
 @InterfaceAudience.Public

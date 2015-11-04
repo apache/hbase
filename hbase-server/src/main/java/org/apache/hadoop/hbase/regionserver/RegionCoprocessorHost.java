@@ -1432,7 +1432,7 @@ public class RegionCoprocessorHost
 
   /**
    * @return true if default behavior should be bypassed, false otherwise
-   * @deprecated use {@link #preWALRestore(HRegionInfo, WALKey, WALEdit)}
+   * @deprecated use {@link #preWALRestore(HRegionInfo, WALKey, WALEdit)}; as of 2.0, remove in 3.0
    */
   @Deprecated
   public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
@@ -1469,7 +1469,7 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * @deprecated use {@link #postWALRestore(HRegionInfo, WALKey, WALEdit)}
+   * @deprecated use {@link #postWALRestore(HRegionInfo, WALKey, WALEdit)}; as of 2.0, remove in 3.0
    */
   @Deprecated
   public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)

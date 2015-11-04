@@ -51,18 +51,6 @@ extends RecordReader<ImmutableBytesWritable, Result> {
     this.recordReaderImpl.restart(firstRow);
   }
 
-
-  /**
-   * Sets the HBase table.
-   *
-   * @param htable  The table to scan.
-   * @deprecated Use setTable() instead.
-   */
-  @Deprecated
-  public void setHTable(Table htable) {
-    this.setTable(htable);
-  }
-
   /**
    * @param table the {@link Table} to scan.
    */

@@ -44,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Emits Sorted KeyValues. Parse the passed text and creates KeyValues. Sorts them before emit.
- * @see HFileOutputFormat
+ * @see HFileOutputFormat2
  * @see KeyValueSortReducer
  * @see PutSortReducer
  */

@@ -128,7 +128,7 @@ public final class HTableWrapper implements Table {
   }
 
   /**
-   * @deprecated Use {@link #existsAll(java.util.List)}  instead.
+   * @deprecated Use {@link #existsAll(java.util.List)}  instead. since 2.0.  remove in 3.0
    */
   @Deprecated
   public Boolean[] exists(List<Get> gets) throws IOException {

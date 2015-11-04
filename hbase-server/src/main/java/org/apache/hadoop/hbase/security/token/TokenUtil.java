@@ -58,20 +58,6 @@ public class TokenUtil {
 
   /**
    * Obtain and return an authentication token for the current user.
-   * @param conf the configuration for connecting to the cluster
-   * @return the authentication token instance
-   * @deprecated Replaced by {@link #obtainToken(Connection)}
-   */
-  @Deprecated
-  public static Token<AuthenticationTokenIdentifier> obtainToken(
-      Configuration conf) throws IOException {
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      return obtainToken(connection);
-    }
-  }
-
-  /**
-   * Obtain and return an authentication token for the current user.
    * @param conn The HBase cluster connection
    * @return the authentication token instance
    */
@@ -123,28 +109,6 @@ public class TokenUtil {
   /**
    * Obtain an authentication token for the given user and add it to the
    * user's credentials.
-   * @param conf The configuration for connecting to the cluster
-   * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the authentication service fails
-   * @throws InterruptedException If executing as the given user is interrupted
-   * @deprecated Replaced by {@link #obtainAndCacheToken(Connection,User)}
-   */
-  @Deprecated
-  public static void obtainAndCacheToken(final Configuration conf,
-                                         UserGroupInformation user)
-      throws IOException, InterruptedException {
-    Connection conn = ConnectionFactory.createConnection(conf);
-    try {
-      UserProvider userProvider = UserProvider.instantiate(conf);
-      obtainAndCacheToken(conn, userProvider.create(user));
-    } finally {
-      conn.close();
-    }
-  }
-
-  /**
-   * Obtain an authentication token for the given user and add it to the
-   * user's credentials.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @throws IOException If making a remote call to the authentication service fails
@@ -173,29 +137,6 @@ public class TokenUtil {
     } catch (Exception e) {
       throw new UndeclaredThrowableException(e,
           "Unexpected exception obtaining token for user " + user.getName());
-    }
-  }
-
-  /**
-   * Obtain an authentication token on behalf of the given user and add it to
-   * the credentials for the given map reduce job.
-   * @param conf The configuration for connecting to the cluster
-   * @param user The user for whom to obtain the token
-   * @param job The job instance in which the token should be stored
-   * @throws IOException If making a remote call to the authentication service fails
-   * @throws InterruptedException If executing as the given user is interrupted
-   * @deprecated Replaced by {@link #obtainTokenForJob(Connection,User,Job)}
-   */
-  @Deprecated
-  public static void obtainTokenForJob(final Configuration conf,
-                                       UserGroupInformation user, Job job)
-      throws IOException, InterruptedException {
-    Connection conn = ConnectionFactory.createConnection(conf);
-    try {
-      UserProvider userProvider = UserProvider.instantiate(conf);
-      obtainTokenForJob(conn, userProvider.create(user), job);
-    } finally {
-      conn.close();
     }
   }
 
@@ -232,28 +173,6 @@ public class TokenUtil {
     } catch (Exception e) {
       throw new UndeclaredThrowableException(e,
           "Unexpected exception obtaining token for user " + user.getName());
-    }
-  }
-
-  /**
-   * Obtain an authentication token on behalf of the given user and add it to
-   * the credentials for the given map reduce job.
-   * @param user The user for whom to obtain the token
-   * @param job The job configuration in which the token should be stored
-   * @throws IOException If making a remote call to the authentication service fails
-   * @throws InterruptedException If executing as the given user is interrupted
-   * @deprecated Replaced by {@link #obtainTokenForJob(Connection,JobConf,User)}
-   */
-  @Deprecated
-  public static void obtainTokenForJob(final JobConf job,
-                                       UserGroupInformation user)
-      throws IOException, InterruptedException {
-    Connection conn = ConnectionFactory.createConnection(job);
-    try {
-      UserProvider userProvider = UserProvider.instantiate(job);
-      obtainTokenForJob(conn, job, userProvider.create(user));
-    } finally {
-      conn.close();
     }
   }
 

@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -250,15 +249,6 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * Allows subclasses to get the {@link HTable}.
-   * @deprecated use {@link #getTable()}
-   */
-  @Deprecated
-  protected HTable getHTable() {
-    return (HTable) getTable();
-  }
-
-  /**
    * Allows subclasses to get the {@link Table}.
    */
   protected Table getTable() {
@@ -266,17 +256,6 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       throw new IllegalStateException(NOT_INITIALIZED);
     }
     return this.table;
-  }
-
-  /**
-   * Allows subclasses to set the {@link HTable}.
-   *
-   * @param table to get the data from
-   * @deprecated use {@link #initializeTable(Connection,TableName)}
-   */
-  @Deprecated
-  protected void setHTable(HTable table) {
-    this.table = table;
   }
 
   /**

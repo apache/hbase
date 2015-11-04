@@ -78,7 +78,7 @@ public class TableInputFormat extends TableInputFormatBase implements
     }
 
     // connected to table?
-    if (getHTable() == null) {
+    if (getTable() == null) {
       throw new IOException("could not connect to table '" +
         tableNames[0].getName() + "'");
     }

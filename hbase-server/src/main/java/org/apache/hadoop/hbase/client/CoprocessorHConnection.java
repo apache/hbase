@@ -67,19 +67,6 @@ public class CoprocessorHConnection extends ConnectionImplementation {
   private final HRegionServer server;
 
   /**
-   * Legacy constructor
-   * @param delegate
-   * @param server
-   * @throws IOException if we cannot create the connection
-   * @deprecated delegate is not used
-   */
-  @Deprecated
-  public CoprocessorHConnection(ClusterConnection delegate, HRegionServer server)
-      throws IOException {
-    this(server);
-  }
-
-  /**
    * Constructor that uses server configuration
    * @param server
    * @throws IOException if we cannot create the connection

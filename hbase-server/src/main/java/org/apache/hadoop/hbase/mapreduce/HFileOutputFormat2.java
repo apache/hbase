@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -409,28 +408,6 @@ public class HFileOutputFormat2
     } finally {
       writer.close();
     }
-  }
-
-  /**
-   * Configure a MapReduce Job to perform an incremental load into the given
-   * table. This
-   * <ul>
-   *   <li>Inspects the table to configure a total order partitioner</li>
-   *   <li>Uploads the partitions file to the cluster and adds it to the DistributedCache</li>
-   *   <li>Sets the number of reduce tasks to match the current number of regions</li>
-   *   <li>Sets the output key/value class to match HFileOutputFormat2's requirements</li>
-   *   <li>Sets the reducer up to perform the appropriate sorting (either KeyValueSortReducer or
-   *     PutSortReducer)</li>
-   * </ul>
-   * The user should be sure to set the map output value class to either KeyValue or Put before
-   * running this function.
-   * 
-   * @deprecated Use {@link #configureIncrementalLoad(Job, Table, RegionLocator)} instead.
-   */
-  @Deprecated
-  public static void configureIncrementalLoad(Job job, HTable table)
-      throws IOException {
-    configureIncrementalLoad(job, table.getTableDescriptor(), table.getRegionLocator());
   }
 
   /**
