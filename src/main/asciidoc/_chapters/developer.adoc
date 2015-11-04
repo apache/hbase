@@ -419,12 +419,6 @@ Its not an error.
 It is link:http://jira.codehaus.org/browse/MSITE-286[officially
                         ugly] though.
 
-[[build.snappy]]
-==== Building in snappy compression support
-
-Pass `-Psnappy` to trigger the `hadoop-snappy` maven profile for building Google Snappy native libraries into HBase.
-See also <<snappy.compression.installation,snappy.compression.installation>>
-
 [[releasing]]
 == Releasing Apache HBase
 
