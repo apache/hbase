@@ -618,22 +618,6 @@
     </profile>
     <!-- Special builds -->
     <profile>
-      <id>hadoop-snappy</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>snappy</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-snappy</artifactId>
-          <version>${hadoop-snappy.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
       <id>native</id>
       <activation>
         <activeByDefault>false</activeByDefault>
