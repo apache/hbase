@@ -89,7 +89,7 @@ GIT is our repository of record for all but the Apache HBase website.
 We used to be on SVN.
 We migrated.
 See link:https://issues.apache.org/jira/browse/INFRA-7768[Migrate Apache HBase SVN Repos to Git].
-Updating hbase.apache.org still requires use of SVN (See <<hbase.org,hbase.org>>). See link:http://hbase.apache.org/source-repository.html[Source Code
+See link:http://hbase.apache.org/source-repository.html[Source Code
                 Management] page for contributor and committer links or seach for HBase on the link:http://git.apache.org/[Apache Git] page.
 
 == IDEs
@@ -570,7 +570,8 @@ Checkin the _CHANGES.txt_ and any version changes.
 . Update the documentation.
 +
 Update the documentation under _src/main/asciidoc_.
-This usually involves copying the latest from master and making version-particular adjustments to suit this release candidate version. 
+This usually involves copying the latest from master and making version-particular
+adjustments to suit this release candidate version.
 
 . Build the source tarball.
 +
@@ -616,7 +617,8 @@ $ mvn install -DskipTests site assembly:single -Prelease
 ----
 
 +
-Otherwise, the build complains that hbase modules are not in the maven repository when you try to do it at once, especially on fresh repository.
+Otherwise, the build complains that hbase modules are not in the maven repository
+when you try to do it at once, especially on fresh repository.
 It seems that you need the install goal in both steps.
 +
 Extract the generated tarball and check it out.
@@ -771,24 +773,7 @@ See <<appendix_contributing_to_documentation,appendix contributing to documentat
 [[hbase.org.site.publishing]]
 === Publishing link:http://hbase.apache.org[hbase.apache.org]
 
-As of link:https://issues.apache.org/jira/browse/INFRA-5680[INFRA-5680 Migrate apache hbase website], to publish the website, build it using Maven, and then deploy it over a checkout of _https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk_                and check in your changes.
-The script _dev-scripts/publish_hbase_website.sh_ is provided to automate this process and to be sure that stale files are removed from SVN.
-Review the script even if you decide to publish the website manually.
-Use the script as follows:
-
-----
-$ publish_hbase_website.sh -h
-Usage: publish_hbase_website.sh [-i | -a] [-g <dir>] [-s <dir>]
- -h          Show this message
- -i          Prompts the user for input
- -a          Does not prompt the user. Potentially dangerous.
- -g          The local location of the HBase git repository
- -s          The local location of the HBase svn checkout
- Either --interactive or --silent is required.
- Edit the script to set default Git and SVN directories.
-----
-
-NOTE: The SVN commit takes a long time.
+See <<website_publish>> for instructions on publishing the website and documentation.
 
 [[hbase.tests]]
 == Tests
