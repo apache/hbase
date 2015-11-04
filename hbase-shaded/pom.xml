@@ -294,12 +294,40 @@
                                         <pattern>org.apache.commons.el</pattern>
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.el</shadedPattern>
                                     </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.httpclient</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.httpclient</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.compress</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.compress</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.digester</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.digester</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.codec</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.codec</shadedPattern>
+                                    </relocation>
 
                                     <!-- top level net-->
                                     <relocation>
                                         <pattern>net.iharder</pattern>
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.net.iharder</shadedPattern>
                                     </relocation>
+
+                                    <!-- junit -->
+                                    <relocation>
+                                        <pattern>junit</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.junit</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.junit</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.junit</shadedPattern>
+                                    </relocation>
+
+
                                 </relocations>
                                 <transformers>
                                   <!-- Need to filter out some extraneous license files.
