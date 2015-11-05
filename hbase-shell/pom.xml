@@ -256,10 +256,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skipServerTests</id>
+      <id>skipShellTests</id>
       <activation>
         <property>
-          <name>skipServerTests</name>
+          <name>skipShellTests</name>
         </property>
       </activation>
       <properties>
