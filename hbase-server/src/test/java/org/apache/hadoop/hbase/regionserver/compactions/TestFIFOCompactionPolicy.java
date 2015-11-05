@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -151,7 +149,7 @@ public class TestFIFOCompactionPolicy {
     TEST_UTIL.startMiniCluster(1);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    String tableName = this.tableName.getNameAsString()+"-TTL";
+    TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-TTL");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -180,7 +178,7 @@ public class TestFIFOCompactionPolicy {
     TEST_UTIL.startMiniCluster(1);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    String tableName = this.tableName.getNameAsString()+"-MinVersion";
+    TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-MinVersion");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -211,7 +209,7 @@ public class TestFIFOCompactionPolicy {
     TEST_UTIL.startMiniCluster(1);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    String tableName = this.tableName.getNameAsString()+"-MinVersion";
+    TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-BlockingStoreFiles");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
