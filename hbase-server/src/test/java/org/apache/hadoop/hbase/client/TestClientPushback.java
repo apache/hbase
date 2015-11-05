@@ -43,6 +43,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -75,7 +76,7 @@ public class TestClientPushback {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeBytes);
     // ensure we block the flushes when we are double that flushsize
     conf.setLong(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, HConstants.DEFAULT_HREGION_MEMSTORE_BLOCK_MULTIPLIER);
-
+    conf.setBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     UTIL.startMiniCluster();
     UTIL.createTable(tableName, family);
   }
@@ -116,9 +117,8 @@ public class TestClientPushback {
     ServerStatistics serverStats = stats.getServerStatsForTesting(server);
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
     int load = regionStats.getMemstoreLoadPercent();
-    if (load < 11) {
-      assertEquals("Load on memstore too low", 11, load);
-    }
+    assertEquals("We did not find some load on the memstore", load,
+      regionStats.getMemstoreLoadPercent());
 
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
@@ -144,6 +144,21 @@ public class TestClientPushback {
     // produces a backoffTime of 151 milliseconds. This is long enough so the
     // wait and related checks below are reasonable. Revisit if the backoff
     // time reported by above debug logging has significantly deviated.
+    String name = server.getServerName() + "," + Bytes.toStringBinary(regionName);
+    MetricsConnection.RegionStats rsStats = connection.getConnectionMetrics().
+            serverStats.get(server).get(regionName);
+    assertEquals(name, rsStats.name);
+    assertEquals(rsStats.heapOccupancyHist.mean(),
+        (double)regionStats.getHeapOccupancyPercent(), 0.1 );
+    assertEquals(rsStats.memstoreLoadHist.mean(),
+        (double)regionStats.getMemstoreLoadPercent(), 0.1);
+
+    MetricsConnection.RunnerStats runnerStats = connection.getConnectionMetrics().runnerStats;
+
+    assertEquals(runnerStats.delayRunners.count(), 1);
+    assertEquals(runnerStats.normalRunners.count(), 1);
+    assertEquals("", runnerStats.delayIntevalHist.mean(), (double)backoffTime, 0.1);
+
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
     assertNotEquals("AsyncProcess did not submit the work time", endTime.get(), 0);
     assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
