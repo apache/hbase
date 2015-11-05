@@ -675,12 +675,13 @@ This example lists HBase tables, creates a new table, and adds a row to it.
 [source, scala]
 ----
 import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.{HBaseAdmin,HTable,Put,Get}
+import org.apache.hadoop.hbase.client.{Connection,ConnectionFactory,HBaseAdmin,HTable,Put,Get}
 import org.apache.hadoop.hbase.util.Bytes
 
 
 val conf = new HBaseConfiguration()
-val admin = new HBaseAdmin(conf)
+val connection = ConnectionFactory.createConnection(conf);
+val admin = connection.getAdmin();
 
 // list the tables
 val listtables=admin.listTables()

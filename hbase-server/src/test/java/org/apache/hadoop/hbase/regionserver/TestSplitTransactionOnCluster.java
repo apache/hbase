@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -120,7 +119,7 @@ import com.google.protobuf.ServiceException;
 public class TestSplitTransactionOnCluster {
   private static final Log LOG =
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
-  private HBaseAdmin admin = null;
+  private Admin admin = null;
   private MiniHBaseCluster cluster = null;
   private static final int NB_SERVERS = 3;
   private static CountDownLatch latch = new CountDownLatch(1);
@@ -201,7 +200,7 @@ public class TestSplitTransactionOnCluster {
         Coprocessor.PRIORITY_USER, region.getBaseConf());
 
       // split async
-      this.admin.split(region.getRegionInfo().getRegionName(), new byte[] {42});
+      this.admin.splitRegion(region.getRegionInfo().getRegionName(), new byte[] {42});
 
       // we have to wait until the SPLITTING state is seen by the master
       FailingSplitRegionObserver observer = (FailingSplitRegionObserver) region
@@ -365,9 +364,9 @@ public class TestSplitTransactionOnCluster {
 
       // Now try splitting.... should fail.  And each should successfully
       // rollback.
-      this.admin.split(hri.getRegionNameAsString());
-      this.admin.split(hri.getRegionNameAsString());
-      this.admin.split(hri.getRegionNameAsString());
+      this.admin.splitRegion(hri.getRegionName());
+      this.admin.splitRegion(hri.getRegionName());
+      this.admin.splitRegion(hri.getRegionName());
       // Wait around a while and assert count of regions remains constant.
       for (int i = 0; i < 10; i++) {
         Thread.sleep(100);
@@ -427,7 +426,7 @@ public class TestSplitTransactionOnCluster {
       LOG.info("Daughter we are going to split: " + daughter);
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
-      this.admin.compact(daughter.getRegionName());
+      this.admin.compactRegion(daughter.getRegionName());
       daughters = cluster.getRegions(tableName);
       HRegion daughterRegion = null;
       for (HRegion r: daughters) {
@@ -488,13 +487,13 @@ public class TestSplitTransactionOnCluster {
         String val = "Val" + i;
         p.addColumn("col".getBytes(), "ql".getBytes(), val.getBytes());
         table.put(p);
-        admin.flush(userTableName.getName());
+        admin.flush(userTableName);
         Delete d = new Delete(row.getBytes());
         // Do a normal delete
         table.delete(d);
-        admin.flush(userTableName.getName());
+        admin.flush(userTableName);
       }
-      admin.majorCompact(userTableName.getName());
+      admin.majorCompact(userTableName);
       List<HRegionInfo> regionsOfTable = TESTING_UTIL.getMiniHBaseCluster()
           .getMaster().getAssignmentManager().getRegionStates()
           .getRegionsOfTable(userTableName);
@@ -508,8 +507,8 @@ public class TestSplitTransactionOnCluster {
       p = new Put("row8".getBytes());
       p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
       table.put(p);
-      admin.flush(userTableName.getName());
-      admin.split(hRegionInfo.getRegionName(), "row7".getBytes());
+      admin.flush(userTableName);
+      admin.splitRegion(hRegionInfo.getRegionName(), "row7".getBytes());
       regionsOfTable = TESTING_UTIL.getMiniHBaseCluster().getMaster()
           .getAssignmentManager().getRegionStates()
           .getRegionsOfTable(userTableName);
@@ -585,7 +584,7 @@ public class TestSplitTransactionOnCluster {
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
 
-      this.admin.split(hri.getRegionNameAsString());
+      this.admin.splitRegion(hri.getRegionName());
       checkAndGetDaughters(tableName);
 
       HMaster master = abortAndWaitForMaster();
@@ -750,7 +749,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final TableName tableName, HBaseAdmin admin, Table t) throws IOException,
+  private void insertData(final TableName tableName, Admin admin, Table t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
@@ -1142,7 +1141,7 @@ public class TestSplitTransactionOnCluster {
 
   private void split(final HRegionInfo hri, final HRegionServer server, final int regionCount)
       throws IOException, InterruptedException {
-    this.admin.split(hri.getRegionNameAsString());
+    this.admin.splitRegion(hri.getRegionName());
     for (int i = 0; ProtobufUtil.getOnlineRegions(
         server.getRSRpcServices()).size() <= regionCount && i < 300; i++) {
       LOG.debug("Waiting on region to split");

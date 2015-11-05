@@ -30,7 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -89,7 +89,7 @@ public class TestCompactionState {
     Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, family);
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       try {
         admin.compact(table, fakecf);
       } catch (IOException ioe) {
@@ -137,18 +137,18 @@ public class TestCompactionState {
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
-          admin.compact(table.getName(), family);
+          admin.compact(table, family);
         } else {
-          admin.compact(table.getName());
+          admin.compact(table);
         }
       } else {
         if (singleFamily) {
-          admin.majorCompact(table.getName(), family);
+          admin.majorCompact(table, family);
         } else {
-          admin.majorCompact(table.getName());
+          admin.majorCompact(table);
         }
       }
       long curt = System.currentTimeMillis();

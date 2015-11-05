@@ -210,50 +210,15 @@ public class HBaseAdmin implements Admin {
   private final int retryLongerMultiplier;
   private final int syncWaitTimeout;
   private boolean aborted;
-  private boolean cleanupConnectionOnClose = false; // close the connection in close()
-  private boolean closed = false;
   private int operationTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
   private NonceGenerator ng;
 
-  /**
-   * Constructor.
-   * See {@link #HBaseAdmin(Connection connection)}
-   *
-   * @param c Configuration object. Copied internally.
-   * @deprecated Constructing HBaseAdmin objects manually has been deprecated.
-   * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead.
-   */
-  @Deprecated
-  public HBaseAdmin(Configuration c)
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    this(ConnectionFactory.createConnection(new Configuration(c)));
-    this.cleanupConnectionOnClose = true;
-  }
-
   @Override
   public int getOperationTimeout() {
     return operationTimeout;
-  }
-
-
-  /**
-   * Constructor for externally managed Connections.
-   * The connection to master will be created when required by admin functions.
-   *
-   * @param connection The Connection instance to use
-   * @throws MasterNotRunningException
-   * @throws ZooKeeperConnectionException are not
-   *  thrown anymore but kept into the interface for backward api compatibility
-   * @deprecated Constructing HBaseAdmin objects manually has been deprecated.
-   * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead.
-   */
-  @Deprecated
-  public HBaseAdmin(Connection connection)
-      throws MasterNotRunningException, ZooKeeperConnectionException {
-    this((ClusterConnection)connection);
   }
 
   HBaseAdmin(ClusterConnection connection) {
@@ -1854,31 +1819,6 @@ public class HBaseAdmin implements Admin {
     flush(regionServerPair.getSecond(), regionServerPair.getFirst());
   }
 
-  /**
-   * @deprecated Use {@link #flush(org.apache.hadoop.hbase.TableName)} or {@link #flushRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void flush(final String tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    flush(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * @deprecated Use {@link #flush(org.apache.hadoop.hbase.TableName)} or {@link #flushRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void flush(final byte[] tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    try {
-      flushRegion(tableNameOrRegionName);
-    } catch (IllegalArgumentException e) {
-      // Unknown region.  Try table.
-      flush(TableName.valueOf(tableNameOrRegionName));
-    }
-  }
-
   private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -1910,30 +1850,6 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void compact(final String tableNameOrRegionName)
-  throws IOException {
-    compact(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void compact(final byte[] tableNameOrRegionName)
-  throws IOException {
-    try {
-      compactRegion(tableNameOrRegionName, null, false);
-    } catch (IllegalArgumentException e) {
-      compact(TableName.valueOf(tableNameOrRegionName), null, false, CompactType.NORMAL);
-    }
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -1949,31 +1865,6 @@ public class HBaseAdmin implements Admin {
   public void compactRegion(final byte[] regionName, final byte[] columnFamily)
     throws IOException {
     compactRegion(regionName, columnFamily, false);
-  }
-
-  /**
-   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
-   * (byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void compact(String tableOrRegionName, String columnFamily)
-    throws IOException {
-    compact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
-  }
-
-  /**
-   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
-   * (byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void compact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
-  throws IOException {
-    try {
-      compactRegion(tableNameOrRegionName, columnFamily, false);
-    } catch (IllegalArgumentException e) {
-      // Bad region, try table
-      compact(TableName.valueOf(tableNameOrRegionName), columnFamily, false, CompactType.NORMAL);
-    }
   }
 
   /**
@@ -2006,31 +1897,6 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName)} or {@link
-   * #majorCompactRegion(byte[])} instead.
-   */
-  @Deprecated
-  public void majorCompact(final String tableNameOrRegionName)
-  throws IOException {
-    majorCompact(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName)} or {@link
-   * #majorCompactRegion(byte[])} instead.
-   */
-  @Deprecated
-  public void majorCompact(final byte[] tableNameOrRegionName)
-  throws IOException {
-    try {
-      compactRegion(tableNameOrRegionName, null, true);
-    } catch (IllegalArgumentException e) {
-      // Invalid region, try table
-      compact(TableName.valueOf(tableNameOrRegionName), null, true, CompactType.NORMAL);
-    }
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -2046,31 +1912,6 @@ public class HBaseAdmin implements Admin {
   public void majorCompactRegion(final byte[] regionName, final byte[] columnFamily)
   throws IOException {
     compactRegion(regionName, columnFamily, true);
-  }
-
-  /**
-   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName,
-   * byte[])} or {@link #majorCompactRegion(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void majorCompact(final String tableNameOrRegionName, final String columnFamily)
-  throws IOException {
-    majorCompact(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(columnFamily));
-  }
-
-  /**
-   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName,
-   * byte[])} or {@link #majorCompactRegion(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void majorCompact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
-  throws IOException {
-    try {
-      compactRegion(tableNameOrRegionName, columnFamily, true);
-    } catch (IllegalArgumentException e) {
-      // Invalid region, try table
-      compact(TableName.valueOf(tableNameOrRegionName), columnFamily, true, CompactType.NORMAL);
-    }
   }
 
   /**
@@ -2479,26 +2320,6 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName)} or {@link #splitRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void split(final String tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    split(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName)} or {@link #splitRegion
-   * (byte[])} instead.
-   */
-  @Deprecated
-  public void split(final byte[] tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    split(tableNameOrRegionName, null);
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -2553,31 +2374,6 @@ public class HBaseAdmin implements Admin {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
     }
     split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
-  }
-
-  /**
-   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName,
-   * byte[])} or {@link #splitRegion(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void split(final String tableNameOrRegionName,
-    final String splitPoint) throws IOException {
-    split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
-  }
-
-  /**
-   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName,
-   * byte[])} or {@link #splitRegion(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public void split(final byte[] tableNameOrRegionName,
-      final byte [] splitPoint) throws IOException {
-    try {
-      splitRegion(tableNameOrRegionName, splitPoint);
-    } catch (IllegalArgumentException e) {
-      // Bad region, try table
-      split(TableName.valueOf(tableNameOrRegionName), splitPoint);
-    }
   }
 
   @VisibleForTesting
@@ -3077,10 +2873,6 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public synchronized void close() throws IOException {
-    if (cleanupConnectionOnClose && this.connection != null && !this.closed) {
-      this.connection.close();
-      this.closed = true;
-    }
   }
 
   /**
@@ -3236,31 +3028,6 @@ public class HBaseAdmin implements Admin {
       return response.getCompactionState();
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
-  /**
-   * @deprecated Use {@link #getCompactionState(org.apache.hadoop.hbase.TableName)} or {@link
-   * #getCompactionStateForRegion(byte[])} instead.
-   */
-  @Deprecated
-  public CompactionState getCompactionState(final String tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * @deprecated Use {@link #getCompactionState(org.apache.hadoop.hbase.TableName)} or {@link
-   * #getCompactionStateForRegion(byte[])} instead.
-   */
-  @Deprecated
-  public CompactionState getCompactionState(final byte[] tableNameOrRegionName)
-  throws IOException, InterruptedException {
-    try {
-      return getCompactionStateForRegion(tableNameOrRegionName);
-    } catch (IllegalArgumentException e) {
-      // Invalid region, try table
-      return getCompactionState(TableName.valueOf(tableNameOrRegionName));
     }
   }
 

@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -1176,7 +1177,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void shutdownMiniHBaseCluster() throws IOException {
     if (hbaseAdmin != null) {
-      hbaseAdmin.close0();
+      hbaseAdmin.close();
       hbaseAdmin = null;
     }
 
@@ -2693,28 +2694,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
-      this.hbaseAdmin = new HBaseAdminForTests(getConnection());
+      this.hbaseAdmin = (HBaseAdmin) getConnection().getAdmin();
     }
     return hbaseAdmin;
   }
 
-  private HBaseAdminForTests hbaseAdmin = null;
-  private static class HBaseAdminForTests extends HBaseAdmin {
-    public HBaseAdminForTests(Connection connection) throws MasterNotRunningException,
-        ZooKeeperConnectionException, IOException {
-      super(connection);
-    }
+  private HBaseAdmin hbaseAdmin = null;
 
-    @Override
-    public synchronized void close() throws IOException {
-      LOG.warn("close() called on HBaseAdmin instance returned from " +
-        "HBaseTestingUtility.getHBaseAdmin()");
-    }
-
-    private synchronized void close0() throws IOException {
-      super.close();
-    }
-  }
 
   /**
    * Returns a ZooKeeperWatcher instance.

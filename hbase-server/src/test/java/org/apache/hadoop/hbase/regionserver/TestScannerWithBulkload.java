@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -73,7 +72,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoad() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoad");
     long l = System.currentTimeMillis();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
@@ -177,7 +176,7 @@ public class TestScannerWithBulkload {
     return hfilePath;
   }
 
-  private Table init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
+  private Table init(Admin admin, long l, Scan scan, TableName tableName) throws Exception {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
@@ -211,7 +210,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoadWithParallelScan() throws Exception {
     final TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
       final long l = System.currentTimeMillis();
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
@@ -253,7 +252,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoadNativeHFile() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
     long l = System.currentTimeMillis();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);

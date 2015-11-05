@@ -45,11 +45,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -186,7 +186,7 @@ public class TestVisibilityLabelsReplication {
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
-    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -198,7 +198,7 @@ public class TestVisibilityLabelsReplication {
         hBaseAdmin.close();
       }
     }
-    HBaseAdmin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin();
+    Admin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin();
     try {
       hBaseAdmin1.createTable(table);
     } finally {

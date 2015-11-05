@@ -29,6 +29,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
@@ -65,7 +68,8 @@ public class Sweeper extends Configured implements Tool {
     Configuration conf = getConf();
     // make sure the target HBase exists.
     HBaseAdmin.checkHBaseAvailable(conf);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Connection connection = ConnectionFactory.createConnection(getConf());
+    Admin admin = connection.getAdmin();
     try {
       FileSystem fs = FileSystem.get(conf);
       TableName tn = TableName.valueOf(tableName);
@@ -85,6 +89,11 @@ public class Sweeper extends Configured implements Tool {
         admin.close();
       } catch (IOException e) {
         System.out.println("Failed to close the HBaseAdmin: " + e.getMessage());
+      }
+      try {
+        connection.close();
+      } catch (IOException e) {
+        System.out.println("Failed to close the connection: " + e.getMessage());
       }
     }
   }

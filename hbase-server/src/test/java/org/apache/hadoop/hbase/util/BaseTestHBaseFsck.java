@@ -272,8 +272,6 @@ public class BaseTestHBaseFsck {
    *
    * It will set tbl which needs to be closed after test
    *
-   * @param tableName
-   * @param replicaCount
    * @throws Exception
    */
   void setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
@@ -296,7 +294,7 @@ public class BaseTestHBaseFsck {
   /**
    * Setup a clean table with a mob-enabled column.
    *
-   * @param tableName The name of a table to be created.
+   * @param tablename The name of a table to be created.
    * @throws Exception
    */
   void setupMobTable(TableName tablename) throws Exception {
@@ -349,7 +347,7 @@ public class BaseTestHBaseFsck {
   /**
    * Get region info from local cluster.
    */
-  Map<ServerName, List<String>> getDeployedHRIs(final HBaseAdmin admin) throws IOException {
+  Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
     ClusterStatus status = admin.getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm =

@@ -149,17 +149,16 @@ public class TestFromClientSide3 {
      */
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
-    String tableName = "testAdvancedConfigOverride";
-    TableName TABLE = TableName.valueOf(tableName);
-    Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    TableName tableName = TableName.valueOf("testAdvancedConfigOverride");
+    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());
-    performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 100);
+    performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 100);
 
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       // Verify we have multiple store files.
       HRegionLocation loc = locator.getRegionLocation(row, true);
       byte[] regionName = loc.getRegionInfo().getRegionName();
@@ -167,7 +166,7 @@ public class TestFromClientSide3 {
       assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
 
       // Issue a compaction request
-      admin.compact(TABLE.getName());
+      admin.compact(tableName);
 
       // poll wait for the compactions to happen
       for (int i = 0; i < 10 * 1000 / 40; ++i) {
@@ -189,19 +188,19 @@ public class TestFromClientSide3 {
       LOG.info("hbase.hstore.compaction.min should now be 5");
       HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
       htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-      admin.modifyTable(TABLE, htd);
+      admin.modifyTable(tableName, htd);
       Pair<Integer, Integer> st;
-      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
         LOG.debug(st.getFirst() + " regions left to update");
         Thread.sleep(40);
       }
       LOG.info("alter status finished");
 
       // Create 3 more store files.
-      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
+      performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 10);
 
       // Issue a compaction request
-      admin.compact(TABLE.getName());
+      admin.compact(tableName);
 
       // This time, the compaction request should not happen
       Thread.sleep(10 * 1000);
@@ -216,15 +215,15 @@ public class TestFromClientSide3 {
       HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
       htd.modifyFamily(hcd);
-      admin.modifyTable(TABLE, htd);
-      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+      admin.modifyTable(tableName, htd);
+      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
         LOG.debug(st.getFirst() + " regions left to update");
         Thread.sleep(40);
       }
       LOG.info("alter status finished");
 
       // Issue a compaction request
-      admin.compact(TABLE.getName());
+      admin.compact(tableName);
 
       // poll wait for the compactions to happen
       for (int i = 0; i < 10 * 1000 / 40; ++i) {
@@ -251,8 +250,8 @@ public class TestFromClientSide3 {
       hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", null);
       htd.modifyFamily(hcd);
-      admin.modifyTable(TABLE, htd);
-      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+      admin.modifyTable(tableName, htd);
+      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
         LOG.debug(st.getFirst() + " regions left to update");
         Thread.sleep(40);
       }

@@ -158,22 +158,6 @@ public class OfflineMetaRebuildTestCore {
     tbl.put(puts);
   }
 
-  /**
-   * delete table in preparation for next test
-   *
-   * @param tablename
-   * @throws IOException
-   */
-  void deleteTable(HBaseAdmin admin, String tablename) throws IOException {
-    try {
-      byte[] tbytes = Bytes.toBytes(tablename);
-      admin.disableTable(tbytes);
-      admin.deleteTable(tbytes);
-    } catch (Exception e) {
-      // Do nothing.
-    }
-  }
-
   protected void deleteRegion(Configuration conf, final Table tbl,
       byte[] startKey, byte[] endKey) throws IOException {
 

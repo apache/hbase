@@ -28,10 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -304,7 +304,7 @@ public class TestAcidGuarantees implements Tool {
     }
     // Add a flusher
     ctx.addThread(new RepeatingTestThread(ctx) {
-      HBaseAdmin admin = util.getHBaseAdmin();
+      Admin admin = util.getHBaseAdmin();
       public void doAnAction() throws Exception {
         try {
           admin.flush(TABLE_NAME);

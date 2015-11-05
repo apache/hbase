@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -82,7 +82,7 @@ public class TestEnableTableHandler {
     final TableName tableName = TableName.valueOf("testEnableTableWithNoRegionServers");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     admin.createTable(desc);
@@ -143,7 +143,7 @@ public class TestEnableTableHandler {
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     try {
@@ -211,13 +211,7 @@ public class TestEnableTableHandler {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
-    byte [][] splitKeys)
-  throws Exception {
-    createTable(testUtil, testUtil.getHBaseAdmin(), htd, splitKeys);
-  }
-
-  public static void createTable(HBaseTestingUtility testUtil, HBaseAdmin admin,
+  public static void createTable(HBaseTestingUtility testUtil,
     HTableDescriptor htd, byte [][] splitKeys)
   throws Exception {
     // NOTE: We need a latch because admin is not sync,
@@ -225,6 +219,7 @@ public class TestEnableTableHandler {
     MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     observer.tableCreationLatch = new CountDownLatch(1);
+    Admin admin = testUtil.getHBaseAdmin();
     if (splitKeys != null) {
       admin.createTable(htd, splitKeys);
     } else {
@@ -237,17 +232,12 @@ public class TestEnableTableHandler {
 
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
   throws Exception {
-    deleteTable(testUtil, testUtil.getHBaseAdmin(), tableName);
-  }
-
-  public static void deleteTable(HBaseTestingUtility testUtil, HBaseAdmin admin,
-    TableName tableName)
-  throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
     MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     observer.tableDeletionLatch = new CountDownLatch(1);
+    Admin admin = testUtil.getHBaseAdmin();
     try {
       admin.disableTable(tableName);
     } catch (Exception e) {

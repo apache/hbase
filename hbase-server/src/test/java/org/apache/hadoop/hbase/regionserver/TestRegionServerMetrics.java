@@ -436,7 +436,8 @@ public class TestRegionServerMetrics {
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(0);
     htd.addFamily(hcd);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Admin admin = connection.getAdmin();
     HTable t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
     Region region = rs.getOnlineRegions(tableName).get(0);
     t.setAutoFlush(true, true);
@@ -485,5 +486,6 @@ public class TestRegionServerMetrics {
         serverSource);
     t.close();
     admin.close();
+    connection.close();
   }
 }

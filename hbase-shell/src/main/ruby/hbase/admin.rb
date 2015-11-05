@@ -51,30 +51,34 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a table or region flush
     def flush(table_or_region_name)
-      @admin.flush(table_or_region_name)
+      begin
+        @admin.flushRegion(table_or_region_name.to_java_bytes);
+      rescue java.lang.IllegalArgumentException => e
+        # Unknown region. Try table.
+        @admin.flush(TableName.valueOf(table_or_region_name));
+      end
     end
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family compaction
     def compact(table_or_region_name, family = nil, type = "NORMAL")
+      family_bytes = nil
+      unless family.nil?
+        family_bytes = family.to_java_bytes
+      end
+      compact_type = nil
       if type == "NORMAL"
-        if family == nil
-          @admin.compact(table_or_region_name)
-        else
-          # We are compacting a column family within a region.
-          @admin.compact(table_or_region_name, family)
-        end
+        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::NORMAL
       elsif type == "MOB"
-        if family == nil
-          @admin.compact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
-          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
-        else
-          # We are compacting a mob column family within a table.
-          @admin.compact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name), family.to_java_bytes,
-          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
-        end
+        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::MOB
       else
-         raise ArgumentError, "only NORMAL or MOB accepted for type!"
+        raise ArgumentError, "only NORMAL or MOB accepted for type!"
+      end
+
+      begin
+        @admin.compactRegion(table_or_region_name.to_java_bytes, family_bytes, false)
+      rescue java.lang.IllegalArgumentException => e
+        @admin.compact(TableName.valueOf(table_or_region_name), family_bytes, false, compact_type)
       end
     end
 
@@ -86,24 +90,23 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family major compaction
     def major_compact(table_or_region_name, family = nil, type = "NORMAL")
+      family_bytes = nil
+      unless family.nil?
+        family_bytes = family.to_java_bytes
+      end
+      compact_type = nil
       if type == "NORMAL"
-        if family == nil
-          @admin.majorCompact(table_or_region_name)
-        else
-          # We are major compacting a column family within a region or table.
-          @admin.majorCompact(table_or_region_name, family)
-        end
+        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::NORMAL
       elsif type == "MOB"
-        if family == nil
-          @admin.majorCompact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
-          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
-        else
-          # We are major compacting a mob column family within a table.
-          @admin.majorCompact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
-          family.to_java_bytes, org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
-        end
+        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::MOB
       else
         raise ArgumentError, "only NORMAL or MOB accepted for type!"
+      end
+
+      begin
+        @admin.majorCompactRegion(table_or_region_name.to_java_bytes, family_bytes)
+      rescue java.lang.IllegalArgumentException => e
+        @admin.majorCompact(TableName.valueOf(table_or_region_name), family_bytes, compact_type)
       end
     end
 
@@ -117,11 +120,15 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region split
-    def split(table_or_region_name, split_point)
-      if split_point == nil
-        @admin.split(table_or_region_name)
-      else
-        @admin.split(table_or_region_name, split_point)
+    def split(table_or_region_name, split_point = nil)
+      split_point_bytes = nil
+      unless split_point.nil?
+        split_point_bytes = split_point.to_java_bytes
+      end
+      begin
+        @admin.splitRegion(table_or_region_name.to_java_bytes, split_point_bytes)
+      rescue java.lang.IllegalArgumentException => e
+        @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
       end
     end
 

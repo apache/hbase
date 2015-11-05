@@ -551,7 +551,7 @@ public class TestFromClientSide {
   private List<HRegionLocation> splitTable(final Table t)
   throws IOException, InterruptedException {
     // Split this table in two.
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.split(t.getName());
     admin.close();
     List<HRegionLocation> regions = waitOnSplit(t);
@@ -1661,7 +1661,7 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteFamilyVersion() throws Exception {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     TableName TABLE = TableName.valueOf("testDeleteFamilyVersion");
 
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
@@ -1706,7 +1706,7 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 5);
     Put put = null;
     Result result = null;
@@ -3546,7 +3546,7 @@ public class TestFromClientSide {
 
     TableName TABLE = TableName.valueOf("testUpdatesWithMajorCompaction");
     Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row2");
@@ -3605,10 +3605,9 @@ public class TestFromClientSide {
   @Test
   public void testMajorCompactionBetweenTwoUpdates() throws Exception {
 
-    String tableName = "testMajorCompactionBetweenTwoUpdates";
-    TableName TABLE = TableName.valueOf(tableName);
-    Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    TableName tableName = TableName.valueOf("testMajorCompactionBetweenTwoUpdates");
+    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row3");
@@ -4048,10 +4047,10 @@ public class TestFromClientSide {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Table t = conn.getTable(tableName);
-    HBaseAdmin ha = new HBaseAdmin(conn);
-    assertTrue(ha.tableExists(tableName));
+    Admin admin = conn.getAdmin();
+    assertTrue(admin.tableExists(tableName));
     assertTrue(t.get(new Get(ROW)).isEmpty());
-    ha.close();
+    admin.close();
   }
 
   /**
@@ -4066,8 +4065,8 @@ public class TestFromClientSide {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Table t = conn.getTable(tableName);
-    try (HBaseAdmin ha = new HBaseAdmin(conn)) {
-      assertTrue(ha.tableExists(tableName));
+    try (Admin admin = conn.getAdmin()) {
+      assertTrue(admin.tableExists(tableName));
       assertTrue(t.get(new Get(ROW)).isEmpty());
     }
 
@@ -4081,10 +4080,10 @@ public class TestFromClientSide {
     assertTrue(cluster.waitForActiveAndReadyMaster());
 
     // test that the same unmanaged connection works with a new
-    // HBaseAdmin and can connect to the new master;
-    try (HBaseAdmin newAdmin = new HBaseAdmin(conn)) {
-      assertTrue(newAdmin.tableExists(tableName));
-      assertTrue(newAdmin.getClusterStatus().getServersSize() == SLAVES + 1);
+    // Admin and can connect to the new master;
+    try (Admin admin = conn.getAdmin()) {
+      assertTrue(admin.tableExists(tableName));
+      assertTrue(admin.getClusterStatus().getServersSize() == SLAVES + 1);
     }
   }
 
@@ -6350,7 +6349,7 @@ public class TestFromClientSide {
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd, KEYS);
     List<HRegionInfo> regions = admin.getTableRegions(htd.getTableName());
 

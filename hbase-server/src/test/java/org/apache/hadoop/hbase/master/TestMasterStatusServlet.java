@@ -30,8 +30,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +61,7 @@ public class TestMasterStatusServlet {
 
   private HMaster master;
   private Configuration conf;
-  private HBaseAdmin admin;
+  private Admin admin;
 
   static final ServerName FAKE_HOST =
       ServerName.valueOf("fakehost", 12345, 1234567890);
@@ -110,7 +114,7 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(rms).when(master).getRegionServerMetrics();
 
     // Mock admin
-    admin = Mockito.mock(HBaseAdmin.class);
+    admin = Mockito.mock(Admin.class);
   }
 
   private void setupMockTables() throws IOException {

@@ -37,10 +37,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
@@ -141,10 +141,10 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(desc);
-    try (HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin()) {
+    try (Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin()) {
       hBaseAdmin.createTable(table);
     }
-    try (HBaseAdmin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin()){
+    try (Admin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin()){
       hBaseAdmin1.createTable(table);
     }
     addLabels();

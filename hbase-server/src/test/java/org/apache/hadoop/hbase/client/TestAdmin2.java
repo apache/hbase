@@ -465,10 +465,10 @@ public class TestAdmin2 {
         onlineRegions.contains(info));
   }
 
-  private HBaseAdmin createTable(byte[] TABLENAME) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+  private Admin createTable(TableName tableName) throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLENAME));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
 
     htd.addFamily(hcd);
@@ -517,10 +517,10 @@ public class TestAdmin2 {
 
   @Test (timeout=300000)
   public void testMoveToPreviouslyAssignedRS() throws IOException, InterruptedException {
-    byte[] tableName = Bytes.toBytes("testMoveToPreviouslyAssignedRS");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
-    HBaseAdmin localAdmin = createTable(tableName);
+    TableName tableName = TableName.valueOf("testMoveToPreviouslyAssignedRS");
+    Admin localAdmin = createTable(tableName);
     List<HRegionInfo> tableRegions = localAdmin.getTableRegions(tableName);
     HRegionInfo hri = tableRegions.get(0);
     AssignmentManager am = master.getAssignmentManager();

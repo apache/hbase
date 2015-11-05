@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,7 +98,8 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     String familyName = args[1];
     TableName tn = TableName.valueOf(tableName);
     HBaseAdmin.checkHBaseAvailable(getConf());
-    HBaseAdmin admin = new HBaseAdmin(getConf());
+    Connection connection = ConnectionFactory.createConnection(getConf());
+    Admin admin = connection.getAdmin();
     try {
       HTableDescriptor htd = admin.getTableDescriptor(tn);
       HColumnDescriptor family = htd.getFamily(Bytes.toBytes(familyName));
@@ -113,6 +117,11 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
         admin.close();
       } catch (IOException e) {
         LOG.error("Failed to close the HBaseAdmin.", e);
+      }
+      try {
+        connection.close();
+      } catch (IOException e) {
+        LOG.error("Failed to close the connection.", e);
       }
     }
   }

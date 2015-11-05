@@ -190,7 +190,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // different regions with the same start/endkeys since it doesn't
       // differentiate on ts/regionId!  We actually need to recheck
       // deployments!
-      while (findDeployedHSI(getDeployedHRIs((HBaseAdmin) admin), hriDupe) == null) {
+      while (findDeployedHSI(getDeployedHRIs(admin), hriDupe) == null) {
         Thread.sleep(250);
       }
 

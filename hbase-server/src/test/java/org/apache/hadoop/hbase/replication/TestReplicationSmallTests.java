@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -521,7 +520,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final String colFam = "cf1";
     final int numOfTables = 3;
 
-    HBaseAdmin hadmin = utility1.getHBaseAdmin();
+    Admin hadmin = utility1.getHBaseAdmin();
 
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {
@@ -552,9 +551,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     // drop tables
     for (int i = 0; i < numOfTables; i++) {
-      String ht = tName + i;
-      hadmin.disableTable(ht);
-      hadmin.deleteTable(ht);
+      TableName tableName = TableName.valueOf(tName + i);
+      hadmin.disableTable(tableName);
+      hadmin.deleteTable(tableName);
     }
 
     hadmin.close();

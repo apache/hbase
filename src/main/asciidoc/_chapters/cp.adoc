@@ -396,10 +396,11 @@ coprocessor.jar| org.myname.hbase.Coprocessor.RegionObserverExample|1073741823|'
 +
 [source,java]
 ----
-String tableName = "users";
+TableName tableName = TableName.valueOf("users");
 String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
+Connection connection = ConnectionFactory.createConnection(conf);
+Admin admin = connection.getAdmin();
 admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
@@ -460,10 +461,11 @@ attached to this table, if any. For example:
 +
 [source,java]
 ----
-String tableName = "users";
+TableName tableName = TableName.valueOf("users");
 String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
+Connection connection = ConnectionFactory.createConnection(conf);
+Admin admin = connection.getAdmin();
 admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");

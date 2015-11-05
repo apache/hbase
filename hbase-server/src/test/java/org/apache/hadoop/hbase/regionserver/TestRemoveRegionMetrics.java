@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -76,7 +76,7 @@ public class TestRemoveRegionMetrics {
     TableName tableName = TableName.valueOf(tableNameString);
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("D"));
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HRegionInfo regionInfo;
     byte[] row =  Bytes.toBytes("r1");
 
