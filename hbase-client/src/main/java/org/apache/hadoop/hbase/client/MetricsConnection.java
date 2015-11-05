@@ -26,12 +26,16 @@ import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.reporting.JmxReporter;
 import com.yammer.metrics.util.RatioGauge;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +58,8 @@ public class MetricsConnection {
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
+  private static final String MEMLOAD_BASE = "memstoreLoad_";
+  private static final String HEAP_BASE = "heapOccupancy_";
   private static final String CLIENT_SVC = ClientService.getDescriptor().getName();
 
   /** A container class for collecting details about the RPC call as it percolates. */
@@ -130,6 +136,88 @@ public class MetricsConnection {
     }
   }
 
+  protected static class RegionStats {
+    final String name;
+    final Histogram memstoreLoadHist;
+    final Histogram heapOccupancyHist;
+
+    public RegionStats(MetricsRegistry registry, String name) {
+      this.name = name;
+      this.memstoreLoadHist = registry.newHistogram(MetricsConnection.class,
+          MEMLOAD_BASE + this.name);
+      this.heapOccupancyHist = registry.newHistogram(MetricsConnection.class,
+          HEAP_BASE + this.name);
+    }
+
+    public void update(ClientProtos.RegionLoadStats regionStatistics) {
+      this.memstoreLoadHist.update(regionStatistics.getMemstoreLoad());
+      this.heapOccupancyHist.update(regionStatistics.getHeapOccupancy());
+    }
+  }
+
+  @VisibleForTesting
+  protected static class RunnerStats {
+    final Counter normalRunners;
+    final Counter delayRunners;
+    final Histogram delayIntevalHist;
+
+    public RunnerStats(MetricsRegistry registry) {
+      this.normalRunners = registry.newCounter(MetricsConnection.class, "normalRunnersCount");
+      this.delayRunners = registry.newCounter(MetricsConnection.class, "delayRunnersCount");
+      this.delayIntevalHist = registry.newHistogram(MetricsConnection.class, "delayIntervalHist");
+    }
+
+    public void incrNormalRunners() {
+      this.normalRunners.inc();
+    }
+
+    public void incrDelayRunners() {
+      this.delayRunners.inc();
+    }
+
+    public void updateDelayInterval(long interval) {
+      this.delayIntevalHist.update(interval);
+    }
+  }
+
+  @VisibleForTesting
+  protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats
+          = new ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>>();
+
+  public void updateServerStats(ServerName serverName, byte[] regionName,
+                                Object r) {
+    if (!(r instanceof Result)) {
+      return;
+    }
+    Result result = (Result) r;
+    ClientProtos.RegionLoadStats stats = result.getStats();
+    if(stats == null){
+      return;
+    }
+    String name = serverName.getServerName() + "," + Bytes.toStringBinary(regionName);
+    ConcurrentMap<byte[], RegionStats> rsStats = null;
+    if (serverStats.containsKey(serverName)) {
+      rsStats = serverStats.get(serverName);
+    } else {
+      rsStats = serverStats.putIfAbsent(serverName,
+          new ConcurrentSkipListMap<byte[], RegionStats>(Bytes.BYTES_COMPARATOR));
+      if (rsStats == null) {
+        rsStats = serverStats.get(serverName);
+      }
+    }
+    RegionStats regionStats = null;
+    if (rsStats.containsKey(regionName)) {
+      regionStats = rsStats.get(regionName);
+    } else {
+      regionStats = rsStats.putIfAbsent(regionName, new RegionStats(this.registry, name));
+      if (regionStats == null) {
+        regionStats = rsStats.get(regionName);
+      }
+    }
+    regionStats.update(stats);
+  }
+
+
   /** A lambda for dispatching to the appropriate metric factory method */
   private static interface NewMetric<T> {
     T newMetric(Class<?> clazz, String name, String scope);
@@ -172,6 +260,7 @@ public class MetricsConnection {
   @VisibleForTesting protected final CallTracker incrementTracker;
   @VisibleForTesting protected final CallTracker putTracker;
   @VisibleForTesting protected final CallTracker multiTracker;
+  @VisibleForTesting protected final RunnerStats runnerStats;
 
   // dynamic metrics
 
@@ -208,6 +297,8 @@ public class MetricsConnection {
     this.incrementTracker = new CallTracker(this.registry, "Mutate", "Increment", scope);
     this.putTracker = new CallTracker(this.registry, "Mutate", "Put", scope);
     this.multiTracker = new CallTracker(this.registry, "Multi", scope);
+    this.runnerStats = new RunnerStats(this.registry);
+
     this.reporter = new JmxReporter(this.registry);
     this.reporter.start();
   }
@@ -231,6 +322,21 @@ public class MetricsConnection {
   /** Increment the number of meta cache misses. */
   public void incrMetaCacheMiss() {
     metaCacheMisses.inc();
+  }
+
+  /** Increment the number of normal runner counts. */
+  public void incrNormalRunners() {
+    this.runnerStats.incrNormalRunners();
+  }
+
+  /** Increment the number of delay runner counts. */
+  public void incrDelayRunners() {
+    this.runnerStats.incrDelayRunners();
+  }
+
+  /** Update delay interval of delay runner. */
+  public void updateDelayInterval(long interval) {
+    this.runnerStats.updateDelayInterval(interval);
   }
 
   /**

@@ -632,6 +632,9 @@ class AsyncProcess<CResult> {
       final Batch.Callback<CResult> batchCallback) {
     // no stats to manage, just do the standard action
     if (AsyncProcess.this.hConnection.getStatisticsTracker() == null) {
+      if (hConnection.getConnectionMetrics() != null) {
+        hConnection.getConnectionMetrics().incrNormalRunners();
+      }
       List<Runnable> toReturn = new ArrayList<Runnable>(1);
       toReturn.add(Trace.wrap("AsyncProcess.sendMultiAction", 
         getNewSingleServerRunnable(initialActions, loc, multiAction, numAttempt,
@@ -663,6 +666,14 @@ class AsyncProcess<CResult> {
           runner.setRunner(runnable);
           traceText = "AsyncProcess.clientBackoff.sendMultiAction";
           runnable = runner;
+          if (hConnection.getConnectionMetrics() != null) {
+            hConnection.getConnectionMetrics().incrDelayRunners();
+            hConnection.getConnectionMetrics().updateDelayInterval(runner.getSleepTime());
+          }
+        } else {
+          if (hConnection.getConnectionMetrics() != null) {
+            hConnection.getConnectionMetrics().incrNormalRunners();
+          }
         }
         runnable = Trace.wrap(traceText, runnable);
         toReturn.add(runnable);
@@ -877,6 +888,13 @@ class AsyncProcess<CResult> {
             toReplay.add(correspondingAction);
           }
         } else { // success
+
+          if (AsyncProcess.this.hConnection.getConnectionMetrics() != null) {
+            AsyncProcess.this.hConnection.getConnectionMetrics().
+              updateServerStats(location.getServerName(),
+                location.getRegionInfo().getRegionName(), result);
+          }
+
           if (callback != null || batchCallback != null) {
             int index = regionResult.getFirst();
             Action<Row> correspondingAction = initialActions.get(index);
