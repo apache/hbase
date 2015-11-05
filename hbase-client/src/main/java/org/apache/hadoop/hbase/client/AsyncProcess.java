@@ -1009,6 +1009,9 @@ class AsyncProcess {
         int numAttempt) {
       // no stats to manage, just do the standard action
       if (AsyncProcess.this.connection.getStatisticsTracker() == null) {
+        if (connection.getConnectionMetrics() != null) {
+          connection.getConnectionMetrics().incrNormalRunners();
+        }
         return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction",
             new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress)));
       }
@@ -1039,6 +1042,14 @@ class AsyncProcess {
           runner.setRunner(runnable);
           traceText = "AsyncProcess.clientBackoff.sendMultiAction";
           runnable = runner;
+          if (connection.getConnectionMetrics() != null) {
+            connection.getConnectionMetrics().incrDelayRunners();
+            connection.getConnectionMetrics().updateDelayInterval(runner.getSleepTime());
+          }
+        } else {
+          if (connection.getConnectionMetrics() != null) {
+            connection.getConnectionMetrics().incrNormalRunners();
+          }
         }
         runnable = Trace.wrap(traceText, runnable);
         toReturn.add(runnable);
@@ -1267,6 +1278,12 @@ class AsyncProcess {
               ++failed;
             }
           } else {
+            
+            if (AsyncProcess.this.connection.getConnectionMetrics() != null) {
+              AsyncProcess.this.connection.getConnectionMetrics().
+                      updateServerStats(server, regionName, result);
+            }
+
             // update the stats about the region, if its a user table. We don't want to slow down
             // updates to meta tables, especially from internal updates (master, etc).
             if (AsyncProcess.this.connection.getStatisticsTracker() != null) {
