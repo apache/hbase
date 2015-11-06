@@ -174,15 +174,13 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
     return 0;
   }
 
-  @Override // CM is not intended to be run with this test
+  @Override // Chaos Monkey is not intended to be run with this test
   public TableName getTablename() {
     return null;
   }
 
-  @Override
-  protected Set<String> getColumnFamilies() {
-    return null;
-  }
+  @Override // Chaos Monkey is not inteded to be run with this test
+  protected Set<String> getColumnFamilies() { return null; }
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
