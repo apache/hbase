@@ -1174,7 +1174,7 @@ public class HStore implements Store {
    *  Since we already have this data, this will be idempotent but we will have a redundant
    *  copy of the data.
    *  - If RS fails between 2 and 3, the region will have a redundant copy of the data. The
-   *  RS that failed won't be able to finish snyc() for WAL because of lease recovery in WAL.
+   *  RS that failed won't be able to finish sync() for WAL because of lease recovery in WAL.
    *  - If RS fails after 3, the region region server who opens the region will pick up the
    *  the compaction marker from the WAL and replay it by removing the compaction input files.
    *  Failed RS can also attempt to delete those files, but the operation will be idempotent
@@ -1218,7 +1218,7 @@ public class HStore implements Store {
           + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
 
       // Commence the compaction.
-      List<Path> newFiles = compaction.compact(throughputController, user);
+      List<Path> newFiles = compaction.compact(throughputController, user, region.lock.readLock());
 
       // TODO: get rid of this!
       if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
@@ -1232,19 +1232,24 @@ public class HStore implements Store {
         }
         return sfs;
       }
-      // Do the steps necessary to complete the compaction.
-      sfs = moveCompatedFilesIntoPlace(cr, newFiles, user);
-      writeCompactionWalRecord(filesToCompact, sfs);
-      replaceStoreFiles(filesToCompact, sfs);
-      if (cr.isMajor()) {
-        majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
-      } else {
-        compactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        compactedCellsSize += getCompactionProgress().totalCompactedSize;
+      // Do the steps necessary to complete the compaction. Hold region open for these operations.
+      region.lock.readLock().lock();
+      try {
+        sfs = moveCompatedFilesIntoPlace(cr, newFiles, user);
+        writeCompactionWalRecord(filesToCompact, sfs);
+        replaceStoreFiles(filesToCompact, sfs);
+        if (cr.isMajor()) {
+          majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
+          majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
+        } else {
+          compactedCellsCount += getCompactionProgress().totalCompactingKVs;
+          compactedCellsSize += getCompactionProgress().totalCompactedSize;
+        }
+        // At this point the store will use new files for all new scanners.
+        completeCompaction(filesToCompact, true); // Archive old files & update store size.
+      } finally {
+        region.lock.readLock().unlock();
       }
-      // At this point the store will use new files for all new scanners.
-      completeCompaction(filesToCompact, true); // Archive old files & update store size.
 
       logCompactionEndMessage(cr, sfs, compactionStartTime);
       return sfs;
@@ -1443,6 +1448,7 @@ public class HStore implements Store {
    * but instead makes a compaction candidate list by itself.
    * @param N Number of files.
    */
+  @VisibleForTesting
   public void compactRecentForTestingAssumingDefaultPolicy(int N) throws IOException {
     List<StoreFile> filesToCompact;
     boolean isMajor;
@@ -2123,7 +2129,11 @@ public class HStore implements Store {
   public long getTotalStaticIndexSize() {
     long size = 0;
     for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
-      size += s.getReader().getUncompressedDataIndexSize();
+      StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        continue;
+      }
+      size += r.getUncompressedDataIndexSize();
     }
     return size;
   }
@@ -2133,6 +2143,9 @@ public class HStore implements Store {
     long size = 0;
     for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
       StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        continue;
+      }
       size += r.getTotalBloomSize();
     }
     return size;
