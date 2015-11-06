@@ -151,12 +151,12 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get the percent of HFiles' that are local.
    */
-  int getPercentFileLocal();
+  double getPercentFileLocal();
 
   /**
    * Get the percent of HFiles' that are local for secondary region replicas.
    */
-  int getPercentFileLocalSecondaryRegions();
+  double getPercentFileLocalSecondaryRegions();
 
   /**
    * Get the size of the split queue
@@ -231,7 +231,7 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get the percent of requests with the block cache turned on that hit the block cache.
    */
-  int getBlockCacheHitCachingPercent();
+  double getBlockCacheHitCachingPercent();
 
   /**
    * Force a re-computation of the metrics.
@@ -276,5 +276,5 @@ public interface MetricsRegionServerWrapper {
   /**
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
-  public long getBlockedRequestsCount();
+  long getBlockedRequestsCount();
 }
