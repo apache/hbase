@@ -76,7 +76,7 @@ li#publishDate.pull-right {
 }
 
 /* On small screens, put the search form on its own line */
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 767px) {
   body {
     width: 100%;
     font-size: 120%;
@@ -110,5 +110,13 @@ li#publishDate.pull-right {
   }
 }
 
+// Make the font size even bigger on high-DPI small-screen devices
+// such as iphone 6 and 6+ but not iPad (768 px)
+only screen and (max-width: 767px) and (-webkit-min-device-pixel-ratio : 1.5),
+only screen and (max-width: 767px) and (min-device-pixel-ratio : 1.5) {
+  body {
+    font-size: 140%;
+  }
+}
 
 
