@@ -203,7 +203,15 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   public abstract int runTestFromCommandLine() throws Exception;
 
+  /**
+   * Provides the name of the table that is protected from random Chaos monkey activity
+   * @return table to not delete.
+   */
   public abstract TableName getTablename();
 
+  /**
+   * Provides the name of the CFs that are protected from random Chaos monkey activity (alter)
+   * @return set of cf names to protect.
+   */
   protected abstract Set<String> getColumnFamilies();
 }

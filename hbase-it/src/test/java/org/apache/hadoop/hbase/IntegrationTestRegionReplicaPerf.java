@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
 import com.yammer.metrics.core.Histogram;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -234,7 +236,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return null;
+    return Sets.newHashSet(Bytes.toString(PerformanceEvaluation.FAMILY_NAME));
   }
 
   /** Compute the mean of the given {@code stat} from a timing results. */
