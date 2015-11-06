@@ -187,7 +187,11 @@ public class CacheTestUtils {
         public void doAnAction() throws Exception {
           ByteArrayCacheable returned = (ByteArrayCacheable) toBeTested
               .getBlock(key, false, false, true);
-          assertArrayEquals(buf, returned.buf);
+          if (returned != null) {
+            assertArrayEquals(buf, returned.buf);
+          } else {
+            Thread.sleep(10);
+          }
           totalQueries.incrementAndGet();
         }
       };
@@ -195,6 +199,19 @@ public class CacheTestUtils {
       t.setDaemon(true);
       ctx.addThread(t);
     }
+
+    // add a thread to periodically evict and re-cache the block
+    final long blockEvictPeriod = 50;
+    TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
+      @Override
+      public void doAnAction() throws Exception {
+        toBeTested.evictBlock(key);
+        toBeTested.cacheBlock(key, bac);
+        Thread.sleep(blockEvictPeriod);
+      }
+    };
+    t.setDaemon(true);
+    ctx.addThread(t);
 
     ctx.startThreads();
     while (totalQueries.get() < numQueries && ctx.shouldRun()) {

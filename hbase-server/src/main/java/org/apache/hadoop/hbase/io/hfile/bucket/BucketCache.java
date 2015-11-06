@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,7 +69,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -180,14 +181,11 @@ public class BucketCache implements BlockCache, HeapSize {
   private volatile long ioErrorStartTime = -1;
 
   /**
-   * A "sparse lock" implementation allowing to lock on a particular block
-   * identified by offset. The purpose of this is to avoid freeing the block
-   * which is being read.
-   *
-   * TODO:We could extend the IdLock to IdReadWriteLock for better.
+   * A ReentrantReadWriteLock to lock on a particular block identified by offset.
+   * The purpose of this is to avoid freeing the block which is being read.
    */
   @VisibleForTesting
-  final IdLock offsetLock = new IdLock();
+  final IdReadWriteLock offsetLock = new IdReadWriteLock();
 
   private final ConcurrentIndex<String, BlockCacheKey> blocksByHFile =
       new ConcurrentIndex<String, BlockCacheKey>(new Comparator<BlockCacheKey>() {
@@ -412,9 +410,9 @@ public class BucketCache implements BlockCache, HeapSize {
     BucketEntry bucketEntry = backingMap.get(key);
     if (bucketEntry != null) {
       long start = System.nanoTime();
-      IdLock.Entry lockEntry = null;
+      ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
       try {
-        lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
+        lock.readLock().lock();
         // We can not read here even if backingMap does contain the given key because its offset
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
@@ -442,9 +440,7 @@ public class BucketCache implements BlockCache, HeapSize {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
         checkIOErrorIsTolerated();
       } finally {
-        if (lockEntry != null) {
-          offsetLock.releaseLockEntry(lockEntry);
-        }
+        lock.readLock().unlock();
       }
     }
     if (!repeat && updateCacheMetrics) {
@@ -484,21 +480,16 @@ public class BucketCache implements BlockCache, HeapSize {
         return false;
       }
     }
-    IdLock.Entry lockEntry = null;
+    ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
     try {
-      lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
+      lock.writeLock().lock();
       if (backingMap.remove(cacheKey, bucketEntry)) {
         blockEvicted(cacheKey, bucketEntry, removedBlock == null);
       } else {
         return false;
       }
-    } catch (IOException ie) {
-      LOG.warn("Failed evicting block " + cacheKey);
-      return false;
     } finally {
-      if (lockEntry != null) {
-        offsetLock.releaseLockEntry(lockEntry);
-      }
+      lock.writeLock().unlock();
     }
     cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     return true;
@@ -527,9 +518,9 @@ public class BucketCache implements BlockCache, HeapSize {
         return false;
       }
     }
-    IdLock.Entry lockEntry = null;
+    ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
     try {
-      lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
+      lock.writeLock().lock();
       int refCount = bucketEntry.refCount.get();
       if(refCount == 0) {
         if (backingMap.remove(cacheKey, bucketEntry)) {
@@ -553,13 +544,8 @@ public class BucketCache implements BlockCache, HeapSize {
           bucketEntry.markedForEvict = true;
         }
       }
-    } catch (IOException ie) {
-      LOG.warn("Failed evicting block " + cacheKey);
-      return false;
     } finally {
-      if (lockEntry != null) {
-        offsetLock.releaseLockEntry(lockEntry);
-      }
+      lock.writeLock().unlock();
     }
     cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     return true;
@@ -909,18 +895,14 @@ public class BucketCache implements BlockCache, HeapSize {
           heapSize.addAndGet(-1 * entries.get(i).getData().heapSize());
         } else if (bucketEntries[i] != null){
           // Block should have already been evicted. Remove it and free space.
-          IdLock.Entry lockEntry = null;
+          ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntries[i].offset());
           try {
-            lockEntry = offsetLock.getLockEntry(bucketEntries[i].offset());
+            lock.writeLock().lock();
             if (backingMap.remove(key, bucketEntries[i])) {
               blockEvicted(key, bucketEntries[i], false);
             }
-          } catch (IOException e) {
-            LOG.warn("failed to free space for " + key, e);
           } finally {
-            if (lockEntry != null) {
-              offsetLock.releaseLockEntry(lockEntry);
-            }
+            lock.writeLock().unlock();
           }
         }
       }
