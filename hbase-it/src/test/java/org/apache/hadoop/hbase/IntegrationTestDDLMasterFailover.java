@@ -954,12 +954,12 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   @Override
   public TableName getTablename() {
-    return null;
+    return null; // This test is not inteded to run with stock Chaos Monkey
   }
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return null;
+    return null; // This test is not inteded to run with stock Chaos Monkey
   }
 
   public static void main(String[] args) throws Exception {

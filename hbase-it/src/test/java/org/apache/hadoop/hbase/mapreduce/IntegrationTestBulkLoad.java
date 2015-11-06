@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.base.Joiner;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -79,6 +80,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -778,7 +780,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return null;
+    return Sets.newHashSet(Bytes.toString(CHAIN_FAM) , Bytes.toString(DATA_FAM),
+        Bytes.toString(SORT_FAM));
   }
 
   public static void main(String[] args) throws Exception {
