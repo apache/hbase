@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -80,6 +81,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Test Bulk Load and MR on a distributed cluster.
@@ -767,7 +779,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return null;
+    return Sets.newHashSet(Bytes.toString(CHAIN_FAM) , Bytes.toString(DATA_FAM),
+        Bytes.toString(SORT_FAM));
   }
 
   public static void main(String[] args) throws Exception {
