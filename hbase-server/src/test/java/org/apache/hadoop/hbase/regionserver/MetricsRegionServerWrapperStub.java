@@ -126,12 +126,12 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public int getPercentFileLocal() {
+  public double getPercentFileLocal() {
     return 99;
   }
 
   @Override
-  public int getPercentFileLocalSecondaryRegions() {
+  public double getPercentFileLocalSecondaryRegions() {
     return 99;
   }
 
@@ -206,7 +206,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public int getBlockCacheHitCachingPercent() {
+  public double getBlockCacheHitCachingPercent() {
     return 97;
   }
 
@@ -347,7 +347,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public int getMobFileCacheHitPercent() {
+  public double getMobFileCacheHitPercent() {
     return 50;
   }
 }

@@ -74,8 +74,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long totalStaticBloomSize = 0;
   private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
-  private volatile int percentFileLocal = 0;
-  private volatile int percentFileLocalSecondaryRegions = 0;
+  private volatile double percentFileLocal = 0;
+  private volatile double percentFileLocalSecondaryRegions = 0;
   private volatile long flushedCellsCount = 0;
   private volatile long compactedCellsCount = 0;
   private volatile long majorCompactedCellsCount = 0;
@@ -330,15 +330,25 @@ class MetricsRegionServerWrapperImpl
     if (this.cacheStats == null) {
       return 0;
     }
-    return (int) (this.cacheStats.getHitRatio() * 100);
+    double ratio = this.cacheStats.getHitRatio();
+    if (Double.isNaN(ratio)) {
+      ratio = 0;
+    }
+    return (ratio * 100);
   }
 
   @Override
-  public int getBlockCacheHitCachingPercent() {
+  public double getBlockCacheHitCachingPercent() {
     if (this.cacheStats == null) {
       return 0;
     }
-    return (int) (this.cacheStats.getHitCachingRatio() * 100);
+
+    double ratio = this.cacheStats.getHitCachingRatio();
+
+    if (Double.isNaN(ratio)) {
+      ratio = 0;
+    }
+    return (ratio * 100);
   }
 
   @Override public void forceRecompute() {
@@ -425,12 +435,12 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public int getPercentFileLocal() {
+  public double getPercentFileLocal() {
     return percentFileLocal;
   }
 
   @Override
-  public int getPercentFileLocalSecondaryRegions() {
+  public double getPercentFileLocalSecondaryRegions() {
     return percentFileLocalSecondaryRegions;
   }
 
@@ -538,8 +548,8 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public int getMobFileCacheHitPercent() {
-    return (int) (mobFileCacheHitRatio * 100);
+  public double getMobFileCacheHitPercent() {
+    return mobFileCacheHitRatio * 100;
   }
 
   /**
@@ -572,8 +582,8 @@ class MetricsRegionServerWrapperImpl
       long tempTotalStaticBloomSize = 0;
       long tempNumMutationsWithoutWAL = 0;
       long tempDataInMemoryWithoutWAL = 0;
-      int tempPercentFileLocal = 0;
-      int tempPercentFileLocalSecondaryRegions = 0;
+      double tempPercentFileLocal = 0;
+      double tempPercentFileLocalSecondaryRegions = 0;
       long tempFlushedCellsCount = 0;
       long tempCompactedCellsCount = 0;
       long tempMajorCompactedCellsCount = 0;
@@ -589,7 +599,7 @@ class MetricsRegionServerWrapperImpl
       long tempMobFlushedCellsSize = 0;
       long tempMobScanCellsCount = 0;
       long tempMobScanCellsSize = 0;
-      long tempBlockedRequestsCount = 0L;
+      long tempBlockedRequestsCount = 0;
 
       for (Region r : regionServer.getOnlineRegionsLocalContext()) {
         tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
@@ -636,13 +646,14 @@ class MetricsRegionServerWrapperImpl
       }
       float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
           regionServer.getServerName().getHostname());
-      tempPercentFileLocal = (int) (localityIndex * 100);
+      tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
 
       float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
           .getBlockLocalityIndex(regionServer.getServerName().getHostname());
-      tempPercentFileLocalSecondaryRegions = (int) (localityIndexSecondaryRegions * 100);
+      tempPercentFileLocalSecondaryRegions =
+          Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
 
-      //Compute the number of requests per second
+      // Compute the number of requests per second
       long currentTime = EnvironmentEdgeManager.currentTime();
 
       // assume that it took PERIOD seconds to start the executor.
@@ -650,7 +661,7 @@ class MetricsRegionServerWrapperImpl
       if (lastRan == 0) {
         lastRan = currentTime - period;
       }
-      //If we've time traveled keep the last requests per second.
+      // If we've time traveled keep the last requests per second.
       if ((currentTime - lastRan) > 0) {
         long currentRequestCount = getTotalRequestCount();
         requestsPerSecond = (currentRequestCount - lastRequestCount) /
@@ -665,7 +676,7 @@ class MetricsRegionServerWrapperImpl
           (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
       walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
           (provider == null ? 0 : provider.getLogFileSize());
-      //Copy over computed values so that no thread sees half computed values.
+      // Copy over computed values so that no thread sees half computed values.
       numStores = tempNumStores;
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
@@ -698,7 +709,7 @@ class MetricsRegionServerWrapperImpl
       mobScanCellsSize = tempMobScanCellsSize;
       mobFileCacheAccessCount = mobFileCache.getAccessCount();
       mobFileCacheMissCount = mobFileCache.getMissCount();
-      mobFileCacheHitRatio = mobFileCache.getHitRatio();
+      mobFileCacheHitRatio = Double.isNaN(mobFileCache.getHitRatio())?0:mobFileCache.getHitRatio();
       mobFileCacheEvictedCount = mobFileCache.getEvictedFileCount();
       mobFileCacheCount = mobFileCache.getCacheSize();
       blockedRequestsCount = tempBlockedRequestsCount;
