@@ -403,8 +403,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         if (this.numNodes < this.wrap) {
           this.wrap = this.numNodes;
         }
-        this.multipleUnevenColumnFamilies =
-            context.getConfiguration().getBoolean(MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY, false);
+        this.multipleUnevenColumnFamilies = isMultiUnevenColumnFamilies(context.getConfiguration());
       }
 
       protected void instantiateHTable() throws IOException {
@@ -610,11 +609,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       job.setOutputFormatClass(NullOutputFormat.class);
 
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
-      String multipleUnevenColumnFamiliesStr = System.getProperty(MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY);
-      if (multipleUnevenColumnFamiliesStr != null) {
-        job.getConfiguration().setBoolean(MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY,
-          Boolean.parseBoolean(multipleUnevenColumnFamiliesStr));
-      }
       TableMapReduceUtil.addDependencyJars(job);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
@@ -829,9 +823,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       protected void setup(
           Mapper<ImmutableBytesWritable, Result, BytesWritable, BytesWritable>.Context context)
           throws IOException, InterruptedException {
-        this.multipleUnevenColumnFamilies =
-            context.getConfiguration().getBoolean(Generator.MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY,
-              false);
+        this.multipleUnevenColumnFamilies = isMultiUnevenColumnFamilies(context.getConfiguration());
       }
 
       @Override
@@ -1100,10 +1092,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
       scan.setCaching(10000);
       scan.setCacheBlocks(false);
-      if (isMultiUnevenColumnFamilies()) {
+      if (isMultiUnevenColumnFamilies(getConf())) {
         scan.addColumn(BIG_FAMILY_NAME, BIG_FAMILY_NAME);
         scan.addColumn(TINY_FAMILY_NAME, TINY_FAMILY_NAME);
-        job.getConfiguration().setBoolean(Generator.MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY, true);
       }
 
       TableMapReduceUtil.initTableMapperJob(getTableName(getConf()).getName(), scan,
@@ -1585,16 +1576,15 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
   }
 
-  private static boolean isMultiUnevenColumnFamilies() {
-    return Boolean.TRUE.toString().equalsIgnoreCase(
-      System.getProperty(Generator.MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY));
+  private static boolean isMultiUnevenColumnFamilies(Configuration conf) {
+    return conf.getBoolean(Generator.MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY,true);
   }
 
   @Test
   public void testContinuousIngest() throws IOException, Exception {
     //Loop <num iterations> <num mappers> <num nodes per mapper> <output dir> <num reducers>
     Configuration conf = getTestingUtil(getConf()).getConfiguration();
-    if (isMultiUnevenColumnFamilies()) {
+    if (isMultiUnevenColumnFamilies(getConf())) {
       // make sure per CF flush is on
       conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
     }
@@ -1692,7 +1682,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    if (isMultiUnevenColumnFamilies()) {
+    if (isMultiUnevenColumnFamilies(getConf())) {
       return Sets.newHashSet(Bytes.toString(FAMILY_NAME), Bytes.toString(BIG_FAMILY_NAME),
         Bytes.toString(TINY_FAMILY_NAME));
     } else {
