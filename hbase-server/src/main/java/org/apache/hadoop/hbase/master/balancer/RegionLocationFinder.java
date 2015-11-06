@@ -174,17 +174,25 @@ class RegionLocationFinder {
     Collection<ServerName> regionServers = status.getServers();
 
     // create a mapping from hostname to ServerName for fast lookup
-    HashMap<String, ServerName> hostToServerName = new HashMap<String, ServerName>();
+    HashMap<String, List<ServerName>> hostToServerName = new HashMap<String, List<ServerName>>();
     for (ServerName sn : regionServers) {
-      hostToServerName.put(sn.getHostname(), sn);
+      String host = sn.getHostname();
+      if (!hostToServerName.containsKey(host)) {
+        hostToServerName.put(host, new ArrayList<ServerName>());
+      }
+      hostToServerName.get(host).add(sn);
     }
 
     for (String host : hosts) {
-      ServerName sn = hostToServerName.get(host);
-      // it is possible that HDFS is up ( thus host is valid ),
-      // but RS is down ( thus sn is null )
-      if (sn != null) {
-        topServerNames.add(sn);
+      if (!hostToServerName.containsKey(host)) {
+        continue;
+      }
+      for (ServerName sn : hostToServerName.get(host)) {
+        // it is possible that HDFS is up ( thus host is valid ),
+        // but RS is down ( thus sn is null )
+        if (sn != null) {
+          topServerNames.add(sn);
+        }
       }
     }
     return topServerNames;
