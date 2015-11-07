@@ -1236,9 +1236,9 @@
     <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
     <surefire.Xmx>2800m</surefire.Xmx>
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
-    <!--Mark our test runs with '-Dhbase.test' so we can identify a surefire test as ours in a process listing
+    <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
      -->
-    <hbase-surefire.argLine>-enableassertions -Dhbase.test -Xmx${surefire.Xmx}
+    <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
     </hbase-surefire.argLine>
@@ -1252,7 +1252,12 @@
     <extra.enforcer.version>1.0-beta-3</extra.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
-  </properties>
+    <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
+    <!--This build.id we'll add as flag so can identify which forked processes belong to our build.
+        Default is the build start timestamp. Up on jenkins pass in the jenkins build id by setting
+        this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
+    <build.id>${maven.build.timestamp}</build.id>
+    </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
     <dependencies>
