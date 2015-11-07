@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -463,4 +464,31 @@ public class TestFSHLog {
     }
   }
 
+  @Test
+  public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
+      SecurityException, IllegalArgumentException, IllegalAccessException {
+    final String name = "testSyncRunnerIndexOverflow";
+    FSHLog log =
+        new FSHLog(fs, FSUtils.getRootDir(conf), name, HConstants.HREGION_OLDLOGDIR_NAME, conf,
+            null, true, null, null);
+    try {
+      Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
+      ringBufferEventHandlerField.setAccessible(true);
+      FSHLog.RingBufferEventHandler ringBufferEventHandler =
+          (FSHLog.RingBufferEventHandler) ringBufferEventHandlerField.get(log);
+      Field syncRunnerIndexField =
+          FSHLog.RingBufferEventHandler.class.getDeclaredField("syncRunnerIndex");
+      syncRunnerIndexField.setAccessible(true);
+      syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
+      TableName tn = TableName.valueOf("t1");
+      HRegionInfo hri =
+          new HRegionInfo(tn, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      AtomicLong sequenceId = new AtomicLong(1);
+      for (int i = 0; i < 10; i++) {
+        addEdits(log, hri, tn, 1, sequenceId);
+      }
+    } finally {
+      log.close();
+    }
+  }
 }
