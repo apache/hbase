@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2056,9 +2055,10 @@ public class FSHLog implements WAL {
         if (this.exception == null) {
           // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
           // the syncRunner. We should never get an exception in here.
-          int index = Math.abs(this.syncRunnerIndex++) % this.syncRunners.length;
+          this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
           try {
-            this.syncRunners[index].offer(sequence, this.syncFutures, this.syncFuturesCount);
+            this.syncRunners[this.syncRunnerIndex].offer(sequence, this.syncFutures,
+              this.syncFuturesCount);
           } catch (Exception e) {
             // Should NEVER get here.
             requestLogRoll();
