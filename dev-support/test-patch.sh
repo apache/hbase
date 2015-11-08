@@ -875,6 +875,7 @@ runTests () {
   # NOTE!!!! The below code has been copied and pasted up into jenkins as an post-build task.
   # Make sure to update it too if you change the below (Or extract below into script to checkout
   # to run post-build)
+  $BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}
   ZOMBIE_TESTS_COUNT=`zombieCount`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     # It seems sometimes the tests are not dying immediately. Let's give them 30s

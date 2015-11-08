@@ -23,8 +23,7 @@
 # TODO: format output to suit context -- test-patch, jenkins or dev env
 
 #set -x
-# REMOVE
-printenv
+# printenv
 
 ### Setup some variables.  
 bindir=$(dirname $0)
@@ -32,7 +31,7 @@ bindir=$(dirname $0)
 # This key is set by our surefire configuration up in the main pom.xml
 # This key needs to match the key we set up there.
 HBASE_BUILD_ID_KEY="hbase.build.id="
-JENKINS=false
+JENKINS=
 
 PS=${PS:-ps}
 AWK=${AWK:-awk}
@@ -90,12 +89,6 @@ parseArgs() {
     printUsage
     exit 1
   fi
-  if [[ $JENKINS == "true" ]] ; then
-    echo "Running in Jenkins mode"
-  else
-    echo "Running in developer mode"
-    JENKINS=false
-  fi
 }
 
 ### Return list of the processes found with passed build id.
@@ -109,8 +102,8 @@ zombies () {
   # xargs trims white space before and after the count
   ZOMBIE_TESTS_COUNT=`echo "${ZOMBIES}"|wc -l|xargs`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-    wait=15
-    echo "Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es); waiting ${wait}s to see if just slow to stop"
+    wait=30
+    echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es); waiting ${wait}s to see if just slow to stop"
     sleep ${wait}
     PIDS=`echo "${ZOMBIES}"|${AWK} '{print $1}'`
     ZOMBIE_TESTS_COUNT=0
@@ -120,7 +113,7 @@ zombies () {
       PS_OUTPUT=`ps -p $pid | tail +2 | grep -e "${HBASE_BUILD_TAG}"`
       if [[ ! -z "${PS_OUTPUT}" ]]
       then
-        echo "Zombie: $PS_OUTPUT"
+        echo "`date` Zombie: $PS_OUTPUT"
         let "ZOMBIE_TESTS_COUNT+=1"
         PS_STACK=`jstack $pid | grep -e "\.Test" | grep -e "\.java"| head -3`
         echo "${PS_STACK}"
@@ -129,11 +122,14 @@ zombies () {
     done
     if [[ $ZOMBIE_TESTS_COUNT != 0 ]]
     then
+      echo "`date` There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s)."
       # If JIRA_COMMENT in environment, append our findings to it
       JIRA_COMMENT="$JIRA_COMMENT
-      {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s): ${ZB_STACK}"
+        {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s): ${ZB_STACK}"
       # Exit with error
       exit 1
+    else
+      echo "We're ok: there is no zombie test"
     fi
   fi
 }
