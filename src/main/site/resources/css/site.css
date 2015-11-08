@@ -47,9 +47,12 @@ footer {
 footer .row, footer p, footer .pull-right {
   margin: 5px;
 }
-form#search-form.navbar-search.pull-right {
-  width: 150px;
-  margin-right: 33px;
+div#search-form.navbar-search.pull-right {
+  width: 290px;
+  margin-right: 0;
+  margin-top: -5px;
+  margin-left: 0;
+  position: initial;
 }
 li#publishDate.pull-right {
   margin-top: -23px;
@@ -61,9 +64,7 @@ li#publishDate.pull-right {
 .navbar-fixed-bottom .container,
 .navbar-inner {
   width: 100%;
-  margin: 2px;
 }
-
 /* Change the color and effect when clicking in menus */
 .dropdown-menu>li>a:hover,
 .dropdown-menu>li>a:focus,
@@ -75,48 +76,21 @@ li#publishDate.pull-right {
   font-weight: bolder;
 }
 
-/* On small screens, put the search form on its own line */
-@media only screen and (max-width: 767px) {
-  body {
+.dropdown-backdrop {
+  position: static;
+}
+
+@media only screen and (max-width: 977px) {
+  /* Without this rule, drop-down divs are a fixed height
+   * the first time they are expanded */
+  .collapse.in {
+    height: auto;
+    overflow: visible;
+  }
+  div#search-form.navbar-search.pull-right {
+    padding: 0;
+    margin-left: ;
     width: 100%;
-    font-size: 120%;
-  }
-  div#topbar,
-  div#banner,
-  div#breadcrumbs,
-  div#bodyColumn,
-  footer {
-    width: 98%;
-    margin-left: 5px;
-    margin-right: 5px;
-    clear: both;
-    margin-bottom: 2px;
-  }
-  div#banner {
-    margin-top: 90px;
-  }
-  form#search-form.navbar-search.pull-right, .pull-right {
-    width: 95%;
-    margin: 2px;
-    float: left;
     clear: both;
   }
-  li#publishDate.pull-right {
-    display: block;
-    width: 95%;
-    float: left;
-    margin-top: 5px;
-    list-style: none;
-  }
 }
-
-// Make the font size even bigger on high-DPI small-screen devices
-// such as iphone 6 and 6+ but not iPad (768 px)
-only screen and (max-width: 767px) and (-webkit-min-device-pixel-ratio : 1.5),
-only screen and (max-width: 767px) and (min-device-pixel-ratio : 1.5) {
-  body {
-    font-size: 140%;
-  }
-}
-
-

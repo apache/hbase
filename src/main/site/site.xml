@@ -25,14 +25,15 @@
   <skin>
     <groupId>org.apache.maven.skins</groupId>
     <artifactId>maven-fluido-skin</artifactId>
-    <version>1.4</version>
+    <version>1.5-HBASE</version>
   </skin>
   <custom>
     <fluidoSkin>
       <topBarEnabled>true</topBarEnabled>
-      <topBarContainerStyle>width: 98%;</topBarContainerStyle>
       <sideBarEnabled>false</sideBarEnabled>
-      <googleSearch/>
+      <googleSearch>
+        <customSearch>000385458301414556862:sq1bb0xugjg</customSearch>
+      </googleSearch>
       <sourceLineNumbersEnabled>false</sourceLineNumbersEnabled>
       <skipGenerationDate>true</skipGenerationDate>
       <breadcrumbDivider>»</breadcrumbDivider>
@@ -53,9 +54,10 @@
   <body>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
-      <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/styles/github.min.css"/>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.min.css"/>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/styles/github.min.css"/>
       <link rel="stylesheet" href="css/site.css"/>
-      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>
     </head>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
