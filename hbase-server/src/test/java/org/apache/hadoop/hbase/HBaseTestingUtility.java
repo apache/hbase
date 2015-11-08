@@ -3451,6 +3451,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     do {
       port = randomPort();
       if (takenRandomPorts.contains(port)) {
+        port = 0;
         continue;
       }
       takenRandomPorts.add(port);
