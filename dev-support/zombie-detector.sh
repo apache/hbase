@@ -99,8 +99,12 @@ find_processes () {
 ### Look for zombies
 zombies () {
   ZOMBIES=`find_processes`
-  # xargs trims white space before and after the count
-  ZOMBIE_TESTS_COUNT=`echo "${ZOMBIES}"|wc -l|xargs`
+  if [[ -z ${ZOMBIES} ]]
+  then
+    ZOMBIE_TESTS_COUNT=0
+  else
+    ZOMBIE_TESTS_COUNT=`echo "${ZOMBIES}"| wc -l| xargs`
+  fi
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     wait=30
     echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es) listed below; waiting ${wait}s to see if just slow to stop"
