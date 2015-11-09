@@ -100,6 +100,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private final LinkedList<ProcedureWALFile> logs = new LinkedList<ProcedureWALFile>();
   private final ProcedureStoreTracker storeTracker = new ProcedureStoreTracker();
+  private final AtomicLong inactiveLogsMaxId = new AtomicLong(0);
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
   private final Condition slotCond = lock.newCondition();
@@ -223,6 +224,14 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   public ProcedureStoreTracker getStoreTracker() {
     return storeTracker;
+  }
+
+  public LinkedList<ProcedureWALFile> getActiveLogs() {
+    return logs;
+  }
+
+  public Set<ProcedureWALFile> getCorruptedLogs() {
+    return corruptedLogs;
   }
 
   @Override
@@ -386,7 +395,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     if (removeOldLogs) {
-      removeAllLogs(logId - 1);
+      setInactiveLogsMaxId(logId - 1);
     }
   }
 
@@ -426,7 +435,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     if (removeOldLogs) {
-      removeAllLogs(logId);
+      setInactiveLogsMaxId(logId);
     }
   }
 
@@ -499,6 +508,18 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return syncException.get() != null;
   }
 
+  protected void periodicRoll() throws IOException {
+    long logId;
+    boolean removeOldLogs;
+    synchronized (storeTracker) {
+      logId = flushLogId;
+      removeOldLogs = storeTracker.isEmpty();
+    }
+    if (checkAndTryRoll() && removeOldLogs) {
+      setInactiveLogsMaxId(logId);
+    }
+  }
+
   private void syncLoop() throws Throwable {
     inSync.set(false);
     lock.lock();
@@ -507,6 +528,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
         try {
           // Wait until new data is available
           if (slotIndex == 0) {
+            removeInactiveLogs();
+
             if (LOG.isTraceEnabled()) {
               float rollTsSec = getMillisFromLastRoll() / 1000.0f;
               LOG.trace(String.format("Waiting for data. flushed=%s (%s/sec)",
@@ -516,8 +539,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
             waitCond.await(getMillisToNextPeriodicRoll(), TimeUnit.MILLISECONDS);
             if (slotIndex == 0) {
-              // no data.. probably a stop()
-              checkAndTryRoll();
+              // no data.. probably a stop() or a periodic roll
+              periodicRoll();
               continue;
             }
           }
@@ -724,7 +747,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
     try {
       if (stream != null) {
         try {
-          ProcedureWALFormat.writeTrailer(stream, storeTracker);
+          synchronized (storeTracker) {
+            ProcedureWALFile log = logs.getLast();
+            log.setProcIds(storeTracker.getUpdatedMinProcId(), storeTracker.getUpdatedMaxProcId());
+            ProcedureWALFormat.writeTrailer(stream, storeTracker);
+          }
         } catch (IOException e) {
           LOG.warn("Unable to write the trailer: " + e.getMessage());
         }
@@ -737,21 +764,51 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  private void removeAllLogs(long lastLogId) {
-    if (logs.size() <= 1) {
-      assert logs.size() == 1: "Expected at least one active log to be running.";
-      return;
+  // ==========================================================================
+  //  Log Files cleaner helpers
+  // ==========================================================================
+  private void setInactiveLogsMaxId(long logId) {
+    long expect = 0;
+    while (!inactiveLogsMaxId.compareAndSet(expect, logId)) {
+      expect = inactiveLogsMaxId.get();
+      if (expect >= logId) {
+        break;
+      }
     }
+  }
+
+  private void removeInactiveLogs() {
+    long lastLogId = inactiveLogsMaxId.get();
+    if (lastLogId != 0) {
+      removeAllLogs(lastLogId);
+      inactiveLogsMaxId.compareAndSet(lastLogId, 0);
+    }
+
+    // Verify if the ProcId of the first oldest is still active. if not remove the file.
+    while (logs.size() > 1) {
+      ProcedureWALFile log = logs.getFirst();
+      synchronized (storeTracker) {
+        if (storeTracker.isTracking(log.getMinProcId(), log.getMaxProcId())) {
+          break;
+        }
+      }
+      removeLogFile(log);
+    }
+  }
+
+  private void removeAllLogs(long lastLogId) {
+    if (logs.size() <= 1) return;
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Remove all state logs with ID less than " + lastLogId);
     }
-    do {
+    while (logs.size() > 1) {
       ProcedureWALFile log = logs.getFirst();
       if (lastLogId < log.getLogId()) {
         break;
       }
       removeLogFile(log);
-    } while(!logs.isEmpty());
+    }
   }
 
   private boolean removeLogFile(final ProcedureWALFile log) {
@@ -761,15 +818,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
       }
       log.removeFile();
       logs.remove(log);
+      LOG.info("Remove log: " + log);
+      LOG.info("Removed logs: " + logs);
+      if (logs.size() == 0) { LOG.error("Expected at least one log"); }
+      assert logs.size() > 0 : "expected at least one log";
     } catch (IOException e) {
       LOG.error("Unable to remove log: " + log, e);
       return false;
     }
     return true;
-  }
-
-  public Set<ProcedureWALFile> getCorruptedLogs() {
-    return corruptedLogs;
   }
 
   // ==========================================================================
