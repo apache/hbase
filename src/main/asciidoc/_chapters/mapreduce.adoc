@@ -33,7 +33,9 @@ A good place to get started with MapReduce is http://hadoop.apache.org/docs/r2.6
 MapReduce version 2 (MR2)is now part of link:http://hadoop.apache.org/docs/r2.3.0/hadoop-yarn/hadoop-yarn-site/[YARN].
 
 This chapter discusses specific configuration steps you need to take to use MapReduce on data within HBase.
-In addition, it discusses other interactions and issues between HBase and MapReduce jobs.
+In addition, it discusses other interactions and issues between HBase and MapReduce
+jobs. Finally, it discusses <<cascading,Cascading>>, an
+link:http://www.cascading.org/[alternative API] for MapReduce.
 
 .`mapred` and `mapreduce`
 [NOTE]
@@ -594,3 +596,50 @@ This can either be done on a per-Job basis through properties, on on the entire 
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
 See <<spec.ex,spec.ex>> for more information.
+
+[[cascading]]
+== Cascading
+
+link:http://www.cascading.org/[Cascading] is an alternative API for MapReduce, which
+actually uses MapReduce, but allows you to write your MapReduce code in a simplified
+way.
+
+The following example shows a Cascading `Flow` which "sinks" data into an HBase cluster. The same
+`hBaseTap` API could be used to "source" data as well.
+
+[source, java]
+----
+// read data from the default filesystem
+// emits two fields: "offset" and "line"
+Tap source = new Hfs( new TextLine(), inputFileLhs );
+
+// store data in a HBase cluster
+// accepts fields "num", "lower", and "upper"
+// will automatically scope incoming fields to their proper familyname, "left" or "right"
+Fields keyFields = new Fields( "num" );
+String[] familyNames = {"left", "right"};
+Fields[] valueFields = new Fields[] {new Fields( "lower" ), new Fields( "upper" ) };
+Tap hBaseTap = new HBaseTap( "multitable", new HBaseScheme( keyFields, familyNames, valueFields ), SinkMode.REPLACE );
+
+// a simple pipe assembly to parse the input into fields
+// a real app would likely chain multiple Pipes together for more complex processing
+Pipe parsePipe = new Each( "insert", new Fields( "line" ), new RegexSplitter( new Fields( "num", "lower", "upper" ), " " ) );
+
+// "plan" a cluster executable Flow
+// this connects the source Tap and hBaseTap (the sink Tap) to the parsePipe
+Flow parseFlow = new FlowConnector( properties ).connect( source, hBaseTap, parsePipe );
+
+// start the flow, and block until complete
+parseFlow.complete();
+
+// open an iterator on the HBase table we stuffed data into
+TupleEntryIterator iterator = parseFlow.openSink();
+
+while(iterator.hasNext())
+  {
+  // print out each tuple from HBase
+  System.out.println( "iterator.next() = " + iterator.next() );
+  }
+
+iterator.close();
+----

@@ -92,7 +92,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 .Operational Compatibility
 * Metric changes
 * Behavioral changes of services
-* Web page APIs
+* JMX APIs exposed via the `/jmx/` endpoint
 
 .Summary
 * A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.]. Downgrading versions within patch releases may not be compatible.
@@ -191,6 +191,12 @@ See <<zookeeper.requirements>>.
 [[default.ports.changed]]
 .HBase Default Ports Changed
 The ports used by HBase changed. They used to be in the 600XX range. In HBase 1.0.0 they have been moved up out of the ephemeral port range and are 160XX instead (Master web UI was 60010 and is now 16010; the RegionServer web UI was 60030 and is now 16030, etc.). If you want to keep the old port locations, copy the port setting configs from _hbase-default.xml_ into _hbase-site.xml_, change them back to the old values from the HBase 0.98.x era, and ensure you've distributed your configurations before you restart.
+
+.HBase Master Port Binding Change
+In HBase 1.0.x, the HBase Master binds the RegionServer ports as well as the Master
+ports. This behavior is changed from HBase versions prior to 1.0. In HBase 1.1 and 2.0 branches,
+this behavior is reverted to the pre-1.0 behavior of the HBase master not binding the RegionServer
+ports.
 
 [[upgrade1.0.hbase.bucketcache.percentage.in.combinedcache]]
 .hbase.bucketcache.percentage.in.combinedcache configuration has been REMOVED

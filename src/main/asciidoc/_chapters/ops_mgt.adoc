@@ -637,10 +637,14 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 [[compaction.tool]]
 === Offline Compaction Tool
 
-See the usage for the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[Compaction
-          Tool].
-Run it like this +./bin/hbase
-          org.apache.hadoop.hbase.regionserver.CompactionTool+
+See the usage for the
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
+Run it like:
+
+[source, bash]
+----
+$ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+----
 
 === `hbase clean`
 
@@ -1252,7 +1256,8 @@ Have a look in the Web UI.
 
 == Cluster Replication
 
-NOTE: This information was previously available at link:http://hbase.apache.org/replication.html[Cluster Replication].
+NOTE: This information was previously available at
+link:http://hbase.apache.org#replication[Cluster Replication].
 
 HBase provides a cluster replication mechanism which allows you to keep one cluster's state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes.
 Some use cases for cluster replication include:
