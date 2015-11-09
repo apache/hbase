@@ -150,8 +150,8 @@ public class ProcedureWALFormatReader {
       LOG.info("No active entry found in state log " + log + ". removing it");
       loader.removeLog(log);
     } else {
+      log.setProcIds(localProcedureMap.getMinProcId(), localProcedureMap.getMaxProcId());
       procedureMap.mergeTail(localProcedureMap);
-
       //if (hasFastStartSupport) {
         // TODO: Some procedure may be already runnables (see readInitEntry())
         //       (we can also check the "update map" in the log trackers)
@@ -321,6 +321,10 @@ public class ProcedureWALFormatReader {
     // pending unlinked children (root not present yet)
     private Entry childUnlinkedHead;
 
+    // Track ProcId range
+    private long minProcId = Long.MAX_VALUE;
+    private long maxProcId = Long.MIN_VALUE;
+
     public WalProcedureMap(int size) {
       procedureMap = new Entry[size];
       replayOrderHead = null;
@@ -330,6 +334,7 @@ public class ProcedureWALFormatReader {
     }
 
     public void add(ProcedureProtos.Procedure procProto) {
+      trackProcIds(procProto.getProcId());
       Entry entry = addToMap(procProto.getProcId(), procProto.hasParentId());
       boolean isNew = entry.proto == null;
       entry.proto = procProto;
@@ -345,6 +350,7 @@ public class ProcedureWALFormatReader {
     }
 
     public boolean remove(long procId) {
+      trackProcIds(procId);
       Entry entry = removeFromMap(procId);
       if (entry != null) {
         unlinkFromReplayList(entry);
@@ -352,6 +358,19 @@ public class ProcedureWALFormatReader {
         return true;
       }
       return false;
+    }
+
+    private void trackProcIds(long procId) {
+      minProcId = Math.min(minProcId, procId);
+      maxProcId = Math.max(maxProcId, procId);
+    }
+
+    public long getMinProcId() {
+      return minProcId;
+    }
+
+    public long getMaxProcId() {
+      return maxProcId;
     }
 
     public boolean contains(long procId) {
@@ -370,6 +389,8 @@ public class ProcedureWALFormatReader {
       replayOrderTail = null;
       rootHead = null;
       childUnlinkedHead = null;
+      minProcId = Long.MAX_VALUE;
+      maxProcId = Long.MIN_VALUE;
     }
 
     /*
