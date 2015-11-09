@@ -833,12 +833,6 @@ checkLineLengths () {
   return 0
 }
 
-zombieCount() {
-  # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can
-  # be identified as hbase in a process listing.
-  echo `jps -v | grep surefirebooter | grep -e '-Dhbase.test' | wc -l`
-}
-
 ###############################################################################
 ### Run the tests
 runTests () {
@@ -875,31 +869,8 @@ runTests () {
   # NOTE!!!! The below code has been copied and pasted up into jenkins as an post-build task.
   # Make sure to update it too if you change the below (Or extract below into script to checkout
   # to run post-build)
+  export JIRA_COMMENT
   $BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}
-  ZOMBIE_TESTS_COUNT=`zombieCount`
-  if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-    # It seems sometimes the tests are not dying immediately. Let's give them 30s
-    echo "Suspicious java process found - waiting 30s to see if there are just slow to stop"
-    sleep 30
-    ZOMBIE_TESTS_COUNT=`zombieCount`
-    if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-      echo "There appear to be $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
-      jps -v | grep surefirebooter | grep -e '-Dhbase.test'
-      echo "************ BEGIN zombies jstack extract"
-      # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can be identified as hbase in a process listing.
-      ZB_STACK=`jps -v | grep surefirebooter | grep -e '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
-      echo "************ END  zombies jstack extract"
-      JIRA_COMMENT="$JIRA_COMMENT
-
-      {color:red}-1 core zombie tests{color}.  There are possible ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
-      BAD=1
-    else
-      echo "We're ok: there is no zombie test, but some tests took some time to stop"
-    fi
-  else
-    echo "We're ok: there is no zombie test"
-  fi
-  return $BAD
 }
 
 ###############################################################################

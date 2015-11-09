@@ -103,7 +103,8 @@ zombies () {
   ZOMBIE_TESTS_COUNT=`echo "${ZOMBIES}"|wc -l|xargs`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     wait=30
-    echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es); waiting ${wait}s to see if just slow to stop"
+    echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es) listed below; waiting ${wait}s to see if just slow to stop"
+    echo ${ZOMBIES}
     sleep ${wait}
     PIDS=`echo "${ZOMBIES}"|${AWK} '{print $1}'`
     ZOMBIE_TESTS_COUNT=0
@@ -130,6 +131,8 @@ zombies () {
       exit 1
     else
       echo "`date` We're ok: there is no zombie test"
+      JIRA_COMMENT="$JIRA_COMMENT
+        {color:green}+1 core zombie tests -- no zombies!{color}."
     fi
   fi
 }
