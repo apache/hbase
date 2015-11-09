@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.procedure2.store;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -123,6 +124,36 @@ public class TestProcedureStoreTracker {
     assertEquals(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(579));
     assertEquals(ProcedureStoreTracker.DeleteState.MAYBE, tracker.isDeleted(577));
     assertEquals(ProcedureStoreTracker.DeleteState.MAYBE, tracker.isDeleted(580));
+
+    tracker.setDeleted(579, true);
+    tracker.setPartialFlag(false);
+    assertTrue(tracker.isEmpty());
+  }
+
+  @Test
+  public void testIsTracking() {
+    long[][] procIds = new long[][] {{4, 7}, {1024, 1027}, {8192, 8194}};
+    long[][] checkIds = new long[][] {{2, 8}, {1023, 1025}, {8193, 8191}};
+
+    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (int i = 0; i < procIds.length; ++i) {
+      long[] seq = procIds[i];
+      tracker.insert(seq[0]);
+      tracker.insert(seq[1]);
+    }
+
+    for (int i = 0; i < procIds.length; ++i) {
+      long[] check = checkIds[i];
+      long[] seq = procIds[i];
+      assertTrue(tracker.isTracking(seq[0], seq[1]));
+      assertTrue(tracker.isTracking(check[0], check[1]));
+      tracker.delete(seq[0]);
+      tracker.delete(seq[1]);
+      assertFalse(tracker.isTracking(seq[0], seq[1]));
+      assertFalse(tracker.isTracking(check[0], check[1]));
+    }
+
+    assertTrue(tracker.isEmpty());
   }
 
   @Test

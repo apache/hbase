@@ -29,6 +29,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -95,6 +97,15 @@ public class TestWALProcedureStore {
     procStore.start(PROCEDURE_STORE_SLOTS);
     procStore.recoverLease();
     procStore.load(loader);
+  }
+
+  @Test
+  public void testEmptyRoll() throws Exception {
+    for (int i = 0; i < 10; ++i) {
+      procStore.periodicRoll();
+    }
+    FileStatus[] status = fs.listStatus(logDir);
+    assertEquals(1, status.length);
   }
 
   @Test
@@ -353,6 +364,60 @@ public class TestWALProcedureStore {
         assertFalse(procIter.hasNext());
       }
     });
+  }
+
+  @Test
+  public void testInsertUpdateDelete() throws Exception {
+    final int NTHREAD = 2;
+
+    procStore.stop(false);
+    fs.delete(logDir, true);
+
+    org.apache.hadoop.conf.Configuration conf =
+      new org.apache.hadoop.conf.Configuration(htu.getConfiguration());
+    conf.setBoolean("hbase.procedure.store.wal.use.hsync", false);
+    conf.setInt("hbase.procedure.store.wal.periodic.roll.msec", 10000);
+    conf.setInt("hbase.procedure.store.wal.roll.threshold", 128 * 1024);
+
+    fs.mkdirs(logDir);
+    procStore = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
+    procStore.start(NTHREAD);
+    procStore.recoverLease();
+
+    final long LAST_PROC_ID = 9999;
+    final Thread[] thread = new Thread[NTHREAD];
+    final AtomicLong procCounter = new AtomicLong((long)Math.round(Math.random() * 100));
+    for (int i = 0; i < thread.length; ++i) {
+      thread[i] = new Thread() {
+        @Override
+        public void run() {
+          Random rand = new Random();
+          TestProcedure proc;
+          do {
+            proc = new TestProcedure(procCounter.addAndGet(1));
+            // Insert
+            procStore.insert(proc, null);
+            // Update
+            for (int i = 0, nupdates = rand.nextInt(10); i <= nupdates; ++i) {
+              try { Thread.sleep(0, rand.nextInt(15)); } catch (InterruptedException e) {}
+              procStore.update(proc);
+            }
+            // Delete
+            procStore.delete(proc.getProcId());
+          } while (proc.getProcId() < LAST_PROC_ID);
+        }
+      };
+      thread[i].start();
+    }
+
+    for (int i = 0; i < thread.length; ++i) {
+      thread[i].join();
+    }
+
+    procStore.getStoreTracker().dump();
+    assertTrue(procCounter.get() >= LAST_PROC_ID);
+    assertTrue(procStore.getStoreTracker().isEmpty());
+    assertEquals(1, procStore.getActiveLogs().size());
   }
 
   private void corruptLog(final FileStatus logFile, final long dropBytes)
