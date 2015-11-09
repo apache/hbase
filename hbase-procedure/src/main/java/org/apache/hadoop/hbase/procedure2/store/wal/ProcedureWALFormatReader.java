@@ -97,17 +97,24 @@ public class ProcedureWALFormatReader {
     } else {
       Iterator<Map.Entry<Long, ProcedureProtos.Procedure>> itd =
         localProcedures.entrySet().iterator();
+      long minProcId = Long.MAX_VALUE;
+      long maxProcId = Long.MIN_VALUE;
       while (itd.hasNext()) {
         Map.Entry<Long, ProcedureProtos.Procedure> entry = itd.next();
         itd.remove();
 
+        long procId = entry.getKey();
+        minProcId = Math.min(minProcId, procId);
+        maxProcId = Math.max(maxProcId, procId);
+
         // Deserialize the procedure
         Procedure proc = Procedure.convert(entry.getValue());
-        procedures.put(entry.getKey(), proc);
+        procedures.put(procId, proc);
       }
 
       // TODO: Some procedure may be already runnables (see readInitEntry())
       //       (we can also check the "update map" in the log trackers)
+      log.setProcIds(minProcId, maxProcId);
     }
   }
 
