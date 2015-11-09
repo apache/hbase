@@ -129,7 +129,7 @@ zombies () {
       # Exit with error
       exit 1
     else
-      echo "We're ok: there is no zombie test"
+      echo "`date` We're ok: there is no zombie test"
     fi
   fi
 }
