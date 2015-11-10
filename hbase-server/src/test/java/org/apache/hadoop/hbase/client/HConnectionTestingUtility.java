@@ -117,8 +117,6 @@ public class HConnectionTestingUtility {
     Mockito.when(c.getAsyncProcess()).thenReturn(
       new AsyncProcess(c, conf, null, RpcRetryingCallerFactory.instantiate(conf), false,
           RpcControllerFactory.instantiate(conf)));
-    Mockito.doNothing().when(c).incCount();
-    Mockito.doNothing().when(c).decCount();
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
         RpcRetryingCallerFactory.instantiate(conf,
             RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));

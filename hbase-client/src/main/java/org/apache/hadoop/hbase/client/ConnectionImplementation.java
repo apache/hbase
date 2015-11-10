@@ -170,8 +170,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final MetaCache metaCache;
   private final MetricsConnection metrics;
 
-  private int refCount;
-
   protected User user;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
@@ -2138,22 +2136,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.registry.getCurrentNrHRS();
   }
 
-  /**
-   * Increment this client's reference count.
-   */
-  void incCount() {
-    ++refCount;
-  }
-
-  /**
-   * Decrement this client's reference count.
-   */
-  void decCount() {
-    if (refCount > 0) {
-      --refCount;
-    }
-  }
-
   @Override
   public void close() {
     if (this.closed) {
@@ -2176,13 +2158,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   /**
-   * Close the connection for good, regardless of what the current value of
-   * {@link #refCount} is. Ideally, {@link #refCount} should be zero at this
-   * point, which would be the case if all of its consumers close the
-   * connection. However, on the off chance that someone is unable to close
+   * Close the connection for good. On the off chance that someone is unable to close
    * the connection, perhaps because it bailed out prematurely, the method
-   * below will ensure that this {@link org.apache.hadoop.hbase.client.HConnection} instance
-   * is cleaned up.
+   * below will ensure that this instance is cleaned up.
    * Caveat: The JVM may take an unknown amount of time to call finalize on an
    * unreachable object, so our hope is that every consumer cleans up after
    * itself, like any good citizen.
@@ -2190,8 +2168,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   protected void finalize() throws Throwable {
     super.finalize();
-    // Pretend as if we are about to release the last remaining reference
-    refCount = 1;
     close();
   }
 
