@@ -1,5 +1,65 @@
 HBase Change Log
 
+Release 0.98.16 - 11/16/2015
+
+** Sub-task
+    * [HBASE-14519] - Purge TestFavoredNodeAssignmentHelper, a test for an abandoned feature that can hang
+    * [HBASE-14535] - Integration test for rpc connection concurrency / deadlock testing 
+    * [HBASE-14538] - Remove TestVisibilityLabelsWithDistributedLogReplay, a test for an unsupported feature
+    * [HBASE-14571] - Purge TestProcessBasedCluster; it does nothing and then fails
+    * [HBASE-14605] - Split fails due to 'No valid credentials' error when SecureBulkLoadEndpoint#start tries to access hdfs
+    * [HBASE-14622] - Purge TestZkLess* tests from branch-1
+    * [HBASE-14631] - Region merge request should be audited with request user through proper scope of doAs() calls to region observer notifications
+    * [HBASE-14655] - Narrow the scope of doAs() calls to region observer notifications for compaction
+    * [HBASE-14709] - Parent change breaks graceful_stop.sh on a cluster
+
+** Bug
+    * [HBASE-13318] - RpcServer.getListenerAddress should handle when the accept channel is closed
+    * [HBASE-13330] - Region left unassigned due to AM & SSH each thinking the assignment would be done by the other
+    * [HBASE-14283] - Reverse scan doesn’t work with HFile inline index/bloom blocks
+    * [HBASE-14347] - Add a switch to DynamicClassLoader to disable it
+    * [HBASE-14366] - NPE in case visibility expression is not present in labels table during importtsv run
+    * [HBASE-14491] - ReplicationSource#countDistinctRowKeys code logic is not correct
+    * [HBASE-14497] - Reverse Scan threw StackOverflow caused by readPt checking
+    * [HBASE-14501] - NPE in replication with TDE
+    * [HBASE-14545] - TestMasterFailover often times out
+    * [HBASE-14553] - [0.98] Per column family DFS Replication doesn't work against hadoop-1
+    * [HBASE-14577] - HBase shell help for scan and returning a column family has a typo
+    * [HBASE-14578] - URISyntaxException during snapshot restore for table with user defined namespace
+    * [HBASE-14581] - Znode cleanup throws auth exception in secure mode
+    * [HBASE-14591] - Region with reference hfile may split after a forced split in IncreasingToUpperBoundRegionSplitPolicy
+    * [HBASE-14594] - Use new DNS API introduced in HADOOP-12437
+    * [HBASE-14598] - ByteBufferOutputStream grows its HeapByteBuffer beyond JVM limitations
+    * [HBASE-14604] - Improve MoveCostFunction in StochasticLoadBalancer
+    * [HBASE-14621] - ReplicationLogCleaner gets stuck when a regionserver crashes
+    * [HBASE-14624] - BucketCache.freeBlock is too expensive
+    * [HBASE-14628] - [0.98] Save object creation for scanning with block encodings
+    * [HBASE-14658] - Allow loading a MonkeyFactory by class name
+    * [HBASE-14663] - HStore::close does not honor config hbase.rs.evictblocksonclose
+    * [HBASE-14680] - Two configs for snapshot timeout and better defaults
+    * [HBASE-14689] - Addendum and unit test for HBASE-13471
+    * [HBASE-14705] - Javadoc for KeyValue constructor is not correct.
+    * [HBASE-14733] - Minor typo in alter_namespace.rb
+    * [HBASE-14768] - bin/graceful_stop.sh logs nothing as a balancer state to be stored
+
+** Improvement
+    * [HBASE-12986] - Compaction pressure based client pushback
+    * [HBASE-14436] - HTableDescriptor#addCoprocessor will always make RegionCoprocessorHost create new Configuration
+    * [HBASE-14580] - Make the HBaseMiniCluster compliant with Kerberos
+    * [HBASE-14586] - Use a maven profile to run Jacoco analysis
+    * [HBASE-14588] - Stop accessing test resources from within src folder
+    * [HBASE-14693] - Add client-side metrics for received pushback signals
+    * [HBASE-14700] - Support a "permissive" mode for secure clusters to allow "simple" auth clients
+    * [HBASE-14715] - Add javadocs to DelegatingRetryingCallable
+
+** New Feature
+    * [HBASE-12911] - Client-side metrics
+
+** Task
+    * [HBASE-14493] - Upgrade the jamon-runtime dependency
+    * [HBASE-14611] - Backport HBASE-14473 (Compute region locality in parallel) to 0.98
+
+
 Release 0.98.15 - 10/9/2015
 
 ** Sub-task
