@@ -85,6 +85,7 @@ public class TestProcedureAdmin {
 
   @After
   public void tearDown() throws Exception {
+    assertTrue("expected executor to be running", getMasterProcedureExecutor().isRunning());
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
@@ -103,12 +104,13 @@ public class TestProcedureAdmin {
     // Submit an abortable procedure
     long procId = procExec.submitProcedure(
         new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+    // Wait for one step to complete
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     boolean abortResult = procExec.abort(procId, true);
     assertTrue(abortResult);
 
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    ProcedureTestingUtility.restart(procExec);
+    MasterProcedureTestingUtility.testRestartWithAbort(procExec, procId);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     // Validate the disable table procedure was aborted successfully
     MasterProcedureTestingUtility.validateTableIsEnabled(
@@ -129,12 +131,13 @@ public class TestProcedureAdmin {
     // Submit an un-abortable procedure
     long procId = procExec.submitProcedure(
         new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
+    // Wait for one step to complete
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     boolean abortResult = procExec.abort(procId, true);
     assertFalse(abortResult);
 
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    ProcedureTestingUtility.restart(procExec);
+    MasterProcedureTestingUtility.testRestartWithAbort(procExec, procId);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     // Validate the delete table procedure was not aborted
@@ -195,6 +198,8 @@ public class TestProcedureAdmin {
 
     long procId = procExec.submitProcedure(
       new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+    // Wait for one step to complete
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     List<ProcedureInfo> listProcedures = procExec.listProcedures();
     assertTrue(listProcedures.size() >= 1);
