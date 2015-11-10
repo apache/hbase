@@ -194,6 +194,14 @@ public class TestRegionServerOnlineConfigChange {
     rs1.getConfigurationManager().notifyAllObservers(conf);
     assertEquals(newMaxCompactSize,
                  hstore.getStoreEngine().getCompactionPolicy().getConf().getMaxCompactSize());
+    // Check if the offPeakMaxCompactSize gets updated.
+    long newOffpeakMaxCompactSize =
+            hstore.getStoreEngine().getCompactionPolicy().getConf().getOffPeakMaxCompactSize() - 1;
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY,
+      newOffpeakMaxCompactSize);
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+    assertEquals(newOffpeakMaxCompactSize,
+                 hstore.getStoreEngine().getCompactionPolicy().getConf().getOffPeakMaxCompactSize());
 
     // Check if majorCompactionPeriod gets updated.
     long newMajorCompactionPeriod =
