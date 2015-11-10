@@ -210,6 +210,10 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
     return 97;
   }
 
+  @Override
+  public long getBlockCacheFailedInsertions() {
+    return 36;
+  }
 
   @Override
   public long getUpdatesBlockedTime() {
