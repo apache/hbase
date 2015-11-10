@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -270,8 +271,7 @@ public class MasterProcedureTestingUtility {
     //   rollback step N - kill before store update
     //   restart executor/store
     //   rollback step N - save on store
-    MasterProcedureTestingUtility.InjectAbortOnLoadListener abortListener =
-      new MasterProcedureTestingUtility.InjectAbortOnLoadListener(procExec);
+    InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
     procExec.registerListener(abortListener);
     try {
       for (int i = lastStep + 1; i >= 0; --i) {
@@ -305,8 +305,7 @@ public class MasterProcedureTestingUtility {
 
     // try to inject the abort
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    MasterProcedureTestingUtility.InjectAbortOnLoadListener abortListener =
-      new MasterProcedureTestingUtility.InjectAbortOnLoadListener(procExec);
+    InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
     procExec.registerListener(abortListener);
     try {
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
@@ -339,8 +338,7 @@ public class MasterProcedureTestingUtility {
 
     // execute the rollback
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    MasterProcedureTestingUtility.InjectAbortOnLoadListener abortListener =
-      new MasterProcedureTestingUtility.InjectAbortOnLoadListener(procExec);
+    InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
     procExec.registerListener(abortListener);
     try {
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
@@ -352,6 +350,20 @@ public class MasterProcedureTestingUtility {
     }
 
     ProcedureTestingUtility.assertIsAbortException(procExec.getResult(procId));
+  }
+
+  public static void testRestartWithAbort(ProcedureExecutor<MasterProcedureEnv> procExec,
+      long procId) throws Exception {
+    InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
+    abortListener.addProcId(procId);
+    procExec.registerListener(abortListener);
+    try {
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+      ProcedureTestingUtility.restart(procExec);
+      ProcedureTestingUtility.waitProcedure(procExec, procId);
+    } finally {
+      assertTrue(procExec.unregisterListener(abortListener));
+    }
   }
 
   public static void validateColumnFamilyAddition(final HMaster master, final TableName tableName,
@@ -435,13 +447,24 @@ public class MasterProcedureTestingUtility {
   public static class InjectAbortOnLoadListener
       implements ProcedureExecutor.ProcedureExecutorListener {
     private final ProcedureExecutor<MasterProcedureEnv> procExec;
+    private TreeSet<Long> procsToAbort = null;
 
     public InjectAbortOnLoadListener(final ProcedureExecutor<MasterProcedureEnv> procExec) {
       this.procExec = procExec;
     }
 
+    public void addProcId(long procId) {
+      if (procsToAbort == null) {
+        procsToAbort = new TreeSet<Long>();
+      }
+      procsToAbort.add(procId);
+    }
+
     @Override
     public void procedureLoaded(long procId) {
+      if (procsToAbort != null && !procsToAbort.contains(procId)) {
+        return;
+      }
       procExec.abort(procId);
     }
 

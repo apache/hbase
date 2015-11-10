@@ -813,14 +813,14 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private boolean removeLogFile(final ProcedureWALFile log) {
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Remove log: " + log);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removing log=" + log);
       }
       log.removeFile();
       logs.remove(log);
-      LOG.info("Remove log: " + log);
-      LOG.info("Removed logs: " + logs);
-      if (logs.size() == 0) { LOG.error("Expected at least one log"); }
+      if (LOG.isDebugEnabled()) {
+        LOG.info("Removed log=" + log + " activeLogs=" + logs);
+      }
       assert logs.size() > 0 : "expected at least one log";
     } catch (IOException e) {
       LOG.error("Unable to remove log: " + log, e);
