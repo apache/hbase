@@ -96,7 +96,7 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     // If we can't have all files, we cannot do major anyway
     boolean isAllFiles = candidateFiles.size() == candidateSelection.size();
     if (!(forceMajor && isAllFiles)) {
-      candidateSelection = skipLargeFiles(candidateSelection);
+      candidateSelection = skipLargeFiles(candidateSelection, mayUseOffPeak);
       isAllFiles = candidateFiles.size() == candidateSelection.size();
     }
 
@@ -128,10 +128,11 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
    * exclude all files above maxCompactSize
    * Also save all references. We MUST compact them
    */
-  private ArrayList<StoreFile> skipLargeFiles(ArrayList<StoreFile> candidates) {
+  private ArrayList<StoreFile> skipLargeFiles(ArrayList<StoreFile> candidates, 
+    boolean mayUseOffpeak) {
     int pos = 0;
     while (pos < candidates.size() && !candidates.get(pos).isReference()
-      && (candidates.get(pos).getReader().length() > comConf.getMaxCompactSize())) {
+      && (candidates.get(pos).getReader().length() > comConf.getMaxCompactSize(mayUseOffpeak))) {
       ++pos;
     }
     if (pos > 0) {

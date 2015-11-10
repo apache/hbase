@@ -57,6 +57,8 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_COMPACTION_MAX_KEY = "hbase.hstore.compaction.max";
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY =
     "hbase.hstore.compaction.max.size";
+  public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY =
+      "hbase.hstore.compaction.max.size.offpeak";
   public static final String HBASE_HSTORE_OFFPEAK_END_HOUR = "hbase.offpeak.end.hour";
   public static final String HBASE_HSTORE_OFFPEAK_START_HOUR = "hbase.offpeak.start.hour";
   public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
@@ -68,6 +70,7 @@ public class CompactionConfiguration {
   private final double offPeakCompactionRatio;
   /** Since all these properties can change online, they are volatile **/
   private final long maxCompactSize;
+  private final long offPeakMaxCompactSize;
   private final long minCompactSize;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
@@ -82,6 +85,8 @@ public class CompactionConfiguration {
     this.storeConfigInfo = storeConfigInfo;
 
     maxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, Long.MAX_VALUE);
+    offPeakMaxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY, 
+      maxCompactSize);      
     minCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
         storeConfigInfo.getMemstoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
@@ -102,10 +107,11 @@ public class CompactionConfiguration {
   @Override
   public String toString() {
     return String.format(
-      "size [%d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
+      "size [%d, %d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f",
       minCompactSize,
       maxCompactSize,
+      offPeakMaxCompactSize,
       minFilesToCompact,
       maxFilesToCompact,
       compactionRatio,
@@ -188,5 +194,17 @@ public class CompactionConfiguration {
    */
   public float getMinLocalityToForceCompact() {
     return minLocalityToForceCompact;
+  }
+
+  public long getOffPeakMaxCompactSize() {
+    return offPeakMaxCompactSize;
+  }
+  
+  public long getMaxCompactSize(boolean mayUseOffpeak) {
+    if (mayUseOffpeak) {
+      return getOffPeakMaxCompactSize();
+    } else {
+      return getMaxCompactSize();
+    }
   }
 }
