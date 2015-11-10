@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
@@ -40,9 +41,13 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Test our testing utility class
@@ -385,5 +390,32 @@ public class TestHBaseTestingUtility {
     assertTrue(hbt.cleanupTestDir());
   }
 
-}
+  @Test public void testResolvePortConflict() throws Exception {
+    // raises port conflict between 1st call and 2nd call of randomPort() by mocking Random object
+    Random random = Mockito.mock(Random.class);
+    Mockito.when(random.nextInt(Mockito.any(Integer.class)))
+      .thenAnswer(new Answer<Integer>() {
+        int[] numbers = { 1, 1, 2 };
+        int count = 0;
 
+        @Override
+        public Integer answer(InvocationOnMock invocation) {
+          int ret = numbers[count];
+          count++;
+          return ret;
+        }
+      });
+
+    HBaseTestingUtility.PortAllocator.AvailablePortChecker portChecker =
+      Mockito.mock(HBaseTestingUtility.PortAllocator.AvailablePortChecker.class);
+    Mockito.when(portChecker.available(Mockito.any(Integer.class))).thenReturn(true);
+
+    HBaseTestingUtility.PortAllocator portAllocator =
+      new HBaseTestingUtility.PortAllocator(random, portChecker);
+
+    int port1 = portAllocator.randomFreePort();
+    int port2 = portAllocator.randomFreePort();
+    assertNotEquals(port1, port2);
+    Mockito.verify(random, Mockito.times(3)).nextInt(Mockito.any(Integer.class));
+  }
+}

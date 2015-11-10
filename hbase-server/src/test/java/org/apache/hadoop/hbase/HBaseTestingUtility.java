@@ -203,9 +203,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
 
-  /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-  private static final Set<Integer> takenRandomPorts = new HashSet<Integer>();
-
   /** Compression algorithms to use in parameterized JUnit 4 tests */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
     Arrays.asList(new Object[][] {
@@ -3429,41 +3426,77 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return table;
   }
 
-  private static final int MIN_RANDOM_PORT = 0xc000;
-  private static final int MAX_RANDOM_PORT = 0xfffe;
   private static Random random = new Random();
 
-  /**
-   * Returns a random port. These ports cannot be registered with IANA and are
-   * intended for dynamic allocation (see http://bit.ly/dynports).
-   */
-  public static int randomPort() {
-    return MIN_RANDOM_PORT
-        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+  private static final PortAllocator portAllocator = new PortAllocator(random);
+
+  public static int randomFreePort() {
+    return portAllocator.randomFreePort();
   }
 
-  /**
-   * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
-   * called from single-threaded test setup code/
-   */
-  public static int randomFreePort() {
-    int port = 0;
-    do {
-      port = randomPort();
-      if (takenRandomPorts.contains(port)) {
-        port = 0;
-        continue;
-      }
-      takenRandomPorts.add(port);
+  static class PortAllocator {
+    private static final int MIN_RANDOM_PORT = 0xc000;
+    private static final int MAX_RANDOM_PORT = 0xfffe;
 
-      try {
-        ServerSocket sock = new ServerSocket(port);
-        sock.close();
-      } catch (IOException ex) {
-        port = 0;
-      }
-    } while (port == 0);
-    return port;
+    /** A set of ports that have been claimed using {@link #randomFreePort()}. */
+    private final Set<Integer> takenRandomPorts = new HashSet<Integer>();
+
+    private final Random random;
+    private final AvailablePortChecker portChecker;
+
+    public PortAllocator(Random random) {
+      this.random = random;
+      this.portChecker = new AvailablePortChecker() {
+        public boolean available(int port) {
+          try {
+            ServerSocket sock = new ServerSocket(port);
+            sock.close();
+            return true;
+          } catch (IOException ex) {
+            return false;
+          }
+        }
+      };
+    }
+
+    public PortAllocator(Random random, AvailablePortChecker portChecker) {
+      this.random = random;
+      this.portChecker = portChecker;
+    }
+
+    /**
+     * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
+     * called from single-threaded test setup code/
+     */
+    public int randomFreePort() {
+      int port = 0;
+      do {
+        port = randomPort();
+        if (takenRandomPorts.contains(port)) {
+          port = 0;
+          continue;
+        }
+        takenRandomPorts.add(port);
+
+        if (!portChecker.available(port)) {
+          port = 0;
+        }
+      } while (port == 0);
+      return port;
+    }
+
+    /**
+     * Returns a random port. These ports cannot be registered with IANA and are
+     * intended for dynamic allocation (see http://bit.ly/dynports).
+     */
+    private int randomPort() {
+      return MIN_RANDOM_PORT
+          + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+    }
+
+    interface AvailablePortChecker {
+      boolean available(int port);
+    }
   }
 
 
