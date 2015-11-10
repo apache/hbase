@@ -74,6 +74,9 @@ public class CacheStats {
   /** The total number of blocks for primary replica that have been evicted */
   private final AtomicLong primaryEvictedBlockCount = new AtomicLong(0);
 
+  /** The total number of blocks that were not inserted. */
+  private final AtomicLong failedInserts = new AtomicLong(0);
+
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
   /** Hit counts for each period in window */
@@ -154,6 +157,10 @@ public class CacheStats {
     }
   }
 
+  public long failInsert() {
+    return failedInserts.incrementAndGet();
+  }
+
   public long getRequestCount() {
     return getHitCount() + getMissCount();
   }
@@ -216,6 +223,10 @@ public class CacheStats {
 
   public double evictedPerEviction() {
     return ((float)getEvictedCount()/(float)getEvictionCount());
+  }
+
+  public long getFailedInserts() {
+    return failedInserts.get();
   }
 
   public void rollMetricsPeriod() {

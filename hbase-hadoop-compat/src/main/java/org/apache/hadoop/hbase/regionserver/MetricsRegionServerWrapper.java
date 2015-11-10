@@ -234,6 +234,11 @@ public interface MetricsRegionServerWrapper {
   double getBlockCacheHitCachingPercent();
 
   /**
+   * Number of cache insertions that failed.
+   */
+  long getBlockCacheFailedInsertions();
+
+  /**
    * Force a re-computation of the metrics.
    */
   void forceRecompute();
