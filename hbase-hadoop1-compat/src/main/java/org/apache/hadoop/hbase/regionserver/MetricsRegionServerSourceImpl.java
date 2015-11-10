@@ -239,6 +239,8 @@ public class MetricsRegionServerSourceImpl
           .addGauge(BLOCK_CACHE_EXPRESS_HIT_PERCENT,
               BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC,
               rsWrap.getBlockCacheHitCachingPercent())
+          .addCounter(BLOCK_CACHE_FAILED_INSERTION_COUNT,
+              BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC,rsWrap.getBlockCacheFailedInsertions())
           .addCounter(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC, rsWrap.getUpdatesBlockedTime())
           .addCounter(FLUSHED_CELLS, FLUSHED_CELLS_DESC, rsWrap.getFlushedCellsCount())
           .addCounter(COMPACTED_CELLS, COMPACTED_CELLS_DESC, rsWrap.getCompactedCellsCount())

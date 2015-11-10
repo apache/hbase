@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
@@ -256,7 +258,8 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        false);
+        false,
+        16 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -376,7 +379,8 @@ public class TestLruBlockCache {
         0.2f, // single
         0.3f, // multi
         0.5f, // memory
-        true);
+        true,
+        16 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -481,7 +485,8 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        false);
+        false,
+        16 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -529,6 +534,43 @@ public class TestLruBlockCache {
 
   }
 
+  @Test
+  public void testMaxBlockSize() throws Exception {
+    long maxSize = 100000;
+    long blockSize = calculateBlockSize(maxSize, 10);
+
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+        (int)Math.ceil(1.2*maxSize/blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR,
+        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+        0.66f, // min
+        0.99f, // acceptable
+        0.33f, // single
+        0.33f, // multi
+        0.34f, // memory
+        false,
+        1024);
+    CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
+    CachedItem [] small = generateFixedBlocks(15, 600, "small");
+
+
+    for (CachedItem i:tooLong) {
+      cache.cacheBlock(i.cacheKey, i);
+    }
+    for (CachedItem i:small) {
+      cache.cacheBlock(i.cacheKey, i);
+    }
+    assertEquals(15,cache.getBlockCount());
+    for (CachedItem i:small) {
+      assertNotNull(cache.getBlock(i.cacheKey, true, false, false));
+    }
+    for (CachedItem i:tooLong) {
+      assertNull(cache.getBlock(i.cacheKey, true, false, false));
+    }
+
+    assertEquals(10, cache.getStats().getFailedInserts());
+  }
+
   // test setMaxSize
   @Test
   public void testResizeBlockCache() throws Exception {
@@ -545,7 +587,8 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        false);
+        false,
+        16 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");

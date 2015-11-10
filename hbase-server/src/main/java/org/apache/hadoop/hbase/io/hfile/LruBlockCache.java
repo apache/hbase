@@ -129,11 +129,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /** Statistics thread */
   static final int statThreadPeriod = 60 * 5;
 
+  private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
+  private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
+
   /** Concurrent map (the cache) */
   private final Map<BlockCacheKey,LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private final ReentrantLock evictionLock = new ReentrantLock(true);
+  private final long maxBlockSize;
 
   /** Volatile boolean to track if we are in an eviction process or not */
   private volatile boolean evictionInProgress = false;
@@ -215,7 +219,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
         DEFAULT_SINGLE_FACTOR,
         DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR,
-        false
+        false,
+        DEFAULT_MAX_BLOCK_SIZE
         );
   }
 
@@ -229,7 +234,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
         conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
         conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
         conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
-        conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE)
+        conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
+        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE)
         );
   }
 
@@ -254,7 +260,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor, float singleFactor,
-      float multiFactor, float memoryFactor, boolean forceInMemory) {
+      float multiFactor, float memoryFactor, boolean forceInMemory, long maxBlockSize) {
+    this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
         singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
       throw new IllegalArgumentException("Single, multi, and memory factors " +
@@ -311,6 +318,21 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+
+    if (buf.heapSize() > maxBlockSize) {
+      // If there are a lot of blocks that are too
+      // big this can make the logs way too noisy.
+      // So we log 2%
+      if (stats.failInsert() % 50 == 0) {
+        LOG.warn("Trying to cache too large a block "
+            + cacheKey.getHfileName() + " @ "
+            + cacheKey.getOffset()
+            + " is " + buf.heapSize()
+            + " which is larger than " + maxBlockSize);
+      }
+      return;
+    }
+
     LruCachedBlock cb = map.get(cacheKey);
     if(cb != null) {
       // compare the contents, if they are not equal, we are in big trouble
@@ -856,8 +878,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (3 * Bytes.SIZEOF_LONG) + (9 * ClassSize.REFERENCE) +
-      (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
+      (3 * Bytes.SIZEOF_LONG) + (10 * ClassSize.REFERENCE) +
+      (5 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
       + ClassSize.OBJECT);
 
   // HeapSize implementation

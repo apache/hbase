@@ -152,7 +152,6 @@ public class BucketCache implements BlockCache, HeapSize {
   private final AtomicLong heapSize = new AtomicLong(0);
   /** Current number of cached elements */
   private final AtomicLong blockNumber = new AtomicLong(0);
-  private final AtomicLong failedBlockAdditions = new AtomicLong(0);
 
   /** Cache access count (sequential ID) */
   private final AtomicLong accessCount = new AtomicLong(0);
@@ -379,7 +378,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     if (!successfulAddition) {
       ramCache.remove(cacheKey);
-      failedBlockAdditions.incrementAndGet();
+      cacheStats.failInsert();
     } else {
       this.blockNumber.incrementAndGet();
       this.heapSize.addAndGet(cachedItem.heapSize());
@@ -526,9 +525,9 @@ public class BucketCache implements BlockCache, HeapSize {
     long totalSize = bucketAllocator.getTotalSize();
     long usedSize = bucketAllocator.getUsedSize();
     long freeSize = totalSize - usedSize;
-    long cacheSize = this.realCacheSize.get();
+    long cacheSize = getRealCacheSize();
     LOG.debug("BucketCache Stats: " +
-        "failedBlockAdditions=" + this.failedBlockAdditions.get() + ", " +
+        "failedBlockAdditions=" + cacheStats.getFailedInserts() + ", " +
         "total=" + StringUtils.byteDesc(totalSize) + ", " +
         "free=" + StringUtils.byteDesc(freeSize) + ", " +
         "usedSize=" + StringUtils.byteDesc(usedSize) +", " +
@@ -547,6 +546,10 @@ public class BucketCache implements BlockCache, HeapSize {
         "evicted=" + cacheStats.getEvictedCount() + ", " +
         "evictedPerRun=" + cacheStats.evictedPerEviction());
     cacheStats.reset();
+  }
+
+  public long getRealCacheSize() {
+    return this.realCacheSize.get();
   }
 
   private long acceptableSize() {

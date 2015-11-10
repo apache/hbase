@@ -272,6 +272,11 @@ class MetricsRegionServerWrapperImpl
     return (int) (this.cacheStats.getHitCachingRatio() * 100);
   }
 
+  @Override
+  public long getBlockCacheFailedInsertions() {
+    return this.cacheStats.getFailedInserts();
+  }
+
   @Override public void forceRecompute() {
     this.runnable.run();
   }

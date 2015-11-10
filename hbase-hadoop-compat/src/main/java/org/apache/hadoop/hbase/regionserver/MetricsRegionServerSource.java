@@ -216,6 +216,9 @@ public interface MetricsRegionServerSource extends BaseSource {
   String BLOCK_CACHE_EXPRESS_HIT_PERCENT = "blockCacheExpressHitPercent";
   String BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC =
       "The percent of the time that requests with the cache turned on hit the cache.";
+  String BLOCK_CACHE_FAILED_INSERTION_COUNT = "blockCacheFailedInsertionCount";
+  String BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC = "Number of times that a block cache " +
+      "insertion failed. Usually due to size restrictions.";
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
