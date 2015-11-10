@@ -96,7 +96,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           smallestSize = size;
         }
 
-        if (size > comConf.getMaxCompactSize()) {
+        if (size > comConf.getMaxCompactSize(mayUseOffPeak)) {
           continue;
         }
 
