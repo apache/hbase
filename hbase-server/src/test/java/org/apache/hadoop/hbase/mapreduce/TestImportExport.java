@@ -169,42 +169,44 @@ public class TestImportExport {
   @Test
   public void testSimpleCase() throws Exception {
     String EXPORT_TABLE = "exportSimpleCase";
-    Table t = UTIL.createTable(TableName.valueOf(EXPORT_TABLE), FAMILYA, 3);
-    Put p = new Put(ROW1);
-    p.addColumn(FAMILYA, QUAL, now, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-    t.put(p);
-    p = new Put(ROW2);
-    p.addColumn(FAMILYA, QUAL, now, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-    t.put(p);
+    try (Table t = UTIL.createTable(TableName.valueOf(EXPORT_TABLE), FAMILYA, 3);) {
+      Put p = new Put(ROW1);
+      p.addColumn(FAMILYA, QUAL, now, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      t.put(p);
+      p = new Put(ROW2);
+      p.addColumn(FAMILYA, QUAL, now, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      t.put(p);
+    }
 
-    String[] args = new String[] {
-        EXPORT_TABLE,
-        FQ_OUTPUT_DIR,
-        "1000", // max number of key versions per key to export
-    };
-    assertTrue(runExport(args));
+      String[] args = new String[] {
+          EXPORT_TABLE,
+          FQ_OUTPUT_DIR,
+          "1000", // max number of key versions per key to export
+      };
+      assertTrue(runExport(args));
 
-    String IMPORT_TABLE = "importTableSimpleCase";
-    t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);
-    args = new String[] {
-        "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
-        IMPORT_TABLE,
-        FQ_OUTPUT_DIR
-    };
-    assertTrue(runImport(args));
+      String IMPORT_TABLE = "importTableSimpleCase";
+      try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);) {
+        args = new String[] {
+            "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
+            IMPORT_TABLE,
+            FQ_OUTPUT_DIR
+        };
+        assertTrue(runImport(args));
 
-    Get g = new Get(ROW1);
-    g.setMaxVersions();
-    Result r = t.get(g);
-    assertEquals(3, r.size());
-    g = new Get(ROW2);
-    g.setMaxVersions();
-    r = t.get(g);
-    assertEquals(3, r.size());
+        Get g = new Get(ROW1);
+        g.setMaxVersions();
+        Result r = t.get(g);
+        assertEquals(3, r.size());
+        g = new Get(ROW2);
+        g.setMaxVersions();
+        r = t.get(g);
+        assertEquals(3, r.size());
+      }
   }
 
   /**
@@ -238,23 +240,22 @@ public class TestImportExport {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR + name));
     String IMPORT_TABLE = name;
-    Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
-    String[] args = new String[] {
-        "-Dhbase.import.version=0.94" ,
-        IMPORT_TABLE, FQ_OUTPUT_DIR
-    };
-    assertTrue(runImport(args));
-
-    /* exportedTableIn94Format contains 5 rows
-     ROW         COLUMN+CELL
-     r1          column=f1:c1, timestamp=1383766761171, value=val1
-     r2          column=f1:c1, timestamp=1383766771642, value=val2
-     r3          column=f1:c1, timestamp=1383766777615, value=val3
-     r4          column=f1:c1, timestamp=1383766785146, value=val4
-     r5          column=f1:c1, timestamp=1383766791506, value=val5
-     */
-    assertEquals(5, UTIL.countRows(t));
-    t.close();
+    try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);) {
+      String[] args = new String[] {
+          "-Dhbase.import.version=0.94" ,
+          IMPORT_TABLE, FQ_OUTPUT_DIR
+      };
+      assertTrue(runImport(args));
+      /* exportedTableIn94Format contains 5 rows
+      ROW         COLUMN+CELL
+      r1          column=f1:c1, timestamp=1383766761171, value=val1
+      r2          column=f1:c1, timestamp=1383766771642, value=val2
+      r3          column=f1:c1, timestamp=1383766777615, value=val3
+      r4          column=f1:c1, timestamp=1383766785146, value=val4
+      r5          column=f1:c1, timestamp=1383766791506, value=val5
+      */
+     assertEquals(5, UTIL.countRows(t));
+    }
   }
 
   /**
@@ -268,26 +269,26 @@ public class TestImportExport {
         .setMaxVersions(1)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-     Table t = UTIL.getConnection().getTable(desc.getTableName());
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
 
-    Put p = new Put(ROW1);
-     p.addColumn(FAMILYA, QUAL, now, QUAL);
-     p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-     p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-     p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
-     p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
-     t.put(p);
+      Put p = new Put(ROW1);
+      p.addColumn(FAMILYA, QUAL, now, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
+      t.put(p);
 
-    String[] args = new String[] {
-        "-D" + Export.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
-        BATCH_TABLE,
-        FQ_OUTPUT_DIR
-    };
-    assertTrue(runExport(args));
+      String[] args = new String[] {
+          "-D" + Export.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
+          BATCH_TABLE,
+          FQ_OUTPUT_DIR
+      };
+      assertTrue(runExport(args));
 
-    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    fs.delete(new Path(FQ_OUTPUT_DIR), true);
-    t.close();
+      FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+      fs.delete(new Path(FQ_OUTPUT_DIR), true);
+    }
   }
 
   @Test
@@ -299,21 +300,22 @@ public class TestImportExport {
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    Table t = UTIL.getConnection().getTable(desc.getTableName());
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
 
-    Put p = new Put(ROW1);
-    p.addColumn(FAMILYA, QUAL, now, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
-    p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
-    t.put(p);
+      Put p = new Put(ROW1);
+      p.addColumn(FAMILYA, QUAL, now, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
+      p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
+      t.put(p);
 
-    Delete d = new Delete(ROW1, now+3);
-    t.delete(d);
-    d = new Delete(ROW1);
-    d.addColumns(FAMILYA, QUAL, now+2);
-    t.delete(d);
+      Delete d = new Delete(ROW1, now+3);
+      t.delete(d);
+      d = new Delete(ROW1);
+      d.addColumns(FAMILYA, QUAL, now+2);
+      t.delete(d);
+    }
 
     String[] args = new String[] {
         "-D" + Export.RAW_SCAN + "=true",
@@ -330,28 +332,27 @@ public class TestImportExport {
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    t.close();
-    t = UTIL.getConnection().getTable(desc.getTableName());
-    args = new String[] {
-        IMPORT_TABLE,
-        FQ_OUTPUT_DIR
-    };
-    assertTrue(runImport(args));
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
+      args = new String[] {
+          IMPORT_TABLE,
+          FQ_OUTPUT_DIR
+      };
+      assertTrue(runImport(args));
 
-    Scan s = new Scan();
-    s.setMaxVersions();
-    s.setRaw(true);
-    ResultScanner scanner = t.getScanner(s);
-    Result r = scanner.next();
-    Cell[] res = r.rawCells();
-    assertTrue(CellUtil.isDeleteFamily(res[0]));
-    assertEquals(now+4, res[1].getTimestamp());
-    assertEquals(now+3, res[2].getTimestamp());
-    assertTrue(CellUtil.isDelete(res[3]));
-    assertEquals(now+2, res[4].getTimestamp());
-    assertEquals(now+1, res[5].getTimestamp());
-    assertEquals(now, res[6].getTimestamp());
-    t.close();
+      Scan s = new Scan();
+      s.setMaxVersions();
+      s.setRaw(true);
+      ResultScanner scanner = t.getScanner(s);
+      Result r = scanner.next();
+      Cell[] res = r.rawCells();
+      assertTrue(CellUtil.isDeleteFamily(res[0]));
+      assertEquals(now+4, res[1].getTimestamp());
+      assertEquals(now+3, res[2].getTimestamp());
+      assertTrue(CellUtil.isDelete(res[3]));
+      assertEquals(now+2, res[4].getTimestamp());
+      assertEquals(now+1, res[5].getTimestamp());
+      assertEquals(now, res[6].getTimestamp());
+    }
   }
 
 
@@ -418,15 +419,11 @@ public class TestImportExport {
 
     ResultScanner exportedTScanner = exportT.getScanner(s);
     Result  exportedTResult =  exportedTScanner.next();
-    try
-    {
+    try {
       Result.compareResults(exportedTResult, importedTResult);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       fail("Original and imported tables data comparision failed with error:"+e.getMessage());
-    }
-    finally
-    {
+    } finally {
       exportT.close();
       importT.close();
     }
@@ -470,7 +467,8 @@ public class TestImportExport {
 
     Table importTable = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),
-        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, FQ_OUTPUT_DIR,
+        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE,
+        FQ_OUTPUT_DIR,
         "1000" };
     assertTrue(runImport(args));
 
@@ -634,60 +632,61 @@ public class TestImportExport {
   public void testDurability() throws Exception {
     // Create an export table.
     String exportTableName = "exporttestDurability";
-    Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);
+    try (Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);) {
 
-    // Insert some data
-    Put put = new Put(ROW1);
-    put.addColumn(FAMILYA, QUAL, now, QUAL);
-    put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-    put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-    exportTable.put(put);
+      // Insert some data
+      Put put = new Put(ROW1);
+      put.addColumn(FAMILYA, QUAL, now, QUAL);
+      put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      exportTable.put(put);
 
-    put = new Put(ROW2);
-    put.addColumn(FAMILYA, QUAL, now, QUAL);
-    put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
-    put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
-    exportTable.put(put);
+      put = new Put(ROW2);
+      put.addColumn(FAMILYA, QUAL, now, QUAL);
+      put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+      put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+      exportTable.put(put);
 
-    // Run the export
-    String[] args = new String[] { exportTableName, FQ_OUTPUT_DIR, "1000"};
-    assertTrue(runExport(args));
+      // Run the export
+      String[] args = new String[] { exportTableName, FQ_OUTPUT_DIR, "1000"};
+      assertTrue(runExport(args));
 
-    // Create the table for import
-    String importTableName = "importTestDurability1";
-    Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
+      // Create the table for import
+      String importTableName = "importTestDurability1";
+      Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
 
-    // Register the wal listener for the import table
-    TableWALActionListener walListener = new TableWALActionListener(importTableName);
-    HRegionInfo region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
-    WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
-    wal.registerWALActionsListener(walListener);
+      // Register the wal listener for the import table
+      TableWALActionListener walListener = new TableWALActionListener(importTableName);
+      HRegionInfo region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+          .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+      WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
+      wal.registerWALActionsListener(walListener);
 
-    // Run the import with SKIP_WAL
-    args =
-        new String[] { "-D" + Import.WAL_DURABILITY + "=" + Durability.SKIP_WAL.name(),
-            importTableName, FQ_OUTPUT_DIR };
-    assertTrue(runImport(args));
-    //Assert that the wal is not visisted
-    assertTrue(!walListener.isWALVisited());
-    //Ensure that the count is 2 (only one version of key value is obtained)
-    assertTrue(getCount(importTable, null) == 2);
+      // Run the import with SKIP_WAL
+      args =
+          new String[] { "-D" + Import.WAL_DURABILITY + "=" + Durability.SKIP_WAL.name(),
+              importTableName, FQ_OUTPUT_DIR };
+      assertTrue(runImport(args));
+      //Assert that the wal is not visisted
+      assertTrue(!walListener.isWALVisited());
+      //Ensure that the count is 2 (only one version of key value is obtained)
+      assertTrue(getCount(importTable, null) == 2);
 
-    // Run the import with the default durability option
-    importTableName = "importTestDurability2";
-    importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
-    region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
-    wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
-    walListener = new TableWALActionListener(importTableName);
-    wal.registerWALActionsListener(walListener);
-    args = new String[] { importTableName, FQ_OUTPUT_DIR };
-    assertTrue(runImport(args));
-    //Assert that the wal is visisted
-    assertTrue(walListener.isWALVisited());
-    //Ensure that the count is 2 (only one version of key value is obtained)
-    assertTrue(getCount(importTable, null) == 2);
+      // Run the import with the default durability option
+      importTableName = "importTestDurability2";
+      importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
+      region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+          .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+      wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
+      walListener = new TableWALActionListener(importTableName);
+      wal.registerWALActionsListener(walListener);
+      args = new String[] { importTableName, FQ_OUTPUT_DIR };
+      assertTrue(runImport(args));
+      //Assert that the wal is visisted
+      assertTrue(walListener.isWALVisited());
+      //Ensure that the count is 2 (only one version of key value is obtained)
+      assertTrue(getCount(importTable, null) == 2);
+    }
   }
 
   /**

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
@@ -60,9 +61,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
@@ -97,11 +100,15 @@ public class TestAtomicOperation {
   public void setup() {
     tableName = Bytes.toBytes(name.getMethodName());
   }
-  
+
   @After
   public void teardown() throws IOException {
     if (region != null) {
+      BlockCache bc = region.getStores().get(0).getCacheConfig().getBlockCache();
       ((HRegion)region).close();
+      WAL wal = ((HRegion)region).getWAL();
+      if (wal != null) wal.close();
+      if (bc != null) bc.shutdown();
       region = null;
     }
   }
@@ -176,17 +183,15 @@ public class TestAtomicOperation {
    */
   @Test
   public void testIncrementMultiThreads() throws IOException {
-
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
-    // create 100 threads, each will increment by its own quantity
-    int numThreads = 100;
+    // create 25 threads, each will increment by its own quantity
+    int numThreads = 25;
     int incrementsPerThread = 1000;
     Incrementer[] all = new Incrementer[numThreads];
     int expectedTotal = 0;
-
     // create all threads
     for (int i = 0; i < numThreads; i++) {
       all[i] = new Incrementer(region, i, i, incrementsPerThread);
@@ -203,13 +208,13 @@ public class TestAtomicOperation {
       try {
         all[i].join();
       } catch (InterruptedException e) {
+        LOG.info("Ignored", e);
       }
     }
     assertICV(row, fam1, qual1, expectedTotal);
     assertICV(row, fam1, qual2, expectedTotal*2);
     assertICV(row, fam2, qual3, expectedTotal*3);
-    LOG.info("testIncrementMultiThreads successfully verified that total is " +
-             expectedTotal);
+    LOG.info("testIncrementMultiThreads successfully verified that total is " + expectedTotal);
   }
 
 
@@ -260,6 +265,7 @@ public class TestAtomicOperation {
 
     public Incrementer(Region region,
         int threadNumber, int amount, int numIncrements) {
+      super("incrementer." + threadNumber);
       this.region = region;
       this.numIncrements = numIncrements;
       this.amount = amount;
@@ -268,7 +274,7 @@ public class TestAtomicOperation {
 
     @Override
     public void run() {
-      for (int i=0; i<numIncrements; i++) {
+      for (int i = 0; i < numIncrements; i++) {
         try {
           Increment inc = new Increment(row);
           inc.addColumn(fam1, qual1, amount);
@@ -280,8 +286,15 @@ public class TestAtomicOperation {
           // verify: Make sure we only see completed increments
           Get g = new Get(row);
           Result result = region.get(g);
-          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2, Bytes.toLong(result.getValue(fam1, qual2))); 
-          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3, Bytes.toLong(result.getValue(fam2, qual3)));
+          if (result != null) {
+            assertTrue(result.getValue(fam1, qual1) != null);
+            assertTrue(result.getValue(fam1, qual2) != null);
+            assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
+              Bytes.toLong(result.getValue(fam1, qual2))); 
+            assertTrue(result.getValue(fam2, qual3) != null);
+            assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3,
+              Bytes.toLong(result.getValue(fam2, qual3)));
+          }
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -359,7 +372,7 @@ public class TestAtomicOperation {
     // create 10 threads, each will alternate between adding and
     // removing a column
     int numThreads = 10;
-    int opsPerThread = 500;
+    int opsPerThread = 250;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
     AtomicLong timeStamps = new AtomicLong(0);
@@ -451,7 +464,7 @@ public class TestAtomicOperation {
     // create 10 threads, each will alternate between adding and
     // removing a column
     int numThreads = 10;
-    int opsPerThread = 500;
+    int opsPerThread = 250;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
     AtomicLong timeStamps = new AtomicLong(0);
@@ -571,14 +584,12 @@ public class TestAtomicOperation {
    */
   @Test
   public void testPutAndCheckAndPutInParallel() throws Exception {
-
     final String tableName = "testPutAndCheckAndPut";
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName))
         .addFamily(new HColumnDescriptor(family));
-    final Region region = TEST_UTIL.createLocalHRegion(htd, null, null);
-    
+    this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));
     put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
@@ -602,7 +613,6 @@ public class TestAtomicOperation {
     for (Cell keyValue : results) {
       assertEquals("50",Bytes.toString(CellUtil.cloneValue(keyValue)));
     }
-
   }
 
   private class PutThread extends TestThread {
