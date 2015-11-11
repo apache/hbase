@@ -570,9 +570,11 @@ public class HStore implements Store {
     }
     if (ioe != null) {
       // close StoreFile readers
+      boolean evictOnClose = 
+          cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
       for (StoreFile file : results) {
         try {
-          if (file != null) file.closeReader(true);
+          if (file != null) file.closeReader(evictOnClose);
         } catch (IOException e) {
           LOG.warn(e.getMessage());
         }
@@ -1244,10 +1246,12 @@ public class HStore implements Store {
       if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
         sfs = new ArrayList<StoreFile>(newFiles.size());
+        final boolean evictOnClose =
+            cacheConf != null? cacheConf.shouldEvictOnClose(): true;
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           StoreFile sf = createStoreFileAndReader(newFile);
-          sf.closeReader(true);
+          sf.closeReader(evictOnClose);
           sfs.add(sf);
         }
         return sfs;
@@ -1797,8 +1801,10 @@ public class HStore implements Store {
 
       // let the archive util decide if we should archive or delete the files
       LOG.debug("Removing store files after compaction...");
+      boolean evictOnClose = 
+          cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
       for (StoreFile compactedFile : compactedFiles) {
-        compactedFile.closeReader(true);
+        compactedFile.closeReader(evictOnClose);
       }
       if (removeFiles) {
         this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
