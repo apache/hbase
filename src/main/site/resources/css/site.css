@@ -19,12 +19,10 @@
 
 /*@import(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap.min.css);
 @import(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.css);*/
-
 html {
   background-color: #fff;
 }
 body {
-  width: 100%;
   font-size: 16px;
 }
 li {
@@ -36,10 +34,10 @@ div#banner,
 div#breadcrumbs,
 div#bodyColumn,
 footer {
-  width: 98%;
+  width: initial;
   max-width: 1000px;
-  margin-left: 5px;
-  margin-right: 5px;
+  padding-left: 20px;
+  padding-right: 20px;
   clear: both;
 }
 footer {
@@ -63,7 +61,7 @@ li#publishDate.pull-right {
 .navbar-fixed-top .container,
 .navbar-fixed-bottom .container,
 .navbar-inner {
-  width: 100%;
+  width: initial;
 }
 /* Change the color and effect when clicking in menus */
 .dropdown-menu>li>a:hover,
@@ -80,35 +78,42 @@ li#publishDate.pull-right {
   position: static;
 }
 
-@media only screen and (max-width: 977px) {
+@media only screen and (max-width: 979px) {
+  body {
+    padding-left: 0;
+    padding-right: 0;
+    width: initial;
+    margin: 0;
+  }
   /* Without this rule, drop-down divs are a fixed height
    * the first time they are expanded */
   .collapse.in {
-      height: auto;
+      height: auto !important;
   }
-  /* Fix Google Search Results box on small screens */
-  input.gsc-input,
-  .gsc-input-box,
-  .gsc-input-box-hover,
-  .gsc-input-box-focus,
-  .gsc-search-button,
-  .gsc-results-wrapper-visible {
-    -webkit-box-sizing: content-box;
-    -moz-box-sizing: content-box;
-    box-sizing: content-box;
-  }
-
   div#search-form.navbar-search.pull-right {
     padding: 0;
     margin-left: ;
-    width: 100%;
+    width: initial;
     clear: both;
   }
 }
 
-/* Fix Google Custom Search results div on very narrow screens */
+/* Fix Google Custom Search results on very narrow screens */
 @media(max-width: 480px) {
     .gsc-overflow-hidden .nav-collapse {
         -webkit-transform: none;
     }
+}
+
+/* Override weird body padding thing that causes scrolling */
+@media (max-width: 767px)
+body {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+@media (max-width: 767px)
+.navbar-fixed-top, .navbar-fixed-bottom, .navbar-static-top {
+  margin-left: 0;
+  margin-right: 0;
 }
