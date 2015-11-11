@@ -325,6 +325,10 @@ public class StoreFile {
     return max;
   }
 
+  public CacheConfig getCacheConf() {
+    return this.cacheConf;
+  }
+
   /**
    * Check if this storefile was created by bulk load.
    * When a hfile is bulk loaded into HBase, we append
@@ -477,7 +481,9 @@ public class StoreFile {
         this.reader = open(canUseDropBehind);
       } catch (IOException e) {
         try {
-          this.closeReader(true);
+          boolean evictOnClose =
+              cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+          this.closeReader(evictOnClose);
         } catch (IOException ee) {
         }
         throw e;
@@ -512,7 +518,9 @@ public class StoreFile {
    * @throws IOException
    */
   public void deleteReader() throws IOException {
-    closeReader(true);
+    boolean evictOnClose =
+        cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+    closeReader(evictOnClose);
     this.fs.delete(getPath(), true);
   }
 

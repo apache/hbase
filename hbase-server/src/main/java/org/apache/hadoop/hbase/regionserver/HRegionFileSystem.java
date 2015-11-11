@@ -593,7 +593,7 @@ public class HRegionFileSystem {
           }
         }
       } finally {
-        f.closeReader(true);
+        f.closeReader(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
       }
     }
 
