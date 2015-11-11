@@ -82,17 +82,6 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Test Bulk Load and MR on a distributed cluster.
  * It starts an MR job that creates linked chains
