@@ -32,6 +32,9 @@
       <topBarEnabled>true</topBarEnabled>
       <sideBarEnabled>false</sideBarEnabled>
       <googleSearch>
+        <!-- The ID of the Google custom search engine to use.
+             This one searches hbase.apache.org, issues.apache.org/browse/HBASE-*,
+             and user and dev mailing list archives. -->
         <customSearch>000385458301414556862:sq1bb0xugjg</customSearch>
       </googleSearch>
       <sourceLineNumbersEnabled>false</sourceLineNumbersEnabled>
