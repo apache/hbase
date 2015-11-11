@@ -664,6 +664,13 @@ public class ImportTsv extends Configured implements Tool {
       "Record with invalid timestamps (blank, non-numeric) will be treated as bad record.\n" +
       "Note: if you use this option, then '" + TIMESTAMP_CONF_KEY + "' option will be ignored.\n" +
       "\n" +
+      "Other special columns that can be specified are " + TsvParser.CELL_TTL_COLUMN_SPEC +
+      " and " + TsvParser.CELL_VISIBILITY_COLUMN_SPEC + ".\n" +
+      TsvParser.CELL_TTL_COLUMN_SPEC + " designates that this column will be used " +
+      "as a Cell's Time To Live (TTL) attribute.\n" +
+      TsvParser.CELL_VISIBILITY_COLUMN_SPEC + " designates that this column contains the " +
+      "visibility label expression.\n" +
+      "\n" +
       TsvParser.ATTRIBUTES_COLUMN_SPEC+" can be used to specify Operation Attributes per record.\n"+
       " Should be specified as key=>value where "+TsvParser.DEFAULT_ATTRIBUTES_COLUMN_INDEX+ " is used \n"+
       " as the seperator.  Note that more than one OperationAttributes can be specified.\n"+
