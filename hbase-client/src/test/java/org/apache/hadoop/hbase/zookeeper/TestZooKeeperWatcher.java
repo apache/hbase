@@ -22,23 +22,15 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class})
 public class TestZooKeeperWatcher {
-  private final static Log LOG = LogFactory.getLog(TestZooKeeperWatcher.class);
-  
+
   @Test
   public void testIsClientReadable() throws ZooKeeperConnectionException, IOException {
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(HBaseConfiguration.create(),
@@ -63,44 +55,5 @@ public class TestZooKeeperWatcher {
 
     watcher.close();
   }
-  
-  @Test
-  public void testConnectionEvent() throws ZooKeeperConnectionException, IOException {
-    long zkSessionTimeout = 15000l;
-    Configuration conf = HBaseConfiguration.create();
-    conf.set("zookeeper.session.timeout", "15000");
 
-    Abortable abortable = new Abortable() {
-      boolean aborted = false;
-
-      @Override
-      public void abort(String why, Throwable e) {
-        aborted = true;
-        LOG.error(why, e);
-      }
-
-      @Override
-      public boolean isAborted() {
-        return aborted;
-      }
-    };
-    ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, "testConnectionEvent", abortable, false);
-
-    WatchedEvent event =
-        new WatchedEvent(Watcher.Event.EventType.None, Watcher.Event.KeeperState.Disconnected, null);
-
-    long startTime = EnvironmentEdgeManager.currentTime();
-    while (!abortable.isAborted()
-        && (EnvironmentEdgeManager.currentTime() - startTime < zkSessionTimeout)) {
-      watcher.process(event);
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-
-    assertTrue(abortable.isAborted());
-    watcher.close();
-  }
 }
