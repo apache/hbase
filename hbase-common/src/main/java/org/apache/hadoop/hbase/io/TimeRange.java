@@ -68,16 +68,15 @@ public class TimeRange {
    * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
-   * @throws IOException
+   * @throws IllegalArgumentException
    */
-  public TimeRange(long minStamp, long maxStamp)
-  throws IOException {
+  public TimeRange(long minStamp, long maxStamp) {
     if (minStamp < 0 || maxStamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
         + ", maxStamp:" + maxStamp);
     }
     if(maxStamp < minStamp) {
-      throw new IOException("maxStamp is smaller than minStamp");
+      throw new IllegalArgumentException("maxStamp is smaller than minStamp");
     }
     this.minStamp = minStamp;
     this.maxStamp = maxStamp;

@@ -827,8 +827,7 @@ public class DefaultMemStore implements MemStore {
     }
 
     @Override
-    public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
-        long oldestUnexpiredTS) {
+    public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
       return shouldSeek(scan, oldestUnexpiredTS);
     }
 

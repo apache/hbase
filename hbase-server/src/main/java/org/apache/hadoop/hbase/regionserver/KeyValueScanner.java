@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -76,15 +75,12 @@ public interface KeyValueScanner extends Shipper {
    * Allows to filter out scanners (both StoreFile and memstore) that we don't
    * want to use based on criteria such as Bloom filters and timestamp ranges.
    * @param scan the scan that we are selecting scanners for
-   * @param columns the set of columns in the current column family, or null if
-   *          not specified by the scan
+   * @param store the store we are performing the scan on.
    * @param oldestUnexpiredTS the oldest timestamp we are interested in for
    *          this query, based on TTL
    * @return true if the scanner should be included in the query
    */
-  boolean shouldUseScanner(
-    Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS
-  );
+  boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS);
 
   // "Lazy scanner" optimizations
 

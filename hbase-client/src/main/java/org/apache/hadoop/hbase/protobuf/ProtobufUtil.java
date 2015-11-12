@@ -458,17 +458,16 @@ public final class ProtobufUtil {
     if (proto.hasStoreOffset()) {
       get.setRowOffsetPerColumnFamily(proto.getStoreOffset());
     }
+    if (proto.getCfTimeRangeCount() > 0) {
+      for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
+        TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
+        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
+      }
+    }
     if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      get.setTimeRange(minStamp, maxStamp);
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -829,16 +828,8 @@ public final class ProtobufUtil {
       }
     }
     if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      increment.setTimeRange(minStamp, maxStamp);
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      increment.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     increment.setDurability(toDurability(proto.getDurability()));
     for (NameBytesPair attribute : proto.getAttributeList()) {
@@ -876,6 +867,12 @@ public final class ProtobufUtil {
       scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
     }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
+    for (Entry<byte[], TimeRange> cftr : scan.getColumnFamilyTimeRange().entrySet()) {
+      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
+      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setTimeRange(timeRangeToProto(cftr.getValue()));
+      scanBuilder.addCfTimeRange(b);
+    }
     TimeRange timeRange = scan.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -970,17 +967,16 @@ public final class ProtobufUtil {
     if (proto.hasLoadColumnFamiliesOnDemand()) {
       scan.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
+    if (proto.getCfTimeRangeCount() > 0) {
+      for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
+        TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
+        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
+      }
+    }
     if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      scan.setTimeRange(minStamp, maxStamp);
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      scan.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -1041,6 +1037,12 @@ public final class ProtobufUtil {
     builder.setMaxVersions(get.getMaxVersions());
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
+    }
+    for (Entry<byte[], TimeRange> cftr : get.getColumnFamilyTimeRange().entrySet()) {
+      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
+      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setTimeRange(timeRangeToProto(cftr.getValue()));
+      builder.addCfTimeRange(b);
     }
     TimeRange timeRange = get.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -3162,4 +3164,25 @@ public final class ProtobufUtil {
     }
     return scList;
   }
+
+  private static HBaseProtos.TimeRange.Builder timeRangeToProto(TimeRange timeRange) {
+    HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+    timeRangeBuilder.setFrom(timeRange.getMin());
+    timeRangeBuilder.setTo(timeRange.getMax());
+    return timeRangeBuilder;
+  }
+
+  private static TimeRange protoToTimeRange(HBaseProtos.TimeRange timeRange) throws IOException {
+      long minStamp = 0;
+      long maxStamp = Long.MAX_VALUE;
+      if (timeRange.hasFrom()) {
+        minStamp = timeRange.getFrom();
+      }
+      if (timeRange.hasTo()) {
+        maxStamp = timeRange.getTo();
+      }
+    return new TimeRange(minStamp, maxStamp);
+  }
+
 }
