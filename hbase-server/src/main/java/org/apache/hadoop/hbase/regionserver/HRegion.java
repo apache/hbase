@@ -968,16 +968,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     initializeRegionStores(reporter, status, true);
   }
 
-  private void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
-    Map<byte[], List<Path>> storeFiles = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
+  /**
+   * @return Map of StoreFiles by column family
+   */
+  private NavigableMap<byte[], List<Path>> getStoreFiles() {
+    NavigableMap<byte[], List<Path>> allStoreFiles =
+      new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
     for (Store store: getStores()) {
-      ArrayList<Path> storeFileNames = new ArrayList<Path>();
-      for (StoreFile storeFile: store.getStorefiles()) {
+      Collection<StoreFile> storeFiles = store.getStorefiles();
+      if (storeFiles == null) continue;
+      List<Path> storeFileNames = new ArrayList<Path>();
+      for (StoreFile storeFile: storeFiles) {
         storeFileNames.add(storeFile.getPath());
       }
-      storeFiles.put(store.getFamily().getName(), storeFileNames);
+      allStoreFiles.put(store.getFamily().getName(), storeFileNames);
     }
+    return allStoreFiles;
+  }
 
+  private void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
+    Map<byte[], List<Path>> storeFiles = getStoreFiles();
     RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
       RegionEventDescriptor.EventType.REGION_OPEN, getRegionInfo(), openSeqId,
       getRegionServerServices().getServerName(), storeFiles);
@@ -986,15 +996,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private void writeRegionCloseMarker(WAL wal) throws IOException {
-    Map<byte[], List<Path>> storeFiles = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
-    for (Store store: getStores()) {
-      ArrayList<Path> storeFileNames = new ArrayList<Path>();
-      for (StoreFile storeFile: store.getStorefiles()) {
-        storeFileNames.add(storeFile.getPath());
-      }
-      storeFiles.put(store.getFamily().getName(), storeFileNames);
-    }
-
+    Map<byte[], List<Path>> storeFiles = getStoreFiles();
     RegionEventDescriptor regionEventDesc = ProtobufUtil.toRegionEventDescriptor(
       RegionEventDescriptor.EventType.REGION_CLOSE, getRegionInfo(), getSequenceId().get(),
       getRegionServerServices().getServerName(), storeFiles);
@@ -1026,7 +1028,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       new HDFSBlocksDistribution();
     synchronized (this.stores) {
       for (Store store : this.stores.values()) {
-        for (StoreFile sf : store.getStorefiles()) {
+        Collection<StoreFile> storeFiles = store.getStorefiles();
+        if (storeFiles == null) continue;
+        for (StoreFile sf : storeFiles) {
           HDFSBlocksDistribution storeFileBlocksDistribution =
             sf.getHDFSBlockDistribution();
           hdfsBlocksDistribution.add(storeFileBlocksDistribution);
@@ -1069,7 +1073,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
       Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family.getNameAsString());
       if (storeFiles == null) continue;
-
       for (StoreFileInfo storeFileInfo : storeFiles) {
         hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
       }
@@ -1635,10 +1638,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public long getOldestHfileTs(boolean majorCompactioOnly) throws IOException {
     long result = Long.MAX_VALUE;
     for (Store store : getStores()) {
-      for (StoreFile file : store.getStorefiles()) {
-        HFile.Reader reader = file.getReader().getHFileReader();
+      Collection<StoreFile> storeFiles = store.getStorefiles();
+      if (storeFiles == null) continue;
+      for (StoreFile file : storeFiles) {
+        StoreFile.Reader sfReader = file.getReader();
+        if (sfReader == null) continue;
+        HFile.Reader reader = sfReader.getHFileReader();
+        if (reader == null) continue;
         if (majorCompactioOnly) {
           byte[] val = reader.loadFileInfo().get(StoreFile.MAJOR_COMPACTION_KEY);
+          if (val == null) continue;
           if (val == null || !Bytes.toBoolean(val)) {
             continue;
           }
@@ -4899,7 +4908,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (LOG.isTraceEnabled()) {
       LOG.trace(getRegionInfo().getEncodedName() + " : Store files for region: ");
       for (Store s : stores.values()) {
-        for (StoreFile sf : s.getStorefiles()) {
+        Collection<StoreFile> storeFiles = s.getStorefiles();
+        if (storeFiles == null) continue;
+        for (StoreFile sf : storeFiles) {
           LOG.trace(getRegionInfo().getEncodedName() + " : " + sf);
         }
       }
@@ -4998,7 +5009,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           throw new IllegalArgumentException("No column family : " +
               new String(column) + " available");
         }
-        for (StoreFile storeFile: store.getStorefiles()) {
+        Collection<StoreFile> storeFiles = store.getStorefiles();
+        if (storeFiles == null) continue;
+        for (StoreFile storeFile: storeFiles) {
           storeFileNames.add(storeFile.getPath().toString());
         }
 
