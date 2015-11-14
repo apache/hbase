@@ -176,6 +176,14 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
+      <id>chenheng</id>
+      <name>Heng Chen</name>
+      <email>chenheng@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Yuantiku</organization>
+      <organizationUrl>http://www.yuantiku.com</organizationUrl>
+    </developer>
+    <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
