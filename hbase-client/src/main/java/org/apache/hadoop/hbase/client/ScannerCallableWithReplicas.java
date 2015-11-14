@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -163,12 +164,13 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     replicaSwitched.set(false);
     // submit call for the primary replica.
     addCallsForCurrentReplica(cs, rl);
+
     try {
       // wait for the timeout to see whether the primary responds back
       Future<Pair<Result[], ScannerCallable>> f = cs.poll(timeBeforeReplicas,
           TimeUnit.MICROSECONDS); // Yes, microseconds
       if (f != null) {
-        Pair<Result[], ScannerCallable> r = f.get();
+        Pair<Result[], ScannerCallable> r = f.get(timeout, TimeUnit.MILLISECONDS);
         if (r != null && r.getSecond() != null) {
           updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
         }
@@ -180,22 +182,30 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       throw new InterruptedIOException(e.getMessage());
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
+    } catch (TimeoutException e) {
+      throw new InterruptedIOException(e.getMessage());
     }
+
     // submit call for the all of the secondaries at once
     // TODO: this may be an overkill for large region replication
     addCallsForOtherReplicas(cs, rl, 0, rl.size() - 1);
+
     try {
-      Future<Pair<Result[], ScannerCallable>> f = cs.take();
-      Pair<Result[], ScannerCallable> r = f.get();
-      if (r != null && r.getSecond() != null) {
-        updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
+      Future<Pair<Result[], ScannerCallable>> f = cs.poll(timeout, TimeUnit.MILLISECONDS);
+      if (f != null) {
+        Pair<Result[], ScannerCallable> r = f.get(timeout, TimeUnit.MILLISECONDS);
+        if (r != null && r.getSecond() != null) {
+          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
+        }
+        return r == null ? null : r.getFirst(); // great we got an answer
       }
-      return r == null ? null : r.getFirst(); // great we got an answer
     } catch (ExecutionException e) {
       RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
     } catch (CancellationException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (TimeoutException e) {
       throw new InterruptedIOException(e.getMessage());
     } finally {
       // We get there because we were interrupted or because one or more of the
