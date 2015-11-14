@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -30,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -103,7 +103,7 @@ public class TestWALLockup {
    * <p>First I need to set up some mocks for Server and RegionServerServices. I also need to
    * set up a dodgy WAL that will throw an exception when we go to append to it.
    */
-  @Test (timeout=30000)
+  @Test (timeout=15000)
   public void testLockupWhenSyncInMiddleOfZigZagSetup() throws IOException {
     // A WAL that we can have throw exceptions when a flag is set.
     class DodgyFSLog extends FSHLog {
@@ -209,15 +209,21 @@ public class TestWALLockup {
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName());
       WALEdit edit = new WALEdit();
+      CellScanner CellScanner = put.cellScanner();
+      assertTrue(CellScanner.advance());
+      edit.add(CellScanner.current());
       // Put something in memstore and out in the WAL. Do a big number of appends so we push
       // out other side of the ringbuffer. If small numbers, stuff doesn't make it to WAL
       for (int i = 0; i < 1000; i++) {
-        dodgyWAL.append(htd, region.getRegionInfo(), key, edit, true);
+        region.put(put);
       }
       // Set it so we start throwing exceptions.
+      LOG.info("SET throwing of exception on append");
       dodgyWAL.throwException = true;
-      // This append provokes a WAL roll.
+      // This append provokes a WAL roll request
       dodgyWAL.append(htd, region.getRegionInfo(), key, edit, true);
+      // Now wait until the dodgy WAL is latched.
+      while (dodgyWAL.latch.getCount() <= 0) Threads.sleep(1);
       boolean exception = false;
       try {
         dodgyWAL.sync();
@@ -229,20 +235,25 @@ public class TestWALLockup {
       // Get a memstore flush going too so we have same hung profile as up in the issue over
       // in HBASE-14317. Flush hangs trying to get sequenceid because the ringbuffer is held up
       // by the zigzaglatch waiting on syncs to come home.
-      Thread t = new Thread ("flusher") {
+      Thread t = new Thread ("Flusher") {
         public void run() {
           try {
+            if (region.getMemstoreSize() <= 0) {
+              throw new IOException("memstore size=" + region.getMemstoreSize());
+            }
             region.flush(false);
           } catch (IOException e) {
+            // Can fail trying to flush in middle of a roll. Not a failure. Will succeed later
+            // when roll completes.
             LOG.info("In flush", e);
-            fail();
           }
+          LOG.info("Exiting");
         };
       };
       t.setDaemon(true);
       t.start();
-      // Wait till it gets into flushing. It will get stuck on getSequenceId. Then proceed.
-      while (!region.writestate.flushing) Threads.sleep(1);
+      // Wait until 
+      while (dodgyWAL.latch.getCount() > 0) Threads.sleep(1);
       // Now assert I got a new WAL file put in place even though loads of errors above.
       assertTrue(originalWAL != dodgyWAL.getCurrentFileName());
       // Can I append to it?
