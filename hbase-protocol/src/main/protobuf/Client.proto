@@ -87,6 +87,7 @@ message Get {
   optional bool closest_row_before = 11 [default = false];
 
   optional Consistency consistency = 12 [default = STRONG];
+  repeated ColumnFamilyTimeRange cf_time_range = 13;
 }
 
 message Result {
@@ -257,6 +258,7 @@ message Scan {
   optional Consistency consistency = 16 [default = STRONG];
   optional uint32 caching = 17;
   optional bool allow_partial_results = 18;
+  repeated ColumnFamilyTimeRange cf_time_range = 19;
 }
 
 /**

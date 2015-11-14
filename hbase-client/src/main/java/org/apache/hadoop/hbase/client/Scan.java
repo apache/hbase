@@ -240,6 +240,10 @@ public class Scan extends Query {
     for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
+    for (Map.Entry<byte[], TimeRange> entry : scan.getColumnFamilyTimeRange().entrySet()) {
+      TimeRange tr = entry.getValue();
+      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
+    }
   }
 
   /**
@@ -260,6 +264,10 @@ public class Scan extends Query {
     this.consistency = get.getConsistency();
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
+    }
+    for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
+      TimeRange tr = entry.getValue();
+      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
   }
 
@@ -312,13 +320,11 @@ public class Scan extends Query {
    * returned, up the number of versions beyond the default.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException if invalid time range
    * @see #setMaxVersions()
    * @see #setMaxVersions(int)
    * @return this
    */
-  public Scan setTimeRange(long minStamp, long maxStamp)
-  throws IOException {
+  public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
@@ -337,12 +343,16 @@ public class Scan extends Query {
   throws IOException {
     try {
       tr = new TimeRange(timestamp, timestamp+1);
-    } catch(IOException e) {
+    } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
     return this;
+  }
+
+  @Override public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+    return (Scan) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
   }
 
   /**
