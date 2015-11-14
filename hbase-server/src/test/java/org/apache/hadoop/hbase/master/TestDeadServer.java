@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -42,16 +47,19 @@ public class TestDeadServer {
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
     ds.add(hostname123);
+    ds.notifyServer(hostname123);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname123);
     assertFalse(ds.areDeadServersInProgress());
 
     ds.add(hostname1234);
+    ds.notifyServer(hostname1234);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname1234);
     assertFalse(ds.areDeadServersInProgress());
 
     ds.add(hostname12345);
+    ds.notifyServer(hostname12345);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
@@ -74,6 +82,18 @@ public class TestDeadServer {
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
   }
 
+  @Test(timeout = 15000)
+  public void testCrashProcedureReplay() throws Exception {
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL.startMiniCluster();
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    ProcedureExecutor pExecutor = master.getMasterProcedureExecutor();
+    ServerCrashProcedure proc = new ServerCrashProcedure(hostname123, false, false);
+
+    ProcedureTestingUtility.submitAndWait(pExecutor, proc);
+
+    assertFalse(master.getServerManager().getDeadServers().areDeadServersInProgress());
+  }
 
   @Test
   public void testSortExtract(){
