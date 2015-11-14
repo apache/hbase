@@ -390,7 +390,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         continue;
       }
 
-      if (kvs.shouldUseScanner(scan, columns, expiredTimestampCutoff)) {
+      if (kvs.shouldUseScanner(scan, store, expiredTimestampCutoff)) {
         scanners.add(kvs);
       }
     }
