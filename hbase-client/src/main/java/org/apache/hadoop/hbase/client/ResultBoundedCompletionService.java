@@ -39,12 +39,13 @@ public class ResultBoundedCompletionService<V> {
   private final Executor executor;
   private final QueueingFuture<V>[] tasks; // all the tasks
   private volatile QueueingFuture<V> completed = null;
+  private volatile boolean cancelled = false;
   
   class QueueingFuture<T> implements RunnableFuture<T> {
     private final RetryingCallable<T> future;
     private T result = null;
     private ExecutionException exeEx = null;
-    private volatile boolean cancelled;
+    private volatile boolean cancelled = false;
     private final int callTimeout;
     private final RpcRetryingCaller<T> retryingCaller;
     private boolean resultObtained = false;
@@ -61,18 +62,21 @@ public class ResultBoundedCompletionService<V> {
     public void run() {
       try {
         if (!cancelled) {
-          result =
-              this.retryingCaller.callWithRetries(future, callTimeout);
+          result = this.retryingCaller.callWithRetries(future, callTimeout);
           resultObtained = true;
         }
       } catch (Throwable t) {
         exeEx = new ExecutionException(t);
       } finally {
-        if (!cancelled && completed == null) {
-          completed = (QueueingFuture<V>) QueueingFuture.this;
-          synchronized (tasks) {
-            tasks.notify();
+        synchronized (tasks) {
+          // If this wasn't canceled then store the result.
+          if (!cancelled && completed == null) {
+            completed = (QueueingFuture<V>) QueueingFuture.this;
           }
+
+          // Notify just in case there was someone waiting and this was canceled.
+          // That shouldn't happen but better safe than sorry.
+          tasks.notify();
         }
       }
     }
@@ -145,19 +149,23 @@ public class ResultBoundedCompletionService<V> {
 
   public QueueingFuture<V> take() throws InterruptedException {
     synchronized (tasks) {
-      while (completed == null) tasks.wait();
+      while (completed == null && !cancelled) tasks.wait();
     }
     return completed;
   }
 
   public QueueingFuture<V> poll(long timeout, TimeUnit unit) throws InterruptedException {
     synchronized (tasks) {
-      if (completed == null) unit.timedWait(tasks, timeout);
+      if (completed == null && !cancelled) unit.timedWait(tasks, timeout);
     }
     return completed;
   }
 
   public void cancelAll() {
+    // Grab the lock on tasks so that cancelled is visible everywhere
+    synchronized (tasks) {
+      cancelled = true;
+    }
     for (QueueingFuture<V> future : tasks) {
       if (future != null) future.cancel(true);
     }
