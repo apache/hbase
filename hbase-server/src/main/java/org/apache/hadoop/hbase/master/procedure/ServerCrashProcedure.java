@@ -111,6 +111,11 @@ implements ServerProcedureInterface {
   private ServerName serverName;
 
   /**
+   * Whether DeadServer knows that we are processing it.
+   */
+  private boolean notifiedDeadServer = false;
+
+  /**
    * Regions that were on the crashed server.
    */
   private Set<HRegionInfo> regionsOnCrashedServer;
@@ -184,6 +189,13 @@ implements ServerProcedureInterface {
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
       throwProcedureYieldException("Waiting on master failover to complete");
     }
+    // HBASE-14802
+    // If we have not yet notified that we are processing a dead server, we should do now.
+    if (!notifiedDeadServer) {
+      services.getServerManager().getDeadServers().notifyServer(serverName);
+      notifiedDeadServer = true;
+    }
+
     try {
       switch (state) {
       case SERVER_CRASH_START:
