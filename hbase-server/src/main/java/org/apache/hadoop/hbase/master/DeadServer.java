@@ -59,11 +59,6 @@ public class DeadServer {
   private int numProcessing = 0;
 
   /**
-   * Whether a dead server is being processed currently.
-   */
-  private boolean processing = false;
-
-  /**
    * A dead server that comes back alive has a different start code. The new start code should be
    *  greater than the old one, but we don't take this into account in this method.
    *
@@ -99,7 +94,9 @@ public class DeadServer {
    *
    * @return true if any RS are being processed as dead
    */
-  public synchronized boolean areDeadServersInProgress() { return processing; }
+  public synchronized boolean areDeadServersInProgress() {
+    return numProcessing != 0;
+  }
 
   public synchronized Set<ServerName> copyServerNames() {
     Set<ServerName> clone = new HashSet<ServerName>(deadServers.size());
@@ -112,34 +109,15 @@ public class DeadServer {
    * @param sn the server name
    */
   public synchronized void add(ServerName sn) {
-    processing = true;
+    this.numProcessing++;
     if (!deadServers.containsKey(sn)){
       deadServers.put(sn, EnvironmentEdgeManager.currentTime());
     }
   }
 
-  /**
-   * Notify that we started processing this dead server.
-   * @param sn ServerName for the dead server.
-   */
-  public synchronized void notifyServer(ServerName sn) {
-    if (LOG.isDebugEnabled()) { LOG.debug("Started processing " + sn); }
-    processing = true;
-    numProcessing++;
-  }
-
   public synchronized void finish(ServerName sn) {
-    numProcessing--;
-    if (LOG.isDebugEnabled()) LOG.debug("Finished " + sn + "; numProcessing=" + numProcessing);
-
-    assert numProcessing >= 0: "Number of dead servers in processing should always be non-negative";
-
-    if (numProcessing < 0) {
-      LOG.error("Number of dead servers in processing = " + numProcessing
-          + ". Something went wrong, this should always be non-negative.");
-      numProcessing = 0;
-    }
-    if (numProcessing == 0) { processing = false; }
+    if (LOG.isDebugEnabled()) LOG.debug("Finished " + sn + "; numProcessing=" + this.numProcessing);
+    this.numProcessing--;
   }
 
   public synchronized int size() {
