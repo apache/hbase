@@ -17,13 +17,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -35,24 +41,39 @@ import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeadServer {
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   final ServerName hostname123 = ServerName.valueOf("127.0.0.1", 123, 3L);
   final ServerName hostname123_2 = ServerName.valueOf("127.0.0.1", 123, 4L);
   final ServerName hostname1234 = ServerName.valueOf("127.0.0.2", 1234, 4L);
   final ServerName hostname12345 = ServerName.valueOf("127.0.0.2", 12345, 4L);
 
+  @BeforeClass
+  public static void setupBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
     ds.add(hostname123);
+    ds.notifyServer(hostname123);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname123);
     assertFalse(ds.areDeadServersInProgress());
 
     ds.add(hostname1234);
+    ds.notifyServer(hostname1234);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname1234);
     assertFalse(ds.areDeadServersInProgress());
 
     ds.add(hostname12345);
+    ds.notifyServer(hostname12345);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
@@ -75,6 +96,16 @@ public class TestDeadServer {
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
   }
 
+  @Test(timeout = 15000)
+  public void testCrashProcedureReplay() {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    ProcedureExecutor pExecutor = master.getMasterProcedureExecutor();
+    ServerCrashProcedure proc = new ServerCrashProcedure(hostname123, false, false);
+
+    ProcedureTestingUtility.submitAndWait(pExecutor, proc);
+    
+    assertFalse(master.getServerManager().getDeadServers().areDeadServersInProgress());
+  }
 
   @Test
   public void testSortExtract(){
