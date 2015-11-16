@@ -23,7 +23,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -57,6 +60,7 @@ import com.google.protobuf.BlockingRpcChannel;
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final Log LOG = LogFactory.getLog(TestNamespaceCommands.class);
   private static String TEST_NAMESPACE = "ns1";
   private static String TEST_NAMESPACE2 = "ns2";
   private static Configuration conf;
@@ -94,11 +98,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
   private static User USER_TABLE_CREATE; // TODO: WE DO NOT GIVE ANY PERMS TO THIS USER
 
   private static final String GROUP_ADMIN = "group_admin";
+  private static final String GROUP_NS_ADMIN = "group_ns_admin";
   private static final String GROUP_CREATE = "group_create";
   private static final String GROUP_READ = "group_read";
   private static final String GROUP_WRITE = "group_write";
 
   private static User USER_GROUP_ADMIN;
+  private static User USER_GROUP_NS_ADMIN;
   private static User USER_GROUP_CREATE;
   private static User USER_GROUP_READ;
   private static User USER_GROUP_WRITE;
@@ -130,6 +136,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     USER_GROUP_ADMIN =
         User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_GROUP_NS_ADMIN =
+        User.createUserForTesting(conf, "user_group_ns_admin", new String[] { GROUP_NS_ADMIN });
     USER_GROUP_CREATE =
         User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
@@ -162,6 +170,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     grantOnNamespace(UTIL, USER_NS_WRITE.getShortName(),  TEST_NAMESPACE, Permission.Action.WRITE);
     grantOnNamespace(UTIL, USER_NS_READ.getShortName(),   TEST_NAMESPACE, Permission.Action.READ);
     grantOnNamespace(UTIL, USER_NS_EXEC.getShortName(),   TEST_NAMESPACE, Permission.Action.EXEC);
+    grantOnNamespace(UTIL, toGroupEntry(GROUP_NS_ADMIN), TEST_NAMESPACE, Permission.Action.ADMIN);
 
     grantOnNamespace(UTIL, USER_NS_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
 
@@ -187,7 +196,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
           AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      assertEquals(5, perms.size());
+      for (Map.Entry<String, TablePermission> entry : perms.entries()) {
+        LOG.debug(entry);
+      }
+      assertEquals(6, perms.size());
 
       // Grant and check state in ACL table
       grantOnNamespace(UTIL, userTestNamespace, TEST_NAMESPACE,
@@ -196,7 +208,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       Result result = acl.get(new Get(Bytes.toBytes(userTestNamespace)));
       assertTrue(result != null);
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      assertEquals(6, perms.size());
+      assertEquals(7, perms.size());
       List<TablePermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
       assertEquals(1, namespacePerms.size());
@@ -212,7 +224,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
         Permission.Action.WRITE);
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      assertEquals(5, perms.size());
+      assertEquals(6, perms.size());
     } finally {
       acl.close();
     }
@@ -356,6 +368,21 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
+    AccessTestAction grantNamespaceAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.grant(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+            TEST_NAMESPACE, Action.READ);
+        }
+        return null;
+      }
+    };
+
     AccessTestAction revokeAction = new AccessTestAction() {
       public Object run() throws Exception {
         Connection connection = ConnectionFactory.createConnection(conf);
@@ -366,6 +393,25 @@ public class TestNamespaceCommands extends SecureTestUtil {
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.revoke(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+        } finally {
+          acl.close();
+          connection.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction revokeNamespaceAction = new AccessTestAction() {
+      public Object run() throws Exception {
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
+        try {
+          BlockingRpcChannel service =
+              acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.revoke(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+            TEST_NAMESPACE, Action.READ);
         } finally {
           acl.close();
           connection.close();
@@ -392,14 +438,26 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(grantAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(grantAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
     verifyDenied(grantAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC, USER_NS_ADMIN, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
       USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
-    verifyAllowed(revokeAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(grantNamespaceAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN,
+      USER_NS_ADMIN, USER_GROUP_NS_ADMIN);
+    verifyDenied(grantNamespaceAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    verifyAllowed(revokeAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
     verifyDenied(revokeAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC, USER_NS_ADMIN, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    verifyAllowed(revokeNamespaceAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN,
+      USER_NS_ADMIN, USER_GROUP_NS_ADMIN);
+    verifyDenied(revokeNamespaceAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
       USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
     verifyAllowed(getPermissionsAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_NS_ADMIN,
