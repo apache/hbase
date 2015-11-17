@@ -1074,7 +1074,8 @@
     <commons-lang.version>2.6</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
-    <collections.version>3.2.1</collections.version>
+    <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
+    <collections.version>3.2.2</collections.version>
     <httpclient.version>3.1</httpclient.version>
     <metrics-core.version>2.2.0</metrics-core.version>
     <guava.version>12.0.1</guava.version>

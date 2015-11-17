@@ -1144,6 +1144,11 @@ public final class HConstants {
   public static final String ZK_SERVER_KERBEROS_PRINCIPAL =
       "hbase.zookeeper.server.kerberos.principal";
 
+  /**
+   * Allow legacy object serialization. Disabled by default because it is a security risk */
+  public static final String ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY =
+      "hbase.allow.legacy.object.serialization";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

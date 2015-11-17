@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BitComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -514,6 +515,11 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
       }
       ((Writable)instanceObj).write(out);
     } else if (Serializable.class.isAssignableFrom(declClass)) {
+      if (!conf.getBoolean(HConstants.ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY, false)) {
+        throw new IOException(
+          "Legacy object serialization support is disabled by default." +
+          " Change '" + HConstants.ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY + "' to enable.");
+      }
       Class <?> c = instanceObj.getClass();
       Integer code = CLASS_TO_CODE.get(c);
       if (code == null) {
@@ -698,6 +704,11 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
           instance = null;
         }
       } else {
+        if (!conf.getBoolean(HConstants.ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY, false)) {
+          throw new IOException(
+            "Legacy object deserialization support is disabled by default." +
+            " Change '" + HConstants.ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY + "' to enable.");
+        }
         int length = in.readInt();
         byte[] objectBytes = new byte[length];
         in.readFully(objectBytes);
