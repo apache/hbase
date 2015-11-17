@@ -564,7 +564,7 @@ If you are running a distributed operation, be sure to wait until HBase has shut
 === _hbase-site.xml_ and _hbase-default.xml_
 
 Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-site.xml_ file, for HBase, site specific customizations go into the file _conf/hbase-site.xml_.
-For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_. 
+For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_.
 
 Not all configuration options make it out to _hbase-default.xml_.
 Configuration that it is thought rare anyone would change can exist only in code; the only way to turn up such configurations is via a reading of the source code itself.
@@ -572,7 +572,7 @@ Configuration that it is thought rare anyone would change can exist only in code
 Currently, changes here will require a cluster restart for HBase to notice the change.
 // hbase/src/main/asciidoc
 //
-include::../../../../target/asciidoc/hbase-default.adoc[]
+include::{docdir}/../../../target/asciidoc/hbase-default.adoc[]
 
 
 [[hbase.env.sh]]
@@ -604,7 +604,7 @@ ZooKeeper is where all these values are kept.
 Thus clients require the location of the ZooKeeper ensemble before they can do anything else.
 Usually this the ensemble location is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
 
-If you are configuring an IDE to run a HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests). 
+If you are configuring an IDE to run a HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
 Minimally, a client of HBase needs several libraries in its `CLASSPATH` when connecting to a cluster, including:
 [source]
@@ -621,7 +621,7 @@ slf4j-log4j (slf4j-log4j12-1.5.8.jar)
 zookeeper (zookeeper-3.4.2.jar)
 ----
 
-An example basic _hbase-site.xml_ for client only might look as follows: 
+An example basic _hbase-site.xml_ for client only might look as follows:
 [source,xml]
 ----
 <?xml version="1.0"?>
@@ -1002,7 +1002,7 @@ See the link:http://docs.oracle.com/javase/6/docs/technotes/guides/management/ag
 Historically, besides above port mentioned, JMX opens two additional random TCP listening ports, which could lead to port conflict problem. (See link:https://issues.apache.org/jira/browse/HBASE-10289[HBASE-10289] for details)
 
 As an alternative, You can use the coprocessor-based JMX implementation provided by HBase.
-To enable it in 0.99 or above, add below property in _hbase-site.xml_: 
+To enable it in 0.99 or above, add below property in _hbase-site.xml_:
 
 [source,xml]
 ----
@@ -1033,7 +1033,7 @@ The registry port can be shared with connector port in most cases, so you only n
 However if you want to use SSL communication, the 2 ports must be configured to different values.
 
 By default the password authentication and SSL communication is disabled.
-To enable password authentication, you need to update _hbase-env.sh_          like below: 
+To enable password authentication, you need to update _hbase-env.sh_          like below:
 [source,bash]
 ----
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
@@ -1060,7 +1060,7 @@ keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
 keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
 ----
 
-And then update _hbase-env.sh_ like below: 
+And then update _hbase-env.sh_ like below:
 
 [source,bash]
 ----
@@ -1082,7 +1082,7 @@ Finally start `jconsole` on the client using the key store:
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 ----
 
-NOTE: To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_: 
+NOTE: To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_:
 
 [source,xml]
 ----

@@ -192,8 +192,11 @@ This format applies to intermediate-level and leaf index blocks of a version 2 m
 Every non-root index block is structured as follows.
 
 . numEntries: the number of entries (int).
-. entryOffsets: the ``secondary index'' of offsets of entries in the block, to facilitate a quick binary search on the key (numEntries + 1 int values). The last value is the total length of all entries in this index block.
-  For example, in a non-root index block with entry sizes 60, 80, 50 the ``secondary index'' will contain the following int array: {0, 60, 140, 190}.
+. entryOffsets: the "secondary index" of offsets of entries in the block, to facilitate
+  a quick binary search on the key (`numEntries + 1` int values). The last value
+  is the total length of all entries in this index block. For example, in a non-root
+  index block with entry sizes 60, 80, 50 the "secondary index" will contain the
+  following int array: `{0, 60, 140, 190}`.
 . Entries.
   Each entry contains:
 +

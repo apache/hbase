@@ -102,12 +102,12 @@ Are all the network interfaces functioning correctly? Are you sure? See the Trou
 
 [[perf.network.call_me_maybe]]
 === Network Consistency and Partition Tolerance
-The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a distributed system can maintain two out of the following three charateristics: 
-- *C*onsistency -- all nodes see the same data. 
+The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a distributed system can maintain two out of the following three charateristics:
+- *C*onsistency -- all nodes see the same data.
 - *A*vailability -- every request receives a response about whether it succeeded or failed.
 - *P*artition tolerance -- the system continues to operate even if some of its components become unavailable to the others.
 
-HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/. 
+HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/.
 
 Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/[blog post] and an link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
 
@@ -782,7 +782,8 @@ Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
 For a large number of deletes, consider `Table.delete(List)`.
 
-See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29
+See
++++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29">hbase.client.Delete</a>+++.
 
 [[perf.hdfs]]
 == HDFS

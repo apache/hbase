@@ -140,7 +140,7 @@ If a region has both an empty start and an empty end key, it is the only region 
 
 In the (hopefully unlikely) event that programmatic processing of catalog metadata
 is required, see the
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29[Writables]
++++<a href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</a>+++
 utility.
 
 [[arch.catalog.startup]]
@@ -931,7 +931,7 @@ To configure MultiWAL for a RegionServer, set the value of the property `hbase.w
 </property>
 ----
 
-Restart the RegionServer for the changes to take effect. 
+Restart the RegionServer for the changes to take effect.
 
 To disable MultiWAL for a RegionServer, unset the property and restart the RegionServer.
 
@@ -1806,60 +1806,116 @@ This list is not exhaustive.
 To tune these parameters from the defaults, edit the _hbase-default.xml_ file.
 For a full list of all configuration parameters available, see <<config.files,config.files>>
 
-[cols="1,1a,1", options="header"]
-|===
-| Parameter
-| Description
-| Default
+`hbase.hstore.compaction.min`::
+  The minimum number of StoreFiles which must be eligible for compaction before compaction can run.
+  The goal of tuning `hbase.hstore.compaction.min` is to avoid ending up with too many tiny StoreFiles
+  to compact. Setting this value to 2 would cause a minor compaction each time you have two StoreFiles
+  in a Store, and this is probably not appropriate. If you set this value too high, all the other
+  values will need to be adjusted accordingly. For most cases, the default value is appropriate.
+  In previous versions of HBase, the parameter `hbase.hstore.compaction.min` was called
+  `hbase.hstore.compactionThreshold`.
++
+*Default*: 3
 
-|`hbase.hstore.compaction.min`
-| The minimum number of StoreFiles which must be eligible for compaction before compaction can run. The goal of tuning `hbase.hstore.compaction.min` is to avoid ending up with too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction each time you have two StoreFiles in a Store, and this is probably not appropriate. If you set this value too high, all the other values will need to be adjusted accordingly. For most cases, the default value is appropriate. In previous versions of HBase, the parameter hbase.hstore.compaction.min was called `hbase.hstore.compactionThreshold`.
-|3
+`hbase.hstore.compaction.max`::
+  The maximum number of StoreFiles which will be selected for a single minor compaction,
+  regardless of the number of eligible StoreFiles. Effectively, the value of
+  `hbase.hstore.compaction.max` controls the length of time it takes a single
+  compaction to complete. Setting it larger means that more StoreFiles are included
+  in a compaction. For most cases, the default value is appropriate.
++
+*Default*: 10
 
-|`hbase.hstore.compaction.max`
-| The maximum number of StoreFiles which will be selected for a single minor compaction, regardless of the number of eligible StoreFiles. Effectively, the value of hbase.hstore.compaction.max controls the length of time it takes a single compaction to complete. Setting it larger means that more StoreFiles are included in a compaction. For most cases, the default value is appropriate.
-|10
+`hbase.hstore.compaction.min.size`::
+  A StoreFile smaller than this size will always be eligible for minor compaction.
+  StoreFiles this size or larger are evaluated by `hbase.hstore.compaction.ratio`
+  to determine if they are eligible. Because this limit represents the "automatic
+  include" limit for all StoreFiles smaller than this value, this value may need
+  to be reduced in write-heavy environments where many files in the 1-2 MB range
+  are being flushed, because every StoreFile will be targeted for compaction and
+  the resulting StoreFiles may still be under the minimum size and require further
+  compaction. If this parameter is lowered, the ratio check is triggered more quickly.
+  This addressed some issues seen in earlier versions of HBase but changing this
+  parameter is no longer necessary in most situations.
++
+*Default*:128 MB
 
-|`hbase.hstore.compaction.min.size`
-| A StoreFile smaller than this size will always be eligible for minor compaction. StoreFiles this size or larger are evaluated by `hbase.hstore.compaction.ratio` to determine if they are eligible. Because this limit represents the "automatic include" limit for all StoreFiles smaller than this value, this value may need to be reduced in write-heavy environments where many files in the 1-2 MB range are being flushed, because every StoreFile will be targeted for compaction and the resulting StoreFiles may still be under the minimum size and require further compaction. If this parameter is lowered, the ratio check is triggered more quickly. This addressed some issues seen in earlier versions of HBase but changing this parameter is no longer necessary in most situations.
-|128 MB
+`hbase.hstore.compaction.max.size`::
+  A StoreFile larger than this size will be excluded from compaction. The effect of
+  raising `hbase.hstore.compaction.max.size` is fewer, larger StoreFiles that do not
+  get compacted often. If you feel that compaction is happening too often without
+  much benefit, you can try raising this value.
++
+*Default*: `Long.MAX_VALUE`
 
-|`hbase.hstore.compaction.max.size`
-| An StoreFile larger than this size will be excluded from compaction. The effect of raising `hbase.hstore.compaction.max.size` is fewer, larger StoreFiles that do not get compacted often. If you feel that compaction is happening too often without much benefit, you can try raising this value.
-|`Long.MAX_VALUE`
+`hbase.hstore.compaction.ratio`::
+  For minor compaction, this ratio is used to determine whether a given StoreFile
+  which is larger than `hbase.hstore.compaction.min.size` is eligible for compaction.
+  Its effect is to limit compaction of large StoreFile. The value of
+  `hbase.hstore.compaction.ratio` is expressed as a floating-point decimal.
++
+* A large ratio, such as 10, will produce a single giant StoreFile. Conversely,
+  a value of .25, will produce behavior similar to the BigTable compaction algorithm,
+  producing four StoreFiles.
+* A moderate value of between 1.0 and 1.4 is recommended. When tuning this value,
+  you are balancing write costs with read costs. Raising the value (to something like
+  1.4) will have more write costs, because you will compact larger StoreFiles.
+  However, during reads, HBase will need to seek through fewer StoreFiles to
+  accomplish the read. Consider this approach if you cannot take advantage of <<bloom>>.
+* Alternatively, you can lower this value to something like 1.0 to reduce the
+  background cost of writes, and use  to limit the number of StoreFiles touched
+  during reads. For most cases, the default value is appropriate.
++
+*Default*: `1.2F`
 
-|`hbase.hstore.compaction.ratio`
-| For minor compaction, this ratio is used to determine whether a given StoreFile which is larger than `hbase.hstore.compaction.min.size` is eligible for compaction. Its effect is to limit compaction of large StoreFile. The value of `hbase.hstore.compaction.ratio` is expressed as a floating-point decimal.
+`hbase.hstore.compaction.ratio.offpeak`::
+  The compaction ratio used during off-peak compactions, if off-peak hours are
+  also configured (see below). Expressed as a floating-point decimal. This allows
+  for more aggressive (or less aggressive, if you set it lower than
+  `hbase.hstore.compaction.ratio`) compaction during a set time period. Ignored
+  if off-peak is disabled (default). This works the same as
+  `hbase.hstore.compaction.ratio`.
++
+*Default*: `5.0F`
 
-* A large ratio, such as 10, will produce a single giant StoreFile. Conversely, a value of .25, will produce behavior similar to the BigTable compaction algorithm, producing four StoreFiles.
-* A moderate value of between 1.0 and 1.4 is recommended. When tuning this value, you are balancing write costs with read costs. Raising the value (to something like 1.4) will have more write costs, because you will compact larger StoreFiles. However, during reads, HBase will need to seek through fewer StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of <<bloom>>.
-* Alternatively, you can lower this value to something like 1.0 to reduce the background cost of writes, and use  to limit the number of StoreFiles touched during reads. For most cases, the default value is appropriate.
-| `1.2F`
+`hbase.offpeak.start.hour`::
+  The start of off-peak hours, expressed as an integer between 0 and 23, inclusive.
+  Set to -1 to disable off-peak.
++
+*Default*: `-1` (disabled)
 
-|`hbase.hstore.compaction.ratio.offpeak`
-| The compaction ratio used during off-peak compactions, if off-peak hours are also configured (see below). Expressed as a floating-point decimal. This allows for more aggressive (or less aggressive, if you set it lower than `hbase.hstore.compaction.ratio`) compaction during a set time period. Ignored if off-peak is disabled (default). This works the same as hbase.hstore.compaction.ratio.
-| `5.0F`
+`hbase.offpeak.end.hour`::
+  The end of off-peak hours, expressed as an integer between 0 and 23, inclusive.
+  Set to -1 to disable off-peak.
++
+*Default*: `-1` (disabled)
 
-| `hbase.offpeak.start.hour`
-| The start of off-peak hours, expressed as an integer between 0 and 23, inclusive. Set to -1 to disable off-peak.
-| `-1` (disabled)
+`hbase.regionserver.thread.compaction.throttle`::
+  There are two different thread pools for compactions, one for large compactions
+  and the other for small compactions. This helps to keep compaction of lean tables
+  (such as `hbase:meta`) fast. If a compaction is larger than this threshold,
+  it goes into the large compaction pool. In most cases, the default value is
+  appropriate.
++
+*Default*: `2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size`
+(which defaults to `128`)
 
-| `hbase.offpeak.end.hour`
-| The end of off-peak hours, expressed as an integer between 0 and 23, inclusive. Set to -1 to disable off-peak.
-| `-1` (disabled)
+`hbase.hregion.majorcompaction`::
+  Time between major compactions, expressed in milliseconds. Set to 0 to disable
+  time-based automatic major compactions. User-requested and size-based major
+  compactions will still run. This value is multiplied by
+  `hbase.hregion.majorcompaction.jitter` to cause compaction to start at a
+  somewhat-random time during a given window of time.
++
+*Default*: 7 days (`604800000` milliseconds)
 
-| `hbase.regionserver.thread.compaction.throttle`
-| There are two different thread pools for compactions, one for large compactions and the other for small compactions. This helps to keep compaction of lean tables (such as `hbase:meta`) fast. If a compaction is larger than this threshold, it goes into the large compaction pool. In most cases, the default value is appropriate.
-| `2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size` (which defaults to `128`)
-
-| `hbase.hregion.majorcompaction`
-| Time between major compactions, expressed in milliseconds. Set to 0 to disable time-based automatic major compactions. User-requested and size-based major compactions will still run. This value is multiplied by `hbase.hregion.majorcompaction.jitter` to cause compaction to start at a somewhat-random time during a given window of time.
-| 7 days (`604800000` milliseconds)
-
-| `hbase.hregion.majorcompaction.jitter`
-| A multiplier applied to hbase.hregion.majorcompaction to cause compaction to occur a given amount of time either side of `hbase.hregion.majorcompaction`. The smaller the number, the closer the compactions will happen to the `hbase.hregion.majorcompaction` interval. Expressed as a floating-point decimal.
-| `.50F`
-|===
+`hbase.hregion.majorcompaction.jitter`::
+  A multiplier applied to hbase.hregion.majorcompaction to cause compaction to
+  occur a given amount of time either side of `hbase.hregion.majorcompaction`.
+  The smaller the number, the closer the compactions will happen to the
+  `hbase.hregion.majorcompaction` interval. Expressed as a floating-point decimal.
++
+*Default*: `.50F`
 
 [[compaction.file.selection.old]]
 ===== Compaction File Selection
@@ -2308,18 +2364,18 @@ To serve the region data from multiple replicas, HBase opens the regions in seco
 The regions opened in secondary mode will share the same data files with the primary region replica, however each secondary region replica will have its own MemStore to keep the unflushed data (only primary region can do flushes). Also to serve reads from secondary regions, the blocks of data files may be also cached in the block caches for the secondary regions.
 
 === Where is the code
-This feature is delivered in two phases, Phase 1 and 2. The first phase is done in time for HBase-1.0.0 release. Meaning that using HBase-1.0.x, you can use all the features that are marked for Phase 1. Phase 2 is committed in HBase-1.1.0, meaning all HBase versions after 1.1.0 should contain Phase 2 items. 
+This feature is delivered in two phases, Phase 1 and 2. The first phase is done in time for HBase-1.0.0 release. Meaning that using HBase-1.0.x, you can use all the features that are marked for Phase 1. Phase 2 is committed in HBase-1.1.0, meaning all HBase versions after 1.1.0 should contain Phase 2 items.
 
 === Propagating writes to region replicas
-As discussed above writes only go to the primary region replica. For propagating the writes from the primary region replica to the secondaries, there are two different mechanisms. For read-only tables, you do not need to use any of the following methods. Disabling and enabling the table should make the data available in all region replicas. For mutable tables, you have to use *only* one of the following mechanisms: storefile refresher, or async wal replication. The latter is recommeded. 
+As discussed above writes only go to the primary region replica. For propagating the writes from the primary region replica to the secondaries, there are two different mechanisms. For read-only tables, you do not need to use any of the following methods. Disabling and enabling the table should make the data available in all region replicas. For mutable tables, you have to use *only* one of the following mechanisms: storefile refresher, or async wal replication. The latter is recommeded.
 
 ==== StoreFile Refresher
-The first mechanism is store file refresher which is introduced in HBase-1.0+. Store file refresher is a thread per region server, which runs periodically, and does a refresh operation for the store files of the primary region for the secondary region replicas. If enabled, the refresher will ensure that the secondary region replicas see the new flushed, compacted or bulk loaded files from the primary region in a timely manner. However, this means that only flushed data can be read back from the secondary region replicas, and after the refresher is run, making the secondaries lag behind the primary for an a longer time. 
+The first mechanism is store file refresher which is introduced in HBase-1.0+. Store file refresher is a thread per region server, which runs periodically, and does a refresh operation for the store files of the primary region for the secondary region replicas. If enabled, the refresher will ensure that the secondary region replicas see the new flushed, compacted or bulk loaded files from the primary region in a timely manner. However, this means that only flushed data can be read back from the secondary region replicas, and after the refresher is run, making the secondaries lag behind the primary for an a longer time.
 
-For turning this feature on, you should configure `hbase.regionserver.storefile.refresh.period` to a non-zero value. See Configuration section below. 
+For turning this feature on, you should configure `hbase.regionserver.storefile.refresh.period` to a non-zero value. See Configuration section below.
 
 ==== Asnyc WAL replication
-The second mechanism for propagation of writes to secondaries is done via “Async WAL Replication” feature and is only available in HBase-1.1+. This works similarly to HBase’s multi-datacenter replication, but instead the data from a region is replicated to the secondary regions. Each secondary replica always receives and observes the writes in the same order that the primary region committed them. In some sense, this design can be thought of as “in-cluster replication”, where instead of replicating to a different datacenter, the data goes to secondary regions to keep secondary region’s in-memory state up to date. The data files are shared between the primary region and the other replicas, so that there is no extra storage overhead. However, the secondary regions will have recent non-flushed data in their memstores, which increases the memory overhead. The primary region writes flush, compaction, and bulk load events to its WAL as well, which are also replicated through wal replication to secondaries. When they observe the flush/compaction or bulk load event, the secondary regions replay the event to pick up the new files and drop the old ones.  
+The second mechanism for propagation of writes to secondaries is done via “Async WAL Replication” feature and is only available in HBase-1.1+. This works similarly to HBase’s multi-datacenter replication, but instead the data from a region is replicated to the secondary regions. Each secondary replica always receives and observes the writes in the same order that the primary region committed them. In some sense, this design can be thought of as “in-cluster replication”, where instead of replicating to a different datacenter, the data goes to secondary regions to keep secondary region’s in-memory state up to date. The data files are shared between the primary region and the other replicas, so that there is no extra storage overhead. However, the secondary regions will have recent non-flushed data in their memstores, which increases the memory overhead. The primary region writes flush, compaction, and bulk load events to its WAL as well, which are also replicated through wal replication to secondaries. When they observe the flush/compaction or bulk load event, the secondary regions replay the event to pick up the new files and drop the old ones.
 
 Committing writes in the same order as in primary ensures that the secondaries won’t diverge from the primary regions data, but since the log replication is asynchronous, the data might still be stale in secondary regions. Since this feature works as a replication endpoint, the performance and latency characteristics is expected to be similar to inter-cluster replication.
 
@@ -2332,18 +2388,18 @@ Asyn WAL Replication feature will add a new replication peer named `region_repli
 	hbase> disable_peer 'region_replica_replication'
 ----
 
-=== Store File TTL 
-In both of the write propagation approaches mentioned above, store files of the primary will be opened in secondaries independent of the primary region. So for files that the primary compacted away, the secondaries might still be referring to these files for reading. Both features are using HFileLinks to refer to files, but there is no protection (yet) for guaranteeing that the file will not be deleted prematurely. Thus, as a guard, you should set the configuration property `hbase.master.hfilecleaner.ttl` to a larger value, such as 1 hour to guarantee that you will not receive IOExceptions for requests going to replicas. 
+=== Store File TTL
+In both of the write propagation approaches mentioned above, store files of the primary will be opened in secondaries independent of the primary region. So for files that the primary compacted away, the secondaries might still be referring to these files for reading. Both features are using HFileLinks to refer to files, but there is no protection (yet) for guaranteeing that the file will not be deleted prematurely. Thus, as a guard, you should set the configuration property `hbase.master.hfilecleaner.ttl` to a larger value, such as 1 hour to guarantee that you will not receive IOExceptions for requests going to replicas.
 
 === Region replication for META table’s region
-Currently, Async WAL Replication is not done for the META table’s WAL. The meta table’s secondary replicas still refreshes themselves from the persistent store files. Hence the `hbase.regionserver.meta.storefile.refresh.period` needs to be set to a certain non-zero value for refreshing the meta store files. Note that this configuration is configured differently than 
-`hbase.regionserver.storefile.refresh.period`. 
+Currently, Async WAL Replication is not done for the META table’s WAL. The meta table’s secondary replicas still refreshes themselves from the persistent store files. Hence the `hbase.regionserver.meta.storefile.refresh.period` needs to be set to a certain non-zero value for refreshing the meta store files. Note that this configuration is configured differently than
+`hbase.regionserver.storefile.refresh.period`.
 
 === Memory accounting
 The secondary region replicas refer to the data files of the primary region replica, but they have their own memstores (in HBase-1.1+) and uses block cache as well. However, one distinction is that the secondary region replicas cannot flush the data when there is memory pressure for their memstores. They can only free up memstore memory when the primary region does a flush and this flush is replicated to the secondary. Since in a region server hosting primary replicas for some regions and secondaries for some others, the secondaries might cause extra flushes to the primary regions in the same host. In extreme situations, there can be no memory left for adding new writes coming from the primary via wal replication. For unblocking this situation (and since secondary cannot flush by itself), the secondary is allowed to do a “store file refresh” by doing a file system list operation to pick up new files from primary, and possibly dropping its memstore. This refresh will only be performed if the memstore size of the biggest secondary region replica is at least `hbase.region.replica.storefile.refresh.memstore.multiplier` (default 4) times bigger than the biggest memstore of a primary replica. One caveat is that if this is performed, the secondary can observe partial row updates across column families (since column families are flushed independently). The default should be good to not do this operation frequently. You can set this value to a large number to disable this feature if desired, but be warned that it might cause the replication to block forever.
 
 === Secondary replica failover
-When a secondary region replica first comes online, or fails over, it may have served some edits from it’s memstore. Since the recovery is handled differently for secondary replicas, the secondary has to ensure that it does not go back in time before it starts serving requests after assignment. For doing that, the secondary waits until it observes a full flush cycle (start flush, commit flush) or a “region open event” replicated from the primary. Until this happens, the secondary region replica will reject all read requests by throwing an IOException with message “The region's reads are disabled”. However, the other replicas will probably still be available to read, thus not causing any impact for the rpc with TIMELINE consistency. To facilitate faster recovery, the secondary region will trigger a flush request from the primary when it is opened. The configuration property `hbase.region.replica.wait.for.primary.flush` (enabled by default) can be used to disable this feature if needed. 
+When a secondary region replica first comes online, or fails over, it may have served some edits from it’s memstore. Since the recovery is handled differently for secondary replicas, the secondary has to ensure that it does not go back in time before it starts serving requests after assignment. For doing that, the secondary waits until it observes a full flush cycle (start flush, commit flush) or a “region open event” replicated from the primary. Until this happens, the secondary region replica will reject all read requests by throwing an IOException with message “The region's reads are disabled”. However, the other replicas will probably still be available to read, thus not causing any impact for the rpc with TIMELINE consistency. To facilitate faster recovery, the secondary region will trigger a flush request from the primary when it is opened. The configuration property `hbase.region.replica.wait.for.primary.flush` (enabled by default) can be used to disable this feature if needed.
 
 
 
@@ -2352,7 +2408,7 @@ When a secondary region replica first comes online, or fails over, it may have s
 
 To use highly available reads, you should set the following properties in `hbase-site.xml` file.
 There is no specific configuration to enable or disable region replicas.
-Instead you can change the number of region replicas per table to increase or decrease at the table creation or with alter table. The following configuration is for using async wal replication and using meta replicas of 3. 
+Instead you can change the number of region replicas per table to increase or decrease at the table creation or with alter table. The following configuration is for using async wal replication and using meta replicas of 3.
 
 
 ==== Server side properties
@@ -2413,7 +2469,7 @@ Instead you can change the number of region replicas per table to increase or de
 </property>
 
 
-<property> 
+<property>
     <name>hbase.region.replica.storefile.refresh.memstore.multiplier</name>
     <value>4</value>
     <description>
@@ -2476,7 +2532,7 @@ Ensure to set the following for all clients (and servers) that will use region r
 </property>
 ----
 
-Note HBase-1.0.x users should use `hbase.ipc.client.allowsInterrupt` rather than `hbase.ipc.client.specificThreadForWriting`. 
+Note HBase-1.0.x users should use `hbase.ipc.client.allowsInterrupt` rather than `hbase.ipc.client.specificThreadForWriting`.
 
 === User Interface
 

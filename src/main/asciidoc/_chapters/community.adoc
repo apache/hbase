@@ -45,18 +45,18 @@ See link:http://search-hadoop.com/m/asM982C5FkS1[HBase, mail # dev - Thoughts
 
 The below policy is something we put in place 09/2012.
 It is a suggested policy rather than a hard requirement.
-We want to try it first to see if it works before we cast it in stone. 
+We want to try it first to see if it works before we cast it in stone.
 
 Apache HBase is made of link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components].
 Components have one or more <<owner,OWNER>>s.
-See the 'Description' field on the link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components]        JIRA page for who the current owners are by component. 
+See the 'Description' field on the link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components]        JIRA page for who the current owners are by component.
 
 Patches that fit within the scope of a single Apache HBase component require, at least, a +1 by one of the component's owners before commit.
-If owners are absent -- busy or otherwise -- two +1s by non-owners will suffice. 
+If owners are absent -- busy or otherwise -- two +1s by non-owners will suffice.
 
-Patches that span components need at least two +1s before they can be committed, preferably +1s by owners of components touched by the x-component patch (TODO: This needs tightening up but I think fine for first pass). 
+Patches that span components need at least two +1s before they can be committed, preferably +1s by owners of components touched by the x-component patch (TODO: This needs tightening up but I think fine for first pass).
 
-Any -1 on a patch by anyone vetos a patch; it cannot be committed until the justification for the -1 is addressed. 
+Any -1 on a patch by anyone vetos a patch; it cannot be committed until the justification for the -1 is addressed.
 
 [[hbase.fix.version.in.jira]]
 .How to set fix version in JIRA on issue resolve
@@ -67,13 +67,13 @@ If master is going to be 0.98.0 then:
 * Commit only to master: Mark with 0.98
 * Commit to 0.95 and master: Mark with 0.98, and 0.95.x
 * Commit to 0.94.x and 0.95, and master: Mark with 0.98, 0.95.x, and 0.94.x
-* Commit to 89-fb: Mark with 89-fb. 
-* Commit site fixes: no version 
+* Commit to 89-fb: Mark with 89-fb.
+* Commit site fixes: no version
 
 [[hbase.when.to.close.jira]]
 .Policy on when to set a RESOLVED JIRA as CLOSED
 
-We link:http://search-hadoop.com/m/4cIKs1iwXMS1[agreed] that for issues that list multiple releases in their _Fix Version/s_ field, CLOSE the issue on the release of any of the versions listed; subsequent change to the issue must happen in a new JIRA. 
+We link:http://search-hadoop.com/m/4cIKs1iwXMS1[agreed] that for issues that list multiple releases in their _Fix Version/s_ field, CLOSE the issue on the release of any of the versions listed; subsequent change to the issue must happen in a new JIRA.
 
 [[no.permanent.state.in.zk]]
 .Only transient state in ZooKeeper!
@@ -81,7 +81,7 @@ We link:http://search-hadoop.com/m/4cIKs1iwXMS1[agreed] that for issues that lis
 You should be able to kill the data in zookeeper and hbase should ride over it recreating the zk content as it goes.
 This is an old adage around these parts.
 We just made note of it now.
-We also are currently in violation of this basic tenet -- replication at least keeps permanent state in zk -- but we are working to undo this breaking of a golden rule. 
+We also are currently in violation of this basic tenet -- replication at least keeps permanent state in zk -- but we are working to undo this breaking of a golden rule.
 
 [[community.roles]]
 == Community Roles
@@ -90,22 +90,22 @@ We also are currently in violation of this basic tenet -- replication at least k
 .Component Owner/Lieutenant
 
 Component owners are listed in the description field on this Apache HBase JIRA link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components]        page.
-The owners are listed in the 'Description' field rather than in the 'Component Lead' field because the latter only allows us list one individual whereas it is encouraged that components have multiple owners. 
+The owners are listed in the 'Description' field rather than in the 'Component Lead' field because the latter only allows us list one individual whereas it is encouraged that components have multiple owners.
 
-Owners or component lieutenants are volunteers who are (usually, but not necessarily) expert in their component domain and may have an agenda on how they think their Apache HBase component should evolve. 
+Owners or component lieutenants are volunteers who are (usually, but not necessarily) expert in their component domain and may have an agenda on how they think their Apache HBase component should evolve.
 
-. Owners will try and review patches that land within their component's scope. 
-. If applicable, if an owner has an agenda, they will publish their goals or the design toward which they are driving their component 
+. Owners will try and review patches that land within their component's scope.
+. If applicable, if an owner has an agenda, they will publish their goals or the design toward which they are driving their component
 
 If you would like to be volunteer as a component owner, just write the dev list and we'll sign you up.
-Owners do not need to be committers. 
+Owners do not need to be committers.
 
 [[hbase.commit.msg.format]]
 == Commit Message format
 
-We link:http://search-hadoop.com/m/Gwxwl10cFHa1[agreed] to the following Git commit message format: 
+We link:http://search-hadoop.com/m/Gwxwl10cFHa1[agreed] to the following Git commit message format:
 [source]
 ----
 HBASE-xxxxx <title>. (<contributor>)
----- 
-If the person making the commit is the contributor, leave off the '(<contributor>)' element. 
+----
+If the person making the commit is the contributor, leave off the '(<contributor>)' element.

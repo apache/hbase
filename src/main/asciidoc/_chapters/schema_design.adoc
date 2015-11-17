@@ -733,10 +733,12 @@ Composite Rowkey With Numeric Substitution:
 For this approach another lookup table would be needed in addition to LOG_DATA, called LOG_TYPES.
 The rowkey of LOG_TYPES would be:
 
-* [type] (e.g., byte indicating hostname vs. event-type)
-* [bytes] variable length bytes for raw hostname or event-type.
+* `[type]` (e.g., byte indicating hostname vs. event-type)
+* `[bytes]` variable length bytes for raw hostname or event-type.
 
-A column for this rowkey could be a long with an assigned number, which could be obtained by using an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29[HBase counter].
+A column for this rowkey could be a long with an assigned number, which could be obtained
+by using an
++++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29">HBase counter</a>+++.
 
 So the resulting composite rowkey would be:
 
@@ -751,7 +753,9 @@ In either the Hash or Numeric substitution approach, the raw values for hostname
 
 This effectively is the OpenTSDB approach.
 What OpenTSDB does is re-write data and pack rows into columns for certain time-periods.
-For a detailed explanation, see: link:http://opentsdb.net/schema.html, and link:http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html[Lessons Learned from OpenTSDB] from HBaseCon2012.
+For a detailed explanation, see: link:http://opentsdb.net/schema.html, and
++++<a href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</a>+++
+from HBaseCon2012.
 
 But this is how the general concept works: data is ingested, for example, in this manner...
 
@@ -854,14 +858,14 @@ The ORDER table's rowkey was described above: <<schema.casestudies.custorder,sch
 
 The SHIPPING_LOCATION's composite rowkey would be something like this:
 
-* [order-rowkey]
-* [shipping location number] (e.g., 1st location, 2nd, etc.)
+* `[order-rowkey]`
+* `[shipping location number]` (e.g., 1st location, 2nd, etc.)
 
 The LINE_ITEM table's composite rowkey would be something like this:
 
-* [order-rowkey]
-* [shipping location number] (e.g., 1st location, 2nd, etc.)
-* [line item number] (e.g., 1st lineitem, 2nd, etc.)
+* `[order-rowkey]`
+* `[shipping location number]` (e.g., 1st location, 2nd, etc.)
+* `[line item number]` (e.g., 1st lineitem, 2nd, etc.)
 
 Such a normalized model is likely to be the approach with an RDBMS, but that's not your only option with HBase.
 The cons of such an approach is that to retrieve information about any Order, you will need:
@@ -879,21 +883,21 @@ With this approach, there would exist a single table ORDER that would contain
 
 The Order rowkey was described above: <<schema.casestudies.custorder,schema.casestudies.custorder>>
 
-* [order-rowkey]
-* [ORDER record type]
+* `[order-rowkey]`
+* `[ORDER record type]`
 
 The ShippingLocation composite rowkey would be something like this:
 
-* [order-rowkey]
-* [SHIPPING record type]
-* [shipping location number] (e.g., 1st location, 2nd, etc.)
+* `[order-rowkey]`
+* `[SHIPPING record type]`
+* `[shipping location number]` (e.g., 1st location, 2nd, etc.)
 
 The LineItem composite rowkey would be something like this:
 
-* [order-rowkey]
-* [LINE record type]
-* [shipping location number] (e.g., 1st location, 2nd, etc.)
-* [line item number] (e.g., 1st lineitem, 2nd, etc.)
+* `[order-rowkey]`
+* `[LINE record type]`
+* `[shipping location number]` (e.g., 1st location, 2nd, etc.)
+* `[line item number]` (e.g., 1st lineitem, 2nd, etc.)
 
 [[schema.casestudies.custorder.obj.denorm]]
 ===== Denormalized
@@ -902,9 +906,9 @@ A variant of the Single Table With Record Types approach is to denormalize and f
 
 The LineItem composite rowkey would be something like this:
 
-* [order-rowkey]
-* [LINE record type]
-* [line item number] (e.g., 1st lineitem, 2nd, etc., care must be taken that there are unique across the entire order)
+* `[order-rowkey]`
+* `[LINE record type]`
+* `[line item number]` (e.g., 1st lineitem, 2nd, etc., care must be taken that there are unique across the entire order)
 
 and the LineItem columns would be something like this:
 

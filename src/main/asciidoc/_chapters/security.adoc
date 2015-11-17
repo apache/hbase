@@ -1332,11 +1332,21 @@ static Table createTableAndWriteDataWithLabels(TableName tableName, String... la
 ----
 ====
 
-<<reading_cells_with_labels>>
+[[reading_cells_with_labels]]
 ==== Reading Cells with Labels
-When you issue a Scan or Get, HBase uses your default set of authorizations to filter out cells that you do not have access to. A superuser can set the default set of authorizations for a given user by using the `set_auths` HBase Shell command or the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,%20java.lang.String[],%20java.lang.String)[VisibilityClient.setAuths()] method.
 
-You can specify a different authorization during the Scan or Get, by passing the AUTHORIZATIONS option in HBase Shell, or the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()] method if you use the API. This authorization will be combined with your default set as an additional filter. It will further filter your results, rather than giving you additional authorization.
+When you issue a Scan or Get, HBase uses your default set of authorizations to
+filter out cells that you do not have access to. A superuser can set the default
+set of authorizations for a given user by using the `set_auths` HBase Shell command
+or the
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,%20java.lang.String\[\],%20java.lang.String)[VisibilityClient.setAuths()] method.
+
+You can specify a different authorization during the Scan or Get, by passing the
+AUTHORIZATIONS option in HBase Shell, or the
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()]
+method if you use the API. This authorization will be combined with your default
+set as an additional filter. It will further filter your results, rather than
+giving you additional authorization.
 
 .HBase Shell
 ====
@@ -1582,8 +1592,10 @@ Rotate the Master Key::
 === Secure Bulk Load
 
 Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the MapReduce job to HBase.
-Secure bulk loading is implemented by a coprocessor, named link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html
-[SecureBulkLoadEndpoint], which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to _/tmp/hbase-staging/_.
+Secure bulk loading is implemented by a coprocessor, named
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint],
+which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to
+_/tmp/hbase-staging/_.
 
 .Secure Bulk Load Algorithm
 

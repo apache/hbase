@@ -65,7 +65,7 @@ Possible permissions include the following:
 For the most part, permissions work in an expected way, with the following caveats:
 
 Having Write permission does not imply Read permission.::
-  It is possible and sometimes desirable for a user to be able to write data that same user cannot read. One such example is a log-writing process. 
+  It is possible and sometimes desirable for a user to be able to write data that same user cannot read. One such example is a log-writing process.
 The [systemitem]+hbase:meta+ table is readable by every user, regardless of the user's other grants or restrictions.::
   This is a requirement for HBase to function correctly.
 `CheckAndPut` and `CheckAndDelete` operations will fail if the user does not have both Write and Read permission.::

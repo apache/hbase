@@ -47,7 +47,7 @@ public class MyHBaseDAO {
         Put put = createPut(obj);
         table.put(put);
     }
-    
+
     private static Put createPut(HBaseTestObj obj) {
         Put put = new Put(Bytes.toBytes(obj.getRowKey()));
         put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1"),
@@ -96,7 +96,7 @@ public class TestMyHbaseDAOData {
 
 These tests ensure that your `createPut` method creates, populates, and returns a `Put` object with expected values.
 Of course, JUnit can do much more than this.
-For an introduction to JUnit, see link:https://github.com/junit-team/junit/wiki/Getting-started. 
+For an introduction to JUnit, see link:https://github.com/junit-team/junit/wiki/Getting-started.
 
 == Mockito
 
@@ -133,7 +133,7 @@ public class TestMyHBaseDAO{
   Configuration config = HBaseConfiguration.create();
   @Mock
   Connection connection = ConnectionFactory.createConnection(config);
-  @Mock 
+  @Mock
   private Table table;
   @Captor
   private ArgumentCaptor putCaptor;
@@ -150,7 +150,7 @@ public class TestMyHBaseDAO{
     MyHBaseDAO.insertRecord(table, obj);
     verify(table).put(putCaptor.capture());
     Put put = putCaptor.getValue();
-  
+
     assertEquals(Bytes.toString(put.getRow()), obj.getRowKey());
     assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1")));
     assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2")));
@@ -197,7 +197,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
  }
 ----
 
-To test this code, the first step is to add a dependency to MRUnit to your Maven POM file. 
+To test this code, the first step is to add a dependency to MRUnit to your Maven POM file.
 
 [source,xml]
 ----
@@ -225,16 +225,16 @@ public class MyReducerTest {
       MyReducer reducer = new MyReducer();
       reduceDriver = ReduceDriver.newReduceDriver(reducer);
     }
-  
+
    @Test
    public void testHBaseInsert() throws IOException {
-      String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1", 
+      String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1",
 strValue2 = "DATA2";
       List<Text> list = new ArrayList<Text>();
       list.add(new Text(strValue));
       list.add(new Text(strValue1));
       list.add(new Text(strValue2));
-      //since in our case all that the reducer is doing is appending the records that the mapper   
+      //since in our case all that the reducer is doing is appending the records that the mapper
       //sends it, we should get the following back
       String expectedOutput = strValue + strValue1 + strValue2;
      //Setup Input, mimic what mapper would have passed
@@ -242,10 +242,10 @@ strValue2 = "DATA2";
       reduceDriver.withInput(new Text(strKey), list);
       //run the reducer and get its output
       List<Pair<ImmutableBytesWritable, Writable>> result = reduceDriver.run();
-    
+
       //extract key from result and verify
       assertEquals(Bytes.toString(result.get(0).getFirst().get()), strKey);
-    
+
       //extract value for CF/QUALIFIER and verify
       Put a = (Put)result.get(0).getSecond();
       String c = Bytes.toString(a.get(CF, QUALIFIER).get(0).getValue());
@@ -283,7 +283,7 @@ Check the versions to be sure they are appropriate.
     <type>test-jar</type>
     <scope>test</scope>
 </dependency>
-        
+
 <dependency>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdfs</artifactId>
@@ -309,7 +309,7 @@ public class MyHBaseIntegrationTest {
     private static HBaseTestingUtility utility;
     byte[] CF = "CF".getBytes();
     byte[] QUALIFIER = "CQ-1".getBytes();
-    
+
     @Before
     public void setup() throws Exception {
     	utility = new HBaseTestingUtility();
@@ -343,7 +343,7 @@ This code creates an HBase mini-cluster and starts it.
 Next, it creates a table called `MyTest` with one column family, `CF`.
 A record is inserted, a Get is performed from the same table, and the insertion is verified.
 
-NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing. 
+NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
 
 To use an HBase mini-cluster on Microsoft Windows, you need to use a Cygwin environment.
 

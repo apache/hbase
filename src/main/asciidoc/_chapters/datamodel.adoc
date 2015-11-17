@@ -93,7 +93,7 @@ The colon character (`:`) delimits the column family from the column family _qua
 |===
 |Row Key |Time Stamp  |ColumnFamily `contents` |ColumnFamily `anchor`|ColumnFamily `people`
 |"com.cnn.www" |t9    | |anchor:cnnsi.com = "CNN"   |
-|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |  
+|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |
 |"com.cnn.www" |t6  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t5  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t3  | contents:html = "<html>..."    | |

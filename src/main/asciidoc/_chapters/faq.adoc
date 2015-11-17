@@ -55,18 +55,18 @@ How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?::
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase-client</artifactId>
   <version>0.98.5-hadoop2</version>
-</dependency>  
-----              
-+    
-.Maven Dependency for HBase 0.96       
+</dependency>
+----
++
+.Maven Dependency for HBase 0.96
 [source,xml]
 ----
 <dependency>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase-client</artifactId>
   <version>0.96.2-hadoop2</version>
-</dependency>  
-----           
+</dependency>
+----
 +
 .Maven Dependency for HBase 0.94
 [source,xml]
@@ -75,9 +75,9 @@ How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?::
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <version>0.94.3</version>
-</dependency>   
-----         
-                
+</dependency>
+----
+
 
 === Architecture
 How does HBase handle Region-RegionServer assignment and locality?::
@@ -91,7 +91,7 @@ Where can I learn about the rest of the configuration options?::
   See <<configuration>>.
 
 === Schema Design / Data Access
-  
+
 How should I design my schema in HBase?::
   See <<datamodel>> and <<schema>>.
 
