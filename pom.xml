@@ -1084,6 +1084,8 @@
     <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
+    <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
+    <commons-collections.version>3.2.2</commons-collections.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
     <commons-io.version>2.1</commons-io.version>
     <commons-lang.version>2.5</commons-lang.version>
@@ -1186,6 +1188,11 @@
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>${commons-codec.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>${commons-collections.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-httpclient</groupId>
