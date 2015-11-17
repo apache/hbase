@@ -53,6 +53,10 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
         <configuration>
           <skip>true</skip>
@@ -148,11 +152,9 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
           <configuration>
-            <excludeResources>true</excludeResources>
-            <includes>
-              <include>src/main/java</include>
-              <include>${project.build.outputDirectory}/META-INF</include>
-            </includes>
+            <excludes>
+              <exclude>hbase-default.xml</exclude>
+            </excludes>
           </configuration>
         </plugin>
     </plugins>
