@@ -203,7 +203,7 @@ implements Configurable {
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
-      this.table = new HTable(this.conf, tableName);
+      this.table = new BufferedHTable(this.conf, tableName);
       this.table.setAutoFlush(false, true);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {

@@ -102,7 +102,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     HTable getTable(ImmutableBytesWritable tableName) throws IOException {
       if (!tables.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
-        HTable table = new HTable(conf, tableName.get());
+        HTable table = new BufferedHTable(conf, tableName.get());
         table.setAutoFlush(false, true);
         tables.put(tableName, table);
       }
