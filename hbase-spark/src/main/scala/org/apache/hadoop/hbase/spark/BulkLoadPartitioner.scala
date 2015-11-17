@@ -36,19 +36,21 @@ class BulkLoadPartitioner(startKeys:Array[Array[Byte]])
 
   override def getPartition(key: Any): Int = {
 
-    val rowKey:Array[Byte] =
-      key match {
-        case qualifier: KeyFamilyQualifier =>
-          qualifier.rowKey
-        case _ =>
-          key.asInstanceOf[Array[Byte]]
-      }
-
     val comparator: Comparator[Array[Byte]] = new Comparator[Array[Byte]] {
       override def compare(o1: Array[Byte], o2: Array[Byte]): Int = {
         Bytes.compareTo(o1, o2)
       }
     }
+
+    val rowKey:Array[Byte] =
+      key match {
+        case qualifier: KeyFamilyQualifier =>
+          qualifier.rowKey
+        case wrapper: ByteArrayWrapper =>
+          wrapper.value
+        case _ =>
+          key.asInstanceOf[Array[Byte]]
+      }
     val partition = util.Arrays.binarySearch(startKeys, rowKey, comparator)
     if (partition < 0) partition * -1 + -2
     else partition

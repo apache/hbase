@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.spark
 
 import java.util
 
-import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hbase.{HConstants, TableName}
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.rdd.RDD
 
-import scala.collection.immutable.HashMap
 import scala.reflect.ClassTag
 
 /**
@@ -164,8 +162,8 @@ object HBaseRDDFunctions
     }
 
     /**
-     * Implicit method that gives easy access to HBaseContext's
-     * bulkLoad method.
+     * Spark Implementation of HBase Bulk load for wide rows or when
+     * values are not already combined at the time of the map process
      *
      * A Spark Implementation of HBase Bulk load
      *
@@ -201,6 +199,52 @@ object HBaseRDDFunctions
                          maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):Unit = {
       hc.bulkLoad(rdd, tableName,
         flatMap, stagingDir, familyHFileWriteOptionsMap,
+        compactionExclude, maxSize)
+    }
+
+    /**
+     * Implicit method that gives easy access to HBaseContext's
+     * bulkLoadThinRows method.
+     *
+     * Spark Implementation of HBase Bulk load for short rows some where less then
+     * a 1000 columns.  This bulk load should be faster for tables will thinner
+     * rows then the other spark implementation of bulk load that puts only one
+     * value into a record going into a shuffle
+     *
+     * This will take the content from an existing RDD then sort and shuffle
+     * it with respect to region splits.  The result of that sort and shuffle
+     * will be written to HFiles.
+     *
+     * After this function is executed the user will have to call
+     * LoadIncrementalHFiles.doBulkLoad(...) to move the files into HBase
+     *
+     * In this implementation only the rowKey is given to the shuffle as the key
+     * and all the columns are already linked to the RowKey before the shuffle
+     * stage.  The sorting of the qualifier is done in memory out side of the
+     * shuffle stage
+     *
+     * @param tableName                      The HBase table we are loading into
+     * @param mapFunction                    A function that will convert the RDD records to
+     *                                       the key value format used for the shuffle to prep
+     *                                       for writing to the bulk loaded HFiles
+     * @param stagingDir                     The location on the FileSystem to bulk load into
+     * @param familyHFileWriteOptionsMap     Options that will define how the HFile for a
+     *                                       column family is written
+     * @param compactionExclude              Compaction excluded for the HFiles
+     * @param maxSize                        Max size for the HFiles before they roll
+     */
+    def hbaseBulkLoadThinRows(hc: HBaseContext,
+                      tableName: TableName,
+                      mapFunction: (T) =>
+                        (ByteArrayWrapper, FamiliesQualifiersValues),
+                      stagingDir:String,
+                      familyHFileWriteOptionsMap:
+                      util.Map[Array[Byte], FamilyHFileWriteOptions] =
+                      new util.HashMap[Array[Byte], FamilyHFileWriteOptions](),
+                      compactionExclude: Boolean = false,
+                      maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):Unit = {
+      hc.bulkLoadThinRows(rdd, tableName,
+        mapFunction, stagingDir, familyHFileWriteOptionsMap,
         compactionExclude, maxSize)
     }
   }
