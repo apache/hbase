@@ -1847,8 +1847,7 @@ public class RpcServer implements RpcServerInterface {
           ? new TraceInfo(header.getTraceInfo().getTraceId(), header.getTraceInfo().getParentId())
           : null;
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
-              totalRequestSize,
-              traceInfo, RpcServer.getRemoteIp());
+              totalRequestSize, traceInfo, this.addr);
       scheduler.dispatch(new CallRunner(RpcServer.this, call));
     }
 
