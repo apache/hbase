@@ -67,8 +67,7 @@ public class UserProvider extends BaseConfigurable {
     }
 
     long cacheTimeout =
-        getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
-          300) * 1000;
+        getConf().getLong("hadoop.security.groups.cache.secs", 300) * 1000;
 
     this.groupCache = CacheBuilder.newBuilder()
         // This is the same timeout that hadoop uses. So we'll follow suit.
