@@ -30,6 +30,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -202,15 +203,16 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                   " entries of total size " + replicateContext.getSize());
             }
             // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-            futures.add(exec.submit(new Replicator(entryLists.get(i), i)));
+            futures.add(exec.submit(createReplicator(entryLists.get(i), i)));
           }
         }
         IOException iox = null;
-        for (Future<Integer> f : futures) {
+        for (int index = futures.size() - 1; index >= 0; index--) {
           try {
             // wait for all futures, remove successful parts
             // (only the remaining parts will be retried)
-            entryLists.remove(f.get());
+            Future<Integer> f = futures.get(index);
+            entryLists.remove(f.get().intValue());
           } catch (InterruptedException ie) {
             iox =  new IOException(ie);
           } catch (ExecutionException ee) {
@@ -289,7 +291,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return super.stopAndWait();
   }
 
-  private class Replicator implements Callable<Integer> {
+  @VisibleForTesting
+  protected Replicator createReplicator(List<Entry> entries, int ordinal) {
+    return new Replicator(entries, ordinal);
+  }
+
+  @VisibleForTesting
+  protected class Replicator implements Callable<Integer> {
     private List<Entry> entries;
     private int ordinal;
     public Replicator(List<Entry> entries, int ordinal) {
