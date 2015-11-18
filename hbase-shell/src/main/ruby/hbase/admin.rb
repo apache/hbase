@@ -595,6 +595,14 @@ module Hbase
         for k, v in status.getRegionsInTransition()
           puts("    %s" % [v])
         end
+        master = status.getMaster()
+        puts("active master:  %s:%d %d" % [master.getHostname(), master.getPort(), master.getStartcode()])
+        puts("%d backup masters" % [ status.getBackupMastersSize() ])
+        for server in status.getBackupMasters()
+          puts("    %s:%d %d" % \
+            [ server.getHostname(), server.getPort(), server.getStartcode() ])
+        end
+
         master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors())
         if master_coprocs != nil
           puts("master coprocessors: %s" % master_coprocs)
@@ -656,6 +664,13 @@ module Hbase
       elsif format == "simple"
         load = 0
         regions = 0
+        master = status.getMaster()
+        puts("active master:  %s:%d %d" % [master.getHostname(), master.getPort(), master.getStartcode()])
+        puts("%d backup masters" % [ status.getBackupMastersSize() ])
+        for server in status.getBackupMasters()
+          puts("    %s:%d %d" % \
+            [ server.getHostname(), server.getPort(), server.getStartcode() ])
+        end
         puts("%d live servers" % [ status.getServersSize() ])
         for server in status.getServers()
           puts("    %s:%d %d" % \
@@ -670,7 +685,7 @@ module Hbase
         end
         puts("Aggregate load: %d, regions: %d" % [ load , regions ] )
       else
-        puts "#{status.getServersSize} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
+        puts "1 active master, #{status.getBackupMastersSize} backup masters, #{status.getServersSize} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
       end
     end
 
