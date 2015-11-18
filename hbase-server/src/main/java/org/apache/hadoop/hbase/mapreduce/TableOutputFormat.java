@@ -59,22 +59,32 @@ implements Configurable {
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
+   * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}.
+   * For keys matching this prefix, the prefix is stripped, and the value is set in the
+   * configuration with the resulting key, ie. the entry "hbase.mapred.output.key1 = value1"
+   * would be set in the configuration as "key1 = value1".  Use this to set properties
+   * which should only be applied to the {@code TableOutputFormat} configuration and not the
+   * input configuration.
+   */
+  public static final String OUTPUT_CONF_PREFIX = "hbase.mapred.output.";
+
+  /**
    * Optional job parameter to specify a peer cluster.
    * Used specifying remote cluster when copying between hbase clusters (the
    * source is picked up from <code>hbase-site.xml</code>).
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job, Class, String, String, String)
    */
-  public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
+  public static final String QUORUM_ADDRESS = OUTPUT_CONF_PREFIX + "quorum";
 
   /** Optional job parameter to specify peer cluster's ZK client port */
-  public static final String QUORUM_PORT = "hbase.mapred.output.quorum.port";
+  public static final String QUORUM_PORT = OUTPUT_CONF_PREFIX + "quorum.port";
 
   /** Optional specification of the rs class name of the peer cluster */
   public static final String
-      REGION_SERVER_CLASS = "hbase.mapred.output.rs.class";
+      REGION_SERVER_CLASS = OUTPUT_CONF_PREFIX + "rs.class";
   /** Optional specification of the rs impl name of the peer cluster */
   public static final String
-      REGION_SERVER_IMPL = "hbase.mapred.output.rs.impl";
+      REGION_SERVER_IMPL = OUTPUT_CONF_PREFIX + "rs.impl";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -207,5 +217,9 @@ implements Configurable {
       LOG.error(e);
       throw new RuntimeException(e);
     }
+
+    // finally apply any remaining "hbase.mapred.output." configuration overrides
+    Configuration outputOverrides = HBaseConfiguration.subset(otherConf, OUTPUT_CONF_PREFIX);
+    HBaseConfiguration.merge(this.conf, outputOverrides);
   }
 }
