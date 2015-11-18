@@ -344,7 +344,9 @@ public class TestExportSnapshot {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setBoolean(ExportSnapshot.CONF_TEST_FAILURE, true);
     conf.setBoolean(ExportSnapshot.CONF_TEST_RETRY, retry);
-
+    if (!retry) {
+      conf.setInt("mapreduce.map.maxattempts", 3);
+    }
     // Export Snapshot
     Path sourceDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     int res = ExportSnapshot.innerMain(conf, new String[] {
