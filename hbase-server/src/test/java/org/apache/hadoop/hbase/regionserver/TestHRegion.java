@@ -54,11 +54,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -103,7 +98,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -1126,18 +1120,18 @@ public class TestHRegion {
 
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
       final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<OperationStatus[]>();
-      final CountDownLatch startingPuts = new CountDownLatch(1);
-      final CountDownLatch startingClose = new CountDownLatch(1);
       TestThread putter = new TestThread(ctx) {
         @Override
         public void doWork() throws IOException {
-          startingPuts.countDown();
           retFromThread.set(region.batchMutate(puts));
         }
       };
       LOG.info("...starting put thread while holding locks");
       ctx.addThread(putter);
       ctx.startThreads();
+
+      LOG.info("...waiting for put thread to sync 1st time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 1);
 
       // Now attempt to close the region from another thread.  Prior to HBASE-12565
       // this would cause the in-progress batchMutate operation to to fail with
@@ -1148,34 +1142,31 @@ public class TestHRegion {
         @Override
         public void run() {
           try {
-            startingPuts.await();
-            // Give some time for the batch mutate to get in.
-            // We don't want to race with the mutate
-            Thread.sleep(10);
-            startingClose.countDown();
             HRegion.closeHRegion(region);
           } catch (IOException e) {
-            throw new RuntimeException(e);
-          } catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
         }
       };
       regionCloseThread.start();
 
-      startingClose.await();
-      startingPuts.await();
-      Thread.sleep(100);
       LOG.info("...releasing row lock 1, which should let put thread continue");
       rowLock1.release();
+
+      LOG.info("...waiting for put thread to sync 2nd time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 2);
 
       LOG.info("...releasing row lock 2, which should let put thread continue");
       rowLock2.release();
 
+      LOG.info("...waiting for put thread to sync 3rd time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 3);
+
       LOG.info("...releasing row lock 3, which should let put thread continue");
       rowLock3.release();
 
-      waitForCounter(source, "syncTimeNumOps", syncs + 1);
+      LOG.info("...waiting for put thread to sync 4th time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 4);
 
       LOG.info("...joining on put thread");
       ctx.stop();
@@ -5603,53 +5594,6 @@ public class TestHRegion {
 
     assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
       qual2, 0, qual2.length));
-  }
-
-  @Test(timeout = 30000)
-  public void testBatchMutateWithWrongRegionException() throws IOException, InterruptedException {
-    final byte[] a = Bytes.toBytes("a");
-    final byte[] b = Bytes.toBytes("b");
-    final byte[] c = Bytes.toBytes("c"); // exclusive
-
-    int prevLockTimeout = CONF.getInt("hbase.rowlock.wait.duration", 30000);
-    CONF.setInt("hbase.rowlock.wait.duration", 3000);
-    final HRegion region = initHRegion(tableName, a, c, name.getMethodName(), CONF, false, fam1);
-
-    Mutation[] mutations = new Mutation[] {
-        new Put(a).addImmutable(fam1, null, null),
-        new Put(c).addImmutable(fam1, null, null), // this is outside the region boundary
-        new Put(b).addImmutable(fam1, null, null),
-    };
-
-    OperationStatus[] status = region.batchMutate(mutations);
-    assertEquals(status[0].getOperationStatusCode(), OperationStatusCode.SUCCESS);
-    assertEquals(status[1].getOperationStatusCode(), OperationStatusCode.SANITY_CHECK_FAILURE);
-    assertEquals(status[2].getOperationStatusCode(), OperationStatusCode.SUCCESS);
-
-    // test with a leaked row lock
-    ExecutorService exec = Executors.newSingleThreadExecutor();
-    exec.submit(new Callable<Void>() {
-      @Override
-      public Void call() throws Exception {
-        region.getRowLock(b);
-        return null;
-      }
-    });
-    exec.shutdown();
-    exec.awaitTermination(30, TimeUnit.SECONDS);
-
-    mutations = new Mutation[] {
-        new Put(a).addImmutable(fam1, null, null),
-        new Put(b).addImmutable(fam1, null, null),
-    };
-
-    try {
-      status = region.batchMutate(mutations);
-      fail("Failed to throw exception");
-    } catch (IOException expected) {
-    }
-
-    CONF.setInt("hbase.rowlock.wait.duration", prevLockTimeout);
   }
 
   private static HRegion initHRegion(byte[] tableName, String callingMethod,
