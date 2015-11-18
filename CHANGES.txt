@@ -37,7 +37,6 @@ Release 0.98.16 - 11/16/2015
     * [HBASE-14658] - Allow loading a MonkeyFactory by class name
     * [HBASE-14663] - HStore::close does not honor config hbase.rs.evictblocksonclose
     * [HBASE-14680] - Two configs for snapshot timeout and better defaults
-    * [HBASE-14689] - Addendum and unit test for HBASE-13471
     * [HBASE-14705] - Javadoc for KeyValue constructor is not correct.
     * [HBASE-14733] - Minor typo in alter_namespace.rb
     * [HBASE-14768] - bin/graceful_stop.sh logs nothing as a balancer state to be stored
