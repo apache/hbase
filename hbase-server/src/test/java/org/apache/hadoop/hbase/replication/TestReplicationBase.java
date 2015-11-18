@@ -83,9 +83,11 @@ public class TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
-    // smaller log roll size to trigger more events
-    conf1.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
-    conf1.setInt("replication.source.size.capacity", 10240);
+    // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
+    // sufficient number of events. But we don't want to go too low because
+    // HBaseInterClusterReplicationEndpoint partitions entries into batches and we want
+    // more than one batch sent to the peer cluster for better testing.
+    conf1.setInt("replication.source.size.capacity", 102400);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
@@ -98,6 +100,7 @@ public class TestReplicationBase {
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setLong("replication.sleep.before.failover", 2000);
     conf1.setInt("replication.source.maxretriesmultiplier", 10);
+    conf1.setFloat("replication.source.ratio", 1.0f);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -126,7 +129,9 @@ public class TestReplicationBase {
     LOG.info("Setup second Zk");
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
     utility1.startMiniCluster(2);
-    utility2.startMiniCluster(2);
+    // Have a bunch of slave servers, because inter-cluster shipping logic uses number of sinks
+    // as a component in deciding maximum number of parallel batches to send to the peer cluster.
+    utility2.startMiniCluster(4);
 
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
