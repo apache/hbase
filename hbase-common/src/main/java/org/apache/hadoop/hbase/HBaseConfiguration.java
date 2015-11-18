@@ -121,6 +121,27 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
+   * Returns a subset of the configuration properties, matching the given key prefix.
+   * The prefix is stripped from the return keys, ie. when calling with a prefix of "myprefix",
+   * the entry "myprefix.key1 = value1" would be returned as "key1 = value1".  If an entry's
+   * key matches the prefix exactly ("myprefix = value2"), it will <strong>not</strong> be
+   * included in the results, since it would show up as an entry with an empty key.
+   */
+  public static Configuration subset(Configuration srcConf, String prefix) {
+    Configuration newConf = new Configuration(false);
+    for (Entry<String, String> entry : srcConf) {
+      if (entry.getKey().startsWith(prefix)) {
+        String newKey = entry.getKey().substring(prefix.length());
+        // avoid entries that would produce an empty key
+        if (!newKey.isEmpty()) {
+          newConf.set(newKey, entry.getValue());
+        }
+      }
+    }
+    return newConf;
+  }
+
+  /**
    * @return whether to show HBase Configuration in servlet
    */
   public static boolean isShowConfInServlet() {

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -62,6 +63,31 @@ public class TestHBaseConfiguration {
     conf.setInt(DEPRECATED_NAME, VAL);
     conf.setInt(NAME, VAL2); // deprecated value will override this
     assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
+  }
+
+  @Test
+  public void testSubset() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    // subset is used in TableMapReduceUtil#initCredentials to support different security
+    // configurations between source and destination clusters, so we'll use that as an example
+    String prefix = "hbase.mapred.output.";
+    conf.set("hbase.security.authentication", "kerberos");
+    conf.set("hbase.regionserver.kerberos.principal", "hbasesource");
+    conf.set(prefix + "hbase.regionserver.kerberos.principal", "hbasedest");
+    conf.set(prefix, "shouldbemissing");
+
+    Configuration subsetConf = HBaseConfiguration.subset(conf, prefix);
+    assertNull(subsetConf.get(prefix + "hbase.regionserver.kerberos.principal"));
+    assertEquals("hbasedest", subsetConf.get("hbase.regionserver.kerberos.principal"));
+    assertNull(subsetConf.get("hbase.security.authentication"));
+    assertNull(subsetConf.get(""));
+
+    Configuration mergedConf = HBaseConfiguration.create(conf);
+    HBaseConfiguration.merge(mergedConf, subsetConf);
+
+    assertEquals("hbasedest", mergedConf.get("hbase.regionserver.kerberos.principal"));
+    assertEquals("kerberos", mergedConf.get("hbase.security.authentication"));
+    assertEquals("shouldbemissing", mergedConf.get(prefix));
   }
 
   @Test
