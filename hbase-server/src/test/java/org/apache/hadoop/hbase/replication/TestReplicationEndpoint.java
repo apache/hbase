@@ -29,11 +29,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,7 +63,6 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    utility2.shutdownMiniCluster(); // we don't need the second cluster
     admin.removePeer("2");
     numRegionServers = utility1.getHBaseCluster().getRegionServerThreads().size();
   }
@@ -185,6 +187,49 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   }
 
   @Test (timeout=120000)
+  public void testInterClusterReplication() throws Exception {
+    final String id = "testInterClusterReplication";
+
+    List<HRegion> regions = utility1.getHBaseCluster().getRegions(tableName);
+    int totEdits = 0;
+
+    // Make sure edits are spread across regions because we do region based batching
+    // before shipping edits.
+    for(HRegion region: regions) {
+      HRegionInfo hri = region.getRegionInfo();
+      byte[] row = hri.getStartKey();
+      for (int i = 0; i < 100; i++) {
+        if (row.length > 0) {
+          doPut(row);
+          totEdits++;
+        }
+      }
+    }
+
+    admin.addPeer(id,
+        new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf2))
+            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()),
+        null);
+
+    final int numEdits = totEdits;
+    Waiter.waitFor(conf1, 30000, new Waiter.ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return InterClusterReplicationEndpointForTest.replicateCount.get() == numEdits;
+      }
+      @Override
+      public String explainFailure() throws Exception {
+        String failure = "Failed to replicate all edits, expected = " + numEdits
+            + " replicated = " + InterClusterReplicationEndpointForTest.replicateCount.get();
+        return failure;
+      }
+    });
+
+    admin.removePeer("testInterClusterReplication");
+    utility1.deleteTableData(tableName);
+  }
+
+  @Test (timeout=120000)
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
     admin.addPeer("testWALEntryFilterFromReplicationEndpoint",
       new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
@@ -267,6 +312,60 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     protected void doStop() {
       stoppedCount.incrementAndGet();
       notifyStopped();
+    }
+  }
+
+  public static class InterClusterReplicationEndpointForTest
+      extends HBaseInterClusterReplicationEndpoint {
+
+    static AtomicInteger replicateCount = new AtomicInteger();
+    static boolean failedOnce;
+
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
+      boolean success = super.replicate(replicateContext);
+      if (success) {
+        replicateCount.addAndGet(replicateContext.entries.size());
+      }
+      return success;
+    }
+
+    @Override
+    protected Replicator createReplicator(List<Entry> entries, int ordinal) {
+      // Fail only once, we don't want to slow down the test.
+      if (failedOnce) {
+        return new DummyReplicator(entries, ordinal);
+      } else {
+        failedOnce = true;
+        return new FailingDummyReplicator(entries, ordinal);
+      }
+    }
+
+    protected class DummyReplicator extends Replicator {
+
+      private int ordinal;
+
+      public DummyReplicator(List<Entry> entries, int ordinal) {
+        super(entries, ordinal);
+        this.ordinal = ordinal;
+      }
+
+      @Override
+      public Integer call() throws IOException {
+        return ordinal;
+      }
+    }
+
+    protected class FailingDummyReplicator extends DummyReplicator {
+
+      public FailingDummyReplicator(List<Entry> entries, int ordinal) {
+        super(entries, ordinal);
+      }
+
+      @Override
+      public Integer call() throws IOException {
+        throw new IOException("Sample Exception: Failed to replicate.");
+      }
     }
   }
 
