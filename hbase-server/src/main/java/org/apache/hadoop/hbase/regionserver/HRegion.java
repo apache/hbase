@@ -2971,12 +2971,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
             + Bytes.toStringBinary(mutation.getRow()), ioe);
-          throw ioe;
         }
         if (rowLock == null) {
           // We failed to grab another lock
-          throw new IOException("Failed getting lock in batch put, row=" +
-              Bytes.toStringBinary(mutation.getRow()));
+          assert false: "Should never fail to get lock when blocking";
+          break; // stop acquiring more rows for this batch
         } else {
           acquiredRowLocks.add(rowLock);
         }
@@ -5065,7 +5064,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param readLock is the lock reader or writer. True indicates that a non-exlcusive
    *                 lock is requested
    */
-  @Override
   public RowLock getRowLock(byte[] row, boolean readLock) throws IOException {
     // Make sure the row is inside of this region before getting the lock for it.
     checkRow(row, "row lock");
@@ -6959,7 +6957,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
     if (cell.getTagsLength() <= 0) return tags;
-    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags;
+    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags; 
     Iterator<Tag> i =
         CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
     while (i.hasNext()) newTags.add(i.next());
@@ -7239,7 +7237,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // They are subtley different in quiet a few ways. This came out only
   // after study. I am not sure that many of the differences are intentional.
-  // TODO: St.Ack 20150907
+  // TODO: St.Ack 20150907 
 
   @Override
   public Result increment(Increment mutation, long nonceGroup, long nonce)
@@ -7253,7 +7251,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<Cell> allKVs = new ArrayList<Cell>(mutation.size());
-
+    
     Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
     long size = 0;
     long txid = 0;
@@ -8055,7 +8053,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
       getRegionInfo().getTable(), WALKey.NO_SEQUENCE_ID, 0, null,
       HConstants.NO_NONCE, HConstants.NO_NONCE, getMVCC());
-
+    
     // Call append but with an empty WALEdit.  The returned sequence id will not be associated
     // with any edit and we can be sure it went in after all outstanding appends.
     try {
