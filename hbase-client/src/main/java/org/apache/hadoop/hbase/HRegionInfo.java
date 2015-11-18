@@ -148,6 +148,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private static final int MAX_REPLICA_ID = 0xFFFF;
   public static final int DEFAULT_REPLICA_ID = 0;
+
+  public static final String INVALID_REGION_NAME_FORMAT_MESSAGE = "Invalid regionName format";
+
   /**
    * Does region name contain its encoded name?
    * @param regionName region name
@@ -575,7 +578,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       }
     }
     if (offset == -1) {
-      throw new IOException("Invalid regionName format: " + Bytes.toStringBinary(regionName));
+      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
+        + ": " + Bytes.toStringBinary(regionName));
     }
     byte[] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
@@ -606,7 +610,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       }
     }
     if (offset == -1) {
-      throw new IOException("Invalid regionName format: " + Bytes.toStringBinary(regionName));
+      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
+        + ": " + Bytes.toStringBinary(regionName));
     }
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
     if(offset != tableName.length + 1) {
