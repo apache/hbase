@@ -2267,22 +2267,40 @@ public class HBaseAdmin implements Admin {
     });
   }
 
+  private boolean isEncodedRegionName(byte[] regionName) throws IOException {
+    try {
+      HRegionInfo.parseRegionName(regionName);
+      return false;
+    } catch (IOException e) {
+      if (StringUtils.stringifyException(e)
+        .contains(HRegionInfo.INVALID_REGION_NAME_FORMAT_MESSAGE)) {
+        return true;
+      }
+      throw e;
+    }
+  }
+
   /**
    * Merge two regions. Asynchronous operation.
-   * @param encodedNameOfRegionA encoded name of region a
-   * @param encodedNameOfRegionB encoded name of region b
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          two adjacent regions
    * @throws IOException
    */
   @Override
-  public void mergeRegions(final byte[] encodedNameOfRegionA,
-      final byte[] encodedNameOfRegionB, final boolean forcible)
+  public void mergeRegions(final byte[] nameOfRegionA,
+      final byte[] nameOfRegionB, final boolean forcible)
       throws IOException {
-    Pair<HRegionInfo, ServerName> pair = getRegion(encodedNameOfRegionA);
+    final byte[] encodedNameOfRegionA = isEncodedRegionName(nameOfRegionA) ?
+      nameOfRegionA : HRegionInfo.encodeRegionName(nameOfRegionA).getBytes();
+    final byte[] encodedNameOfRegionB = isEncodedRegionName(nameOfRegionB) ?
+      nameOfRegionB : HRegionInfo.encodeRegionName(nameOfRegionB).getBytes();
+
+    Pair<HRegionInfo, ServerName> pair = getRegion(nameOfRegionA);
     if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
       throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
-    pair = getRegion(encodedNameOfRegionB);
+    pair = getRegion(nameOfRegionB);
     if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
       throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
     executeCallable(new MasterCallable<Void>(getConnection()) {

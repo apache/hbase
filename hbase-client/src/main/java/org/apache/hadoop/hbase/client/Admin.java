@@ -864,13 +864,13 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Merge two regions. Asynchronous operation.
    *
-   * @param encodedNameOfRegionA encoded name of region a
-   * @param encodedNameOfRegionB encoded name of region b
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    * regions
    * @throws IOException
    */
-  void mergeRegions(final byte[] encodedNameOfRegionA, final byte[] encodedNameOfRegionB,
+  void mergeRegions(final byte[] nameOfRegionA, final byte[] nameOfRegionB,
       final boolean forcible) throws IOException;
 
   /**

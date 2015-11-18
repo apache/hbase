@@ -1393,4 +1393,43 @@ public class TestAdmin1 {
       }
     }
   }
+
+  @Test
+  public void testMergeRegions() throws Exception {
+    TableName tableName = TableName.valueOf("testMergeWithFullRegionName");
+    HColumnDescriptor cd = new HColumnDescriptor("d");
+    HTableDescriptor td = new HTableDescriptor(tableName);
+    td.addFamily(cd);
+    byte[][] splitRows = new byte[2][];
+    splitRows[0] = new byte[]{(byte)'3'};
+    splitRows[1] = new byte[]{(byte)'6'};
+    try {
+      TEST_UTIL.createTable(td, splitRows);
+      TEST_UTIL.waitTableAvailable(tableName);
+
+      List<HRegionInfo> tableRegions;
+      HRegionInfo regionA;
+      HRegionInfo regionB;
+
+      // merge with full name
+      tableRegions = admin.getTableRegions(tableName);
+      assertEquals(3, admin.getTableRegions(tableName).size());
+      regionA = tableRegions.get(0);
+      regionB = tableRegions.get(1);
+      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false);
+      Thread.sleep(1000);
+      assertEquals(2, admin.getTableRegions(tableName).size());
+
+      // merge with encoded name
+      tableRegions = admin.getTableRegions(tableName);
+      regionA = tableRegions.get(0);
+      regionB = tableRegions.get(1);
+      admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
+      Thread.sleep(1000);
+      assertEquals(1, admin.getTableRegions(tableName).size());
+    } finally {
+      this.admin.disableTable(tableName);
+      this.admin.deleteTable(tableName);
+    }
+  }
 }
