@@ -154,6 +154,7 @@ public class FuzzyRowFilter extends FilterBase {
     }
     // NOT FOUND -> seek next using hint
     lastFoundIndex = -1;
+
     return ReturnCode.SEEK_NEXT_USING_HINT;
 
   }
@@ -572,7 +573,31 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
 
-    return result;
+    return reverse? result: trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+  }
+
+  /**
+   * For forward scanner, next cell hint should  not contain any trailing zeroes
+   * unless they are part of fuzzyKeyMeta
+   * hint = '\x01\x01\x01\x00\x00'
+   * will skip valid row '\x01\x01\x01'
+   * 
+   * @param result
+   * @param fuzzyKeyMeta
+   * @param toInc - position of incremented byte
+   * @return trimmed version of result
+   */
+  
+  private static byte[] trimTrailingZeroes(byte[] result, byte[] fuzzyKeyMeta, int toInc) {
+    int off = fuzzyKeyMeta.length >= result.length? result.length -1:
+           fuzzyKeyMeta.length -1;  
+    for( ; off >= 0; off--){
+      if(fuzzyKeyMeta[off] != 0) break;
+    }
+    if (off < toInc)  off = toInc;
+    byte[] retValue = new byte[off+1];
+    System.arraycopy(result, 0, retValue, 0, retValue.length);
+    return retValue;
   }
 
   /**
