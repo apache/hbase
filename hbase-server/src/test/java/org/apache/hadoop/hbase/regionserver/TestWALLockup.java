@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -103,7 +104,7 @@ public class TestWALLockup {
    * <p>First I need to set up some mocks for Server and RegionServerServices. I also need to
    * set up a dodgy WAL that will throw an exception when we go to append to it.
    */
-  @Test (timeout=15000)
+  @Test (timeout=20000)
   public void testLockupWhenSyncInMiddleOfZigZagSetup() throws IOException {
     // A WAL that we can have throw exceptions when a flag is set.
     class DodgyFSLog extends FSHLog {
@@ -127,7 +128,13 @@ public class TestWALLockup {
         if (throwException) {
           try {
             LOG.info("LATCHED");
-            this.latch.await();
+            // So, timing can have it that the test can run and the bad flush below happens
+            // before we get here. In this case, we'll be stuck waiting on this latch but there
+            // is nothing in the WAL pipeline to get us to the below beforeWaitOnSafePoint...
+            // because all WALs have rolled. In this case, just give up on test.
+            if (!this.latch.await(5, TimeUnit.SECONDS)) {
+              LOG.warn("GIVE UP! Failed waiting on latch...Test is ABORTED!");
+            }
           } catch (InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -222,8 +229,6 @@ public class TestWALLockup {
       dodgyWAL.throwException = true;
       // This append provokes a WAL roll request
       dodgyWAL.append(htd, region.getRegionInfo(), key, edit, true);
-      // Now wait until the dodgy WAL is latched.
-      while (dodgyWAL.latch.getCount() <= 0) Threads.sleep(1);
       boolean exception = false;
       try {
         dodgyWAL.sync();
