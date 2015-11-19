@@ -116,21 +116,26 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
     // If tag is present in the delete
     boolean hasVisTag = false;
     if (delCell.getTagsLength() > 0) {
+      Byte deleteCellVisTagsFormat = null;
       switch (type) {
       case DeleteFamily:
         List<Tag> delTags = new ArrayList<Tag>();
-        if (visibilityTagsDeleteFamily != null) {
-          Byte deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
-          if (!delTags.isEmpty()) {
-            visibilityTagsDeleteFamily.add(new Triple<List<Tag>, Byte, Long>(
-                delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
-            hasVisTag = true;
-          }
+        if (visibilityTagsDeleteFamily == null) {
+          visibilityTagsDeleteFamily = new ArrayList<Triple<List<Tag>, Byte, Long>>();
+        }
+        deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
+        if (!delTags.isEmpty()) {
+          visibilityTagsDeleteFamily.add(new Triple<List<Tag>, Byte, Long>(delTags,
+              deleteCellVisTagsFormat, delCell.getTimestamp()));
+          hasVisTag = true;
         }
         break;
       case DeleteFamilyVersion:
+        if(visibilityTagsDeleteFamilyVersion == null) {
+          visibilityTagsDeleteFamilyVersion = new ArrayList<Triple<List<Tag>, Byte, Long>>();
+        }
         delTags = new ArrayList<Tag>();
-        Byte deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
+        deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
           visibilityTagsDeleteFamilyVersion.add(new Triple<List<Tag>, Byte, Long>(delTags,
               deleteCellVisTagsFormat, delCell.getTimestamp()));
@@ -164,23 +169,6 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       default:
         throw new IllegalArgumentException("Invalid delete type");
       }
-    } else {
-      switch (type) {
-      case DeleteFamily:
-        visibilityTagsDeleteFamily = null;
-        break;
-      case DeleteFamilyVersion:
-        visibilityTagsDeleteFamilyVersion = null;
-        break;
-      case DeleteColumn:
-        visibilityTagsDeleteColumns = null;
-        break;
-      case Delete:
-        visiblityTagsDeleteColumnVersion = null;
-        break;
-      default:
-        throw new IllegalArgumentException("Invalid delete type");
-      }
     }
     return hasVisTag;
   }
@@ -191,28 +179,35 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
     try {
       if (hasFamilyStamp) {
         if (visibilityTagsDeleteFamily != null) {
-          for (int i = 0; i < visibilityTagsDeleteFamily.size(); i++) {
-            // visibilityTagsDeleteFamily is ArrayList
-            Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamily.get(i);
-            if (timestamp <= triple.getThird()) {
-              List<Tag> putVisTags = new ArrayList<Tag>();
-              Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
-              boolean matchFound = VisibilityLabelServiceManager
-                  .getInstance()
-                  .getVisibilityLabelService()
-                  .matchVisibility(putVisTags, putCellVisTagsFormat, triple.getFirst(),
-                      triple.getSecond());
-              if (matchFound) {
-                // A return type of FAMILY_DELETED will cause skip for all remaining cells from this
-                // family. We would like to match visibility expression on every put cells after
-                // this and only remove those matching with the family delete visibility. So we are
-                // returning FAMILY_VERSION_DELETED from here.
-                return DeleteResult.FAMILY_VERSION_DELETED;
+          if (!visibilityTagsDeleteFamily.isEmpty()) {
+            for (int i = 0; i < visibilityTagsDeleteFamily.size(); i++) {
+              // visibilityTagsDeleteFamily is ArrayList
+              Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamily.get(i);
+              if (timestamp <= triple.getThird()) {
+                List<Tag> putVisTags = new ArrayList<Tag>();
+                Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+                boolean matchFound = VisibilityLabelServiceManager.getInstance()
+                    .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
+                      triple.getFirst(), triple.getSecond());
+                if (matchFound) {
+                  // A return type of FAMILY_DELETED will cause skip for all remaining cells from
+                  // this
+                  // family. We would like to match visibility expression on every put cells after
+                  // this and only remove those matching with the family delete visibility. So we
+                  // are
+                  // returning FAMILY_VERSION_DELETED from here.
+                  return DeleteResult.FAMILY_VERSION_DELETED;
+                }
               }
+            }
+          } else {
+            if (!VisibilityUtils.isVisibilityTagsPresent(cell) && timestamp <= familyStamp) {
+              // No tags
+              return DeleteResult.FAMILY_VERSION_DELETED;
             }
           }
         } else {
-          if (!VisibilityUtils.isVisibilityTagsPresent(cell) && timestamp<=familyStamp) {
+          if (!VisibilityUtils.isVisibilityTagsPresent(cell) && timestamp <= familyStamp) {
             // No tags
             return DeleteResult.FAMILY_VERSION_DELETED;
           }
@@ -220,20 +215,25 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       }
       if (familyVersionStamps.contains(Long.valueOf(timestamp))) {
         if (visibilityTagsDeleteFamilyVersion != null) {
-          for (int i = 0; i < visibilityTagsDeleteFamilyVersion.size(); i++) {
-            // visibilityTagsDeleteFamilyVersion is ArrayList
-            Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamilyVersion.get(i);
-            if (timestamp == triple.getThird()) {
-              List<Tag> putVisTags = new ArrayList<Tag>();
-              Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
-              boolean matchFound = VisibilityLabelServiceManager
-                  .getInstance()
-                  .getVisibilityLabelService()
-                  .matchVisibility(putVisTags, putCellVisTagsFormat, triple.getFirst(),
-                      triple.getSecond());
-              if (matchFound) {
-                return DeleteResult.FAMILY_VERSION_DELETED;
+          if (!visibilityTagsDeleteFamilyVersion.isEmpty()) {
+            for (int i = 0; i < visibilityTagsDeleteFamilyVersion.size(); i++) {
+              // visibilityTagsDeleteFamilyVersion is ArrayList
+              Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamilyVersion.get(i);
+              if (timestamp == triple.getThird()) {
+                List<Tag> putVisTags = new ArrayList<Tag>();
+                Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+                boolean matchFound = VisibilityLabelServiceManager.getInstance()
+                    .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
+                      triple.getFirst(), triple.getSecond());
+                if (matchFound) {
+                  return DeleteResult.FAMILY_VERSION_DELETED;
+                }
               }
+            }
+          } else {
+            if (!VisibilityUtils.isVisibilityTagsPresent(cell)) {
+              // No tags
+              return DeleteResult.FAMILY_VERSION_DELETED;
             }
           }
         } else {
@@ -248,15 +248,21 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {
-              for (Pair<List<Tag>, Byte> tags : visibilityTagsDeleteColumns) {
-                List<Tag> putVisTags = new ArrayList<Tag>();
-                Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
-                boolean matchFound = VisibilityLabelServiceManager
-                    .getInstance()
-                    .getVisibilityLabelService()
-                    .matchVisibility(putVisTags, putCellVisTagsFormat, tags.getFirst(),
-                        tags.getSecond());
-                if (matchFound) {
+              if (!visibilityTagsDeleteColumns.isEmpty()) {
+                for (Pair<List<Tag>, Byte> tags : visibilityTagsDeleteColumns) {
+                  List<Tag> putVisTags = new ArrayList<Tag>();
+                  Byte putCellVisTagsFormat =
+                      VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+                  boolean matchFound = VisibilityLabelServiceManager.getInstance()
+                      .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
+                        tags.getFirst(), tags.getSecond());
+                  if (matchFound) {
+                    return DeleteResult.VERSION_DELETED;
+                  }
+                }
+              } else {
+                if (!VisibilityUtils.isVisibilityTagsPresent(cell)) {
+                  // No tags
                   return DeleteResult.VERSION_DELETED;
                 }
               }
@@ -271,15 +277,21 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           // If the timestamp is the same, keep this one
           if (timestamp == deleteTimestamp) {
             if (visiblityTagsDeleteColumnVersion != null) {
-              for (Pair<List<Tag>, Byte> tags : visiblityTagsDeleteColumnVersion) {
-                List<Tag> putVisTags = new ArrayList<Tag>();
-                Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
-                boolean matchFound = VisibilityLabelServiceManager
-                    .getInstance()
-                    .getVisibilityLabelService()
-                    .matchVisibility(putVisTags, putCellVisTagsFormat, tags.getFirst(),
-                        tags.getSecond());
-                if (matchFound) {
+              if (!visiblityTagsDeleteColumnVersion.isEmpty()) {
+                for (Pair<List<Tag>, Byte> tags : visiblityTagsDeleteColumnVersion) {
+                  List<Tag> putVisTags = new ArrayList<Tag>();
+                  Byte putCellVisTagsFormat =
+                      VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+                  boolean matchFound = VisibilityLabelServiceManager.getInstance()
+                      .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
+                        tags.getFirst(), tags.getSecond());
+                  if (matchFound) {
+                    return DeleteResult.VERSION_DELETED;
+                  }
+                }
+              } else {
+                if (!VisibilityUtils.isVisibilityTagsPresent(cell)) {
+                  // No tags
                   return DeleteResult.VERSION_DELETED;
                 }
               }
@@ -293,6 +305,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         } else if (ret > 0) {
           // Next column case.
           deleteBuffer = null;
+          // Can nullify this because we are moving to the next column
           visibilityTagsDeleteColumns = null;
           visiblityTagsDeleteColumnVersion = null;
         } else {
@@ -312,9 +325,10 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   @Override
   public void reset() {
     super.reset();
+    // clear only here
     visibilityTagsDeleteColumns = null;
-    visibilityTagsDeleteFamily = new ArrayList<Triple<List<Tag>, Byte, Long>>();
-    visibilityTagsDeleteFamilyVersion = new ArrayList<Triple<List<Tag>, Byte, Long>>();
+    visibilityTagsDeleteFamily = null;
+    visibilityTagsDeleteFamilyVersion = null;
     visiblityTagsDeleteColumnVersion = null;
   }
 }
