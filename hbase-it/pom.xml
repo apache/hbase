@@ -91,6 +91,9 @@
             <excludes>
               <exclude>${unittest.include}</exclude>
               <exclude>**/*$*</exclude>
+              <!--Do this to prevent OOME because permgen is full seen on build.apache.org
+               -->
+              <argLine> -XX:+CMSClassUnloadingEnabled </argLine>
               <!--<exclude>${test.exclude.pattern}</exclude>-->
             </excludes>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
