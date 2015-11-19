@@ -470,6 +470,293 @@ public class TestVisibilityLabelsWithDeletes {
   }
 
   @Test
+  public void testDeleteColumnsWithoutAndWithVisibilityLabels() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row1);
+      put.addColumn(fam, qual, value);
+      put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      table.put(put);
+      Delete d = new Delete(row1);
+      // without visibility
+      d.addColumns(fam, qual, HConstants.LATEST_TIMESTAMP);
+      table.delete(d);
+      PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 1);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+      d = new Delete(row1);
+      // with visibility
+      d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      d.addColumns(fam, qual, HConstants.LATEST_TIMESTAMP);
+      table.delete(d);
+      scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+    }
+  }
+
+  @Test
+  public void testDeleteColumnsWithAndWithoutVisibilityLabels() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row1);
+      put.addColumn(fam, qual, value);
+      put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      table.put(put);
+      Delete d = new Delete(row1);
+      // with visibility
+      d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      d.addColumns(fam, qual, HConstants.LATEST_TIMESTAMP);
+      table.delete(d);
+      PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+      d = new Delete(row1);
+      // without visibility
+      d.addColumns(fam, qual, HConstants.LATEST_TIMESTAMP);
+      table.delete(d);
+      scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+    }
+  }
+
+  @Test
+  public void testDeleteFamiliesWithoutAndWithVisibilityLabels() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row1);
+      put.addColumn(fam, qual, value);
+      put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      table.put(put);
+      Delete d = new Delete(row1);
+      // without visibility
+      d.addFamily(fam);
+      table.delete(d);
+      PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 1);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+      d = new Delete(row1);
+      // with visibility
+      d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      d.addFamily(fam);
+      table.delete(d);
+      scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+    }
+  }
+
+  @Test
+  public void testDeleteFamiliesWithAndWithoutVisibilityLabels() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row1);
+      put.addColumn(fam, qual, value);
+      put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      table.put(put);
+      Delete d = new Delete(row1);
+      d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      // with visibility
+      d.addFamily(fam);
+      table.delete(d);
+      PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+      d = new Delete(row1);
+      // without visibility
+      d.addFamily(fam);
+      table.delete(d);
+      scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+    }
+  }
+
+  @Test
+  public void testDeletesWithoutAndWithVisibilityLabels() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row1);
+      put.addColumn(fam, qual, value);
+      put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      table.put(put);
+      Delete d = new Delete(row1);
+      // without visibility
+      d.addColumn(fam, qual);
+      table.delete(d);
+      PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            // The delete would not be able to apply it because of visibility mismatch
+            Result[] next = scanner.next(3);
+            assertEquals(next.length, 1);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+      d = new Delete(row1);
+      // with visibility
+      d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+      d.addColumn(fam, qual);
+      table.delete(d);
+      scanAction = new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+              Table table = connection.getTable(tableName)) {
+            Scan s = new Scan();
+            ResultScanner scanner = table.getScanner(s);
+            Result[] next = scanner.next(3);
+            // this will alone match
+            assertEquals(next.length, 0);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(scanAction);
+    }
+  }
+
+  @Test
   public void testVisibilityLabelsWithDeleteFamilyWithPutsReAppearing() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
