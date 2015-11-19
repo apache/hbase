@@ -1753,18 +1753,11 @@ public class FSHLog implements WAL {
         }
 
         // TODO: Check size and if big go ahead and call a sync if we have enough data.
-
-        // If not a batch, return to consume more events from the ring buffer before proceeding;
-        // we want to get up a batch of syncs and appends before we go do a filesystem sync.
-        if (!endOfBatch || this.syncFuturesCount <= 0) return;
-
-        // Now we have a batch.
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Sequence=" + sequence + ", syncCount=" + this.syncFuturesCount);
-        }
-
+        // This is a sync. If existing exception, fall through. Else look to see if batch.
         if (this.exception == null) {
+          // If not a batch, return to consume more events from the ring buffer before proceeding;
+          // we want to get up a batch of syncs and appends before we go do a filesystem sync.
+          if (!endOfBatch || this.syncFuturesCount <= 0) return;
           // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
           // the syncRunner. We should never get an exception in here.
           this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
@@ -1780,7 +1773,9 @@ public class FSHLog implements WAL {
         // We may have picked up an exception above trying to offer sync
         if (this.exception != null) {
           cleanupOutstandingSyncsOnException(sequence,
-            new DamagedWALException("On sync", this.exception));
+            this.exception instanceof DamagedWALException?
+              this.exception:
+              new DamagedWALException("On sync", this.exception));
         }
         attainSafePoint(sequence);
         this.syncFuturesCount = 0;
@@ -1875,8 +1870,7 @@ public class FSHLog implements WAL {
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
       } catch (Exception e) {
-        String msg = "Append sequenceId=" + regionSequenceId +
-          ", requesting roll of WAL";
+        String msg = "Append sequenceId=" + regionSequenceId + ", requesting roll of WAL";
         LOG.warn(msg, e);
         requestLogRoll();
         throw new DamagedWALException(msg, e);
