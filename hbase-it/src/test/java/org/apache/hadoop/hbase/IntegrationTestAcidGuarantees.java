@@ -94,17 +94,17 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
 
   @Test
   public void testGetAtomicity() throws Exception {
-    tag.runTestAtomicity(20000, 5, 5, 0, 3);
+    tag.runTestAtomicity(20000, 4, 4, 0, 3);
   }
 
   @Test
   public void testScanAtomicity() throws Exception {
-    tag.runTestAtomicity(20000, 5, 0, 5, 3);
+    tag.runTestAtomicity(20000, 3, 0, 2, 3);
   }
 
   @Test
   public void testMixedAtomicity() throws Exception {
-    tag.runTestAtomicity(20000, 5, 2, 2, 3);
+    tag.runTestAtomicity(20000, 4, 2, 2, 3);
   }
 
 
@@ -117,5 +117,3 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
     System.exit(ret);
   }
 }
-
-
