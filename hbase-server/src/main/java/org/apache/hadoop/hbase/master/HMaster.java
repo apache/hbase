@@ -91,6 +91,9 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
@@ -107,9 +110,6 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
@@ -124,10 +124,14 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionStateListener;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -1562,7 +1566,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } catch (IOException e) {
       warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
     }
-
+    // Verify compaction policy
+    try{
+      checkCompactionPolicy(conf, htd);
+    } catch(IOException e){
+      warnOrThrowExceptionForFailure(false, CONF_KEY, e.getMessage(), e);
+    }
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
       String message = "Table should have at least one column family.";
@@ -1618,6 +1627,77 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
+  private void checkCompactionPolicy(Configuration conf, HTableDescriptor htd) 
+      throws IOException {
+    // FIFO compaction has some requirements
+    // Actually FCP ignores periodic major compactions
+    String className =
+        htd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+    if (className == null) {
+      className =
+          conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+            ExploringCompactionPolicy.class.getName());
+    }
+
+    long majorCompactionPeriod = Long.MAX_VALUE;
+    String sv = htd.getConfigurationValue(HConstants.MAJOR_COMPACTION_PERIOD);
+    if (sv != null) {
+      majorCompactionPeriod = Long.parseLong(sv);
+    } else {
+      majorCompactionPeriod =
+          conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, majorCompactionPeriod);
+    }
+    String splitPolicyClassName = htd.getRegionSplitPolicyClassName();
+    if (splitPolicyClassName == null) {
+      splitPolicyClassName = conf.get(HConstants.HBASE_REGION_SPLIT_POLICY_KEY);
+    }
+
+    int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
+    sv = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+    if (sv != null) {
+      blockingFileCount = Integer.parseInt(sv);
+    } else {
+      blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
+    }
+
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      String compactionPolicy =
+          hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+      if (compactionPolicy == null) {
+        compactionPolicy = className;
+      }
+      if (className.equals(FIFOCompactionPolicy.class.getName()) == false) {
+        continue;
+      }
+      // FIFOCompaction
+      String message = null;
+
+      // 1. Check TTL
+      if (hcd.getTimeToLive() == HColumnDescriptor.DEFAULT_TTL) {
+        message = "Default TTL is not supported for FIFO compaction";
+        throw new IOException(message);
+      }
+
+      // 2. Check min versions
+      if (hcd.getMinVersions() > 0) {
+        message = "MIN_VERSION > 0 is not supported for FIFO compaction";
+        throw new IOException(message);
+      }
+
+      // 3. blocking file count
+      String sbfc = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+      if (sbfc != null) {
+        blockingFileCount = Integer.parseInt(sbfc);
+      }
+      if (blockingFileCount < 1000) {
+        message =
+            "blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
+                + " is below recommended minimum of 1000";
+        throw new IOException(message);
+      }
+    }
+  }
+  
   // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
   private static void warnOrThrowExceptionForFailure(boolean logWarn, String confKey,
       String message, Exception cause) throws IOException {
