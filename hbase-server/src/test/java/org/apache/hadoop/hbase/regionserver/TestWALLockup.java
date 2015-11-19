@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -130,7 +131,13 @@ public class TestWALLockup {
         if (throwException) {
           try {
             LOG.info("LATCHED");
-            this.latch.await();
+            // So, timing can have it that the test can run and the bad flush below happens
+            // before we get here. In this case, we'll be stuck waiting on this latch but there
+            // is nothing in the WAL pipeline to get us to the below beforeWaitOnSafePoint...
+            // because all WALs have rolled. In this case, just give up on test.
+            if (!this.latch.await(5, TimeUnit.SECONDS)) {
+              LOG.warn("GIVE UP! Failed waiting on latch...Test is ABORTED!");
+            }
           } catch (InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
