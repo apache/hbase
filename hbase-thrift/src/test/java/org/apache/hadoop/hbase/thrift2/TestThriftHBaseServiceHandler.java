@@ -684,6 +684,56 @@ public class TestThriftHBaseServiceHandler {
     }
   }
 
+  @Test
+  public void testPutTTL() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutTTL".getBytes();
+    ByteBuffer table = wrap(tableAname);
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+
+    // Add some dummy data
+    columnValues.add(
+        new TColumnValue(
+            wrap(familyAname),
+            wrap(qualifierAname),
+            wrap(Bytes.toBytes(1L))));
+
+
+    TPut put = new TPut(wrap(rowName), columnValues);
+    put.setColumnValues(columnValues);
+
+    Map<ByteBuffer, ByteBuffer> attributes = new HashMap<>();
+
+    // Time in ms for the kv's to live.
+    long ttlTimeMs = 2000L;
+
+    // the _ttl attribute is a number of ms ttl for key values in this put.
+    attributes.put(wrap(Bytes.toBytes("_ttl")), wrap(Bytes.toBytes(ttlTimeMs)));
+    // Attach the attributes
+    put.setAttributes(attributes);
+    // Send it.
+    handler.put(table, put);
+
+    // Now get the data back
+    TGet getOne = new TGet(wrap(rowName));
+    TResult resultOne = handler.get(table, getOne);
+
+    // It's there.
+    assertArrayEquals(rowName, resultOne.getRow());
+    assertEquals(1, resultOne.getColumnValuesSize());
+
+    // Sleep 30 seconds just to make 100% sure that the key value should be expired.
+    Thread.sleep(ttlTimeMs * 15);
+
+    TGet getTwo = new TGet(wrap(rowName));
+    TResult resultTwo = handler.get(table, getTwo);
+
+
+    // Nothing should be there since it's ttl'd out.
+    assertNull(resultTwo.getRow());
+    assertEquals(0, resultTwo.getColumnValuesSize());
+  }
+
   /**
    * Padding numbers to make comparison of sort order easier in a for loop
    *
