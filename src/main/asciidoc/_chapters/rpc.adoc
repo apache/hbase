@@ -106,7 +106,7 @@ After client sends preamble and connection header, server does NOT respond if su
 No response means server is READY to accept requests and to give out response.
 If the version or authentication in the preamble is not agreeable or the server has trouble parsing the preamble, it will throw a org.apache.hadoop.hbase.ipc.FatalConnectionException explaining the error and will then disconnect.
 If the client in the connection header -- i.e.
-the protobuf'd Message that comes after the connection preamble -- asks for for a Service the server does not support or a codec the server does not have, again we throw a FatalConnectionException with explanation.
+the protobuf'd Message that comes after the connection preamble -- asks for a Service the server does not support or a codec the server does not have, again we throw a FatalConnectionException with explanation.
 
 ==== Request
 
@@ -118,7 +118,7 @@ The header includes the method name and optionally, metadata on the optional Cel
 The parameter type suits the method being invoked: i.e.
 if we are doing a getRegionInfo request, the protobuf Message param will be an instance of GetRegionInfoRequest.
 The response will be a GetRegionInfoResponse.
-The CellBlock is optionally used ferrying the bulk of the RPC data: i.e Cells/KeyValues.
+The CellBlock is optionally used ferrying the bulk of the RPC data: i.e. Cells/KeyValues.
 
 ===== Request Parts
 
@@ -182,7 +182,7 @@ Codecs will live on the server for all time so old clients can connect.
 
 .Constraints
 In some part, current wire-format -- i.e.
-all requests and responses preceeded by a length -- has been dictated by current server non-async architecture.
+all requests and responses preceded by a length -- has been dictated by current server non-async architecture.
 
 .One fat pb request or header+param
 We went with pb header followed by pb param making a request and a pb header followed by pb response for now.
@@ -214,9 +214,9 @@ If a server sees no codec, it will return all responses in pure protobuf.
 Running pure protobuf all the time will be slower than running with cellblocks.
 
 .Compression
-Uses hadoops compression codecs.
+Uses hadoop's compression codecs.
 To enable compressing of passed CellBlocks, set `hbase.client.rpc.compressor` to the name of the Compressor to use.
-Compressor must implement Hadoops' CompressionCodec Interface.
+Compressor must implement Hadoop's CompressionCodec Interface.
 After connection setup, all passed cellblocks will be sent compressed.
 The server will return cellblocks compressed using this same compressor as long as the compressor is on its CLASSPATH (else you will get `UnsupportedCompressionCodecException`).
 

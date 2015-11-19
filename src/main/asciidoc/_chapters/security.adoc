@@ -331,7 +331,7 @@ To enable REST gateway Kerberos authentication for client access, add the follow
 Substitute the keytab for HTTP for _$KEYTAB_.
 
 HBase REST gateway supports different 'hbase.rest.authentication.type': simple, kerberos.
-You can also implement a custom authentication by implemening Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
+You can also implement a custom authentication by implementing Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
 For more information, refer to link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication].
 
 [[security.rest.gateway]]
@@ -343,7 +343,7 @@ To the HBase server, all requests are from the REST gateway user.
 The actual users are unknown.
 You can turn on the impersonation support.
 With impersonation, the REST gateway user is a proxy user.
-The HBase server knows the acutal/real user of each request.
+The HBase server knows the actual/real user of each request.
 So it can apply proper authorizations.
 
 To turn on REST gateway impersonation, we need to configure HBase servers (masters and region servers) to allow proxy users; configure REST gateway to enable impersonation.
@@ -1117,7 +1117,7 @@ NOTE: Visibility labels are not currently applied for superusers.
 | Interpretation
 
 | fulltime
-| Allow accesss to users associated with the fulltime label.
+| Allow access to users associated with the fulltime label.
 
 | !public
 | Allow access to users not associated with the public label.

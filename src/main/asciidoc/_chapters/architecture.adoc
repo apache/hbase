@@ -41,7 +41,8 @@ Technically speaking, HBase is really more a "Data Store" than "Data Base" becau
 However, HBase has many features which supports both linear and modular scaling.
 HBase clusters expand by adding RegionServers that are hosted on commodity class servers.
 If a cluster expands from 10 to 20 RegionServers, for example, it doubles both in terms of storage and as well as processing capacity.
-RDBMS can scale well, but only up to a point - specifically, the size of a single database server - and for the best performance requires specialized hardware and storage devices.
+An RDBMS can scale well, but only up to a point - specifically, the size of a single database
+server - and for the best performance requires specialized hardware and storage devices.
 HBase features of note are:
 
 * Strongly consistent reads/writes:  HBase is not an "eventually consistent" DataStore.
@@ -140,7 +141,7 @@ If a region has both an empty start and an empty end key, it is the only region 
 
 In the (hopefully unlikely) event that programmatic processing of catalog metadata
 is required, see the
-+++<a href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</a>+++
++++<a href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte%5B%5D%29">Writables</a>+++
 utility.
 
 [[arch.catalog.startup]]
@@ -172,7 +173,7 @@ The API changed in HBase 1.0. For connection configuration information, see <<cl
 
 ==== API as of HBase 1.0.0
 
-Its been cleaned up and users are returned Interfaces to work against rather than particular types.
+It's been cleaned up and users are returned Interfaces to work against rather than particular types.
 In HBase 1.0, obtain a `Connection` object from `ConnectionFactory` and thereafter, get from it instances of `Table`, `Admin`, and `RegionLocator` on an as-need basis.
 When done, close the obtained instances.
 Finally, be sure to cleanup your `Connection` instance before exiting.
@@ -295,7 +296,11 @@ scan.setFilter(list);
 [[client.filter.cv.scvf]]
 ==== SingleColumnValueFilter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html[SingleColumnValueFilter] can be used to test column values for equivalence (`CompareOp.EQUAL`), inequality (`CompareOp.NOT_EQUAL`), or ranges (e.g., `CompareOp.GREATER`). The following is example of testing equivalence a column to a String value "my value"...
+A SingleColumnValueFilter (see:
+http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
+can be used to test column values for equivalence (`CompareOp.EQUAL`),
+inequality (`CompareOp.NOT_EQUAL`), or ranges (e.g., `CompareOp.GREATER`). The following is an
+example of testing equivalence of a column to a String value "my value"...
 
 [source,java]
 ----
@@ -694,7 +699,8 @@ Here are others that you may have to take into account:
 
 Catalog Tables::
   The `-ROOT-` (prior to HBase 0.96, see <<arch.catalog.root,arch.catalog.root>>) and `hbase:meta` tables are forced into the block cache and have the in-memory priority which means that they are harder to evict.
-  The former never uses more than a few hundreds bytes while the latter can occupy a few MBs (depending on the number of regions).
+  The former never uses more than a few hundred bytes while the latter can occupy a few MBs
+  (depending on the number of regions).
 
 HFiles Indexes::
   An _HFile_ is the file format that HBase uses to store data in HDFS.
@@ -878,7 +884,10 @@ image::region_split_process.png[Region Split Process]
 . The Master learns about this znode, since it has a watcher for the parent `region-in-transition` znode.
 . The RegionServer creates a sub-directory named `.splits` under the parent’s `region` directory in HDFS.
 . The RegionServer closes the parent region and marks the region as offline in its local data structures. *THE SPLITTING REGION IS NOW OFFLINE.* At this point, client requests coming to the parent region will throw `NotServingRegionException`. The client will retry with some backoff. The closing region is flushed.
-. The  RegionServer creates region directories under the `.splits` directory, for daughter regions A and B, and creates necessary data structures. Then it splits the store files, in the sense that it creates two link:http://www.google.com/url?q=http%3A%2F%2Fhbase.apache.org%2Fapidocs%2Forg%2Fapache%2Fhadoop%2Fhbase%2Fio%2FReference.html&sa=D&sntz=1&usg=AFQjCNEkCbADZ3CgKHTtGYI8bJVwp663CA[Reference] files per store file in the parent region. Those reference files will point to the parent regions'files.
+. The RegionServer creates region directories under the `.splits` directory, for daughter
+regions A and B, and creates necessary data structures. Then it splits the store files,
+in the sense that it creates two Reference files per store file in the parent region.
+Those reference files will point to the parent region's files.
 . The RegionServer creates the actual region directory in HDFS, and moves the reference files for each daughter.
 . The RegionServer sends a `Put` request to the `.META.` table, to set the parent as offline in the `.META.` table and add information about daughter regions. At this point, there won’t be individual entries in `.META.` for the daughters. Clients will see that the parent region is split if they scan `.META.`, but won’t know about the daughters until they appear in `.META.`. Also, if this `Put` to `.META`. succeeds, the parent will be effectively split. If the RegionServer fails before this RPC succeeds, Master and the next Region Server opening the region will clean dirty state about the region split. After the `.META.` update, though, the region split will be rolled-forward by Master.
 . The RegionServer opens daughters A and B in parallel.
@@ -1008,7 +1017,8 @@ If you set the `hbase.hlog.split.skip.errors` option to `true`, errors are treat
 * Processing of the WAL will continue
 
 If the `hbase.hlog.split.skip.errors` option is set to `false`, the default, the exception will be propagated and the split will be logged as failed.
-See link:https://issues.apache.org/jira/browse/HBASE-2958[HBASE-2958 When hbase.hlog.split.skip.errors is set to false, we fail the split but thats it].
+See link:https://issues.apache.org/jira/browse/HBASE-2958[HBASE-2958 When
+hbase.hlog.split.skip.errors is set to false, we fail the split but that's it].
 We need to do more than just fail split if this flag is set.
 
 ====== How EOFExceptions are treated when splitting a crashed RegionServer's WALs
@@ -1117,7 +1127,8 @@ Based on the state of the task whose data is changed, the split log manager does
 Each RegionServer runs a daemon thread called the _split log worker_, which does the work to split the logs.
 The daemon thread starts when the RegionServer starts, and registers itself to watch HBase znodes.
 If any splitlog znode children change, it notifies a sleeping worker thread to wake up and grab more tasks.
-If if a worker's current task's node data is changed, the worker checks to see if the task has been taken by another worker.
+If a worker's current task's node data is changed,
+the worker checks to see if the task has been taken by another worker.
 If so, the worker thread stops work on the current task.
 +
 The worker monitors the splitlog znode constantly.
@@ -1127,7 +1138,7 @@ At this point, the split log worker scans for another unclaimed task.
 +
 .How the Split Log Worker Approaches a Task
 * It queries the task state and only takes action if the task is in `TASK_UNASSIGNED `state.
-* If the task is is in `TASK_UNASSIGNED` state, the worker attempts to set the state to `TASK_OWNED` by itself.
+* If the task is in `TASK_UNASSIGNED` state, the worker attempts to set the state to `TASK_OWNED` by itself.
   If it fails to set the state, another worker will try to grab it.
   The split log manager will also ask all workers to rescan later if the task remains unassigned.
 * If the worker succeeds in taking ownership of the task, it tries to get the task state again to make sure it really gets it asynchronously.
@@ -1135,7 +1146,7 @@ At this point, the split log worker scans for another unclaimed task.
 ** Get the HBase root folder, create a temp folder under the root, and split the log file to the temp folder.
 ** If the split was successful, the task executor sets the task to state `TASK_DONE`.
 ** If the worker catches an unexpected IOException, the task is set to state `TASK_ERR`.
-** If the worker is shutting down, set the the task to state `TASK_RESIGNED`.
+** If the worker is shutting down, set the task to state `TASK_RESIGNED`.
 ** If the task is taken by another worker, just log it.
 
 
@@ -1326,7 +1337,7 @@ image::region_states.png[]
 . Before assigning a region, the master moves the region to `OFFLINE` state automatically if it is in `CLOSED` state.
 . When a RegionServer is about to split a region, it notifies the master.
   The master moves the region to be split from `OPEN` to `SPLITTING` state and add the two new regions to be created to the RegionServer.
-  These two regions are in `SPLITING_NEW` state initially.
+  These two regions are in `SPLITTING_NEW` state initially.
 . After notifying the master, the RegionServer starts to split the region.
   Once past the point of no return, the RegionServer notifies the master again so the master can update the `hbase:meta` table.
   However, the master does not update the region states until it is notified by the server that the split is done.
@@ -1404,8 +1415,8 @@ hbase> create 'test', {METHOD => 'table_att', CONFIG => {'SPLIT_POLICY' => 'org.
 ----
 
 The default split policy can be overwritten using a custom
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html
-[RegionSplitPolicy(HBase 0.94+)]. Typically a custom split policy should extend HBase's default split policy:
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy(HBase 0.94+)].
+Typically a custom split policy should extend HBase's default split policy:
 link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
 
 The policy can be set globally through the HBaseConfiguration used or on a per table basis:
@@ -1972,8 +1983,8 @@ Why?
 * 100 -> No, because sum(50, 23, 12, 12) * 1.0 = 97.
 * 50 -> No, because sum(23, 12, 12) * 1.0 = 47.
 * 23 -> Yes, because sum(12, 12) * 1.0 = 24.
-* 12 -> Yes, because the previous file has been included, and because this does not exceed the the max-file limit of 5
-* 12 -> Yes, because the previous file had been included, and because this does not exceed the the max-file limit of 5.
+* 12 -> Yes, because the previous file has been included, and because this does not exceed the max-file limit of 5
+* 12 -> Yes, because the previous file had been included, and because this does not exceed the max-file limit of 5.
 
 [[compaction.file.selection.example2]]
 ====== Minor Compaction File Selection - Example #2 (Not Enough Files ToCompact)
@@ -2234,7 +2245,7 @@ See link:http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and
 [[arch.bulk.load.adv]]
 === Advanced Usage
 
-Although the `importtsv` tool is useful in many cases, advanced users may want to generate data programatically, or import data from other formats.
+Although the `importtsv` tool is useful in many cases, advanced users may want to generate data programmatically, or import data from other formats.
 To get started doing so, dig into `ImportTsv.java` and check the JavaDoc for HFileOutputFormat.
 
 The import step of the bulk load can also be done programmatically.
@@ -2330,8 +2341,8 @@ In terms of semantics, TIMELINE consistency as implemented by HBase differs from
 .Timeline Consistency
 image::timeline_consistency.png[Timeline Consistency]
 
-To better understand the TIMELINE semantics, lets look at the above diagram.
-Lets say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later.
+To better understand the TIMELINE semantics, let's look at the above diagram.
+Let's say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later.
 As above, all writes are handled by the primary region replica.
 The writes are saved in the write ahead log (WAL), and replicated to the other replicas asynchronously.
 In the above diagram, notice that replica_id=1 received 2 updates, and its data shows that x=2, while the replica_id=2 only received a single update, and its data shows that x=1.
@@ -2367,7 +2378,7 @@ The regions opened in secondary mode will share the same data files with the pri
 This feature is delivered in two phases, Phase 1 and 2. The first phase is done in time for HBase-1.0.0 release. Meaning that using HBase-1.0.x, you can use all the features that are marked for Phase 1. Phase 2 is committed in HBase-1.1.0, meaning all HBase versions after 1.1.0 should contain Phase 2 items.
 
 === Propagating writes to region replicas
-As discussed above writes only go to the primary region replica. For propagating the writes from the primary region replica to the secondaries, there are two different mechanisms. For read-only tables, you do not need to use any of the following methods. Disabling and enabling the table should make the data available in all region replicas. For mutable tables, you have to use *only* one of the following mechanisms: storefile refresher, or async wal replication. The latter is recommeded.
+As discussed above writes only go to the primary region replica. For propagating the writes from the primary region replica to the secondaries, there are two different mechanisms. For read-only tables, you do not need to use any of the following methods. Disabling and enabling the table should make the data available in all region replicas. For mutable tables, you have to use *only* one of the following mechanisms: storefile refresher, or async wal replication. The latter is recommended.
 
 ==== StoreFile Refresher
 The first mechanism is store file refresher which is introduced in HBase-1.0+. Store file refresher is a thread per region server, which runs periodically, and does a refresh operation for the store files of the primary region for the secondary region replicas. If enabled, the refresher will ensure that the secondary region replicas see the new flushed, compacted or bulk loaded files from the primary region in a timely manner. However, this means that only flushed data can be read back from the secondary region replicas, and after the refresher is run, making the secondaries lag behind the primary for an a longer time.
@@ -2399,7 +2410,7 @@ Currently, Async WAL Replication is not done for the META table’s WAL. The met
 The secondary region replicas refer to the data files of the primary region replica, but they have their own memstores (in HBase-1.1+) and uses block cache as well. However, one distinction is that the secondary region replicas cannot flush the data when there is memory pressure for their memstores. They can only free up memstore memory when the primary region does a flush and this flush is replicated to the secondary. Since in a region server hosting primary replicas for some regions and secondaries for some others, the secondaries might cause extra flushes to the primary regions in the same host. In extreme situations, there can be no memory left for adding new writes coming from the primary via wal replication. For unblocking this situation (and since secondary cannot flush by itself), the secondary is allowed to do a “store file refresh” by doing a file system list operation to pick up new files from primary, and possibly dropping its memstore. This refresh will only be performed if the memstore size of the biggest secondary region replica is at least `hbase.region.replica.storefile.refresh.memstore.multiplier` (default 4) times bigger than the biggest memstore of a primary replica. One caveat is that if this is performed, the secondary can observe partial row updates across column families (since column families are flushed independently). The default should be good to not do this operation frequently. You can set this value to a large number to disable this feature if desired, but be warned that it might cause the replication to block forever.
 
 === Secondary replica failover
-When a secondary region replica first comes online, or fails over, it may have served some edits from it’s memstore. Since the recovery is handled differently for secondary replicas, the secondary has to ensure that it does not go back in time before it starts serving requests after assignment. For doing that, the secondary waits until it observes a full flush cycle (start flush, commit flush) or a “region open event” replicated from the primary. Until this happens, the secondary region replica will reject all read requests by throwing an IOException with message “The region's reads are disabled”. However, the other replicas will probably still be available to read, thus not causing any impact for the rpc with TIMELINE consistency. To facilitate faster recovery, the secondary region will trigger a flush request from the primary when it is opened. The configuration property `hbase.region.replica.wait.for.primary.flush` (enabled by default) can be used to disable this feature if needed.
+When a secondary region replica first comes online, or fails over, it may have served some edits from its memstore. Since the recovery is handled differently for secondary replicas, the secondary has to ensure that it does not go back in time before it starts serving requests after assignment. For doing that, the secondary waits until it observes a full flush cycle (start flush, commit flush) or a “region open event” replicated from the primary. Until this happens, the secondary region replica will reject all read requests by throwing an IOException with message “The region's reads are disabled”. However, the other replicas will probably still be available to read, thus not causing any impact for the rpc with TIMELINE consistency. To facilitate faster recovery, the secondary region will trigger a flush request from the primary when it is opened. The configuration property `hbase.region.replica.wait.for.primary.flush` (enabled by default) can be used to disable this feature if needed.
 
 
 
@@ -2435,7 +2446,7 @@ Instead you can change the number of region replicas per table to increase or de
     <name>hbase.region.replica.replication.enabled</name>
     <value>true</value>
     <description>
-      Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutatations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also      requires disabling the replication peer using shell or ReplicationAdmin java class. Replication to secondary region replicas works over standard inter-cluster replication. So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"· to true for this feature to work.
+      Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also      requires disabling the replication peer using shell or ReplicationAdmin java class. Replication to secondary region replicas works over standard inter-cluster replication. So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"· to true for this feature to work.
     </description>
 </property>
 <property>
@@ -2603,7 +2614,7 @@ hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}
 
 ==== Java
 
-You can set set the consistency for Gets and Scans and do requests as follows.
+You can set the consistency for Gets and Scans and do requests as follows.
 
 [source,java]
 ----

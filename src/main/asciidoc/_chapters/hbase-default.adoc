@@ -497,7 +497,8 @@ ZooKeeper session timeout in milliseconds. It is used in two different ways.
       First, this value is used in the ZK client that HBase uses to connect to the ensemble.
       It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See
       http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
-      For example, if a HBase region server connects to a ZK ensemble that's also managed by HBase, then the
+      For example, if an HBase region server connects to a ZK ensemble that's also managed
+      by HBase, then the
       session timeout will be the one specified by this configuration. But, a region server that connects
       to an ensemble managed with a different configuration will be subjected that ensemble's maxSessionTimeout. So,
       even though HBase might propose using 90 seconds, the ensemble can have a max timeout lower than this and
@@ -844,7 +845,7 @@ Time to sleep in between searches for work (in milliseconds).
 .Description
 
     How many time to retry attempting to write a version file
-    before just aborting. Each attempt is seperated by the
+    before just aborting. Each attempt is separated by the
     hbase.server.thread.wakefrequency milliseconds.
 +
 .Default
@@ -1578,7 +1579,7 @@ Set to true to skip the 'hbase.defaults.for.version' check.
     Setting this to true can be useful in contexts other than
     the other side of a maven generation; i.e. running in an
     ide.  You'll want to set this boolean to true to avoid
-    seeing the RuntimException complaint: "hbase-default.xml file
+    seeing the RuntimeException complaint: "hbase-default.xml file
     seems to be for and old version of HBase (\${hbase.version}), this
     version is X.X.X-SNAPSHOT"
 +
@@ -2139,7 +2140,7 @@ Fully qualified name of class implementing coordinated state manager.
 
       Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
       If this is enabled, a replication peer named "region_replica_replication" will be created
-      which will tail the logs and replicate the mutatations to region replicas for tables that
+      which will tail the logs and replicate the mutations to region replicas for tables that
       have region replication > 1. If this is enabled once, disabling this replication also
       requires disabling the replication peer using shell or ReplicationAdmin java class.
       Replication to secondary region replicas works over standard inter-cluster replication.

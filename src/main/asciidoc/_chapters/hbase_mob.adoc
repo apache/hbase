@@ -115,7 +115,7 @@ suit your environment, and restart or rolling restart the RegionServer.
     <value>1000</value>
     <description>
       Number of opened file handlers to cache.
-      A larger value will benefit reads by provinding more file handlers per mob
+      A larger value will benefit reads by providing more file handlers per mob
       file cache and would reduce frequent file opening and closing.
       However, if this is set too high, this could lead to a "too many opened file handers"
       The default value is 1000.
@@ -167,7 +167,7 @@ These commands are also available via `Admin.compactMob` and
 ==== MOB Sweeper
 
 HBase MOB a MapReduce job called the Sweeper tool for
-optimization. The Sweeper tool oalesces small MOB files or MOB files with many
+optimization. The Sweeper tool coalesces small MOB files or MOB files with many
 deletions or updates. The Sweeper tool is not required if you use native MOB compaction, which
 does not rely on MapReduce.
 

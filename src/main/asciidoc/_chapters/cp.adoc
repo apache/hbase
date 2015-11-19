@@ -101,7 +101,7 @@ link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/Cop
 
 . Load the Coprocessor: Currently there are two ways to load the Coprocessor. +
 Static:: Loading from configuration
-Dynammic:: Loading via 'hbase shell' or via Java code using HTableDescriptor class). +
+Dynamic:: Loading via 'hbase shell' or via Java code using HTableDescriptor class). +
 For more details see <<cp_loading,Loading Coprocessors>>.
 
 . Finally your client-side code to call the Coprocessor. This is the easiest step, as HBase
@@ -239,10 +239,10 @@ link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.h
 From version 0.96, implementing Endpoint Coprocessor is not straight forward. Now it is done with
 the help of Google's Protocol Buffer. For more details on Protocol Buffer, please see
 link:https://developers.google.com/protocol-buffers/docs/proto[Protocol Buffer Guide].
-Endpoints Coprocessor written in version 0.94 are not compatible with with version 0.96 or later
+Endpoints Coprocessor written in version 0.94 are not compatible with version 0.96 or later
 (for more details, see
 link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]),
-so if your are upgrading your HBase cluster from version 0.94 (or before) to 0.96 (or later) you
+so if you are upgrading your HBase cluster from version 0.94 (or before) to 0.96 (or later) you
 have to rewrite your Endpoint coprocessor.
 
 For example see <<cp_example,Examples>>
@@ -252,7 +252,7 @@ For example see <<cp_example,Examples>>
 == Loading Coprocessors
 
 _Loading  of Coprocessor refers to the process of making your custom Coprocessor implementation
-available to the the HBase, so that when a requests comes in or an event takes place the desired
+available to HBase, so that when a request comes in or an event takes place the desired
 functionality implemented in your custom code gets executed. +
 Coprocessor can be loaded broadly in two ways. One is static (loading through configuration files)
 and the other one is dynamic loading (using hbase shell or java code).
@@ -271,10 +271,10 @@ sub elements <name> and <value> respectively.
 ... 'hbase.coprocessor.region.classes' for RegionObservers and Endpoints.
 ... 'hbase.coprocessor.wal.classes' for WALObservers.
 ... 'hbase.coprocessor.master.classes' for MasterObservers.
-.. <value> must contain the fully qualified class name of your class implmenting the Coprocessor.
+.. <value> must contain the fully qualified class name of your class implementing the Coprocessor.
 +
 For example to load a Coprocessor (implemented in class SumEndPoint.java) you have to create
-following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directiory):
+following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directory):
 +
 [source,xml]
 ----
@@ -297,7 +297,7 @@ When calling out to registered observers, the framework executes their callbacks
 sorted order of their priority. +
 Ties are broken arbitrarily.
 
-. Put your code on classpth of HBase: There are various ways to do so, like adding jars on
+. Put your code on classpath of HBase: There are various ways to do so, like adding jars on
 classpath etc. One easy way to do this is to drop the jar (containing you code and all the
 dependencies) in 'lib' folder of the HBase installation.
 
@@ -455,7 +455,7 @@ hbase(main):003:0> alter 'users', METHOD => 'table_att_unset',
 hbase(main):004:0*   NAME => 'coprocessor$1'
 ----
 
-. Using HtableDescriptor: Simply reload the table definition _without_ setting the value of
+. Using HTableDescriptor: Simply reload the table definition _without_ setting the value of
 Coprocessor either in setValue() or addCoprocessor() methods. This will remove the Coprocessor
 attached to this table, if any. For example:
 +
@@ -624,12 +624,12 @@ hadoop fs -copyFromLocal coprocessor.jar coprocessor.jar
 [source,java]
 ----
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase verion 1.x.x or above.
+// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
 
-//Use below code HBase verion 0.98.xx or below.
+//Use below code HBase version 0.98.xx or below.
 //HConnection connection = HConnectionManager.createConnection(conf);
 //HTableInterface table = connection.getTable("users");
 
@@ -789,12 +789,12 @@ following code as shown below:
 ----
 
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase verion 1.x.x or above.
+// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
 
-//Use below code HBase verion 0.98.xx or below.
+//Use below code HBase version 0.98.xx or below.
 //HConnection connection = HConnectionManager.createConnection(conf);
 //HTableInterface table = connection.getTable("users");
 

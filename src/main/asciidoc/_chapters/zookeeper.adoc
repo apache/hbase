@@ -97,7 +97,7 @@ In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
   </configuration>
 ----
 
-.What verion of ZooKeeper should I use?
+.What version of ZooKeeper should I use?
 [CAUTION]
 ====
 The newer version, the better.

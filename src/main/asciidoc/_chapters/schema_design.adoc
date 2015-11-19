@@ -187,7 +187,7 @@ See this comic by IKai Lan on why monotonically increasing row keys are problema
 The pile-up on a single region brought on by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
 
 If you do need to upload time series data into HBase, you should study link:http://opentsdb.net/[OpenTSDB] as a successful example.
-It has a page describing the link: http://opentsdb.net/schema.html[schema] it uses in HBase.
+It has a page describing the link:http://opentsdb.net/schema.html[schema] it uses in HBase.
 The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.
 However, the difference is that the timestamp is not in the _lead_ position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.
 Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
@@ -339,8 +339,8 @@ As an example of why this is important, consider the example of using displayabl
 
 The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and possibly "hot") region problem.
 To understand why, refer to an link:http://www.asciitable.com[ASCII Table].
-'0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will _never appear in this keyspace_ because the only values are [0-9] and [a-f]. Thus, the middle regions regions will never be used.
-To make pre-spliting work with this example keyspace, a custom definition of splits (i.e., and not relying on the built-in split method) is required.
+'0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will _never appear in this keyspace_ because the only values are [0-9] and [a-f]. Thus, the middle regions will never be used.
+To make pre-splitting work with this example keyspace, a custom definition of splits (i.e., and not relying on the built-in split method) is required.
 
 Lesson #1: Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the regions are accessible in the keyspace.
 While this example demonstrated the problem with a hex-key keyspace, the same problem can happen with _any_ keyspace.
@@ -406,7 +406,7 @@ The minimum number of row versions parameter is used together with the time-to-l
 HBase supports a "bytes-in/bytes-out" interface via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
 Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
 
-There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask); search the mailling list for conversations on this topic.
+There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask); search the mailing list for conversations on this topic.
 All rows in HBase conform to the <<datamodel>>, and that includes versioning.
 Take that into consideration when making your design, as well as block size for the ColumnFamily.
 
@@ -514,7 +514,7 @@ ROW                                              COLUMN+CELL
 
 Notice how delete cells are let go.
 
-Now lets run the same test only with `KEEP_DELETED_CELLS` set on the table (you can do table or per-column-family):
+Now let's run the same test only with `KEEP_DELETED_CELLS` set on the table (you can do table or per-column-family):
 
 [source]
 ----
@@ -605,7 +605,7 @@ However, don't try a full-scan on a large table like this from an application (i
 [[secondary.indexes.periodic]]
 ===  Periodic-Update Secondary Index
 
-A secondary index could be created in an other table which is periodically updated via a MapReduce job.
+A secondary index could be created in another table which is periodically updated via a MapReduce job.
 The job could be executed intra-day, but depending on load-strategy it could still potentially be out of sync with the main data table.
 
 See <<mapreduce.example.readwrite,mapreduce.example.readwrite>> for more information.
@@ -753,7 +753,7 @@ In either the Hash or Numeric substitution approach, the raw values for hostname
 
 This effectively is the OpenTSDB approach.
 What OpenTSDB does is re-write data and pack rows into columns for certain time-periods.
-For a detailed explanation, see: link:http://opentsdb.net/schema.html, and
+For a detailed explanation, see: http://opentsdb.net/schema.html, and
 +++<a href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</a>+++
 from HBaseCon2012.
 
@@ -800,7 +800,7 @@ Assuming that the combination of customer number and sales order uniquely identi
 [customer number][order number]
 ----
 
-for a ORDER table.
+for an ORDER table.
 However, there are more design decisions to make: are the _raw_ values the best choices for rowkeys?
 
 The same design questions in the Log Data use-case confront us here.
@@ -931,9 +931,9 @@ For example, the ORDER table's rowkey was described above: <<schema.casestudies.
 
 There are many options here: JSON, XML, Java Serialization, Avro, Hadoop Writables, etc.
 All of them are variants of the same approach: encode the object graph to a byte-array.
-Care should be taken with this approach to ensure backward compatibilty in case the object model changes such that older persisted structures can still be read back out of HBase.
+Care should be taken with this approach to ensure backward compatibility in case the object model changes such that older persisted structures can still be read back out of HBase.
 
-Pros are being able to manage complex object graphs with minimal I/O (e.g., a single HBase Get per Order in this example), but the cons include the aforementioned warning about backward compatiblity of serialization, language dependencies of serialization (e.g., Java Serialization only works with Java clients), the fact that you have to deserialize the entire object to get any piece of information inside the BLOB, and the difficulty in getting frameworks like Hive to work with custom objects like this.
+Pros are being able to manage complex object graphs with minimal I/O (e.g., a single HBase Get per Order in this example), but the cons include the aforementioned warning about backward compatibility of serialization, language dependencies of serialization (e.g., Java Serialization only works with Java clients), the fact that you have to deserialize the entire object to get any piece of information inside the BLOB, and the difficulty in getting frameworks like Hive to work with custom objects like this.
 
 [[schema.smackdown]]
 === Case Study - "Tall/Wide/Middle" Schema Design Smackdown
@@ -945,7 +945,7 @@ These are general guidelines and not laws - each application must consider its o
 ==== Rows vs. Versions
 
 A common question is whether one should prefer rows or HBase's built-in-versioning.
-The context is typically where there are "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 1 max versions). The rows-approach would require storing a timestamp in some portion of the rowkey so that they would not overwite with each successive update.
+The context is typically where there are "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 1 max versions). The rows-approach would require storing a timestamp in some portion of the rowkey so that they would not overwrite with each successive update.
 
 Preference: Rows (generally speaking).
 
@@ -1044,14 +1044,14 @@ The tl;dr version is that you should probably go with one row per user+value, an
 
 Your two options mirror a common question people have when designing HBase schemas: should I go "tall" or "wide"? Your first schema is "tall": each row represents one value for one user, and so there are many rows in the table for each user; the row key is user + valueid, and there would be (presumably) a single column qualifier that means "the value". This is great if you want to scan over rows in sorted order by row key (thus my question above, about whether these ids are sorted correctly). You can start a scan at any user+valueid, read the next 30, and be done.
 What you're giving up is the ability to have transactional guarantees around all the rows for one user, but it doesn't sound like you need that.
-Doing it this way is generally recommended (see here link:http://hbase.apache.org/book.html#schema.smackdown).
+Doing it this way is generally recommended (see here http://hbase.apache.org/book.html#schema.smackdown).
 
 Your second option is "wide": you store a bunch of values in one row, using different qualifiers (where the qualifier is the valueid). The simple way to do that would be to just store ALL values for one user in a single row.
 I'm guessing you jumped to the "paginated" version because you're assuming that storing millions of columns in a single row would be bad for performance, which may or may not be true; as long as you're not trying to do too much in a single request, or do things like scanning over and returning all of the cells in the row, it shouldn't be fundamentally worse.
 The client has methods that allow you to get specific slices of columns.
 
 Note that neither case fundamentally uses more disk space than the other; you're just "shifting" part of the identifying information for a value either to the left (into the row key, in option one) or to the right (into the column qualifiers in option 2). Under the covers, every key/value still stores the whole row key, and column family name.
-(If this is a bit confusing, take an hour and watch Lars George's excellent video about understanding HBase schema design: link:http://www.youtube.com/watch?v=_HLoH_PgrLk).
+(If this is a bit confusing, take an hour and watch Lars George's excellent video about understanding HBase schema design: http://www.youtube.com/watch?v=_HLoH_PgrLk).
 
 A manually paginated version has lots more complexities, as you note, like having to keep track of how many things are in each page, re-shuffling if new values are inserted, etc.
 That seems significantly more complex.

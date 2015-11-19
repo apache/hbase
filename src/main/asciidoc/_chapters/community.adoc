@@ -56,7 +56,7 @@ If owners are absent -- busy or otherwise -- two +1s by non-owners will suffice.
 
 Patches that span components need at least two +1s before they can be committed, preferably +1s by owners of components touched by the x-component patch (TODO: This needs tightening up but I think fine for first pass).
 
-Any -1 on a patch by anyone vetos a patch; it cannot be committed until the justification for the -1 is addressed.
+Any -1 on a patch by anyone vetoes a patch; it cannot be committed until the justification for the -1 is addressed.
 
 [[hbase.fix.version.in.jira]]
 .How to set fix version in JIRA on issue resolve

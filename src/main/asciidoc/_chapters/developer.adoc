@@ -90,7 +90,7 @@ We used to be on SVN.
 We migrated.
 See link:https://issues.apache.org/jira/browse/INFRA-7768[Migrate Apache HBase SVN Repos to Git].
 See link:http://hbase.apache.org/source-repository.html[Source Code
-                Management] page for contributor and committer links or seach for HBase on the link:http://git.apache.org/[Apache Git] page.
+                Management] page for contributor and committer links or search for HBase on the link:http://git.apache.org/[Apache Git] page.
 
 == IDEs
 
@@ -133,7 +133,7 @@ If you cloned the project via git, download and install the Git plugin (EGit). A
 ==== HBase Project Setup in Eclipse using `m2eclipse`
 
 The easiest way is to use the +m2eclipse+ plugin for Eclipse.
-Eclipse Indigo or newer includes +m2eclipse+, or you can download it from link:http://www.eclipse.org/m2e//. It provides Maven integration for Eclipse, and even lets you use the direct Maven commands from within Eclipse to compile and test your project.
+Eclipse Indigo or newer includes +m2eclipse+, or you can download it from http://www.eclipse.org/m2e/. It provides Maven integration for Eclipse, and even lets you use the direct Maven commands from within Eclipse to compile and test your project.
 
 To import the project, click  and select the HBase root directory. `m2eclipse`                    locates all the hbase modules for you.
 
@@ -146,7 +146,7 @@ If you install +m2eclipse+ and import HBase in your workspace, do the following 
 ----
 Failed to execute goal
 org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase:
-'An Ant BuildException has occured: Replace: source file .../target/classes/hbase-default.xml
+'An Ant BuildException has occurred: Replace: source file .../target/classes/hbase-default.xml
 doesn't exist
 ----
 +
@@ -213,7 +213,7 @@ For additional information on setting up Eclipse for HBase development on Window
 
 === IntelliJ IDEA
 
-You can set up IntelliJ IDEA for similar functinoality as Eclipse.
+You can set up IntelliJ IDEA for similar functionality as Eclipse.
 Follow these steps.
 
 . Select
@@ -227,7 +227,7 @@ Using the Eclipse Code Formatter plugin for IntelliJ IDEA, you can import the HB
 
 === Other IDEs
 
-It would be userful to mirror the <<eclipse,eclipse>> set-up instructions for other IDEs.
+It would be useful to mirror the <<eclipse,eclipse>> set-up instructions for other IDEs.
 If you would like to assist, please have a look at link:https://issues.apache.org/jira/browse/HBASE-11704[HBASE-11704].
 
 [[build]]
@@ -331,13 +331,13 @@ Tests may not all pass so you may need to pass `-DskipTests` unless you are incl
 ====
 You will see ERRORs like the above title if you pass the _default_ profile; e.g.
 if you pass +hadoop.profile=1.1+ when building 0.96 or +hadoop.profile=2.0+ when building hadoop 0.98; just drop the hadoop.profile stipulation in this case to get your build to run again.
-This seems to be a maven pecularity that is probably fixable but we've not spent the time trying to figure it.
+This seems to be a maven peculiarity that is probably fixable but we've not spent the time trying to figure it.
 ====
 
 Similarly, for 3.0, you would just replace the profile value.
-Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
+Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artifact - you will need to build and install your own in your local maven repository if you want to run against this profile.
 
-In earilier versions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
+In earlier versions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
 If you are running, for example HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:
 
 [source,bourne]
@@ -415,7 +415,7 @@ mvn -DskipTests package assembly:single deploy
 ==== Build Gotchas
 
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
-Its not an error.
+It's not an error.
 It is link:http://jira.codehaus.org/browse/MSITE-286[officially
                         ugly] though.
 
@@ -504,7 +504,7 @@ For building earlier versions, the process is different.
 See this section under the respective release documentation folders.
 
 .Point Releases
-If you are making a point release (for example to quickly address a critical incompatability or security problem) off of a release branch instead of a development branch, the tagging instructions are slightly different.
+If you are making a point release (for example to quickly address a critical incompatibility or security problem) off of a release branch instead of a development branch, the tagging instructions are slightly different.
 I'll prefix those special steps with _Point Release Only_.
 
 .Before You Begin
@@ -516,7 +516,7 @@ You should also have tried recent branch tips out on a cluster under load, perha
 [NOTE]
 ====
 At this point you should tag the previous release branch (ex: 0.96.1) with the new point release tag (e.g.
-0.96.1.1 tag). Any commits with changes for the point release should be appled to the new tag.
+0.96.1.1 tag). Any commits with changes for the point release should be applied to the new tag.
 ====
 
 The Hadoop link:http://wiki.apache.org/hadoop/HowToRelease[How To
@@ -584,8 +584,8 @@ $ mvn clean install -DskipTests assembly:single -Dassembly.file=hbase-assembly/s
 Extract the tarball and make sure it looks good.
 A good test for the src tarball being 'complete' is to see if you can build new tarballs from this source bundle.
 If the source tarball is good, save it off to a _version directory_, a directory somewhere where you are collecting all of the tarballs you will publish as part of the release candidate.
-For example if you were building a hbase-0.96.0 release candidate, you might call the directory _hbase-0.96.0RC0_.
-Later you will publish this directory as our release candidate up on http://people.apache.org/~YOU.
+For example if you were building an hbase-0.96.0 release candidate, you might call the directory _hbase-0.96.0RC0_.
+Later you will publish this directory as our release candidate up on pass:[http://people.apache.org/~YOU].
 
 . Build the binary tarball.
 +
@@ -1146,7 +1146,7 @@ However, maven will do this for us; just use: +mvn
 
 This is very similar to how you specify running a subset of unit tests (see above), but use the property `it.test` instead of `test`.
 To just run `IntegrationTestClassXYZ.java`, use: +mvn
-                            failsafe:integration-test -Dit.test=IntegrationTestClassXYZ+                        The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java: +mvn failsafe:integration-test -Dit.test=*ClassX*+ This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like: +mvn
+                            failsafe:integration-test -Dit.test=IntegrationTestClassXYZ+                        The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java: +mvn failsafe:integration-test -Dit.test=*ClassX*+ This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like: +mvn
                             failsafe:integration-test -Dit.test=*ClassX*, *ClassY+
 
 [[maven.build.commands.integration.tests.distributed]]
@@ -1183,8 +1183,9 @@ For other deployment options, a ClusterManager can be implemented and plugged in
 [[maven.build.commands.integration.tests.destructive]]
 ==== Destructive integration / system tests (ChaosMonkey)
 
-HBase 0.96 introduced a tool named `ChaosMonkey`, modeled after link:http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html
-[same-named tool by Netflix's Chaos Monkey tool]. ChaosMonkey simulates real-world
+HBase 0.96 introduced a tool named `ChaosMonkey`, modeled after
+link:http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html[same-named tool by Netflix's Chaos Monkey tool].
+ChaosMonkey simulates real-world
 faults in a running cluster by killing or disconnecting random servers, or injecting
 other failures into the environment. You can use ChaosMonkey as a stand-alone tool
 to run a policy while other tests are running. In some environments, ChaosMonkey is
@@ -1262,8 +1263,8 @@ HBase ships with several ChaosMonkey policies, available in the
 [[chaos.monkey.properties]]
 ==== Configuring Individual ChaosMonkey Actions
 
-Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348
-[HBASE-11348]), ChaosMonkey integration tests can be configured per test run.
+Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348[HBASE-11348]),
+ChaosMonkey integration tests can be configured per test run.
 Create a Java properties file in the HBase classpath and pass it to ChaosMonkey using
 the `-monkeyProps` configuration flag. Configurable properties, along with their default
 values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
@@ -1604,7 +1605,7 @@ All are subject to challenge of course but until then, please hold to the rules 
 
 ZooKeeper state should transient (treat it like memory). If ZooKeeper state is deleted, hbase should be able to recover and essentially be in the same state.
 
-* .ExceptionsThere are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
+* .Exceptions: There are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
 * Replication data is currently stored only in ZooKeeper.
   Deleting ZooKeeper data related to replication may cause replication to be disabled.
   Do not delete the replication tree, _/hbase/replication/_.
@@ -1866,9 +1867,9 @@ If the push fails for any reason, fix the problem or ask for help.
 Do not do a +git push --force+.
 +
 Before you can commit a patch, you need to determine how the patch was created.
-The instructions and preferences around the way to create patches have changed, and there will be a transition periond.
+The instructions and preferences around the way to create patches have changed, and there will be a transition period.
 +
-* .Determine How a Patch Was CreatedIf the first few lines of the patch look like the headers of an email, with a From, Date, and Subject, it was created using +git format-patch+.
+* .Determine How a Patch Was Created: If the first few lines of the patch look like the headers of an email, with a From, Date, and Subject, it was created using +git format-patch+.
   This is the preference, because you can reuse the submitter's commit message.
   If the commit message is not appropriate, you can still use the commit, then run the command +git
   rebase -i origin/master+, and squash and reword as appropriate.
@@ -1971,7 +1972,7 @@ When the amending author is different from the original committer, add notice of
                                 from master to branch].
 
 [[committer.tests]]
-====== Committers are responsible for making sure commits do not break thebuild or tests
+====== Committers are responsible for making sure commits do not break the build or tests
 
 If a committer commits a patch, it is their responsibility to make sure it passes the test suite.
 It is helpful if contributors keep an eye out that their patch does not break the hbase build and/or tests, but ultimately, a contributor cannot be expected to be aware of all the particular vagaries and interconnections that occur in a project like HBase.

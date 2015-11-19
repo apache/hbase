@@ -42,7 +42,7 @@ $ ./bin/hbase hbck
 ----
 
 At the end of the commands output it prints OK or tells you the number of INCONSISTENCIES present.
-You may also want to run run hbck a few times because some inconsistencies can be transient (e.g.
+You may also want to run hbck a few times because some inconsistencies can be transient (e.g.
 cluster is starting up or a region is splitting). Operationally you may want to run hbck regularly and setup alert (e.g.
 via nagios) if it repeatedly reports inconsistencies . A run of hbck will report a list of inconsistencies along with a brief description of the regions and tables affected.
 The using the `-details` option will report more details including a representative listing of all the splits present in all the tables.
@@ -177,7 +177,7 @@ $ ./bin/hbase hbck -fixMetaOnly -fixAssignments
 ==== Special cases: HBase version file is missing
 
 HBase's data on the file system requires a version file in order to start.
-If this flie is missing, you can use the `-fixVersionFile` option to fabricating a new HBase version file.
+If this file is missing, you can use the `-fixVersionFile` option to fabricating a new HBase version file.
 This assumes that the version of hbck you are running is the appropriate version for the HBase cluster.
 
 ==== Special case: Root and META are corrupt.

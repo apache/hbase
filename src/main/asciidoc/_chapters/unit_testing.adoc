@@ -96,13 +96,13 @@ public class TestMyHbaseDAOData {
 
 These tests ensure that your `createPut` method creates, populates, and returns a `Put` object with expected values.
 Of course, JUnit can do much more than this.
-For an introduction to JUnit, see link:https://github.com/junit-team/junit/wiki/Getting-started.
+For an introduction to JUnit, see https://github.com/junit-team/junit/wiki/Getting-started.
 
 == Mockito
 
 Mockito is a mocking framework.
 It goes further than JUnit by allowing you to test the interactions between objects without having to replicate the entire environment.
-You can read more about Mockito at its project site, link:https://code.google.com/p/mockito/.
+You can read more about Mockito at its project site, https://code.google.com/p/mockito/.
 
 You can use Mockito to do unit testing on smaller units.
 For instance, you can mock a `org.apache.hadoop.hbase.Server` instance or a `org.apache.hadoop.hbase.master.MasterServices` interface reference rather than a full-blown `org.apache.hadoop.hbase.master.HMaster`.
@@ -182,7 +182,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
    public static final byte[] CF = "CF".getBytes();
    public static final byte[] QUALIFIER = "CQ-1".getBytes();
    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-     //bunch of processing to extract data to be inserted, in our case, lets say we are simply
+     //bunch of processing to extract data to be inserted, in our case, let's say we are simply
      //appending all the records we receive from the mapper for this particular
      //key and insert one record into HBase
      StringBuffer data = new StringBuffer();
@@ -259,7 +259,7 @@ Your MRUnit test verifies that the output is as expected, the Put that is insert
 
 MRUnit includes a MapperDriver to test mapping jobs, and you can use MRUnit to test other operations, including reading from HBase, processing data, or writing to HDFS,
 
-== Integration Testing with a HBase Mini-Cluster
+== Integration Testing with an HBase Mini-Cluster
 
 HBase ships with HBaseTestingUtility, which makes it easy to write integration tests using a [firstterm]_mini-cluster_.
 The first step is to add some dependencies to your Maven POM file.

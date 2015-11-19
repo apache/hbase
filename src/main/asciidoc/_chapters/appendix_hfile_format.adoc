@@ -252,7 +252,8 @@ However, the version is always stored as the last four-byte integer in the file.
 |===
 | Version 1 | Version 2
 | |File info offset (long)
-| Data index offset (long)| loadOnOpenOffset (long) /The offset of the sectionthat we need toload when opening the file./
+| Data index offset (long)
+| loadOnOpenOffset (long) /The offset of the section that we need to load when opening the file./
 | | Number of data index entries (int)
 | metaIndexOffset (long) /This field is not being used by the version 1 reader, so we removed it from version 2./ | uncompressedDataIndexSize (long) /The total uncompressed size of the whole data block index, including root-level, intermediate-level, and leaf-level blocks./
 | | Number of meta index entries (int)
@@ -260,7 +261,7 @@ However, the version is always stored as the last four-byte integer in the file.
 | numEntries (int) | numEntries (long)
 | Compression codec: 0 = LZO, 1 = GZ, 2 = NONE (int) | Compression codec: 0 = LZO, 1 = GZ, 2 = NONE (int)
 | | The number of levels in the data block index (int)
-| | firstDataBlockOffset (long) /The offset of the first first data block. Used when scanning./
+| | firstDataBlockOffset (long) /The offset of the first data block. Used when scanning./
 | | lastDataBlockEnd (long) /The offset of the first byte after the last key/value data block. We don't need to go beyond this offset when scanning./
 | Version: 1 (int) | Version: 2 (int)
 |===

@@ -77,7 +77,7 @@ of the <<security>> chapter.
 
 === Using REST Endpoints
 
-The following examples use the placeholder server `http://example.com:8000`, and
+The following examples use the placeholder server pass:[http://example.com:8000], and
 the following commands can all be run using `curl` or `wget` commands. You can request
 plain text (the default), XML , or JSON output by adding no header for plain text,
 or the header "Accept: text/xml" for XML or "Accept: application/json" for JSON.

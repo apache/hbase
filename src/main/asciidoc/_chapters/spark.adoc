@@ -36,9 +36,9 @@ more information on the Spark project and subprojects. This document will focus
 on 4 main interaction points between Spark and HBase. Those interaction points are:
 
 Basic Spark::
-  The ability to have a HBase Connection at any point in your Spark DAG.
+  The ability to have an HBase Connection at any point in your Spark DAG.
 Spark Streaming::
-  The ability to have a HBase Connection at any point in your Spark Streaming
+  The ability to have an HBase Connection at any point in your Spark Streaming
   application.
 Spark Bulk Load::
   The ability to write directly to HBase HFiles for bulk insertion into HBase
@@ -205,7 +205,7 @@ There are three inputs to the `hbaseBulkPut` function.
 . The hbaseContext that carries the configuration boardcast information link us
 to the HBase Connections in the executors
 . The table name of the table we are putting data into
-. A function that will convert a record in the DStream into a HBase Put object.
+. A function that will convert a record in the DStream into an HBase Put object.
 ====
 
 == Bulk Load
@@ -350,7 +350,7 @@ FROM hbaseTmp
 WHERE (KEY_FIELD = 'get1' or KEY_FIELD = 'get2' or KEY_FIELD = 'get3')
 ----
 
-Now lets look at an example where we will end up doing two scans on HBase.
+Now let's look at an example where we will end up doing two scans on HBase.
 
 [source, sql]
 ----

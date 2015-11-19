@@ -151,7 +151,7 @@ If you see the following in your HBase logs, you know that HBase was unable to l
 ----
 If the libraries loaded successfully, the WARN message does not show.
 
-Lets presume your Hadoop shipped with a native library that suits the platform you are running HBase on.
+Let's presume your Hadoop shipped with a native library that suits the platform you are running HBase on.
 To check if the Hadoop native library is available to HBase, run the following tool (available in  Hadoop 2.1 and greater):
 [source]
 ----
@@ -170,7 +170,7 @@ Above shows that the native hadoop library is not available in HBase context.
 To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase stalls are adjacent in the filesystem.
 You could also point at their location by setting the `LD_LIBRARY_PATH` environment variable.
 
-Where the JVM looks to find native librarys is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM`      is the label for the platform your HBase is installed on.
+Where the JVM looks to find native libraries is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM`      is the label for the platform your HBase is installed on.
 On a local linux machine, it seems to be the concatenation of the java properties `os.name` and `os.arch` followed by whether 32 or 64 bit.
 HBase on startup prints out all of the java system properties so find the os.name and os.arch in the log.
 For example:
