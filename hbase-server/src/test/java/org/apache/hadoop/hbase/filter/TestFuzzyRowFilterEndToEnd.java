@@ -109,6 +109,57 @@ public class TestFuzzyRowFilterEndToEnd {
     // Nothing to do.
   }
 
+  @Test  
+  public void testHBASE14782() throws IOException
+  {
+    String cf = "f";
+    String cq = "q";
+    String table = "HBASE14872";
+
+    HTable ht =
+        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+    // Load data
+    String[] rows = new String[]{
+        "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
+        "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", 
+        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
+        "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
+        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", 
+        "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", 
+    };
+    
+    String badRow = "\\x9C\\x00\\x03\\xE9e\\xBB{X\\x1Fwts\\x1F\\x15vRX";
+    
+    for(int i=0; i < rows.length; i++){
+      Put p = new Put(Bytes.toBytesBinary(rows[i]));
+      p.add(cf.getBytes(), cq.getBytes(), "value".getBytes());
+      ht.put(p);            
+    }
+    
+    Put p = new Put(Bytes.toBytesBinary(badRow));
+    p.add(cf.getBytes(), cq.getBytes(), "value".getBytes());
+    ht.put(p);            
+
+    TEST_UTIL.flush();
+
+    List<Pair<byte[], byte[]>> data =  new ArrayList<Pair<byte[], byte[]>>();
+    byte[] fuzzyKey = Bytes.toBytesBinary("\\x00\\x00\\x044");
+    byte[] mask = new byte[] { 1,0,0,0};
+    data.add(new Pair<byte[], byte[]>(fuzzyKey, mask));
+    FuzzyRowFilter filter = new FuzzyRowFilter(data);
+    
+    Scan scan = new Scan();
+    scan.setFilter(filter);
+    
+    ResultScanner scanner = ht.getScanner(scan);
+    int total = 0;
+    while(scanner.next() != null){
+      total++;
+    }    
+    assertEquals(rows.length, total);
+    TEST_UTIL.deleteTable(TableName.valueOf(table));
+  }
+  
   @Test
   public void testEndToEnd() throws Exception {
     String cf = "f";

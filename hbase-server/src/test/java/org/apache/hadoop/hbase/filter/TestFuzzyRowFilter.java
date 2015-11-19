@@ -229,7 +229,7 @@ public class TestFuzzyRowFilter {
             new byte[]{0, 1, 2}, // fuzzy row
             new byte[]{0, -1, -1}, // mask
             new byte[]{1, 2, 1, 0, 1}, // current
-            new byte[]{2, 1, 2, 0, 0}); // expected next
+            new byte[]{2, 1, 2}); // expected next
 
     assertNext(false,
             new byte[]{0, 1, 2}, // fuzzy row
@@ -241,13 +241,13 @@ public class TestFuzzyRowFilter {
             new byte[]{0, 1, 0, 2, 0}, // fuzzy row
             new byte[]{0, -1, 0, -1, 0}, // mask
             new byte[]{1, 0, 2, 0, 1}, // current
-            new byte[]{1, 1, 0, 2, 0}); // expected next
+            new byte[]{1, 1, 0, 2}); // expected next
 
     assertNext(false,
             new byte[]{1, 0, 1},
             new byte[]{-1, 0, -1},
             new byte[]{1, (byte) 128, 2, 0, 1},
-            new byte[]{1, (byte) 129, 1, 0, 0});
+            new byte[]{1, (byte) 129, 1});
 
     assertNext(false,
             new byte[]{0, 1, 0, 1},
@@ -313,7 +313,7 @@ public class TestFuzzyRowFilter {
             new byte[]{1, 1, 0, 0},
             new byte[]{-1, -1, 0, 0},
             new byte[]{0, 1, 3, 2},
-            new byte[]{1, 1, 0, 0});
+            new byte[]{1, 1});
 
     // No next for this one
     Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(
