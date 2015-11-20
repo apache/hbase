@@ -114,6 +114,7 @@ public class MetricMutableHistogram extends MetricMutable implements MetricHisto
 
       metricsRecordBuilder.addGauge(name + MEDIAN_METRIC_NAME, "", s.getMedian());
       metricsRecordBuilder.addGauge(name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, "", s.get75thPercentile());
+      metricsRecordBuilder.addGauge(name + NINETIETH_PERCENTILE_METRIC_NAME, "", s.getValue(0.90));
       metricsRecordBuilder.addGauge(name + NINETY_FIFTH_PERCENTILE_METRIC_NAME, "", s.get95thPercentile());
       metricsRecordBuilder.addGauge(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, "", s.get99thPercentile());
     }
