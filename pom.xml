@@ -849,6 +849,10 @@
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
               <exclude>**/gen-*/**</exclude>
+              <!-- native build leftovers -->
+              <exclude>**/buck-out/**</exclude>
+              <exclude>**/.buckd/**</exclude>
+              <exclude>hbase-native-client/third-party/**</exclude>
               <!-- No material contents -->
               <exclude>conf/regionservers</exclude>
               <exclude>**/*.avpr</exclude>
