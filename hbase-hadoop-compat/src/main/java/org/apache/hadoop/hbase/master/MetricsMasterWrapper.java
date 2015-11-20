@@ -107,4 +107,9 @@ public interface MetricsMasterWrapper {
    */
   int getNumDeadRegionServers();
 
+  /**
+   * Get the number of master WAL files.
+   */
+  long getNumWALFiles();
+
 }

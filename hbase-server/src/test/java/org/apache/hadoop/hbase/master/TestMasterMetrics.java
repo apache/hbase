@@ -128,4 +128,10 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
   }
+
+  @Test
+  public void testDefaultMasterProcMetrics() throws Exception {
+    MetricsMasterProcSource masterSource = master.getMasterMetrics().getMetricsProcSource();
+    metricsHelper.assertGauge("numMasterWALs", master.getNumWALFiles(), masterSource);
+  }
 }

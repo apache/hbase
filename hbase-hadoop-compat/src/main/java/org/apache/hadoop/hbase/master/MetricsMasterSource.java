@@ -58,7 +58,6 @@ public interface MetricsMasterSource extends BaseSource {
   String CLUSTER_ID_NAME = "clusterId";
   String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
 
-
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";

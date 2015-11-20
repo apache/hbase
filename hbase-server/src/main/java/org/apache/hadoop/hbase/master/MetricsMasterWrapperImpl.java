@@ -118,4 +118,10 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   public boolean getIsActiveMaster() {
     return master.isActiveMaster();
   }
+
+  @Override
+  public long getNumWALFiles() {
+    return master.getNumWALFiles();
+  }
+
 }

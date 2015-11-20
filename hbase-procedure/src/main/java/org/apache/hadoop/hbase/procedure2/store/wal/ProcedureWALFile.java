@@ -121,7 +121,7 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
   }
 
   public long getSize() {
-    return logStatus.getLen();
+    return logStatus != null ? logStatus.getLen() : 0;
   }
 
   public void removeFile() throws IOException {
