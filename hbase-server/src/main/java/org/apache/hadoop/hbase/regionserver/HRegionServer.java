@@ -4287,16 +4287,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       final ReplicateWALEntryRequest request)
   throws ServiceException {
     try {
+      checkOpen();
       if (replicationSinkHandler != null) {
-        checkOpen();
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         CellScanner cellScanner = ((PayloadCarryingRpcController)controller).cellScanner();
         rsHost.preReplicateLogEntries(entries, cellScanner);
         replicationSinkHandler.replicateLogEntries(entries, cellScanner);
         rsHost.postReplicateLogEntries(entries, cellScanner);
+        return ReplicateWALEntryResponse.newBuilder().build();
+      } else {
+        throw new ServiceException("Replication services are not initialized yet");
       }
-      return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
