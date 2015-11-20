@@ -19,11 +19,10 @@ under the License.
 
 # hbase-native-client
 
-Native client for HBase 0.96
+Native client for HBase
 
-This is a C  library that implements a
-HBase client.  It's thread safe and libEv
-based.
+This is a C/C++  library that implements a
+HBase client.
 
 
 ## Design Philosphy
@@ -51,3 +50,11 @@ the hbase_ prefix is assumed to be implementation private.
 All C apis and typedefs will be prefixed with hb_.
 
 All typedefs end with _t.
+
+
+## Docker
+
+The build environment is docker. This should keep a consistent
+build environment for everyone. Buck the build system works
+best with mmap'd files. On OSX this means that vmwarefusion
+works the best. However it should work with just the defaults.

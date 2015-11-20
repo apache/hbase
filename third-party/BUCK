@@ -1,0 +1,105 @@
+##
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+def add_system_libs(names = []):
+        rules = []
+        for name in names:
+                prebuilt_cxx_library(
+                        name = name,
+                        lib_name = name,
+                        lib_dir = "/usr/lib/x86_64-linux-gnu"
+                )
+                rules.append(":" + name)
+
+        return rules
+
+system_libs = [
+        "double-conversion",
+        "glog",
+        "gflags",
+        "unwind",
+        "lzma",
+        "boost_regex",
+]
+tp_dep_rules = add_system_libs(system_libs)
+prebuilt_cxx_library(
+        name = "folly",
+        lib_name = "folly",
+        lib_dir = "/usr/local/lib",
+        deps = tp_dep_rules,
+        exported_linker_flags = [
+                "-pthread",
+                "-lstdc++",
+        ],
+        visibility = [
+                'PUBLIC',
+        ]
+)
+prebuilt_cxx_library(
+        name = "follybenchmark",
+        lib_name = "follybenchmark",
+        lib_dir = "/usr/local/lib",
+        deps = tp_dep_rules + [":folly"],
+        exported_linker_flags = [
+                "-pthread",
+                "-lstdc++",
+        ],
+        visibility = [
+                'PUBLIC',
+        ]
+)
+prebuilt_cxx_library(
+        name = "wangle",
+        lib_name = "wangle",
+        lib_dir = "/usr/local/lib",
+        deps = tp_dep_rules +  [":folly"],
+        exported_linker_flags = [
+                "-pthread",
+                "-lstdc++",
+        ],
+        visibility = [
+                'PUBLIC',
+        ]
+)
+cxx_library(
+  name = 'google-test',
+  srcs = [
+    'googletest/googletest/src/gtest-all.cc',
+    'googletest/googlemock/src/gmock-all.cc',
+    'googletest/googlemock/src/gmock_main.cc',
+  ], 
+  header_namespace = '',
+  exported_headers = subdir_glob([
+    ('googletest/googletest/include', '**/*.h'),
+    ('googletest/googlemock/include', '**/*.h'),
+  ]),
+  headers = subdir_glob([
+    ('googletest/googletest', 'src/*.h'),
+    ('googletest/googletest', 'src/*.cc'),
+    ('googletest/googlemock', 'src/*.h'),
+    ('googletest/googlemock', 'src/*.cc'),
+  ]),
+  exported_linker_flags = [
+    "-pthread",
+    "-lstdc++",
+  ],
+  visibility = [
+    'PUBLIC',
+  ],
+  deps = [
+  ]
+)
