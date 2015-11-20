@@ -200,9 +200,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       byte[] row = hri.getStartKey();
       for (int i = 0; i < 100; i++) {
         if (row.length > 0) {
-          Put put = new Put(row);
-          put.addColumn(famName, row, row);
-          region.put(put);
+          doPut(row);
           totEdits++;
         }
       }
