@@ -60,6 +60,7 @@ public class DynamicMetricsRegistry {
       "_max",
       "_median",
       "_75th_percentile",
+      "_90th_percentile",
       "_95th_percentile",
       "_99th_percentile"};
 
