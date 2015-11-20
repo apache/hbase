@@ -2186,6 +2186,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return masterActiveTime;
   }
 
+  public int getNumWALFiles() {
+    return procedureStore != null ? procedureStore.getActiveLogs().size() : 0;
+  }
+
   public int getRegionServerInfoPort(final ServerName sn) {
     RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
     if (info == null || info.getInfoPort() == 0) {

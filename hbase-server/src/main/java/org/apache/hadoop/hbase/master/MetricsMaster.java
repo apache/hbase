@@ -23,9 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.master.MetricsMasterSource;
-import org.apache.hadoop.hbase.master.MetricsMasterSourceFactory;
-import org.apache.hadoop.hbase.master.MetricsMasterWrapper;
 
 /**
  * This class is for maintaining the various master statistics
@@ -39,14 +36,21 @@ import org.apache.hadoop.hbase.master.MetricsMasterWrapper;
 public class MetricsMaster {
   private static final Log LOG = LogFactory.getLog(MetricsMaster.class);
   private MetricsMasterSource masterSource;
+  private MetricsMasterProcSource masterProcSource;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
+    masterProcSource =
+            CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
   }
 
   // for unit-test usage
   public MetricsMasterSource getMetricsSource() {
     return masterSource;
+  }
+
+  public MetricsMasterProcSource getMetricsProcSource() {
+    return masterProcSource;
   }
 
   /**

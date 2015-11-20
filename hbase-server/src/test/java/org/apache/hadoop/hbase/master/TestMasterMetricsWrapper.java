@@ -73,5 +73,6 @@ public class TestMasterMetricsWrapper {
     }
     assertEquals(4, info.getNumRegionServers());
     assertEquals(1, info.getNumDeadRegionServers());
+    assertEquals(1, info.getNumWALFiles());
   }
 }
