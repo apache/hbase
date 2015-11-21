@@ -659,19 +659,17 @@ checkCheckstyleErrors() {
     mv target/checkstyle-result.xml $PATCH_DIR/patchCheckstyle.xml
     mv target/site/checkstyle-aggregate.html $PATCH_DIR
     mv target/site/checkstyle.css $PATCH_DIR
-    trunkCheckstyleErrors=`$GREP '<error' $PATCH_DIR/trunkCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
-    patchCheckstyleErrors=`$GREP '<error' $PATCH_DIR/patchCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
-    if [[ $patchCheckstyleErrors -gt $trunkCheckstyleErrors ]] ; then
+    $BASEDIR/dev-support/checkstyle_report.py $PATCH_DIR/trunkCheckstyle.xml $PATCH_DIR/patchCheckstyle.xml
+    if [[ $? -eq 1 ]] ; then
                 JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
 
                 $JIRA_COMMENT_FOOTER"
 
                 JIRA_COMMENT="$JIRA_COMMENT
 
-                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the master's current $trunkCheckstyleErrors errors)."
+                {color:red}-1 checkstyle{color}.  The applied patch generated new checkstyle errors. Check build console for list of new errors."
         return 1
     fi
-    echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
   fi
   JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
 
@@ -679,7 +677,7 @@ checkCheckstyleErrors() {
 
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 checkstyle{color}.  The applied patch does not increase the total number of checkstyle errors"
+    {color:green}+1 checkstyle{color}. The applied patch does not generate new checkstyle errors."
   return 0
 
 }

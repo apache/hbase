@@ -67,10 +67,7 @@
     http://checkstyle.sourceforge.net/config_imports.html -->
     <module name="AvoidStarImport"/>
     <module name="ImportOrder">
-      <property name="groups" value="*,javax,java"/>
       <property name="ordered" value="true"/>
-      <property name="separated" value="true"/>
-      <property name="option" value="bottom"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
     <module name="RedundantImport"/>
@@ -89,6 +86,9 @@
     <module name="Indentation">
       <property name="basicOffset" value="2"/>
       <property name="caseIndent" value="2"/>
+      <property name="throwsIndent" value="2"/>
+      <property name="arrayInitIndent" value="2"/>
+      <property name="lineWrappingIndentation" value="2"/>
     </module>
 
     <!-- Size Violation Checks

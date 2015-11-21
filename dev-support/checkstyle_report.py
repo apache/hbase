@@ -36,28 +36,45 @@ def path_key(x):
   path = x.attrib['name']
   return path[path.find('hbase-'):]
 
-def print_row(path, master_errors, patch_errors):
-    print '%s\t%s\t%s' % (path,master_errors,patch_errors)
+def error_name(x):
+  error_class = x.attrib['source']
+  return error_class[error_class.rfind(".") + 1:]
+
+def print_row(path, error, master_errors, patch_errors):
+    print '%s\t%s\t%s\t%s' % (path,error, master_errors,patch_errors)
 
 master = etree.parse(sys.argv[1])
 patch = etree.parse(sys.argv[2])
 
 master_dict = defaultdict(int)
+ret_value = 0
 
 for child in master.getroot().getchildren():
     if child.tag != 'file':
         continue
-    child_errors = len(child.getchildren())
-    if child_errors == 0:
-        continue
-    master_dict[path_key(child)] = child_errors
+    file = path_key(child)
+    for error_tag in child.getchildren():
+        error = error_name(error_tag)
+        if (file, error) in master_dict:
+            master_dict[(file, error)] += 1
+        else:
+            master_dict[(file, error)] = 1
 
 for child in patch.getroot().getchildren():
     if child.tag != 'file':
         continue
-    child_errors = len(child.getchildren())
-    if child_errors == 0:
-        continue
-    k = path_key(child)
-    if child_errors > master_dict[k]:
-        print_row(k, master_dict[k], child_errors)
+    temp_dict = defaultdict(int)
+    for error_tag in child.getchildren():
+        error = error_name(error_tag)
+        if error in temp_dict:
+            temp_dict[error] += 1
+        else:
+            temp_dict[error] = 1
+
+    file = path_key(child)
+    for error, count in temp_dict.iteritems():
+        if count > master_dict[(file, error)]:
+            print_row(file, error, master_dict[(file, error)], count)
+            ret_value = 1
+
+sys.exit(ret_value)
