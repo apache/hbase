@@ -85,6 +85,7 @@
             </dependency>
           </dependencies>
           <configuration>
+            <argLine> -XX:+CMSClassUnloadingEnabled  -verbose:gc  -XX:+PrintCommandLineFlags  </argLine>
             <includes>
               <include>${integrationtest.include}</include>
             </includes>
