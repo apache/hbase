@@ -53,38 +53,38 @@ public class TestBoundedByteBufferPool {
     this.reservoir.putBuffer(bb);
     this.reservoir.putBuffer(bb);
     this.reservoir.putBuffer(bb);
-    assertEquals(3, this.reservoir.buffers.size());
+    assertEquals(3, this.reservoir.getQueueSize());
   }
 
   @Test
   public void testGetPut() {
     ByteBuffer bb = this.reservoir.getBuffer();
     assertEquals(initialByteBufferSize, bb.capacity());
-    assertEquals(0, this.reservoir.buffers.size());
+    assertEquals(0, this.reservoir.getQueueSize());
     this.reservoir.putBuffer(bb);
-    assertEquals(1, this.reservoir.buffers.size());
+    assertEquals(1, this.reservoir.getQueueSize());
     // Now remove a buffer and don't put it back so reservoir is empty.
     this.reservoir.getBuffer();
-    assertEquals(0, this.reservoir.buffers.size());
+    assertEquals(0, this.reservoir.getQueueSize());
     // Try adding in a buffer with a bigger-than-initial size and see if our runningAverage works.
     // Need to add then remove, then get a new bytebuffer so reservoir internally is doing
     // allocation
     final int newCapacity = 2;
     this.reservoir.putBuffer(ByteBuffer.allocate(newCapacity));
-    assertEquals(1, reservoir.buffers.size());
+    assertEquals(1, reservoir.getQueueSize());
     this.reservoir.getBuffer();
-    assertEquals(0, this.reservoir.buffers.size());
+    assertEquals(0, this.reservoir.getQueueSize());
     bb = this.reservoir.getBuffer();
     assertEquals(newCapacity, bb.capacity());
     // Assert that adding a too-big buffer won't happen
-    assertEquals(0, this.reservoir.buffers.size());
+    assertEquals(0, this.reservoir.getQueueSize());
     this.reservoir.putBuffer(ByteBuffer.allocate(maxByteBufferSizeToCache * 2));
-    assertEquals(0, this.reservoir.buffers.size());
+    assertEquals(0, this.reservoir.getQueueSize());
     // Assert we can't add more than max allowed instances.
     for (int i = 0; i < maxToCache; i++) {
       this.reservoir.putBuffer(ByteBuffer.allocate(initialByteBufferSize));
     }
-    assertEquals(maxToCache, this.reservoir.buffers.size());
+    assertEquals(maxToCache, this.reservoir.getQueueSize());
   }
 
   @Test
@@ -144,6 +144,6 @@ public class TestBoundedByteBufferPool {
     }
     // None of the BBs we got from pool is growing while in use. So we should not change the
     // runningAverage in pool
-    assertEquals(initialByteBufferSize, this.reservoir.runningAverage);
+    assertEquals(initialByteBufferSize, this.reservoir.getRunningAverage());
   }
 }
