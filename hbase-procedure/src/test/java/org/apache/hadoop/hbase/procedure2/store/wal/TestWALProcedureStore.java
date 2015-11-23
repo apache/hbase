@@ -383,6 +383,12 @@ public class TestWALProcedureStore {
     procStore.start(NTHREAD);
     procStore.recoverLease();
 
+    LoadCounter loader = new LoadCounter();
+    procStore.load(loader);
+    assertEquals(0, loader.getMaxProcId());
+    assertEquals(0, loader.getLoadedCount());
+    assertEquals(0, loader.getCorruptedCount());
+
     final long LAST_PROC_ID = 9999;
     final Thread[] thread = new Thread[NTHREAD];
     final AtomicLong procCounter = new AtomicLong((long)Math.round(Math.random() * 100));
