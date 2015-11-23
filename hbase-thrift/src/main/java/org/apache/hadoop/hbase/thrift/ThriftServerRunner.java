@@ -535,7 +535,7 @@ public class ThriftServerRunner implements Runnable {
         CallQueue callQueue =
             new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
         ExecutorService executorService = createExecutor(
-            callQueue, serverArgs.getWorkerThreads());
+            callQueue, serverArgs.getMinWorkerThreads(), serverArgs.getMaxWorkerThreads());
         serverArgs.executorService(executorService)
                   .processor(processor)
                   .transportFactory(transportFactory)
@@ -547,7 +547,7 @@ public class ThriftServerRunner implements Runnable {
         CallQueue callQueue =
             new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
         ExecutorService executorService = createExecutor(
-            callQueue, serverArgs.getWorkerThreads());
+            callQueue, serverArgs.getWorkerThreads(), serverArgs.getWorkerThreads());
         serverArgs.executorService(executorService)
                   .processor(processor)
                   .transportFactory(transportFactory)
@@ -592,11 +592,11 @@ public class ThriftServerRunner implements Runnable {
   }
 
   ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
-                                 int workerThreads) {
+                                 int minWorkers, int maxWorkers) {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
-    return new ThreadPoolExecutor(workerThreads, workerThreads,
+    return new ThreadPoolExecutor(minWorkers, maxWorkers,
             Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
   }
 
