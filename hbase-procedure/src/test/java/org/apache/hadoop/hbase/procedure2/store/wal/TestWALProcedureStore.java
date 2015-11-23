@@ -275,7 +275,7 @@ public class TestWALProcedureStore {
 
   private int countProcedures(Iterator<Procedure> iterator) {
     int count = 0;
-    while (iterator.hasNext()) {
+    while (iterator != null && iterator.hasNext()) {
       Procedure proc = iterator.next();
       LOG.trace("loading procId=" + proc.getProcId());
       count++;
