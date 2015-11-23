@@ -116,6 +116,7 @@ public class WALProcedureStore implements ProcedureStore {
   private final FileSystem fs;
   private final Path logDir;
 
+  private AtomicBoolean loading = new AtomicBoolean(true);
   private AtomicBoolean inSync = new AtomicBoolean(false);
   private AtomicReference<Throwable> syncException = new AtomicReference<>();
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
@@ -296,6 +297,7 @@ public class WALProcedureStore implements ProcedureStore {
       if (LOG.isDebugEnabled()) {
         LOG.debug("No state logs to replay.");
       }
+      loading.set(false);
       return null;
     }
 
@@ -325,6 +327,7 @@ public class WALProcedureStore implements ProcedureStore {
           removeLogFile(log);
         }
       }
+      loading.set(false);
     }
   }
 
@@ -533,7 +536,9 @@ public class WALProcedureStore implements ProcedureStore {
         try {
           // Wait until new data is available
           if (slotIndex == 0) {
-            removeInactiveLogs();
+            if (!loading.get()) {
+              removeInactiveLogs();
+            }
 
             if (LOG.isTraceEnabled()) {
               float rollTsSec = getMillisFromLastRoll() / 1000.0f;

@@ -207,6 +207,7 @@ public class TestWALProcedureStore {
     procStore = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
     procStore.start(NTHREAD);
     procStore.recoverLease();
+    assertEquals(0, countProcedures(procStore.load()));
 
     final long LAST_PROC_ID = 9999;
     final Thread[] thread = new Thread[NTHREAD];
