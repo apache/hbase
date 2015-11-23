@@ -245,10 +245,11 @@ public class ThriftServer {
     log.info("starting HBase HsHA Thrift server on " + inetSocketAddress.toString());
     THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
     if (workerThreads > 0) {
-      serverArgs.workerThreads(workerThreads);
+      // Could support the min & max threads, avoiding to preserve existing functionality.
+      serverArgs.minWorkerThreads(workerThreads).maxWorkerThreads(workerThreads);
     }
     ExecutorService executorService = createExecutor(
-        serverArgs.getWorkerThreads(), metrics);
+        workerThreads, metrics);
     serverArgs.executorService(executorService);
     serverArgs.processor(processor);
     serverArgs.transportFactory(transportFactory);
