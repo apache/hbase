@@ -111,6 +111,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final FileSystem fs;
   private final Path logDir;
 
+  private AtomicBoolean loading = new AtomicBoolean(true);
   private AtomicBoolean inSync = new AtomicBoolean(false);
   private AtomicReference<Throwable> syncException = new AtomicReference<>();
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
@@ -276,6 +277,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         LOG.debug("No state logs to replay.");
       }
       loader.setMaxProcId(0);
+      loading.set(false);
       return;
     }
 
@@ -320,6 +322,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
           removeLogFile(log);
         }
       }
+      loading.set(false);
     }
   }
 
@@ -528,7 +531,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
         try {
           // Wait until new data is available
           if (slotIndex == 0) {
-            removeInactiveLogs();
+            if (!loading.get()) {
+              removeInactiveLogs();
+            }
 
             if (LOG.isTraceEnabled()) {
               float rollTsSec = getMillisFromLastRoll() / 1000.0f;
