@@ -29,8 +29,11 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * <p>Contains a set of methods for the collaboration between the start/stop scripts and the
@@ -56,7 +59,7 @@ public class ZNodeClearer {
     String fileName = ZNodeClearer.getMyEphemeralNodeFileName();
     if (fileName == null) {
       LOG.warn("Environment variable HBASE_ZNODE_FILE not set; znodes will not be cleared " +
-        "on crash by start scripts (Longer MTTR!)");
+          "on crash by start scripts (Longer MTTR!)");
       return;
     }
 
@@ -121,10 +124,42 @@ public class ZNodeClearer {
       new File(fileName).delete();
     }
   }
+  
+  /**
+   * See HBASE-14861. We are extracting master ServerName from rsZnodePath
+   * example: "/hbase/rs/server.example.com,16020,1448266496481"
+   * @param rsZnodePath from HBASE_ZNODE_FILE
+   * @return String representation of ServerName or null if fails
+   */
+  
+  public static String parseMasterServerName(String rsZnodePath) {
+    String masterServerName = null;
+    try {
+      String[] rsZnodeParts = rsZnodePath.split("/");
+      masterServerName = rsZnodeParts[rsZnodeParts.length -1];
+    } catch (IndexOutOfBoundsException e) {
+      LOG.warn("String " + rsZnodePath + " has wrong fromat", e);
+    }
+    return masterServerName; 
+  }
+  
+  /**
+   * 
+   * @return true if cluster is configured with master-rs collocation 
+   */
+  private static boolean tablesOnMaster(Configuration conf) {
+    boolean tablesOnMaster = true;
+    String confValue = conf.get(BaseLoadBalancer.TABLES_ON_MASTER);
+    if (confValue != null && confValue.equalsIgnoreCase("none")) {
+      tablesOnMaster = false;
+    }
+    return tablesOnMaster;
+  }
 
   /**
    * Delete the master znode if its content (ServerName string) is the same
-   *  as the one in the znode file. (env: HBASE_ZNODE_FILE).
+   *  as the one in the znode file. (env: HBASE_ZNODE_FILE). I case of master-rs
+   *  colloaction we extract ServerName string from rsZnode path.(HBASE-14861)
    * @return true on successful deletion, false otherwise.
    */
   public static boolean clear(Configuration conf) {
@@ -146,13 +181,23 @@ public class ZNodeClearer {
     String znodeFileContent;
     try {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
-      return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
+      if(ZNodeClearer.tablesOnMaster(conf)) {
+      //In case of master crash also remove rsZnode since master is also regionserver 
+        ZKUtil.deleteNodeFailSilent(zkw, znodeFileContent);  
+        return MasterAddressTracker.deleteIfEquals(zkw, 
+                                    ZNodeClearer.parseMasterServerName(znodeFileContent));
+      } else {
+        return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
+      }
     } catch (FileNotFoundException fnfe) {
       // If no file, just keep going -- return success.
       LOG.warn("Can't find the znode file; presume non-fatal", fnfe);
       return true;
     } catch (IOException e) {
       LOG.warn("Can't read the content of the znode file", e);
+      return false;
+    } catch (KeeperException e) {
+      LOG.warn("Zookeeper exception deleting znode", e);
       return false;
     } finally {
       zkw.close();
