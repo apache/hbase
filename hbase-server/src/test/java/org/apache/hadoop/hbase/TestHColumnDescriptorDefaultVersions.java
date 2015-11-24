@@ -134,6 +134,19 @@ public class TestHColumnDescriptorDefaultVersions {
       admin.deleteTable(TABLE_NAME);
     }
   }
+  
+  @Test
+  public void testHColumnDescriptorCachedMaxVersions() throws Exception {
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    hcd.setMaxVersions(5);
+    // Verify the max version
+    assertEquals(5, hcd.getMaxVersions());
+
+    // modify the max version
+    hcd.setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8"));
+    // Verify the max version
+    assertEquals(8, hcd.getMaxVersions());
+  }
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
       final byte[]... families) throws IOException {

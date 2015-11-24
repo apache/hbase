@@ -568,6 +568,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(byte[] key, byte[] value) {
+    if (Bytes.compareTo(Bytes.toBytes(HConstants.VERSIONS), key) == 0) {
+      cachedMaxVersions = UNINITIALIZED;
+    }
     values.put(new ImmutableBytesWritable(key),
       new ImmutableBytesWritable(value));
     return this;
