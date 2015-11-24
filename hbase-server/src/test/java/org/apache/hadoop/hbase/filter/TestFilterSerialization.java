@@ -127,6 +127,7 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterWrapper))));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testFirstKeyValueMatchingQualifiersFilter() throws Exception {
     // empty qualifiers set

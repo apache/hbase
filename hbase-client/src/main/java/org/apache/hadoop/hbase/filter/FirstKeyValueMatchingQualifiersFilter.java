@@ -43,9 +43,11 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * caveat, this filter is only useful for special cases
  * like {@link org.apache.hadoop.hbase.mapreduce.RowCounter}.
  * <p>
+ * @deprecated Deprecated in 2.0. See HBASE-13347
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   private Set<byte []> qualifiers;

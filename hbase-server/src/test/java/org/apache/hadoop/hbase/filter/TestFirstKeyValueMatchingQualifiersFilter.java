@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
+@SuppressWarnings("deprecation")
 @Category({FilterTests.class, SmallTests.class})
 public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
