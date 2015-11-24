@@ -2055,7 +2055,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param forceNewPlan
    */
   private void assign(RegionState state,
-      final boolean setOfflineInZK, final boolean forceNewPlan) {
+      boolean setOfflineInZK, final boolean forceNewPlan) {
     long startTime = EnvironmentEdgeManager.currentTime();
     try {
       Configuration conf = server.getConfiguration();
@@ -2101,6 +2101,7 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
         if (setOfflineInZK && versionOfOfflineNode == -1) {
+          LOG.info("Setting node as OFFLINED in ZooKeeper for region " + region);
           // get the version of the znode after setting it to OFFLINE.
           // versionOfOfflineNode will be -1 if the znode was not set to OFFLINE
           versionOfOfflineNode = setOfflineInZooKeeper(currentState, plan.getDestination());
@@ -2270,8 +2271,13 @@ public class AssignmentManager extends ZooKeeperListener {
             // Clean out plan we failed execute and one that doesn't look like it'll
             // succeed anyways; we need a new plan!
             // Transition back to OFFLINE
+            LOG.info("Region assignment plan changed from " + plan.getDestination() + " to "
+                + newPlan.getDestination() + " server.");
             currentState = regionStates.updateRegionState(region, State.OFFLINE);
             versionOfOfflineNode = -1;
+            if (useZKForAssignment) {
+              setOfflineInZK = true;
+            }
             plan = newPlan;
           } else if(plan.getDestination().equals(newPlan.getDestination()) &&
               previousException instanceof FailedServerException) {
