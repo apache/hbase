@@ -20,18 +20,22 @@
 # Make a patch for the current branch based on its tracking branch
 
 # Process args
-while getopts "ahd:" opt; do
+while getopts "ahd:b:" opt; do
     case "$opt" in
         a)  addendum='-addendum'
             ;;
         d)  
             patch_dir=$OPTARG
             ;;
+        b)
+            tracking_branch=$OPTARG
+            ;;
         *)
             echo -e "Usage: $0 [-h] [-a] [-d] <directory> \n\
         Must be run from within the git branch to make the patch against.\n\
         -h - display these instructions.\n\
         -a - Add an 'addendum' prefix to the patch name.\n\
+        -b - Specify the base branch to diff from. (defaults to the tracking branch or origin master)\n\
         -d - specify a patch directory (defaults to ~/patches/)"
             exit 0
             ;;
@@ -53,19 +57,24 @@ if [ "$git_dirty" -ne 0 ]; then
     exit 1
 fi
 
-# Determine the tracking branch
-git log -n 1 origin/$branch > /dev/null 2>&1
-status=$?
-if [ "$status" -eq 128 ]; then
-    # Status 128 means there is no remote branch
-    tracking_branch='origin/master'
-elif [ "$status" -eq 0 ]; then
-    # Status 0 means there is a remote branch
-    tracking_branch="origin/$branch"
-else
-    echo "Unknown error: $?" >&2
-    exit 1
+# Determine the tracking branch if needed.
+# If it was passed in from the command line
+# with -b then use dthat no matter what.
+if [ ! "$tracking_branch" ]; then
+  git log -n 1 origin/$branch > /dev/null 2>&1
+  status=$?
+  if [ "$status" -eq 128 ]; then
+      # Status 128 means there is no remote branch
+      tracking_branch='origin/master'
+  elif [ "$status" -eq 0 ]; then
+      # Status 0 means there is a remote branch
+      tracking_branch="origin/$branch"
+  else
+      echo "Unknown error: $?" >&2
+      exit 1
+  fi
 fi
+
 
 # Deal with invalid or missing $patch_dir
 if [ ! "$patch_dir" ]; then
