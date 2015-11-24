@@ -111,13 +111,14 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final FileSystem fs;
   private final Path logDir;
 
-  private AtomicBoolean loading = new AtomicBoolean(true);
-  private AtomicBoolean inSync = new AtomicBoolean(false);
-  private AtomicReference<Throwable> syncException = new AtomicReference<>();
+  private final AtomicReference<Throwable> syncException = new AtomicReference<Throwable>();
+  private final AtomicBoolean loading = new AtomicBoolean(true);
+  private final AtomicBoolean inSync = new AtomicBoolean(false);
+  private final AtomicLong totalSynced = new AtomicLong(0);
+  private final AtomicLong lastRollTs = new AtomicLong(0);
+
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
   private Set<ProcedureWALFile> corruptedLogs = null;
-  private AtomicLong totalSynced = new AtomicLong(0);
-  private AtomicLong lastRollTs = new AtomicLong(0);
   private FSDataOutputStream stream = null;
   private long flushLogId = 0;
   private int slotIndex = 0;
@@ -148,6 +149,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     // Init buffer slots
+    loading.set(true);
     slots = new ByteSlot[numSlots];
     slotsCache = new LinkedTransferQueue();
     while (slotsCache.size() < numSlots) {

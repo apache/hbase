@@ -83,6 +83,7 @@ public class TestWALProcedureStore {
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
     procStore.start(PROCEDURE_STORE_SLOTS);
     procStore.recoverLease();
+    procStore.load(new LoadCounter());
   }
 
   @After
@@ -434,7 +435,9 @@ public class TestWALProcedureStore {
     InputStream in = fs.open(logFile.getPath());
     OutputStream out =  fs.create(tmpPath);
     IOUtils.copyBytes(in, out, logFile.getLen() - dropBytes, true);
-    fs.rename(tmpPath, logFile.getPath());
+    if (!fs.rename(tmpPath, logFile.getPath())) {
+      throw new IOException("Unable to rename");
+    }
   }
 
   private void verifyProcIdsOnRestart(final Set<Long> procIds) throws Exception {
