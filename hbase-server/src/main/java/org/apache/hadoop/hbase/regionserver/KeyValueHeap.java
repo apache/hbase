@@ -297,11 +297,9 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     if (current == null) {
       return false;
     }
-    heap.add(current);
-    current = null;
 
-    KeyValueScanner scanner;
-    while ((scanner = heap.poll()) != null) {
+    KeyValueScanner scanner = current;
+    while (scanner != null) {
       Cell topKey = scanner.peek();
       if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
         // Top KeyValue is at-or-after Seek KeyValue. We only know that all
@@ -328,6 +326,10 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
         this.scannersForDelayedClose.add(scanner);
       } else {
         heap.add(scanner);
+      }
+      scanner = heap.poll();
+      if (scanner == null) {
+        current = null;
       }
     }
 
