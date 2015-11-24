@@ -85,7 +85,7 @@
             </dependency>
           </dependencies>
           <configuration>
-            <argLine> -XX:+CMSClassUnloadingEnabled  -verbose:gc  -XX:+PrintCommandLineFlags  </argLine>
+            <argLine> -XX:+CMSClassUnloadingEnabled -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
             <includes>
               <include>${integrationtest.include}</include>
             </includes>
@@ -94,7 +94,6 @@
               <exclude>**/*$*</exclude>
               <!--Do this to prevent OOME because permgen is full seen on build.apache.org
                -->
-              <argLine> -XX:+CMSClassUnloadingEnabled </argLine>
               <!--<exclude>${test.exclude.pattern}</exclude>-->
             </excludes>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
