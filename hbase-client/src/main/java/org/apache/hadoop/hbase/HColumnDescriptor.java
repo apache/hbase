@@ -439,6 +439,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(byte[] key, byte[] value) {
+    if (Bytes.compareTo(Bytes.toBytes(HConstants.VERSIONS), key) == 0) {
+      cachedMaxVersions = UNINITIALIZED;
+    }
     values.put(new Bytes(key),
         new Bytes(value));
     return this;
