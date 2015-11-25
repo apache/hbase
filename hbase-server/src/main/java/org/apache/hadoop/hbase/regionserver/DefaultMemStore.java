@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -550,12 +551,19 @@ public class DefaultMemStore implements MemStore {
 
   /**
    * Check if this memstore may contain the required keys
-   * @param scan
+   * @param scan scan
+   * @param store holds reference to cf
+   * @param oldestUnexpiredTS
    * @return False if the key definitely does not exist in this Memstore
    */
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return (timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
-        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange()))
+  public boolean shouldSeek(Scan scan, Store store, long oldestUnexpiredTS) {
+    byte[] cf = store.getFamily().getName();
+    TimeRange timeRange = scan.getColumnFamilyTimeRange().get(cf);
+    if (timeRange == null) {
+      timeRange = scan.getTimeRange();
+    }
+    return (timeRangeTracker.includesTimeRange(timeRange) ||
+        snapshotTimeRangeTracker.includesTimeRange(timeRange))
         && (Math.max(timeRangeTracker.getMaximumTimestamp(),
                      snapshotTimeRangeTracker.getMaximumTimestamp()) >=
             oldestUnexpiredTS);
@@ -828,7 +836,7 @@ public class DefaultMemStore implements MemStore {
 
     @Override
     public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
-      return shouldSeek(scan, oldestUnexpiredTS);
+      return shouldSeek(scan, store, oldestUnexpiredTS);
     }
 
     /**
