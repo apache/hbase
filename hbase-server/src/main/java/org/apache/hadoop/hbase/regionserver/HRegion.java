@@ -2974,7 +2974,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         if (rowLock == null) {
           // We failed to grab another lock
-          assert false: "Should never fail to get lock when blocking";
           break; // stop acquiring more rows for this batch
         } else {
           acquiredRowLocks.add(rowLock);
