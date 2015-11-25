@@ -76,19 +76,23 @@ public class BoundedByteBufferPool {
   // queued buffers in any transition.
   private final AtomicLong stateRef = new AtomicLong();
 
-  private static int toCountOfBuffers(long state) {
+  @VisibleForTesting
+  static int toCountOfBuffers(long state) {
     return (int)state;
   }
 
-  private static int toTotalCapacity(long state) {
+  @VisibleForTesting
+  static int toTotalCapacity(long state) {
     return (int)(state >>> 32);
   }
 
-  private static long toState(int countOfBuffers, int totalCapacity) {
-    return ((long)totalCapacity << 32) | totalCapacity;
+  @VisibleForTesting
+  static long toState(int countOfBuffers, int totalCapacity) {
+    return ((long)totalCapacity << 32) | countOfBuffers;
   }
 
-  private static long subtractOneBufferFromState(long state, int capacity) {
+  @VisibleForTesting
+  static long subtractOneBufferFromState(long state, int capacity) {
     return state - ((long)capacity << 32) - 1;
   }
 

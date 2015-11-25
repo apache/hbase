@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.apache.hadoop.hbase.io.BoundedByteBufferPool.subtractOneBufferFromState;
+import static org.apache.hadoop.hbase.io.BoundedByteBufferPool.toCountOfBuffers;
+import static org.apache.hadoop.hbase.io.BoundedByteBufferPool.toState;
+import static org.apache.hadoop.hbase.io.BoundedByteBufferPool.toTotalCapacity;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
@@ -145,5 +149,19 @@ public class TestBoundedByteBufferPool {
     // None of the BBs we got from pool is growing while in use. So we should not change the
     // runningAverage in pool
     assertEquals(initialByteBufferSize, this.reservoir.getRunningAverage());
+  }
+
+  @Test
+  public void testStateConversionMethods() {
+    int countOfBuffers = 123;
+    int totalCapacity = 456;
+
+    long state = toState(countOfBuffers, totalCapacity);
+    assertEquals(countOfBuffers, toCountOfBuffers(state));
+    assertEquals(totalCapacity, toTotalCapacity(state));
+
+    long state2 = subtractOneBufferFromState(state, 7);
+    assertEquals(countOfBuffers - 1, toCountOfBuffers(state2));
+    assertEquals(totalCapacity - 7, toTotalCapacity(state2));
   }
 }
