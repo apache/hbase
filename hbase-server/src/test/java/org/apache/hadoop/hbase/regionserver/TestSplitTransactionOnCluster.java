@@ -1302,7 +1302,7 @@ public class TestSplitTransactionOnCluster {
       TESTING_UTIL.deleteTable(tableName);
     }
   }
-  
+
   @Test(timeout = 120000)
   public void testFailedSplit() throws Exception {
     TableName tableName = TableName.valueOf("testFailedSplit");
@@ -1325,7 +1325,7 @@ public class TestSplitTransactionOnCluster {
       assertNotNull(observer);
       observer.latch.await();
       observer.postSplit.await();
-      LOG.info("Waiting for region to come out of RIT");
+      LOG.info("Waiting for region to come out of RIT: " + actualRegion);
       TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
@@ -1336,7 +1336,9 @@ public class TestSplitTransactionOnCluster {
       });
       regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
       assertTrue(regions.size() == 1);
-      assertTrue(admin.balancer());
+      RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
+      Map<String, RegionState> rit = regionStates.getRegionsInTransition();
+      assertTrue(rit.size() == 0);
     } finally {
       table.close();
       connection.close();
