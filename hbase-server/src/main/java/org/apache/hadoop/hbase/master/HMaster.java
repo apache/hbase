@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -1357,8 +1358,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
           continue;
         }
-        if (table.isSystemTable() || !getTableDescriptors().getDescriptor(table).
-            getHTableDescriptor().isNormalizationEnabled()) {
+        TableDescriptor tblDesc = getTableDescriptors().getDescriptor(table);
+        if (table.isSystemTable() || (tblDesc != null &&
+            tblDesc.getHTableDescriptor() != null &&
+            !tblDesc.getHTableDescriptor().isNormalizationEnabled())) {
           LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
             + " table or doesn't have auto normalization turned on");
           continue;
