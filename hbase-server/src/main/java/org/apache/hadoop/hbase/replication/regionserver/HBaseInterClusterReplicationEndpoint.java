@@ -22,9 +22,12 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -154,6 +157,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    */
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
+    CompletionService<Integer> pool = new ExecutorCompletionService<Integer>(this.exec);
     List<Entry> entries = replicateContext.getEntries();
     String walGroupId = replicateContext.getWalGroupId();
     int sleepMultiplier = 1;
@@ -195,7 +199,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
               " entries of total size " + replicateContext.getSize());
         }
 
-        List<Future<Integer>> futures = new ArrayList<Future<Integer>>(entryLists.size());
+        int futures = 0;
         for (int i=0; i<entryLists.size(); i++) {
           if (!entryLists.get(i).isEmpty()) {
             if (LOG.isTraceEnabled()) {
@@ -203,16 +207,18 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                   " entries of total size " + replicateContext.getSize());
             }
             // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-            futures.add(exec.submit(createReplicator(entryLists.get(i), i)));
+            pool.submit(createReplicator(entryLists.get(i), i));
+            futures++;
           }
         }
         IOException iox = null;
-        for (int index = futures.size() - 1; index >= 0; index--) {
+
+        for (int i=0; i<futures; i++) {
           try {
             // wait for all futures, remove successful parts
             // (only the remaining parts will be retried)
-            Future<Integer> f = futures.get(index);
-            entryLists.remove(f.get().intValue());
+            Future<Integer> f = pool.take();
+            entryLists.set(f.get().intValue(), Collections.<Entry>emptyList());
           } catch (InterruptedException ie) {
             iox =  new IOException(ie);
           } catch (ExecutionException ee) {
