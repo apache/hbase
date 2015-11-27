@@ -1402,10 +1402,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    this.closing.set(true);
-    status.setStatus("Disabling writes for close");
     // block waiting for the lock for closing
     lock.writeLock().lock();
+    this.closing.set(true);
+    status.setStatus("Disabling writes for close");
     try {
       if (this.isClosed()) {
         status.abort("Already got closed by another process");
