@@ -792,7 +792,7 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
 
     /**
-     * Write the RPC header: <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>
+     * Write the RPC header: {@code <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>}
      */
     private void writeConnectionHeaderPreamble(OutputStream outStream) throws IOException {
       // Assemble the preamble up in a buffer first and then send it.  Writing individual elements,

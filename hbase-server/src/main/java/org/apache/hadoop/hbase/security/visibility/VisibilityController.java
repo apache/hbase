@@ -450,13 +450,11 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
    * Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE. This
    * tag type is reserved and should not be explicitly set by user.
    *
-   * @param cell
-   *          - the cell under consideration
-   * @param pair - an optional pair of type <Boolean, Tag> which would be reused
-   *               if already set and new one will be created if null is passed
-   * @return a pair<Boolean, Tag> - if the boolean is false then it indicates
-   *         that the cell has a RESERVERD_VIS_TAG and with boolean as true, not
-   *         null tag indicates that a string modified tag was found.
+   * @param cell The cell under consideration
+   * @param pair An optional pair of type {@code <Boolean, Tag>} which would be reused if already
+   *     set and new one will be created if NULL is passed
+   * @return If the boolean is false then it indicates that the cell has a RESERVERD_VIS_TAG and
+   *     with boolean as true, not null tag indicates that a string modified tag was found.
    */
   private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(Cell cell,
       Pair<Boolean, Tag> pair) throws IOException {

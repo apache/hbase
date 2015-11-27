@@ -5234,7 +5234,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Determines whether multiple column families are present
    * Precondition: familyPaths is not null
    *
-   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   * @param familyPaths List of (column family, hfilePath)
    */
   private static boolean hasMultipleColumnFamilies(Collection<Pair<byte[], String>> familyPaths) {
     boolean multipleFamilies = false;
@@ -5947,10 +5947,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * This function is to maintain backward compatibility for 0.94 filters. HBASE-6429 combines
-     * both filterRow & filterRow(List<KeyValue> kvs) functions. While 0.94 code or older, it may
-     * not implement hasFilterRow as HBase-6429 expects because 0.94 hasFilterRow() only returns
-     * true when filterRow(List<KeyValue> kvs) is overridden not the filterRow(). Therefore, the
-     * filterRow() will be skipped.
+     * both filterRow & filterRow({@code List<KeyValue> kvs}) functions. While 0.94 code or older,
+     * it may not implement hasFilterRow as HBase-6429 expects because 0.94 hasFilterRow() only
+     * returns true when filterRow({@code List<KeyValue> kvs}) is overridden not the filterRow().
+     * Therefore, the filterRow() will be skipped.
      */
     private boolean filterRow() throws IOException {
       // when hasFilterRow returns true, filter.filterRow() will be called automatically inside
@@ -6950,9 +6950,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * @param cell
-   * @param tags
-   * @return The passed-in List<Tag> but with the tags from <code>cell</code> added.
+   * @return The passed-in {@code tags} but with the tags from {@code cell} added.
    */
   private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
     if (cell.getTagsLength() <= 0) return tags;
@@ -6965,12 +6963,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Run a Get against passed in <code>store</code> on passed <code>row</code>, etc.
-   * @param store
-   * @param row
-   * @param family
-   * @param tr
    * @return Get result.
-   * @throws IOException
    */
   private List<Cell> doGet(final Store store, final byte [] row,
       final Map.Entry<byte[], List<Cell>> family, final TimeRange tr)

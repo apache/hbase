@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
- * Scanner scans the MOB Store. Coalesce KeyValue stream into List<KeyValue>
+ * Scanner scans the MOB Store. Coalesce KeyValue stream into {@code List<KeyValue>}
  * for a single row. It's only used in the compaction of mob-enabled columns.
  * It outputs the normal cells and delete markers when outputDeleteMarkers is set as true.
  */

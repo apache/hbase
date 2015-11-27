@@ -42,24 +42,23 @@ public class Tag {
   private int offset = 0;
   private int length = 0;
 
-  // The special tag will write the length of each tag and that will be
-  // followed by the type and then the actual tag.
-  // So every time the length part is parsed we need to add + 1 byte to it to
-  // get the type and then get the actual tag.
+  /**
+   * The special tag will write the length of each tag and that will be
+   * followed by the type and then the actual tag.
+   * So every time the length part is parsed we need to add + 1 byte to it to
+   * get the type and then get the actual tag.
+   */
   public Tag(byte tagType, String tag) {
     this(tagType, Bytes.toBytes(tag));
   }
 
   /**
-   * @param tagType
-   * @param tag
+   * Format for a tag :
+   * {@code <length of tag - 2 bytes><type code - 1 byte><tag>} tag length is serialized
+   * using 2 bytes only but as this will be unsigned, we can have max tag length of
+   * (Short.MAX_SIZE * 2) +1. It includes 1 byte type length and actual tag bytes length.
    */
   public Tag(byte tagType, byte[] tag) {
-    /**
-     * Format for a tag : <length of tag - 2 bytes><type code - 1 byte><tag> taglength is serialized
-     * using 2 bytes only but as this will be unsigned, we can have max taglength of
-     * (Short.MAX_SIZE * 2) +1. It includes 1 byte type length and actual tag bytes length.
-     */
     int tagLength = tag.length + TYPE_LENGTH_SIZE;
     if (tagLength > MAX_TAG_LENGTH) {
       throw new IllegalArgumentException(
@@ -78,10 +77,7 @@ public class Tag {
    * <code>bytes</code> content starting at <code>offset</code> is formatted as
    * a Tag blob.
    * The bytes to include the tag type, tag length and actual tag bytes.
-   * @param bytes
-   *          byte array
-   * @param offset
-   *          offset to start of Tag
+   * @param offset offset to start of Tag
    */
   public Tag(byte[] bytes, int offset) {
     this(bytes, offset, getLength(bytes, offset));
@@ -95,12 +91,6 @@ public class Tag {
    * Creates a Tag from the specified byte array, starting at offset, and for length
    * <code>length</code>. Presumes <code>bytes</code> content starting at <code>offset</code> is
    * formatted as a Tag blob.
-   * @param bytes
-   *          byte array
-   * @param offset
-   *          offset to start of the Tag
-   * @param length
-   *          length of the Tag
    */
   public Tag(byte[] bytes, int offset, int length) {
     if (length > MAX_TAG_LENGTH) {

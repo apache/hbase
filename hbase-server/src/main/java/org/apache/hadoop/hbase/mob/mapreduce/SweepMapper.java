@@ -35,8 +35,8 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * The mapper of a sweep job.
- * Takes the rows from the table and their results and map to <filename:Text, mobValue:KeyValue>
- * where mobValue is the actual cell in HBase.
+ * Takes the rows from the table and their results and map to {@literal <filename:Text,
+ * mobValue:KeyValue>} where mobValue is the actual cell in HBase.
  */
 @InterfaceAudience.Private
 public class SweepMapper extends TableMapper<Text, KeyValue> {

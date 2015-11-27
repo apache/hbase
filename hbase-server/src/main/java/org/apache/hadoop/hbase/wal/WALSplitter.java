@@ -1643,7 +1643,7 @@ public class WALSplitter {
         .synchronizedMap(new TreeMap<TableName, HConnection>());
     /**
      * Map key -> value layout
-     * <servername>:<table name> -> Queue<Row>
+     * {@literal <servername>:<table name> -> Queue<Row>}
      */
     private Map<String, List<Pair<HRegionLocation, Entry>>> serverToBufferQueueMap =
         new ConcurrentHashMap<String, List<Pair<HRegionLocation, Entry>>>();
@@ -2173,7 +2173,7 @@ public class WALSplitter {
     }
     private TableName getTableFromLocationStr(String loc) {
       /**
-       * location key is in format <server name:port>#<table name>
+       * location key is in format {@literal <server name:port>#<table name>}
        */
       String[] splits = loc.split(KEY_DELIMITER);
       if (splits.length != 2) {

@@ -157,7 +157,7 @@ public class TaskMonitor {
   /**
    * This class encapsulates an object as well as a weak reference to a proxy
    * that passes through calls to that object. In art form:
-   * <code>
+   * <pre>
    *     Proxy  <------------------
    *       |                       \
    *       v                        \
@@ -166,7 +166,7 @@ public class TaskMonitor {
    * MonitoredTaskImpl            / 
    *       |                     /
    * StatAndWeakRefProxy  ------/
-   *
+   * </pre>
    * Since we only return the Proxy to the creator of the MonitorableStatus,
    * this means that they can leak that object, and we'll detect it
    * since our weak reference will go null. But, we still have the actual

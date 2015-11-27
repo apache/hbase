@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
@@ -218,9 +219,8 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   /**
-   * Thread to run region post open tasks. Call {@link #getException()} after
-   * the thread finishes to check for exceptions running
-   * {@link RegionServerServices#postOpenDeployTasks(HRegion)
+   * Thread to run region post open tasks. Call {@link #getException()} after the thread finishes
+   * to check for exceptions running {@link RegionServerServices#postOpenDeployTasks(Region)}.
    */
   static class PostOpenDeployTasksThread extends Thread {
     private Throwable exception = null;

@@ -521,8 +521,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
-   * @return A Multimap<startkey, LoadQueueItem> that groups LQI by likely
-   * bulk load region targets.
+   * @return A map that groups LQI by likely bulk load region targets.
    */
   private Multimap<ByteBuffer, LoadQueueItem> groupOrSplitPhase(final Table table,
       ExecutorService pool, Deque<LoadQueueItem> queue,

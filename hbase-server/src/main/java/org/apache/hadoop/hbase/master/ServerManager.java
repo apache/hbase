@@ -143,10 +143,7 @@ public class ServerManager {
   private final Map<ServerName, AdminService.BlockingInterface> rsAdmins =
     new HashMap<ServerName, AdminService.BlockingInterface>();
 
-  /**
-   * List of region servers <ServerName> that should not get any more new
-   * regions.
-   */
+  /** List of region servers that should not get any more new regions. */
   private final ArrayList<ServerName> drainingServers =
     new ArrayList<ServerName>();
 

@@ -924,7 +924,7 @@ public final class RequestConverter {
  }
 
  /**
-  * @see {@link #buildRollWALWriterRequest()
+  * @see {@link #buildRollWALWriterRequest()}
   */
  private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST =
      RollWALWriterRequest.newBuilder().build();

@@ -198,7 +198,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * @return Map<byte[], TimeRange> a map of column families to time ranges
+   * @return A map of column families to time ranges
    */
   public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
     return this.colFamTimeRangeMap;

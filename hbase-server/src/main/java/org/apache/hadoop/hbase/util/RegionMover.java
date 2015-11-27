@@ -119,9 +119,8 @@ public class RegionMover extends AbstractHBaseTool {
     private int port = HConstants.DEFAULT_REGIONSERVER_PORT;
 
     /**
-     * Hostname to unload regions from or load regions to Valid format: <hostname> or
-     * <hostname:port>
-     * @param hostname
+     * @param hostname Hostname to unload regions from or load regions to. Can be either hostname
+     *     or hostname:port.
      */
     public RegionMoverBuilder(String hostname) {
       String[] splitHostname = hostname.split(":");
@@ -150,8 +149,6 @@ public class RegionMover extends AbstractHBaseTool {
 
     /**
      * Set the max number of threads that will be used to move regions
-     * @param threads
-     * @return RegionMoverBuilder object
      */
     public RegionMoverBuilder maxthreads(int threads) {
       this.maxthreads = threads;
@@ -159,11 +156,9 @@ public class RegionMover extends AbstractHBaseTool {
     }
 
     /**
-     * Path of file containing hostnames to be excluded during region movement Exclude file should
-     * have <host:port> per line.Port is mandatory here as we can have many RS running on a single
-     * host
-     * @param excludefile
-     * @return RegionMoverBuilder object
+     * Path of file containing hostnames to be excluded during region movement. Exclude file should
+     * have 'host:port' per line. Port is mandatory here as we can have many RS running on a single
+     * host.
      */
     public RegionMoverBuilder excludeFile(String excludefile) {
       this.excludeFile = excludefile;
@@ -751,10 +746,7 @@ public class RegionMover extends AbstractHBaseTool {
   }
 
   /**
-   * Create an Arraylst of servers listed in exclude file
-   * @param excludeFile
-   * @return ArrayList of servers to be excluded in format <hostname:port>
-   * @throws IOException
+   * @return List of servers from the exclude file in format 'hostname:port'.
    */
   private ArrayList<String> readExcludes(String excludeFile) throws IOException {
     ArrayList<String> excludeServers = new ArrayList<String>();

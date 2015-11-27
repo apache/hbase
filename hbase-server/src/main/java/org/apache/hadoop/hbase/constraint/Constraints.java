@@ -154,12 +154,10 @@ public final class Constraints {
   /**
    * Get the kv {@link Entry} in the descriptor for the specified class
    * 
-   * @param desc
-   *          {@link HTableDescriptor} to read
-   * @param clazz
-   *          to search for
-   * @return the {@link Pair} of <key, value> in the table, if that class is
-   *         present. <tt>null</tt> otherwise.
+   * @param desc {@link HTableDescriptor} to read
+   * @param clazz To search for
+   * @return The {@link Pair} of {@literal <key, value>} in the table, if that class is
+   *         present. {@code NULL} otherwise.
    */
   private static Pair<String, String> getKeyValueForClass(
       HTableDescriptor desc, Class<? extends Constraint> clazz) {

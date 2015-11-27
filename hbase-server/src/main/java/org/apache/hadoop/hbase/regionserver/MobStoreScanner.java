@@ -28,9 +28,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
 /**
- * Scanner scans both the memstore and the MOB Store. Coalesce KeyValue stream into List<KeyValue>
- * for a single row.
- *
+ * Scanner scans both the memstore and the MOB Store. Coalesce KeyValue stream into
+ * {@code List<KeyValue>} for a single row.
  */
 @InterfaceAudience.Private
 public class MobStoreScanner extends StoreScanner {

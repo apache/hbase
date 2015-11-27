@@ -51,8 +51,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 
-
-
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
@@ -87,10 +85,10 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   /**
    * Will block until a write entry has been assigned by they WAL subsystem.
    * @return A WriteEntry gotten from local WAL subsystem. Must be completed by calling
-   * mvcc#complete or mvcc#completeAndWait.
-   * @throws InterruptedIOException
-   * @see
-   * #setWriteEntry(org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry)
+   *     {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
+   *     or
+   *     {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
+   * @see {@link #setWriteEntry(MultiVersionConcurrencyControl.WriteEntry)}
    */
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl.WriteEntry getWriteEntry() throws InterruptedIOException {

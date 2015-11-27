@@ -82,14 +82,14 @@ public class ScannerContext {
    * some limits and then repeatedly invoke {@link InternalScanner#next(List)} or
    * {@link RegionScanner#next(List)} where each invocation respects these limits separately.
    * <p>
-   * For example: <code><pre>
+   * For example: <pre> {@code
    * ScannerContext context = new ScannerContext.newBuilder().setBatchLimit(5).build();
    * RegionScanner scanner = ...
    * List<Cell> results = new ArrayList<Cell>();
    * while(scanner.next(results, context)) {
    *   // Do something with a batch of 5 cells
    * }
-   * </pre></code> However, in the case of RPCs, the server wants to be able to define a set of
+   * }</pre> However, in the case of RPCs, the server wants to be able to define a set of
    * limits for a particular RPC request and have those limits respected across multiple
    * invocations. This means that the progress made towards the limits in earlier calls will be
    * saved and considered in future invocations

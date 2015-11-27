@@ -399,8 +399,7 @@ public class SplitLogManager {
    * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
    * region server hosting the region can allow reads to the recovered region
    * @param serverNames servers which are just recovered
-   * @param isMetaRecovery whether current recovery is for the meta region on
-   *          <code>serverNames<code>
+   * @param isMetaRecovery whether current recovery is for the meta region on {@code serverNames}
    */
   private void removeRecoveringRegions(final Set<ServerName> serverNames, Boolean isMetaRecovery) {
     if (!isLogReplaying()) {

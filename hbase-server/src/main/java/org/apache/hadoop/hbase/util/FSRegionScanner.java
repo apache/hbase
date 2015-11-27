@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Thread that walks over the filesystem, and computes the mappings
- * <Region -> BestHost> and <Region -> Map<HostName, fractional-locality-of-region>>
+ * Region -> BestHost and Region -> {@code Map<HostName, fractional-locality-of-region>}
  *
  */
 @InterfaceAudience.Private

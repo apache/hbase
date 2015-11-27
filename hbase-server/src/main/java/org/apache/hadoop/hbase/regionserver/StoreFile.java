@@ -361,7 +361,7 @@ public class StoreFile {
   /**
    * Check if this storefile was created by bulk load.
    * When a hfile is bulk loaded into HBase, we append
-   * '_SeqId_<id-when-loaded>' to the hfile name, unless
+   * {@code '_SeqId_<id-when-loaded>'} to the hfile name, unless
    * "hbase.mapreduce.bulkload.assign.sequenceNumbers" is
    * explicitly turned off.
    * If "hbase.mapreduce.bulkload.assign.sequenceNumbers"

@@ -68,8 +68,8 @@ public class StoreFileInfo {
     Pattern.compile("^(" + DELFILE_NAME_REGEX + ")");
 
   /**
-   * Regex that will work for straight reference names (<hfile>.<parentEncRegion>)
-   * and hfilelink reference names (<table>=<region>-<hfile>.<parentEncRegion>)
+   * Regex that will work for straight reference names ({@code <hfile>.<parentEncRegion>})
+   * and hfilelink reference names ({@code <table>=<region>-<hfile>.<parentEncRegion>})
    * If reference, then the regex has more than just one group.
    * Group 1, hfile/hfilelink pattern, is this file's id.
    * Group 2 '(.+)' is the reference's parent region name.

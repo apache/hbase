@@ -806,7 +806,7 @@ public class BucketCache implements BlockCache, HeapSize {
      * Process all that are passed in even if failure being sure to remove from ramCache else we'll
      * never undo the references and we'll OOME.
      * @param entries Presumes list passed in here will be processed by this invocation only. No
-     * interference expected.
+     *   interference expected.
      * @throws InterruptedException
      */
     @VisibleForTesting
@@ -911,23 +911,23 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Blocks until elements available in <code>q</code> then tries to grab as many as possible
+   * Blocks until elements available in {@code q} then tries to grab as many as possible
    * before returning.
-   * @param recepticle Where to stash the elements taken from queue. We clear before we use it
-   * just in case.
+   * @param receptacle Where to stash the elements taken from queue. We clear before we use it
+   *     just in case.
    * @param q The queue to take from.
-   * @return <code>receptical laden with elements taken from the queue or empty if none found.
+   * @return {@code receptacle} laden with elements taken from the queue or empty if none found.
    */
   @VisibleForTesting
   static List<RAMQueueEntry> getRAMQueueEntries(final BlockingQueue<RAMQueueEntry> q,
-      final List<RAMQueueEntry> receptical)
+      final List<RAMQueueEntry> receptacle)
   throws InterruptedException {
     // Clear sets all entries to null and sets size to 0. We retain allocations. Presume it
     // ok even if list grew to accommodate thousands.
-    receptical.clear();
-    receptical.add(q.take());
-    q.drainTo(receptical);
-    return receptical;
+    receptacle.clear();
+    receptacle.add(q.take());
+    q.drainTo(receptacle);
+    return receptacle;
   }
 
   private void persistToFile() throws IOException {
