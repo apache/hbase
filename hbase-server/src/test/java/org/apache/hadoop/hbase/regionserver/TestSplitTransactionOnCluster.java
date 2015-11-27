@@ -972,20 +972,21 @@ public class TestSplitTransactionOnCluster {
       List<HRegion> regions = cluster.getRegions(desc.getTableName());
       int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
-      cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       SplitTransactionImpl st = new SplitTransactionImpl(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       Path tableDir =
           FSUtils.getTableDir(cluster.getMaster().getMasterFileSystem().getRootDir(),
             desc.getTableName());
-      tableDir.getFileSystem(cluster.getConfiguration());
       List<Path> regionDirs =
           FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
       assertEquals(3,regionDirs.size());
-      cluster.startRegionServer();
       regionServer.kill();
-      cluster.getRegionServerThreads().get(serverWith).join();
+      // Before we check deadServerInProgress, we should ensure server is dead at master side.
+      while (!cluster.getMaster().getServerManager().
+          getDeadServers().isDeadServer(regionServer.serverName)) {
+        Thread.sleep(10);
+      }
       // Wait until finish processing of shutdown
       while (cluster.getMaster().getServerManager().areDeadServersInProgress()) {
         Thread.sleep(10);
