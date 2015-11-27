@@ -158,6 +158,8 @@ else
 
   if [ $RR_GRACEFUL -eq 1 ]; then
     # gracefully restart all online regionservers
+    masterport=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.master.port`
+    if [ "$masterport" == "null" ]; then masterport="16000"; fi
     zkrs=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.rs`
     if [ "$zkrs" == "null" ]; then zkrs="rs"; fi
     zkrs="$zparent/$zkrs"
@@ -166,9 +168,15 @@ else
     do
         rs_parts=(${rs//,/ })
         hostname=${rs_parts[0]}
-        echo "Gracefully restarting: $hostname"
-        "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug --maxthreads "${RR_MAXTHREADS}" "$hostname"
-        sleep 1
+        port=${rs_parts[1]}
+        if [ "$port" -eq "$masterport" ]; then
+          echo "Skipping regionserver on master machine $hostname:$port"
+          continue
+        else
+          echo "Gracefully restarting: $hostname"
+          "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug --maxthreads "${RR_MAXTHREADS}" "$hostname"
+          sleep 1
+        fi
     done
   fi
 fi
