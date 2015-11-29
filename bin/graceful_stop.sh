@@ -104,7 +104,7 @@ hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
 if [ "$thrift" != "" ]; then
   log "Stopping thrift server on $hostname"
-  if [ "$local" ]; then
+  if [ "$local" == true ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop thrift
   else
     "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
@@ -112,21 +112,21 @@ if [ "$thrift" != "" ]; then
 fi
 if [ "$rest" != "" ]; then
   log "Stopping rest server on $hostname"
-  if [ "$local" ]; then
+  if [ "$local" == true ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop rest
   else
     "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
   fi
 fi
 log "Stopping regionserver on $hostname"
-if [ "$local" ]; then
+if [ "$local" == true ]; then
   "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop regionserver
 else
   "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
 fi
 if [ "$restart" != "" ]; then
   log "Restarting regionserver on $hostname"
-  if [ "$local" ]; then
+  if [ "$local" == true ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start regionserver
   else
     "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
@@ -134,7 +134,7 @@ if [ "$restart" != "" ]; then
   if [ "$thrift" != "" ]; then
     log "Restarting thrift server on $hostname"
     # -b 0.0.0.0 says listen on all interfaces rather than just default.
-    if [ "$local" ]; then
+    if [ "$local" == true ]; then
       "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start thrift -b 0.0.0.0
     else
       "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
@@ -142,7 +142,7 @@ if [ "$restart" != "" ]; then
   fi
   if [ "$rest" != "" ]; then
     log "Restarting rest server on $hostname"
-    if [ "$local" ]; then
+    if [ "$local" == true ]; then
       "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start rest
     else
       "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
