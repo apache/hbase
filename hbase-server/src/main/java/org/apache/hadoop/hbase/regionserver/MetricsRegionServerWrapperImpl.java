@@ -569,155 +569,160 @@ class MetricsRegionServerWrapperImpl
 
     @Override
     synchronized public void run() {
-      initBlockCache();
-      initMobFileCache();
-      cacheStats = blockCache.getStats();
+      try {
+        initBlockCache();
+        initMobFileCache();
+        cacheStats = blockCache.getStats();
 
-      HDFSBlocksDistribution hdfsBlocksDistribution =
-          new HDFSBlocksDistribution();
-      HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
-          new HDFSBlocksDistribution();
+        HDFSBlocksDistribution hdfsBlocksDistribution =
+            new HDFSBlocksDistribution();
+        HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
+            new HDFSBlocksDistribution();
 
-      long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
-      long tempReadRequestsCount = 0, tempWriteRequestsCount = 0;
-      long tempCheckAndMutateChecksFailed = 0;
-      long tempCheckAndMutateChecksPassed = 0;
-      long tempStorefileIndexSize = 0;
-      long tempTotalStaticIndexSize = 0;
-      long tempTotalStaticBloomSize = 0;
-      long tempNumMutationsWithoutWAL = 0;
-      long tempDataInMemoryWithoutWAL = 0;
-      double tempPercentFileLocal = 0;
-      double tempPercentFileLocalSecondaryRegions = 0;
-      long tempFlushedCellsCount = 0;
-      long tempCompactedCellsCount = 0;
-      long tempMajorCompactedCellsCount = 0;
-      long tempFlushedCellsSize = 0;
-      long tempCompactedCellsSize = 0;
-      long tempMajorCompactedCellsSize = 0;
-      long tempCellsCountCompactedToMob = 0;
-      long tempCellsCountCompactedFromMob = 0;
-      long tempCellsSizeCompactedToMob = 0;
-      long tempCellsSizeCompactedFromMob = 0;
-      long tempMobFlushCount = 0;
-      long tempMobFlushedCellsCount = 0;
-      long tempMobFlushedCellsSize = 0;
-      long tempMobScanCellsCount = 0;
-      long tempMobScanCellsSize = 0;
-      long tempBlockedRequestsCount = 0;
+        long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
+        long tempReadRequestsCount = 0, tempWriteRequestsCount = 0;
+        long tempCheckAndMutateChecksFailed = 0;
+        long tempCheckAndMutateChecksPassed = 0;
+        long tempStorefileIndexSize = 0;
+        long tempTotalStaticIndexSize = 0;
+        long tempTotalStaticBloomSize = 0;
+        long tempNumMutationsWithoutWAL = 0;
+        long tempDataInMemoryWithoutWAL = 0;
+        double tempPercentFileLocal = 0;
+        double tempPercentFileLocalSecondaryRegions = 0;
+        long tempFlushedCellsCount = 0;
+        long tempCompactedCellsCount = 0;
+        long tempMajorCompactedCellsCount = 0;
+        long tempFlushedCellsSize = 0;
+        long tempCompactedCellsSize = 0;
+        long tempMajorCompactedCellsSize = 0;
+        long tempCellsCountCompactedToMob = 0;
+        long tempCellsCountCompactedFromMob = 0;
+        long tempCellsSizeCompactedToMob = 0;
+        long tempCellsSizeCompactedFromMob = 0;
+        long tempMobFlushCount = 0;
+        long tempMobFlushedCellsCount = 0;
+        long tempMobFlushedCellsSize = 0;
+        long tempMobScanCellsCount = 0;
+        long tempMobScanCellsSize = 0;
+        long tempBlockedRequestsCount = 0;
 
-      for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-        tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
-        tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
-        tempReadRequestsCount += r.getReadRequestsCount();
-        tempWriteRequestsCount += r.getWriteRequestsCount();
-        tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
-        tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
-        tempBlockedRequestsCount += r.getBlockedRequestsCount();
-        List<Store> storeList = r.getStores();
-        tempNumStores += storeList.size();
-        for (Store store : storeList) {
-          tempNumStoreFiles += store.getStorefilesCount();
-          tempMemstoreSize += store.getMemStoreSize();
-          tempStoreFileSize += store.getStorefilesSize();
-          tempStorefileIndexSize += store.getStorefilesIndexSize();
-          tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
-          tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
-          tempFlushedCellsCount += store.getFlushedCellsCount();
-          tempCompactedCellsCount += store.getCompactedCellsCount();
-          tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
-          tempFlushedCellsSize += store.getFlushedCellsSize();
-          tempCompactedCellsSize += store.getCompactedCellsSize();
-          tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
-          if (store instanceof HMobStore) {
-            HMobStore mobStore = (HMobStore) store;
-            tempCellsCountCompactedToMob += mobStore.getCellsCountCompactedToMob();
-            tempCellsCountCompactedFromMob += mobStore.getCellsCountCompactedFromMob();
-            tempCellsSizeCompactedToMob += mobStore.getCellsSizeCompactedToMob();
-            tempCellsSizeCompactedFromMob += mobStore.getCellsSizeCompactedFromMob();
-            tempMobFlushCount += mobStore.getMobFlushCount();
-            tempMobFlushedCellsCount += mobStore.getMobFlushedCellsCount();
-            tempMobFlushedCellsSize += mobStore.getMobFlushedCellsSize();
-            tempMobScanCellsCount += mobStore.getMobScanCellsCount();
-            tempMobScanCellsSize += mobStore.getMobScanCellsSize();
+        for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+          tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
+          tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
+          tempReadRequestsCount += r.getReadRequestsCount();
+          tempWriteRequestsCount += r.getWriteRequestsCount();
+          tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
+          tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
+          tempBlockedRequestsCount += r.getBlockedRequestsCount();
+          List<Store> storeList = r.getStores();
+          tempNumStores += storeList.size();
+          for (Store store : storeList) {
+            tempNumStoreFiles += store.getStorefilesCount();
+            tempMemstoreSize += store.getMemStoreSize();
+            tempStoreFileSize += store.getStorefilesSize();
+            tempStorefileIndexSize += store.getStorefilesIndexSize();
+            tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
+            tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
+            tempFlushedCellsCount += store.getFlushedCellsCount();
+            tempCompactedCellsCount += store.getCompactedCellsCount();
+            tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
+            tempFlushedCellsSize += store.getFlushedCellsSize();
+            tempCompactedCellsSize += store.getCompactedCellsSize();
+            tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
+            if (store instanceof HMobStore) {
+              HMobStore mobStore = (HMobStore) store;
+              tempCellsCountCompactedToMob += mobStore.getCellsCountCompactedToMob();
+              tempCellsCountCompactedFromMob += mobStore.getCellsCountCompactedFromMob();
+              tempCellsSizeCompactedToMob += mobStore.getCellsSizeCompactedToMob();
+              tempCellsSizeCompactedFromMob += mobStore.getCellsSizeCompactedFromMob();
+              tempMobFlushCount += mobStore.getMobFlushCount();
+              tempMobFlushedCellsCount += mobStore.getMobFlushedCellsCount();
+              tempMobFlushedCellsSize += mobStore.getMobFlushedCellsSize();
+              tempMobScanCellsCount += mobStore.getMobScanCellsCount();
+              tempMobScanCellsSize += mobStore.getMobScanCellsSize();
+            }
+          }
+
+          HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
+          hdfsBlocksDistribution.add(distro);
+          if (r.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+            hdfsBlocksDistributionSecondaryRegions.add(distro);
           }
         }
+        float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
+            regionServer.getServerName().getHostname());
+        tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
 
-        HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
-        hdfsBlocksDistribution.add(distro);
-        if (r.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-          hdfsBlocksDistributionSecondaryRegions.add(distro);
+        float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
+            .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+        tempPercentFileLocalSecondaryRegions = Double.
+            isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
+
+        // Compute the number of requests per second
+        long currentTime = EnvironmentEdgeManager.currentTime();
+
+        // assume that it took PERIOD seconds to start the executor.
+        // this is a guess but it's a pretty good one.
+        if (lastRan == 0) {
+          lastRan = currentTime - period;
         }
+        // If we've time traveled keep the last requests per second.
+        if ((currentTime - lastRan) > 0) {
+          long currentRequestCount = getTotalRequestCount();
+          requestsPerSecond = (currentRequestCount - lastRequestCount) /
+              ((currentTime - lastRan) / 1000.0);
+          lastRequestCount = currentRequestCount;
+        }
+        lastRan = currentTime;
+
+        WALProvider provider = regionServer.walFactory.getWALProvider();
+        WALProvider metaProvider = regionServer.walFactory.getMetaWALProvider();
+        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
+            (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
+        walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
+            (provider == null ? 0 : provider.getLogFileSize());
+        // Copy over computed values so that no thread sees half computed values.
+        numStores = tempNumStores;
+        numStoreFiles = tempNumStoreFiles;
+        memstoreSize = tempMemstoreSize;
+        storeFileSize = tempStoreFileSize;
+        readRequestsCount = tempReadRequestsCount;
+        writeRequestsCount = tempWriteRequestsCount;
+        checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;
+        checkAndMutateChecksPassed = tempCheckAndMutateChecksPassed;
+        storefileIndexSize = tempStorefileIndexSize;
+        totalStaticIndexSize = tempTotalStaticIndexSize;
+        totalStaticBloomSize = tempTotalStaticBloomSize;
+        numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
+        dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
+        percentFileLocal = tempPercentFileLocal;
+        percentFileLocalSecondaryRegions = tempPercentFileLocalSecondaryRegions;
+        flushedCellsCount = tempFlushedCellsCount;
+        compactedCellsCount = tempCompactedCellsCount;
+        majorCompactedCellsCount = tempMajorCompactedCellsCount;
+        flushedCellsSize = tempFlushedCellsSize;
+        compactedCellsSize = tempCompactedCellsSize;
+        majorCompactedCellsSize = tempMajorCompactedCellsSize;
+        cellsCountCompactedToMob = tempCellsCountCompactedToMob;
+        cellsCountCompactedFromMob = tempCellsCountCompactedFromMob;
+        cellsSizeCompactedToMob = tempCellsSizeCompactedToMob;
+        cellsSizeCompactedFromMob = tempCellsSizeCompactedFromMob;
+        mobFlushCount = tempMobFlushCount;
+        mobFlushedCellsCount = tempMobFlushedCellsCount;
+        mobFlushedCellsSize = tempMobFlushedCellsSize;
+        mobScanCellsCount = tempMobScanCellsCount;
+        mobScanCellsSize = tempMobScanCellsSize;
+        mobFileCacheAccessCount = mobFileCache.getAccessCount();
+        mobFileCacheMissCount = mobFileCache.getMissCount();
+        mobFileCacheHitRatio = Double.
+            isNaN(mobFileCache.getHitRatio())?0:mobFileCache.getHitRatio();
+        mobFileCacheEvictedCount = mobFileCache.getEvictedFileCount();
+        mobFileCacheCount = mobFileCache.getCacheSize();
+        blockedRequestsCount = tempBlockedRequestsCount;
+      } catch (Throwable e) {
+        LOG.warn("Caught exception! Will suppress and retry.", e);
       }
-      float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
-          regionServer.getServerName().getHostname());
-      tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
-
-      float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
-          .getBlockLocalityIndex(regionServer.getServerName().getHostname());
-      tempPercentFileLocalSecondaryRegions =
-          Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
-
-      // Compute the number of requests per second
-      long currentTime = EnvironmentEdgeManager.currentTime();
-
-      // assume that it took PERIOD seconds to start the executor.
-      // this is a guess but it's a pretty good one.
-      if (lastRan == 0) {
-        lastRan = currentTime - period;
-      }
-      // If we've time traveled keep the last requests per second.
-      if ((currentTime - lastRan) > 0) {
-        long currentRequestCount = getTotalRequestCount();
-        requestsPerSecond = (currentRequestCount - lastRequestCount) /
-            ((currentTime - lastRan) / 1000.0);
-        lastRequestCount = currentRequestCount;
-      }
-      lastRan = currentTime;
-
-      WALProvider provider = regionServer.walFactory.getWALProvider();
-      WALProvider metaProvider = regionServer.walFactory.getMetaWALProvider();
-      numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
-          (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
-      walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
-          (provider == null ? 0 : provider.getLogFileSize());
-      // Copy over computed values so that no thread sees half computed values.
-      numStores = tempNumStores;
-      numStoreFiles = tempNumStoreFiles;
-      memstoreSize = tempMemstoreSize;
-      storeFileSize = tempStoreFileSize;
-      readRequestsCount = tempReadRequestsCount;
-      writeRequestsCount = tempWriteRequestsCount;
-      checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;
-      checkAndMutateChecksPassed = tempCheckAndMutateChecksPassed;
-      storefileIndexSize = tempStorefileIndexSize;
-      totalStaticIndexSize = tempTotalStaticIndexSize;
-      totalStaticBloomSize = tempTotalStaticBloomSize;
-      numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
-      dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
-      percentFileLocal = tempPercentFileLocal;
-      percentFileLocalSecondaryRegions = tempPercentFileLocalSecondaryRegions;
-      flushedCellsCount = tempFlushedCellsCount;
-      compactedCellsCount = tempCompactedCellsCount;
-      majorCompactedCellsCount = tempMajorCompactedCellsCount;
-      flushedCellsSize = tempFlushedCellsSize;
-      compactedCellsSize = tempCompactedCellsSize;
-      majorCompactedCellsSize = tempMajorCompactedCellsSize;
-      cellsCountCompactedToMob = tempCellsCountCompactedToMob;
-      cellsCountCompactedFromMob = tempCellsCountCompactedFromMob;
-      cellsSizeCompactedToMob = tempCellsSizeCompactedToMob;
-      cellsSizeCompactedFromMob = tempCellsSizeCompactedFromMob;
-      mobFlushCount = tempMobFlushCount;
-      mobFlushedCellsCount = tempMobFlushedCellsCount;
-      mobFlushedCellsSize = tempMobFlushedCellsSize;
-      mobScanCellsCount = tempMobScanCellsCount;
-      mobScanCellsSize = tempMobScanCellsSize;
-      mobFileCacheAccessCount = mobFileCache.getAccessCount();
-      mobFileCacheMissCount = mobFileCache.getMissCount();
-      mobFileCacheHitRatio = Double.isNaN(mobFileCache.getHitRatio())?0:mobFileCache.getHitRatio();
-      mobFileCacheEvictedCount = mobFileCache.getEvictedFileCount();
-      mobFileCacheCount = mobFileCache.getCacheSize();
-      blockedRequestsCount = tempBlockedRequestsCount;
     }
   }
 
