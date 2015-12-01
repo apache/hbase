@@ -1669,7 +1669,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return response;
       }
 
-      HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
+      HRegion.warmupHRegion(region, htd, null,
           regionServer.getConfiguration(), regionServer, null);
 
     } catch (IOException ie) {
