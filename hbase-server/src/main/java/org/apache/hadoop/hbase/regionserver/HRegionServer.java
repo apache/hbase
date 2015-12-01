@@ -1858,6 +1858,26 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
+  public void releaseWAL(HRegionInfo regionInfo, WAL wal) throws IOException {
+    if (regionInfo != null && regionInfo.isMetaTable() &&
+        regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+
+      walFactory.closeMetaWAL(regionInfo.getEncodedNameAsBytes());
+
+      LogRoller roller;
+      if (regionInfo != null && regionInfo.isMetaTable() &&
+          regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+        roller = metawalRoller.get();
+        if (roller != null) {
+          roller.removeWAL(wal); // only do this for meta WAL
+        }
+
+        // TODO: meta wal roller is left running. Should be fine.
+      }
+    }
+  }
+
+  @Override
   public ClusterConnection getConnection() {
     return this.clusterConnection;
   }

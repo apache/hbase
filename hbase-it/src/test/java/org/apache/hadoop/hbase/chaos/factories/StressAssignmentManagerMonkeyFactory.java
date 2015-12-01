@@ -34,7 +34,8 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new CompactTableAction(tableName, 0.5f),
         new CompactRandomRegionOfTableAction(tableName, 0.6f),
         new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName)
+        new FlushRandomRegionOfTableAction(tableName),
+        new MoveMetaAction()
     };
 
     Action[] actions2 = new Action[]{
@@ -55,6 +56,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new SplitAllRegionOfTableAction(tableName),
         new DecreaseMaxHFileSizeAction(MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME,
             tableName),
+        new MoveMetaAction()
     };
 
     // Action to log more info for debugging
