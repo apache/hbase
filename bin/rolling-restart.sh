@@ -116,6 +116,7 @@ else
     if [ "$zmaster" == "null" ]; then zmaster="master"; fi
     zmaster=$zparent/$zmaster
     echo -n "Waiting for Master ZNode ${zmaster} to expire"
+    echo
     while ! "$bin"/hbase zkcli stat $zmaster 2>&1 | grep "Node does not exist"; do
       echo -n "."
       sleep 1
@@ -136,17 +137,28 @@ else
     zunassigned=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.unassigned`
     if [ "$zunassigned" == "null" ]; then zunassigned="region-in-transition"; fi
     zunassigned="$zparent/$zunassigned"
-    echo -n "Waiting for ${zunassigned} to empty"
-    while true ; do
-      unassigned=`$bin/hbase zkcli stat ${zunassigned} 2>&1 |grep -e 'numChildren = '|sed -e 's,numChildren = ,,'`
-      if test 0 -eq ${unassigned}
-      then
-        break
-      else
-        echo -n " ${unassigned}"
-      fi
-      sleep 1
-    done
+    # Checking if /hbase/region-in-transition exist
+    ritZnodeCheck=`$bin/hbase zkcli stat ${zunassigned} 2>&1 | tail -1 \
+		  | grep "Node does not exist:" >/dev/null`
+    ret=$?
+    if test 0 -eq ${ret}
+    then
+      echo "Znode ${zunassigned} does not exist"
+    else
+      echo -n "Waiting for ${zunassigned} to empty"
+      while true ; do
+        unassigned=`$bin/hbase zkcli stat ${zunassigned} 2>&1 \
+		   | grep -e 'numChildren = '|sed -e 's,numChildren = ,,'`
+        if test 0 -eq ${unassigned}
+        then
+          echo
+          break
+        else
+          echo -n " ${unassigned}"
+        fi
+        sleep 1
+      done
+    fi
   fi
 
   if [ $RR_RS -eq 1 ]; then
