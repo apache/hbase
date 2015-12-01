@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.MoveMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RemoveColumnAction;
@@ -77,7 +78,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
         new FlushTableAction(tableName),
         new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName)
+        new MoveRandomRegionOfTableAction(tableName),
+        new MoveMetaAction()
     };
 
     // Actions such as split/merge/snapshot.
@@ -105,7 +107,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new RestartActiveMasterAction(restartActiveMasterSleepTime),
         new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
             rollingBatchRestartRSRatio),
-        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime)
+        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
+        new MoveMetaAction()
     };
 
     // Action to log more info for debugging

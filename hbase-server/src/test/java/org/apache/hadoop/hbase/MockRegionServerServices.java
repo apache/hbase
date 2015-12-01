@@ -283,4 +283,8 @@ public class MockRegionServerServices implements RegionServerServices {
   public HeapMemoryManager getHeapMemoryManager() {
     return null;
   }
+
+  @Override
+  public void releaseWAL(HRegionInfo regionInfo, WAL wal) throws IOException {
+  }
 }
