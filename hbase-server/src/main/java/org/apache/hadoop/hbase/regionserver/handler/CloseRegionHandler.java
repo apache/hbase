@@ -46,8 +46,9 @@ public class CloseRegionHandler extends EventHandler {
   // have a running queue of user regions to close?
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
-  private final RegionServerServices rsServices;
-  private final HRegionInfo regionInfo;
+  protected final RegionServerServices rsServices;
+  protected final HRegionInfo regionInfo;
+  protected HRegion region;
 
   // If true, the hosting server is aborting.  Region close process is different
   // when we are aborting.
@@ -119,7 +120,7 @@ public class CloseRegionHandler extends EventHandler {
       LOG.debug("Processing close of " + name);
       String encodedRegionName = regionInfo.getEncodedName();
       // Check that this region is being served here
-      HRegion region = (HRegion)rsServices.getFromOnlineRegions(encodedRegionName);
+      region = (HRegion)rsServices.getFromOnlineRegions(encodedRegionName);
       if (region == null) {
         LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
         // TODO: do better than a simple warning
@@ -142,6 +143,10 @@ public class CloseRegionHandler extends EventHandler {
           LOG.warn("Can't close region: was already closed during close(): " +
             regionInfo.getRegionNameAsString());
           return;
+        }
+
+        if (!abort) {
+          releaseWALIfNeeded();
         }
       } catch (IOException ioe) {
         // An IOException here indicates that we couldn't successfully flush the
@@ -166,5 +171,9 @@ public class CloseRegionHandler extends EventHandler {
       this.rsServices.getRegionsInTransitionInRS().
           remove(this.regionInfo.getEncodedNameAsBytes());
     }
+  }
+
+  protected void releaseWALIfNeeded() throws IOException {
+    // release the WAL if needed. Only meta does this for now.
   }
 }
