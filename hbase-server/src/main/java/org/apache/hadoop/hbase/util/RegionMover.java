@@ -104,8 +104,8 @@ public class RegionMover extends AbstractHBaseTool {
   }
 
   /**
-   * Builder for Region mover.Use the {@link #build()} method to create {@link #RegionMover(String)}
-   * object Has {@link #filename(String)}, {@link #excludeFile(String)}, {@link #maxthreads(int)},
+   * Builder for Region mover. Use the {@link #build()} method to create RegionMover object. Has
+   * {@link #filename(String)}, {@link #excludeFile(String)}, {@link #maxthreads(int)},
    * {@link #ack(boolean)}, {@link #timeout(int)} methods to set the corresponding options
    */
   public static class RegionMoverBuilder {

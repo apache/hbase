@@ -88,7 +88,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    *     {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
    *     or
    *     {@link MultiVersionConcurrencyControl#complete(MultiVersionConcurrencyControl.WriteEntry)}
-   * @see {@link #setWriteEntry(MultiVersionConcurrencyControl.WriteEntry)}
+   * @see #setWriteEntry(MultiVersionConcurrencyControl.WriteEntry)
    */
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl.WriteEntry getWriteEntry() throws InterruptedIOException {
