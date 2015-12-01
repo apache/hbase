@@ -36,7 +36,7 @@
     <unittest.include>**/Test*.java</unittest.include>
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
     <!-- To Run Tests with a particular Xmx Value use -Dfailsafe.Xmx=XXXg -->
-    <failsafe.Xmx>3g</failsafe.Xmx>
+    <failsafe.Xmx>4g</failsafe.Xmx>
     <!-- To run a single integration test, use -Dit.test=IntegrationTestXXX -->
   </properties>
 
@@ -174,7 +174,7 @@
             <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
                  I believe it is a failsafe bug, we may consider using surefire -->
             <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx${failsafe.Xmx} -XX:MaxPermSize=256m
+            <argLine>-enableassertions -Xmx${failsafe.Xmx} -XX:MaxPermSize=368m
                 -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
                 -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
           </configuration>
