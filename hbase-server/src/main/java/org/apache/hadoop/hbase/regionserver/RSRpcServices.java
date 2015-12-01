@@ -165,7 +165,6 @@ import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -175,6 +174,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -1609,9 +1609,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return response;
       }
 
-      HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
+      HRegion.warmupHRegion(region, htd, null,
           regionServer.getConfiguration(), regionServer, null);
-
     } catch (IOException ie) {
       LOG.error("Failed warming up region " + region.getRegionNameAsString(), ie);
       throw new ServiceException(ie);
