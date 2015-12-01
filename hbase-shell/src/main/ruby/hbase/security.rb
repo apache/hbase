@@ -64,7 +64,7 @@ module Hbase
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-            tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
+            tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name.to_java_bytes)
             htd = @admin.getTableDescriptor(tableName)
 
             if (family != nil)
@@ -106,7 +106,7 @@ module Hbase
              # Table should exist
              raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
+             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name.to_java_bytes)
              htd = @admin.getTableDescriptor(tableName)
 
              if (family != nil)
@@ -165,7 +165,7 @@ module Hbase
 
     # Does table exist?
     def exists?(table_name)
-      @admin.tableExists(TableName.valueOf(table_name))
+      @admin.tableExists(table_name)
     end
 
     def isNamespace?(table_name)

@@ -718,7 +718,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         }
         TableName tableName = selected.getTableName();
         LOG.info("Deleting column family: " + cfd + " from table: " + tableName);
-        admin.deleteColumnFamily(tableName, cfd.getName());
+        admin.deleteColumn(tableName, cfd.getName());
         // assertion
         HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
         Assert.assertFalse("Column family: " + cfd + " was not added",

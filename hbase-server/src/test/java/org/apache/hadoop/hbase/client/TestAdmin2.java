@@ -465,8 +465,8 @@ public class TestAdmin2 {
         onlineRegions.contains(info));
   }
 
-  private HBaseAdmin createTable(TableName tableName) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+  private Admin createTable(TableName tableName) throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");

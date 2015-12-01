@@ -153,7 +153,7 @@ module Hbase
 
     # Does table exist?
     def exists?(table_name)
-      @admin.tableExists(TableName.valueOf(table_name))
+      @admin.tableExists(table_name)
     end
   end
 end

@@ -100,7 +100,7 @@ public class TestExpiredMobFileCleaner {
     int timeToLive = expireDays * secondsOfDay();
     hcd.setTimeToLive(timeToLive);
 
-    admin.modifyColumnFamily(tableName, hcd);
+    admin.modifyColumn(tableName, hcd);
   }
 
   private void putKVAndFlush(BufferedMutator table, byte[] row, byte[] value, long ts)

@@ -400,8 +400,8 @@ public class TestMetaWithReplicas {
       }
     }
     assert(moveToServer != null);
-    TableName tableName = TableName.valueOf("randomTable5678");
-    TEST_UTIL.createTable(tableName, "f");
+    String tableName = "randomTable5678";
+    TEST_UTIL.createTable(TableName.valueOf(tableName), "f");
     assertTrue(TEST_UTIL.getHBaseAdmin().tableExists(tableName));
     TEST_UTIL.getHBaseAdmin().move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(moveToServer.getServerName()));
@@ -413,8 +413,8 @@ public class TestMetaWithReplicas {
       i++;
     } while (!moveToServer.equals(currentServer) && i < 1000); //wait for 10 seconds overall
     assert(i != 1000);
-    TEST_UTIL.getHBaseAdmin().disableTable(tableName);
-    assertTrue(TEST_UTIL.getHBaseAdmin().isTableDisabled(tableName));
+    TEST_UTIL.getHBaseAdmin().disableTable("randomTable5678");
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableDisabled("randomTable5678"));
   }
 
   @Test

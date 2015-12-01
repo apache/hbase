@@ -421,7 +421,7 @@ onwards.
 +
 [source,java]
 ----
-TableName tableName = TableName.valueOf("users");
+String tableName = "users";
 String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 HBaseAdmin admin = new HBaseAdmin(conf);

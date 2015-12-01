@@ -53,7 +53,7 @@ Tables must be disabled when making ColumnFamily modifications, for example:
 
 Configuration config = HBaseConfiguration.create();
 Admin admin = new Admin(conf);
-TableName table = TableName.valueOf("myTable");
+String table = "myTable";
 
 admin.disableTable(table);
 

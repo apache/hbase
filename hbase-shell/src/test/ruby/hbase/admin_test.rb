@@ -405,21 +405,21 @@ module Hbase
     end
 
     #-------------------------------------------------------------------------------
-    define_test "Snapshot should fail with non-string table name" do
-      assert_raise(ArgumentError) do
+    define_test "Snapshot should fail with non-string snapshot name" do
+      assert_raise(NoMethodError) do
         admin.snapshot(123, 'xxx')
       end
     end
 
-    define_test "Snapshot should fail with non-string snapshot name" do
-      assert_raise(ArgumentError) do
-        admin.snapshot(@test_name, 123)
+    define_test "Snapshot should fail with non-string table name" do
+      assert_raise(NoMethodError) do
+        admin.snapshot(@create_test_snapshot, 123)
       end
     end
 
-    define_test "Snapshot should fail without snapshot name" do
+    define_test "Snapshot should fail without table name" do
       assert_raise(ArgumentError) do
-        admin.snapshot(@test_name)
+        admin.snapshot("hbase_create_test_snapshot")
       end
     end
 

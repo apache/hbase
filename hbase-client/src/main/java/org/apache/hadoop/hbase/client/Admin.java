@@ -487,10 +487,7 @@ public interface Admin extends Abortable, Closeable {
    * @return Pair indicating the number of regions updated Pair.getFirst() is the regions that are
    * yet to be updated Pair.getSecond() is the total number of regions of the table
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #getAlterStatus(TableName)}
-   *     instead.
    */
-  @Deprecated
   Pair<Integer, Integer> getAlterStatus(final byte[] tableName) throws IOException;
 
   /**
@@ -1184,8 +1181,9 @@ public interface Admin extends Abortable, Closeable {
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
-   * Create a timestamp consistent snapshot for the given table. Snapshots are considered unique
-   * based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even
+   * public void snapshot(final String snapshotName, Create a timestamp consistent snapshot for the
+   * given table. final byte[] tableName) throws IOException, Snapshots are considered unique based
+   * on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even a
    * different type or with different parameters) will fail with a {@link SnapshotCreationException}
    * indicating the duplicate naming. Snapshot names follow the same naming constraints as tables in
    * HBase.
