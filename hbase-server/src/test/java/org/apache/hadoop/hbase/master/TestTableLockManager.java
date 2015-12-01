@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InterProcessLock;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
@@ -129,7 +130,7 @@ public class TestTableLockManager {
 
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     master.getMasterCoprocessorHost().load(TestAlterAndDisableMasterObserver.class,
-        0, TEST_UTIL.getConfiguration());
+            0, TEST_UTIL.getConfiguration());
 
     ExecutorService executor = Executors.newFixedThreadPool(2);
     Future<Object> alterTableFuture = executor.submit(new Callable<Object>() {
@@ -233,6 +234,23 @@ public class TestTableLockManager {
 
   }
 
+  public class TableLockCounter implements InterProcessLock.MetadataHandler {
+
+    private int lockCount = 0;
+
+    @Override
+    public void handleMetadata(byte[] metadata) {
+      lockCount++;
+    }
+
+    public void reset() {
+      lockCount = 0;
+    }
+
+    public int getLockCount() {
+      return lockCount;
+    }
+  }
 
   @Test(timeout = 600000)
   public void testReapAllTableLocks() throws Exception {
@@ -257,7 +275,7 @@ public class TestTableLockManager {
           public Void call() throws Exception {
             writeLocksAttempted.countDown();
             lockManager.writeLock(TableName.valueOf(table),
-                "testReapAllTableLocks").acquire();
+                    "testReapAllTableLocks").acquire();
             writeLocksObtained.countDown();
             return null;
           }
@@ -268,9 +286,15 @@ public class TestTableLockManager {
     writeLocksObtained.await();
     writeLocksAttempted.await();
 
+    TableLockCounter counter = new TableLockCounter();
+    do {
+      counter.reset();
+      lockManager.visitAllLocks(counter);
+      Thread.sleep(10);
+    } while (counter.getLockCount() != 10);
+
     //now reap all table locks
     lockManager.reapWriteLocks();
-
     TEST_UTIL.getConfiguration().setInt(TableLockManager.TABLE_WRITE_LOCK_TIMEOUT_MS, 0);
     TableLockManager zeroTimeoutLockManager = TableLockManager.createTableLockManager(
           TEST_UTIL.getConfiguration(), TEST_UTIL.getZooKeeperWatcher(), serverName);
