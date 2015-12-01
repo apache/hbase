@@ -85,7 +85,6 @@
             </dependency>
           </dependencies>
           <configuration>
-            <argLine> -XX:+CMSClassUnloadingEnabled -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
             <includes>
               <include>${integrationtest.include}</include>
             </includes>
@@ -175,9 +174,9 @@
             <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
                  I believe it is a failsafe bug, we may consider using surefire -->
             <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx${failsafe.Xmx}
-              -Djava.security.egd=file:/dev/./urandom</argLine>
-            <testFailureIgnore>false</testFailureIgnore>
+            <argLine>-enableassertions -Xmx${failsafe.Xmx} -XX:MaxPermSize=256m
+                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
+                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
           </configuration>
       </plugin>
     </plugins>
