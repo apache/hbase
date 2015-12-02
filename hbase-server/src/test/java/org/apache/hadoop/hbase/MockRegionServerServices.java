@@ -102,7 +102,7 @@ public class MockRegionServerServices implements RegionServerServices {
   public List<Region> getOnlineRegions(TableName tableName) throws IOException {
     return null;
   }
-
+  
   @Override
   public Set<TableName> getOnlineTables() {
     return null;
@@ -181,7 +181,7 @@ public class MockRegionServerServices implements RegionServerServices {
   public TableLockManager getTableLockManager() {
     return new NullTableLockManager();
   }
-
+  
   @Override
   public RegionServerQuotaManager getRegionServerQuotaManager() {
     return null;
@@ -303,9 +303,5 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public double getCompactionPressure() {
     return 0;
-  }
-
-  @Override
-  public void releaseWAL(HRegionInfo regionInfo, WAL wal) throws IOException {
   }
 }

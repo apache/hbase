@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -42,10 +39,5 @@ public class CloseMetaHandler extends CloseRegionHandler {
       CloseRegionCoordination.CloseRegionDetails crd) {
     super(server, rsServices, regionInfo, abort, closeRegionCoordination,
       crd, EventType.M_RS_CLOSE_META);
-  }
-
-  @Override
-  protected void releaseWALIfNeeded() throws IOException {
-    rsServices.releaseWAL(regionInfo, region.getWAL());
   }
 }

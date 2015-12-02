@@ -57,8 +57,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
         new FlushTableAction(tableName),
         new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName),
-        new MoveMetaAction()
+        new MoveRandomRegionOfTableAction(tableName)
     };
 
     // Actions such as split/merge/snapshot.
@@ -90,7 +89,6 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
         new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
         new SplitAllRegionOfTableAction(tableName),
-        new MoveMetaAction()
     };
 
     // Action to log more info for debugging
