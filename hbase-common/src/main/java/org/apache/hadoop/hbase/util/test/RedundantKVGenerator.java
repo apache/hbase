@@ -24,8 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -288,6 +290,159 @@ public class RedundantKVGenerator {
     Collections.sort(result, CellComparator.COMPARATOR);
 
     return result;
+  }
+
+  /**
+   * Generate test data useful to test encoders.
+   * @param howMany How many Key values should be generated.
+   * @return sorted list of key values
+   */
+  public List<Cell> generateTestExtendedOffheapKeyValues(int howMany, boolean useTags) {
+    List<Cell> result = new ArrayList<Cell>();
+    List<byte[]> rows = generateRows();
+    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<Integer, List<byte[]>>();
+
+    if (family == null) {
+      family = new byte[columnFamilyLength];
+      randomizer.nextBytes(family);
+    }
+
+    long baseTimestamp = Math.abs(randomizer.nextInt()) / baseTimestampDivide;
+
+    byte[] value = new byte[valueLength];
+
+    for (int i = 0; i < howMany; ++i) {
+      long timestamp = baseTimestamp;
+      if(timestampDiffSize > 0){
+        timestamp += randomizer.nextInt(timestampDiffSize);
+      }
+      Integer rowId = randomizer.nextInt(rows.size());
+      byte[] row = rows.get(rowId);
+
+      // generate qualifier, sometimes it is same, sometimes similar,
+      // occasionally completely different
+      byte[] qualifier;
+      float qualifierChance = randomizer.nextFloat();
+      if (!rowsToQualifier.containsKey(rowId)
+          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier) {
+        int qualifierLength = averageQualifierLength;
+        qualifierLength += randomizer.nextInt(2 * qualifierLengthVariance + 1)
+            - qualifierLengthVariance;
+        qualifier = new byte[qualifierLength];
+        randomizer.nextBytes(qualifier);
+
+        // add it to map
+        if (!rowsToQualifier.containsKey(rowId)) {
+          rowsToQualifier.put(rowId, new ArrayList<byte[]>());
+        }
+        rowsToQualifier.get(rowId).add(qualifier);
+      } else if (qualifierChance > chanceForSameQualifier) {
+        // similar qualifier
+        List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
+        byte[] originalQualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers
+            .size()));
+
+        qualifier = new byte[originalQualifier.length];
+        int commonPrefix = randomizer.nextInt(qualifier.length);
+        System.arraycopy(originalQualifier, 0, qualifier, 0, commonPrefix);
+        for (int j = commonPrefix; j < qualifier.length; ++j) {
+          qualifier[j] = (byte) (randomizer.nextInt() & 0xff);
+        }
+
+        rowsToQualifier.get(rowId).add(qualifier);
+      } else {
+        // same qualifier
+        List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
+        qualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers.size()));
+      }
+
+      if (randomizer.nextFloat() < chanceForZeroValue) {
+        for (int j = 0; j < value.length; ++j) {
+          value[j] = (byte) 0;
+        }
+      } else {
+        randomizer.nextBytes(value);
+      }
+      if (useTags) {
+        KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value,
+            new Tag[] { new Tag((byte) 1, "value1") });
+        ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
+        ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
+          keyValue.getOffset(), keyValue.getLength());
+        OffheapKeyValue offheapKV =
+            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), true, 0);
+        result.add(offheapKV);
+      } else {
+        KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value);
+        ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
+        ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
+          keyValue.getOffset(), keyValue.getLength());
+        OffheapKeyValue offheapKV =
+            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), false, 0);
+        result.add(offheapKV);
+      }
+    }
+
+    Collections.sort(result, CellComparator.COMPARATOR);
+
+    return result;
+  }
+
+  static class ExtendedOffheapKeyValue extends OffheapKeyValue {
+    public ExtendedOffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags,
+        long seqId) {
+      super(buf, offset, length, hasTags, seqId);
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      throw new IllegalArgumentException("getRowArray operation is not allowed");
+    }
+
+    @Override
+    public int getRowOffset() {
+      throw new IllegalArgumentException("getRowOffset operation is not allowed");
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      throw new IllegalArgumentException("getFamilyArray operation is not allowed");
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      throw new IllegalArgumentException("getFamilyOffset operation is not allowed");
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      throw new IllegalArgumentException("getQualifierArray operation is not allowed");
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      throw new IllegalArgumentException("getQualifierOffset operation is not allowed");
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      throw new IllegalArgumentException("getValueArray operation is not allowed");
+    }
+
+    @Override
+    public int getValueOffset() {
+      throw new IllegalArgumentException("getValueOffset operation is not allowed");
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      throw new IllegalArgumentException("getTagsArray operation is not allowed");
+    }
+
+    @Override
+    public int getTagsOffset() {
+      throw new IllegalArgumentException("getTagsOffset operation is not allowed");
+    }
   }
 
   /**

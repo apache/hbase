@@ -229,7 +229,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // put column family
       byte familyLength = cell.getFamilyLength();
       out.write(familyLength);
-      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), familyLength);
+      CellUtil.writeFamily(out, cell, familyLength);
     } else {
       // Finding common prefix
       int preKeyLength = KeyValueUtil.keyLength(prevCell);
@@ -282,7 +282,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // Previous and current rows are different. Copy the differing part of
       // the row, skip the column family, and copy the qualifier.
       CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      CellUtil.writeQualifier(out, cell, cell.getQualifierLength());
     } else {
       // The common part includes the whole row. As the column family is the
       // same across the whole file, it will automatically be included in the
@@ -290,8 +290,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // What we write here is the non common part of the qualifier
       int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
           - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
-          cell.getQualifierLength() - commonQualPrefix);
+      CellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
+        commonQualPrefix);
     }
     if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
       ByteBufferUtils.putLong(out, timestamp, timestampFitsInBytes);
@@ -302,7 +302,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     if ((flag & FLAG_SAME_TYPE) == 0) {
       out.write(cell.getTypeByte());
     }
-    out.write(cell.getValueArray(), cell.getValueOffset(), vLength);
+    CellUtil.writeValue(out, cell, vLength);
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 

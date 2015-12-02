@@ -48,14 +48,14 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
     out.writeInt(klength);
     out.writeInt(vlength);
     CellUtil.writeFlatKey(cell, out);
-    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
+    CellUtil.writeValue(out, cell, vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     // Write the additional tag into the stream
     if (encodingContext.getHFileContext().isIncludesTags()) {
       int tagsLength = cell.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
-        out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
+        CellUtil.writeTags(out, cell, tagsLength);
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }

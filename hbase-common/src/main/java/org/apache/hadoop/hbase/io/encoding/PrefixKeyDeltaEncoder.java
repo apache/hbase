@@ -69,7 +69,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       writeKeyExcludingCommon(cell, common, out);
     }
     // Write the value part
-    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
+    CellUtil.writeValue(out, cell, vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     size += afterEncodingKeyValue(cell, out, encodingContext);
     state.prevCell = cell;
@@ -85,8 +85,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
       byte fLen = cell.getFamilyLength();
       out.writeByte(fLen);
-      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      CellUtil.writeFamily(out, cell, fLen);
+      CellUtil.writeQualifier(out, cell, cell.getQualifierLength());
       out.writeLong(cell.getTimestamp());
       out.writeByte(cell.getTypeByte());
     } else {
@@ -98,8 +98,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       int commonQualPrefix = Math.min(commonPrefix, qLen);
       int qualPartLenToWrite = qLen - commonQualPrefix;
       if (qualPartLenToWrite > 0) {
-        out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
-            qualPartLenToWrite);
+        CellUtil.writeQualifierSkippingBytes(out, cell, qLen, commonQualPrefix);
       }
       commonPrefix -= commonQualPrefix;
       // Common part in TS also?

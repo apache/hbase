@@ -595,26 +595,29 @@ public final class CellUtil {
   }
 
   public static boolean matchingValue(final Cell left, final Cell right) {
-    int lvlength = left.getValueLength();
-    int rvlength = right.getValueLength();
+    return matchingValue(left, right, left.getValueLength(), right.getValueLength());
+  }
+
+  public static boolean matchingValue(final Cell left, final Cell right, int lvlength,
+      int rvlength) {
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
       return ByteBufferUtils.equals(((ByteBufferedCell) left).getValueByteBuffer(),
-          ((ByteBufferedCell) left).getValuePosition(), lvlength,
-          ((ByteBufferedCell) right).getValueByteBuffer(),
-          ((ByteBufferedCell) right).getValuePosition(), rvlength);
+        ((ByteBufferedCell) left).getValuePosition(), lvlength,
+        ((ByteBufferedCell) right).getValueByteBuffer(),
+        ((ByteBufferedCell) right).getValuePosition(), rvlength);
     }
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.equals(((ByteBufferedCell) left).getValueByteBuffer(),
-          ((ByteBufferedCell) left).getValuePosition(), lvlength,
-          right.getValueArray(), right.getValueOffset(), rvlength);
+        ((ByteBufferedCell) left).getValuePosition(), lvlength, right.getValueArray(),
+        right.getValueOffset(), rvlength);
     }
     if (right instanceof ByteBufferedCell) {
       return ByteBufferUtils.equals(((ByteBufferedCell) right).getValueByteBuffer(),
-          ((ByteBufferedCell) right).getValuePosition(), rvlength,
-          left.getValueArray(), left.getValueOffset(), lvlength);
+        ((ByteBufferedCell) right).getValuePosition(), rvlength, left.getValueArray(),
+        left.getValueOffset(), lvlength);
     }
     return Bytes.equals(left.getValueArray(), left.getValueOffset(), lvlength,
-        right.getValueArray(), right.getValueOffset(), rvlength);
+      right.getValueArray(), right.getValueOffset(), rvlength);
   }
 
   public static boolean matchingValue(final Cell left, final byte[] buf) {
@@ -879,14 +882,144 @@ public final class CellUtil {
    */
   public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
     short rowLen = cell.getRowLength();
-    out.writeShort(rowLen);
-    out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
     byte fLen = cell.getFamilyLength();
-    out.writeByte(fLen);
-    out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
-    out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    int qLen = cell.getQualifierLength();
+    // Using just one if/else loop instead of every time checking before writing every
+    // component of cell
+    if (cell instanceof ByteBufferedCell) {
+      out.writeShort(rowLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPosition(), rowLen);
+      out.writeByte(fLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferedCell) cell).getFamilyPosition(), fLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferedCell) cell).getQualifierPosition(), qLen);
+    } else {
+      out.writeShort(rowLen);
+      out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
+      out.writeByte(fLen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qLen);
+    }
     out.writeLong(cell.getTimestamp());
     out.writeByte(cell.getTypeByte());
+  }
+
+  /**
+   * Writes the row from the given cell to the output stream
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param rlength the row length
+   * @throws IOException
+   */
+  public static void writeRow(DataOutputStream out, Cell cell, short rlength) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPosition(), rlength);
+    } else {
+      out.write(cell.getRowArray(), cell.getRowOffset(), rlength);
+    }
+  }
+
+  /**
+   * Writes the row from the given cell to the output stream excluding the common prefix
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param rlength the row length
+   * @throws IOException
+   */
+  public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
+      int commonPrefix) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
+    } else {
+      out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rlength - commonPrefix);
+    }
+  }
+
+  /**
+   * Writes the family from the given cell to the output stream
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param flength the family length
+   * @throws IOException
+   */
+  public static void writeFamily(DataOutputStream out, Cell cell, byte flength) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferedCell) cell).getFamilyPosition(), flength);
+    } else {
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), flength);
+    }
+  }
+
+  /**
+   * Writes the qualifier from the given cell to the output stream
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param qlength the qualifier length
+   * @throws IOException
+   */
+  public static void writeQualifier(DataOutputStream out, Cell cell, int qlength)
+      throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferedCell) cell).getQualifierPosition(), qlength);
+    } else {
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qlength);
+    }
+  }
+
+  /**
+   * Writes the qualifier from the given cell to the output stream excluding the common prefix
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param qlength the qualifier length
+   * @throws IOException
+   */
+  public static void writeQualifierSkippingBytes(DataOutputStream out, Cell cell,
+      int qlength, int commonPrefix) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferedCell) cell).getQualifierPosition() + commonPrefix, qlength - commonPrefix);
+    } else {
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonPrefix,
+        qlength - commonPrefix);
+    }
+  }
+
+  /**
+   * Writes the value from the given cell to the output stream
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param vlength the value length
+   * @throws IOException
+   */
+  public static void writeValue(DataOutputStream out, Cell cell, int vlength) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getValueByteBuffer(),
+        ((ByteBufferedCell) cell).getValuePosition(), vlength);
+    } else {
+      out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
+    }
+  }
+
+  /**
+   * Writes the tag from the given cell to the output stream
+   * @param out The dataoutputstream to which the data has to be written
+   * @param cell The cell whose contents has to be written
+   * @param tagsLength the tag length
+   * @throws IOException
+   */
+  public static void writeTags(DataOutputStream out, Cell cell, int tagsLength) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferedCell) cell).getTagsByteBuffer(),
+        ((ByteBufferedCell) cell).getTagsPosition(), tagsLength);
+    } else {
+      out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
+    }
   }
 
   /**
@@ -951,7 +1084,7 @@ public final class CellUtil {
       commonPrefix -= KeyValue.ROW_LENGTH_SIZE;
     }
     if (rLen > commonPrefix) {
-      out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rLen - commonPrefix);
+      writeRowSkippingBytes(out, cell, rLen, commonPrefix);
     }
   }
 
@@ -982,8 +1115,18 @@ public final class CellUtil {
           Bytes.toBytes(rLen2), 0, KeyValue.ROW_LENGTH_SIZE);
     }
     // Compare the RKs
-    int rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(),
+    int rkCommonPrefix = 0;
+    if (c1 instanceof ByteBufferedCell && c2 instanceof ByteBufferedCell) {
+      rkCommonPrefix = ByteBufferUtils.findCommonPrefix(((ByteBufferedCell) c1).getRowByteBuffer(),
+        ((ByteBufferedCell) c1).getRowPosition(), rLen1, ((ByteBufferedCell) c2).getRowByteBuffer(),
+        ((ByteBufferedCell) c2).getRowPosition(), rLen2);
+    } else {
+      // There cannot be a case where one cell is BBCell and other is KeyValue. This flow comes either
+      // in flush or compactions. In flushes both cells are KV and in case of compaction it will be either
+      // KV or BBCell
+      rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(),
         rLen1, c2.getRowArray(), c2.getRowOffset(), rLen2);
+    }
     commonPrefix += rkCommonPrefix;
     if (rkCommonPrefix != rLen1) {
       // Early out when RK is not fully matching.
@@ -1004,8 +1147,17 @@ public final class CellUtil {
       // CF lengths are same so there is one more byte common in key part
       commonPrefix += KeyValue.FAMILY_LENGTH_SIZE;
       // Compare the CF names
-      int fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(),
-          c1.getFamilyOffset(), fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
+      int fCommonPrefix;
+      if (c1 instanceof ByteBufferedCell && c2 instanceof ByteBufferedCell) {
+        fCommonPrefix =
+            ByteBufferUtils.findCommonPrefix(((ByteBufferedCell) c1).getFamilyByteBuffer(),
+              ((ByteBufferedCell) c1).getFamilyPosition(), fLen1,
+              ((ByteBufferedCell) c2).getFamilyByteBuffer(),
+              ((ByteBufferedCell) c2).getFamilyPosition(), fLen2);
+      } else {
+        fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(), c1.getFamilyOffset(),
+          fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
+      }
       commonPrefix += fCommonPrefix;
       if (fCommonPrefix != fLen1) {
         return commonPrefix;
@@ -1014,8 +1166,16 @@ public final class CellUtil {
     // Compare the Qualifiers
     int qLen1 = c1.getQualifierLength();
     int qLen2 = c2.getQualifierLength();
-    int qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
+    int qCommon;
+    if (c1 instanceof ByteBufferedCell && c2 instanceof ByteBufferedCell) {
+      qCommon = ByteBufferUtils.findCommonPrefix(((ByteBufferedCell) c1).getQualifierByteBuffer(),
+        ((ByteBufferedCell) c1).getQualifierPosition(), qLen1,
+        ((ByteBufferedCell) c2).getQualifierByteBuffer(),
+        ((ByteBufferedCell) c2).getQualifierPosition(), qLen2);
+    } else {
+      qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
         qLen1, c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
+    }
     commonPrefix += qCommon;
     if (!withTsType || Math.max(qLen1, qLen2) != qCommon) {
       return commonPrefix;

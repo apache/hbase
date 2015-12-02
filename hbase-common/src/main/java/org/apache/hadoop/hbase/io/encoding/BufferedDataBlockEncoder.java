@@ -1002,10 +1002,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         // When tag compression is enabled, tagCompressionContext will have a not null value. Write
         // the tags using Dictionary compression in such a case
         if (tagCompressionContext != null) {
+          // TODO : Make Dictionary interface to work with BBs and then change the corresponding
+          // compress tags code to work with BB
           tagCompressionContext
               .compressTags(out, cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         } else {
-          out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
+          CellUtil.writeTags(out, cell, tagsLength);
         }
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;

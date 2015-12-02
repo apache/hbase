@@ -264,7 +264,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, 0);
       CellUtil.writeFlatKey(cell, out);
       // Write the value part
-      out.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      CellUtil.writeValue(out, cell, cell.getValueLength());
     } else {
       int preKeyLength = KeyValueUtil.keyLength(prevCell);
       int preValLength = prevCell.getValueLength();
@@ -290,8 +290,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       // Check if current and previous values are the same. Compare value
       // length first as an optimization.
       if (vLength == preValLength
-          && Bytes.equals(cell.getValueArray(), cell.getValueOffset(), vLength,
-              prevCell.getValueArray(), prevCell.getValueOffset(), preValLength)) {
+          && CellUtil.matchingValue(cell, prevCell, vLength, preValLength)) {
         flag |= FLAG_SAME_VALUE;
       }
 
@@ -308,7 +307,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         // Previous and current rows are different. Copy the differing part of
         // the row, skip the column family, and copy the qualifier.
         CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
-        out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+        CellUtil.writeQualifier(out, cell, cell.getQualifierLength());
       } else {
         // The common part includes the whole row. As the column family is the
         // same across the whole file, it will automatically be included in the
@@ -316,8 +315,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         // What we write here is the non common part of the qualifier
         int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
             - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
-        out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
-            cell.getQualifierLength() - commonQualPrefix);
+        CellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
+          commonQualPrefix);
       }
       // Write non common ts part
       out.write(curTsBuf, commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
@@ -329,7 +328,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
       // Write the value if it is not the same as before.
       if ((flag & FLAG_SAME_VALUE) == 0) {
-        out.write(cell.getValueArray(), cell.getValueOffset(), vLength);
+        CellUtil.writeValue(out, cell, vLength);
       }
     }
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
