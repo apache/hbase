@@ -191,6 +191,28 @@ public class TestLoadIncrementalHFiles {
     testRegionCrossingHFileSplit(BloomType.ROWCOL);
   }
 
+  @Test
+  public void testSplitALot() throws Exception {
+    runTest("testSplitALot", BloomType.NONE,
+      new byte[][] {
+        Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"),
+        Bytes.toBytes("ccc"), Bytes.toBytes("ddd"),
+        Bytes.toBytes("eee"), Bytes.toBytes("fff"),
+        Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
+        Bytes.toBytes("iii"), Bytes.toBytes("lll"),
+        Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+        Bytes.toBytes("ooo"), Bytes.toBytes("ppp"),
+        Bytes.toBytes("qqq"), Bytes.toBytes("rrr"),
+        Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
+        Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
+        Bytes.toBytes("zzz"),
+      },
+      new byte[][][] {
+        new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("zzz") },
+      }
+    );
+  }
+
   private void testRegionCrossingHFileSplit(BloomType bloomType) throws Exception {
     runTest("testHFileSplit" + bloomType + "Bloom", bloomType,
         new byte[][] {
