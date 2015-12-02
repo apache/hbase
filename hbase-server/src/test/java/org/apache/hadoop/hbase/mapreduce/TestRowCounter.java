@@ -32,15 +32,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -51,7 +50,7 @@ import org.junit.rules.TestRule;
 /**
  * Test the rowcounter map reduce job.
  */
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestRowCounter {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
