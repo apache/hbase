@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
