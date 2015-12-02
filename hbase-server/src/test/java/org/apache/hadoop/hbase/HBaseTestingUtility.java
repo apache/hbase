@@ -3968,8 +3968,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
       @Override
       public boolean evaluate() throws IOException {
-        final RegionStates regionStates = getMiniHBaseCluster().getMaster()
-            .getAssignmentManager().getRegionStates();
+        HMaster master = getMiniHBaseCluster().getMaster();
+        if (master == null) return false;
+        AssignmentManager am = master.getAssignmentManager();
+        if (am == null) return false;
+        final RegionStates regionStates = am.getRegionStates();
         return !regionStates.isRegionsInTransition();
       }
     };
