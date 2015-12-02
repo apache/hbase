@@ -1793,8 +1793,80 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     MonitoredTask status = null;
     boolean requestNeedsCancellation = true;
-    // block waiting for the lock for compaction
-    lock.readLock().lock();
+    /*
+     * We are trying to remove / relax the region read lock for compaction.
+     * Let's see what are the potential race conditions among the operations (user scan,
+     * region split, region close and region bulk load).
+     * 
+     *  user scan ---> region read lock
+     *  region split --> region close first --> region write lock
+     *  region close --> region write lock
+     *  region bulk load --> region write lock
+     *  
+     * read lock is compatible with read lock. ---> no problem with user scan/read
+     * region bulk load does not cause problem for compaction (no consistency problem, store lock
+     *  will help the store file accounting).
+     * They can run almost concurrently at the region level.
+     * 
+     * The only remaining race condition is between the region close and compaction.
+     * So we will evaluate, below, how region close intervenes with compaction if compaction does
+     * not acquire region read lock.
+     * 
+     * Here are the steps for compaction:
+     * 1. obtain list of StoreFile's
+     * 2. create StoreFileScanner's based on list from #1
+     * 3. perform compaction and save resulting files under tmp dir
+     * 4. swap in compacted files
+     * 
+     * #1 is guarded by store lock. This patch does not change this --> no worse or better
+     * For #2, we obtain smallest read point (for region) across all the Scanners (for both default
+     * compactor and stripe compactor).
+     * The read points are for user scans. Region keeps the read points for all currently open
+     * user scanners.
+     * Compaction needs to know the smallest read point so that during re-write of the hfiles,
+     * it can remove the mvcc points for the cells if their mvccs are older than the smallest
+     * since they are not needed anymore.
+     * This will not conflict with compaction.
+     * For #3, it can be performed in parallel to other operations.
+     * For #4 bulk load and compaction don't conflict with each other on the region level
+     *   (for multi-family atomicy). 
+     * Region close and compaction are guarded pretty well by the 'writestate'.
+     * In HRegion#doClose(), we have :
+     * synchronized (writestate) {
+     *   // Disable compacting and flushing by background threads for this
+     *   // region.
+     *   canFlush = !writestate.readOnly;
+     *   writestate.writesEnabled = false;
+     *   LOG.debug("Closing " + this + ": disabling compactions & flushes");
+     *   waitForFlushesAndCompactions();
+     * }
+     * waitForFlushesAndCompactions() would wait for writestate.compacting to come down to 0.
+     * and in HRegion.compact()
+     *  try {
+     *    synchronized (writestate) {
+     *    if (writestate.writesEnabled) {
+     *      wasStateSet = true;
+     *      ++writestate.compacting;
+     *    } else {
+     *      String msg = "NOT compacting region " + this + ". Writes disabled.";
+     *      LOG.info(msg);
+     *      status.abort(msg);
+     *      return false;
+     *    }
+     *  }
+     * Also in compactor.performCompaction():
+     * check periodically to see if a system stop is requested
+     * if (closeCheckInterval > 0) {
+     *   bytesWritten += len;
+     *   if (bytesWritten > closeCheckInterval) {
+     *     bytesWritten = 0;
+     *     if (!store.areWritesEnabled()) {
+     *       progress.cancel();
+     *       return false;
+     *     }
+     *   }
+     * }
+     */
     try {
       byte[] cf = Bytes.toBytes(store.getColumnFamilyName());
       if (stores.get(cf) != store) {
@@ -1852,12 +1924,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       status.markComplete("Compaction complete");
       return true;
     } finally {
-      try {
-        if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
-        if (status != null) status.cleanup();
-      } finally {
-        lock.readLock().unlock();
-      }
+      if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
+      if (status != null) status.cleanup();
     }
   }
 

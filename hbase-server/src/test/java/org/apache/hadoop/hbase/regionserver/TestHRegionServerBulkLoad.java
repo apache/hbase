@@ -17,7 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.Lists;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +52,9 @@ import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -60,24 +73,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Lists;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of
  * the region server's bullkLoad functionality.
  */
+@RunWith(Parameterized.class)
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestHRegionServerBulkLoad {
   private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
@@ -85,6 +94,7 @@ public class TestHRegionServerBulkLoad {
   private final static Configuration conf = UTIL.getConfiguration();
   private final static byte[] QUAL = Bytes.toBytes("qual");
   private final static int NUM_CFS = 10;
+  private int sleepDuration;
   public static int BLOCKSIZE = 64 * 1024;
   public static Algorithm COMPRESSION = Compression.Algorithm.NONE;
 
@@ -93,6 +103,24 @@ public class TestHRegionServerBulkLoad {
     for (int i = 0; i < NUM_CFS; i++) {
       families[i] = Bytes.toBytes(family(i));
     }
+  }
+  @Parameters
+  public static final Collection<Object[]> parameters() {
+    int[] sleepDurations = new int[] { 0, 30000 };
+    List<Object[]> configurations = new ArrayList<Object[]>();
+    for (int i : sleepDurations) {
+      configurations.add(new Object[] { i });
+    }
+    return configurations;
+  }
+
+  public TestHRegionServerBulkLoad(int duration) {
+    this.sleepDuration = duration;
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    conf.setInt("hbase.rpc.timeout", 10 * 1000);
   }
 
   /**
@@ -189,8 +217,8 @@ public class TestHRegionServerBulkLoad {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
 
       // Periodically do compaction to reduce the number of open file handles.
-      if (numBulkLoads.get() % 10 == 0) {
-        // 10 * 50 = 500 open file handles!
+      if (numBulkLoads.get() % 5 == 0) {
+        // 5 * 50 = 250 open file handles!
         callable = new RegionServerCallable<Void>(conn, tableName, Bytes.toBytes("aaa")) {
           @Override
           public Void call(int callTimeout) throws Exception {
@@ -208,6 +236,23 @@ public class TestHRegionServerBulkLoad {
         };
         caller.callWithRetries(callable, Integer.MAX_VALUE);
       }
+    }
+  }
+
+  public static class MyObserver extends BaseRegionObserver {
+    static int sleepDuration;
+    @Override
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        final Store store, final InternalScanner scanner, final ScanType scanType)
+            throws IOException {
+      try {
+        Thread.sleep(sleepDuration);
+      } catch (InterruptedException ie) {
+        IOException ioe = new InterruptedIOException();
+        ioe.initCause(ie);
+        throw ioe;
+      }
+      return scanner;
     }
   }
 
@@ -278,6 +323,8 @@ public class TestHRegionServerBulkLoad {
     try {
       LOG.info("Creating table " + table);
       HTableDescriptor htd = new HTableDescriptor(table);
+      htd.addCoprocessor(MyObserver.class.getName());
+      MyObserver.sleepDuration = this.sleepDuration;
       for (int i = 0; i < 10; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
@@ -348,7 +395,7 @@ public class TestHRegionServerBulkLoad {
   public static void main(String args[]) throws Exception {
     try {
       Configuration c = HBaseConfiguration.create();
-      TestHRegionServerBulkLoad test = new TestHRegionServerBulkLoad();
+      TestHRegionServerBulkLoad test = new TestHRegionServerBulkLoad(0);
       test.setConf(c);
       test.runAtomicBulkloadTest(TableName.valueOf("atomicTableTest"), 5 * 60 * 1000, 50);
     } finally {
