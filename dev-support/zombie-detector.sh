@@ -134,10 +134,14 @@ zombies () {
       # Exit with error
       exit 1
     else
+      echo "`date` We're ok: there was a zombie candidate but it went away"
+      JIRA_COMMENT="$JIRA_COMMENT
+        {color:green}+1 core zombie tests -- (was a candidate but now) no zombies!{color}."
+    fi
+  else
       echo "`date` We're ok: there is no zombie test"
       JIRA_COMMENT="$JIRA_COMMENT
         {color:green}+1 core zombie tests -- no zombies!{color}."
-    fi
   fi
 }
 
