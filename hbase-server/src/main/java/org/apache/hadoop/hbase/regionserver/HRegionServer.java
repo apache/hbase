@@ -605,7 +605,7 @@ public class HRegionServer extends HasThread implements
     rpcServices.start();
     putUpWebUI();
     this.walRoller = new LogRoller(this, this);
-    this.choreService = new ChoreService(getServerName().toString());
+    this.choreService = new ChoreService(getServerName().toString(), true);
 
     if (!SystemUtils.IS_OS_WINDOWS) {
       Signal.handle(new Signal("HUP"), new SignalHandler() {
@@ -1574,8 +1574,8 @@ public class HRegionServer extends HasThread implements
 
   static class PeriodicMemstoreFlusher extends ScheduledChore {
     final HRegionServer server;
-    final static int RANGE_OF_DELAY = 20000; //millisec
-    final static int MIN_DELAY_TIME = 3000; //millisec
+    final static int RANGE_OF_DELAY = 5 * 60 * 1000; // 5 min in milliseconds
+    final static int MIN_DELAY_TIME = 0; // millisec
     public PeriodicMemstoreFlusher(int cacheFlushInterval, final HRegionServer server) {
       super(server.getServerName() + "-MemstoreFlusherChore", server, cacheFlushInterval);
       this.server = server;

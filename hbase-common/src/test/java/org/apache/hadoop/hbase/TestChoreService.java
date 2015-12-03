@@ -315,7 +315,7 @@ public class TestChoreService {
     final int corePoolSize = 10;
     final int defaultCorePoolSize = ChoreService.MIN_CORE_POOL_SIZE;
 
-    ChoreService customInit = new ChoreService("testChoreServiceConstruction_custom", corePoolSize);
+    ChoreService customInit = new ChoreService("testChoreServiceConstruction_custom", corePoolSize, false);
     try {
       assertEquals(corePoolSize, customInit.getCorePoolSize());
     } finally {
@@ -329,11 +329,11 @@ public class TestChoreService {
       shutdownService(defaultInit);
     }
 
-    ChoreService invalidInit = new ChoreService("testChoreServiceConstruction_invalid", -10);
+    ChoreService invalidInit = new ChoreService("testChoreServiceConstruction_invalid", -10, false);
     try {
       assertEquals(defaultCorePoolSize, invalidInit.getCorePoolSize());
     } finally {
-    shutdownService(invalidInit);
+      shutdownService(invalidInit);
     }
   }
 
@@ -403,7 +403,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testCorePoolIncrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
-    ChoreService service = new ChoreService("testCorePoolIncrease", initialCorePoolSize);
+    ChoreService service = new ChoreService("testCorePoolIncrease", initialCorePoolSize, false);
 
     try {
       assertEquals("Should have a core pool of size: " + initialCorePoolSize, initialCorePoolSize,
@@ -443,7 +443,7 @@ public class TestChoreService {
   @Test(timeout = 30000)
   public void testCorePoolDecrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
-    ChoreService service = new ChoreService("testCorePoolDecrease", initialCorePoolSize);
+    ChoreService service = new ChoreService("testCorePoolDecrease", initialCorePoolSize, false);
     final int chorePeriod = 100;
     try {
       // Slow chores always miss their start time and thus the core pool size should be at least as
