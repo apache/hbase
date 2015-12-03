@@ -135,7 +135,7 @@ zombies () {
       # If JIRA_COMMENT in environment, append our findings to it
       echo -e "$JIRA_COMMENT
 
-    {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s):
+    {color:red}+1 zombies{red}. There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s)
         ${ZB_STACK}"
       # Exit with exit code of 1.
       exit 1
@@ -143,13 +143,13 @@ zombies () {
       echo "`date` We're ok: there was a zombie candidate but it went away" >&2
       echo "$JIRA_COMMENT
 
-    {color:green}+1 core zombie tests -- (was a candidate but now) no zombies!{color}."
+    {color:green}+1 zombies{color}. No zombie tests found running at the end of the build (There were candidates but they seem to have gone away)."
     fi
   else
       echo "`date` We're ok: there is no zombie test" >&2
       echo "$JIRA_COMMENT
 
-    {color:green}+1 core zombie tests -- no zombies!{color}."
+    {color:green}+1 zombies{color}. No zombie tests found running at the end of the build."
   fi
 }
 
