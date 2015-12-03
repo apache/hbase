@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.MoveMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RemoveColumnAction;
@@ -53,8 +52,7 @@ public class NoKillMonkeyFactory extends MonkeyFactory {
             MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO),
         new FlushTableAction(tableName),
         new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName),
-        new MoveMetaAction()
+        new MoveRandomRegionOfTableAction(tableName)
     };
 
     Action[] actions2 = new Action[] {

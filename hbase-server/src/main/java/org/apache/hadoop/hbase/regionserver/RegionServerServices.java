@@ -50,12 +50,6 @@ public interface RegionServerServices
   WAL getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
-   * Releases the dependency of this region to the WAL previously obtained from
-   * {@link #getWAL(HRegionInfo)}.
-   */
-  void releaseWAL(HRegionInfo regionInfo, WAL wal) throws IOException;
-
-  /**
    * @return Implementation of {@link CompactionRequestor} or null.
    */
   CompactionRequestor getCompactionRequester();
