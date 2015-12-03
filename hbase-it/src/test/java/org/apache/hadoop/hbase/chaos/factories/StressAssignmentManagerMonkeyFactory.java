@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.MoveMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RemoveColumnAction;
@@ -50,8 +49,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new CompactTableAction(tableName, 0.5f),
         new CompactRandomRegionOfTableAction(tableName, 0.6f),
         new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName),
-        new MoveMetaAction()
+        new FlushRandomRegionOfTableAction(tableName)
     };
 
     Action[] actions2 = new Action[] {
@@ -64,8 +62,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new RestartRandomRsAction(60000),
         new BatchRestartRsAction(5000, 0.5f),
         new RollingBatchRestartRsAction(5000, 1.0f),
-        new RestartRsHoldingMetaAction(35000),
-        new MoveMetaAction()
+        new RestartRsHoldingMetaAction(35000)
     };
 
     // Action to log more info for debugging

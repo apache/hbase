@@ -82,10 +82,6 @@ public class LogRoller extends HasThread {
     }
   }
 
-  public void removeWAL(final WAL wal) {
-    walNeedsRoll.remove(wal);
-  }
-
   public void requestRollAll() {
     for (WAL wal : walNeedsRoll.keySet()) {
       walNeedsRoll.put(wal, Boolean.TRUE);
