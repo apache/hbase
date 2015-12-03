@@ -18,7 +18,11 @@
 
 # Looks for any running zombies left over from old build runs.
 # Will report and try to do stack trace on stale processes so can
-# figure how they are hung.
+# figure how they are hung. Echos state as the script runs
+# on STDERR but prints final output on STDOUT formatted so it
+# will fold into the test result formatting done by test-patch.sh.
+# This script is called from test-patch.sh but also after tests
+# have run up on builds.apache.org.
 
 # TODO: format output to suit context -- test-patch, jenkins or dev env
 
@@ -107,8 +111,8 @@ zombies () {
   fi
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     wait=30
-    echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es) listed below; waiting ${wait}s to see if just slow to stop"
-    echo ${ZOMBIES}
+    echo "`date` Found ${ZOMBIE_TESTS_COUNT} suspicious java process(es) listed below; waiting ${wait}s to see if just slow to stop" >&2
+    echo ${ZOMBIES} >&2
     sleep ${wait}
     PIDS=`echo "${ZOMBIES}"|${AWK} '{print $1}'`
     ZOMBIE_TESTS_COUNT=0
@@ -118,29 +122,30 @@ zombies () {
       PS_OUTPUT=`ps -p $pid | tail +2 | grep -e "${HBASE_BUILD_TAG}"`
       if [[ ! -z "${PS_OUTPUT}" ]]
       then
-        echo "`date` Zombie: $PS_OUTPUT"
+        echo "`date` Zombie: $PS_OUTPUT" >&2
         let "ZOMBIE_TESTS_COUNT+=1"
         PS_STACK=`jstack $pid | grep -e "\.Test" | grep -e "\.java"| head -3`
-        echo "${PS_STACK}"
-        ZB_STACK="${ZB_STACK}\npid=${pid} ${PS_STACK}"
+        echo "${PS_STACK}" >&2
+        ZB_STACK="${ZB_STACK}\nPID=${pid} ${PS_STACK}"
       fi
     done
     if [[ $ZOMBIE_TESTS_COUNT != 0 ]]
     then
-      echo "`date` There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s)."
+      echo "`date` There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s)." >&2
       # If JIRA_COMMENT in environment, append our findings to it
-      JIRA_COMMENT="$JIRA_COMMENT
-        {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s): ${ZB_STACK}"
-      # Exit with error
+      echo -e "$JIRA_COMMENT
+        {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} possible zombie test(s):
+        ${ZB_STACK}"
+      # Exit with exit code of 1.
       exit 1
     else
-      echo "`date` We're ok: there was a zombie candidate but it went away"
-      JIRA_COMMENT="$JIRA_COMMENT
+      echo "`date` We're ok: there was a zombie candidate but it went away" >&2
+      echo "$JIRA_COMMENT
         {color:green}+1 core zombie tests -- (was a candidate but now) no zombies!{color}."
     fi
   else
-      echo "`date` We're ok: there is no zombie test"
-      JIRA_COMMENT="$JIRA_COMMENT
+      echo "`date` We're ok: there is no zombie test" >&2
+      echo "$JIRA_COMMENT
         {color:green}+1 core zombie tests -- no zombies!{color}."
   fi
 }

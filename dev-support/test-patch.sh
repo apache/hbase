@@ -867,8 +867,8 @@ runTests () {
   # NOTE!!!! The below code has been copied and pasted up into jenkins as an post-build task.
   # Make sure to update it too if you change the below (Or extract below into script to checkout
   # to run post-build)
-  export JIRA_COMMENT
-  $BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}
+  JIRA_COMMENT=``$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
+  BAD=$?
 }
 
 ###############################################################################
