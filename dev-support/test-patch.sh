@@ -849,6 +849,8 @@ runTests () {
   export MAVEN_OPTS="${MAVEN_OPTS}"
   ulimit -a
   $MVN clean test -Dsurefire.rerunFailingTestsCount=2 -P runAllTests -D${PROJECT_NAME}PatchProcess
+  # Need to export this so the zombie subshell picks up current content
+  export JIRA_COMMENT
   if [[ $? != 0 ]] ; then
      ### Find and format names of failed tests
      failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
@@ -858,17 +860,14 @@ runTests () {
      {color:red}-1 core tests{color}.  The patch failed these unit tests:
      $failed_tests"
      BAD=1
+     JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
   else
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
-    BAD=0
+     JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
+    BAD=$?
   fi
-  # NOTE!!!! The below code has been copied and pasted up into jenkins as an post-build task.
-  # Make sure to update it too if you change the below (Or extract below into script to checkout
-  # to run post-build)
-  JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
-  BAD=$?
 }
 
 ###############################################################################
