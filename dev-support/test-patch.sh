@@ -517,9 +517,8 @@ checkAntiPatterns () {
   if [[ $warnings != "" ]]; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-		    {color:red}-1 Anti-pattern{color}.  The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted:
-             $warnings."
-	  return 1
+    {color:red}-1 Anti-pattern{color}.  The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: $warnings."
+    return 1
   fi
   return 0
 }
@@ -540,9 +539,8 @@ checkInterfaceAudience () {
   if [[ $warnings != "" ]]; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-		    {color:red}-1 InterfaceAudience{color}.  The patch appears to contain InterfaceAudience from hadoop rather than hbase:
-             $warnings."
-	  return 1
+    {color:red}-1 InterfaceAudience{color}.  The patch appears to contain InterfaceAudience from hadoop rather than hbase: $warnings."
+    return 1
   fi
   return 0
 }
@@ -595,7 +593,7 @@ checkBuildWithHadoopVersions() {
   echo ""
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for HADOOP2_VERSION in $HADOOP2_VERSIONS ; do
-	echo "$MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1"
+    echo "$MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1"
     $MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1
     checkCompilationErrors $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt $HADOOP2_VERSION
   done
@@ -857,7 +855,7 @@ runTests () {
  
      JIRA_COMMENT="$JIRA_COMMENT
 
-     {color:red}-1 core tests{color}.  The patch failed these unit tests:
+    {color:red}-1 core tests{color}.  The patch failed these unit tests:
      $failed_tests"
      BAD=1
      JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
@@ -894,7 +892,7 @@ checkSiteXml () {
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-  {color:green}+1 site{color}.  The mvn post-site goal succeeds with this patch."
+    {color:green}+1 site{color}.  The mvn post-site goal succeeds with this patch."
   return 0
 }
 
