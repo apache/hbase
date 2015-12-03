@@ -32,7 +32,8 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage_str="Usage: `basename $0` [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]"
+usage_str="Usage: `basename $0` [--config <hbase-confdir>] [--rs-only] [--master-only]\
+ [--graceful [--maxthreads xx] [--noack] [--movetimeout]]"
 
 function usage() {
   echo "${usage_str}"
@@ -54,6 +55,8 @@ RR_RS=1
 RR_MASTER=1
 RR_GRACEFUL=0
 RR_MAXTHREADS=1
+RR_NOACK=
+RR_MOVE_TIMEOUT=2147483647
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -78,6 +81,15 @@ while [ $# -gt 0 ]; do
     --maxthreads)
       shift
       RR_MAXTHREADS=$1
+      shift
+      ;;
+    --noack)
+      RR_NOACK="--noack"
+      shift
+      ;;
+    --movetimeout)
+      shift
+      RR_MOVE_TIMEOUT=$1
       shift
       ;;
     --help|-h)
@@ -186,7 +198,8 @@ else
           continue
         else
           echo "Gracefully restarting: $hostname"
-          "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug --maxthreads "${RR_MAXTHREADS}" "$hostname"
+          "$bin"/graceful_stop.sh --config ${HBASE_CONF_DIR} --restart --reload --maxthreads \
+		${RR_MAXTHREADS} ${RR_NOACK} --movetimeout ${RR_MOVE_TIMEOUT} $hostname
           sleep 1
         fi
     done

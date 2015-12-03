@@ -21,13 +21,17 @@
 # Move regions off a server then stop it.  Optionally restart and reload.
 # Turn off the balancer before running this script.
 function usage {
-  echo "Usage: graceful_stop.sh [--config <conf-dir>] [-d] [-e] [--restart [--reload]] [--thrift] [--rest] <hostname>"
+  echo "Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] \
+[--rest] <hostname>"
   echo " thrift         If we should stop/start thrift before/after the hbase stop/start"
   echo " rest           If we should stop/start rest before/after the hbase stop/start"
   echo " restart        If we should restart after graceful stop"
   echo " reload         Move offloaded regions back on to the restarted server"
-  echo " d|debug        Print helpful debug information"
+  echo " n|noack        Enable noAck mode in RegionMover. This is a best effort mode for \
+moving regions"
   echo " maxthreads xx  Limit the number of threads used by the region mover. Default value is 1."
+  echo " movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,\
+exit with error. Default value is INT_MAX."
   echo " hostname       Hostname of server we are to stop"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
   exit 1
@@ -44,9 +48,10 @@ bin=`cd "$bin">/dev/null; pwd`
 # Get arguments
 restart=
 reload=
-debug=
+noack=
 thrift=
 rest=
+movetimeout=2147483647
 maxthreads=1
 failfast=
 while [ $# -gt 0 ]
@@ -57,8 +62,9 @@ do
     --restart)  restart=true; shift;;
     --reload)   reload=true; shift;;
     --failfast | -e)  failfast=true; shift;;
-    --debug | -d)  debug="--debug"; shift;;
+    --noack | -n)  noack="--noack"; shift;;
     --maxthreads) shift; maxthreads=$1; shift;;
+    --movetimeout) shift; movetimeout=$1; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;	# terminate while loop
@@ -96,7 +102,9 @@ HBASE_BALANCER_STATE=`echo 'balance_switch false' | "$bin"/hbase --config ${HBAS
 log "Previous balancer state was $HBASE_BALANCER_STATE"
 
 log "Unloading $hostname region(s)"
-HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug --maxthreads=$maxthreads unload $hostname
+HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.apache.hadoop.hbase.util.RegionMover \
+--filename $filename --maxthreads $maxthreads $noack --operation "unload" --timeout $movetimeout \
+--regionserverhost $hostname
 log "Unloaded $hostname region(s)"
 
 # Stop the server(s). Have to put hostname into its own little file for hbase-daemons.sh
@@ -150,7 +158,9 @@ if [ "$restart" != "" ]; then
   fi
   if [ "$reload" != "" ]; then
     log "Reloading $hostname region(s)"
-    HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug --maxthreads=$maxthreads load $hostname
+    HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} \
+    org.apache.hadoop.hbase.util.RegionMover --filename $filename --maxthreads $maxthreads $noack \
+    --operation "load" --timeout $movetimeout --regionserverhost $hostname
     log "Reloaded $hostname region(s)"
   fi
 fi

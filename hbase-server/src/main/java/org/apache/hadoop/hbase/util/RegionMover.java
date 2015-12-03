@@ -379,7 +379,7 @@ public class RegionMover extends AbstractHBaseTool {
       } catch (IOException e) {
         LOG.warn("Could not get list of region servers", e);
       } catch (Exception e) {
-        LOG.info("hostname=" + hostname + " is not up yet, waiting", e);
+        LOG.info("hostname=" + hostname + " is not up yet, waiting");
       }
       try {
         Thread.sleep(500);
@@ -392,7 +392,7 @@ public class RegionMover extends AbstractHBaseTool {
       LOG.error("Host:" + hostname + " is not up.Giving up.");
       throw new Exception("Host to load regions not online");
     }
-    LOG.info("Moving" + regionsToMove.size() + " regions to " + server + " using "
+    LOG.info("Moving " + regionsToMove.size() + " regions to " + server + " using "
         + this.maxthreads + " threads.Ack mode:" + this.ack);
     ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<Future<Boolean>>();
@@ -559,7 +559,7 @@ public class RegionMover extends AbstractHBaseTool {
       boolean sameServer = true;
       // Assert we can scan the region in its current location
       isSuccessfulScan(admin, region);
-      LOG.info("Moving region:" + region.getEncodedName() + "from " + sourceServer + " to "
+      LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
           + targetServer);
       while (count < retries && sameServer) {
         if (count > 0) {
@@ -616,7 +616,7 @@ public class RegionMover extends AbstractHBaseTool {
     @Override
     public Boolean call() {
       try {
-        LOG.info("Moving region:" + region.getEncodedName() + "from " + sourceServer + " to "
+        LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
             + targetServer);
         admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(targetServer));
         LOG.info("Moved " + region.getEncodedName() + " from " + sourceServer + " to "
@@ -733,16 +733,21 @@ public class RegionMover extends AbstractHBaseTool {
       LOG.info("Excluded Servers are" + excludes.toString());
     }
   }
-  
+
   /**
    * Exclude master from list of RSs to move regions to
    * @param regionServers
    * @param admin
-   * @throws Exception
+   * @throws IOException
    */
-  private void stripMaster(ArrayList<String> regionServers, Admin admin) throws Exception {
-      stripServer(regionServers, admin.getClusterStatus().getMaster().getHostname(),
-        admin.getClusterStatus().getMaster().getPort());
+  private void stripMaster(ArrayList<String> regionServers, Admin admin) throws IOException {
+    String masterHostname = admin.getClusterStatus().getMaster().getHostname();
+    int masterPort = admin.getClusterStatus().getMaster().getPort();
+    try {
+      stripServer(regionServers, masterHostname, masterPort);
+    } catch (Exception e) {
+      LOG.warn("Could not remove master from list of RS", e);
+    }
   }
 
   /**
@@ -931,7 +936,7 @@ public class RegionMover extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     this.addRequiredOptWithArg("r", "regionserverhost", "region server <hostname>|<hostname:port>");
-    this.addRequiredOptWithArg("l", "Expected: load/unload");
+    this.addRequiredOptWithArg("o", "operation", "Expected: load/unload");
     this.addOptWithArg("m", "maxthreads",
       "Define the maximum number of threads to use to unload and reload the regions");
     this.addOptWithArg("x", "excludefile",
@@ -940,9 +945,11 @@ public class RegionMover extends AbstractHBaseTool {
     this.addOptWithArg("f", "filename",
       "File to save regions list into unloading, or read from loading; "
           + "default /tmp/<usernamehostname:port>");
-    this.addOptNoArg("n", "noAck",
-      "Enable Ack mode(default: true) which checks if region is online on target RegionServer -- "
-          + "Upon disabling,in case a region is stuck, it'll move on anyways");
+    this.addOptNoArg("n", "noack",
+      "Turn on No-Ack mode(default: false) which won't check if region is online on target "
+          + "RegionServer, hence best effort. This is more performant in unloading and loading "
+          + "but might lead to region being unavailable for some time till master reassigns it "
+          + "in case the move failed");
     this.addOptWithArg("t", "timeout", "timeout in seconds after which the tool will exit "
         + "irrespective of whether it finished or not;default Integer.MAX_VALUE");
   }
@@ -966,21 +973,22 @@ public class RegionMover extends AbstractHBaseTool {
     if (cmd.hasOption('t')) {
       rmbuilder.timeout(Integer.parseInt(cmd.getOptionValue('t')));
     }
-    this.loadUnload = cmd.getOptionValue("l").toLowerCase();
+    this.loadUnload = cmd.getOptionValue("o").toLowerCase();
   }
 
   @Override
   protected int doWork() throws Exception {
+    boolean success;
     RegionMover rm = rmbuilder.build();
     if (loadUnload.equalsIgnoreCase("load")) {
-      rm.load();
+      success = rm.load();
     } else if (loadUnload.equalsIgnoreCase("unload")) {
-      rm.unload();
+      success = rm.unload();
     } else {
       printUsage();
-      System.exit(1);
+      success = false;
     }
-    return 0;
+    return (success ? 0 : 1);
   }
 
   public static void main(String[] args) {
