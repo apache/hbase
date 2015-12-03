@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
@@ -87,11 +88,21 @@ public class ChoreService implements ChoreServicer {
   private final String coreThreadPoolPrefix;
 
   /**
+   *
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
    */
+  @VisibleForTesting
   public ChoreService(final String coreThreadPoolPrefix) {
-    this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE);
+    this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, false);
+  }
+
+  /**
+   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
+   *               to true this will add -10% to 10% jitter.
+   */
+  public ChoreService(final String coreThreadPoolPrefix, final boolean jitter) {
+    this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, jitter);
   }
 
   /**
@@ -101,11 +112,19 @@ public class ChoreService implements ChoreServicer {
    *          to during initialization. The default size is 1, but specifying a larger size may be
    *          beneficial if you know that 1 thread will not be enough.
    */
-  public ChoreService(final String coreThreadPoolPrefix, int corePoolSize) {
+  public ChoreService(final String coreThreadPoolPrefix, int corePoolSize, boolean jitter) {
     this.coreThreadPoolPrefix = coreThreadPoolPrefix;
-    if (corePoolSize < MIN_CORE_POOL_SIZE) corePoolSize = MIN_CORE_POOL_SIZE;
+    if (corePoolSize < MIN_CORE_POOL_SIZE)  {
+      corePoolSize = MIN_CORE_POOL_SIZE;
+    }
+
     final ThreadFactory threadFactory = new ChoreServiceThreadFactory(coreThreadPoolPrefix);
-    scheduler = new ScheduledThreadPoolExecutor(corePoolSize, threadFactory);
+    if (jitter) {
+      scheduler = new JitterScheduledThreadPoolExecutorImpl(corePoolSize, threadFactory, 0.1);
+    } else {
+      scheduler = new ScheduledThreadPoolExecutor(corePoolSize, threadFactory);
+    }
+
     scheduler.setRemoveOnCancelPolicy(true);
     scheduledChores = new HashMap<ScheduledChore, ScheduledFuture<?>>();
     choresMissingStartTime = new HashMap<ScheduledChore, Boolean>();
@@ -127,7 +146,9 @@ public class ChoreService implements ChoreServicer {
    *         (typically occurs when a chore is scheduled during shutdown of service)
    */
   public synchronized boolean scheduleChore(ScheduledChore chore) {
-    if (chore == null) return false;
+    if (chore == null) {
+      return false;
+    }
 
     try {
       chore.setChoreServicer(this);
