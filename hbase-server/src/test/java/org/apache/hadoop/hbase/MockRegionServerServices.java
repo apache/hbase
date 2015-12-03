@@ -306,8 +306,4 @@ public class MockRegionServerServices implements RegionServerServices {
   public double getCompactionPressure() {
     return 0;
   }
-
-  @Override
-  public void releaseWAL(HRegionInfo regionInfo, WAL wal) throws IOException {
-  }
 }

@@ -250,21 +250,6 @@ public class WALFactory {
     return metaProvider.getWAL(identifier, null);
   }
 
-  /**
-   * Closes the meta WAL and meta WALProvider
-   */
-  public void closeMetaWAL(final byte[] identifier) throws IOException {
-    // NOTE: this assumes single META region. The close of WAL does not do ref-counting for the
-    // number of regions depending on the meta WAL
-    WALProvider metaProvider = this.metaProvider.get();
-    if (metaProvider != null) {
-      if (this.metaProvider.compareAndSet(metaProvider, null)) {
-        // close the metaProvider
-        metaProvider.close();
-      }
-    }
-  }
-
   public Reader createReader(final FileSystem fs, final Path path) throws IOException {
     return createReader(fs, path, (CancelableProgressable)null);
   }
