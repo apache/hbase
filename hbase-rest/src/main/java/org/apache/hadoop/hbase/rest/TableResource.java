@@ -137,20 +137,26 @@ public class TableResource extends ResourceBase {
       @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String filters) {
     try {
       Filter filter = null;
+      Scan tableScan = new Scan();
       if (scanSpec.indexOf('*') > 0) {
         String prefix = scanSpec.substring(0, scanSpec.indexOf('*'));
+        byte[] prefixBytes = Bytes.toBytes(prefix);
         filter = new PrefixFilter(Bytes.toBytes(prefix));
+        if (startRow.isEmpty()) {
+          tableScan.setStartRow(prefixBytes);
+        }
       }
       LOG.debug("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
           + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
           + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
           + maxVersions + " Batch Size => " + batchSize);
       Table hTable = RESTServlet.getInstance().getTable(this.table);
-      Scan tableScan = new Scan();
       tableScan.setBatch(batchSize);
       tableScan.setMaxVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
-      tableScan.setStartRow(Bytes.toBytes(startRow));
+      if (!startRow.isEmpty()) {
+        tableScan.setStartRow(Bytes.toBytes(startRow));
+      }
       tableScan.setStopRow(Bytes.toBytes(endRow));
       for (String csplit : column) {
         String[] familysplit = csplit.trim().split(":");
