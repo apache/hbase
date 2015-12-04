@@ -27,16 +27,17 @@ import javax.annotation.Nonnull;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * TODO javadoc
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public abstract class BaseDecoder implements Codec.Decoder {
   protected static final Log LOG = LogFactory.getLog(BaseDecoder.class);
 
-  protected final PBIS in;
+  protected final InputStream in;
   private Cell current = null;
 
   protected static class PBIS extends PushbackInputStream {
@@ -60,13 +61,13 @@ public abstract class BaseDecoder implements Codec.Decoder {
     if (firstByte == -1) {
       return false;
     } else {
-      in.unread(firstByte);
+      ((PBIS)in).unread(firstByte);
     }
 
     try {
       this.current = parseCell();
     } catch (IOException ioEx) {
-      in.resetBuf(1); // reset the buffer in case the underlying stream is read from upper layers
+      ((PBIS)in).resetBuf(1); // reset the buffer in case the underlying stream is read from upper layers
       rethrowEofException(ioEx);
     }
     return true;
@@ -86,6 +87,10 @@ public abstract class BaseDecoder implements Codec.Decoder {
     EOFException eofEx = new EOFException("Partial cell read");
     eofEx.initCause(ioEx);
     throw eofEx;
+  }
+
+  protected InputStream getInputStream() {
+    return in;
   }
 
   /**
