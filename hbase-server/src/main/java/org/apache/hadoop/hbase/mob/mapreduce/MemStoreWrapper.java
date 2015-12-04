@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Reducer.Context;
 
@@ -90,7 +91,7 @@ public class MemStoreWrapper {
     flushSize = this.conf.getLong(MobConstants.MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE,
         MobConstants.DEFAULT_MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE);
     mobFamilyDir = MobUtils.getMobFamilyPath(conf, table.getName(), hcd.getNameAsString());
-    cryptoContext = MobUtils.createEncryptionContext(conf, hcd);
+    cryptoContext = EncryptionUtil.createEncryptionContext(conf, hcd);
   }
 
   public void setPartitionId(CompactionPartitionId partitionId) {

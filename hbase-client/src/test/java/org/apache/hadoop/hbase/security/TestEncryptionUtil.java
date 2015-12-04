@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.security.SecureRandom;
@@ -28,7 +29,9 @@ import java.security.SecureRandom;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -39,6 +42,9 @@ import org.junit.experimental.categories.Category;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestEncryptionUtil {
+  // There does not seem to be a ready way to test either getKeyFromBytesOrMasterKey
+  // or createEncryptionContext, and the existing code under MobUtils appeared to be
+  // untested.  Not ideal!
 
   @Test
   public void testKeyWrapping() throws Exception {

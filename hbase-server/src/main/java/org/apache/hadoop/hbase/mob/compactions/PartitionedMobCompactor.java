@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -113,7 +114,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     compactionCacheConfig = new CacheConfig(copyOfConf);
     tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, tableName.getName());
-    cryptoContext = MobUtils.createEncryptionContext(copyOfConf, column);
+    cryptoContext = EncryptionUtil.createEncryptionContext(copyOfConf, column);
   }
 
   @Override

@@ -26,7 +26,10 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -41,9 +44,16 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class EncryptionUtil {
+public final class EncryptionUtil {
+  static private final Log LOG = LogFactory.getLog(EncryptionUtil.class);
 
   static private final SecureRandom RNG = new SecureRandom();
+
+  /**
+   * Private constructor to keep this class from being instantiated.
+   */
+  private EncryptionUtil() {
+  }
 
   /**
    * Protect a key by encrypting it with the secret key of the given subject.
@@ -159,4 +169,90 @@ public class EncryptionUtil {
     return getUnwrapKey(conf, subject, wrappedKey, cipher);
   }
 
+  /**
+   * Helper to create an encyption context.
+   *
+   * @param conf The current configuration.
+   * @param family The current column descriptor.
+   * @return The created encryption context.
+   * @throws IOException if an encryption key for the column cannot be unwrapped
+   */
+  public static Encryption.Context createEncryptionContext(Configuration conf,
+    HColumnDescriptor family) throws IOException {
+    Encryption.Context cryptoContext = Encryption.Context.NONE;
+    String cipherName = family.getEncryptionType();
+    if (cipherName != null) {
+      Cipher cipher;
+      Key key;
+      byte[] keyBytes = family.getEncryptionKey();
+      if (keyBytes != null) {
+        // Family provides specific key material
+        key = unwrapKey(conf, keyBytes);
+        // Use the algorithm the key wants
+        cipher = Encryption.getCipher(conf, key.getAlgorithm());
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
+        }
+        // Fail if misconfigured
+        // We use the encryption type specified in the column schema as a sanity check on
+        // what the wrapped key is telling us
+        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
+          throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+            + "' configured with type '" + cipherName + "' but key specifies algorithm '"
+            + cipher.getName() + "'");
+        }
+      } else {
+        // Family does not provide key material, create a random key
+        cipher = Encryption.getCipher(conf, cipherName);
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
+        }
+        key = cipher.getRandomKey();
+      }
+      cryptoContext = Encryption.newContext(conf);
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
+    }
+    return cryptoContext;
+  }
+
+  /**
+   * Helper for {@link #unwrapKey(Configuration, String, byte[])} which automatically uses the
+   * configured master and alternative keys, rather than having to specify a key type to unwrap
+   * with.
+   *
+   * The configuration must be set up correctly for key alias resolution.
+   *
+   * @param conf the current configuration
+   * @param keyBytes the key encrypted by master (or alternative) to unwrap
+   * @return the key bytes, decrypted
+   * @throws IOException if the key cannot be unwrapped
+   */
+  public static Key unwrapKey(Configuration conf, byte[] keyBytes) throws IOException {
+    Key key;
+    String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+      User.getCurrent().getShortName());
+    try {
+      // First try the master key
+      key = unwrapKey(conf, masterKeyName, keyBytes);
+    } catch (KeyException e) {
+      // If the current master key fails to unwrap, try the alternate, if
+      // one is configured
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
+      }
+      String alternateKeyName =
+        conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
+      if (alternateKeyName != null) {
+        try {
+          key = unwrapKey(conf, alternateKeyName, keyBytes);
+        } catch (KeyException ex) {
+          throw new IOException(ex);
+        }
+      } else {
+        throw new IOException(e);
+      }
+    }
+    return key;
+  }
 }

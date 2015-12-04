@@ -21,26 +21,25 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.Key;
-import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -1817,29 +1815,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     if (keyBytes != null) {
       Encryption.Context cryptoContext = Encryption.newContext(conf);
       Key key;
-      String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-        User.getCurrent().getShortName());
-      try {
-        // First try the master key
-        key = EncryptionUtil.unwrapKey(conf, masterKeyName, keyBytes);
-      } catch (KeyException e) {
-        // If the current master key fails to unwrap, try the alternate, if
-        // one is configured
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
-        }
-        String alternateKeyName =
-          conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
-        if (alternateKeyName != null) {
-          try {
-            key = EncryptionUtil.unwrapKey(conf, alternateKeyName, keyBytes);
-          } catch (KeyException ex) {
-            throw new IOException(ex);
-          }
-        } else {
-          throw new IOException(e);
-        }
-      }
+      key = EncryptionUtil.unwrapKey(conf, keyBytes);
       // Use the algorithm the key wants
       Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
       if (cipher == null) {

@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
-import java.security.Key;
-import java.security.KeyException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,7 +63,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -82,9 +79,9 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -280,62 +277,7 @@ public class HStore implements Store {
       conf.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 10));
     completionService =
         new ExecutorCompletionService<StoreFile>(compactionCleanerthreadPoolExecutor);
-    // Crypto context for new store files
-    String cipherName = family.getEncryptionType();
-    if (cipherName != null) {
-      Cipher cipher;
-      Key key;
-      byte[] keyBytes = family.getEncryptionKey();
-      if (keyBytes != null) {
-        // Family provides specific key material
-        String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-          User.getCurrent().getShortName());
-        try {
-          // First try the master key
-          key = EncryptionUtil.unwrapKey(conf, masterKeyName, keyBytes);
-        } catch (KeyException e) {
-          // If the current master key fails to unwrap, try the alternate, if
-          // one is configured
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
-          }
-          String alternateKeyName =
-            conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
-          if (alternateKeyName != null) {
-            try {
-              key = EncryptionUtil.unwrapKey(conf, alternateKeyName, keyBytes);
-            } catch (KeyException ex) {
-              throw new IOException(ex);
-            }
-          } else {
-            throw new IOException(e);
-          }
-        }
-        // Use the algorithm the key wants
-        cipher = Encryption.getCipher(conf, key.getAlgorithm());
-        if (cipher == null) {
-          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
-        }
-        // Fail if misconfigured
-        // We use the encryption type specified in the column schema as a sanity check on
-        // what the wrapped key is telling us
-        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-          throw new RuntimeException("Encryption for family '" + family.getNameAsString() +
-            "' configured with type '" + cipherName +
-            "' but key specifies algorithm '" + cipher.getName() + "'");
-        }
-      } else {
-        // Family does not provide key material, create a random key
-        cipher = Encryption.getCipher(conf, cipherName);
-        if (cipher == null) {
-          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
-        }
-        key = cipher.getRandomKey();
-      }
-      cryptoContext = Encryption.newContext(conf);
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-    }
+    cryptoContext = EncryptionUtil.createEncryptionContext(conf, family);
   }
 
   /**
