@@ -133,20 +133,26 @@ public class TableResource extends ResourceBase {
       @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks) {
     try {
       Filter filter = null;
+      Scan tableScan = new Scan();
       if (scanSpec.indexOf('*') > 0) {
         String prefix = scanSpec.substring(0, scanSpec.indexOf('*'));
+        byte[] prefixBytes = Bytes.toBytes(prefix);
         filter = new PrefixFilter(Bytes.toBytes(prefix));
+        if (startRow.isEmpty()) {
+          tableScan.setStartRow(prefixBytes);
+        }
       }
       LOG.debug("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
           + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
           + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
           + maxVersions + " Batch Size => " + batchSize);
       HTableInterface hTable = RESTServlet.getInstance().getTable(this.table);
-      Scan tableScan = new Scan();
       tableScan.setBatch(batchSize);
       tableScan.setMaxVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
-      tableScan.setStartRow(Bytes.toBytes(startRow));
+      if (!startRow.isEmpty()) {
+        tableScan.setStartRow(Bytes.toBytes(startRow));
+      }
       tableScan.setStopRow(Bytes.toBytes(endRow));
       for (String csplit : column) {
         String[] familysplit = csplit.trim().split(":");
