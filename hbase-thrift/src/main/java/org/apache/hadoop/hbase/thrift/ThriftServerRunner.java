@@ -160,6 +160,15 @@ public class ThriftServerRunner implements Runnable {
   static final String THRIFT_SSL_KEYSTORE_PASSWORD = "hbase.thrift.ssl.keystore.password";
   static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD = "hbase.thrift.ssl.keystore.keypassword";
 
+  /**
+   * Amount of time in milliseconds before a server thread will timeout
+   * waiting for client to send data on a connected socket. Currently,
+   * applies only to TBoundedThreadPoolServer
+   */
+  public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
+    "hbase.thrift.server.socket.read.timeout";
+  public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
+
 
   /**
    * Thrift quality of protection configuration key. Valid values can be:
@@ -522,7 +531,6 @@ public class ThriftServerRunner implements Runnable {
 
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
-
       InetAddress listenAddress = getBindAddress(conf);
       TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
           new InetSocketAddress(listenAddress, listenPort));
@@ -563,10 +571,13 @@ public class ThriftServerRunner implements Runnable {
     } else if (implType == ImplType.THREAD_POOL) {
       // Thread pool server. Get the IP address to bind to.
       InetAddress listenAddress = getBindAddress(conf);
-
+      int readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
+          THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
       TServerTransport serverTransport = new TServerSocket(
           new TServerSocket.ServerSocketTransportArgs().
-              bindAddr(new InetSocketAddress(listenAddress, listenPort)).backlog(backlog));
+              bindAddr(new InetSocketAddress(listenAddress, listenPort)).
+              backlog(backlog).
+              clientTimeout(readTimeout));
 
       TBoundedThreadPoolServer.Args serverArgs =
           new TBoundedThreadPoolServer.Args(serverTransport, conf);
@@ -575,7 +586,7 @@ public class ThriftServerRunner implements Runnable {
                 .protocolFactory(protocolFactory);
       LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
           + listenAddress + ":" + Integer.toString(listenPort)
-          + "; " + serverArgs);
+          + " with readTimeout " + readTimeout + "ms; " + serverArgs);
       TBoundedThreadPoolServer tserver =
           new TBoundedThreadPoolServer(serverArgs, metrics);
       this.tserver = tserver;

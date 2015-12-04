@@ -64,6 +64,8 @@ public class ThriftServer {
 
   private InfoServer infoServer;
 
+  private static final String READ_TIMEOUT_OPTION = "readTimeout";
+
   //
   // Main program and support routines
   //
@@ -134,6 +136,11 @@ public class ThriftServer {
         "The amount of time in secods to keep a thread alive when idle in " +
         ImplType.THREAD_POOL.simpleClassName());
 
+    options.addOption("t", READ_TIMEOUT_OPTION, true,
+        "Amount of time in milliseconds before a server thread will timeout " +
+        "waiting for client to send data on a connected socket. Currently, " +
+        "only applies to TBoundedThreadPoolServer");
+
     options.addOptionGroup(ImplType.createOptionGroup());
 
     CommandLineParser parser = new PosixParser();
@@ -185,7 +192,9 @@ public class ThriftServer {
         conf, TBoundedThreadPoolServer.MAX_QUEUED_REQUESTS_CONF_KEY);
     optionToConf(cmd, KEEP_ALIVE_SEC_OPTION,
         conf, TBoundedThreadPoolServer.THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY);
-
+    optionToConf(cmd, READ_TIMEOUT_OPTION, conf,
+        ThriftServerRunner.THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY);
+    
     // Set general thrift server options
     boolean compact = cmd.hasOption(COMPACT_OPTION) ||
       conf.getBoolean(ThriftServerRunner.COMPACT_CONF_KEY, false);
@@ -194,8 +203,7 @@ public class ThriftServer {
       conf.getBoolean(ThriftServerRunner.FRAMED_CONF_KEY, false);
     conf.setBoolean(ThriftServerRunner.FRAMED_CONF_KEY, framed);
     if (cmd.hasOption(BIND_OPTION)) {
-      conf.set(
-          ThriftServerRunner.BIND_CONF_KEY, cmd.getOptionValue(BIND_OPTION));
+      conf.set(ThriftServerRunner.BIND_CONF_KEY, cmd.getOptionValue(BIND_OPTION));
     }
 
     ImplType.setServerImpl(cmd, conf);

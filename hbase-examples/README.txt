@@ -14,21 +14,24 @@ Example code.
     to be able to compile/run the examples without Thrift installed.
     If desired, the code can be re-generated as follows:
     thrift --gen cpp --gen java --gen rb --gen py --gen php --gen perl \
-        ${HBASE_ROOT}/hbase-server/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
-    and re-placed at the corresponding paths.
+        ${HBASE_ROOT}/hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
+    and re-placed at the corresponding paths. You should not have to do this generally.
 
-    Before you run any Thrift examples, find a running HBase Thrift server.
-    If you start one locally (bin/hbase thrift start), the default port is 9090.
+    Before you run any Thrift examples, find a running HBase Thrift server (and a running
+    hbase cluster for this server to talk to -- at a minimum start a standalone instance
+    by doing ./bin/start-hbase.sh). If you start one locally (bin/hbase thrift start),
+    the default port is 9090 (a webserver with basic stats defaults showing on port 9095).
 
     * Java: org.apache.hadoop.hbase.thrift.DemoClient (jar under lib/).
-      1. Set up the classpath with all the necessary jars, for example:
-        for f in `find . -name "libthrift-*.jar" -or -name "slf4j-*.jar" -or -name "log4j-*.jar"`; do
-          HBASE_EXAMPLE_CLASSPATH=${HBASE_EXAMPLE_CLASSPATH}:$f;
-        done
+      1. Make sure your client has all required jars on the CLASSPATH when it starts. If lazy,
+      just add all jars as follows: {HBASE_EXAMPLE_CLASSPATH=`./bin/hbase classpath`}
       2. If HBase server is not secure, or authentication is not enabled for the Thrift server, execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port>}
       3. If HBase server is secure, and authentication is enabled for the Thrift server, run kinit at first, then execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true}
+      4. Here is a lazy example that just pulls in all hbase dependency jars and that goes against default location on localhost.
+      It should work with a standalone hbase instance started by doing ./bin/start-hbase.sh:
+      {java -cp ./hbase-examples/target/hbase-examples-2.0.0-SNAPSHOT.jar:`./bin/hbase classpath` org.apache.hadoop.hbase.thrift.DemoClient localhost 9090}
 
     * Ruby: hbase-examples/src/main/ruby/DemoClient.rb
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
