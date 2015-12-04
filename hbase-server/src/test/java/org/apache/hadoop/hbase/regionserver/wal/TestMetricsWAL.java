@@ -26,6 +26,7 @@ import org.junit.experimental.categories.Category;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,5 +53,17 @@ public class TestMetricsWAL {
     MetricsWAL metricsWAL = new MetricsWAL(source);
     metricsWAL.postSync(nanos, 1);
     verify(source, times(1)).incrementSyncTime(145);
+  }
+
+  @Test
+  public void testSlowAppend() throws Exception {
+    MetricsWALSource source = new MetricsWALSourceImpl();
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    // One not so slow append (< 1000)
+    metricsWAL.postAppend(1, 900);
+    // Two slow appends (> 1000)
+    metricsWAL.postAppend(1, 1010);
+    metricsWAL.postAppend(1, 2000);
+    assertEquals(2, source.getSlowAppendCount());
   }
 }

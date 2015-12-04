@@ -98,4 +98,9 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   public void incrementLowReplicationLogRoll() {
     lowReplicationLogRollRequested.incr();
   }
+
+  @Override
+  public long getSlowAppendCount() {
+    return slowAppendCount.value();
+  }
 }

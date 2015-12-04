@@ -236,6 +236,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getNumWALSlowAppend() {
+    return 0;
+  }
+
+  @Override
   public long getFlushedCellsCount() {
     return 100000000;
   }

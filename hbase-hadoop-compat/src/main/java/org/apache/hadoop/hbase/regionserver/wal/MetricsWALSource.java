@@ -92,4 +92,5 @@ public interface MetricsWALSource extends BaseSource {
 
   void incrementLowReplicationLogRoll();
 
+  long getSlowAppendCount();
 }

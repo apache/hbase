@@ -70,16 +70,21 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get the number of WAL files of this region server.
    */
-  public long getNumWALFiles();
+  long getNumWALFiles();
   
   /**
    * Get the size of WAL files of this region server.
    */
-  public long getWALFileSize();
-  
+  long getWALFileSize();
+
   /**
-   * Get the number of store files hosted on this region server.
+   * Get the number of WAL files with slow appends for this region server.
    */
+  long getNumWALSlowAppend();
+
+    /**
+     * Get the number of store files hosted on this region server.
+     */
   long getNumStoreFiles();
 
   /**

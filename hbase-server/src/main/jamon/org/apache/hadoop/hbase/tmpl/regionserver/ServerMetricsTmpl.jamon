@@ -84,7 +84,7 @@ java.lang.management.ManagementFactory;
         <td><% mWrap.getNumOnlineRegions() %></td>
         <td><% mWrap.getPercentFileLocal() %></td>
         <td><% mWrap.getPercentFileLocalSecondaryRegions() %></td>
-        <td><% 0 %></td>
+        <td><% mWrap.getNumWALSlowAppend() %></td>
     </tr>
 </table>
 </%def>

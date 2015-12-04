@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -54,6 +55,7 @@ class MetricsRegionServerWrapperImpl
   private static final Log LOG = LogFactory.getLog(MetricsRegionServerWrapperImpl.class);
 
   private final HRegionServer regionServer;
+  private final MetricsWALSource metricsWALSource;
 
   private BlockCache blockCache;
   private MobFileCache mobFileCache;
@@ -121,6 +123,7 @@ class MetricsRegionServerWrapperImpl
     this.runnable = new RegionServerMetricsWrapperRunnable();
     this.executor.scheduleWithFixedDelay(this.runnable, this.period, this.period,
       TimeUnit.MILLISECONDS);
+    this.metricsWALSource = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
 
     try {
       this.dfsHedgedReadMetrics = FSUtils.getDFSHedgedReadMetrics(regionServer.getConfiguration());
@@ -373,6 +376,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getWALFileSize() {
     return walFileSize;
+  }
+
+  @Override
+  public long getNumWALSlowAppend() {
+    return metricsWALSource.getSlowAppendCount();
   }
   
   @Override
