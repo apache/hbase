@@ -229,7 +229,7 @@ public class HLogPrettyPrinter {
    */
   public void processFile(final Configuration conf, final Path p)
       throws IOException {
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = p.getFileSystem(conf);
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }

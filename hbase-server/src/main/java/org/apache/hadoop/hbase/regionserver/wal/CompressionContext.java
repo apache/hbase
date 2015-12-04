@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
@@ -28,10 +29,10 @@ import org.apache.hadoop.hbase.io.util.Dictionary;
 /**
  * Context that holds the various dictionaries for compression in HLog.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 class CompressionContext {
 
-  static final String ENABLE_WAL_TAGS_COMPRESSION = 
+  static final String ENABLE_WAL_TAGS_COMPRESSION =
       "hbase.regionserver.wal.tags.enablecompression";
 
   final Dictionary regionDict;
