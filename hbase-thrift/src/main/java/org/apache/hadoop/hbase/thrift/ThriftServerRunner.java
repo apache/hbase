@@ -160,6 +160,15 @@ public class ThriftServerRunner implements Runnable {
   static final String THRIFT_SSL_KEYSTORE_PASSWORD = "hbase.thrift.ssl.keystore.password";
   static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD = "hbase.thrift.ssl.keystore.keypassword";
 
+  /**
+   * Amount of time in milliseconds before a server thread will timeout
+   * waiting for client to send data on a connected socket. Currently,
+   * applies only to TBoundedThreadPoolServer
+   */
+  public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
+    "hbase.thrift.server.socket.read.timeout";
+  public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
+
 
   /**
    * Thrift quality of protection configuration key. Valid values can be:
@@ -171,6 +180,7 @@ public class ThriftServerRunner implements Runnable {
    * The thrift server and the HBase cluster must run in secure mode.
    */
   static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
+  static final String BACKLOG_CONF_KEY = "hbase.regionserver.thrift.backlog";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
@@ -516,9 +526,11 @@ public class ThriftServerRunner implements Runnable {
           "-" + BIND_CONF_KEY + " not supported with " + implType);
     }
 
+    // Thrift's implementation uses '0' as a placeholder for 'use the default.'
+    int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
+
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
-
       InetAddress listenAddress = getBindAddress(conf);
       TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
           new InetSocketAddress(listenAddress, listenPort));
@@ -559,9 +571,13 @@ public class ThriftServerRunner implements Runnable {
     } else if (implType == ImplType.THREAD_POOL) {
       // Thread pool server. Get the IP address to bind to.
       InetAddress listenAddress = getBindAddress(conf);
-
+      int readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
+          THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
       TServerTransport serverTransport = new TServerSocket(
-          new InetSocketAddress(listenAddress, listenPort));
+          new TServerSocket.ServerSocketTransportArgs().
+              bindAddr(new InetSocketAddress(listenAddress, listenPort)).
+              backlog(backlog).
+              clientTimeout(readTimeout));
 
       TBoundedThreadPoolServer.Args serverArgs =
           new TBoundedThreadPoolServer.Args(serverTransport, conf);
@@ -570,7 +586,7 @@ public class ThriftServerRunner implements Runnable {
                 .protocolFactory(protocolFactory);
       LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
           + listenAddress + ":" + Integer.toString(listenPort)
-          + "; " + serverArgs);
+          + " with readTimeout " + readTimeout + "ms; " + serverArgs);
       TBoundedThreadPoolServer tserver =
           new TBoundedThreadPoolServer(serverArgs, metrics);
       this.tserver = tserver;
@@ -911,7 +927,7 @@ public class ThriftServerRunner implements Runnable {
      */
     public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, byte[] family,
         byte[] qualifier, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -957,7 +973,7 @@ public class ThriftServerRunner implements Runnable {
     protected List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, byte[] family,
         byte[] qualifier, long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1009,7 +1025,7 @@ public class ThriftServerRunner implements Runnable {
     public List<TRowResult> getRowWithColumnsTs(
         ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns,
         long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1075,7 +1091,7 @@ public class ThriftServerRunner implements Runnable {
                                                  List<ByteBuffer> rows,
         List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table= null;
       try {
         List<Get> gets = new ArrayList<Get>(rows.size());
@@ -1424,7 +1440,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1476,7 +1492,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow,
         List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1506,7 +1522,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer stopRow, List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1537,7 +1553,7 @@ public class ThriftServerRunner implements Runnable {
                                      List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1569,7 +1585,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpenTs(ByteBuffer tableName, ByteBuffer startRow,
         List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1600,7 +1616,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer stopRow, List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1630,7 +1646,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public Map<ByteBuffer, ColumnDescriptor> getColumnDescriptors(
         ByteBuffer tableName) throws IOError, TException {
-      
+
       Table table = null;
       try {
         TreeMap<ByteBuffer, ColumnDescriptor> columns =
@@ -1715,13 +1731,13 @@ public class ThriftServerRunner implements Runnable {
         throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
-    
+
     private Result getRowOrBefore(byte[] tableName, byte[] row, byte[] family) throws IOException {
       Scan scan = new Scan(row);
       scan.setReversed(true);
       scan.addFamily(family);
       scan.setStartRow(row);
-      Table table = getTable(tableName);      
+      Table table = getTable(tableName);
       try (ResultScanner scanner = table.getScanner(scan)) {
         return scanner.next();
       } finally{
