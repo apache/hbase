@@ -93,7 +93,7 @@ if ! ARG_LIST=$(${GETOPT} -q -o abfhno:qr:s \
     -l all,binary-only,force-download,help,no-checkout,options:,quick,repo:,source-only \
     -- "${@}"); then
   usage >&2
-  exit 1
+  exit 2
 fi
 eval set -- "${ARG_LIST[@]}"
 
@@ -145,7 +145,7 @@ while ((${#})); do
       # message.
       else
         usage >&2
-        exit 1
+        exit 2
       fi
       ;;
   esac
@@ -166,7 +166,7 @@ for ref in 1 2; do
       echo "Cloning ${REPO_URL} into ${SCRIPT_DIRECTORY}/target/compatibility/${ref}..."
       if ! git clone ${REPO_URL} ${SCRIPT_DIRECTORY}/target/compatibility/${ref}; then
 	echo "Error while cloning ${REPO_URL}. Exiting..." >&2
-	exit 1
+	exit 2
       fi
     elif [ "${ref}" = "2" ]; then
       # Avoid cloning from Git twice by copying first repo into different folder.
@@ -181,12 +181,12 @@ for ref in 1 2; do
     echo "Checking out ${COMMIT[${ref}]} into ${ref}/..."
     if ! git checkout -f ${COMMIT[${ref}]}; then
       echo "Error while checking out ${COMMIT[${ref}]}. Exiting..." >&2
-      exit 1
+      exit 2
     fi
     echo "Building ${COMMIT[${ref}]}..."
     if ! mvn clean package -DskipTests; then
       echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
-      exit 1
+      exit 2
     fi
     popd > /dev/null
   fi
@@ -205,7 +205,7 @@ for ref in 1 2; do
             "Attempting to build ${COMMIT[${ref}]}..."
         if ! mvn clean package -DskipTests; then
           echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
-          exit 1
+          exit 2
         fi
         popd > /dev/null
       done
@@ -213,7 +213,7 @@ for ref in 1 2; do
       JARS=$(find ${SCRIPT_DIRECTORY}/target/compatibility/${ref} "${JAR_FIND_EXPRESSION[@]}")
       if [ ${#JARS[@]} -eq 0 ]; then
 	echo "Unable to find any JARs matching the find expression. Exiting..." >&2
-        exit 1
+        exit 2
       fi
 
     # If no JARs were found and --no-checkout was not specified, fail immediately.
@@ -242,7 +242,7 @@ if [ ! -d ${SCRIPT_DIRECTORY}/target/compatibility/javaACC ] || [ -n "${FORCE_DO
   if ! git clone https://github.com/lvc/japi-compliance-checker.git \
       ${SCRIPT_DIRECTORY}/target/compatibility/javaACC; then
     echo "Failed to download Java API Compliance Checker. Exiting..." >&2
-    exit 1
+    exit 2
   fi
 fi
 
