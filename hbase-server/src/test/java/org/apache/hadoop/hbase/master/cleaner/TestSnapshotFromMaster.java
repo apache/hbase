@@ -48,6 +48,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -121,6 +124,7 @@ public class TestSnapshotFromMaster {
     conf.setLong(SnapshotHFileCleaner.HFILE_CACHE_REFRESH_PERIOD_CONF_KEY, cacheRefreshPeriod);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
+    conf.setInt("hbase.hfile.compactions.cleaner.interval", 20 * 1000);
 
   }
 
@@ -319,6 +323,10 @@ public class TestSnapshotFromMaster {
     for (HRegion region : regions) {
       region.waitForFlushesAndCompactions(); // enable can trigger a compaction, wait for it.
       region.compactStores(); // min is 2 so will compact and archive
+    }
+    for (HRegion region : regions) {
+      CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, region);
+      cleaner.chore();
     }
     LOG.info("After compaction File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);

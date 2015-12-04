@@ -248,6 +248,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public void close() {
     cur = null;
     this.hfs.close();
+    if (this.reader != null) {
+      this.reader.decrementRefCount();
+    }
   }
 
   /**

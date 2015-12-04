@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -1369,6 +1370,8 @@ public class TestHRegionReplayEvents {
 
     // Test case 3: compact primary files
     primaryRegion.compactStores();
+    CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, primaryRegion);
+    cleaner.chore();
     secondaryRegion.refreshStoreFiles();
     assertPathListsEqual(primaryRegion.getStoreFileList(families),
       secondaryRegion.getStoreFileList(families));

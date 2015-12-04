@@ -137,6 +137,7 @@ public class TestStripeStoreFileManager {
     MockStoreFile stripe0a = createFile(0, 100, OPEN_KEY, KEY_B),
         stripe1 = createFile(KEY_B, OPEN_KEY);
     manager.addCompactionResults(al(l0File), al(stripe0a, stripe1));
+    manager.removeCompactedFiles(al(l0File));
     // If we want a key <= KEY_A, we should get everything except stripe1.
     ArrayList<StoreFile> sfsDump = dumpIterator(manager.getCandidateFilesForRowKeyBefore(KV_A));
     assertEquals(2, sfsDump.size());
@@ -162,6 +163,7 @@ public class TestStripeStoreFileManager {
     // a candidate from the first file, the old one should not be removed.
     StoreFile stripe0b = createFile(0, 101, OPEN_KEY, KEY_B);
     manager.addCompactionResults(al(l0File2), al(stripe0b));
+    manager.removeCompactedFiles(al(l0File2));
     sfs = manager.getCandidateFilesForRowKeyBefore(KV_A);
     assertEquals(stripe0b, sfs.next());
     sfs.remove();
@@ -350,10 +352,12 @@ public class TestStripeStoreFileManager {
     // Here, [B, C] is logically [B, inf), so we should be able to compact it to that only.
     verifyInvalidCompactionScenario(manager, al(sf), al(createFile(KEY_B, KEY_C)));
     manager.addCompactionResults(al(sf), al(createFile(KEY_B, OPEN_KEY)));
+    manager.removeCompactedFiles(al(sf));
     // Do the same for other variants.
     manager = createManager(al(sf, createFile(KEY_C, OPEN_KEY)));
     verifyInvalidCompactionScenario(manager, al(sf), al(createFile(KEY_B, KEY_C)));
     manager.addCompactionResults(al(sf), al(createFile(OPEN_KEY, KEY_C)));
+    manager.removeCompactedFiles(al(sf));
     manager = createManager(al(sf));
     verifyInvalidCompactionScenario(manager, al(sf), al(createFile(KEY_B, KEY_C)));
     manager.addCompactionResults(al(sf), al(createFile(OPEN_KEY, OPEN_KEY)));
@@ -379,6 +383,7 @@ public class TestStripeStoreFileManager {
     StoreFile sf_B2C_0 = createFile(KEY_B, KEY_C);
     StoreFile sf_C2i_0 = createFile(KEY_C, OPEN_KEY);
     manager.addCompactionResults(al(sf_L0_0a), al(sf_i2B_0, sf_B2C_0, sf_C2i_0));
+    manager.removeCompactedFiles(al(sf_L0_0a));
     verifyAllFiles(manager, al(sf_L0_0b, sf_i2B_0, sf_B2C_0, sf_C2i_0));
 
     // Add another l0 file, "compact" both L0 into two stripes
@@ -387,51 +392,61 @@ public class TestStripeStoreFileManager {
     StoreFile sf_B2C_1 = createFile(KEY_B, KEY_C);
     manager.insertNewFiles(al(sf_L0_1));
     manager.addCompactionResults(al(sf_L0_0b, sf_L0_1), al(sf_i2B_1, sf_B2C_1));
+    manager.removeCompactedFiles(al(sf_L0_0b, sf_L0_1));
     verifyAllFiles(manager, al(sf_i2B_0, sf_B2C_0, sf_C2i_0, sf_i2B_1, sf_B2C_1));
 
     // Try compacting with invalid file (no metadata) - should add files to L0.
     StoreFile sf_L0_2 = createFile(null, null);
     manager.addCompactionResults(al(), al(sf_L0_2));
+    manager.removeCompactedFiles(al());
     verifyAllFiles(manager, al(sf_i2B_0, sf_B2C_0, sf_C2i_0, sf_i2B_1, sf_B2C_1, sf_L0_2));
     // Remove it...
     manager.addCompactionResults(al(sf_L0_2), al());
+    manager.removeCompactedFiles(al(sf_L0_2));
 
     // Do regular compaction in the first stripe.
     StoreFile sf_i2B_3 = createFile(OPEN_KEY, KEY_B);
     manager.addCompactionResults(al(sf_i2B_0, sf_i2B_1), al(sf_i2B_3));
+    manager.removeCompactedFiles(al(sf_i2B_0, sf_i2B_1));
     verifyAllFiles(manager, al(sf_B2C_0, sf_C2i_0, sf_B2C_1, sf_i2B_3));
 
     // Rebalance two stripes.
     StoreFile sf_B2D_4 = createFile(KEY_B, KEY_D);
     StoreFile sf_D2i_4 = createFile(KEY_D, OPEN_KEY);
     manager.addCompactionResults(al(sf_B2C_0, sf_C2i_0, sf_B2C_1), al(sf_B2D_4, sf_D2i_4));
+    manager.removeCompactedFiles(al(sf_B2C_0, sf_C2i_0, sf_B2C_1));
     verifyAllFiles(manager, al(sf_i2B_3, sf_B2D_4, sf_D2i_4));
 
     // Split the first stripe.
     StoreFile sf_i2A_5 = createFile(OPEN_KEY, KEY_A);
     StoreFile sf_A2B_5 = createFile(KEY_A, KEY_B);
     manager.addCompactionResults(al(sf_i2B_3), al(sf_i2A_5, sf_A2B_5));
+    manager.removeCompactedFiles(al(sf_i2B_3));
     verifyAllFiles(manager, al(sf_B2D_4, sf_D2i_4, sf_i2A_5, sf_A2B_5));
 
     // Split the middle stripe.
     StoreFile sf_B2C_6 = createFile(KEY_B, KEY_C);
     StoreFile sf_C2D_6 = createFile(KEY_C, KEY_D);
     manager.addCompactionResults(al(sf_B2D_4), al(sf_B2C_6, sf_C2D_6));
+    manager.removeCompactedFiles(al(sf_B2D_4));
     verifyAllFiles(manager, al(sf_D2i_4, sf_i2A_5, sf_A2B_5, sf_B2C_6, sf_C2D_6));
 
     // Merge two different middle stripes.
     StoreFile sf_A2C_7 = createFile(KEY_A, KEY_C);
     manager.addCompactionResults(al(sf_A2B_5, sf_B2C_6), al(sf_A2C_7));
+    manager.removeCompactedFiles(al(sf_A2B_5, sf_B2C_6));
     verifyAllFiles(manager, al(sf_D2i_4, sf_i2A_5, sf_C2D_6, sf_A2C_7));
 
     // Merge lower half.
     StoreFile sf_i2C_8 = createFile(OPEN_KEY, KEY_C);
     manager.addCompactionResults(al(sf_i2A_5, sf_A2C_7), al(sf_i2C_8));
+    manager.removeCompactedFiles(al(sf_i2A_5, sf_A2C_7));
     verifyAllFiles(manager, al(sf_D2i_4, sf_C2D_6, sf_i2C_8));
 
     // Merge all.
     StoreFile sf_i2i_9 = createFile(OPEN_KEY, OPEN_KEY);
     manager.addCompactionResults(al(sf_D2i_4, sf_C2D_6, sf_i2C_8), al(sf_i2i_9));
+    manager.removeCompactedFiles(al(sf_D2i_4, sf_C2D_6, sf_i2C_8));
     verifyAllFiles(manager, al(sf_i2i_9));
   }
 
@@ -451,12 +466,14 @@ public class TestStripeStoreFileManager {
     verifyGetAndScanScenario(sfm, KEY_C, KEY_C, sf_i2d, sf_d2i, sf_c2i);
     // Remove these files.
     sfm.addCompactionResults(al(sf_i2d, sf_d2i), al());
+    sfm.removeCompactedFiles(al(sf_i2d, sf_d2i));
     assertEquals(0, sfm.getLevel0Files().size());
     // Add another file to stripe; then "rebalance" stripes w/o it - the file, which was
     // presumably flushed during compaction, should go to L0.
     StoreFile sf_i2c_2 = createFile(OPEN_KEY, KEY_C);
     sfm.insertNewFiles(al(sf_i2c_2));
     sfm.addCompactionResults(al(sf_i2c, sf_c2i), al(sf_i2d, sf_d2i));
+    sfm.removeCompactedFiles(al(sf_i2c, sf_c2i));
     assertEquals(1, sfm.getLevel0Files().size());
     verifyGetAndScanScenario(sfm, KEY_C, KEY_C, sf_i2d, sf_i2c_2);
   }
@@ -472,9 +489,11 @@ public class TestStripeStoreFileManager {
     ArrayList<StoreFile> compacted = al(createFile(OPEN_KEY, KEY_B),
         createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY));
     manager.addCompactionResults(al(sf0a), compacted);
+    manager.removeCompactedFiles(al(sf0a));
     // Next L0 compaction only produces file for the first and last stripe.
     ArrayList<StoreFile> compacted2 = al(createFile(OPEN_KEY, KEY_B), createFile(KEY_C, OPEN_KEY));
     manager.addCompactionResults(al(sf0b), compacted2);
+    manager.removeCompactedFiles(al(sf0b));
     compacted.addAll(compacted2);
     verifyAllFiles(manager, compacted);
   }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -248,6 +249,7 @@ public class TestRegionReplicas {
       LOG.info("Flushing primary region");
       Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
+      HRegion primaryRegion = (HRegion) region;
 
       // ensure that chore is run
       LOG.info("Sleeping for " + (4 * refreshPeriod));
@@ -277,7 +279,7 @@ public class TestRegionReplicas {
       assertGetRpc(hriSecondary, 1042, true);
       assertGetRpc(hriSecondary, 2042, true);
 
-      // ensure that we are see the 3 store files
+      // ensure that we see the 3 store files
       Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
 
       // force compaction
@@ -292,7 +294,8 @@ public class TestRegionReplicas {
       }
 
       // ensure that we see the compacted file only
-      Assert.assertEquals(1, secondaryRegion.getStore(f).getStorefilesCount());
+      // This will be 4 until the cleaner chore runs
+      Assert.assertEquals(4, secondaryRegion.getStore(f).getStorefilesCount());
 
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
@@ -451,7 +454,9 @@ public class TestRegionReplicas {
       LOG.info("Force Major compaction on primary region " + hriPrimary);
       primaryRegion.compact(true);
       Assert.assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
-
+      CompactedHFilesDischarger cleaner =
+          new CompactedHFilesDischarger(100, null, (HRegion) primaryRegion);
+      cleaner.chore();
       // scan all the hfiles on the secondary.
       // since there are no read on the secondary when we ask locations to
       // the NN a FileNotFound exception will be returned and the FileLink

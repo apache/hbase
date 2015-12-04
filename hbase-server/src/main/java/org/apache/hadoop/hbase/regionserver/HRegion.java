@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -148,6 +149,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
@@ -297,6 +299,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   protected final Configuration conf;
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
+  private CompactedHFilesDischarger compactedFileDischarger;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
   // The internal wait duration to acquire a lock before read/update
@@ -809,6 +812,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
     long maxSeqId = initializeStores(reporter, status);
+    // Start the CompactedHFilesDischarger here. This chore helps to remove the compacted files
+    // that will no longer be used in reads.
+    if (this.getRegionServerServices() != null) {
+      ChoreService choreService = this.getRegionServerServices().getChoreService();
+      if (choreService != null) {
+        // Default is 2 mins. The default value for TTLCleaner is 5 mins so we set this to
+        // 2 mins so that compacted files can be archived before the TTLCleaner runs
+        int cleanerInterval =
+            conf.getInt("hbase.hfile.compactions.cleaner.interval", 2 * 60 * 1000);
+        this.compactedFileDischarger =
+            new CompactedHFilesDischarger(cleanerInterval, this.getRegionServerServices(), this);
+        choreService.scheduleChore(compactedFileDischarger);
+      }
+    }
     this.mvcc.advanceTo(maxSeqId);
     if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
       // Recover any edits if available.
@@ -1513,6 +1530,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (this.metricsRegionWrapper != null) {
         Closeables.closeQuietly(this.metricsRegionWrapper);
       }
+      // stop the Compacted hfile discharger
+      if (this.compactedFileDischarger != null) this.compactedFileDischarger.cancel(true);
+
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
@@ -6658,6 +6678,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       dstRegion.getRegionFileSystem().logFileSystemState(LOG);
     }
 
+    // clear the compacted files if any
+    for (Store s : dstRegion.getStores()) {
+      s.closeAndArchiveCompactedFiles();
+    }
     if (dstRegion.getRegionFileSystem().hasReferences(dstRegion.getTableDesc())) {
       throw new IOException("Merged region " + dstRegion
           + " still has references after the compaction, is compaction canceled?");
@@ -7527,7 +7551,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      43 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      44 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 

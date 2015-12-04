@@ -106,6 +106,7 @@ public class StripeStoreFileManager
 
     /** Cached list of all files in the structure, to return from some calls */
     public ImmutableList<StoreFile> allFilesCached = ImmutableList.<StoreFile>of();
+    private ImmutableList<StoreFile> allCompactedFilesCached = ImmutableList.<StoreFile>of();
   }
   private State state = null;
 
@@ -141,8 +142,14 @@ public class StripeStoreFileManager
   }
 
   @Override
+  public Collection<StoreFile> getCompactedfiles() {
+    return state.allCompactedFilesCached;
+  }
+
+  @Override
   public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
+    // Passing null does not cause NPE??
     cmc.mergeResults(null, sfs);
     debugDumpState("Added new files");
   }
@@ -153,6 +160,13 @@ public class StripeStoreFileManager
     this.state = new State();
     this.fileStarts.clear();
     this.fileEnds.clear();
+    return result;
+  }
+
+  @Override
+  public ImmutableCollection<StoreFile> clearCompactedFiles() {
+    ImmutableCollection<StoreFile> result = state.allCompactedFilesCached;
+    this.state = new State();
     return result;
   }
 
@@ -306,7 +320,29 @@ public class StripeStoreFileManager
     // copies and apply the result at the end.
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(false);
     cmc.mergeResults(compactedFiles, results);
+    markCompactedAway(compactedFiles);
     debugDumpState("Merged compaction results");
+  }
+
+  // Mark the files as compactedAway once the storefiles and compactedfiles list is finalised
+  // Let a background thread close the actual reader on these compacted files and also
+  // ensure to evict the blocks from block cache so that they are no longer in
+  // cache
+  private void markCompactedAway(Collection<StoreFile> compactedFiles) {
+    for (StoreFile file : compactedFiles) {
+      file.markCompactedAway();
+    }
+  }
+
+  @Override
+  public void removeCompactedFiles(Collection<StoreFile> compactedFiles) throws IOException {
+    // See class comment for the assumptions we make here.
+    LOG.debug("Attempting to delete compaction results: " + compactedFiles.size());
+    // In order to be able to fail in the middle of the operation, we'll operate on lazy
+    // copies and apply the result at the end.
+    CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(false);
+    cmc.deleteResults(compactedFiles);
+    debugDumpState("Deleted compaction results");
   }
 
   @Override
@@ -684,7 +720,7 @@ public class StripeStoreFileManager
       this.isFlush = isFlush;
     }
 
-    public void mergeResults(Collection<StoreFile> compactedFiles, Collection<StoreFile> results)
+    private void mergeResults(Collection<StoreFile> compactedFiles, Collection<StoreFile> results)
         throws IOException {
       assert this.compactedFiles == null && this.results == null;
       this.compactedFiles = compactedFiles;
@@ -696,12 +732,20 @@ public class StripeStoreFileManager
         processNewCandidateStripes(newStripes);
       }
       // Create new state and update parent.
-      State state = createNewState();
+      State state = createNewState(false);
       StripeStoreFileManager.this.state = state;
       updateMetadataMaps();
     }
 
-    private State createNewState() {
+    private void deleteResults(Collection<StoreFile> compactedFiles) throws IOException {
+      this.compactedFiles = compactedFiles;
+      // Create new state and update parent.
+      State state = createNewState(true);
+      StripeStoreFileManager.this.state = state;
+      updateMetadataMaps();
+    }
+
+    private State createNewState(boolean delCompactedFiles) {
       State oldState = StripeStoreFileManager.this.state;
       // Stripe count should be the same unless the end rows changed.
       assert oldState.stripeFiles.size() == this.stripeFiles.size() || this.stripeEndRows != null;
@@ -717,9 +761,21 @@ public class StripeStoreFileManager
       }
 
       List<StoreFile> newAllFiles = new ArrayList<StoreFile>(oldState.allFilesCached);
-      if (!isFlush) newAllFiles.removeAll(compactedFiles);
-      newAllFiles.addAll(results);
+      List<StoreFile> newAllCompactedFiles =
+          new ArrayList<StoreFile>(oldState.allCompactedFilesCached);
+      if (!isFlush) {
+        newAllFiles.removeAll(compactedFiles);
+        if (delCompactedFiles) {
+          newAllCompactedFiles.removeAll(compactedFiles);
+        } else {
+          newAllCompactedFiles.addAll(compactedFiles);
+        }
+      }
+      if (results != null) {
+        newAllFiles.addAll(results);
+      }
       newState.allFilesCached = ImmutableList.copyOf(newAllFiles);
+      newState.allCompactedFilesCached = ImmutableList.copyOf(newAllCompactedFiles);
       return newState;
     }
 
@@ -970,14 +1026,16 @@ public class StripeStoreFileManager
     // Order by seqnum is reversed.
     for (int i = 1; i < stripe.size(); ++i) {
       StoreFile sf = stripe.get(i);
-      long fileTs = sf.getReader().getMaxTimestamp();
-      if (fileTs < maxTs && !filesCompacting.contains(sf)) {
-        LOG.info("Found an expired store file: " + sf.getPath()
-            + " whose maxTimeStamp is " + fileTs + ", which is below " + maxTs);
-        if (expiredStoreFiles == null) {
-          expiredStoreFiles = new ArrayList<StoreFile>();
+      synchronized (sf) {
+        long fileTs = sf.getReader().getMaxTimestamp();
+        if (fileTs < maxTs && !filesCompacting.contains(sf)) {
+          LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimeStamp is "
+              + fileTs + ", which is below " + maxTs);
+          if (expiredStoreFiles == null) {
+            expiredStoreFiles = new ArrayList<StoreFile>();
+          }
+          expiredStoreFiles.add(sf);
         }
-        expiredStoreFiles.add(sf);
       }
     }
     return expiredStoreFiles;

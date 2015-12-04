@@ -466,4 +466,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException;
 
   boolean isPrimaryReplicaStore();
+
+  /**
+   * Closes and archives the compacted files under this store
+   */
+  void closeAndArchiveCompactedFiles() throws IOException;
 }

@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -170,10 +172,11 @@ public class TestZooKeeperTableArchiveClient {
 
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
-    Region region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-
+    HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    final CompactedHFilesDischarger compactionCleaner =
+        new CompactedHFilesDischarger(100, stop, region);
     loadFlushAndCompact(region, TEST_FAM);
-
+    compactionCleaner.chore();
     // get the current hfiles in the archive directory
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
@@ -217,18 +220,22 @@ public class TestZooKeeperTableArchiveClient {
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
-
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
-    Region region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    final CompactedHFilesDischarger compactionCleaner =
+        new CompactedHFilesDischarger(100, stop, region);
     loadFlushAndCompact(region, TEST_FAM);
-
+    compactionCleaner.chore();
     // create the another table that we don't archive
     hcd = new HColumnDescriptor(TEST_FAM);
-    Region otherRegion = UTIL.createTestRegion(otherTable, hcd);
+    HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
+    final CompactedHFilesDischarger compactionCleaner1 =
+        new CompactedHFilesDischarger(100, stop, otherRegion);
     loadFlushAndCompact(otherRegion, TEST_FAM);
-
+    compactionCleaner1.chore();
     // get the current hfiles in the archive directory
+    // Should  be archived
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
       FSUtils.logFileSystemState(fs, archiveDir, LOG);
