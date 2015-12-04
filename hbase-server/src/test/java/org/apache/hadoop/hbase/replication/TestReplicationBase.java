@@ -135,7 +135,7 @@ public class TestReplicationBase {
 
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setMaxVersions(3);
+    fam.setMaxVersions(100);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);

@@ -115,6 +115,8 @@ public class VerifyReplication extends Configured implements Tool {
           }
         }
         scan.setTimeRange(startTime, endTime);
+        int versions = conf.getInt(NAME+".versions", -1);
+        LOG.info("Setting number of version inside map as: " + versions);
         if (versions >= 0) {
           scan.setMaxVersions(versions);
         }
@@ -261,6 +263,9 @@ public class VerifyReplication extends Configured implements Tool {
     conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
     LOG.info("Peer Quorum Address: " + peerQuorumAddress);
 
+    conf.setInt(NAME + ".versions", versions);
+    LOG.info("Number of version: " + versions);
+
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(VerifyReplication.class);
 
@@ -268,6 +273,7 @@ public class VerifyReplication extends Configured implements Tool {
     scan.setTimeRange(startTime, endTime);
     if (versions >= 0) {
       scan.setMaxVersions(versions);
+      LOG.info("Number of versions set to " + versions);
     }
     if(families != null) {
       String[] fams = families.split(",");
