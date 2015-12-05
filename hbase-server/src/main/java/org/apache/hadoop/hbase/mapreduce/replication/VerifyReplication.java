@@ -151,6 +151,7 @@ public class VerifyReplication extends Configured implements Tool {
             context.getCounter(Counters.GOODROWS).increment(1);
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
+            LOG.error("Exception while comparing row : " + e);
           }
           currentCompareRowInPeerTable = replicatedScanner.next();
           break;
