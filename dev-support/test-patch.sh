@@ -1007,6 +1007,7 @@ cd $BASEDIR
 echo "Version of this script: Wed Oct 14 00:29:04 PDT 2015"
 checkout
 RESULT=$?
+echo "RESULT = " $RESULT
 if [[ $JENKINS == "true" ]] ; then
   if [[ $RESULT != 0 ]] ; then
     exit 100
@@ -1015,8 +1016,10 @@ fi
 setup
 checkAuthor
 RESULT=$?
+echo "RESULT = " $RESULT
 checkTests
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 applyPatch
 if [[ $? != 0 ]] ; then
   submitJiraComment 1
@@ -1025,30 +1028,42 @@ fi
 
 checkAntiPatterns
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkBuildWithHadoopVersions
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkJavacWarnings
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkProtocErrors
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkCheckstyleErrors
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkInterfaceAudience
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkReleaseAuditWarnings
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkLineLengths
 (( RESULT = RESULT + $? ))
+echo "RESULT = " $RESULT
 checkSiteXml
 (( RESULT = RESULT + $?))
-### Do not call these when run by a developer 
+echo "RESULT = " $RESULT
+### Do not call these when run by a developer
 if [[ $JENKINS == "true" ]] ; then
   runTests
   (( RESULT = RESULT + $? ))
+  echo "RESULT = " $RESULT
 JIRA_COMMENT_FOOTER="Test results: $BUILD_URL/testReport/
 $JIRA_COMMENT_FOOTER"
 fi
