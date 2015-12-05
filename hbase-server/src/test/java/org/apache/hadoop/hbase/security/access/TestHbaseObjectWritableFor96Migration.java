@@ -76,13 +76,16 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.Message;
 
+@Category({SmallTests.class})
 public class TestHbaseObjectWritableFor96Migration {
 
   @Test
