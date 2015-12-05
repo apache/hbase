@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
@@ -34,6 +36,7 @@ import java.util.concurrent.TimeoutException;
  *
  * This will spread out things on a distributed cluster.
  */
+@InterfaceAudience.Private
 public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolExecutor {
   private final double spread;
 
