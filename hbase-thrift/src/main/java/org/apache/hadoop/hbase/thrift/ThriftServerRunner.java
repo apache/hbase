@@ -141,6 +141,15 @@ public class ThriftServerRunner implements Runnable {
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
 
   /**
+   * Amount of time in milliseconds before a server thread will timeout
+   * waiting for client to send data on a connected socket. Currently,
+   * applies only to TBoundedThreadPoolServer
+   */
+  public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
+    "hbase.thrift.server.socket.read.timeout";
+  public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
+
+  /**
    * Thrift quality of protection configuration key. Valid values can be:
    * auth-conf: authentication, integrity and confidentiality checking
    * auth-int: authentication and integrity checking
@@ -150,6 +159,7 @@ public class ThriftServerRunner implements Runnable {
    * The thrift server and the HBase cluster must run in secure mode.
    */
   static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
+  static final String BACKLOG_CONF_KEY = "hbase.regionserver.thrift.backlog";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
@@ -419,7 +429,6 @@ public class ThriftServerRunner implements Runnable {
 
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
-
       InetAddress listenAddress = getBindAddress(conf);
       TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
           new InetSocketAddress(listenAddress, listenPort));
@@ -460,9 +469,10 @@ public class ThriftServerRunner implements Runnable {
     } else if (implType == ImplType.THREAD_POOL) {
       // Thread pool server. Get the IP address to bind to.
       InetAddress listenAddress = getBindAddress(conf);
-
-      TServerTransport serverTransport = new TServerSocket(
-          new InetSocketAddress(listenAddress, listenPort));
+      int readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
+          THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
+      TServerTransport serverTransport =
+        new TServerSocket(new InetSocketAddress(listenAddress, listenPort), readTimeout);
 
       TBoundedThreadPoolServer.Args serverArgs =
           new TBoundedThreadPoolServer.Args(serverTransport, conf);
@@ -471,7 +481,7 @@ public class ThriftServerRunner implements Runnable {
                 .protocolFactory(protocolFactory);
       LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
           + listenAddress + ":" + Integer.toString(listenPort)
-          + "; " + serverArgs);
+          + " with readTimeout " + readTimeout + "ms; " + serverArgs);
       TBoundedThreadPoolServer tserver =
           new TBoundedThreadPoolServer(serverArgs, metrics);
       this.tserver = tserver;
@@ -568,7 +578,6 @@ public class ThriftServerRunner implements Runnable {
      *          name of table
      * @return HTable object
      * @throws IOException
-     * @throws IOError
      */
     public HTableInterface getTable(final byte[] tableName) throws
         IOException {

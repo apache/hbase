@@ -107,7 +107,19 @@ public class ThriftServer {
 
   public static final int DEFAULT_LISTEN_PORT = 9090;
 
-  
+  private static final String READ_TIMEOUT_OPTION = "readTimeout";
+
+  static final String BACKLOG_CONF_KEY = "hbase.regionserver.thrift.backlog";
+
+  /**
+   * Amount of time in milliseconds before a server thread will timeout
+   * waiting for client to send data on a connected socket. Currently,
+   * applies only to TBoundedThreadPoolServer
+   */
+  public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
+    "hbase.thrift.server.socket.read.timeout";
+  public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
+
   public ThriftServer() {
   }
 
@@ -129,7 +141,10 @@ public class ThriftServer {
     options.addOption("c", "compact", false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
     options.addOption(null, "infoport", true, "Port for web UI");
-
+    options.addOption("t", READ_TIMEOUT_OPTION, true,
+      "Amount of time in milliseconds before a server thread will timeout " +
+      "waiting for client to send data on a connected socket. Currently, " +
+      "only applies to TBoundedThreadPoolServer");
     OptionGroup servers = new OptionGroup();
     servers.addOption(
         new Option("nonblocking", false, "Use the TNonblockingServer. This implies the framed transport."));
@@ -259,9 +274,13 @@ public class ThriftServer {
             Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
   }
 
-  private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory, TProcessor processor,
-      TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws TTransportException {
-    TServerTransport serverTransport = new TServerSocket(inetSocketAddress);
+  private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory,
+                                              TProcessor processor,
+                                              TTransportFactory transportFactory,
+                                              InetSocketAddress inetSocketAddress,
+                                              int clientTimeout)
+      throws TTransportException {
+    TServerTransport serverTransport = new TServerSocket(inetSocketAddress, clientTimeout);
     log.info("starting HBase ThreadPool Thrift server on " + inetSocketAddress.toString());
     TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
     serverArgs.processor(processor);
@@ -319,6 +338,19 @@ public class ThriftServer {
       bindAddress = conf.get("hbase.thrift.info.bindAddress");
     }
 
+    // Get read timeout
+    int readTimeout = THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT;
+    if (cmd.hasOption(READ_TIMEOUT_OPTION)) {
+      try {
+        readTimeout = Integer.parseInt(cmd.getOptionValue(READ_TIMEOUT_OPTION));
+      } catch (NumberFormatException e) {
+        throw new RuntimeException("Could not parse the value provided for the timeout option", e);
+      }
+    } else {
+      readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
+        THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
+    }
+
     // Get port to bind to
     int listenPort = 0;
     try {
@@ -330,6 +362,9 @@ public class ThriftServer {
     } catch (NumberFormatException e) {
       throw new RuntimeException("Could not parse the value provided for the port option", e);
     }
+
+    // Thrift's implementation uses '0' as a placeholder for 'use the default.'
+    int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
 
     // Local hostname and user name,
     // used only if QOP is configured.
@@ -440,7 +475,11 @@ public class ThriftServer {
     } else if (hsha) {
       server = getTHsHaServer(protocolFactory, processor, transportFactory, inetSocketAddress, metrics);
     } else {
-      server = getTThreadPoolServer(protocolFactory, processor, transportFactory, inetSocketAddress);
+      server = getTThreadPoolServer(protocolFactory,
+          processor,
+          transportFactory,
+          inetSocketAddress,
+          readTimeout);
     }
 
     final TServer tserver = server;
