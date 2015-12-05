@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -344,13 +345,19 @@ public class DeleteTableProcedure
       LOG.debug("Table '" + tableName + "' archived!");
     }
 
-    // Archive mob data
-    Path mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
-            tableName);
-    Path regionDir =
-            new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
-    if (fs.exists(regionDir)) {
-      HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
+    // Archive the mob data if there is a mob-enabled column
+    HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
+    boolean hasMob = MobUtils.hasMobColumns(htd);
+    Path mobTableDir = null;
+    if (hasMob) {
+      // Archive mob data
+      mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
+              tableName);
+      Path regionDir =
+              new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
+      if (fs.exists(regionDir)) {
+        HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
+      }
     }
 
     // Delete table directory from FS (temp directory)
@@ -359,7 +366,7 @@ public class DeleteTableProcedure
     }
 
     // Delete the table directory where the mob files are saved
-    if (mobTableDir != null && fs.exists(mobTableDir)) {
+    if (hasMob && mobTableDir != null && fs.exists(mobTableDir)) {
       if (!fs.delete(mobTableDir, true)) {
         throw new IOException("Couldn't delete mob dir " + mobTableDir);
       }
