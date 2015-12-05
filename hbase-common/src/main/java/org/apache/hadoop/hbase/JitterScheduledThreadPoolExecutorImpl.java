@@ -81,8 +81,7 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     public long getDelay(TimeUnit unit) {
       long baseDelay = wrapped.getDelay(unit);
       long spreadTime = (long) (baseDelay * spread);
-      long delay = spreadTime <= 0 ? baseDelay
-          : baseDelay + ThreadLocalRandom.current().nextLong(-spreadTime, spreadTime);
+      long delay = baseDelay + ThreadLocalRandom.current().nextLong(-spreadTime, spreadTime);
       // Ensure that we don't roll over for nanoseconds.
       return (delay < 0) ? baseDelay : delay;
     }
