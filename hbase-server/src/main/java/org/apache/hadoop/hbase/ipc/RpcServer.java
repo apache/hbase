@@ -1988,13 +1988,19 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
       throws IOException {
-    this.reservoir = new BoundedByteBufferPool(
-      conf.getInt("hbase.ipc.server.reservoir.max.buffer.size",  1024 * 1024),
-      conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
-      // Make the max twice the number of handlers to be safe.
-      conf.getInt("hbase.ipc.server.reservoir.initial.max",
-        conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
+
+    if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
+      this.reservoir = new BoundedByteBufferPool(
+          conf.getInt("hbase.ipc.server.reservoir.max.buffer.size", 1024 * 1024),
+          conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
+          // Make the max twice the number of handlers to be safe.
+          conf.getInt("hbase.ipc.server.reservoir.initial.max",
+              conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+                  HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
+    } else {
+      reservoir = null;
+    }
+    
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;
