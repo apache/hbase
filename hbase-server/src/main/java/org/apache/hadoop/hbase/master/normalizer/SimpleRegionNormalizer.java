@@ -45,6 +45,10 @@ import java.util.List;
  *    to merge, if R1 + R1 &lt;  S, and normalization stops
  *  <li> Otherwise, no action is performed
  * </ol>
+ * <p>
+ * Region sizes are coarse and approximate on the order of megabytes. Additionally,
+ * "empty" regions (less than 1MB, with the previous note) are not merged away. This
+ * is by design to prevent normalization from undoing the pre-splitting of a table.
  */
 @InterfaceAudience.Private
 public class SimpleRegionNormalizer implements RegionNormalizer {
