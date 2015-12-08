@@ -19,10 +19,11 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetAddress;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.security.User;
 
-
+@InterfaceAudience.Private
 public interface RpcCallContext extends Delayable {
   /**
    * Check if the caller who made this IPC call has disconnected.
@@ -40,7 +41,7 @@ public interface RpcCallContext extends Delayable {
    * support cellblocks while fielding requests from clients that do not.
    * @return True if the client supports cellblocks, else return all content in pb
    */
-  boolean isClientCellBlockSupport();
+  boolean isClientCellBlockSupported();
 
   /**
    * Returns the user credentials associated with the current RPC request or
@@ -71,4 +72,22 @@ public interface RpcCallContext extends Delayable {
    * @param callback
    */
   void setCallBack(RpcCallback callback);
+
+  boolean isRetryImmediatelySupported();
+
+  /**
+   * The size of response cells that have been accumulated so far.
+   * This along with the corresponding increment call is used to ensure that multi's or
+   * scans dont get too excessively large
+   */
+  long getResponseCellSize();
+
+  /**
+   * Add on the given amount to the retained cell size.
+   *
+   * This is not thread safe and not synchronized at all. If this is used by more than one thread
+   * then everything will break. Since this is called for every row synchronization would be too
+   * onerous.
+   */
+  void incrementResponseCellSize(long cellSize);
 }

@@ -24,10 +24,8 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.RpcCallContext;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo;
 
 /**
  * Latch used by the Master to have the prepare() sync behaviour for old
@@ -44,24 +42,7 @@ public abstract class ProcedurePrepareLatch {
   }
 
   public static boolean hasProcedureSupport() {
-    return currentClientHasMinimumVersion(1, 1);
-  }
-
-  private static boolean currentClientHasMinimumVersion(int major, int minor) {
-    RpcCallContext call = RpcServer.getCurrentCall();
-    VersionInfo versionInfo = call != null ? call.getClientVersionInfo() : null;
-    if (versionInfo != null) {
-      String[] components = versionInfo.getVersion().split("\\.");
-
-      int clientMajor = components.length > 0 ? Integer.parseInt(components[0]) : 0;
-      if (clientMajor != major) {
-        return clientMajor > major;
-      }
-
-      int clientMinor = components.length > 1 ? Integer.parseInt(components[1]) : 0;
-      return clientMinor >= minor;
-    }
-    return false;
+    return VersionInfoUtil.currentClientHasMinimumVersion(1, 1);
   }
 
   protected abstract void countDown(final Procedure proc);
