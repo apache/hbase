@@ -2123,7 +2123,11 @@ public class HStore implements Store {
   public long getTotalStaticIndexSize() {
     long size = 0;
     for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
-      size += s.getReader().getUncompressedDataIndexSize();
+      StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        continue;
+      }
+      size += r.getUncompressedDataIndexSize();
     }
     return size;
   }
@@ -2133,6 +2137,9 @@ public class HStore implements Store {
     long size = 0;
     for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
       StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        continue;
+      }
       size += r.getTotalBloomSize();
     }
     return size;
