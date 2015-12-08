@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -2701,7 +2702,8 @@ class ConnectionManager {
     Throwable cur = (Throwable) exception;
     while (cur != null) {
       if (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-          || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException) {
+          || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
+          || cur instanceof RetryImmediatelyException) {
         return cur;
       }
       if (cur instanceof RemoteException) {

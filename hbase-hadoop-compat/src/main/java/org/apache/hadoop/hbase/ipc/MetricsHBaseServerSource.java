@@ -74,6 +74,9 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String EXCEPTIONS_SANITY_NAME="exceptions.FailedSanityCheckException";
   String EXCEPTIONS_MOVED_NAME="exceptions.RegionMovedException";
   String EXCEPTIONS_NSRE_NAME="exceptions.NotServingRegionException";
+  String EXCEPTIONS_MULTI_TOO_LARGE_NAME = "exceptions.multiResponseTooLarge";
+  String EXCEPTIONS_MULTI_TOO_LARGE_DESC = "A response to a multi request was too large and the " +
+      "rest of the requests will have to be retried.";
 
   void authorizationSuccess();
 
@@ -96,6 +99,7 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void notServingRegionException();
   void unknownScannerException();
   void tooBusyException();
+  void multiActionTooLargeException();
 
   void sentBytes(long count);
 
@@ -110,4 +114,6 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void processedCall(int processingTime);
 
   void queuedAndProcessedCall(int totalTime);
-  }
+
+
+}

@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -105,6 +106,8 @@ public class MetricsHBaseServer {
         source.notServingRegionException();
       } else if (throwable instanceof FailedSanityCheckException) {
         source.failedSanityException();
+      } else if (throwable instanceof MultiActionResultTooLarge) {
+        source.multiActionTooLargeException();
       }
     }
   }
