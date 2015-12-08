@@ -164,8 +164,8 @@
       <name>Mikhail Antonov</name>
       <email>antonov@apache.org</email>
       <timezone>-8</timezone>
-      <organization>WANdisco</organization>
-      <organizationUrl>http://www.wandisco.com/</organizationUrl>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com/</organizationUrl>
     </developer>
     <developer>
       <id>busbey</id>
