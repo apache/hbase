@@ -95,8 +95,11 @@
 
         <%for HRegionInfo r: onlineRegions %>
         <tr>
-            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
-                                        regionServer.getConfiguration()) %></td>
+            <%java>
+             String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+               regionServer.getConfiguration());
+            </%java>
+            <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <td><% Bytes.toStringBinary(HRegionInfo.getStartKeyForDisplay(r,
                                         regionServer.getConfiguration())) %></td>
             <td><% Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(r,
@@ -123,9 +126,10 @@
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+              regionServer.getConfiguration());
         </%java>
-            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
-                                           regionServer.getConfiguration()) %></td>
+            <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getReadRequestsCount() %></td>
             <td><% load.getWriteRequestsCount() %></td>
@@ -157,9 +161,10 @@
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+              regionServer.getConfiguration());
         </%java>
-            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
-                                           regionServer.getConfiguration()) %></td>
+            <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getStores() %></td>
             <td><% load.getStorefiles() %></td>
@@ -197,9 +202,10 @@
             percentDone = String.format("%.2f", 100 *
             ((float) load.getCurrentCompactedKVs() / load.getTotalCompactingKVs())) + "%";
             }
+            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+              regionServer.getConfiguration());
         </%java>
-            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
-                                           regionServer.getConfiguration()) %></td>
+            <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getTotalCompactingKVs() %></td>
             <td><% load.getCurrentCompactedKVs() %></td>
@@ -225,9 +231,10 @@
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+              regionServer.getConfiguration());
         </%java>
-            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
-                                           regionServer.getConfiguration()) %></td>
+            <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getMemstoreSizeMB() %>m</td>
             </%if>
