@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -126,19 +127,36 @@ class AsyncProcess {
     public void waitUntilDone() throws InterruptedIOException;
   }
 
-  /** Return value from a submit that didn't contain any requests. */
+  /**
+   * Return value from a submit that didn't contain any requests.
+   */
   private static final AsyncRequestFuture NO_REQS_RESULT = new AsyncRequestFuture() {
-    public final Object[] result = new Object[0];
+
+    final Object[] result = new Object[0];
+
     @Override
-    public boolean hasError() { return false; }
+    public boolean hasError() {
+      return false;
+    }
+
     @Override
-    public RetriesExhaustedWithDetailsException getErrors() { return null; }
+    public RetriesExhaustedWithDetailsException getErrors() {
+      return null;
+    }
+
     @Override
-    public List<? extends Row> getFailedOperations() { return null; }
+    public List<? extends Row> getFailedOperations() {
+      return null;
+    }
+
     @Override
-    public Object[] getResults() { return result; }
+    public Object[] getResults() {
+      return result;
+    }
+
     @Override
-    public void waitUntilDone() throws InterruptedIOException {}
+    public void waitUntilDone() throws InterruptedIOException {
+    }
   };
 
   /** Sync point for calls to multiple replicas for the same user request (Get).
@@ -306,8 +324,12 @@ class AsyncProcess {
    *         RuntimeException
    */
   private ExecutorService getPool(ExecutorService pool) {
-    if (pool != null) return pool;
-    if (this.pool != null) return this.pool;
+    if (pool != null) {
+      return pool;
+    }
+    if (this.pool != null) {
+      return this.pool;
+    }
     throw new RuntimeException("Neither AsyncProcess nor request have ExecutorService");
   }
 
@@ -365,7 +387,9 @@ class AsyncProcess {
         Row r = it.next();
         HRegionLocation loc;
         try {
-          if (r == null) throw new IllegalArgumentException("#" + id + ", row cannot be null");
+          if (r == null) {
+            throw new IllegalArgumentException("#" + id + ", row cannot be null");
+          }
           // Make sure we get 0-s replica.
           RegionLocations locs = connection.locateRegion(
               tableName, r.getRow(), true, true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
@@ -728,10 +752,10 @@ class AsyncProcess {
           // Normal case: we received an answer from the server, and it's not an exception.
           receiveMultiAction(multiAction, server, res, numAttempt);
         } catch (Throwable t) {
-              // Something really bad happened. We are on the send thread that will now die.
-              LOG.error("Internal AsyncProcess #" + id + " error for "
-                  + tableName + " processing for " + server, t);
-              throw new RuntimeException(t);
+          // Something really bad happened. We are on the send thread that will now die.
+          LOG.error("Internal AsyncProcess #" + id + " error for "
+              + tableName + " processing for " + server, t);
+          throw new RuntimeException(t);
         } finally {
           decTaskCounters(multiAction.getRegions(), server);
           if (callsInProgress != null && callable != null) {
@@ -750,19 +774,25 @@ class AsyncProcess {
 
     private final TableName tableName;
     private final AtomicLong actionsInProgress = new AtomicLong(-1);
-    /** The lock controls access to results. It is only held when populating results where
+    /**
+     * The lock controls access to results. It is only held when populating results where
      * there might be several callers (eventual consistency gets). For other requests,
-     * there's one unique call going on per result index. */
+     * there's one unique call going on per result index.
+     */
     private final Object replicaResultLock = new Object();
-    /** Result array.  Null if results are not needed. Otherwise, each index corresponds to
+    /**
+     * Result array.  Null if results are not needed. Otherwise, each index corresponds to
      * the action index in initial actions submitted. For most request types, has null-s for
      * requests that are not done, and result/exception for those that are done.
      * For eventual-consistency gets, initially the same applies; at some point, replica calls
      * might be started, and ReplicaResultState is put at the corresponding indices. The
      * returning calls check the type to detect when this is the case. After all calls are done,
-     * ReplicaResultState-s are replaced with results for the user. */
+     * ReplicaResultState-s are replaced with results for the user.
+     */
     private final Object[] results;
-    /** Indices of replica gets in results. If null, all or no actions are replica-gets. */
+    /**
+     * Indices of replica gets in results. If null, all or no actions are replica-gets.
+     */
     private final int[] replicaGetIndices;
     private final boolean hasAnyReplicaGets;
     private final long nonceGroup;
@@ -777,7 +807,9 @@ class AsyncProcess {
       this.actionsInProgress.set(actions.size());
       if (results != null) {
         assert needResults;
-        if (results.length != actions.size()) throw new AssertionError("results.length");
+        if (results.length != actions.size()) {
+          throw new AssertionError("results.length");
+        }
         this.results = results;
         for (int i = 0; i != this.results.length; ++i) {
           results[i] = null;
@@ -1177,9 +1209,13 @@ class AsyncProcess {
       // We have two contradicting needs here:
       //  1) We want to get the new location after having slept, as it may change.
       //  2) We want to take into account the location when calculating the sleep time.
+      //  3) If all this is just because the response needed to be chunked try again FAST.
       // It should be possible to have some heuristics to take the right decision. Short term,
       //  we go for one.
-      long backOffTime = errorsByServer.calculateBackoffTime(oldServer, pause);
+      boolean retryImmediately = throwable instanceof RetryImmediatelyException;
+      int nextAttemptNumber = retryImmediately ? numAttempt : numAttempt + 1;
+      long backOffTime = retryImmediately ? 0 :
+          errorsByServer.calculateBackoffTime(oldServer, pause);
       if (numAttempt > startLogErrorsCnt) {
         // We use this value to have some logs when we have multiple failures, but not too many
         //  logs, as errors are to be expected when a region moves, splits and so on
@@ -1188,14 +1224,16 @@ class AsyncProcess {
       }
 
       try {
-        Thread.sleep(backOffTime);
+        if (backOffTime > 0) {
+          Thread.sleep(backOffTime);
+        }
       } catch (InterruptedException e) {
         LOG.warn("#" + id + ", not sent: " + toReplay.size() + " operations, " + oldServer, e);
         Thread.currentThread().interrupt();
         return;
       }
 
-      groupAndSendMultiAction(toReplay, numAttempt + 1);
+      groupAndSendMultiAction(toReplay, nextAttemptNumber);
     }
 
     private void logNoResubmit(ServerName oldServer, int numAttempt,
@@ -1255,6 +1293,7 @@ class AsyncProcess {
           // Failure: retry if it's make sense else update the errors lists
           if (result == null || result instanceof Throwable) {
             Row row = sentAction.getAction();
+            throwable = ConnectionManager.findException(result);
             // Register corresponding failures once per server/once per region.
             if (!regionFailureRegistered) {
               regionFailureRegistered = true;
@@ -1404,7 +1443,9 @@ class AsyncProcess {
       // will either see state with callCount 0 after locking it; or will not see state at all
       // we will replace it with the result.
       synchronized (state) {
-        if (state.callCount == 0) return; // someone already set the result
+        if (state.callCount == 0) {
+          return; // someone already set the result
+        }
         state.callCount = 0;
       }
       synchronized (replicaResultLock) {
