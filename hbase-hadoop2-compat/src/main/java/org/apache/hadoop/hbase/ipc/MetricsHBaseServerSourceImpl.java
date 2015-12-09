@@ -62,9 +62,9 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         SENT_BYTES_DESC, 0l);
     this.receivedBytes = this.getMetricsRegistry().newCounter(RECEIVED_BYTES_NAME,
         RECEIVED_BYTES_DESC, 0l);
-    this.queueCallTime = this.getMetricsRegistry().newHistogram(QUEUE_CALL_TIME_NAME,
+    this.queueCallTime = this.getMetricsRegistry().newTimeHistogram(QUEUE_CALL_TIME_NAME,
         QUEUE_CALL_TIME_DESC);
-    this.processCallTime = this.getMetricsRegistry().newHistogram(PROCESS_CALL_TIME_NAME,
+    this.processCallTime = this.getMetricsRegistry().newTimeHistogram(PROCESS_CALL_TIME_NAME,
         PROCESS_CALL_TIME_DESC);
   }
 

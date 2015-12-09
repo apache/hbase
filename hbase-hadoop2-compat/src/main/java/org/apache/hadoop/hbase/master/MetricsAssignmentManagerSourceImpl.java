@@ -46,8 +46,8 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implement
     ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, "", 0l);
     ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, "", 0l);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
-    assignTimeHisto = metricsRegistry.newHistogram(ASSIGN_TIME_NAME);
-    bulkAssignTimeHisto = metricsRegistry.newHistogram(BULK_ASSIGN_TIME_NAME);
+    assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
+    bulkAssignTimeHisto = metricsRegistry.newTimeHistogram(BULK_ASSIGN_TIME_NAME);
   }
 
   @Override
