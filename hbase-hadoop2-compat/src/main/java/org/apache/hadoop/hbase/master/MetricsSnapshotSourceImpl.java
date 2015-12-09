@@ -41,11 +41,11 @@ public class MetricsSnapshotSourceImpl extends BaseSourceImpl implements Metrics
 
   @Override
   public void init() {
-    snapshotTimeHisto = metricsRegistry.newHistogram(
+    snapshotTimeHisto = metricsRegistry.newTimeHistogram(
         SNAPSHOT_TIME_NAME, SNAPSHOT_TIME_DESC);
-    snapshotCloneTimeHisto = metricsRegistry.newHistogram(
+    snapshotCloneTimeHisto = metricsRegistry.newTimeHistogram(
         SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC);
-    snapshotRestoreTimeHisto = metricsRegistry.newHistogram(
+    snapshotRestoreTimeHisto = metricsRegistry.newTimeHistogram(
         SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC);
   }
 

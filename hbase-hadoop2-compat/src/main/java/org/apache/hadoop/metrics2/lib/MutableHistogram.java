@@ -41,8 +41,8 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   // Per Cormode et al. an alpha of 0.015 strongly biases to the last 5 minutes
   private static final double DEFAULT_ALPHA = 0.015;
 
-  private final String name;
-  private final String desc;
+  protected final String name;
+  protected final String desc;
   private final Sample sample;
   private final AtomicLong min;
   private final AtomicLong max;
@@ -116,6 +116,11 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   public void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     if (all || changed()) {
       clearChanged();
+      updateSnapshotMetrics(metricsRecordBuilder);
+    }
+  }
+  
+  public void updateSnapshotMetrics(MetricsRecordBuilder metricsRecordBuilder) {
       final Snapshot s = sample.getSnapshot();
       metricsRecordBuilder.addCounter(Interns.info(name + NUM_OPS_METRIC_NAME, desc), count.get());
 
@@ -130,6 +135,5 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
           s.get95thPercentile());
       metricsRecordBuilder.addGauge(Interns.info(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, desc),
           s.get99thPercentile());
-    }
   }
 }
