@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,7 +115,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
     admin.addPeer("testCustomReplicationEndpoint",
-      new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
+      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()), null);
 
     // check whether the class has been constructed and started
@@ -157,7 +157,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     int peerCount = admin.getPeersCount();
     final String id = "testReplicationEndpointReturnsFalseOnReplicate";
     admin.addPeer(id,
-      new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
+      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()), null);
     // This test is flakey and then there is so much stuff flying around in here its, hard to
     // debug.  Peer needs to be up for the edit to make it across. This wait on
@@ -209,7 +209,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     admin.addPeer(id,
-        new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf2))
+        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf2))
             .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()),
         null);
 
@@ -234,7 +234,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   @Test (timeout=120000)
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
     admin.addPeer("testWALEntryFilterFromReplicationEndpoint",
-      new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
+      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName()), null);
     // now replicate some data.
     try (Connection connection = ConnectionFactory.createConnection(conf1)) {

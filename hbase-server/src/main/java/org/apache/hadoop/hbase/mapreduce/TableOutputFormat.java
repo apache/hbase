@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -195,22 +194,19 @@ implements Configurable {
 
   @Override
   public void setConf(Configuration otherConf) {
-    this.conf = HBaseConfiguration.create(otherConf);
-
-    String tableName = this.conf.get(OUTPUT_TABLE);
+    String tableName = otherConf.get(OUTPUT_TABLE);
     if(tableName == null || tableName.length() <= 0) {
       throw new IllegalArgumentException("Must specify table name");
     }
 
-    String address = this.conf.get(QUORUM_ADDRESS);
-    int zkClientPort = this.conf.getInt(QUORUM_PORT, 0);
-    String serverClass = this.conf.get(REGION_SERVER_CLASS);
-    String serverImpl = this.conf.get(REGION_SERVER_IMPL);
+    String address = otherConf.get(QUORUM_ADDRESS);
+    int zkClientPort = otherConf.getInt(QUORUM_PORT, 0);
+    String serverClass = otherConf.get(REGION_SERVER_CLASS);
+    String serverImpl = otherConf.get(REGION_SERVER_IMPL);
 
     try {
-      if (address != null) {
-        ZKUtil.applyClusterKeyToConf(this.conf, address);
-      }
+      this.conf = HBaseConfiguration.createClusterConf(otherConf, address, OUTPUT_CONF_PREFIX);
+
       if (serverClass != null) {
         this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
       }
@@ -221,9 +217,5 @@ implements Configurable {
       LOG.error(e);
       throw new RuntimeException(e);
     }
-
-    // finally apply any remaining "hbase.mapred.output." configuration overrides
-    Configuration outputOverrides = HBaseConfiguration.subset(otherConf, OUTPUT_CONF_PREFIX);
-    HBaseConfiguration.merge(this.conf, outputOverrides);
   }
 }

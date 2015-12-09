@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
@@ -626,7 +625,8 @@ public class ReplicationAdmin implements Closeable {
     }
   }
 
-  private List<ReplicationPeer> listValidReplicationPeers() {
+  @VisibleForTesting
+  List<ReplicationPeer> listValidReplicationPeers() {
     Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
     if (peers == null || peers.size() <= 0) {
       return null;
@@ -634,18 +634,16 @@ public class ReplicationAdmin implements Closeable {
     List<ReplicationPeer> validPeers = new ArrayList<ReplicationPeer>(peers.size());
     for (Entry<String, ReplicationPeerConfig> peerEntry : peers.entrySet()) {
       String peerId = peerEntry.getKey();
-      String clusterKey = peerEntry.getValue().getClusterKey();
-      Configuration peerConf = new Configuration(this.connection.getConfiguration());
       Stat s = null;
       try {
-        ZKUtil.applyClusterKeyToConf(peerConf, clusterKey);
         Pair<ReplicationPeerConfig, Configuration> pair = this.replicationPeers.getPeerConf(peerId);
+        Configuration peerConf = pair.getSecond();
         ReplicationPeer peer = new ReplicationPeerZKImpl(peerConf, peerId, pair.getFirst());
         s =
             zkw.getRecoverableZooKeeper().exists(peerConf.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
               null);
         if (null == s) {
-          LOG.info(peerId + ' ' + clusterKey + " is invalid now.");
+          LOG.info(peerId + ' ' + pair.getFirst().getClusterKey() + " is invalid now.");
           continue;
         }
         validPeers.add(peer);
@@ -663,10 +661,6 @@ public class ReplicationAdmin implements Closeable {
         LOG.warn("Failed to get valid replication peers due to InterruptedException.");
         LOG.debug("Failure details to get valid replication peers.", e);
         Thread.currentThread().interrupt();
-        continue;
-      } catch (IOException e) {
-        LOG.warn("Failed to get valid replication peers due to IOException.");
-        LOG.debug("Failure details to get valid replication peers.", e);
         continue;
       }
     }
