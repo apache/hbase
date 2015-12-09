@@ -443,4 +443,70 @@ public class TestRegionServerMetrics {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
   }
+
+  @Test
+  public void testRangeCountMetrics() throws Exception {
+    String tableNameString = "testRangeCountMetrics";
+    final long[] timeranges =
+        { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
+    final String timeRangeType = "TimeRangeCount";
+    final String timeRangeMetricName = "Mutate";
+    boolean timeRangeCountUpdated = false;
+
+    byte[] tName = Bytes.toBytes(tableNameString);
+    byte[] cfName = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] initValue = Bytes.toBytes("Value");
+
+    TEST_UTIL.createTable(tName, cfName);
+
+    new HTable(conf, tName).close(); // wait for the table to come up.
+
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    HTable table = new HTable(conf, tName);
+    Put p = new Put(row);
+    p.add(cfName, qualifier, initValue);
+    table.put(p);
+
+    // do some puts and gets
+    for (int i = 0; i < 10; i++) {
+      table.put(p);
+    }
+
+    Get g = new Get(row);
+    for (int i = 0; i < 10; i++) {
+      table.get(g);
+    }
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    // Check some time range counters were updated
+    long prior = 0;
+
+    String dynamicMetricName;
+    for (int i = 0; i < timeranges.length; i++) {
+      dynamicMetricName =
+          timeRangeMetricName + "_" + timeRangeType + "_" + prior + "-" + timeranges[i];
+      if (metricsHelper.checkCounterExists(dynamicMetricName, serverSource)) {
+        long count = metricsHelper.getCounter(dynamicMetricName, serverSource);
+        if (count > 0) {
+          timeRangeCountUpdated = true;
+          break;
+        }
+      }
+      prior = timeranges[i];
+    }
+    dynamicMetricName =
+        timeRangeMetricName + "_" + timeRangeType + "_" + timeranges[timeranges.length - 1] + "-inf";
+    if (metricsHelper.checkCounterExists(dynamicMetricName, serverSource)) {
+      long count = metricsHelper.getCounter(dynamicMetricName, serverSource);
+      if (count > 0) {
+        timeRangeCountUpdated = true;
+      }
+    }
+    assertEquals(true, timeRangeCountUpdated);
+
+    table.close();
+  }
 }

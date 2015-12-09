@@ -140,6 +140,16 @@ public interface MetricsAssertHelper {
   long getCounter(String name, BaseSource source);
 
   /**
+   * Check if a dynamic counter exists.
+   *
+   * @param name   name of the counter.
+   * @param source The BaseSource{@link BaseSource} that will provide the tags,
+   *               gauges, and counters.
+   * @return boolean true id counter metric exists.
+   */
+  boolean checkCounterExists(String name, BaseSource source);
+  
+  /**
    * Get the value of a gauge as a double.
    *
    * @param name   name of the gauge.

@@ -52,11 +52,11 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
   @Override
   public void init() {
     super.init();
-    batchGetStat = getMetricsRegistry().newHistogram(BATCH_GET_KEY);
-    batchMutateStat = getMetricsRegistry().newHistogram(BATCH_MUTATE_KEY);
-    queueTimeStat = getMetricsRegistry().newHistogram(TIME_IN_QUEUE_KEY);
-    thriftCallStat = getMetricsRegistry().newHistogram(THRIFT_CALL_KEY);
-    thriftSlowCallStat = getMetricsRegistry().newHistogram(SLOW_THRIFT_CALL_KEY);
+    batchGetStat = getMetricsRegistry().newTimeHistogram(BATCH_GET_KEY);
+    batchMutateStat = getMetricsRegistry().newTimeHistogram(BATCH_MUTATE_KEY);
+    queueTimeStat = getMetricsRegistry().newTimeHistogram(TIME_IN_QUEUE_KEY);
+    thriftCallStat = getMetricsRegistry().newTimeHistogram(THRIFT_CALL_KEY);
+    thriftSlowCallStat = getMetricsRegistry().newTimeHistogram(SLOW_THRIFT_CALL_KEY);
     callQueueLenGauge = getMetricsRegistry().getLongGauge(CALL_QUEUE_LEN_KEY, 0);
   }
 

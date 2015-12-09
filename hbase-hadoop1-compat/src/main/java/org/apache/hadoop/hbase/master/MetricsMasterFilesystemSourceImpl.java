@@ -40,10 +40,12 @@ public class MetricsMasterFilesystemSourceImpl extends BaseSourceImpl implements
 
   @Override
   public void init() {
-    splitSizeHisto = metricsRegistry.newHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
-    splitTimeHisto = metricsRegistry.newHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
-    metaSplitTimeHisto = metricsRegistry.newHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
-    metaSplitSizeHisto = metricsRegistry.newHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
+    splitSizeHisto = metricsRegistry.newSizeHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
+    splitTimeHisto = metricsRegistry.newTimeHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
+    metaSplitTimeHisto = 
+        metricsRegistry.newTimeHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
+    metaSplitSizeHisto = 
+        metricsRegistry.newSizeHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
   }
 
   @Override

@@ -206,6 +206,13 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   }
 
   @Override
+  public boolean checkCounterExists(String name, BaseSource source) {
+    getMetrics(source);
+    String cName = canonicalizeMetricName(name);
+    return (counters.get(cName) != null) ? true : false;
+  }
+
+  @Override
   public double getGaugeDouble(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);

@@ -40,7 +40,7 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
 
   @Override
   public void init() {
-    blanceClusterHisto = metricsRegistry.newHistogram(BALANCE_CLUSTER);
+    blanceClusterHisto = metricsRegistry.newTimeHistogram(BALANCE_CLUSTER);
     miscCount = metricsRegistry.newCounter(MISC_INVOATION_COUNT, "", 0L);
 
   }

@@ -202,6 +202,46 @@ public class DynamicMetricsRegistry {
   }
 
   /**
+   * Create a new histogram with time range counts.
+   * @param name Name of the histogram.
+   * @return A new MetricMutableTimeHistogram
+   */
+  public MetricMutableTimeHistogram newTimeHistogram(String name) {
+     return newTimeHistogram(name, "");
+  }
+
+  /**
+   * Create a new histogram with time range counts.
+   * @param name The name of the histogram
+   * @param desc The description of the data in the histogram.
+   * @return A new MetricMutableTimeHistogram
+   */
+  public MetricMutableTimeHistogram newTimeHistogram(String name, String desc) {
+    MetricMutableTimeHistogram histo = new MetricMutableTimeHistogram(name, desc);
+    return addNewMetricIfAbsent(name, histo, MetricMutableTimeHistogram.class);
+  }
+  
+  /**
+   * Create a new histogram with size range counts.
+   * @param name Name of the histogram.
+   * @return A new MetricMutableSizeHistogram
+   */
+  public MetricMutableSizeHistogram newSizeHistogram(String name) {
+     return newSizeHistogram(name, "");
+  }
+
+  /**
+   * Create a new histogram with size range counts.
+   * @param name The name of the histogram
+   * @param desc The description of the data in the histogram.
+   * @return A new MetricMutableSizeHistogram
+   */
+  public MetricMutableSizeHistogram newSizeHistogram(String name, String desc) {
+    MetricMutableSizeHistogram histo = new MetricMutableSizeHistogram(name, desc);
+    return addNewMetricIfAbsent(name, histo, MetricMutableSizeHistogram.class);
+  }
+
+  /**
    * Create a new MutableQuantile(A more accurate histogram).
    * @param name The name of the histogram
    * @return a new MutableQuantile

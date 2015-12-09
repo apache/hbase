@@ -52,11 +52,11 @@ public class MetricsEditsReplaySourceImpl extends BaseSourceImpl implements
   @Override
   public void init() {
     super.init();
-    replayTimeHisto = metricsRegistry.newHistogram(REPLAY_TIME_NAME, REPLAY_TIME_DESC);
-    replayBatchSizeHisto = metricsRegistry.newHistogram(REPLAY_BATCH_SIZE_NAME,
+    replayTimeHisto = metricsRegistry.newTimeHistogram(REPLAY_TIME_NAME, REPLAY_TIME_DESC);
+    replayBatchSizeHisto = metricsRegistry.newSizeHistogram(REPLAY_BATCH_SIZE_NAME,
       REPLAY_BATCH_SIZE_DESC);
     replayDataSizeHisto = metricsRegistry
-        .newHistogram(REPLAY_DATA_SIZE_NAME, REPLAY_DATA_SIZE_DESC);
+        .newSizeHistogram(REPLAY_DATA_SIZE_NAME, REPLAY_DATA_SIZE_DESC);
   }
 
   @Override
