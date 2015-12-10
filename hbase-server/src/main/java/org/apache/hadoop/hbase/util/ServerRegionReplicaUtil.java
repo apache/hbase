@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 
 /**
  * Similar to {@link RegionReplicaUtil} but for the server side
@@ -148,7 +148,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     try {
       if (repAdmin.getPeerConfig(REGION_REPLICA_REPLICATION_PEER) == null) {
         ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
-        peerConfig.setClusterKey(ZKUtil.getZooKeeperClusterKey(conf));
+        peerConfig.setClusterKey(ZKConfig.getZooKeeperClusterKey(conf));
         peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
         repAdmin.addPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, null);
       }
