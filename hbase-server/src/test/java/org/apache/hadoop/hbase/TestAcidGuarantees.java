@@ -88,7 +88,7 @@ public class TestAcidGuarantees implements Tool {
       // force mob enabled such that all data is mob data
       hcd.setMobEnabled(true);
       hcd.setMobThreshold(4);
-      util.getHBaseAdmin().modifyColumn(TABLE_NAME, hcd);
+      util.getHBaseAdmin().modifyColumnFamily(TABLE_NAME, hcd);
     }
   }
 

@@ -2682,13 +2682,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Returns a Admin instance.
-   * This instance is shared between HBaseTestingUtility instance users.
-   * Closing it has no effect, it will be closed automatically when the
-   * cluster shutdowns
+   * This instance is shared between HBaseTestingUtility instance users. Closing it has no effect,
+   * it will be closed automatically when the cluster shutdowns
    *
-   * @return An Admin instance.
-   * @throws IOException
+   * @return HBaseAdmin instance which is guaranteed to support only {@link Admin} interface.
+   *   Functions in HBaseAdmin not provided by {@link Admin} interface can be changed/deleted
+   *   anytime.
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #getAdmin()} instead.
    */
+  @Deprecated
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
@@ -2697,8 +2699,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return hbaseAdmin;
   }
 
-  private HBaseAdmin hbaseAdmin = null;
+  /**
+   * Returns an Admin instance which is shared between HBaseTestingUtility instance users.
+   * Closing it has no effect, it will be closed automatically when the cluster shutdowns
+   */
+  public synchronized Admin getAdmin() throws IOException {
+    if (hbaseAdmin == null){
+      this.hbaseAdmin = (HBaseAdmin) getConnection().getAdmin();
+    }
+    return hbaseAdmin;
+  }
 
+  private HBaseAdmin hbaseAdmin = null;
 
   /**
    * Returns a ZooKeeperWatcher instance.

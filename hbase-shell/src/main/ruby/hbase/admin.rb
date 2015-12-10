@@ -210,7 +210,7 @@ module Hbase
     def enable(table_name)
       tableExists(table_name)
       return if enabled?(table_name)
-      @admin.enableTable(table_name)
+      @admin.enableTable(TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ module Hbase
     def disable(table_name)
       tableExists(table_name)
       return if disabled?(table_name)
-      @admin.disableTable(table_name)
+      @admin.disableTable(TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -244,14 +244,15 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Is table disabled?
     def disabled?(table_name)
-      @admin.isTableDisabled(table_name)
+      @admin.isTableDisabled(TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop(table_name)
       tableExists(table_name)
-      raise ArgumentError, "Table #{table_name} is enabled. Disable it first." if enabled?(table_name)
+      raise ArgumentError, "Table #{table_name} is enabled. Disable it first." if enabled?(
+          table_name)
 
       @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
     end
@@ -447,15 +448,17 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
-    def truncate(table_name, conf = @conf)
-      table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
-      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first." unless enabled?(table_name)
+    def truncate(table_name_str, conf = @conf)
+      table_name = TableName.valueOf(table_name_str)
+      table_description = @admin.getTableDescriptor(table_name)
+      raise ArgumentError, "Table #{table_name_str} is not enabled. Enable it first." unless
+          enabled?(table_name_str)
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
 
       begin
         yield 'Truncating table...' if block_given?
-        @admin.truncateTable(org.apache.hadoop.hbase.TableName.valueOf(table_name), false)
+        @admin.truncateTable(table_name, false)
       rescue => e
         # Handle the compatibility case, where the truncate method doesn't exists on the Master
         raise e unless e.respond_to?(:cause) && e.cause != nil
@@ -463,7 +466,7 @@ module Hbase
         if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
           # Handle the compatibility case, where the truncate method doesn't exists on the Master
           yield 'Dropping table...' if block_given?
-          @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+          @admin.deleteTable(table_name)
 
           yield 'Creating table...' if block_given?
           @admin.createTable(table_description)
@@ -475,9 +478,10 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
-    def truncate_preserve(table_name, conf = @conf)
-      h_table = @connection.getTable(TableName.valueOf(table_name))
-      locator = @connection.getRegionLocator(TableName.valueOf(table_name))
+    def truncate_preserve(table_name_str, conf = @conf)
+      table_name = TableName.valueOf(table_name_str)
+      h_table = @connection.getTable(table_name)
+      locator = @connection.getRegionLocator(table_name)
       begin
         splits = locator.getAllRegionLocations().
             map{|i| Bytes.toString(i.getRegionInfo().getStartKey)}.
@@ -486,13 +490,13 @@ module Hbase
         locator.close()
       end
 
-      table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
+      table_description = @admin.getTableDescriptor(table_name)
       yield 'Disabling table...' if block_given?
-      disable(table_name)
+      disable(table_name_str)
 
       begin
         yield 'Truncating table...' if block_given?
-        @admin.truncateTable(org.apache.hadoop.hbase.TableName.valueOf(table_name), true)
+        @admin.truncateTable(table_name, true)
       rescue => e
         # Handle the compatibility case, where the truncate method doesn't exists on the Master
         raise e unless e.respond_to?(:cause) && e.cause != nil
@@ -500,7 +504,7 @@ module Hbase
         if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
           # Handle the compatibility case, where the truncate method doesn't exists on the Master
           yield 'Dropping table...' if block_given?
-          @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+          @admin.deleteTable(table_name)
 
           yield 'Creating table with region boundaries...' if block_given?
           @admin.createTable(table_description, splits)
@@ -534,18 +538,21 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Change table structure or table options
-    def alter(table_name, wait = true, *args)
+    def alter(table_name_str, wait = true, *args)
       # Table name should be a string
-      raise(ArgumentError, "Table name must be of type String") unless table_name.kind_of?(String)
+      raise(ArgumentError, "Table name must be of type String") unless
+          table_name_str.kind_of?(String)
 
       # Table should exist
-      raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
+      raise(ArgumentError, "Can't find a table: #{table_name_str}") unless exists?(table_name_str)
 
       # There should be at least one argument
       raise(ArgumentError, "There should be at least one argument but the table name") if args.empty?
 
+      table_name = TableName.valueOf(table_name_str)
+
       # Get table descriptor
-      htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
+      htd = @admin.getTableDescriptor(table_name)
 
       # Process all args
       args.each do |arg|
@@ -573,11 +580,11 @@ module Hbase
 
           if wait == true
             puts "Updating all regions with the new schema..."
-            alter_status(table_name)
+            alter_status(table_name_str)
           end
 
           # We bypass descriptor when adding column families; refresh it to apply other args correctly.
-          htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
+          htd = @admin.getTableDescriptor(table_name)
           next
         end
 
@@ -587,7 +594,7 @@ module Hbase
           # Delete column family
           if method == "delete"
             raise(ArgumentError, "NAME parameter missing for delete method") unless name
-            @admin.deleteColumn(table_name, name)
+            @admin.deleteColumn(table_name, name.to_java_bytes)
           # Unset table attributes
           elsif method == "table_att_unset"
             raise(ArgumentError, "NAME parameter missing for table_att_unset method") unless name
@@ -604,7 +611,7 @@ module Hbase
               end
               htd.remove(name)
             end
-            @admin.modifyTable(table_name.to_java_bytes, htd)
+            @admin.modifyTable(table_name, htd)
           # Unknown method
           else
             raise ArgumentError, "Unknown method: #{method}"
@@ -616,12 +623,12 @@ module Hbase
 
           if wait == true
             puts "Updating all regions with the new schema..."
-            alter_status(table_name)
+            alter_status(table_name_str)
           end
 
           if method == "delete"
             # We bypass descriptor when deleting column families; refresh it to apply other args correctly.
-            htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
+            htd = @admin.getTableDescriptor(table_name)
           end
           next
         end
@@ -667,7 +674,7 @@ module Hbase
             arg.delete(key)
           end
 
-          @admin.modifyTable(table_name.to_java_bytes, htd)
+          @admin.modifyTable(table_name, htd)
 
           arg.each_key do |unknown_key|
             puts("Unknown argument ignored: %s" % [unknown_key])
@@ -675,7 +682,7 @@ module Hbase
 
           if wait == true
             puts "Updating all regions with the new schema..."
-            alter_status(table_name)
+            alter_status(table_name_str)
           end
           next
         end
@@ -792,13 +799,13 @@ module Hbase
 
     # Does table exist?
     def exists?(table_name)
-      @admin.tableExists(table_name)
+      @admin.tableExists(TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
     # Is table enabled
     def enabled?(table_name)
-      @admin.isTableEnabled(table_name)
+      @admin.isTableEnabled(TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -910,14 +917,23 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Take a snapshot of specified table
     def snapshot(table, snapshot_name, *args)
+      # Table name should be a string
+      raise(ArgumentError, "Table name must be of type String") unless table.kind_of?(String)
+
+      # Snapshot name should be a string
+      raise(ArgumentError, "Snapshot name must be of type String") unless
+          snapshot_name.kind_of?(String)
+
+      table_name = TableName.valueOf(table)
       if args.empty?
-         @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+         @admin.snapshot(snapshot_name, table_name)
       else
          args.each do |arg|
             if arg[SKIP_FLUSH] == true
-              @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes, SnapshotDescription::Type::SKIPFLUSH)
+              @admin.snapshot(snapshot_name, table_name,
+                              SnapshotDescription::Type::SKIPFLUSH)
             else
-               @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+               @admin.snapshot(snapshot_name, table_name)
             end
          end
       end
@@ -926,19 +942,19 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Restore specified snapshot
     def restore_snapshot(snapshot_name)
-      @admin.restoreSnapshot(snapshot_name.to_java_bytes)
+      @admin.restoreSnapshot(snapshot_name)
     end
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
     def clone_snapshot(snapshot_name, table)
-      @admin.cloneSnapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table))
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete specified snapshot
     def delete_snapshot(snapshot_name)
-      @admin.deleteSnapshot(snapshot_name.to_java_bytes)
+      @admin.deleteSnapshot(snapshot_name)
     end
 
     #----------------------------------------------------------------------------------------------

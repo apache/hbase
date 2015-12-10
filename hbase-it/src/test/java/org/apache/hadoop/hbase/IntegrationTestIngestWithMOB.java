@@ -121,7 +121,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
       if(Arrays.equals(columnDescriptor.getName(), mobColumnFamily)) {
         columnDescriptor.setMobEnabled(true);
         columnDescriptor.setMobThreshold((long) threshold);
-        admin.modifyColumn(tableName, columnDescriptor);
+        admin.modifyColumnFamily(tableName, columnDescriptor);
       }
     }
     LOG.info("Enabling table " + getTablename());
