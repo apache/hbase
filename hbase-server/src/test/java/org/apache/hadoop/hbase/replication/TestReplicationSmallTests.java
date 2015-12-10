@@ -658,7 +658,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     HRegionInfo hri = new HRegionInfo(htable1.getName(),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
-    Replication.scopeWALEdits(htable1.getTableDescriptor(), new WALKey(), edit);
+    Replication.scopeWALEdits(htable1.getTableDescriptor(), new WALKey(), edit,
+      htable1.getConfiguration(), null);
   }
 
   /**

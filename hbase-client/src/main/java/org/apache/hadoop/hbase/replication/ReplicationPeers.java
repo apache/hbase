@@ -50,7 +50,7 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
    * @param tableCFs the table and column-family list which will be replicated for this peer or null
-   * for all table and column families
+   *          for all table and column families
    */
   void addPeer(String peerId, ReplicationPeerConfig peerConfig, String tableCFs)
       throws ReplicationException;

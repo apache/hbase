@@ -649,8 +649,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
         // set the region name for the target region replica
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
-            ReplicationProtbufUtil.buildReplicateWALEntryRequest(
-              entriesArray, location.getRegionInfo().getEncodedNameAsBytes());
+            ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray, location
+                .getRegionInfo().getEncodedNameAsBytes(), null, null, null);
         try {
           PayloadCarryingRpcController controller = rpcControllerFactory.newController(p.getSecond());
           controller.setCallTimeout(timeout);

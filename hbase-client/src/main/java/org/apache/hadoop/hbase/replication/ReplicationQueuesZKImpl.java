@@ -84,6 +84,15 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       throw new ReplicationException("Could not initialize replication queues.", e);
     }
+    // If only bulk load hfile replication is enabled then create the hfile-refs znode
+    if (replicationForBulkLoadEnabled) {
+      try {
+        ZKUtil.createWithParents(this.zookeeper, this.hfileRefsZNode);
+      } catch (KeeperException e) {
+        throw new ReplicationException("Could not initialize hfile references replication queue.",
+            e);
+      }
+    }
   }
 
   @Override
@@ -430,5 +439,66 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     byte[] bytes =
         ZooKeeperProtos.ReplicationLock.newBuilder().setLockOwner(lockOwner).build().toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  @Override
+  public void addHFileRefs(String peerId, List<String> files) throws ReplicationException {
+    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    boolean debugEnabled = LOG.isDebugEnabled();
+    if (debugEnabled) {
+      LOG.debug("Adding hfile references " + files + " in queue " + peerZnode);
+    }
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+    int size = files.size();
+    for (int i = 0; i < size; i++) {
+      listOfOps.add(ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i)),
+        HConstants.EMPTY_BYTE_ARRAY));
+    }
+    if (debugEnabled) {
+      LOG.debug(" The multi list size for adding hfile references in zk for node " + peerZnode
+          + " is " + listOfOps.size());
+    }
+    try {
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, true);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Failed to create hfile reference znode=" + e.getPath(), e);
+    }
+  }
+
+  @Override
+  public void removeHFileRefs(String peerId, List<String> files) {
+    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    boolean debugEnabled = LOG.isDebugEnabled();
+    if (debugEnabled) {
+      LOG.debug("Removing hfile references " + files + " from queue " + peerZnode);
+    }
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+    int size = files.size();
+    for (int i = 0; i < size; i++) {
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i))));
+    }
+    if (debugEnabled) {
+      LOG.debug(" The multi list size for removing hfile references in zk for node " + peerZnode
+          + " is " + listOfOps.size());
+    }
+    try {
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, true);
+    } catch (KeeperException e) {
+      LOG.error("Failed to remove hfile reference znode=" + e.getPath(), e);
+    }
+  }
+
+  @Override
+  public void addPeerToHFileRefs(String peerId) throws ReplicationException {
+    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    try {
+      if (ZKUtil.checkExists(this.zookeeper, peerZnode) == -1) {
+        LOG.info("Adding peer " + peerId + " to hfile reference queue.");
+        ZKUtil.createWithParents(this.zookeeper, peerZnode);
+      }
+    } catch (KeeperException e) {
+      throw new ReplicationException("Failed to add peer " + peerId + " to hfile reference queue.",
+          e);
+    }
   }
 }

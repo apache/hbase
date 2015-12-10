@@ -36,7 +36,13 @@ public interface ReplicationSinkService extends ReplicationService {
    * Carry on the list of log entries down to the sink
    * @param entries list of WALEntries to replicate
    * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @param replicationClusterId Id which will uniquely identify source cluster FS client
+   *          configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
+   *          directory required for replicating hfiles
+   * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
    * @throws IOException
    */
-  void replicateLogEntries(List<WALEntry> entries, CellScanner cells) throws IOException;
+  void replicateLogEntries(List<WALEntry> entries, CellScanner cells, String replicationClusterId,
+      String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath) throws IOException;
 }

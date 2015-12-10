@@ -40,10 +40,12 @@ public class MetricsSource {
   // tracks last shipped timestamp for each wal group
   private Map<String, Long> lastTimeStamps = new HashMap<String, Long>();
   private int lastQueueSize = 0;
+  private long lastHFileRefsQueueSize = 0;
   private String id;
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
+
 
   /**
    * Constructor used to register the metrics
@@ -143,6 +145,18 @@ public class MetricsSource {
     globalSourceSource.incrShippedKBs(sizeInKB);
   }
 
+  /**
+   * Convience method to apply changes to metrics do to shipping a batch of logs.
+   *
+   * @param batchSize the size of the batch that was shipped to sinks.
+   * @param hfiles total number of hfiles shipped to sinks.
+   */
+  public void shipBatch(long batchSize, int sizeInKB, long hfiles) {
+    shipBatch(batchSize, sizeInKB);
+    singleSourceSource.incrHFilesShipped(hfiles);
+    globalSourceSource.incrHFilesShipped(hfiles);
+  }
+
   /** increase the byte number read by source from log file */
   public void incrLogReadInBytes(long readInBytes) {
     singleSourceSource.incrLogReadInBytes(readInBytes);
@@ -153,8 +167,10 @@ public class MetricsSource {
   public void clear() {
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
+    globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
     lastTimeStamps.clear();
     lastQueueSize = 0;
+    lastHFileRefsQueueSize = 0;
   }
 
   /**
@@ -193,5 +209,20 @@ public class MetricsSource {
    */
   public String getPeerID() {
     return id;
+  }
+
+  public void incrSizeOfHFileRefsQueue(long size) {
+    singleSourceSource.incrSizeOfHFileRefsQueue(size);
+    globalSourceSource.incrSizeOfHFileRefsQueue(size);
+    lastHFileRefsQueueSize = size;
+  }
+
+  public void decrSizeOfHFileRefsQueue(int size) {
+    singleSourceSource.decrSizeOfHFileRefsQueue(size);
+    globalSourceSource.decrSizeOfHFileRefsQueue(size);
+    lastHFileRefsQueueSize -= size;
+    if (lastHFileRefsQueueSize < 0) {
+      lastHFileRefsQueueSize = 0;
+    }
   }
 }

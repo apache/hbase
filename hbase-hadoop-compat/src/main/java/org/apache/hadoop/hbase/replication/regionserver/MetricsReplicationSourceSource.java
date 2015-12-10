@@ -32,6 +32,9 @@ public interface MetricsReplicationSourceSource {
 
   public static final String SOURCE_LOG_EDITS_FILTERED = "source.logEditsFiltered";
 
+  public static final String SOURCE_SHIPPED_HFILES = "source.shippedHFiles";
+  public static final String SOURCE_SIZE_OF_HFILE_REFS_QUEUE = "source.sizeOfHFileRefsQueue";
+
   void setLastShippedAge(long age);
   void setSizeOfLogQueue(int size);
   void incrSizeOfLogQueue(int size);
@@ -44,4 +47,7 @@ public interface MetricsReplicationSourceSource {
   void incrLogReadInEdits(long size);
   void clear();
   long getLastShippedAge();
+  void incrHFilesShipped(long hfiles);
+  void incrSizeOfHFileRefsQueue(long size);
+  void decrSizeOfHFileRefsQueue(long size);
 }

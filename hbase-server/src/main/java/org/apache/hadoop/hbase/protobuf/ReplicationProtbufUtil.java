@@ -28,22 +28,23 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 import com.google.protobuf.ServiceException;
 
@@ -51,15 +52,20 @@ import com.google.protobuf.ServiceException;
 public class ReplicationProtbufUtil {
   /**
    * A helper to replicate a list of WAL entries using admin protocol.
-   *
-   * @param admin
-   * @param entries
+   * @param admin Admin service
+   * @param entries Array of WAL entries to be replicated
+   * @param replicationClusterId Id which will uniquely identify source cluster FS client
+   *          configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
+   * @param sourceHFileArchiveDir Path to the source cluster hfile archive directory
    * @throws java.io.IOException
    */
   public static void replicateWALEntry(final AdminService.BlockingInterface admin,
-      final Entry[] entries) throws IOException {
+      final Entry[] entries, String replicationClusterId, Path sourceBaseNamespaceDir,
+      Path sourceHFileArchiveDir) throws IOException {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
-      buildReplicateWALEntryRequest(entries, null);
+        buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
+          sourceHFileArchiveDir);
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
     try {
       admin.replicateWALEntry(controller, p.getFirst());
@@ -77,19 +83,22 @@ public class ReplicationProtbufUtil {
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final Entry[] entries) {
-    return buildReplicateWALEntryRequest(entries, null);
+    return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
 
   /**
    * Create a new ReplicateWALEntryRequest from a list of WAL entries
-   *
    * @param entries the WAL entries to be replicated
    * @param encodedRegionName alternative region name to use if not null
-   * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values
-   * found.
+   * @param replicationClusterId Id which will uniquely identify source cluster FS client
+   *          configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
+   * @param sourceHFileArchiveDir Path to the source cluster hfile archive directory
+   * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
-      buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName) {
+      buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName,
+          String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
     // Accumulate all the Cells seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
@@ -146,6 +155,17 @@ public class ReplicationProtbufUtil {
       entryBuilder.setAssociatedCellCount(cells.size());
       builder.addEntry(entryBuilder.build());
     }
+
+    if (replicationClusterId != null) {
+      builder.setReplicationClusterId(replicationClusterId);
+    }
+    if (sourceBaseNamespaceDir != null) {
+      builder.setSourceBaseNamespaceDirPath(sourceBaseNamespaceDir.toString());
+    }
+    if (sourceHFileArchiveDir != null) {
+      builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
+    }
+
     return new Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>(builder.build(),
       getCellScanner(allCells, size));
   }

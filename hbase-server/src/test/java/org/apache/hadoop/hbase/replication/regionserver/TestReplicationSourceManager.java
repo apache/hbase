@@ -19,13 +19,17 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -51,6 +55,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -64,6 +70,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -107,6 +114,8 @@ public class TestReplicationSourceManager {
   private static final byte[] r2 = Bytes.toBytes("r2");
 
   private static final byte[] f1 = Bytes.toBytes("f1");
+
+  private static final byte[] f2 = Bytes.toBytes("f2");
 
   private static final TableName test =
       TableName.valueOf("test");
@@ -161,10 +170,10 @@ public class TestReplicationSourceManager {
     manager.addSource(slaveId);
 
     htd = new HTableDescriptor(test);
-    HColumnDescriptor col = new HColumnDescriptor("f1");
+    HColumnDescriptor col = new HColumnDescriptor(f1);
     col.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     htd.addFamily(col);
-    col = new HColumnDescriptor("f2");
+    col = new HColumnDescriptor(f2);
     col.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     htd.addFamily(col);
 
@@ -414,6 +423,63 @@ public class TestReplicationSourceManager {
     assertEquals(v0 + 1, v1);
 
     s0.abort("", null);
+  }
+
+  @Test
+  public void testBulkLoadWALEditsWithoutBulkLoadReplicationEnabled() throws Exception {
+    // 1. Create wal key
+    WALKey logKey = new WALKey();
+    // 2. Get the bulk load wal edit event
+    WALEdit logEdit = getBulkLoadWALEdit();
+
+    // 3. Get the scopes for the key
+    Replication.scopeWALEdits(htd, logKey, logEdit, conf, manager);
+
+    // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
+    assertNull("No bulk load entries scope should be added if bulk load replication is diabled.",
+      logKey.getScopes());
+  }
+
+  @Test
+  public void testBulkLoadWALEdits() throws Exception {
+    // 1. Create wal key
+    WALKey logKey = new WALKey();
+    // 2. Get the bulk load wal edit event
+    WALEdit logEdit = getBulkLoadWALEdit();
+    // 3. Enable bulk load hfile replication
+    Configuration bulkLoadConf = HBaseConfiguration.create(conf);
+    bulkLoadConf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
+
+    // 4. Get the scopes for the key
+    Replication.scopeWALEdits(htd, logKey, logEdit, bulkLoadConf, manager);
+
+    NavigableMap<byte[], Integer> scopes = logKey.getScopes();
+    // Assert family with replication scope global is present in the key scopes
+    assertTrue("This family scope is set to global, should be part of replication key scopes.",
+      scopes.containsKey(f1));
+    // Assert family with replication scope local is not present in the key scopes
+    assertFalse("This family scope is set to local, should not be part of replication key scopes",
+      scopes.containsKey(f2));
+  }
+
+  private WALEdit getBulkLoadWALEdit() {
+    // 1. Create store files for the families
+    Map<byte[], List<Path>> storeFiles = new HashMap<>(1);
+    List<Path> p = new ArrayList<>(1);
+    p.add(new Path(Bytes.toString(f1)));
+    storeFiles.put(f1, p);
+
+    p = new ArrayList<>(1);
+    p.add(new Path(Bytes.toString(f2)));
+    storeFiles.put(f2, p);
+
+    // 2. Create bulk load descriptor
+    BulkLoadDescriptor desc = ProtobufUtil.toBulkLoadDescriptor(hri.getTable(),
+      ByteStringer.wrap(hri.getEncodedNameAsBytes()), storeFiles, 1);
+
+    // 3. create bulk load wal edit event
+    WALEdit logEdit = WALEdit.createBulkLoadEvent(hri, desc);
+    return logEdit;
   }
 
   static class DummyNodeFailoverWorker extends Thread {

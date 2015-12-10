@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,9 +46,10 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -59,8 +59,12 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -220,6 +224,34 @@ public class ReplicationSource extends Thread
     if (queue.size() > this.logQueueWarnThreshold) {
       LOG.warn("WAL group " + logPrefix + " queue size: " + queueSize
           + " exceeds value of replication.source.log.queue.warn: " + logQueueWarnThreshold);
+    }
+  }
+
+  @Override
+  public void addHFileRefs(TableName tableName, byte[] family, List<String> files)
+      throws ReplicationException {
+    String peerId = peerClusterZnode;
+    if (peerId.contains("-")) {
+      // peerClusterZnode will be in the form peerId + "-" + rsZNode.
+      // A peerId will not have "-" in its name, see HBASE-11394
+      peerId = peerClusterZnode.split("-")[0];
+    }
+    Map<TableName, List<String>> tableCFMap = replicationPeers.getPeer(peerId).getTableCFs();
+    if (tableCFMap != null) {
+      List<String> tableCfs = tableCFMap.get(tableName);
+      if (tableCFMap.containsKey(tableName)
+          && (tableCfs == null || tableCfs.contains(Bytes.toString(family)))) {
+        this.replicationQueues.addHFileRefs(peerId, files);
+        metrics.incrSizeOfHFileRefsQueue(files.size());
+      } else {
+        LOG.debug("HFiles will not be replicated belonging to the table " + tableName + " family "
+            + Bytes.toString(family) + " to peer id " + peerId);
+      }
+    } else {
+      // user has explicitly not defined any table cfs for replication, means replicate all the
+      // data
+      this.replicationQueues.addHFileRefs(peerId, files);
+      metrics.incrSizeOfHFileRefsQueue(files.size());
     }
   }
 
@@ -471,6 +503,8 @@ public class ReplicationSource extends Thread
     private int currentSize = 0;
     // Indicates whether this particular worker is running
     private boolean workerRunning = true;
+    // Current number of hfiles that we need to replicate
+    private long currentNbHFiles = 0;
 
     public ReplicationSourceWorkerThread(String walGroupId,
         PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo, ReplicationSource source) {
@@ -550,6 +584,7 @@ public class ReplicationSource extends Thread
 
         boolean gotIOE = false;
         currentNbOperations = 0;
+        currentNbHFiles = 0;
         List<WAL.Entry> entries = new ArrayList<WAL.Entry>(1);
         currentSize = 0;
         try {
@@ -699,6 +734,28 @@ public class ReplicationSource extends Thread
       // If we didn't get anything and the queue has an object, it means we
       // hit the end of the file for sure
       return seenEntries == 0 && processEndOfFile();
+    }
+
+    private void cleanUpHFileRefs(WALEdit edit) throws IOException {
+      String peerId = peerClusterZnode;
+      if (peerId.contains("-")) {
+        // peerClusterZnode will be in the form peerId + "-" + rsZNode.
+        // A peerId will not have "-" in its name, see HBASE-11394
+        peerId = peerClusterZnode.split("-")[0];
+      }
+      List<Cell> cells = edit.getCells();
+      for (int i = 0; i < cells.size(); i++) {
+        Cell cell = cells.get(i);
+        if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+          BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+          List<StoreDescriptor> stores = bld.getStoresList();
+          for (int j = 0; j < stores.size(); j++) {
+            List<String> storeFileList = stores.get(j).getStoreFileList();
+            manager.cleanUpHFileRefs(peerId, storeFileList);
+            metrics.decrSizeOfHFileRefsQueue(storeFileList.size());
+          }
+        }
+      }
     }
 
     /**
@@ -853,14 +910,31 @@ public class ReplicationSource extends Thread
     private int countDistinctRowKeys(WALEdit edit) {
       List<Cell> cells = edit.getCells();
       int distinctRowKeys = 1;
+      int totalHFileEntries = 0;
       Cell lastCell = cells.get(0);
+
       for (int i = 0; i < edit.size(); i++) {
+        // Count HFiles to be replicated
+        if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
+          try {
+            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
+            List<StoreDescriptor> stores = bld.getStoresList();
+            for (int j = 0; j < stores.size(); j++) {
+              totalHFileEntries += stores.get(j).getStoreFileList().size();
+            }
+          } catch (IOException e) {
+            LOG.error("Failed to deserialize bulk load entry from wal edit. "
+                + "This its hfiles count will not be added into metric.");
+          }
+        }
+
         if (!CellUtil.matchingRows(cells.get(i), lastCell)) {
           distinctRowKeys++;
         }
         lastCell = cells.get(i);
       }
-      return distinctRowKeys;
+      currentNbHFiles += totalHFileEntries;
+      return distinctRowKeys + totalHFileEntries;
     }
 
     /**
@@ -914,6 +988,12 @@ public class ReplicationSource extends Thread
           }
 
           if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
+            //Clean up hfile references
+            int size = entries.size();
+            for (int i = 0; i < size; i++) {
+              cleanUpHFileRefs(entries.get(i).getEdit());
+            }
+            //Log and clean up WAL logs
             manager.logPositionAndCleanOldLogs(this.currentPath, peerClusterZnode,
               this.repLogReader.getPosition(), this.replicationQueueInfo.isQueueRecovered(),
               currentWALisBeingWrittenTo);
@@ -925,7 +1005,7 @@ public class ReplicationSource extends Thread
           totalReplicatedEdits.addAndGet(entries.size());
           totalReplicatedOperations.addAndGet(currentNbOperations);
           // FIXME check relationship between wal group and overall
-          metrics.shipBatch(currentNbOperations, currentSize / 1024);
+          metrics.shipBatch(currentNbOperations, currentSize / 1024, currentNbHFiles);
           metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),
             walGroupId);
           if (LOG.isTraceEnabled()) {

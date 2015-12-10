@@ -18,14 +18,20 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -52,19 +58,36 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
     }
     int size = cells.size();
 
+    // If null means user has explicitly not configured any table CFs so all the tables data are
+    // applicable for replication
+    if (tableCFs == null) {
+      return entry;
+    }
     // return null(prevent replicating) if logKey's table isn't in this peer's
-    // replicable table list (empty tableCFs means all table are replicable)
-    if (tableCFs != null && !tableCFs.containsKey(tabName)) {
+    // replicable table list
+    if (!tableCFs.containsKey(tabName)) {
       return null;
     } else {
-      List<String> cfs = (tableCFs == null) ? null : tableCFs.get(tabName);
+      List<String> cfs = tableCFs.get(tabName);
       for (int i = size - 1; i >= 0; i--) {
         Cell cell = cells.get(i);
-        // ignore(remove) kv if its cf isn't in the replicable cf list
-        // (empty cfs means all cfs of this table are replicable)
-        if ((cfs != null) && !cfs.contains(Bytes.toString(
-            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))) {
-          cells.remove(i);
+        // TODO There is a similar logic in ScopeWALEntryFilter but data structures are different so
+        // cannot refactor into one now, can revisit and see if any way to unify them.
+        // Filter bulk load entries separately
+        if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+          Cell filteredBulkLoadEntryCell = filterBulkLoadEntries(cfs, cell);
+          if (filteredBulkLoadEntryCell != null) {
+            cells.set(i, filteredBulkLoadEntryCell);
+          } else {
+            cells.remove(i);
+          }
+        } else {
+          // ignore(remove) kv if its cf isn't in the replicable cf list
+          // (empty cfs means all cfs of this table are replicable)
+          if ((cfs != null) && !cfs.contains(Bytes.toString(cell.getFamilyArray(),
+            cell.getFamilyOffset(), cell.getFamilyLength()))) {
+            cells.remove(i);
+          }
         }
       }
     }
@@ -74,4 +97,41 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
     return entry;
   }
 
+  private Cell filterBulkLoadEntries(List<String> cfs, Cell cell) {
+    byte[] fam;
+    BulkLoadDescriptor bld = null;
+    try {
+      bld = WALEdit.getBulkLoadDescriptor(cell);
+    } catch (IOException e) {
+      LOG.warn("Failed to get bulk load events information from the WAL file.", e);
+      return cell;
+    }
+    List<StoreDescriptor> storesList = bld.getStoresList();
+    // Copy the StoreDescriptor list and update it as storesList is a unmodifiableList
+    List<StoreDescriptor> copiedStoresList = new ArrayList<StoreDescriptor>(storesList);
+    Iterator<StoreDescriptor> copiedStoresListIterator = copiedStoresList.iterator();
+    boolean anyStoreRemoved = false;
+    while (copiedStoresListIterator.hasNext()) {
+      StoreDescriptor sd = copiedStoresListIterator.next();
+      fam = sd.getFamilyName().toByteArray();
+      if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
+        copiedStoresListIterator.remove();
+        anyStoreRemoved = true;
+      }
+    }
+
+    if (!anyStoreRemoved) {
+      return cell;
+    } else if (copiedStoresList.isEmpty()) {
+      return null;
+    }
+    BulkLoadDescriptor.Builder newDesc =
+        BulkLoadDescriptor.newBuilder().setTableName(bld.getTableName())
+            .setEncodedRegionName(bld.getEncodedRegionName())
+            .setBulkloadSeqNum(bld.getBulkloadSeqNum());
+    newDesc.addAllStores(copiedStoresList);
+    BulkLoadDescriptor newBulkLoadDescriptor = newDesc.build();
+    return CellUtil.createCell(CellUtil.cloneRow(cell), WALEdit.METAFAMILY, WALEdit.BULK_LOAD,
+      cell.getTimestamp(), cell.getTypeByte(), newBulkLoadDescriptor.toByteArray());
+  }
 }

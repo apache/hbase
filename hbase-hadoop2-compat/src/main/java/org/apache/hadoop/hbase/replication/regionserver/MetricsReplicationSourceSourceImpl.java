@@ -32,6 +32,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedOpsKey;
   private final String shippedKBsKey;
   private final String logReadInBytesKey;
+  private final String shippedHFilesKey;
+  private final String sizeOfHFileRefsQueueKey;
 
   private final MutableGaugeLong ageOfLastShippedOpGauge;
   private final MutableGaugeLong sizeOfLogQueueGauge;
@@ -41,6 +43,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableCounterLong shippedOpsCounter;
   private final MutableCounterLong shippedKBsCounter;
   private final MutableCounterLong logReadInBytesCounter;
+  private final MutableCounterLong shippedHFilesCounter;
+  private final MutableGaugeLong sizeOfHFileRefsQueueGauge;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -69,6 +73,12 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     logEditsFilteredKey = "source." + id + ".logEditsFiltered";
     logEditsFilteredCounter = rms.getMetricsRegistry().getLongCounter(logEditsFilteredKey, 0L);
+
+    shippedHFilesKey = "source." + this.id + ".shippedHFiles";
+    shippedHFilesCounter = rms.getMetricsRegistry().getLongCounter(shippedHFilesKey, 0L);
+
+    sizeOfHFileRefsQueueKey = "source." + id + ".sizeOfHFileRefsQueue";
+    sizeOfHFileRefsQueueGauge = rms.getMetricsRegistry().getLongGauge(sizeOfHFileRefsQueueKey, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -124,10 +134,28 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(logReadInEditsKey);
 
     rms.removeMetric(logEditsFilteredKey);
+
+    rms.removeMetric(shippedHFilesKey);
+    rms.removeMetric(sizeOfHFileRefsQueueKey);
   }
 
   @Override
   public long getLastShippedAge() {
     return ageOfLastShippedOpGauge.value();
+  }
+
+  @Override
+  public void incrHFilesShipped(long hfiles) {
+    shippedHFilesCounter.incr(hfiles);
+  }
+
+  @Override
+  public void incrSizeOfHFileRefsQueue(long size) {
+    sizeOfHFileRefsQueueGauge.incr(size);
+  }
+
+  @Override
+  public void decrSizeOfHFileRefsQueue(long size) {
+    sizeOfHFileRefsQueueGauge.decr(size);
   }
 }

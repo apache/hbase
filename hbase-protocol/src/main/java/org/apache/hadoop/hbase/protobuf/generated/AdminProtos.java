@@ -16896,6 +16896,51 @@ public final class AdminProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntryOrBuilder getEntryOrBuilder(
         int index);
+
+    // optional string replicationClusterId = 2;
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    boolean hasReplicationClusterId();
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    java.lang.String getReplicationClusterId();
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getReplicationClusterIdBytes();
+
+    // optional string sourceBaseNamespaceDirPath = 3;
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    boolean hasSourceBaseNamespaceDirPath();
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    java.lang.String getSourceBaseNamespaceDirPath();
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getSourceBaseNamespaceDirPathBytes();
+
+    // optional string sourceHFileArchiveDirPath = 4;
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    boolean hasSourceHFileArchiveDirPath();
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    java.lang.String getSourceHFileArchiveDirPath();
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getSourceHFileArchiveDirPathBytes();
   }
   /**
    * Protobuf type {@code hbase.pb.ReplicateWALEntryRequest}
@@ -16963,6 +17008,21 @@ public final class AdminProtos {
               entry_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.PARSER, extensionRegistry));
               break;
             }
+            case 18: {
+              bitField0_ |= 0x00000001;
+              replicationClusterId_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000002;
+              sourceBaseNamespaceDirPath_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000004;
+              sourceHFileArchiveDirPath_ = input.readBytes();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -17005,6 +17065,7 @@ public final class AdminProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated .hbase.pb.WALEntry entry = 1;
     public static final int ENTRY_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry> entry_;
@@ -17041,8 +17102,140 @@ public final class AdminProtos {
       return entry_.get(index);
     }
 
+    // optional string replicationClusterId = 2;
+    public static final int REPLICATIONCLUSTERID_FIELD_NUMBER = 2;
+    private java.lang.Object replicationClusterId_;
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    public boolean hasReplicationClusterId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    public java.lang.String getReplicationClusterId() {
+      java.lang.Object ref = replicationClusterId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          replicationClusterId_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string replicationClusterId = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getReplicationClusterIdBytes() {
+      java.lang.Object ref = replicationClusterId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        replicationClusterId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string sourceBaseNamespaceDirPath = 3;
+    public static final int SOURCEBASENAMESPACEDIRPATH_FIELD_NUMBER = 3;
+    private java.lang.Object sourceBaseNamespaceDirPath_;
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    public boolean hasSourceBaseNamespaceDirPath() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    public java.lang.String getSourceBaseNamespaceDirPath() {
+      java.lang.Object ref = sourceBaseNamespaceDirPath_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          sourceBaseNamespaceDirPath_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSourceBaseNamespaceDirPathBytes() {
+      java.lang.Object ref = sourceBaseNamespaceDirPath_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sourceBaseNamespaceDirPath_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string sourceHFileArchiveDirPath = 4;
+    public static final int SOURCEHFILEARCHIVEDIRPATH_FIELD_NUMBER = 4;
+    private java.lang.Object sourceHFileArchiveDirPath_;
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    public boolean hasSourceHFileArchiveDirPath() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    public java.lang.String getSourceHFileArchiveDirPath() {
+      java.lang.Object ref = sourceHFileArchiveDirPath_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          sourceHFileArchiveDirPath_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSourceHFileArchiveDirPathBytes() {
+      java.lang.Object ref = sourceHFileArchiveDirPath_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sourceHFileArchiveDirPath_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       entry_ = java.util.Collections.emptyList();
+      replicationClusterId_ = "";
+      sourceBaseNamespaceDirPath_ = "";
+      sourceHFileArchiveDirPath_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -17065,6 +17258,15 @@ public final class AdminProtos {
       for (int i = 0; i < entry_.size(); i++) {
         output.writeMessage(1, entry_.get(i));
       }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(2, getReplicationClusterIdBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(3, getSourceBaseNamespaceDirPathBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(4, getSourceHFileArchiveDirPathBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -17077,6 +17279,18 @@ public final class AdminProtos {
       for (int i = 0; i < entry_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, entry_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getReplicationClusterIdBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getSourceBaseNamespaceDirPathBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getSourceHFileArchiveDirPathBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -17103,6 +17317,21 @@ public final class AdminProtos {
       boolean result = true;
       result = result && getEntryList()
           .equals(other.getEntryList());
+      result = result && (hasReplicationClusterId() == other.hasReplicationClusterId());
+      if (hasReplicationClusterId()) {
+        result = result && getReplicationClusterId()
+            .equals(other.getReplicationClusterId());
+      }
+      result = result && (hasSourceBaseNamespaceDirPath() == other.hasSourceBaseNamespaceDirPath());
+      if (hasSourceBaseNamespaceDirPath()) {
+        result = result && getSourceBaseNamespaceDirPath()
+            .equals(other.getSourceBaseNamespaceDirPath());
+      }
+      result = result && (hasSourceHFileArchiveDirPath() == other.hasSourceHFileArchiveDirPath());
+      if (hasSourceHFileArchiveDirPath()) {
+        result = result && getSourceHFileArchiveDirPath()
+            .equals(other.getSourceHFileArchiveDirPath());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -17119,6 +17348,18 @@ public final class AdminProtos {
       if (getEntryCount() > 0) {
         hash = (37 * hash) + ENTRY_FIELD_NUMBER;
         hash = (53 * hash) + getEntryList().hashCode();
+      }
+      if (hasReplicationClusterId()) {
+        hash = (37 * hash) + REPLICATIONCLUSTERID_FIELD_NUMBER;
+        hash = (53 * hash) + getReplicationClusterId().hashCode();
+      }
+      if (hasSourceBaseNamespaceDirPath()) {
+        hash = (37 * hash) + SOURCEBASENAMESPACEDIRPATH_FIELD_NUMBER;
+        hash = (53 * hash) + getSourceBaseNamespaceDirPath().hashCode();
+      }
+      if (hasSourceHFileArchiveDirPath()) {
+        hash = (37 * hash) + SOURCEHFILEARCHIVEDIRPATH_FIELD_NUMBER;
+        hash = (53 * hash) + getSourceHFileArchiveDirPath().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -17243,6 +17484,12 @@ public final class AdminProtos {
         } else {
           entryBuilder_.clear();
         }
+        replicationClusterId_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        sourceBaseNamespaceDirPath_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        sourceHFileArchiveDirPath_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -17270,6 +17517,7 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (entryBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             entry_ = java.util.Collections.unmodifiableList(entry_);
@@ -17279,6 +17527,19 @@ public final class AdminProtos {
         } else {
           result.entry_ = entryBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.replicationClusterId_ = replicationClusterId_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.sourceBaseNamespaceDirPath_ = sourceBaseNamespaceDirPath_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.sourceHFileArchiveDirPath_ = sourceHFileArchiveDirPath_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -17319,6 +17580,21 @@ public final class AdminProtos {
               entryBuilder_.addAllMessages(other.entry_);
             }
           }
+        }
+        if (other.hasReplicationClusterId()) {
+          bitField0_ |= 0x00000002;
+          replicationClusterId_ = other.replicationClusterId_;
+          onChanged();
+        }
+        if (other.hasSourceBaseNamespaceDirPath()) {
+          bitField0_ |= 0x00000004;
+          sourceBaseNamespaceDirPath_ = other.sourceBaseNamespaceDirPath_;
+          onChanged();
+        }
+        if (other.hasSourceHFileArchiveDirPath()) {
+          bitField0_ |= 0x00000008;
+          sourceHFileArchiveDirPath_ = other.sourceHFileArchiveDirPath_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -17591,6 +17867,228 @@ public final class AdminProtos {
           entry_ = null;
         }
         return entryBuilder_;
+      }
+
+      // optional string replicationClusterId = 2;
+      private java.lang.Object replicationClusterId_ = "";
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public boolean hasReplicationClusterId() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public java.lang.String getReplicationClusterId() {
+        java.lang.Object ref = replicationClusterId_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          replicationClusterId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getReplicationClusterIdBytes() {
+        java.lang.Object ref = replicationClusterId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          replicationClusterId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public Builder setReplicationClusterId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        replicationClusterId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public Builder clearReplicationClusterId() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        replicationClusterId_ = getDefaultInstance().getReplicationClusterId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string replicationClusterId = 2;</code>
+       */
+      public Builder setReplicationClusterIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        replicationClusterId_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string sourceBaseNamespaceDirPath = 3;
+      private java.lang.Object sourceBaseNamespaceDirPath_ = "";
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public boolean hasSourceBaseNamespaceDirPath() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public java.lang.String getSourceBaseNamespaceDirPath() {
+        java.lang.Object ref = sourceBaseNamespaceDirPath_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          sourceBaseNamespaceDirPath_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSourceBaseNamespaceDirPathBytes() {
+        java.lang.Object ref = sourceBaseNamespaceDirPath_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          sourceBaseNamespaceDirPath_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public Builder setSourceBaseNamespaceDirPath(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        sourceBaseNamespaceDirPath_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public Builder clearSourceBaseNamespaceDirPath() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        sourceBaseNamespaceDirPath_ = getDefaultInstance().getSourceBaseNamespaceDirPath();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string sourceBaseNamespaceDirPath = 3;</code>
+       */
+      public Builder setSourceBaseNamespaceDirPathBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        sourceBaseNamespaceDirPath_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string sourceHFileArchiveDirPath = 4;
+      private java.lang.Object sourceHFileArchiveDirPath_ = "";
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public boolean hasSourceHFileArchiveDirPath() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public java.lang.String getSourceHFileArchiveDirPath() {
+        java.lang.Object ref = sourceHFileArchiveDirPath_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          sourceHFileArchiveDirPath_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSourceHFileArchiveDirPathBytes() {
+        java.lang.Object ref = sourceHFileArchiveDirPath_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          sourceHFileArchiveDirPath_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public Builder setSourceHFileArchiveDirPath(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        sourceHFileArchiveDirPath_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public Builder clearSourceHFileArchiveDirPath() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        sourceHFileArchiveDirPath_ = getDefaultInstance().getSourceHFileArchiveDirPath();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string sourceHFileArchiveDirPath = 4;</code>
+       */
+      public Builder setSourceHFileArchiveDirPathBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        sourceHFileArchiveDirPath_ = value;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicateWALEntryRequest)
@@ -23539,56 +24037,58 @@ public final class AdminProtos {
       "ster_system_time\030\004 \001(\004\"\026\n\024MergeRegionsRe" +
       "sponse\"a\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase." +
       "pb.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025as",
-      "sociated_cell_count\030\003 \001(\005\"=\n\030ReplicateWA" +
-      "LEntryRequest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb." +
-      "WALEntry\"\033\n\031ReplicateWALEntryResponse\"\026\n" +
-      "\024RollWALWriterRequest\"0\n\025RollWALWriterRe" +
-      "sponse\022\027\n\017region_to_flush\030\001 \003(\014\"#\n\021StopS" +
-      "erverRequest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServ" +
-      "erResponse\"\026\n\024GetServerInfoRequest\"K\n\nSe" +
-      "rverInfo\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb" +
-      ".ServerName\022\022\n\nwebui_port\030\002 \001(\r\"B\n\025GetSe" +
-      "rverInfoResponse\022)\n\013server_info\030\001 \002(\0132\024.",
-      "hbase.pb.ServerInfo\"\034\n\032UpdateConfigurati" +
-      "onRequest\"\035\n\033UpdateConfigurationResponse" +
-      "2\207\013\n\014AdminService\022P\n\rGetRegionInfo\022\036.hba" +
-      "se.pb.GetRegionInfoRequest\032\037.hbase.pb.Ge" +
-      "tRegionInfoResponse\022M\n\014GetStoreFile\022\035.hb" +
-      "ase.pb.GetStoreFileRequest\032\036.hbase.pb.Ge" +
-      "tStoreFileResponse\022V\n\017GetOnlineRegion\022 ." +
-      "hbase.pb.GetOnlineRegionRequest\032!.hbase." +
-      "pb.GetOnlineRegionResponse\022G\n\nOpenRegion" +
-      "\022\033.hbase.pb.OpenRegionRequest\032\034.hbase.pb",
-      ".OpenRegionResponse\022M\n\014WarmupRegion\022\035.hb" +
-      "ase.pb.WarmupRegionRequest\032\036.hbase.pb.Wa" +
-      "rmupRegionResponse\022J\n\013CloseRegion\022\034.hbas" +
-      "e.pb.CloseRegionRequest\032\035.hbase.pb.Close" +
-      "RegionResponse\022J\n\013FlushRegion\022\034.hbase.pb" +
-      ".FlushRegionRequest\032\035.hbase.pb.FlushRegi" +
-      "onResponse\022J\n\013SplitRegion\022\034.hbase.pb.Spl" +
-      "itRegionRequest\032\035.hbase.pb.SplitRegionRe" +
-      "sponse\022P\n\rCompactRegion\022\036.hbase.pb.Compa" +
-      "ctRegionRequest\032\037.hbase.pb.CompactRegion",
-      "Response\022M\n\014MergeRegions\022\035.hbase.pb.Merg" +
-      "eRegionsRequest\032\036.hbase.pb.MergeRegionsR" +
-      "esponse\022\\\n\021ReplicateWALEntry\022\".hbase.pb." +
-      "ReplicateWALEntryRequest\032#.hbase.pb.Repl" +
-      "icateWALEntryResponse\022Q\n\006Replay\022\".hbase." +
-      "pb.ReplicateWALEntryRequest\032#.hbase.pb.R" +
-      "eplicateWALEntryResponse\022P\n\rRollWALWrite" +
-      "r\022\036.hbase.pb.RollWALWriterRequest\032\037.hbas" +
-      "e.pb.RollWALWriterResponse\022P\n\rGetServerI" +
-      "nfo\022\036.hbase.pb.GetServerInfoRequest\032\037.hb",
-      "ase.pb.GetServerInfoResponse\022G\n\nStopServ" +
-      "er\022\033.hbase.pb.StopServerRequest\032\034.hbase." +
-      "pb.StopServerResponse\022_\n\022UpdateFavoredNo" +
-      "des\022#.hbase.pb.UpdateFavoredNodesRequest" +
-      "\032$.hbase.pb.UpdateFavoredNodesResponse\022b" +
-      "\n\023UpdateConfiguration\022$.hbase.pb.UpdateC" +
-      "onfigurationRequest\032%.hbase.pb.UpdateCon" +
-      "figurationResponseBA\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\013AdminProtosH\001\210" +
-      "\001\001\240\001\001"
+      "sociated_cell_count\030\003 \001(\005\"\242\001\n\030ReplicateW" +
+      "ALEntryRequest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb" +
+      ".WALEntry\022\034\n\024replicationClusterId\030\002 \001(\t\022" +
+      "\"\n\032sourceBaseNamespaceDirPath\030\003 \001(\t\022!\n\031s" +
+      "ourceHFileArchiveDirPath\030\004 \001(\t\"\033\n\031Replic" +
+      "ateWALEntryResponse\"\026\n\024RollWALWriterRequ" +
+      "est\"0\n\025RollWALWriterResponse\022\027\n\017region_t" +
+      "o_flush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006re" +
+      "ason\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetS" +
+      "erverInfoRequest\"K\n\nServerInfo\022)\n\013server",
+      "_name\030\001 \002(\0132\024.hbase.pb.ServerName\022\022\n\nweb" +
+      "ui_port\030\002 \001(\r\"B\n\025GetServerInfoResponse\022)" +
+      "\n\013server_info\030\001 \002(\0132\024.hbase.pb.ServerInf" +
+      "o\"\034\n\032UpdateConfigurationRequest\"\035\n\033Updat" +
+      "eConfigurationResponse2\207\013\n\014AdminService\022" +
+      "P\n\rGetRegionInfo\022\036.hbase.pb.GetRegionInf" +
+      "oRequest\032\037.hbase.pb.GetRegionInfoRespons" +
+      "e\022M\n\014GetStoreFile\022\035.hbase.pb.GetStoreFil" +
+      "eRequest\032\036.hbase.pb.GetStoreFileResponse" +
+      "\022V\n\017GetOnlineRegion\022 .hbase.pb.GetOnline",
+      "RegionRequest\032!.hbase.pb.GetOnlineRegion" +
+      "Response\022G\n\nOpenRegion\022\033.hbase.pb.OpenRe" +
+      "gionRequest\032\034.hbase.pb.OpenRegionRespons" +
+      "e\022M\n\014WarmupRegion\022\035.hbase.pb.WarmupRegio" +
+      "nRequest\032\036.hbase.pb.WarmupRegionResponse" +
+      "\022J\n\013CloseRegion\022\034.hbase.pb.CloseRegionRe" +
+      "quest\032\035.hbase.pb.CloseRegionResponse\022J\n\013" +
+      "FlushRegion\022\034.hbase.pb.FlushRegionReques" +
+      "t\032\035.hbase.pb.FlushRegionResponse\022J\n\013Spli" +
+      "tRegion\022\034.hbase.pb.SplitRegionRequest\032\035.",
+      "hbase.pb.SplitRegionResponse\022P\n\rCompactR" +
+      "egion\022\036.hbase.pb.CompactRegionRequest\032\037." +
+      "hbase.pb.CompactRegionResponse\022M\n\014MergeR" +
+      "egions\022\035.hbase.pb.MergeRegionsRequest\032\036." +
+      "hbase.pb.MergeRegionsResponse\022\\\n\021Replica" +
+      "teWALEntry\022\".hbase.pb.ReplicateWALEntryR" +
+      "equest\032#.hbase.pb.ReplicateWALEntryRespo" +
+      "nse\022Q\n\006Replay\022\".hbase.pb.ReplicateWALEnt" +
+      "ryRequest\032#.hbase.pb.ReplicateWALEntryRe" +
+      "sponse\022P\n\rRollWALWriter\022\036.hbase.pb.RollW",
+      "ALWriterRequest\032\037.hbase.pb.RollWALWriter" +
+      "Response\022P\n\rGetServerInfo\022\036.hbase.pb.Get" +
+      "ServerInfoRequest\032\037.hbase.pb.GetServerIn" +
+      "foResponse\022G\n\nStopServer\022\033.hbase.pb.Stop" +
+      "ServerRequest\032\034.hbase.pb.StopServerRespo" +
+      "nse\022_\n\022UpdateFavoredNodes\022#.hbase.pb.Upd" +
+      "ateFavoredNodesRequest\032$.hbase.pb.Update" +
+      "FavoredNodesResponse\022b\n\023UpdateConfigurat" +
+      "ion\022$.hbase.pb.UpdateConfigurationReques" +
+      "t\032%.hbase.pb.UpdateConfigurationResponse",
+      "BA\n*org.apache.hadoop.hbase.protobuf.gen" +
+      "eratedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -23750,7 +24250,7 @@ public final class AdminProtos {
           internal_static_hbase_pb_ReplicateWALEntryRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ReplicateWALEntryRequest_descriptor,
-              new java.lang.String[] { "Entry", });
+              new java.lang.String[] { "Entry", "ReplicationClusterId", "SourceBaseNamespaceDirPath", "SourceHFileArchiveDirPath", });
           internal_static_hbase_pb_ReplicateWALEntryResponse_descriptor =
             getDescriptor().getMessageTypes().get(24);
           internal_static_hbase_pb_ReplicateWALEntryResponse_fieldAccessorTable = new

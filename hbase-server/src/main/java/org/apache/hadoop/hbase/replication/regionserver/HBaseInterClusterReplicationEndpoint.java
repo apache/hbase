@@ -37,24 +37,26 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} 
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint}
  * implementation for replicating to another HBase cluster.
  * For the slave cluster it selects a random number of peers
  * using a replication ratio. For example, if replication ration = 0.1
@@ -84,8 +86,12 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   // Handles connecting to peer region servers
   private ReplicationSinkManager replicationSinkMgr;
   private boolean peersSelected = false;
+  private String replicationClusterId = "";
   private ThreadPoolExecutor exec;
   private int maxThreads;
+  private Path baseNamespaceDir;
+  private Path hfileArchiveDir;
+  private boolean replicationBulkLoadDataEnabled;
 
   @Override
   public void init(Context context) throws IOException {
@@ -108,7 +114,19 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
     this.exec = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS,
-      new SynchronousQueue<Runnable>());
+        new SynchronousQueue<Runnable>());
+
+    this.replicationBulkLoadDataEnabled =
+        conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+          HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
+    if (this.replicationBulkLoadDataEnabled) {
+      replicationClusterId = this.conf.get(HConstants.REPLICATION_CLUSTER_ID);
+    }
+    // Construct base namespace directory and hfile archive directory path
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path baseNSDir = new Path(HConstants.BASE_NAMESPACE_DIR);
+    baseNamespaceDir = new Path(rootDir, baseNSDir);
+    hfileArchiveDir = new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNSDir));
   }
 
   private void decorateConf() {
@@ -317,8 +335,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       try {
         sinkPeer = replicationSinkMgr.getReplicationSink();
         BlockingInterface rrs = sinkPeer.getRegionServer();
-        ReplicationProtbufUtil.replicateWALEntry(rrs,
-            entries.toArray(new Entry[entries.size()]));
+        ReplicationProtbufUtil.replicateWALEntry(rrs, entries.toArray(new Entry[entries.size()]),
+          replicationClusterId, baseNamespaceDir, hfileArchiveDir);
         replicationSinkMgr.reportSinkSuccess(sinkPeer);
         return ordinal;
 

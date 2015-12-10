@@ -47,7 +47,7 @@ public class MetricsSink {
     if (lastTimestampForAge != timestamp) {
       lastTimestampForAge = timestamp;
       age = System.currentTimeMillis() - lastTimestampForAge;
-    } 
+    }
     mss.setLastAppliedOpAge(age);
     return age;
   }
@@ -69,6 +69,17 @@ public class MetricsSink {
   public void applyBatch(long batchSize) {
     mss.incrAppliedBatches(1);
     mss.incrAppliedOps(batchSize);
+  }
+
+  /**
+   * Convience method to change metrics when a batch of operations are applied.
+   *
+   * @param batchSize total number of mutations that are applied/replicated
+   * @param hfileSize total number of hfiles that are applied/replicated
+   */
+  public void applyBatch(long batchSize, long hfileSize) {
+    applyBatch(batchSize);
+    mss.incrAppliedHFiles(hfileSize);
   }
 
   /**

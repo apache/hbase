@@ -45,8 +45,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
@@ -225,8 +227,16 @@ public class ReplicationSourceManager implements ReplicationListener {
    * old region server wal queues
    */
   protected void init() throws IOException, ReplicationException {
+    boolean replicationForBulkLoadDataEnabled =
+        conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+          HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     for (String id : this.replicationPeers.getPeerIds()) {
       addSource(id);
+      if (replicationForBulkLoadDataEnabled) {
+        // Check if peer exists in hfile-refs queue, if not add it. This can happen in the case
+        // when a peer was added before replication for bulk loaded data was enabled.
+        this.replicationQueues.addPeerToHFileRefs(id);
+      }
     }
     List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
     if (currentReplicators == null || currentReplicators.size() == 0) {
@@ -732,5 +742,16 @@ public class ReplicationSourceManager implements ReplicationListener {
       stats.append(oldSource.getStats()+ "\n");
     }
     return stats.toString();
+  }
+
+  public void addHFileRefs(TableName tableName, byte[] family, List<String> files)
+      throws ReplicationException {
+    for (ReplicationSourceInterface source : this.sources) {
+      source.addHFileRefs(tableName, family, files);
+    }
+  }
+
+  public void cleanUpHFileRefs(String peerId, List<String> files) {
+    this.replicationQueues.removeHFileRefs(peerId, files);
   }
 }
