@@ -24,8 +24,12 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -34,10 +38,12 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 
 /**
  * Unit testing of ReplicationAdmin
@@ -112,6 +118,28 @@ public class TestReplicationAdmin {
     assertEquals(1, admin.getPeersCount());
     admin.removePeer(ID_SECOND);
     assertEquals(0, admin.getPeersCount());
+  }
+
+  /**
+   * Tests that the peer configuration used by ReplicationAdmin contains all
+   * the peer's properties.
+   */
+  @Test
+  public void testPeerConfig() throws Exception {
+    ReplicationPeerConfig config = new ReplicationPeerConfig();
+    config.setClusterKey(KEY_ONE);
+    config.getConfiguration().put("key1", "value1");
+    config.getConfiguration().put("key2", "value2");
+    admin.addPeer(ID_ONE, config, null);
+
+    List<ReplicationPeer> peers = admin.listValidReplicationPeers();
+    assertEquals(1, peers.size());
+    ReplicationPeer peerOne = peers.get(0);
+    assertNotNull(peerOne);
+    assertEquals("value1", peerOne.getConfiguration().get("key1"));
+    assertEquals("value2", peerOne.getConfiguration().get("key2"));
+
+    admin.removePeer(ID_ONE);
   }
 
   /**
