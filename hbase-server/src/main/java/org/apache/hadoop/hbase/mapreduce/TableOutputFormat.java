@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -53,8 +52,18 @@ implements Configurable {
 
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
+  /**
+   * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}.
+   * For keys matching this prefix, the prefix is stripped, and the value is set in the
+   * configuration with the resulting key, ie. the entry "hbase.mapred.output.key1 = value1"
+   * would be set in the configuration as "key1 = value1".  Use this to set properties
+   * which should only be applied to the {@code TableOutputFormat} configuration and not the
+   * input configuration.
+   */
+  public static final String OUTPUT_CONF_PREFIX = "hbase.mapred.output.";
+
   /** Job parameter that specifies the output table. */
-  public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
+  public static final String OUTPUT_TABLE = OUTPUT_CONF_PREFIX + "outputtable";
 
   /**
    * Optional job parameter to specify a peer cluster.
@@ -62,17 +71,15 @@ implements Configurable {
    * source is picked up from <code>hbase-site.xml</code>).
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job, Class, String, String, String)
    */
-  public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
+  public static final String QUORUM_ADDRESS = OUTPUT_CONF_PREFIX + "quorum";
 
   /** Optional job parameter to specify peer cluster's ZK client port */
-  public static final String QUORUM_PORT = "hbase.mapred.output.quorum.port";
+  public static final String QUORUM_PORT = OUTPUT_CONF_PREFIX + "port";
 
   /** Optional specification of the rs class name of the peer cluster */
-  public static final String
-      REGION_SERVER_CLASS = "hbase.mapred.output.rs.class";
+  public static final String REGION_SERVER_CLASS = OUTPUT_CONF_PREFIX + "rs.class";
   /** Optional specification of the rs impl name of the peer cluster */
-  public static final String
-      REGION_SERVER_IMPL = "hbase.mapred.output.rs.impl";
+  public static final String REGION_SERVER_IMPL = OUTPUT_CONF_PREFIX + "rs.impl";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -181,22 +188,19 @@ implements Configurable {
 
   @Override
   public void setConf(Configuration otherConf) {
-    this.conf = HBaseConfiguration.create(otherConf);
-
-    String tableName = this.conf.get(OUTPUT_TABLE);
+    String tableName = otherConf.get(OUTPUT_TABLE);
     if(tableName == null || tableName.length() <= 0) {
       throw new IllegalArgumentException("Must specify table name");
     }
 
-    String address = this.conf.get(QUORUM_ADDRESS);
-    int zkClientPort = this.conf.getInt(QUORUM_PORT, 0);
-    String serverClass = this.conf.get(REGION_SERVER_CLASS);
-    String serverImpl = this.conf.get(REGION_SERVER_IMPL);
+    String address = otherConf.get(QUORUM_ADDRESS);
+    int zkClientPort = otherConf.getInt(QUORUM_PORT, 0);
+    String serverClass = otherConf.get(REGION_SERVER_CLASS);
+    String serverImpl = otherConf.get(REGION_SERVER_IMPL);
 
     try {
-      if (address != null) {
-        ZKUtil.applyClusterKeyToConf(this.conf, address);
-      }
+      this.conf = HBaseConfiguration.createClusterConf(otherConf, address, OUTPUT_CONF_PREFIX);
+
       if (serverClass != null) {
         this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
       }

@@ -43,7 +43,7 @@ public class TestZKUtil {
     conf.set(HConstants.ZOOKEEPER_QUORUM, "\tlocalhost\n");
     conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, "3333");
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "hbase");
-    String clusterKey = ZKUtil.getZooKeeperClusterKey(conf, "test");
+    String clusterKey = ZKConfig.getZooKeeperClusterKey(conf, "test");
     Assert.assertTrue(!clusterKey.contains("\t") && !clusterKey.contains("\n"));
     Assert.assertEquals("localhost:3333:hbase,test", clusterKey);
   }

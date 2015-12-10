@@ -341,33 +341,6 @@ public class TestZooKeeper {
     assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2", null));
   }
 
-  @Test
-  public void testClusterKey() throws Exception {
-    testKey("server", "2181", "hbase");
-    testKey("server1,server2,server3", "2181", "hbase");
-    try {
-      ZKUtil.transformClusterKey("2181:hbase");
-    } catch (IOException ex) {
-      // OK
-    }
-  }
-
-  private void testKey(String ensemble, String port, String znode)
-      throws IOException {
-    Configuration conf = new Configuration();
-    String key = ensemble+":"+port+":"+znode;
-    String[] parts = ZKUtil.transformClusterKey(key);
-    assertEquals(ensemble, parts[0]);
-    assertEquals(port, parts[1]);
-    assertEquals(znode, parts[2]);
-    ZKUtil.applyClusterKeyToConf(conf, key);
-    assertEquals(parts[0], conf.get(HConstants.ZOOKEEPER_QUORUM));
-    assertEquals(parts[1], conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
-    assertEquals(parts[2], conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
-    String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
-    assertEquals(key, reconstructedKey);
-  }
-
   /**
    * A test for HBASE-3238
    * @throws IOException A connection attempt to zk failed

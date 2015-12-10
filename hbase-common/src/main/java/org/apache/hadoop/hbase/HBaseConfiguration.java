@@ -20,14 +20,15 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Map.Entry;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 
 /**
  * Adds HBase configuration files to a Configuration
@@ -138,8 +139,41 @@ public class HBaseConfiguration extends Configuration {
    * @param srcConf the source configuration
    **/
   public static void merge(Configuration destConf, Configuration srcConf) {
-    for (Entry<String, String> e : srcConf) {
+    for (Map.Entry<String, String> e : srcConf) {
       destConf.set(e.getKey(), e.getValue());
+    }
+  }
+
+  /**
+   * Returns a subset of the configuration properties, matching the given key prefix.
+   * The prefix is stripped from the return keys, ie. when calling with a prefix of "myprefix",
+   * the entry "myprefix.key1 = value1" would be returned as "key1 = value1".  If an entry's
+   * key matches the prefix exactly ("myprefix = value2"), it will <strong>not</strong> be
+   * included in the results, since it would show up as an entry with an empty key.
+   */
+  public static Configuration subset(Configuration srcConf, String prefix) {
+    Configuration newConf = new Configuration(false);
+    for (Map.Entry<String, String> entry : srcConf) {
+      if (entry.getKey().startsWith(prefix)) {
+        String newKey = entry.getKey().substring(prefix.length());
+        // avoid entries that would produce an empty key
+        if (!newKey.isEmpty()) {
+          newConf.set(newKey, entry.getValue());
+        }
+      }
+    }
+    return newConf;
+  }
+
+  /**
+   * Sets all the entries in the provided {@code Map<String, String>} as properties in the
+   * given {@code Configuration}.  Each property will have the specified prefix prepended,
+   * so that the configuration entries are keyed by {@code prefix + entry.getKey()}.
+   */
+  public static void setWithPrefix(Configuration conf, String prefix,
+                                   Iterable<Map.Entry<String, String>> properties) {
+    for (Map.Entry<String, String> entry : properties) {
+      conf.set(prefix + entry.getKey(), entry.getValue());
     }
   }
 
@@ -237,7 +271,67 @@ public class HBaseConfiguration extends Configuration {
     return passwd;
   }
 
-  /** For debugging.  Dump configurations to system output as xml format.
+  /**
+   * Generates a {@link Configuration} instance by applying the ZooKeeper cluster key
+   * to the base Configuration.  Note that additional configuration properties may be needed
+   * for a remote cluster, so it is preferable to use
+   * {@link #createClusterConf(Configuration, String, String)}.
+   *
+   * @param baseConf the base configuration to use, containing prefixed override properties
+   * @param clusterKey the ZooKeeper quorum cluster key to apply, or {@code null} if none
+   *
+   * @return the merged configuration with override properties and cluster key applied
+   *
+   * @see #createClusterConf(Configuration, String, String)
+   */
+  public static Configuration createClusterConf(Configuration baseConf, String clusterKey)
+      throws IOException {
+    return createClusterConf(baseConf, clusterKey, null);
+  }
+
+  /**
+   * Generates a {@link Configuration} instance by applying property overrides prefixed by
+   * a cluster profile key to the base Configuration.  Override properties are extracted by
+   * the {@link #subset(Configuration, String)} method, then the merged on top of the base
+   * Configuration and returned.
+   *
+   * @param baseConf the base configuration to use, containing prefixed override properties
+   * @param clusterKey the ZooKeeper quorum cluster key to apply, or {@code null} if none
+   * @param overridePrefix the property key prefix to match for override properties,
+   *     or {@code null} if none
+   * @return the merged configuration with override properties and cluster key applied
+   */
+  public static Configuration createClusterConf(Configuration baseConf, String clusterKey,
+                                                String overridePrefix) throws IOException {
+    Configuration clusterConf = HBaseConfiguration.create(baseConf);
+    if (clusterKey != null && !clusterKey.isEmpty()) {
+      applyClusterKeyToConf(clusterConf, clusterKey);
+    }
+
+    if (overridePrefix != null && !overridePrefix.isEmpty()) {
+      Configuration clusterSubset = HBaseConfiguration.subset(clusterConf, overridePrefix);
+      HBaseConfiguration.merge(clusterConf, clusterSubset);
+    }
+    return clusterConf;
+  }
+
+  /**
+   * Apply the settings in the given key to the given configuration, this is
+   * used to communicate with distant clusters
+   * @param conf configuration object to configure
+   * @param key string that contains the 3 required configuratins
+   * @throws IOException
+   */
+  private static void applyClusterKeyToConf(Configuration conf, String key)
+      throws IOException{
+    ZKConfig.ZKClusterKey zkClusterKey = ZKConfig.transformClusterKey(key);
+    conf.set(HConstants.ZOOKEEPER_QUORUM, zkClusterKey.getQuorumString());
+    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClusterKey.getClientPort());
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkClusterKey.getZnodeParent());
+  }
+
+  /**
+   * For debugging.  Dump configurations to system output as xml format.
    * Master and RS configurations can also be dumped using
    * http services. e.g. "curl http://master:60010/dump"
    */
