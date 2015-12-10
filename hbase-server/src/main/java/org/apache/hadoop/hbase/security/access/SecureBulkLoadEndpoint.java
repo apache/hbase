@@ -216,7 +216,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair(el.getFamily().toByteArray(),el.getPath()));
     }
-    
+
     Token userToken = null;
     if (userProvider.isHadoopSecurityEnabled()) {
       userToken = new Token(request.getFsToken().getIdentifier().toByteArray(), request.getFsToken()
@@ -374,6 +374,14 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     public String prepareBulkLoad(final byte[] family, final String srcPath) throws IOException {
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
+
+      // In case of Replication for bulk load files, hfiles are already copied in staging directory
+      if (p.equals(stageP)) {
+        LOG.debug(p.getName()
+            + " is already available in staging directory. Skipping copy or rename.");
+        return stageP.toString();
+      }
+
       if (srcFs == null) {
         srcFs = FileSystem.get(p.toUri(), conf);
       }
@@ -413,6 +421,14 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir,
           new Path(Bytes.toString(family), p.getName()));
+
+      // In case of Replication for bulk load files, hfiles are not renamed by end point during
+      // prepare stage, so no need of rename here again
+      if (p.equals(stageP)) {
+        LOG.debug(p.getName() + " is already available in source directory. Skipping rename.");
+        return;
+      }
+
       LOG.debug("Moving " + stageP + " back to " + p);
       if(!fs.rename(stageP, p))
         throw new IOException("Failed to move HFile: " + stageP + " to " + p);

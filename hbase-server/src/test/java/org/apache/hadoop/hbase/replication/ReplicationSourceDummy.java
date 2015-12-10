@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
@@ -88,5 +90,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public String getStats() {
     return "";
+  }
+
+  @Override
+  public void addHFileRefs(TableName tableName, byte[] family, List<String> files)
+      throws ReplicationException {
+    return;
   }
 }

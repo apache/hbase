@@ -33,15 +33,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -51,6 +52,11 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * <p>
@@ -78,6 +84,9 @@ public class ReplicationSink {
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
   private final Object sharedHtableConLock = new Object();
+  // Number of hfiles that we successfully replicated
+  private long hfilesReplicated = 0;
+  private SourceFSConfigurationProvider provider;
 
   /**
    * Create a sink for replication
@@ -91,6 +100,18 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.metrics = new MetricsSink();
+
+    String className =
+        conf.get("hbase.replication.source.fs.conf.provider",
+          DefaultSourceFSConfigurationProvider.class.getCanonicalName());
+    try {
+      @SuppressWarnings("rawtypes")
+      Class c = Class.forName(className);
+      this.provider = (SourceFSConfigurationProvider) c.newInstance();
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Configured source fs configuration provider class "
+          + className + " throws error.", e);
+    }
   }
 
   /**
@@ -113,9 +134,16 @@ public class ReplicationSink {
    * operates against raw protobuf type saving on a conversion from pb to pojo.
    * @param entries
    * @param cells
-   * @throws IOException
+   * @param replicationClusterId Id which will uniquely identify source cluster FS client
+   *          configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
+   *          directory
+   * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
+   * @throws IOException If failed to replicate the data
    */
-  public void replicateEntries(List<WALEntry> entries, final CellScanner cells) throws IOException {
+  public void replicateEntries(List<WALEntry> entries, final CellScanner cells,
+      String replicationClusterId, String sourceBaseNamespaceDirPath,
+      String sourceHFileArchiveDirPath) throws IOException {
     if (entries.isEmpty()) return;
     if (cells == null) throw new NullPointerException("TODO: Add handling of null CellScanner");
     // Very simple optimization where we batch sequences of rows going
@@ -126,6 +154,10 @@ public class ReplicationSink {
       // invocation of this method per table and cluster id.
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap =
           new TreeMap<TableName, Map<List<UUID>, List<Row>>>();
+
+      // Map of table name Vs list of pair of family and list of hfile paths from its namespace
+      Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
+
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
@@ -138,38 +170,135 @@ public class ReplicationSink {
             throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
           }
           Cell cell = cells.current();
-          if (isNewRowOrType(previousCell, cell)) {
-            // Create new mutation
-            m = CellUtil.isDelete(cell)?
-              new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()):
-              new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-            List<UUID> clusterIds = new ArrayList<UUID>();
-            for(HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()){
-              clusterIds.add(toUUID(clusterId));
+          // Handle bulk load hfiles replication
+          if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+            if (bulkLoadHFileMap == null) {
+              bulkLoadHFileMap = new HashMap<String, List<Pair<byte[], List<String>>>>();
             }
-            m.setClusterIds(clusterIds);
-            addToHashMultiMap(rowMap, table, clusterIds, m);
-          }
-          if (CellUtil.isDelete(cell)) {
-            ((Delete)m).addDeleteMarker(cell);
+            buildBulkLoadHFileMap(bulkLoadHFileMap, table, cell);
           } else {
-            ((Put)m).add(cell);
+            // Handle wal replication
+            if (isNewRowOrType(previousCell, cell)) {
+              // Create new mutation
+              m =
+                  CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
+                      cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
+                      cell.getRowLength());
+              List<UUID> clusterIds = new ArrayList<UUID>();
+              for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
+                clusterIds.add(toUUID(clusterId));
+              }
+              m.setClusterIds(clusterIds);
+              addToHashMultiMap(rowMap, table, clusterIds, m);
+            }
+            if (CellUtil.isDelete(cell)) {
+              ((Delete) m).addDeleteMarker(cell);
+            } else {
+              ((Put) m).add(cell);
+            }
+            previousCell = cell;
           }
-          previousCell = cell;
         }
         totalReplicated++;
       }
-      for (Entry<TableName, Map<List<UUID>,List<Row>>> entry : rowMap.entrySet()) {
-        batch(entry.getKey(), entry.getValue().values());
+
+      // TODO Replicating mutations and bulk loaded data can be made parallel
+      if (!rowMap.isEmpty()) {
+        LOG.debug("Started replicating mutations.");
+        for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
+          batch(entry.getKey(), entry.getValue().values());
+        }
+        LOG.debug("Finished replicating mutations.");
       }
+
+      if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
+        LOG.debug("Started replicating bulk loaded data.");
+        HFileReplicator hFileReplicator =
+            new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
+                sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
+                getConnection());
+        hFileReplicator.replicate();
+        LOG.debug("Finished replicating bulk loaded data.");
+      }
+
       int size = entries.size();
       this.metrics.setAgeOfLastAppliedOp(entries.get(size - 1).getKey().getWriteTime());
-      this.metrics.applyBatch(size);
+      this.metrics.applyBatch(size + hfilesReplicated, hfilesReplicated);
       this.totalReplicatedEdits.addAndGet(totalReplicated);
     } catch (IOException ex) {
       LOG.error("Unable to accept edit because:", ex);
       throw ex;
     }
+  }
+
+  private void buildBulkLoadHFileMap(
+      final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, TableName table,
+      Cell cell) throws IOException {
+    BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+    List<StoreDescriptor> storesList = bld.getStoresList();
+    int storesSize = storesList.size();
+    for (int j = 0; j < storesSize; j++) {
+      StoreDescriptor storeDescriptor = storesList.get(j);
+      List<String> storeFileList = storeDescriptor.getStoreFileList();
+      int storeFilesSize = storeFileList.size();
+      hfilesReplicated += storeFilesSize;
+      for (int k = 0; k < storeFilesSize; k++) {
+        byte[] family = storeDescriptor.getFamilyName().toByteArray();
+
+        // Build hfile relative path from its namespace
+        String pathToHfileFromNS = getHFilePath(table, bld, storeFileList.get(k), family);
+
+        String tableName = table.getNameWithNamespaceInclAsString();
+        if (bulkLoadHFileMap.containsKey(tableName)) {
+          List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+          boolean foundFamily = false;
+          for (int i = 0; i < familyHFilePathsList.size(); i++) {
+            Pair<byte[], List<String>> familyHFilePathsPair = familyHFilePathsList.get(i);
+            if (Bytes.equals(familyHFilePathsPair.getFirst(), family)) {
+              // Found family already present, just add the path to the existing list
+              familyHFilePathsPair.getSecond().add(pathToHfileFromNS);
+              foundFamily = true;
+              break;
+            }
+          }
+          if (!foundFamily) {
+            // Family not found, add this family and its hfile paths pair to the list
+            addFamilyAndItsHFilePathToTableInMap(family, pathToHfileFromNS, familyHFilePathsList);
+          }
+        } else {
+          // Add this table entry into the map
+          addNewTableEntryInMap(bulkLoadHFileMap, family, pathToHfileFromNS, tableName);
+        }
+      }
+    }
+  }
+
+  private void addFamilyAndItsHFilePathToTableInMap(byte[] family, String pathToHfileFromNS,
+      List<Pair<byte[], List<String>>> familyHFilePathsList) {
+    List<String> hfilePaths = new ArrayList<String>();
+    hfilePaths.add(pathToHfileFromNS);
+    familyHFilePathsList.add(new Pair<byte[], List<String>>(family, hfilePaths));
+  }
+
+  private void addNewTableEntryInMap(
+      final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, byte[] family,
+      String pathToHfileFromNS, String tableName) {
+    List<String> hfilePaths = new ArrayList<String>();
+    hfilePaths.add(pathToHfileFromNS);
+    Pair<byte[], List<String>> newFamilyHFilePathsPair =
+        new Pair<byte[], List<String>>(family, hfilePaths);
+    List<Pair<byte[], List<String>>> newFamilyHFilePathsList =
+        new ArrayList<Pair<byte[], List<String>>>();
+    newFamilyHFilePathsList.add(newFamilyHFilePathsPair);
+    bulkLoadHFileMap.put(tableName, newFamilyHFilePathsList);
+  }
+
+  private String getHFilePath(TableName table, BulkLoadDescriptor bld, String storeFile,
+      byte[] family) {
+    return new StringBuilder(100).append(table.getNamespaceAsString()).append(Path.SEPARATOR)
+        .append(table.getQualifierAsString()).append(Path.SEPARATOR)
+        .append(Bytes.toString(bld.getEncodedRegionName().toByteArray())).append(Path.SEPARATOR)
+        .append(Bytes.toString(family)).append(Path.SEPARATOR).append(storeFile).toString();
   }
 
   /**
@@ -241,27 +370,32 @@ public class ReplicationSink {
     }
     Table table = null;
     try {
-      // See https://en.wikipedia.org/wiki/Double-checked_locking
-      Connection connection = this.sharedHtableCon;
-      if (connection == null) {
-        synchronized (sharedHtableConLock) {
-          connection = this.sharedHtableCon;
-          if (connection == null) {
-            connection = this.sharedHtableCon = ConnectionFactory.createConnection(this.conf);
-          }
-        }
-      }
+      Connection connection = getConnection();
       table = connection.getTable(tableName);
       for (List<Row> rows : allRows) {
         table.batch(rows);
       }
     } catch (InterruptedException ix) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(ix);
+      throw (InterruptedIOException) new InterruptedIOException().initCause(ix);
     } finally {
       if (table != null) {
         table.close();
       }
     }
+  }
+
+  private Connection getConnection() throws IOException {
+    // See https://en.wikipedia.org/wiki/Double-checked_locking
+    Connection connection = sharedHtableCon;
+    if (connection == null) {
+      synchronized (sharedHtableConLock) {
+        connection = sharedHtableCon;
+        if (connection == null) {
+          connection = sharedHtableCon = ConnectionFactory.createConnection(conf);
+        }
+      }
+    }
+    return connection;
   }
 
   /**

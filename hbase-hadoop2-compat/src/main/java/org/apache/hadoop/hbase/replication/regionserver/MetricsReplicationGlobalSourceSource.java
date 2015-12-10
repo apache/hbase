@@ -32,6 +32,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableCounterLong shippedOpsCounter;
   private final MutableCounterLong shippedKBsCounter;
   private final MutableCounterLong logReadInBytesCounter;
+  private final MutableCounterLong shippedHFilesCounter;
+  private final MutableGaugeLong sizeOfHFileRefsQueueGauge;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -51,6 +53,11 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     logReadInEditsCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_LOG_READ_IN_EDITS, 0L);
 
     logEditsFilteredCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_LOG_EDITS_FILTERED, 0L);
+
+    shippedHFilesCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_SHIPPED_HFILES, 0L);
+
+    sizeOfHFileRefsQueueGauge =
+        rms.getMetricsRegistry().getLongGauge(SOURCE_SIZE_OF_HFILE_REFS_QUEUE, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -99,5 +106,19 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public long getLastShippedAge() {
     return ageOfLastShippedOpGauge.value();
+  }
+
+  @Override public void incrHFilesShipped(long hfiles) {
+    shippedHFilesCounter.incr(hfiles);
+  }
+
+  @Override
+  public void incrSizeOfHFileRefsQueue(long size) {
+    sizeOfHFileRefsQueueGauge.incr(size);
+  }
+
+  @Override
+  public void decrSizeOfHFileRefsQueue(long size) {
+    sizeOfHFileRefsQueueGauge.decr(size);
   }
 }

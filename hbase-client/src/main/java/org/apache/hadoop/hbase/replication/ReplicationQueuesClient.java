@@ -25,7 +25,8 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * This provides an interface for clients of replication to view replication queues. These queues
- * keep track of the WALs that still need to be replicated to remote clusters.
+ * keep track of the sources(WALs/HFile references) that still need to be replicated to remote
+ * clusters.
  */
 @InterfaceAudience.Private
 public interface ReplicationQueuesClient {
@@ -65,4 +66,26 @@ public interface ReplicationQueuesClient {
    * @return cversion of replication rs node
    */
   int getQueuesZNodeCversion() throws KeeperException;
+
+  /**
+   * Get the change version number of replication hfile references node. This can be used as
+   * optimistic locking to get a consistent snapshot of the replication queues of hfile references.
+   * @return change version number of hfile references node
+   */
+  int getHFileRefsNodeChangeVersion() throws KeeperException;
+
+  /**
+   * Get list of all peers from hfile reference queue.
+   * @return a list of peer ids
+   * @throws KeeperException zookeeper exception
+   */
+  List<String> getAllPeersFromHFileRefsQueue() throws KeeperException;
+
+  /**
+   * Get a list of all hfile references in the given peer.
+   * @param peerId a String that identifies the peer
+   * @return a list of hfile references, null if not found any
+   * @throws KeeperException zookeeper exception
+   */
+  List<String> getReplicableHFiles(String peerId) throws KeeperException;
 }
