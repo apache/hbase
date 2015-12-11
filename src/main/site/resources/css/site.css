@@ -35,7 +35,6 @@ div#breadcrumbs,
 div#bodyColumn,
 footer {
   width: initial;
-  max-width: 1000px;
   padding-left: 20px;
   padding-right: 20px;
   clear: both;
