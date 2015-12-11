@@ -38,35 +38,50 @@ public class FlushLargeStoresPolicy extends FlushPolicy {
   public static final String HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND =
       "hbase.hregion.percolumnfamilyflush.size.lower.bound";
 
-  private static final long DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND = 1024 * 1024 * 16L;
+  public static final String HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN =
+      "hbase.hregion.percolumnfamilyflush.size.lower.bound.min";
 
-  private long flushSizeLowerBound;
+  private static final long DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN =
+      1024 * 1024 * 16L;
+
+  private long flushSizeLowerBound = -1;
 
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    long flushSizeLowerBound;
+    int familyNumber = region.getTableDesc().getFamilies().size();
+    if (familyNumber <= 1) {
+      // No need to parse and set flush size lower bound if only one family
+      // Family number might also be zero in some of our unit test case
+      return;
+    }
+    // For multiple families, lower bound is the "average flush size" by default
+    // unless setting in configuration is larger.
+    long flushSizeLowerBound = region.getMemstoreFlushSize() / familyNumber;
+    long minimumLowerBound =
+        getConf().getLong(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
+          DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN);
+    if (minimumLowerBound > flushSizeLowerBound) {
+      flushSizeLowerBound = minimumLowerBound;
+    }
+    // use the setting in table description if any
     String flushedSizeLowerBoundString =
         region.getTableDesc().getValue(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
     if (flushedSizeLowerBoundString == null) {
-      flushSizeLowerBound =
-          getConf().getLong(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-            DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
       if (LOG.isDebugEnabled()) {
-        LOG.debug(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
-            + " is not specified, use global config(" + flushSizeLowerBound + ") instead");
+        LOG.debug("No " + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
+            + " set in description of table " + region.getTableDesc().getTableName()
+            + ", use config (" + flushSizeLowerBound + ") instead");
       }
     } else {
       try {
         flushSizeLowerBound = Long.parseLong(flushedSizeLowerBoundString);
       } catch (NumberFormatException nfe) {
-        flushSizeLowerBound =
-            getConf().getLong(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-              DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
+        // fall back for fault setting
         LOG.warn("Number format exception when parsing "
             + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND + " for table "
             + region.getTableDesc().getTableName() + ":" + flushedSizeLowerBoundString + ". " + nfe
-            + ", use global config(" + flushSizeLowerBound + ") instead");
+            + ", use config (" + flushSizeLowerBound + ") instead");
 
       }
     }
@@ -87,6 +102,11 @@ public class FlushLargeStoresPolicy extends FlushPolicy {
 
   @Override
   public Collection<Store> selectStoresToFlush() {
+    // no need to select stores if only one family
+    if (region.getTableDesc().getFamilies().size() == 1) {
+      return region.stores.values();
+    }
+    // start selection
     Collection<Store> stores = region.stores.values();
     Set<Store> specificStoresToFlush = new HashSet<Store>();
     for (Store store : stores) {

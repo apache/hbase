@@ -8183,4 +8183,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.getRegionInfo().isMetaRegion() ? CellComparator.META_COMPARATOR
         : CellComparator.COMPARATOR;
   }
+
+  public long getMemstoreFlushSize() {
+    return this.memstoreFlushSize;
+  }
 }

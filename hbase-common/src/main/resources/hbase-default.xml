@@ -612,16 +612,17 @@ possible configurations would overwhelm and obscure the important.
     every hbase.server.thread.wakefrequency.</description>
   </property>
   <property>
-    <name>hbase.hregion.percolumnfamilyflush.size.lower.bound</name>
+    <name>hbase.hregion.percolumnfamilyflush.size.lower.bound.min</name>
     <value>16777216</value>
     <description>
-    If FlushLargeStoresPolicy is used, then every time that we hit the
-    total memstore limit, we find out all the column families whose memstores
-    exceed this value, and only flush them, while retaining the others whose
-    memstores are lower than this limit. If none of the families have their
-    memstore size more than this, all the memstores will be flushed
-    (just as usual). This value should be less than half of the total memstore
-    threshold (hbase.hregion.memstore.flush.size).
+    If FlushLargeStoresPolicy is used and there are multiple column families,
+    then every time that we hit the total memstore limit, we find out all the
+    column families whose memstores exceed a "lower bound" and only flush them
+    while retaining the others in memory. The "lower bound" will be
+    "hbase.hregion.memstore.flush.size / column_family_number" by default
+    unless value of this property is larger than that. If none of the families
+    have their memstore size more than lower bound, all the memstores will be
+    flushed (just as usual).
     </description>
   </property>
   <property>
