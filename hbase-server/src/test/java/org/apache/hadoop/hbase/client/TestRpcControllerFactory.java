@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
@@ -54,14 +55,17 @@ public class TestRpcControllerFactory {
       super(conf);
     }
 
+    @Override
     public PayloadCarryingRpcController newController() {
       return new CountingRpcController(super.newController());
     }
 
+    @Override
     public PayloadCarryingRpcController newController(final CellScanner cellScanner) {
       return new CountingRpcController(super.newController(cellScanner));
     }
 
+    @Override
     public PayloadCarryingRpcController newController(final List<CellScannable> cellIterables) {
       return new CountingRpcController(super.newController(cellIterables));
     }
@@ -103,7 +107,7 @@ public class TestRpcControllerFactory {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       ProtobufCoprocessorService.class.getName());
-    
+
     UTIL.startMiniCluster();
   }
 
@@ -201,5 +205,16 @@ public class TestRpcControllerFactory {
     assertEquals(counter.intValue(), CountingRpcController.TABLE_PRIORITY.get());
     assertEquals(0, CountingRpcController.INT_PRIORITY.get());
     return counter + 1;
+  }
+
+  @Test
+  public void testFallbackToDefaultRpcControllerFactory() {
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    conf.set(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY, "foo.bar.Baz");
+
+    // Should not fail
+    RpcControllerFactory factory = RpcControllerFactory.instantiate(conf);
+    assertNotNull(factory);
+    assertEquals(factory.getClass(), RpcControllerFactory.class);
   }
 }
