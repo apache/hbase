@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -30,7 +32,13 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public class RpcControllerFactory {
+  private static final Log LOG = LogFactory.getLog(RpcControllerFactory.class);
 
+  /**
+   * Custom RPC Controller factory allows frameworks to change the RPC controller. If the configured
+   * controller cannot be found in the classpath or loaded, we fall back to the default RPC
+   * controller factory.
+   */
   public static final String CUSTOM_CONTROLLER_CONF_KEY = "hbase.rpc.controllerfactory.class";
   protected final Configuration conf;
 
@@ -55,7 +63,21 @@ public class RpcControllerFactory {
     String rpcControllerFactoryClazz =
         configuration.get(CUSTOM_CONTROLLER_CONF_KEY,
           RpcControllerFactory.class.getName());
-    return ReflectionUtils.instantiateWithCustomCtor(rpcControllerFactoryClazz,
-      new Class[] { Configuration.class }, new Object[] { configuration });
+    try {
+      return ReflectionUtils.instantiateWithCustomCtor(rpcControllerFactoryClazz,
+        new Class[] { Configuration.class }, new Object[] { configuration });
+    } catch (UnsupportedOperationException | NoClassDefFoundError ex) {
+      // HBASE-14960: In case the RPCController is in a non-HBase jar (Phoenix), but the application
+      // is a pure HBase application, we want to fallback to the default one.
+      String msg = "Cannot load configured \"" + CUSTOM_CONTROLLER_CONF_KEY + "\" ("
+          + rpcControllerFactoryClazz + ") from hbase-site.xml, falling back to use "
+          + "default RpcControllerFactory";
+      if (LOG.isDebugEnabled()) {
+        LOG.warn(msg, ex); // if DEBUG enabled, we want the exception, but still log in WARN level
+      } else {
+        LOG.warn(msg);
+      }
+      return new RpcControllerFactory(configuration);
+    }
   }
 }
