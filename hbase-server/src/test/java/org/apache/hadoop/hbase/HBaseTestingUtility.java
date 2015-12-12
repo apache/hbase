@@ -597,6 +597,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
     FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    if (this.conf.getBoolean("hbase.test.local.fileSystem", false)) {
+      FSUtils.setFsDefault(this.conf, new Path("file:///"));
+    }
   }
 
   public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])

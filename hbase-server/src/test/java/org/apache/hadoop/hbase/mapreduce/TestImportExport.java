@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,7 +65,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -77,15 +78,17 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
  * Tests the table import and table export MR job functionality
  */
-@Category(LargeTests.class)
+@Category(MediumTests.class)
 public class TestImportExport {
   private static final Log LOG = LogFactory.getLog(TestImportExport.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -102,19 +105,22 @@ public class TestImportExport {
 
   private static long now = System.currentTimeMillis();
 
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+          withLookingForStuckThread(true).build();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // Up the handlers; this test needs more than usual.
+    UTIL.getConfiguration().setBoolean("hbase.test.local.fileSystem", true);
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     UTIL.startMiniCluster();
-    UTIL.startMiniMapReduceCluster();
     FQ_OUTPUT_DIR =
       new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 
@@ -363,7 +369,7 @@ public class TestImportExport {
     Table exportT = UTIL.getConnection().getTable(desc.getTableName());
       //Add first version of QUAL
       Put p = new Put(ROW1);
-      p.add(FAMILYA, QUAL, now, QUAL);
+    p.add(FAMILYA, QUAL, now, QUAL);
       exportT.put(p);
 
       //Add Delete family marker
@@ -372,7 +378,7 @@ public class TestImportExport {
 
     //Add second version of QUAL
     p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now+5, "s".getBytes());
+    p.add(FAMILYA, QUAL, now + 5, "s".getBytes());
     exportT.put(p);
 
     //Add second Delete family marker
