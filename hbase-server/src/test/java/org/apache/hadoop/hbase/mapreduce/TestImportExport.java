@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -78,8 +79,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -104,9 +107,14 @@ public class TestImportExport {
 
   private static long now = System.currentTimeMillis();
 
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+          withLookingForStuckThread(true).build();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // Up the handlers; this test needs more than usual.
+    UTIL.getConfiguration().setBoolean(HBaseTestingUtility.USE_LOCAL_FILESYSTEM, true);
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
@@ -376,7 +384,7 @@ public class TestImportExport {
     HTable exportT = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
       //Add first version of QUAL
       Put p = new Put(ROW1);
-      p.add(FAMILYA, QUAL, now, QUAL);
+    p.add(FAMILYA, QUAL, now, QUAL);
       exportT.put(p);
 
       //Add Delete family marker
@@ -385,7 +393,7 @@ public class TestImportExport {
 
     //Add second version of QUAL
     p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now+5, "s".getBytes());
+    p.add(FAMILYA, QUAL, now + 5, "s".getBytes());
     exportT.put(p);
 
     //Add second Delete family marker
