@@ -160,7 +160,7 @@ public class TestFlushSnapshotFromClient {
    * Test snapshotting a table that is online without flushing
    * @throws Exception
    */
-  @Ignore ("Flakey test") @Test(timeout=30000)
+  @Test(timeout=30000)
   public void testSkipFlushTableSnapshot() throws Exception {
     Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
@@ -169,6 +169,7 @@ public class TestFlushSnapshotFromClient {
     // put some stuff in the table
     Table table = UTIL.getConnection().getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
+    UTIL.flush(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
