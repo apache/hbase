@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.spark
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.apache.hadoop.hbase.client.{ConnectionFactory, Get, Result, Scan}
+import org.apache.hadoop.hbase.client._
+import org.apache.hadoop.hbase.spark.datasources.{HBaseTableScanRDD, HBaseRegion, SerializableConfiguration}
 import org.apache.hadoop.hbase.types._
-import org.apache.hadoop.hbase.util.{SimplePositionedMutableByteRange,
-PositionedByteRange, Bytes}
-import org.apache.hadoop.hbase.{TableName, HBaseConfiguration}
+import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositionedMutableByteRange}
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.DataType
@@ -159,7 +159,7 @@ class DefaultSource extends RelationProvider with Logging {
  *                                connection information
  * @param sqlContext              SparkSQL context
  */
-class HBaseRelation (val tableName:String,
+case class HBaseRelation (val tableName:String,
                      val schemaMappingDefinition:
                      java.util.HashMap[String, SchemaQualifierDefinition],
                      val batchingNum:Int,
@@ -178,6 +178,9 @@ class HBaseRelation (val tableName:String,
     configResources.split(",").foreach( r => config.addResource(r))
     new HBaseContext(sqlContext.sparkContext, config)
   }
+
+  val wrappedConf = new SerializableConfiguration(hbaseContext.config)
+  def hbaseConf = wrappedConf.value
 
   /**
    * Generates a Spark SQL schema object so Spark SQL knows what is being
@@ -222,6 +225,7 @@ class HBaseRelation (val tableName:String,
    */
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
 
+
     val pushDownTuple = buildPushDownPredicatesResource(filters)
     val pushDownRowKeyFilter = pushDownTuple._1
     var pushDownDynamicLogicExpression = pushDownTuple._2
@@ -253,7 +257,6 @@ class HBaseRelation (val tableName:String,
     //retain the information for unit testing checks
     DefaultSourceStaticUtils.populateLatestExecutionRules(pushDownRowKeyFilter,
       pushDownDynamicLogicExpression)
-    var resultRDD: RDD[Row] = null
 
     val getList = new util.ArrayList[Get]()
     val rddList = new util.ArrayList[RDD[Row]]()
@@ -268,77 +271,24 @@ class HBaseRelation (val tableName:String,
       getList.add(get)
     })
 
-    val rangeIt = pushDownRowKeyFilter.ranges.iterator
-
-    while (rangeIt.hasNext) {
-      val r = rangeIt.next()
-
-      val scan = new Scan()
-      scan.setBatch(batchingNum)
-      scan.setCaching(cachingNum)
-      requiredQualifierDefinitionList.foreach( d =>
-        if (d.columnFamilyBytes.length > 0)
-          scan.addColumn(d.columnFamilyBytes, d.qualifierBytes))
-
-      if (usePushDownColumnFilter && pushDownDynamicLogicExpression != null) {
-        val pushDownFilterJava =
-          new SparkSQLPushDownFilter(pushDownDynamicLogicExpression,
-            valueArray, requiredQualifierDefinitionList)
-
-        scan.setFilter(pushDownFilterJava)
-      }
-
-      //Check if there is a lower bound
-      if (r.lowerBound != null && r.lowerBound.length > 0) {
-
-        if (r.isLowerBoundEqualTo) {
-          //HBase startRow is inclusive: Therefore it acts like  isLowerBoundEqualTo
-          // by default
-          scan.setStartRow(r.lowerBound)
-        } else {
-          //Since we don't equalTo we want the next value we need
-          // to add another byte to the start key.  That new byte will be
-          // the min byte value.
-          val newArray = new Array[Byte](r.lowerBound.length + 1)
-          System.arraycopy(r.lowerBound, 0, newArray, 0, r.lowerBound.length)
-
-          //new Min Byte
-          newArray(r.lowerBound.length) = Byte.MinValue
-          scan.setStartRow(newArray)
-        }
-      }
-
-      //Check if there is a upperBound
-      if (r.upperBound != null && r.upperBound.length > 0) {
-        if (r.isUpperBoundEqualTo) {
-          //HBase stopRow is exclusive: therefore it DOESN'T ast like isUpperBoundEqualTo
-          // by default.  So we need to add a new max byte to the stopRow key
-          val newArray = new Array[Byte](r.upperBound.length + 1)
-          System.arraycopy(r.upperBound, 0, newArray, 0, r.upperBound.length)
-
-          //New Max Bytes
-          newArray(r.upperBound.length) = Byte.MaxValue
-          scan.setStopRow(newArray)
-        } else {
-          //Here equalTo is false for Upper bound which is exclusive and
-          // HBase stopRow acts like that by default so no need to mutate the
-          // rowKey
-          scan.setStopRow(r.upperBound)
-        }
-      }
-
-      val rdd = hbaseContext.hbaseRDD(TableName.valueOf(tableName), scan).map(r => {
-        Row.fromSeq(requiredColumns.map(c =>
-          DefaultSourceStaticUtils.getValue(c, serializableDefinitionMap, r._2)))
-      })
-      rddList.add(rdd)
+    val pushDownFilterJava = if (usePushDownColumnFilter && pushDownDynamicLogicExpression != null) {
+        Some(new SparkSQLPushDownFilter(pushDownDynamicLogicExpression,
+          valueArray, requiredQualifierDefinitionList))
+    } else {
+      None
     }
-
-    //If there is more then one RDD then we have to union them together
-    for (i <- 0 until rddList.size()) {
-      if (resultRDD == null) resultRDD = rddList.get(i)
-      else resultRDD = resultRDD.union(rddList.get(i))
-
+    val hRdd = new HBaseTableScanRDD(this, pushDownFilterJava, requiredQualifierDefinitionList.seq)
+    pushDownRowKeyFilter.ranges.foreach(hRdd.addRange(_))
+    var resultRDD: RDD[Row] = {
+      val tmp = hRdd.map{ r =>
+        Row.fromSeq(requiredColumns.map(c =>
+          DefaultSourceStaticUtils.getValue(c, serializableDefinitionMap, r)))
+      }
+      if (tmp.partitions.size > 0) {
+        tmp
+      } else {
+        null
+      }
     }
 
     //If there are gets then we can get them from the driver and union that rdd in

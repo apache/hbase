@@ -57,7 +57,7 @@ import scala.collection.mutable
   * to the working and managing the life cycle of HConnections.
  */
 class HBaseContext(@transient sc: SparkContext,
-                   @transient config: Configuration,
+                   @transient val config: Configuration,
                    val tmpHdfsConfgFile: String = null)
   extends Serializable with Logging {
 
