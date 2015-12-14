@@ -218,13 +218,14 @@ public class CacheStats {
   }
 
   public double getHitRatioPastNPeriods() {
-    double ratio = ((double)sum(hitCounts)/(double)sum(requestCounts));
+    double ratio = ((double)getSumHitCountsPastNPeriods() /
+        (double)getSumRequestCountsPastNPeriods());
     return Double.isNaN(ratio) ? 0 : ratio;
   }
 
   public double getHitCachingRatioPastNPeriods() {
-    double ratio =
-      ((double)sum(hitCachingCounts)/(double)sum(requestCachingCounts));
+    double ratio = ((double)getSumHitCachingCountsPastNPeriods() /
+        (double)getSumRequestCachingCountsPastNPeriods());
     return Double.isNaN(ratio) ? 0 : ratio;
   }
 
