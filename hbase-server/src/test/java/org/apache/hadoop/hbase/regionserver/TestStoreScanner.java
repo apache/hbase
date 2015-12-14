@@ -454,9 +454,9 @@ public class TestStoreScanner extends TestCase {
     // normally cause an NPE because scan.store is null.  So as long as we get through these
     // two calls we are good and the bug was quashed.
 
-    scan.updateReaders();
+    scan.updateReaders(new ArrayList<StoreFile>());
 
-    scan.updateReaders();
+    scan.updateReaders(new ArrayList<StoreFile>());
 
     scan.peek();
   }

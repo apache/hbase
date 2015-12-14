@@ -1042,7 +1042,7 @@ public class HStore implements Store {
       this.lock.writeLock().unlock();
     }
     // notify to be called here - only in case of flushes
-    notifyChangedReadersObservers();
+    notifyChangedReadersObservers(sfs);
     if (LOG.isTraceEnabled()) {
       long totalSize = 0;
       for (StoreFile sf : sfs) {
@@ -1060,9 +1060,9 @@ public class HStore implements Store {
    * Notify all observers that set of Readers has changed.
    * @throws IOException
    */
-  private void notifyChangedReadersObservers() throws IOException {
+  private void notifyChangedReadersObservers(List<StoreFile> sfs) throws IOException {
     for (ChangedReadersObserver o : this.changedReaderObservers) {
-      o.updateReaders();
+      o.updateReaders(sfs);
     }
   }
 
@@ -1098,6 +1098,30 @@ public class HStore implements Store {
     scanners.addAll(sfScanners);
     // Then the memstore scanners
     scanners.addAll(memStoreScanners);
+    return scanners;
+  }
+
+  @Override
+  public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
+      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException {
+    List<KeyValueScanner> memStoreScanners = null;
+    if (includeMemstoreScanner) {
+      this.lock.readLock().lock();
+      try {
+        memStoreScanners = this.memstore.getScanners(readPt);
+      } finally {
+        this.lock.readLock().unlock();
+      }
+    }
+    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
+      cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(sfScanners.size() + 1);
+    scanners.addAll(sfScanners);
+    // Then the memstore scanners
+    if (memStoreScanners != null) {
+      scanners.addAll(memStoreScanners);
+    }
     return scanners;
   }
 
