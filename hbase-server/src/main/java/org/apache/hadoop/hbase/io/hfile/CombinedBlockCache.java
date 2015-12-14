@@ -122,7 +122,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     return lruCache.getBlockCount() + bucketCache.getBlockCount();
   }
 
-  private static class CombinedCacheStats extends CacheStats {
+  public static class CombinedCacheStats extends CacheStats {
     private final CacheStats lruCacheStats;
     private final CacheStats bucketCacheStats;
 
