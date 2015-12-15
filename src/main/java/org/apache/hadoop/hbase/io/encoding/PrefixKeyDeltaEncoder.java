@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Compress key by storing size of common prefix with previous KeyValue
  * and storing raw size of rest.
@@ -40,6 +42,7 @@ import org.apache.hadoop.io.RawComparator;
  * In a worst case compressed KeyValue will be three bytes longer than original.
  *
  */
+@InterfaceAudience.Private
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   private int addKV(int prevKeyOffset, DataOutputStream out,
