@@ -294,6 +294,29 @@ public interface MetricsRegionServerSource extends BaseSource {
   String BLOCK_CACHE_FAILED_INSERTION_COUNT = "blockCacheFailedInsertionCount";
   String BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC = "Number of times that a block cache " +
       "insertion failed. Usually due to size restrictions.";
+  String BLOCK_CACHE_DATA_MISS_COUNT = "blockCacheDataMissCount";
+  String BLOCK_CACHE_ENCODED_DATA_MISS_COUNT = "blockCacheEncodedDataMissCount";
+  String BLOCK_CACHE_LEAF_INDEX_MISS_COUNT = "blockCacheLeafIndexMissCount";
+  String BLOCK_CACHE_BLOOM_CHUNK_MISS_COUNT = "blockCacheBloomChunkMissCount";
+  String BLOCK_CACHE_META_MISS_COUNT = "blockCacheMetaMissCount";
+  String BLOCK_CACHE_ROOT_INDEX_MISS_COUNT = "blockCacheRootIndexMissCount";
+  String BLOCK_CACHE_INTERMEDIATE_INDEX_MISS_COUNT = "blockCacheIntermediateIndexMissCount";
+  String BLOCK_CACHE_FILE_INFO_MISS_COUNT = "blockCacheFileInfoMissCount";
+  String BLOCK_CACHE_GENERAL_BLOOM_META_MISS_COUNT = "blockCacheGeneralBloomMetaMissCount";
+  String BLOCK_CACHE_DELETE_FAMILY_BLOOM_MISS_COUNT = "blockCacheDeleteFamilyBloomMissCount";
+  String BLOCK_CACHE_TRAILER_MISS_COUNT = "blockCacheTrailerMissCount";
+  String BLOCK_CACHE_DATA_HIT_COUNT = "blockCacheDataHitCount";
+  String BLOCK_CACHE_ENCODED_DATA_HIT_COUNT = "blockCacheEncodedDataHitCount";
+  String BLOCK_CACHE_LEAF_INDEX_HIT_COUNT = "blockCacheLeafIndexHitCount";
+  String BLOCK_CACHE_BLOOM_CHUNK_HIT_COUNT = "blockCacheBloomChunkHitCount";
+  String BLOCK_CACHE_META_HIT_COUNT = "blockCacheMetaHitCount";
+  String BLOCK_CACHE_ROOT_INDEX_HIT_COUNT = "blockCacheRootIndexHitCount";
+  String BLOCK_CACHE_INTERMEDIATE_INDEX_HIT_COUNT = "blockCacheIntermediateIndexHitCount";
+  String BLOCK_CACHE_FILE_INFO_HIT_COUNT = "blockCacheFileInfoHitCount";
+  String BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT = "blockCacheGeneralBloomMetaHitCount";
+  String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
+  String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
+  
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";

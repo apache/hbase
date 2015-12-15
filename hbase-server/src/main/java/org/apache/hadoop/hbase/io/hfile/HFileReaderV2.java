@@ -347,7 +347,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
-        this.isPrimaryReplicaReader());
+        this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
@@ -395,7 +395,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // Without a cache, this synchronizing is needless overhead, but really
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
-    BlockCacheKey cacheKey = new BlockCacheKey(name, dataBlockOffset,this.isPrimaryReplicaReader());
+    BlockCacheKey cacheKey =
+        new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     TraceScope traceScope = Trace.startSpan("HFileReaderV2.readBlock");

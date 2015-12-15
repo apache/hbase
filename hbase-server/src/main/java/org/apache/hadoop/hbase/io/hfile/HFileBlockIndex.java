@@ -981,7 +981,7 @@ public class HFileBlockIndex {
       if (cacheConf != null) {
         HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
         cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
-          beginOffset), blockForCaching);
+          beginOffset, true, blockForCaching.getBlockType()), blockForCaching);
       }
 
       // Add intermediate index block size
