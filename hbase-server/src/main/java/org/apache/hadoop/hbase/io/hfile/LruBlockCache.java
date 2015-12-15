@@ -440,7 +440,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       boolean updateCacheMetrics) {
     LruCachedBlock cb = map.get(cacheKey);
     if (cb == null) {
-      if (!repeat && updateCacheMetrics) stats.miss(caching, cacheKey.isPrimary());
+      if (!repeat && updateCacheMetrics) {
+        stats.miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+      }
       // If there is another block cache then try and read there.
       // However if this is a retry ( second time in double checked locking )
       // And it's already a miss then the l2 will also be a miss.
@@ -455,7 +457,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       }
       return null;
     }
-    if (updateCacheMetrics) stats.hit(caching, cacheKey.isPrimary());
+    if (updateCacheMetrics) stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
     cb.access(count.incrementAndGet());
     return cb.getBuffer();
   }

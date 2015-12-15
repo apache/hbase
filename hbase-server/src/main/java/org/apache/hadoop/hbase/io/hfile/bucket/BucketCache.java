@@ -398,7 +398,7 @@ public class BucketCache implements BlockCache, HeapSize {
     RAMQueueEntry re = ramCache.get(key);
     if (re != null) {
       if (updateCacheMetrics) {
-        cacheStats.hit(caching, key.isPrimary());
+        cacheStats.hit(caching, key.isPrimary(), key.getBlockType());
       }
       re.access(accessCount.incrementAndGet());
       return re.getData();
@@ -424,7 +424,7 @@ public class BucketCache implements BlockCache, HeapSize {
           Cacheable cachedBlock = deserializer.deserialize(bb, true);
           long timeTaken = System.nanoTime() - start;
           if (updateCacheMetrics) {
-            cacheStats.hit(caching, key.isPrimary());
+            cacheStats.hit(caching, key.isPrimary(), key.getBlockType());
             cacheStats.ioHit(timeTaken);
           }
           bucketEntry.access(accessCount.incrementAndGet());
@@ -441,7 +441,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
     if (!repeat && updateCacheMetrics) {
-      cacheStats.miss(caching, key.isPrimary());
+      cacheStats.miss(caching, key.isPrimary(), key.getBlockType());
     }
     return null;
   }
