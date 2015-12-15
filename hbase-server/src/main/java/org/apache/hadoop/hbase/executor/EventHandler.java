@@ -121,6 +121,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     return this;
   }
 
+  @Override
   public void run() {
     TraceScope chunk = Trace.startSpan(this.getClass().getSimpleName(), parent);
     try {
@@ -223,6 +224,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * @param t Throwable object
    */
   protected void handleException(Throwable t) {
-    LOG.error("Caught throwable while processing event " + eventType, t);
+    String msg = "Caught throwable while processing event " + eventType;
+    LOG.error(msg, t);
+    if (server != null) {
+      server.abort(msg, t);
+    }
   }
 }
