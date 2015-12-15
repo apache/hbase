@@ -27,7 +27,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 
 /**
@@ -356,23 +355,17 @@ public class ProcedureStoreTracker {
     }
   }
 
-  public void insert(final Procedure proc, final Procedure[] subprocs) {
-    insert(proc.getProcId());
-    if (subprocs != null) {
-      for (int i = 0; i < subprocs.length; ++i) {
-        insert(subprocs[i].getProcId());
-      }
-    }
-  }
-
-  public void update(final Procedure proc) {
-    update(proc.getProcId());
-  }
-
   public void insert(long procId) {
     BitSetNode node = getOrCreateNode(procId);
     node.update(procId);
     trackProcIds(procId);
+  }
+
+  public void insert(final long procId, final long[] subProcIds) {
+    update(procId);
+    for (int i = 0; i < subProcIds.length; ++i) {
+      insert(subProcIds[i]);
+    }
   }
 
   public void update(long procId) {

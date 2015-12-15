@@ -314,7 +314,7 @@ public class TestProcedureRecovery {
   public void testRunningProcWithSameNonce() throws Exception {
     final long nonceGroup = 456;
     final long nonce = 33333;
-    Procedure proc = new TestMultiStepProcedure();
+    Procedure proc = new TestSingleStepProcedure();
     long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc, nonceGroup, nonce);
 
     // Restart (use a latch to prevent the step execution until we submitted proc2)
@@ -322,7 +322,7 @@ public class TestProcedureRecovery {
     procEnv.setWaitLatch(latch);
     restart();
     // Submit a procedure with the same nonce and expect the same procedure would return.
-    Procedure proc2 = new TestMultiStepProcedure();
+    Procedure proc2 = new TestSingleStepProcedure();
     long procId2 = procExecutor.submitProcedure(proc2, nonceGroup, nonce);
     latch.countDown();
     procEnv.setWaitLatch(null);
