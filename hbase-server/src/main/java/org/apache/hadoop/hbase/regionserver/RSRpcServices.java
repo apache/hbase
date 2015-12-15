@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ByteBufferedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -658,6 +660,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     List<ClientProtos.Action> mutations = null;
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     IOException sizeIOE = null;
+    Object lastBlock = null;
     for (ClientProtos.Action action : actions.getActionList()) {
       ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = null;
       try {
@@ -665,7 +668,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         if (context != null
             && context.isRetryImmediatelySupported()
-            && context.getResponseCellSize() > maxQuotaResultSize) {
+            && (context.getResponseCellSize() > maxQuotaResultSize
+              || context.getResponseBlockSize() > maxQuotaResultSize)) {
 
           // We're storing the exception since the exception and reason string won't
           // change after the response size limit is reached.
@@ -674,15 +678,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             // Throwing will kill the JVM's JIT.
             //
             // Instead just create the exception and then store it.
-            sizeIOE = new MultiActionResultTooLarge("Max response size exceeded: "
-                    + context.getResponseCellSize());
+            sizeIOE = new MultiActionResultTooLarge("Max size exceeded"
+                + " CellSize: " + context.getResponseCellSize()
+                + " BlockSize: " + context.getResponseBlockSize());
 
             // Only report the exception once since there's only one request that
             // caused the exception. Otherwise this number will dominate the exceptions count.
             rpcServer.getMetrics().exception(sizeIOE);
           }
 
-          // Now that there's an exception is know to be created
+          // Now that there's an exception is known to be created
           // use it for the response.
           //
           // This will create a copy in the builder.
@@ -755,9 +760,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             pbResult = ProtobufUtil.toResult(r);
           }
-          if (context != null) {
-            context.incrementResponseCellSize(Result.getTotalSizeOfCells(r));
-          }
+          lastBlock = addSize(context, r, lastBlock);
           resultOrExceptionBuilder =
             ClientProtos.ResultOrException.newBuilder().setResult(pbResult);
         }
@@ -1068,6 +1071,44 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return scannerHolder.getNextCallSeq();
     }
     return 0L;
+  }
+
+  /**
+   * Method to account for the size of retained cells and retained data blocks.
+   * @return an object that represents the last referenced block from this response.
+   */
+  Object addSize(RpcCallContext context, Result r, Object lastBlock) {
+    if (context != null && !r.isEmpty()) {
+      for (Cell c : r.rawCells()) {
+        context.incrementResponseCellSize(CellUtil.estimatedHeapSizeOf(c));
+
+        // Since byte buffers can point all kinds of crazy places it's harder to keep track
+        // of which blocks are kept alive by what byte buffer.
+        // So we make a guess.
+        if (c instanceof ByteBufferedCell) {
+          ByteBufferedCell bbCell = (ByteBufferedCell) c;
+          ByteBuffer bb = bbCell.getValueByteBuffer();
+          if (bb != lastBlock) {
+            context.incrementResponseBlockSize(bb.capacity());
+            lastBlock = bb;
+          }
+        } else {
+          // We're using the last block being the same as the current block as
+          // a proxy for pointing to a new block. This won't be exact.
+          // If there are multiple gets that bounce back and forth
+          // Then it's possible that this will over count the size of
+          // referenced blocks. However it's better to over count and
+          // use two rpcs than to OOME the regionserver.
+          byte[] valueArray = c.getValueArray();
+          if (valueArray != lastBlock) {
+            context.incrementResponseBlockSize(valueArray.length);
+            lastBlock = valueArray;
+          }
+        }
+
+      }
+    }
+    return lastBlock;
   }
 
   RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r)
@@ -2467,6 +2508,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       assert scanner != null;
       RpcCallContext context = RpcServer.getCurrentCall();
+      Object lastBlock = null;
 
       quota = getQuotaManager().checkQuota(region, OperationQuota.OperationType.SCAN);
       long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
@@ -2500,11 +2542,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               scanner, results, rows);
             if (!results.isEmpty()) {
               for (Result r : results) {
-                for (Cell cell : r.rawCells()) {
-                  if (context != null) {
-                    context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(cell));
-                  }
-                }
+                lastBlock = addSize(context, r, lastBlock);
               }
             }
             if (bypass != null && bypass.booleanValue()) {
@@ -2601,13 +2639,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   moreRows = scanner.nextRaw(values, scannerContext);
 
                   if (!values.isEmpty()) {
-                    for (Cell cell : values) {
-                      if (context != null) {
-                        context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(cell));
-                      }
-                    }
                     final boolean partial = scannerContext.partialResultFormed();
-                    results.add(Result.create(values, null, stale, partial));
+                    Result r = Result.create(values, null, stale, partial);
+                    lastBlock = addSize(context, r, lastBlock);
+                    results.add(r);
                     i++;
                   }
 
