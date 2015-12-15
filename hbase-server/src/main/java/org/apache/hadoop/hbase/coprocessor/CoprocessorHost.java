@@ -127,8 +127,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   private static Set<String> coprocessorNames =
       Collections.synchronizedSet(new HashSet<String>());
+
   public static Set<String> getLoadedCoprocessors() {
-      return coprocessorNames;
+    synchronized (coprocessorNames) {
+      return new HashSet(coprocessorNames);
+    }
   }
 
   /**
@@ -372,6 +375,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   static class EnvironmentPriorityComparator
       implements Comparator<CoprocessorEnvironment> {
+    @Override
     public int compare(final CoprocessorEnvironment env1,
         final CoprocessorEnvironment env2) {
       if (env1.getPriority() < env2.getPriority()) {
@@ -738,14 +742,16 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         LOG.warn("Not stopping coprocessor "+impl.getClass().getName()+
             " because not active (state="+state.toString()+")");
       }
-      // clean up any table references
-      for (HTableInterface table: openTables) {
-        try {
-          ((HTableWrapper)table).internalClose();
-        } catch (IOException e) {
-          // nothing can be done here
-          LOG.warn("Failed to close " +
-              Bytes.toStringBinary(table.getTableName()), e);
+      synchronized (openTables) {
+        // clean up any table references
+        for (HTableInterface table: openTables) {
+          try {
+            ((HTableWrapper)table).internalClose();
+          } catch (IOException e) {
+            // nothing can be done here
+            LOG.warn("Failed to close " +
+                Bytes.toStringBinary(table.getTableName()), e);
+          }
         }
       }
     }
