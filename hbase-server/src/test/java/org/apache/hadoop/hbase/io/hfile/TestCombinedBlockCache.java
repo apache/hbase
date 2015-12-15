@@ -38,11 +38,11 @@ public class TestCombinedBlockCache {
     // period 1:
     // lru cache: 1 hit caching, 1 miss caching
     // bucket cache: 2 hit non-caching,1 miss non-caching/primary,1 fail insert
-    lruCacheStats.hit(true);
-    lruCacheStats.miss(true, false);
-    bucketCacheStats.hit(false);
-    bucketCacheStats.hit(false);
-    bucketCacheStats.miss(false, true);
+    lruCacheStats.hit(true, true, BlockType.DATA);
+    lruCacheStats.miss(true, false, BlockType.DATA);
+    bucketCacheStats.hit(false,true, BlockType.DATA);
+    bucketCacheStats.hit(false,true, BlockType.DATA);
+    bucketCacheStats.miss(false, true, BlockType.DATA);
     
     assertEquals(5, stats.getRequestCount());
     assertEquals(2, stats.getRequestCachingCount());
@@ -84,9 +84,9 @@ public class TestCombinedBlockCache {
     
     // period 2:
     // lru cache: 3 hit caching
-    lruCacheStats.hit(true);
-    lruCacheStats.hit(true);
-    lruCacheStats.hit(true);
+    lruCacheStats.hit(true, true, BlockType.DATA);
+    lruCacheStats.hit(true, true, BlockType.DATA);
+    lruCacheStats.hit(true, true, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(6, stats.getSumHitCountsPastNPeriods());
     assertEquals(8, stats.getSumRequestCountsPastNPeriods());

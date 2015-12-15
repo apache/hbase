@@ -74,6 +74,29 @@ public class CacheStats {
   /** The total number of blocks that were not inserted. */
   private final AtomicLong failedInserts = new AtomicLong(0);
 
+  /** Per Block Type Counts */
+  private final Counter dataMissCount = new Counter(0);
+  private final Counter leafIndexMissCount = new Counter(0);
+  private final Counter bloomChunkMissCount = new Counter(0);
+  private final Counter metaMissCount = new Counter(0);
+  private final Counter rootIndexMissCount = new Counter(0);
+  private final Counter intermediateIndexMissCount = new Counter(0);
+  private final Counter fileInfoMissCount = new Counter(0);
+  private final Counter generalBloomMetaMissCount = new Counter(0);
+  private final Counter deleteFamilyBloomMissCount = new Counter(0);
+  private final Counter trailerMissCount = new Counter(0);
+
+  private final Counter dataHitCount = new Counter(0);
+  private final Counter leafIndexHitCount = new Counter(0);
+  private final Counter bloomChunkHitCount = new Counter(0);
+  private final Counter metaHitCount = new Counter(0);
+  private final Counter rootIndexHitCount = new Counter(0);
+  private final Counter intermediateIndexHitCount = new Counter(0);
+  private final Counter fileInfoHitCount = new Counter(0);
+  private final Counter generalBloomMetaHitCount = new Counter(0);
+  private final Counter deleteFamilyBloomHitCount = new Counter(0);
+  private final Counter trailerHitCount = new Counter(0);
+
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
   /** Hit counts for each period in window */
@@ -125,20 +148,99 @@ public class CacheStats {
       ", evictedAgeMean=" + snapshot.getMean();
   }
 
-  public void miss(boolean caching, boolean primary) {
+
+  public void miss(boolean caching, boolean primary, BlockType type) {
     missCount.increment();
     if (primary) primaryMissCount.increment();
     if (caching) missCachingCount.increment();
+    if (type == null) {
+      return;
+    }
+    switch (type) {
+      case DATA:
+      case ENCODED_DATA:
+        dataMissCount.increment();
+        break;
+      case LEAF_INDEX:
+        leafIndexMissCount.increment();
+        break;
+      case BLOOM_CHUNK:
+        bloomChunkMissCount.increment();
+        break;
+      case META:
+        metaMissCount.increment();
+        break;
+      case INTERMEDIATE_INDEX:
+        intermediateIndexMissCount.increment();
+        break;
+      case ROOT_INDEX:
+        rootIndexMissCount.increment();
+        break;
+      case FILE_INFO:
+        fileInfoMissCount.increment();
+        break;
+      case GENERAL_BLOOM_META:
+        generalBloomMetaMissCount.increment();
+        break;
+      case DELETE_FAMILY_BLOOM_META:
+        deleteFamilyBloomMissCount.increment();
+        break;
+      case TRAILER:
+        trailerMissCount.increment();
+        break;
+      default:
+        // If there's a new type that's fine
+        // Ignore it for now. This is metrics don't exception.
+        break;
+    }
   }
 
-  public void hit(boolean caching) {
-    hit(caching, true);
-  }
-
-  public void hit(boolean caching, boolean primary) {
+  public void hit(boolean caching, boolean primary, BlockType type) {
     hitCount.increment();
     if (primary) primaryHitCount.increment();
     if (caching) hitCachingCount.increment();
+
+
+    if (type == null) {
+      return;
+    }
+    switch (type) {
+      case DATA:
+      case ENCODED_DATA:
+        dataHitCount.increment();
+        break;
+      case LEAF_INDEX:
+        leafIndexHitCount.increment();
+        break;
+      case BLOOM_CHUNK:
+        bloomChunkHitCount.increment();
+        break;
+      case META:
+        metaHitCount.increment();
+        break;
+      case INTERMEDIATE_INDEX:
+        intermediateIndexHitCount.increment();
+        break;
+      case ROOT_INDEX:
+        rootIndexHitCount.increment();
+        break;
+      case FILE_INFO:
+        fileInfoHitCount.increment();
+        break;
+      case GENERAL_BLOOM_META:
+        generalBloomMetaHitCount.increment();
+        break;
+      case DELETE_FAMILY_BLOOM_META:
+        deleteFamilyBloomHitCount.increment();
+        break;
+      case TRAILER:
+        trailerHitCount.increment();
+        break;
+      default:
+        // If there's a new type that's fine
+        // Ignore it for now. This is metrics don't exception.
+        break;
+    }
   }
 
   public void evict() {
@@ -155,6 +257,88 @@ public class CacheStats {
 
   public long failInsert() {
     return failedInserts.incrementAndGet();
+  }
+
+
+  // All of the counts of misses and hits.
+  public long getDataMissCount() {
+    return dataMissCount.get();
+  }
+
+  public long getLeafIndexMissCount() {
+    return leafIndexMissCount.get();
+  }
+
+  public long getBloomChunkMissCount() {
+    return bloomChunkMissCount.get();
+  }
+
+  public long getMetaMissCount() {
+    return metaMissCount.get();
+  }
+
+  public long getRootIndexMissCount() {
+    return rootIndexMissCount.get();
+  }
+
+  public long getIntermediateIndexMissCount() {
+    return intermediateIndexMissCount.get();
+  }
+
+  public long getFileInfoMissCount() {
+    return fileInfoMissCount.get();
+  }
+
+  public long getGeneralBloomMetaMissCount() {
+    return generalBloomMetaMissCount.get();
+  }
+
+  public long getDeleteFamilyBloomMissCount() {
+    return deleteFamilyBloomMissCount.get();
+  }
+
+  public long getTrailerMissCount() {
+    return trailerMissCount.get();
+  }
+
+  public long getDataHitCount() {
+    return dataHitCount.get();
+  }
+
+  public long getLeafIndexHitCount() {
+    return leafIndexHitCount.get();
+  }
+
+  public long getBloomChunkHitCount() {
+    return bloomChunkHitCount.get();
+  }
+
+  public long getMetaHitCount() {
+    return metaHitCount.get();
+  }
+
+  public long getRootIndexHitCount() {
+    return rootIndexHitCount.get();
+  }
+
+  public long getIntermediateIndexHitCount() {
+    return intermediateIndexHitCount.get();
+  }
+
+  public long getFileInfoHitCount() {
+    return fileInfoHitCount.get();
+  }
+
+  public long getGeneralBloomMetaHitCount() {
+    return generalBloomMetaHitCount.get();
+  }
+
+  public long getDeleteFamilyBloomHitCount() {
+    return deleteFamilyBloomHitCount.get();
+  }
+
+  public long getTrailerHitCount() {
+    return trailerHitCount.get();
   }
 
   public long getRequestCount() {

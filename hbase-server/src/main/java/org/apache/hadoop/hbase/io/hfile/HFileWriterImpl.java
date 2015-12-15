@@ -483,7 +483,9 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   private void doCacheOnWrite(long offset) {
     HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
-    cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(name, offset), cacheFormatBlock);
+    cacheConf.getBlockCache().cacheBlock(
+        new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
+        cacheFormatBlock);
   }
 
   /**

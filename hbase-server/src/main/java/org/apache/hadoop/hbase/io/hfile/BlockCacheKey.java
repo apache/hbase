@@ -30,6 +30,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private static final long serialVersionUID = -5199992013113130534L;
   private final String hfileName;
   private final long offset;
+  private final BlockType blockType;
   private final boolean isPrimaryReplicaBlock;
 
   /**
@@ -38,13 +39,14 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @param offset Offset of the block into the file
    */
   public BlockCacheKey(String hfileName, long offset) {
-    this(hfileName, offset, true);
+    this(hfileName, offset, true, BlockType.DATA);
   }
 
-  public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica) {
+  public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica, BlockType blockType) {
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.hfileName = hfileName;
     this.offset = offset;
+    this.blockType = blockType;
   }
 
   @Override
@@ -69,9 +71,12 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     return String.format("%s_%d", hfileName, offset);
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT +Bytes.SIZEOF_BOOLEAN +
-          ClassSize.REFERENCE + // this.hfileName
-          Bytes.SIZEOF_LONG);    // this.offset
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT +
+      Bytes.SIZEOF_BOOLEAN +
+      ClassSize.REFERENCE + // this.hfileName
+      ClassSize.REFERENCE + // this.blockType
+      Bytes.SIZEOF_LONG);    // this.offset
 
   /**
    * Strings have two bytes per character due to default Java Unicode encoding
@@ -97,5 +102,9 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   public long getOffset() {
     return offset;
+  }
+
+  public BlockType getBlockType() {
+    return blockType;
   }
 }

@@ -660,48 +660,48 @@ public class TestLruBlockCache {
 
     // period 1, 1 hit caching, 1 hit non-caching, 2 miss non-caching
     // should be (2/4)=0.5 and (1/1)=1
-    stats.hit(false);
-    stats.hit(true);
-    stats.miss(false, false);
-    stats.miss(false, false);
+    stats.hit(false, true, BlockType.DATA);
+    stats.hit(true, true, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.5, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(1.0, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 2, 1 miss caching, 3 miss non-caching
     // should be (2/8)=0.25 and (1/2)=0.5
-    stats.miss(true, false);
-    stats.miss(false, false);
-    stats.miss(false, false);
-    stats.miss(false, false);
+    stats.miss(true, false, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.25, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(0.5, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 3, 2 hits of each type
     // should be (6/12)=0.5 and (3/4)=0.75
-    stats.hit(false);
-    stats.hit(true);
-    stats.hit(false);
-    stats.hit(true);
+    stats.hit(false, true, BlockType.DATA);
+    stats.hit(true, true, BlockType.DATA);
+    stats.hit(false, true, BlockType.DATA);
+    stats.hit(true, true, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.5, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(0.75, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 4, evict period 1, two caching misses
     // should be (4/10)=0.4 and (2/5)=0.4
-    stats.miss(true, false);
-    stats.miss(true, false);
+    stats.miss(true, false, BlockType.DATA);
+    stats.miss(true, false, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.4, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(0.4, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 5, evict period 2, 2 caching misses, 2 non-caching hit
     // should be (6/10)=0.6 and (2/6)=1/3
-    stats.miss(true, false);
-    stats.miss(true, false);
-    stats.hit(false);
-    stats.hit(false);
+    stats.miss(true, false, BlockType.DATA);
+    stats.miss(true, false, BlockType.DATA);
+    stats.hit(false, true, BlockType.DATA);
+    stats.hit(false, true, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.6, stats.getHitRatioPastNPeriods(), delta);
     assertEquals((double)1/3, stats.getHitCachingRatioPastNPeriods(), delta);
@@ -726,10 +726,10 @@ public class TestLruBlockCache {
 
     // period 9, one of each
     // should be (2/4)=0.5 and (1/2)=0.5
-    stats.miss(true, false);
-    stats.miss(false, false);
-    stats.hit(true);
-    stats.hit(false);
+    stats.miss(true, false, BlockType.DATA);
+    stats.miss(false, false, BlockType.DATA);
+    stats.hit(true, true, BlockType.DATA);
+    stats.hit(false, true, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.5, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(0.5, stats.getHitCachingRatioPastNPeriods(), delta);

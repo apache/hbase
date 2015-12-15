@@ -359,7 +359,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     BlockCache blockCache = this.cacheConf.getBlockCache();
     if (blockCache != null && block != null) {
       BlockCacheKey cacheKey = new BlockCacheKey(this.getFileContext().getHFileName(),
-          block.getOffset(), this.isPrimaryReplicaReader());
+          block.getOffset(), this.isPrimaryReplicaReader(), block.getBlockType());
       blockCache.returnBlock(cacheKey, block);
     }
   }
@@ -1425,7 +1425,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
-        this.isPrimaryReplicaReader());
+        this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
       if (cacheConf.isBlockCacheEnabled()) {
@@ -1475,7 +1475,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // from doing).
 
     BlockCacheKey cacheKey = new BlockCacheKey(name, dataBlockOffset,
-      this.isPrimaryReplicaReader());
+      this.isPrimaryReplicaReader(), expectedBlockType);
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
