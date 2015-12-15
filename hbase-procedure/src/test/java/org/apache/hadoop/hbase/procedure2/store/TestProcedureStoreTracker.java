@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
@@ -41,27 +40,6 @@ import static org.junit.Assert.fail;
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureStoreTracker {
   private static final Log LOG = LogFactory.getLog(TestProcedureStoreTracker.class);
-
-  static class TestProcedure extends Procedure<Void> {
-    public TestProcedure(long procId) {
-      setProcId(procId);
-    }
-
-    @Override
-    protected Procedure[] execute(Void env) { return null; }
-
-    @Override
-    protected void rollback(Void env) { /* no-op */ }
-
-    @Override
-    protected boolean abort(Void env) { return false; }
-
-    @Override
-    protected void serializeStateData(final OutputStream stream) { /* no-op */ }
-
-    @Override
-    protected void deserializeStateData(final InputStream stream) { /* no-op */ }
-  }
 
   @Test
   public void testSeqInsertAndDelete() {
@@ -162,13 +140,10 @@ public class TestProcedureStoreTracker {
     ProcedureStoreTracker tracker = new ProcedureStoreTracker();
     assertTrue(tracker.isEmpty());
 
-    Procedure[] procs = new TestProcedure[] {
-      new TestProcedure(1), new TestProcedure(2), new TestProcedure(3),
-      new TestProcedure(4), new TestProcedure(5), new TestProcedure(6),
-    };
+    long[] procs = new long[] { 1, 2, 3, 4, 5, 6 };
 
-    tracker.insert(procs[0], null);
-    tracker.insert(procs[1], new Procedure[] { procs[2], procs[3], procs[4] });
+    tracker.insert(procs[0]);
+    tracker.insert(procs[1], new long[] { procs[2], procs[3], procs[4] });
     assertFalse(tracker.isEmpty());
     assertTrue(tracker.isUpdated());
 
@@ -190,11 +165,11 @@ public class TestProcedureStoreTracker {
     assertTrue(tracker.isUpdated());
 
     for (int i = 0; i < 5; ++i) {
-      tracker.delete(procs[i].getProcId());
+      tracker.delete(procs[i]);
       assertFalse(tracker.isEmpty());
       assertTrue(tracker.isUpdated());
     }
-    tracker.delete(procs[5].getProcId());
+    tracker.delete(procs[5]);
     assertTrue(tracker.isEmpty());
   }
 

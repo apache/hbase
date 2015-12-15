@@ -102,7 +102,7 @@ public class TestWALProcedureStore {
   @Test
   public void testEmptyRoll() throws Exception {
     for (int i = 0; i < 10; ++i) {
-      procStore.periodicRoll();
+      procStore.periodicRollForTesting();
     }
     FileStatus[] status = fs.listStatus(logDir);
     assertEquals(1, status.length);
@@ -214,14 +214,14 @@ public class TestWALProcedureStore {
       procStore.update(rootProcs[i-1]);
     }
     // insert root-child txn
-    procStore.rollWriter();
+    procStore.rollWriterForTesting();
     for (int i = 1; i <= rootProcs.length; i++) {
       TestProcedure b = new TestProcedure(rootProcs.length + i, i);
       rootProcs[i-1].addStackId(1);
       procStore.insert(rootProcs[i-1], new Procedure[] { b });
     }
     // insert child updates
-    procStore.rollWriter();
+    procStore.rollWriterForTesting();
     for (int i = 1; i <= rootProcs.length; i++) {
       procStore.update(new TestProcedure(rootProcs.length + i, i));
     }
@@ -229,9 +229,10 @@ public class TestWALProcedureStore {
     // Stop the store
     procStore.stop(false);
 
-    // Remove 4 byte from the trailer
+    // the first log was removed,
+    // we have insert-txn and updates in the others so everything is fine
     FileStatus[] logs = fs.listStatus(logDir);
-    assertEquals(3, logs.length);
+    assertEquals(Arrays.toString(logs), 2, logs.length);
     Arrays.sort(logs, new Comparator<FileStatus>() {
       @Override
       public int compare(FileStatus o1, FileStatus o2) {
@@ -239,15 +240,13 @@ public class TestWALProcedureStore {
       }
     });
 
-    // Remove the first log, we have insert-txn and updates in the others so everything is fine.
-    fs.delete(logs[0].getPath(), false);
     LoadCounter loader = new LoadCounter();
     storeRestart(loader);
     assertEquals(rootProcs.length * 2, loader.getLoadedCount());
     assertEquals(0, loader.getCorruptedCount());
 
-    // Remove the second log, we have lost any root/parent references
-    fs.delete(logs[1].getPath(), false);
+    // Remove the second log, we have lost all the root/parent references
+    fs.delete(logs[0].getPath(), false);
     loader.reset();
     storeRestart(loader);
     assertEquals(0, loader.getLoadedCount());
@@ -276,7 +275,7 @@ public class TestWALProcedureStore {
     b.addStackId(1);
     procStore.update(b);
 
-    procStore.rollWriter();
+    procStore.rollWriterForTesting();
 
     a.addStackId(2);
     procStore.update(a);
@@ -325,7 +324,7 @@ public class TestWALProcedureStore {
     b.addStackId(2);
     procStore.update(b);
 
-    procStore.rollWriter();
+    procStore.rollWriterForTesting();
 
     b.addStackId(3);
     procStore.update(b);
@@ -423,6 +422,36 @@ public class TestWALProcedureStore {
     procStore.getStoreTracker().dump();
     assertTrue(procCounter.get() >= LAST_PROC_ID);
     assertTrue(procStore.getStoreTracker().isEmpty());
+    assertEquals(1, procStore.getActiveLogs().size());
+  }
+
+  @Test
+  public void testRollAndRemove() throws IOException {
+    // Insert something in the log
+    Procedure proc1 = new TestSequentialProcedure();
+    procStore.insert(proc1, null);
+
+    Procedure proc2 = new TestSequentialProcedure();
+    procStore.insert(proc2, null);
+
+    // roll the log, now we have 2
+    procStore.rollWriterForTesting();
+    assertEquals(2, procStore.getActiveLogs().size());
+
+    // everything will be up to date in the second log
+    // so we can remove the first one
+    procStore.update(proc1);
+    procStore.update(proc2);
+    assertEquals(1, procStore.getActiveLogs().size());
+
+    // roll the log, now we have 2
+    procStore.rollWriterForTesting();
+    assertEquals(2, procStore.getActiveLogs().size());
+
+    // remove everything active
+    // so we can remove all the logs
+    procStore.delete(proc1.getProcId());
+    procStore.delete(proc2.getProcId());
     assertEquals(1, procStore.getActiveLogs().size());
   }
 
