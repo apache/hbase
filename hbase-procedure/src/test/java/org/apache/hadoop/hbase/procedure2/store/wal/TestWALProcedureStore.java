@@ -97,7 +97,7 @@ public class TestWALProcedureStore {
   @Test
   public void testEmptyRoll() throws Exception {
     for (int i = 0; i < 10; ++i) {
-      procStore.periodicRoll();
+      procStore.periodicRollForTesting();
     }
     FileStatus[] status = fs.listStatus(logDir);
     assertEquals(1, status.length);
@@ -243,6 +243,36 @@ public class TestWALProcedureStore {
     procStore.getStoreTracker().dump();
     assertTrue(procCounter.get() >= LAST_PROC_ID);
     assertTrue(procStore.getStoreTracker().isEmpty());
+    assertEquals(1, procStore.getActiveLogs().size());
+  }
+
+  @Test
+  public void testRollAndRemove() throws IOException {
+    // Insert something in the log
+    Procedure proc1 = new TestSequentialProcedure();
+    procStore.insert(proc1, null);
+
+    Procedure proc2 = new TestSequentialProcedure();
+    procStore.insert(proc2, null);
+
+    // roll the log, now we have 2
+    procStore.rollWriterForTesting();
+    assertEquals(2, procStore.getActiveLogs().size());
+
+    // everything will be up to date in the second log
+    // so we can remove the first one
+    procStore.update(proc1);
+    procStore.update(proc2);
+    assertEquals(1, procStore.getActiveLogs().size());
+
+    // roll the log, now we have 2
+    procStore.rollWriterForTesting();
+    assertEquals(2, procStore.getActiveLogs().size());
+
+    // remove everything active
+    // so we can remove all the logs
+    procStore.delete(proc1.getProcId());
+    procStore.delete(proc2.getProcId());
     assertEquals(1, procStore.getActiveLogs().size());
   }
 
