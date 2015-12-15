@@ -80,10 +80,8 @@ public class RegionReplicaFlushHandler extends EventHandler {
 
   @Override
   protected void handleException(Throwable t) {
-    super.handleException(t);
-
     if (t instanceof InterruptedIOException || t instanceof InterruptedException) {
-      // ignore
+      LOG.error("Caught throwable while processing event " + eventType, t);
     } else if (t instanceof RuntimeException) {
       server.abort("ServerAborting because a runtime exception was thrown", t);
     } else {
