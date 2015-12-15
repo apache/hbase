@@ -98,7 +98,7 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
 
     if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching, repeat,
         updateCacheMetrics)) != null) {
-      if (updateCacheMetrics) stats.hit(caching);
+      if (updateCacheMetrics) stats.hit(caching, cacheKey.getBlockType());
       return cachedBlock;
 
     } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching, repeat,
@@ -106,7 +106,7 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
       if (caching) {
         onHeapCache.cacheBlock(cacheKey, cachedBlock);
       }
-      if (updateCacheMetrics) stats.hit(caching);
+      if (updateCacheMetrics) stats.hit(caching, cacheKey.getBlockType());
       return cachedBlock;
     }
 

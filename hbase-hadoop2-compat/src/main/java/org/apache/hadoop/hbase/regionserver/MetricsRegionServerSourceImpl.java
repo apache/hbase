@@ -235,6 +235,7 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getCompactionQueueSize())
           .addGauge(Interns.info(FLUSH_QUEUE_LENGTH, FLUSH_QUEUE_LENGTH_DESC),
               rsWrap.getFlushQueueSize())
+
           .addGauge(Interns.info(BLOCK_CACHE_FREE_SIZE, BLOCK_CACHE_FREE_DESC),
               rsWrap.getBlockCacheFreeSize())
           .addGauge(Interns.info(BLOCK_CACHE_COUNT, BLOCK_CACHE_COUNT_DESC),
@@ -253,6 +254,41 @@ public class MetricsRegionServerSourceImpl
               BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC), rsWrap.getBlockCacheHitCachingPercent())
           .addCounter(Interns.info(BLOCK_CACHE_FAILED_INSERTION_COUNT,
               BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC),rsWrap.getBlockCacheFailedInsertions())
+          .addCounter(Interns.info(BLOCK_CACHE_DATA_MISS_COUNT, ""), rsWrap.getDataMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_LEAF_INDEX_MISS_COUNT, ""),
+              rsWrap.getLeafIndexMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_BLOOM_CHUNK_MISS_COUNT, ""),
+              rsWrap.getBloomChunkMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_META_MISS_COUNT, ""), rsWrap.getMetaMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_ROOT_INDEX_MISS_COUNT, ""),
+              rsWrap.getRootIndexMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_INTERMEDIATE_INDEX_MISS_COUNT, ""),
+              rsWrap.getIntermediateIndexMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_FILE_INFO_MISS_COUNT, ""),
+              rsWrap.getFileInfoMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_GENERAL_BLOOM_META_MISS_COUNT, ""),
+              rsWrap.getGeneralBloomMetaMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_DELETE_FAMILY_BLOOM_MISS_COUNT, ""),
+              rsWrap.getDeleteFamilyBloomMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_TRAILER_MISS_COUNT, ""),
+              rsWrap.getTrailerMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_DATA_HIT_COUNT, ""), rsWrap.getDataHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_LEAF_INDEX_HIT_COUNT, ""),
+              rsWrap.getLeafIndexHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_BLOOM_CHUNK_HIT_COUNT, ""),
+              rsWrap.getBloomChunkHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_META_HIT_COUNT, ""), rsWrap.getMetaHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_ROOT_INDEX_HIT_COUNT, ""),
+              rsWrap.getRootIndexHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_INTERMEDIATE_INDEX_HIT_COUNT, ""),
+              rsWrap.getIntermediateIndexHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_FILE_INFO_HIT_COUNT, ""),
+              rsWrap.getFileInfoHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT, ""),
+              rsWrap.getGeneralBloomMetaHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT, ""),
+              rsWrap.getDeleteFamilyBloomHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_TRAILER_HIT_COUNT, ""), rsWrap.getTrailerHitCount())
           .addCounter(Interns.info(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC),
               rsWrap.getUpdatesBlockedTime())
           .addCounter(Interns.info(FLUSHED_CELLS, FLUSHED_CELLS_DESC),
@@ -269,7 +305,6 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getMajorCompactedCellsSize())
           .addCounter(Interns.info(BLOCKED_REQUESTS_COUNT, BLOCKED_REQUESTS_COUNT_DESC),
             rsWrap.getBlockedRequestsCount())
-
           .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
               rsWrap.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())

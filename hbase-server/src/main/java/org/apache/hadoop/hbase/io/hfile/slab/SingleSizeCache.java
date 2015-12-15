@@ -158,7 +158,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
       return null;
     }
 
-    if (updateCacheMetrics) stats.hit(caching);
+    if (updateCacheMetrics) stats.hit(caching, key.getBlockType());
     // If lock cannot be obtained, that means we're undergoing eviction.
     try {
       contentBlock.recentlyAccessed.set(System.nanoTime());

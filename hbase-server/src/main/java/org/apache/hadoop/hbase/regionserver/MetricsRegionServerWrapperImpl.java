@@ -600,4 +600,162 @@ class MetricsRegionServerWrapperImpl
     return averageRegionSize;
   }
 
+  public long getDataMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getDataMissCount();
+  }
+
+  @Override
+  public long getLeafIndexMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getLeafIndexMissCount();
+  }
+
+  @Override
+  public long getBloomChunkMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getBloomChunkMissCount();
+  }
+
+  @Override
+  public long getMetaMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getMetaMissCount();
+  }
+
+  @Override
+  public long getRootIndexMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getRootIndexMissCount();
+  }
+
+  @Override
+  public long getIntermediateIndexMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getIntermediateIndexMissCount();
+  }
+
+  @Override
+  public long getFileInfoMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getFileInfoMissCount();
+  }
+
+  @Override
+  public long getGeneralBloomMetaMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getGeneralBloomMetaMissCount();
+  }
+
+  @Override
+  public long getDeleteFamilyBloomMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getDeleteFamilyBloomMissCount();
+  }
+
+  @Override
+  public long getTrailerMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getTrailerMissCount();
+  }
+
+  @Override
+  public long getDataHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getDataHitCount();
+  }
+
+  @Override
+  public long getLeafIndexHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getLeafIndexHitCount();
+  }
+
+  @Override
+  public long getBloomChunkHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getBloomChunkHitCount();
+  }
+
+  @Override
+  public long getMetaHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getMetaHitCount();
+  }
+
+  @Override
+  public long getRootIndexHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getRootIndexHitCount();
+  }
+
+  @Override
+  public long getIntermediateIndexHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getIntermediateIndexHitCount();
+  }
+
+  @Override
+  public long getFileInfoHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getFileInfoHitCount();
+  }
+
+  @Override
+  public long getGeneralBloomMetaHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getGeneralBloomMetaHitCount();
+  }
+
+  @Override
+  public long getDeleteFamilyBloomHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getDeleteFamilyBloomHitCount();
+  }
+
+  @Override
+  public long getTrailerHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return cacheStats.getTrailerHitCount();
+  }
 }

@@ -430,12 +430,12 @@ public class LruBlockCache implements BlockCache, HeapSize {
       boolean updateCacheMetrics) {
     LruCachedBlock cb = map.get(cacheKey);
     if(cb == null) {
-      if (!repeat && updateCacheMetrics) stats.miss(caching);
+      if (!repeat && updateCacheMetrics) stats.miss(caching, cacheKey.getBlockType());
       if (victimHandler != null)
         return victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
       return null;
     }
-    if (updateCacheMetrics) stats.hit(caching);
+    if (updateCacheMetrics) stats.hit(caching, cacheKey.getBlockType());
     cb.access(count.incrementAndGet());
     return cb.getBuffer();
   }

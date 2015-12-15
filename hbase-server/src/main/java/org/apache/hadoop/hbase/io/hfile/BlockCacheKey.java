@@ -32,6 +32,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private final String hfileName;
   private final long offset;
   private final DataBlockEncoding encoding;
+  private final BlockType blockType;
 
   public BlockCacheKey(String file, long offset, DataBlockEncoding encoding,
       BlockType blockType) {
@@ -42,6 +43,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     // the provided encoding, because it might be a data block.
     this.encoding = (encoding != null && (blockType == null
       || blockType.isData())) ? encoding : DataBlockEncoding.NONE;
+    this.blockType = blockType;
   }
 
   /**
@@ -49,8 +51,8 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @param file The name of the HFile this block belongs to.
    * @param offset Offset of the block into the file
    */
-  public BlockCacheKey(String file, long offset) {
-    this(file, offset, DataBlockEncoding.NONE, null);
+  public BlockCacheKey(String hfileName, long offset) {
+    this(hfileName, offset, DataBlockEncoding.NONE, BlockType.DATA);
   }
 
   @Override
@@ -77,14 +79,20 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
         + (encoding == DataBlockEncoding.NONE ? "" : "_" + encoding);
   }
 
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT +
+      ClassSize.REFERENCE + // this.hfileName
+      ClassSize.REFERENCE + // this.blockType
+      ClassSize.REFERENCE + // this.encoding
+      Bytes.SIZEOF_LONG);   // this.offset
+
   /**
    * Strings have two bytes per character due to default Java Unicode encoding
    * (hence length times 2).
    */
   @Override
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + 2 * hfileName.length() +
-        Bytes.SIZEOF_LONG + 2 * ClassSize.REFERENCE);
+    return ClassSize.align(FIXED_OVERHEAD + 2 * hfileName.length());
   }
 
   // can't avoid this unfortunately
@@ -101,5 +109,9 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   public long getOffset() {
     return offset;
+  }
+
+  public BlockType getBlockType() {
+    return blockType;
   }
 }

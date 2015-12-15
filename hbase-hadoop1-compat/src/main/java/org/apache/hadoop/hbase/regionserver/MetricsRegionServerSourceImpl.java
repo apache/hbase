@@ -246,6 +246,32 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getBlockCacheHitCachingPercent())
           .addCounter(BLOCK_CACHE_FAILED_INSERTION_COUNT,
               BLOCK_CACHE_FAILED_INSERTION_COUNT_DESC,rsWrap.getBlockCacheFailedInsertions())
+          .addCounter(BLOCK_CACHE_DATA_MISS_COUNT, "", rsWrap.getDataMissCount())
+          .addCounter(BLOCK_CACHE_LEAF_INDEX_MISS_COUNT, "", rsWrap.getLeafIndexMissCount())
+          .addCounter(BLOCK_CACHE_BLOOM_CHUNK_MISS_COUNT, "", rsWrap.getBloomChunkMissCount())
+          .addCounter(BLOCK_CACHE_META_MISS_COUNT, "", rsWrap.getMetaMissCount())
+          .addCounter(BLOCK_CACHE_ROOT_INDEX_MISS_COUNT, "", rsWrap.getRootIndexMissCount())
+          .addCounter(BLOCK_CACHE_INTERMEDIATE_INDEX_MISS_COUNT, "",
+              rsWrap.getIntermediateIndexMissCount())
+          .addCounter(BLOCK_CACHE_FILE_INFO_MISS_COUNT, "", rsWrap.getFileInfoMissCount())
+          .addCounter(BLOCK_CACHE_GENERAL_BLOOM_META_MISS_COUNT, "",
+              rsWrap.getGeneralBloomMetaMissCount())
+          .addCounter(BLOCK_CACHE_DELETE_FAMILY_BLOOM_MISS_COUNT, "",
+              rsWrap.getDeleteFamilyBloomMissCount())
+          .addCounter(BLOCK_CACHE_TRAILER_MISS_COUNT, "", rsWrap.getTrailerMissCount())
+          .addCounter(BLOCK_CACHE_DATA_HIT_COUNT, "", rsWrap.getDataHitCount())
+          .addCounter(BLOCK_CACHE_LEAF_INDEX_HIT_COUNT, "", rsWrap.getLeafIndexHitCount())
+          .addCounter(BLOCK_CACHE_BLOOM_CHUNK_HIT_COUNT, "", rsWrap.getBloomChunkHitCount())
+          .addCounter(BLOCK_CACHE_META_HIT_COUNT, "", rsWrap.getMetaHitCount())
+          .addCounter(BLOCK_CACHE_ROOT_INDEX_HIT_COUNT, "", rsWrap.getRootIndexHitCount())
+          .addCounter(BLOCK_CACHE_INTERMEDIATE_INDEX_HIT_COUNT, "",
+              rsWrap.getIntermediateIndexHitCount())
+          .addCounter(BLOCK_CACHE_FILE_INFO_HIT_COUNT, "", rsWrap.getFileInfoHitCount())
+          .addCounter(BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT, "",
+              rsWrap.getGeneralBloomMetaHitCount())
+          .addCounter(BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT, "",
+              rsWrap.getDeleteFamilyBloomHitCount())
+          .addCounter(BLOCK_CACHE_TRAILER_HIT_COUNT, "", rsWrap.getTrailerHitCount())
           .addCounter(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC, rsWrap.getUpdatesBlockedTime())
           .addCounter(FLUSHED_CELLS, FLUSHED_CELLS_DESC, rsWrap.getFlushedCellsCount())
           .addCounter(COMPACTED_CELLS, COMPACTED_CELLS_DESC, rsWrap.getCompactedCellsCount())

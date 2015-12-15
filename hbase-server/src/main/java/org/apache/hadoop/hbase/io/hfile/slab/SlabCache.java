@@ -252,9 +252,9 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     Cacheable contentBlock = cachedBlock.getBlock(key, caching, false, updateCacheMetrics);
 
     if (contentBlock != null) {
-      if (updateCacheMetrics) stats.hit(caching);
+      if (updateCacheMetrics) stats.hit(caching, key.getBlockType());
     } else if (!repeat) {
-      if (updateCacheMetrics) stats.miss(caching);
+      if (updateCacheMetrics) stats.miss(caching, key.getBlockType());
     }
     return contentBlock;
   }
