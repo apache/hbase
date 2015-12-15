@@ -1345,6 +1345,10 @@ NOTE: End-of-life releases are not included in this list.
 |===
 | Release
 | Release Manager
+
+| 0.94
+| Lars Hofhansl
+
 | 0.98
 | Andrew Purtell
 
