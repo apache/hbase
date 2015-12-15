@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.executor;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -29,7 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -89,8 +89,8 @@ public class TestExecutorService {
     assertTrue(status.queuedEvents.isEmpty());
     assertEquals(5, status.running.size());
     checkStatusDump(status);
-    
-    
+
+
     // Now interrupt the running Executor
     synchronized (lock) {
       lock.set(false);
@@ -139,7 +139,7 @@ public class TestExecutorService {
     status.dumpTo(sw, "");
     String dump = sw.toString();
     LOG.info("Got status dump:\n" + dump);
-    
+
     assertTrue(dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean"));
   }
 
@@ -170,6 +170,39 @@ public class TestExecutorService {
       }
       counter.incrementAndGet();
     }
+  }
+
+  @Test
+  public void testAborting() throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    final Server server = mock(Server.class);
+    when(server.getConfiguration()).thenReturn(conf);
+
+    ExecutorService executorService = new ExecutorService("unit_test");
+    executorService.startExecutorService(
+      ExecutorType.MASTER_SERVER_OPERATIONS, 1);
+
+
+    executorService.submit(new EventHandler(server, EventType.M_SERVER_SHUTDOWN) {
+      @Override
+      public void process() throws IOException {
+        throw new RuntimeException("Should cause abort");
+      }
+    });
+
+    Waiter.waitFor(conf, 30000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        try {
+          verify(server, times(1)).abort(anyString(), (Throwable) anyObject());
+          return true;
+        } catch (Throwable t) {
+          return false;
+        }
+      }
+    });
+
+    executorService.shutdown();
   }
 
 }
