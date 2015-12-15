@@ -414,7 +414,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public Cell peek() {
-    checkFlushed();
     if (this.heap == null) {
       return this.lastTop;
     }
@@ -810,7 +809,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // If there is a flush and the current scan is notified on the flush ensure that the 
       // scan's heap gets reset and we do a seek on the newly flushed file.
       if(!this.closing) {
-        this.lastTop = this.heap.peek();
+        this.lastTop = this.peek();
       } else {
         return false;
       }
