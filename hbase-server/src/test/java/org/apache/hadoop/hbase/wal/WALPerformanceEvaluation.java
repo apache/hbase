@@ -62,16 +62,19 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.impl.ProbabilitySampler;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.reporting.ConsoleReporter;
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.MetricFilter;
 
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 /**
  * This class runs performance benchmarks for {@link WAL}.
@@ -81,20 +84,18 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 @InterfaceAudience.Private
 public final class WALPerformanceEvaluation extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(WALPerformanceEvaluation.class.getName());
-  private final MetricsRegistry metrics = new MetricsRegistry();
+  private final MetricRegistry metrics = new MetricRegistry();
   private final Meter syncMeter =
-    metrics.newMeter(WALPerformanceEvaluation.class, "syncMeter", "syncs", TimeUnit.MILLISECONDS);
-  private final Histogram syncHistogram =
-    metrics.newHistogram(WALPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs",
-      true);
-  private final Histogram syncCountHistogram =
-      metrics.newHistogram(WALPerformanceEvaluation.class, "syncCountHistogram", "countPerSync",
-        true);
-  private final Meter appendMeter =
-    metrics.newMeter(WALPerformanceEvaluation.class, "appendMeter", "bytes",
-      TimeUnit.MILLISECONDS);
+    metrics.meter(name(WALPerformanceEvaluation.class, "syncMeter", "syncs"));
+
+  private final Histogram syncHistogram = metrics.histogram(
+    name(WALPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs"));
+  private final Histogram syncCountHistogram = metrics.histogram(
+    name(WALPerformanceEvaluation.class, "syncCountHistogram", "countPerSync"));
+  private final Meter appendMeter = metrics.meter(
+    name(WALPerformanceEvaluation.class, "appendMeter", "bytes"));
   private final Histogram latencyHistogram =
-    metrics.newHistogram(WALPerformanceEvaluation.class, "latencyHistogram", "nanos", true);
+    metrics.histogram(name(WALPerformanceEvaluation.class, "latencyHistogram", "nanos"));
 
   private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
@@ -333,7 +334,10 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           benchmarks[i] = Trace.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
               syncInterval, traceFreq));
         }
-        ConsoleReporter.enable(this.metrics, 30, TimeUnit.SECONDS);
+        ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).
+          outputTo(System.out).convertRatesTo(TimeUnit.SECONDS).filter(MetricFilter.ALL).build();
+        reporter.start(30, TimeUnit.SECONDS);
+
         long putTime = runBenchmark(benchmarks, numThreads);
         logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
           ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);

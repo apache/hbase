@@ -112,9 +112,9 @@ public class TestMetricsConnection {
         METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
         METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
     }) {
-      Assert.assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.count());
-      Assert.assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.count());
-      Assert.assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.count());
+      Assert.assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
+      Assert.assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
+      Assert.assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
     }
   }
 }

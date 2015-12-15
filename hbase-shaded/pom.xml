@@ -154,8 +154,8 @@
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.com.lmax</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>com.yammer</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.yammer</shadedPattern>
+                                        <pattern>com.dropwizard</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.dropwizard</shadedPattern>
                                     </relocation>
 
                                     <!-- top level io -->

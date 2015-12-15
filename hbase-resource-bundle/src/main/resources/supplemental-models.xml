@@ -219,7 +219,7 @@ under the License.
   </supplement>
   <supplement>
     <project>
-      <groupId>com.yammer.metrics</groupId>
+      <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
 
       <licenses>

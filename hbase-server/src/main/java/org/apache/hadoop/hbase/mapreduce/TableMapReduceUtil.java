@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.yammer.metrics.core.MetricsRegistry;
+import com.codahale.metrics.MetricRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -339,7 +339,7 @@ public class TableMapReduceUtil {
 
     if (addDependencyJars) {
       addDependencyJars(job);
-      addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
+      addDependencyJars(job.getConfiguration(), MetricRegistry.class);
     }
 
     resetCacheConfig(job.getConfiguration());
@@ -785,7 +785,7 @@ public class TableMapReduceUtil {
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
-      com.yammer.metrics.core.MetricsRegistry.class);
+      com.codahale.metrics.MetricRegistry.class);
   }
 
   /**

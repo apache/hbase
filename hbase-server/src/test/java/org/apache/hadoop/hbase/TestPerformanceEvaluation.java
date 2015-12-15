@@ -40,9 +40,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.Snapshot;
-import com.yammer.metrics.stats.UniformSample;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.UniformReservoir;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestPerformanceEvaluation {
@@ -125,16 +125,16 @@ public class TestPerformanceEvaluation {
     opts.setValueSize(valueSize);
     RandomReadTest rrt = new RandomReadTest(null, opts, null);
     Constructor<?> ctor =
-      Histogram.class.getDeclaredConstructor(com.yammer.metrics.stats.Sample.class);
+      Histogram.class.getDeclaredConstructor(com.codahale.metrics.Reservoir.class);
     ctor.setAccessible(true);
-    Histogram histogram = (Histogram)ctor.newInstance(new UniformSample(1024 * 500));
+    Histogram histogram = (Histogram)ctor.newInstance(new UniformReservoir(1024 * 500));
     for (int i = 0; i < 100; i++) {
       histogram.update(rrt.getValueLength(null));
     }
-    double stddev = histogram.stdDev();
-    assertTrue(stddev != 0 && stddev != 1.0);
-    assertTrue(histogram.stdDev() != 0);
     Snapshot snapshot = histogram.getSnapshot();
+    double stddev = snapshot.getStdDev();
+    assertTrue(stddev != 0 && stddev != 1.0);
+    assertTrue(snapshot.getStdDev() != 0);
     double median = snapshot.getMedian();
     assertTrue(median != 0 && median != 1 && median != valueSize);
   }

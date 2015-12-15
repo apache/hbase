@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
-import com.yammer.metrics.core.Histogram;
+import com.codahale.metrics.Histogram;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,12 +73,12 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   private static final String NUM_RS_KEY = "numRs";
   private static final String NUM_RS_DEFAULT = "" + 3;
 
-  /** Extract a descriptive statistic from a {@link com.yammer.metrics.core.Histogram}. */
+  /** Extract a descriptive statistic from a {@link com.codahale.metrics.Histogram}. */
   private enum Stat {
     STDEV {
       @Override
       double apply(Histogram hist) {
-        return hist.stdDev();
+        return hist.getSnapshot().getStdDev();
       }
     },
     FOUR_9S {

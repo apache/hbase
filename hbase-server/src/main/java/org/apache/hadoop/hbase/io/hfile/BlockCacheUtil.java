@@ -31,9 +31,11 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.stats.Snapshot;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Snapshot;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -44,7 +46,7 @@ public class BlockCacheUtil {
   /**
    * Needed making histograms.
    */
-  private static final MetricsRegistry METRICS = new MetricsRegistry();
+  private static final MetricRegistry METRICS = new MetricRegistry();
 
   /**
    * Needed generating JSON.
@@ -189,7 +191,7 @@ public class BlockCacheUtil {
     private final long now = System.nanoTime();
     private final int max;
     public static final int DEFAULT_MAX = 100000;
- 
+
     CachedBlocksByFile() {
       this(null);
     }
@@ -204,7 +206,7 @@ public class BlockCacheUtil {
      */
     private NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile =
       new ConcurrentSkipListMap<String, NavigableSet<CachedBlock>>();
-    Histogram age = METRICS.newHistogram(CachedBlocksByFile.class, "age");
+    Histogram age = METRICS.histogram(name(CachedBlocksByFile.class, "age"));
 
     /**
      * @param cb
@@ -274,11 +276,11 @@ public class BlockCacheUtil {
 
     @Override
     public String toString() {
-      Snapshot snapshot = this.age.getSnapshot();
-      return "count=" + count + ", dataBlockCount=" + this.dataBlockCount + ", size=" + size +
+      Snapshot snapshot = age.getSnapshot();
+      return "count=" + count + ", dataBlockCount=" + dataBlockCount + ", size=" + size +
           ", dataSize=" + getDataSize() +
-          ", mean age=" + this.age.mean() + ", stddev age=" + this.age.stdDev() +
-          ", min age=" + this.age.min() + ", max age=" + this.age.max() +
+          ", mean age=" + snapshot.getMean() + ", stddev age=" + snapshot.getStdDev() +
+          ", min age=" + snapshot.getMin() + ", max age=" + snapshot.getMax() +
           ", 95th percentile age=" + snapshot.get95thPercentile() +
           ", 99th percentile age=" + snapshot.get99thPercentile();
     }

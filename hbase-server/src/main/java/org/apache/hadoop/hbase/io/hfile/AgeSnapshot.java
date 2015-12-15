@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.Snapshot;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Snapshot;
 
 /**
  * Snapshot of block cache age in cache.
@@ -28,11 +28,9 @@ import com.yammer.metrics.stats.Snapshot;
  */
 @JsonIgnoreProperties({"ageHistogram", "snapshot"})
 public class AgeSnapshot {
-  private final Histogram ageHistogram;
   private final Snapshot snapshot;
 
   AgeSnapshot(final Histogram ageHistogram) {
-    this.ageHistogram = ageHistogram;
     this.snapshot = ageHistogram.getSnapshot();
   }
 
@@ -57,18 +55,18 @@ public class AgeSnapshot {
   }
 
   public double getMean() {
-    return this.ageHistogram.mean();
+    return this.snapshot.getMean();
   }
 
   public double getMax() {
-    return ageHistogram.max();
+    return snapshot.getMax();
   }
 
   public double getMin() {
-    return ageHistogram.min();
+    return snapshot.getMin();
   }
 
   public double getStdDev() {
-    return ageHistogram.stdDev();
+    return snapshot.getStdDev();
   }
 }

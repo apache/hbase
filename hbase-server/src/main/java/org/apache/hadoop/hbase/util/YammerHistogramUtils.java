@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.Sample;
-import com.yammer.metrics.stats.Snapshot;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Reservoir;
+import com.codahale.metrics.Snapshot;
 
 import java.lang.reflect.Constructor;
 import java.text.DecimalFormat;
@@ -37,13 +37,13 @@ public final class YammerHistogramUtils {
   private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#0.00");
 
   /**
-   * Create a new {@link com.yammer.metrics.core.Histogram} instance. These constructors are
+   * Create a new {@link com.codahale.metrics.Histogram} instance. These constructors are
    * not public in 2.2.0, so we use reflection to find them.
    */
-  public static Histogram newHistogram(Sample sample) {
+  public static Histogram newHistogram(Reservoir sample) {
     try {
       Constructor<?> ctor =
-          Histogram.class.getDeclaredConstructor(Sample.class);
+          Histogram.class.getDeclaredConstructor(Reservoir.class);
       ctor.setAccessible(true);
       return (Histogram) ctor.newInstance(sample);
     } catch (Exception e) {
@@ -54,10 +54,10 @@ public final class YammerHistogramUtils {
   /** @return an abbreviated summary of {@code hist}. */
   public static String getShortHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
-    return "mean=" + DOUBLE_FORMAT.format(hist.mean()) +
-        ", min=" + DOUBLE_FORMAT.format(hist.min()) +
-        ", max=" + DOUBLE_FORMAT.format(hist.max()) +
-        ", stdDev=" + DOUBLE_FORMAT.format(hist.stdDev()) +
+    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
+        ", min=" + DOUBLE_FORMAT.format(sn.getMin()) +
+        ", max=" + DOUBLE_FORMAT.format(sn.getMax()) +
+        ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) +
         ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +
         ", 99th=" + DOUBLE_FORMAT.format(sn.get99thPercentile());
   }
@@ -65,10 +65,10 @@ public final class YammerHistogramUtils {
   /** @return a summary of {@code hist}. */
   public static String getHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
-    return ", mean=" + DOUBLE_FORMAT.format(hist.mean()) +
-        ", min=" + DOUBLE_FORMAT.format(hist.min()) +
-        ", max=" + DOUBLE_FORMAT.format(hist.max()) +
-        ", stdDev=" + DOUBLE_FORMAT.format(hist.stdDev()) +
+    return ", mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
+        ", min=" + DOUBLE_FORMAT.format(sn.getMin()) +
+        ", max=" + DOUBLE_FORMAT.format(sn.getMax()) +
+        ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) +
         ", 50th=" + DOUBLE_FORMAT.format(sn.getMedian()) +
         ", 75th=" + DOUBLE_FORMAT.format(sn.get75thPercentile()) +
         ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +

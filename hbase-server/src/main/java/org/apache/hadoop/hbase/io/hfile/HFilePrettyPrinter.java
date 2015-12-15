@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,6 +33,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -41,6 +44,7 @@ import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -73,12 +77,18 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Metric;
-import com.yammer.metrics.core.MetricName;
-import com.yammer.metrics.core.MetricPredicate;
-import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.reporting.ConsoleReporter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.ScheduledReporter;
+import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.Timer;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -544,13 +554,17 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   }
 
   private static class KeyValueStatsCollector {
-    private final MetricsRegistry metricsRegistry = new MetricsRegistry();
+    private final MetricRegistry metricsRegistry = new MetricRegistry();
     private final ByteArrayOutputStream metricsOutput = new ByteArrayOutputStream();
-    private final SimpleReporter simpleReporter = new SimpleReporter(metricsRegistry, new PrintStream(metricsOutput));
-    Histogram keyLen = metricsRegistry.newHistogram(HFilePrettyPrinter.class, "Key length");
-    Histogram valLen = metricsRegistry.newHistogram(HFilePrettyPrinter.class, "Val length");
-    Histogram rowSizeBytes = metricsRegistry.newHistogram(HFilePrettyPrinter.class, "Row size (bytes)");
-    Histogram rowSizeCols = metricsRegistry.newHistogram(HFilePrettyPrinter.class, "Row size (columns)");
+    private final SimpleReporter simpleReporter = SimpleReporter.forRegistry(metricsRegistry).
+        outputTo(new PrintStream(metricsOutput)).filter(MetricFilter.ALL).build();
+
+    Histogram keyLen = metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Key length"));
+    Histogram valLen = metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Val length"));
+    Histogram rowSizeBytes = metricsRegistry.histogram(
+      name(HFilePrettyPrinter.class, "Row size (bytes)"));
+    Histogram rowSizeCols = metricsRegistry.histogram(
+      name(HFilePrettyPrinter.class, "Row size (columns)"));
 
     long curRowBytes = 0;
     long curRowCols = 0;
@@ -600,9 +614,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         return "no data available for statistics";
 
       // Dump the metrics to the output stream
-      simpleReporter.shutdown();
-      simpleReporter.run();
-      metricsRegistry.shutdown();
+      simpleReporter.stop();
+      simpleReporter.report();
 
       return
               metricsOutput.toString() +
@@ -610,35 +623,137 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
   }
 
-  private static class SimpleReporter extends ConsoleReporter {
-    private final PrintStream out;
-
-    public SimpleReporter(MetricsRegistry metricsRegistry, PrintStream out) {
-      super(metricsRegistry, out, MetricPredicate.ALL);
-      this.out = out;
+  /**
+   * Almost identical to ConsoleReporter, but extending ScheduledReporter,
+   * as extending ConsoleReporter in this version of dropwizard is now too much trouble.
+   */
+  private static class SimpleReporter extends ScheduledReporter {
+    /**
+     * Returns a new {@link Builder} for {@link ConsoleReporter}.
+     *
+     * @param registry the registry to report
+     * @return a {@link Builder} instance for a {@link ConsoleReporter}
+     */
+    public static Builder forRegistry(MetricRegistry registry) {
+      return new Builder(registry);
     }
 
-    @Override
-    public void run() {
-      for (Map.Entry<String, SortedMap<MetricName, Metric>> entry : getMetricsRegistry().groupedMetrics(
-              MetricPredicate.ALL).entrySet()) {
-        try {
-          for (Map.Entry<MetricName, Metric> subEntry : entry.getValue().entrySet()) {
-            out.print("   " + subEntry.getKey().getName());
-            out.println(':');
+    /**
+     * A builder for {@link SimpleReporter} instances. Defaults to using the default locale and
+     * time zone, writing to {@code System.out}, converting rates to events/second, converting
+     * durations to milliseconds, and not filtering metrics.
+     */
+    public static class Builder {
+      private final MetricRegistry registry;
+      private PrintStream output;
+      private Locale locale;
+      private TimeZone timeZone;
+      private TimeUnit rateUnit;
+      private TimeUnit durationUnit;
+      private MetricFilter filter;
 
-            subEntry.getValue().processWith(this, subEntry.getKey(), out);
-          }
-        } catch (Exception e) {
-          e.printStackTrace(out);
-        }
+      private Builder(MetricRegistry registry) {
+        this.registry = registry;
+        this.output = System.out;
+        this.locale = Locale.getDefault();
+        this.timeZone = TimeZone.getDefault();
+        this.rateUnit = TimeUnit.SECONDS;
+        this.durationUnit = TimeUnit.MILLISECONDS;
+        this.filter = MetricFilter.ALL;
+      }
+
+      /**
+       * Write to the given {@link PrintStream}.
+       *
+       * @param output a {@link PrintStream} instance.
+       * @return {@code this}
+       */
+      public Builder outputTo(PrintStream output) {
+        this.output = output;
+        return this;
+      }
+
+      /**
+       * Only report metrics which match the given filter.
+       *
+       * @param filter a {@link MetricFilter}
+       * @return {@code this}
+       */
+      public Builder filter(MetricFilter filter) {
+        this.filter = filter;
+        return this;
+      }
+
+      /**
+       * Builds a {@link ConsoleReporter} with the given properties.
+       *
+       * @return a {@link ConsoleReporter}
+       */
+      public SimpleReporter build() {
+        return new SimpleReporter(registry,
+            output,
+            locale,
+            timeZone,
+            rateUnit,
+            durationUnit,
+            filter);
       }
     }
 
+    private final PrintStream output;
+    private final Locale locale;
+    private final DateFormat dateFormat;
+
+    private SimpleReporter(MetricRegistry registry,
+                            PrintStream output,
+                            Locale locale,
+                            TimeZone timeZone,
+                            TimeUnit rateUnit,
+                            TimeUnit durationUnit,
+                            MetricFilter filter) {
+      super(registry, "simple-reporter", filter, rateUnit, durationUnit);
+      this.output = output;
+      this.locale = locale;
+
+      this.dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT,
+          DateFormat.MEDIUM,
+          locale);
+      dateFormat.setTimeZone(timeZone);
+    }
+
     @Override
-    public void processHistogram(MetricName name, Histogram histogram, PrintStream stream) {
-      super.processHistogram(name, histogram, stream);
-      stream.printf(Locale.getDefault(), "             count = %d%n", histogram.count());
+    public void report(SortedMap<String, Gauge> gauges,
+                       SortedMap<String, Counter> counters,
+                       SortedMap<String, Histogram> histograms,
+                       SortedMap<String, Meter> meters,
+                       SortedMap<String, Timer> timers) {
+      // we know we only have histograms
+      if (!histograms.isEmpty()) {
+        for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
+          output.print("   " + StringUtils.substringAfterLast(entry.getKey(), "."));
+          output.println(':');
+          printHistogram(entry.getValue());
+        }
+        output.println();
+      }
+
+      output.println();
+      output.flush();
+    }
+
+    private void printHistogram(Histogram histogram) {
+      Snapshot snapshot = histogram.getSnapshot();
+      output.printf(locale, "               min = %d%n", snapshot.getMin());
+      output.printf(locale, "               max = %d%n", snapshot.getMax());
+      output.printf(locale, "              mean = %2.2f%n", snapshot.getMean());
+      output.printf(locale, "            stddev = %2.2f%n", snapshot.getStdDev());
+      output.printf(locale, "            median = %2.2f%n", snapshot.getMedian());
+      output.printf(locale, "              75%% <= %2.2f%n", snapshot.get75thPercentile());
+      output.printf(locale, "              95%% <= %2.2f%n", snapshot.get95thPercentile());
+      output.printf(locale, "              98%% <= %2.2f%n", snapshot.get98thPercentile());
+      output.printf(locale, "              99%% <= %2.2f%n", snapshot.get99thPercentile());
+      output.printf(locale, "            99.9%% <= %2.2f%n", snapshot.get999thPercentile());
+      output.printf(locale, "             count = %d%n", histogram.getCount());
     }
   }
 

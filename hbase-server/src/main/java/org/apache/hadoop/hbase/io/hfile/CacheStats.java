@@ -22,8 +22,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.MetricsRegistry;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 /**
  * Class that implements cache metrics.
@@ -33,7 +35,7 @@ public class CacheStats {
   /**
    * Needed making histograms.
    */
-  private static final MetricsRegistry METRICS = new MetricsRegistry();
+  private static final MetricRegistry METRICS = new MetricRegistry();
 
   /** Sliding window statistics. The number of metric periods to include in
    * sliding window hit ratio calculations.
@@ -113,7 +115,7 @@ public class CacheStats {
     this.hitCachingCounts = initializeZeros(numPeriodsInWindow);
     this.requestCounts = initializeZeros(numPeriodsInWindow);
     this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
-    this.ageAtEviction = METRICS.newHistogram(CacheStats.class, name + ".ageAtEviction");
+    this.ageAtEviction = METRICS.histogram(name(CacheStats.class, name + ".ageAtEviction"));
   }
 
   @Override

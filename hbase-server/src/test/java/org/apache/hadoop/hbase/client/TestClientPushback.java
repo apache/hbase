@@ -150,16 +150,17 @@ public class TestClientPushback {
     MetricsConnection.RegionStats rsStats = conn.getConnectionMetrics().
             serverStats.get(server).get(regionName);
     assertEquals(name, rsStats.name);
-    assertEquals(rsStats.heapOccupancyHist.mean(),
+    assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
         (double)regionStats.getHeapOccupancyPercent(), 0.1 );
-    assertEquals(rsStats.memstoreLoadHist.mean(),
+    assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
         (double)regionStats.getMemstoreLoadPercent(), 0.1);
 
     MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
 
-    assertEquals(runnerStats.delayRunners.count(), 1);
-    assertEquals(runnerStats.normalRunners.count(), 1);
-    assertEquals("", runnerStats.delayIntevalHist.mean(), (double)backoffTime, 0.1);
+    assertEquals(runnerStats.delayRunners.getCount(), 1);
+    assertEquals(runnerStats.normalRunners.getCount(), 1);
+    assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(),
+      (double)backoffTime, 0.1);
 
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
     assertNotEquals("AsyncProcess did not submit the work time", endTime.get(), 0);
