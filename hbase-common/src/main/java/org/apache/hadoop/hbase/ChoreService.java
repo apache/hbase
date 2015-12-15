@@ -296,7 +296,7 @@ public class ChoreService implements ChoreServicer {
    * in the middle of execution will be interrupted and shutdown. This service will be unusable
    * after this method has been called (i.e. future scheduling attempts will fail).
    */
-  public void shutdown() {
+  public synchronized void shutdown() {
     scheduler.shutdownNow();
     if (LOG.isInfoEnabled()) {
       LOG.info("Chore service for: " + coreThreadPoolPrefix + " had " + scheduledChores.keySet()
