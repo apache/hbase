@@ -335,7 +335,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       RegionLocator regionLocator) throws TableNotFoundException, IOException  {
 
     if (!admin.isTableAvailable(regionLocator.getName())) {
-      throw new TableNotFoundException("Table " + table.getName() + "is not currently available.");
+      throw new TableNotFoundException("Table " + table.getName() + " is not currently available.");
     }
 
     // initialize thread pools
