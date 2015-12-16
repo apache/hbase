@@ -23,6 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -62,6 +64,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -506,8 +509,16 @@ public class FSHLog implements WAL {
         FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
     this.logrollsize =
       (long)(blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
-
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
+    
+    float memstoreRatio = conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY,
+      conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY, 
+        HeapMemorySizeUtil.DEFAULT_MEMSTORE_SIZE));
+    boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
+    if(maxLogsDefined){
+      LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
+    }
+    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 
+        Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));    
     this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
         FSUtils.getDefaultReplication(fs, this.fullPathLogDir));
     this.lowReplicationRollLimit =
@@ -557,6 +568,12 @@ public class FSHLog implements WAL {
     this.disruptor.start();
   }
 
+  private int calculateMaxLogFiles(float memstoreSizeRatio, long logRollSize) {
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    int maxLogs = Math.round(mu.getMax() * memstoreSizeRatio * 2 / logRollSize);
+    return maxLogs;
+  }
+  
   /**
    * Get the backing files associated with this WAL.
    * @return may be null if there are no files.
