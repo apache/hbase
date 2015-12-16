@@ -49,7 +49,6 @@
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shaded</include>
         <include>org.apache.hbase:hbase-shell</include>
-        <include>org.apache.hbase:hbase-spark</include>
         <include>org.apache.hbase:hbase-testing-util</include>
         <include>org.apache.hbase:hbase-thrift</include>
       </includes>
