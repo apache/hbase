@@ -51,6 +51,7 @@ for (Map.Entry<String, RegionState> e : rit.entrySet()) {
    }
 }
 
+int totalRITs = rit.size();
 int toRemove = rit.size() - limit;
 int removed = 0;
 if (toRemove > 0) {
@@ -90,7 +91,7 @@ if (toRemove > 0) {
             </%for>
             <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
             </tr>
-    <tr> <td> Total number of Regions in Transition</td><td><% rit.size() %> </td><td></td>
+    <tr> <td> Total number of Regions in Transition</td><td><% totalRITs %> </td><td></td>
     </table>
     <%if removed > 0 %>
     (<% removed %> more regions in transition not shown)
