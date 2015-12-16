@@ -1248,7 +1248,9 @@ When the size of a leaf-level, intermediate-level, or root-level
 +
 .Description
 Where to store the contents of the bucketcache. One of: onheap,
-      offheap, or file. If a file, set it to file:PATH_TO_FILE. See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html for more information.
+      offheap, or file. If a file, set it to file:PATH_TO_FILE.
+      See https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html
+      for more information.
 
 +
 .Default

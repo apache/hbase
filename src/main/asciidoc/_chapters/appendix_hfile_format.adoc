@@ -225,7 +225,7 @@ In contrast with version 1, in a version 2 HFile Bloom filter metadata is stored
 
 ==== File Info format in versions 1 and 2
 
-The file info block is a serialized link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/HbaseMapWritable.html[HbaseMapWritable] (essentially a map from byte arrays to byte arrays) with the following keys, among others.
+The file info block is a serialized map from byte arrays to byte arrays, with the following keys, among others.
 StoreFile-level logic adds more keys to this.
 
 [cols="1,1", frame="all"]
@@ -235,9 +235,11 @@ StoreFile-level logic adds more keys to this.
 |hfile.AVG_VALUE_LEN| The average value length in the file (int)
 |===
 
-File info format did not change in version 2.
-However, we moved the file info to the final section of the file, which can be loaded as one block at the time the HFile is being opened.
-Also, we do not store comparator in the version 2 file info anymore.
+In version 2, we did not change the file format, but we moved the file info to
+the final section of the file, which can be loaded as one block when the HFile
+is being opened.
+
+Also, we do not store the comparator in the version 2 file info anymore.
 Instead, we store it in the fixed file trailer.
 This is because we need to know the comparator at the time of parsing the load-on-open section of the HFile.
 

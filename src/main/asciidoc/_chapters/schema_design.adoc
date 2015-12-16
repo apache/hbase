@@ -632,8 +632,13 @@ For more information, see <<coprocessors,coprocessors>>
 == Constraints
 
 HBase currently supports 'constraints' in traditional (SQL) database parlance.
-The advised usage for Constraints is in enforcing business rules for attributes in the table (e.g. make sure values are in the range 1-10). Constraints could also be used to enforce referential integrity, but this is strongly discouraged as it will dramatically decrease the write throughput of the tables where integrity checking is enabled.
-Extensive documentation on using Constraints can be found at: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/constraint[Constraint] since version 0.94.
+The advised usage for Constraints is in enforcing business rules for attributes
+in the table (e.g. make sure values are in the range 1-10). Constraints could
+also be used to enforce referential integrity, but this is strongly discouraged
+as it will dramatically decrease the write throughput of the tables where integrity
+checking is enabled. Extensive documentation on using Constraints can be found at
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html[Constraint]
+since version 0.94.
 
 [[schema.casestudies]]
 == Schema Design Case Studies
