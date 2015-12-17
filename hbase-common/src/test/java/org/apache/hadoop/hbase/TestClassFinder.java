@@ -42,6 +42,8 @@ import java.util.jar.Manifest;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
@@ -50,10 +52,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mortbay.log.Log;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestClassFinder {
+
+  private static final Log LOG = LogFactory.getLog(TestClassFinder.class);
+
   @Rule public TestName name = new TestName();
   private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private static final String BASEPKG = "tfcpkg";
@@ -79,7 +83,7 @@ public class TestClassFinder {
       deleteTestDir();
     }
     assertTrue(testDir.mkdirs());
-    Log.info("Using new, clean directory=" + testDir);
+    LOG.info("Using new, clean directory=" + testDir);
   }
 
   @AfterClass
@@ -142,7 +146,7 @@ public class TestClassFinder {
   public void testClassFinderFiltersByNameInJar() throws Exception {
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
-    Log.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
+    LOG.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
     ClassFinder.FileNameFilter notExcNameFilter = new ClassFinder.FileNameFilter() {
       @Override
@@ -162,7 +166,7 @@ public class TestClassFinder {
   public void testClassFinderFiltersByClassInJar() throws Exception {
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
-    Log.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
+    LOG.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
     final ClassFinder.ClassFilter notExcClassFilter = new ClassFinder.ClassFilter() {
       @Override
@@ -224,7 +228,7 @@ public class TestClassFinder {
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
     String pkgNameSuffix = name.getMethodName();
-    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
+    LOG.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     ClassFinder allClassesFinder = new ClassFinder();
     String pkgName = makePackageName(pkgNameSuffix, counter);
     Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
@@ -247,7 +251,7 @@ public class TestClassFinder {
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
     String pkgNameSuffix = name.getMethodName();
-    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
+    LOG.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     final String classNameToFilterOut = classNamePrefix + counter;
     final ClassFinder.FileNameFilter notThisFilter = new ClassFinder.FileNameFilter() {
       @Override
@@ -272,7 +276,7 @@ public class TestClassFinder {
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
     String pkgNameSuffix = name.getMethodName();
-    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
+    LOG.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     final Class<?> clazz = makeClass(pkgNameSuffix, classNamePrefix, counter);
     final ClassFinder.ClassFilter notThisFilter = new ClassFinder.ClassFilter() {
       @Override

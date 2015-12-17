@@ -31,12 +31,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -58,7 +60,7 @@ import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mortbay.log.Log;
+
 
 /**
  * Test all of the data block encoding algorithms for correctness. Most of the
@@ -67,6 +69,9 @@ import org.mortbay.log.Log;
 @Category({IOTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestDataBlockEncoders {
+
+  private static final Log LOG = LogFactory.getLog(TestDataBlockEncoders.class);
+
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
@@ -189,7 +194,7 @@ public class TestDataBlockEncoders {
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
         new ArrayList<DataBlockEncoder.EncodedSeeker>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      Log.info("Encoding: " + encoding);
+      LOG.info("Encoding: " + encoding);
       // Off heap block data support not added for PREFIX_TREE DBE yet.
       // TODO remove this once support is added. HBASE-12298
       if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
@@ -197,7 +202,7 @@ public class TestDataBlockEncoders {
       if (encoder == null) {
         continue;
       }
-      Log.info("Encoder: " + encoder);
+      LOG.info("Encoder: " + encoder);
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
           getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
       HFileContext meta = new HFileContextBuilder()
@@ -211,7 +216,7 @@ public class TestDataBlockEncoders {
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }
-    Log.info("Testing it!");
+    LOG.info("Testing it!");
     // test it!
     // try a few random seeks
     for (boolean seekBefore : new boolean[] { false, true }) {
@@ -229,7 +234,7 @@ public class TestDataBlockEncoders {
     }
 
     // check edge cases
-    Log.info("Checking edge cases");
+    LOG.info("Checking edge cases");
     checkSeekingConsistency(encodedSeekers, false, sampleKv.get(0));
     for (boolean seekBefore : new boolean[] { false, true }) {
       checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
@@ -237,7 +242,7 @@ public class TestDataBlockEncoders {
       Cell lastMidKv =CellUtil.createLastOnRowCol(midKv);
       checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
     }
-    Log.info("Done");
+    LOG.info("Done");
   }
 
   static ByteBuffer encodeKeyValues(DataBlockEncoding encoding, List<KeyValue> kvs,

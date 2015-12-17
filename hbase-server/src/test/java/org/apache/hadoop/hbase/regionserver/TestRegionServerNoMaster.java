@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -48,7 +50,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
 
 import com.google.protobuf.ServiceException;
 
@@ -58,6 +59,7 @@ import com.google.protobuf.ServiceException;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionServerNoMaster {
 
+  private static final Log LOG = LogFactory.getLog(TestRegionServerNoMaster.class);
   private static final int NB_SERVERS = 1;
   private static Table table;
   private static final byte[] row = "ee".getBytes();
@@ -95,7 +97,7 @@ public class TestRegionServerNoMaster {
     ServerName masterAddr = master.getServerName();
     master.stopMaster();
 
-    Log.info("Waiting until master thread exits");
+    LOG.info("Waiting until master thread exits");
     while (masterThread != null && masterThread.isAlive()) {
       Threads.sleep(100);
     }

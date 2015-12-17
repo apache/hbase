@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -31,7 +33,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.mortbay.log.Log;
 
 import com.google.protobuf.ServiceException;
 
@@ -40,6 +41,8 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionResponse> {
+
+  private static final Log LOG = LogFactory.getLog(FlushRegionCallable.class);
 
   private final byte[] regionName;
   private final boolean writeFlushWalMarker;
@@ -78,7 +81,7 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
       if (!reload) {
         throw new IOException("Cached location seems to be different than requested region.");
       }
-      Log.info("Skipping flush region, because the located region "
+      LOG.info("Skipping flush region, because the located region "
           + Bytes.toStringBinary(location.getRegionInfo().getRegionName()) + " is different than "
           + " requested region " + Bytes.toStringBinary(regionName));
       return FlushRegionResponse.newBuilder()

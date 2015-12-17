@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -42,7 +46,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
+
 
 /**
  * Tests that need to spin up a cluster testing an {@link HRegion}.  Use
@@ -51,6 +55,8 @@ import org.mortbay.log.Log;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestHRegionOnCluster {
+
+  private static final Log LOG = LogFactory.getLog(TestHRegionOnCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Test (timeout=300000)
@@ -75,7 +81,7 @@ public class TestHRegionOnCluster {
       assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
 
       // Put data: r1->v1
-      Log.info("Loading r1 to v1 into " + TABLENAME);
+      LOG.info("Loading r1 to v1 into " + TABLENAME);
       Table table = TEST_UTIL.getConnection().getTable(TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
@@ -94,7 +100,7 @@ public class TestHRegionOnCluster {
       assertFalse(originServer.equals(targetServer));
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
-      Log.info("Moving " + regionInfo.getEncodedName() + " to " + targetServer.getServerName());
+      LOG.info("Moving " + regionInfo.getEncodedName() + " to " + targetServer.getServerName());
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
           Bytes.toBytes(targetServer.getServerName().getServerName()));
       do {
@@ -102,12 +108,12 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum);
 
       // Put data: r2->v2
-      Log.info("Loading r2 to v2 into " + TABLENAME);
+      LOG.info("Loading r2 to v2 into " + TABLENAME);
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       // Move region to origin server
-      Log.info("Moving " + regionInfo.getEncodedName() + " to " + originServer.getServerName());
+      LOG.info("Moving " + regionInfo.getEncodedName() + " to " + originServer.getServerName());
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
           Bytes.toBytes(originServer.getServerName().getServerName()));
       do {
@@ -115,11 +121,11 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == targetServerNum);
 
       // Put data: r3->v3
-      Log.info("Loading r3 to v3 into " + TABLENAME);
+      LOG.info("Loading r3 to v3 into " + TABLENAME);
       putDataAndVerify(table, "r3", FAMILY, "v3", 3);
 
       // Kill target server
-      Log.info("Killing target server " + targetServer.getServerName());
+      LOG.info("Killing target server " + targetServer.getServerName());
       targetServer.kill();
       cluster.getRegionServerThreads().get(targetServerNum).join();
       // Wait until finish processing of shutdown
@@ -127,12 +133,12 @@ public class TestHRegionOnCluster {
         Thread.sleep(5);
       }
       // Kill origin server
-      Log.info("Killing origin server " + targetServer.getServerName());
+      LOG.info("Killing origin server " + targetServer.getServerName());
       originServer.kill();
       cluster.getRegionServerThreads().get(originServerNum).join();
 
       // Put data: r4->v4
-      Log.info("Loading r4 to v4 into " + TABLENAME);
+      LOG.info("Loading r4 to v4 into " + TABLENAME);
       putDataAndVerify(table, "r4", FAMILY, "v4", 4);
 
     } finally {
