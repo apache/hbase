@@ -88,6 +88,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
   protected long maxMemstoreTS = 0;
 
+  /** warn on cell with tags */
+  private static boolean warnCellWithTags = true;
+
   static class WriterFactoryV2 extends HFile.WriterFactory {
     WriterFactoryV2(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
@@ -265,6 +268,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     if (!fsBlockWriter.isWriting()) {
       newBlock();
+    }
+
+    if (warnCellWithTags && getFileContext().isIncludesTags()) {
+      LOG.warn("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+          + " is required to support cell attributes/tags. Consider setting "
+          + HFile.FORMAT_VERSION_KEY + " accordingly.");
+      warnCellWithTags = false;
     }
 
     fsBlockWriter.write(cell);
