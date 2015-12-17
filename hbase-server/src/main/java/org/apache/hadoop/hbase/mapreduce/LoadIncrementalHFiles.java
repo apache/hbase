@@ -452,11 +452,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @param hfilesDir directory containing list of hfiles to be loaded into the table
    * @param table table to which hfiles should be loaded
    * @param queue queue which needs to be loaded into the table
+   * @param validateHFile if true hfiles will be validated for its format
    * @throws IOException If any I/O or network error occurred
    */
-  public void prepareHFileQueue(Path hfofDir, Table table, Deque<LoadQueueItem> queue,
+  public void prepareHFileQueue(Path hfilesDir, Table table, Deque<LoadQueueItem> queue,
       boolean validateHFile) throws IOException {
-    discoverLoadQueue(queue, hfofDir, validateHFile);
+    discoverLoadQueue(queue, hfilesDir, validateHFile);
     validateFamiliesInHFiles(table, queue);
   }
 
