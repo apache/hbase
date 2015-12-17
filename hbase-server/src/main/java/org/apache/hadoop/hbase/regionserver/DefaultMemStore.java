@@ -240,7 +240,7 @@ public class DefaultMemStore implements MemStore {
     // When we use ACL CP or Visibility CP which deals with Tags during
     // mutation, the TagRewriteCell.getTagsLength() is a cheaper call. We do not
     // parse the byte[] to identify the tags length.
-    if (!tagsPresent && (e.getTagsLength() > 0)) {
+    if(e.getTagsLength() > 0) {
       tagsPresent = true;
     }
     setOldestEditTimeToNow();
