@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,7 +35,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.mortbay.log.Log;
 
 /**
  * A client scanner for a region opened for read-only on the client side. Assumes region data
@@ -41,6 +42,8 @@ import org.mortbay.log.Log;
  */
 @InterfaceAudience.Private
 public class ClientSideRegionScanner extends AbstractClientScanner {
+
+  private static final Log LOG = LogFactory.getLog(ClientSideRegionScanner.class);
 
   private HRegion region;
   RegionScanner scanner;
@@ -96,7 +99,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
         this.scanner.close();
         this.scanner = null;
       } catch (IOException ex) {
-        Log.warn("Exception while closing scanner", ex);
+        LOG.warn("Exception while closing scanner", ex);
       }
     }
     if (this.region != null) {
@@ -105,7 +108,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
         this.region.close(true);
         this.region = null;
       } catch (IOException ex) {
-        Log.warn("Exception while closing region", ex);
+        LOG.warn("Exception while closing region", ex);
       }
     }
   }
