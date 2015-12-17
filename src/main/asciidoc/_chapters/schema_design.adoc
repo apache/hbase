@@ -76,6 +76,50 @@ When changes are made to either Tables or ColumnFamilies (e.g. region size, bloc
 
 See <<store,store>> for more information on StoreFiles.
 
+[[table_schema_rules_of_thumb]]
+== Table Schema Rules Of Thumb
+
+There are many different data sets, with different access patterns and service-level
+expectations. Therefore, these rules of thumb are only an overview. Read the rest
+of this chapter to get more details after you have gone through this list.
+
+* Aim to have regions sized between 10 and 50 GB.
+* Aim to have cells no larger than 10 MB, or 50 MB if you use <<mob>>. Otherwise,
+consider storing your cell data in HDFS and store a pointer to the data in HBase.
+* A typical schema has between 1 and 3 column families per table. HBase tables should
+not be designed to mimic RDBMS tables.
+* Around 50-100 regions is a good number for a table with 1 or 2 column families.
+Remember that a region is a contiguous segment of a column family.
+* Keep your column family names as short as possible. The column family names are
+stored for every value (ignoring prefix encoding). They should not be self-documenting
+and descriptive like in a typical RDBMS.
+* If you are storing time-based machine data or logging information, and the row key
+is based on device ID or service ID plus time, you can end up with a pattern where
+older data regions never have additional writes beyond a certain age. In this type
+of situation, you end up with a small number of active regions and a large number
+of older regions which have no new writes. For these situations, you can tolerate
+a larger number of regions because your resource consumption is driven by the active
+regions only.
+* If only one column family is busy with writes, only that column family accomulates
+memory. Be aware of write patterns when allocating resources.
+
+[[regionserver_sizing_rules_of_thumb]]
+= RegionServer Sizing Rules of Thumb
+
+Lars Hofhansl wrote a great
+link:http://hadoop-hbase.blogspot.com/2013/01/hbase-region-server-memory-sizing.html[blog post]
+about RegionServer memory sizing. The upshot is that you probably need more memory
+than you think you need. He goes into the impact of region size, memstore size, HDFS
+replication factor, and other things to check.
+
+[quote, Lars Hofhansl, http://hadoop-hbase.blogspot.com/2013/01/hbase-region-server-memory-sizing.html]
+____
+Personally I would place the maximum disk space per machine that can be served
+exclusively with HBase around 6T, unless you have a very read-heavy workload.
+In that case the Java heap should be 32GB (20G regions, 128M memstores, the rest
+defaults).
+____
+
 [[number.of.cfs]]
 ==  On the number of column families
 
