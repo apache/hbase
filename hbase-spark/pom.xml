@@ -537,6 +537,9 @@
                 <configuration>
                     <charset>${project.build.sourceEncoding}</charset>
                     <scalaVersion>${scala.version}</scalaVersion>
+                    <args>
+                        <arg>-feature</arg>
+                    </args>
                 </configuration>
                 <executions>
                     <execution>

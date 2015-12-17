@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.spark.datasources
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark.HBaseRelation
+import scala.language.implicitConversions
 
 // Resource and ReferencedResources are defined for extensibility,
 // e.g., consolidate scan and bulkGet in the future work.
