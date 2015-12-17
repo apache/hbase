@@ -24,6 +24,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -52,13 +54,15 @@ import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.mortbay.log.Log;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 @Category(SmallTests.class)
 public class TestHBaseAdminNoCluster {
+
+  private static final Log LOG = LogFactory.getLog(TestHBaseAdminNoCluster.class);
+
   /**
    * Verify that PleaseHoldException gets retried.
    * HBASE-8764
@@ -98,7 +102,7 @@ public class TestHBaseAdminNoCluster {
         admin.createTable(htd, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
         fail();
       } catch (RetriesExhaustedException e) {
-        Log.info("Expected fail", e);
+        LOG.info("Expected fail", e);
       }
       // Assert we were called 'count' times.
       Mockito.verify(masterAdmin, Mockito.atLeast(count)).createTable((RpcController)Mockito.any(),
@@ -316,7 +320,7 @@ public class TestHBaseAdminNoCluster {
         caller.call(admin); // invoke the HBaseAdmin method
         fail();
       } catch (RetriesExhaustedException e) {
-        Log.info("Expected fail", e);
+        LOG.info("Expected fail", e);
       }
       // Assert we were called 'count' times.
       caller.verify(masterAdmin, count);
