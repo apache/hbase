@@ -60,15 +60,14 @@ public class TestCellCounter {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
-    UTIL.startMiniMapReduceCluster();
     FQ_OUTPUT_DIR = new Path(OUTPUT_DIR).makeQualified(new LocalFileSystem());
     FileUtil.fullyDelete(new File(OUTPUT_DIR));
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

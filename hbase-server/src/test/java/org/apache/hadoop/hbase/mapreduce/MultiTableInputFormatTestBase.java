@@ -78,6 +78,7 @@ public abstract class MultiTableInputFormatTestBase {
   public static void setUpBeforeClass() throws Exception {
     // switch TIF to log at DEBUG level
     TEST_UTIL.enableDebug(MultiTableInputFormatBase.class);
+    TEST_UTIL.setJobWithoutMRCluster();
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
@@ -92,13 +93,10 @@ public abstract class MultiTableInputFormatTestBase {
           }
         }
     }
-    // start MR cluster
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -270,7 +268,8 @@ public abstract class MultiTableInputFormatTestBase {
     initJob(scans, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1); // one to get final "first" and "last" key
-    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
+    FileOutputFormat.setOutputPath(job,
+      new Path(TEST_UTIL.getDataTestDirOnTestFS(), job.getJobName()));
     LOG.info("Started " + job.getJobName());
     job.waitForCompletion(true);
     assertTrue(job.isSuccessful());

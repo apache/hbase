@@ -77,20 +77,18 @@ public class TestTableInputFormat {
   private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static MiniMRCluster mrCluster;
   static final byte[] FAMILY = Bytes.toBytes("family");
 
   private static final byte[][] columns = new byte[][] { FAMILY };
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
-    mrCluster = UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

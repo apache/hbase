@@ -176,6 +176,12 @@ public class HBaseCommonTestingUtility {
     return new Path(PathName);
   }
 
+  public Path getRandomDir() {
+    String randomStr = UUID.randomUUID().toString();
+    Path testPath = new Path(getBaseTestDir(), randomStr);
+    return testPath;
+  }
+
   /**
    * @param dir Directory to delete
    * @return True if we deleted it.
