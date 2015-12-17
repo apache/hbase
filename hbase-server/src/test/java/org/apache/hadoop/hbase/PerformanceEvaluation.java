@@ -1827,56 +1827,58 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println("Usage: java " + className + " \\");
     System.err.println("  <OPTIONS> [-D<property=value>]* <command> <nclients>");
     System.err.println();
-    System.err.println("Options:");
+    System.err.println("General Options:");
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
+    System.err.println(" oneCon          all the threads share the same connection. Default: False");
+    System.err.println(" sampleRate      Execute test on a sample of total " +
+      "rows. Only supported by randomRead. Default: 1.0");
+    System.err.println(" period          Report every 'period' rows: " +
+      "Default: opts.perClientRunRows / 10");
+    System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
+    System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
+      "Default: 0");
+    System.err.println(" latency         Set to report operation latencies. Default: False");
+    System.err.println(" measureAfter    Start to measure the latency once 'measureAfter'" +
+        " rows have been treated. Default: 0");
+    System.err.println(" valueSize       Pass value size to use: Default: 1024");
+    System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
+        "'valueSize'; set on read for stats on size: Default: Not set.");
+    System.err.println();
+    System.err.println("Table Creation / Write Tests:");
+    System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. " +
       "Default: 1.0.");
-    System.err.println(" sampleRate      Execute test on a sample of total " +
-      "rows. Only supported by randomRead. Default: 1.0");
-    System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
-      "Default: 0");
-    System.err.println(" table           Alternate table name. Default: 'TestTable'");
-    System.err.println(" multiGet        If >0, when doing RandomRead, perform multiple gets " +
-      "instead of single gets. Default: 0");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
       "Default: false");
+    System.err.println(" valueZipf       Set if we should vary value size between 0 and " +
+        "'valueSize' in zipf form: Default: Not set.");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" autoFlush       Set autoFlush on htable. Default: False");
-    System.err.println(" oneCon          all the threads share the same connection. Default: False");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
       "analysis (see guide).  Default: disabled");
-    System.err.println(" inmemory        Tries to keep the HFiles of the CF " +
-      "inmemory as far as possible. Not guaranteed that reads are always served " +
-      "from memory.  Default: false");
     System.err.println(" usetags         Writes tags along with KVs. Use with HFile V3. " +
       "Default: false");
     System.err.println(" numoftags       Specify the no of tags that would be needed. " +
        "This works only if usetags is true.");
+    System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
+    System.err.println(" columns         Columns to write per row. Default: 1");
+    System.err.println();
+    System.err.println("Read Tests:");
     System.err.println(" filterAll       Helps to filter out all the rows on the server side"
         + " there by not returning any thing back to the client.  Helps to check the server side"
         + " performance.  Uses FilterAllFilter internally. ");
-    System.err.println(" latency         Set to report operation latencies. Default: False");
-    System.err.println(" measureAfter    Start to measure the latency once 'measureAfter'" +
-        " rows have been treated. Default: 0");
-    System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
-    System.err.println(" valueSize       Pass value size to use: Default: 1024");
-    System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
-        "'valueSize'; set on read for stats on size: Default: Not set.");
-    System.err.println(" valueZipf       Set if we should vary value size between 0 and " +
-        "'valueSize' in zipf form: Default: Not set.");
-    System.err.println(" period          Report every 'period' rows: " +
-      "Default: opts.perClientRunRows / 10");
     System.err.println(" multiGet        Batch gets together into groups of N. Only supported " +
       "by randomRead. Default: disabled");
+    System.err.println(" inmemory        Tries to keep the HFiles of the CF " +
+      "inmemory as far as possible. Not guaranteed that reads are always served " +
+      "from memory.  Default: false");
+    System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
     System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
-    System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
-    System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
-    System.err.println(" columns         Columns to write per row. Default: 1");
     System.err.println(" caching         Scan caching to use. Default: 30");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
