@@ -581,6 +581,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     RpcCallContext context = RpcServer.getCurrentCall();
     IOException sizeIOE = null;
+    Object lastBlock = null;
     for (ClientProtos.Action action : actions.getActionList()) {
       ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = null;
       try {
@@ -588,7 +589,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         if (context != null
             && context.isRetryImmediatelySupported()
-            && context.getResponseCellSize() > maxQuotaResultSize) {
+            && (context.getResponseCellSize() > maxQuotaResultSize
+              || context.getResponseBlockSize() > maxQuotaResultSize)) {
 
           // We're storing the exception since the exception and reason string won't
           // change after the response size limit is reached.
@@ -597,15 +599,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             // Throwing will kill the JVM's JIT.
             //
             // Instead just create the exception and then store it.
-            sizeIOE = new MultiActionResultTooLarge("Max response size exceeded: "
-                    + context.getResponseCellSize());
+            sizeIOE = new MultiActionResultTooLarge("Max size exceeded"
+                + " CellSize: " + context.getResponseCellSize()
+                + " BlockSize: " + context.getResponseBlockSize());
 
             // Only report the exception once since there's only one request that
             // caused the exception. Otherwise this number will dominate the exceptions count.
             rpcServer.getMetrics().exception(sizeIOE);
           }
 
-          // Now that there's an exception is know to be created
+          // Now that there's an exception is known to be created
           // use it for the response.
           //
           // This will create a copy in the builder.
@@ -674,9 +677,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             pbResult = ProtobufUtil.toResult(r);
           }
-          if (context != null) {
-            context.incrementResponseCellSize(Result.getTotalSizeOfCells(r));
-          }
+          lastBlock = addSize(context, r, lastBlock);
           resultOrExceptionBuilder =
             ClientProtos.ResultOrException.newBuilder().setResult(pbResult);
         }
@@ -1001,6 +1002,32 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         new ScannerListener(scannerName));
     return scannerId;
   }
+
+  /**
+   * Method to account for the size of retained cells and retained data blocks.
+   * @return an object that represents the last referenced block from this response.
+   */
+  Object addSize(RpcCallContext context, Result r, Object lastBlock) {
+    if (context != null && !r.isEmpty()) {
+      for (Cell c : r.rawCells()) {
+        context.incrementResponseCellSize(CellUtil.estimatedHeapSizeOf(c));
+
+        // We're using the last block being the same as the current block as
+        // a proxy for pointing to a new block. This won't be exact.
+        // If there are multiple gets that bounce back and forth
+        // Then it's possible that this will over count the size of
+        // referenced blocks. However it's better to over count and
+        // use two rpcs than to OOME the regionserver.
+        byte[] rowArray = c.getRowArray();
+        if (rowArray != lastBlock) {
+          context.incrementResponseBlockSize(rowArray.length);
+          lastBlock = rowArray;
+        }
+      }
+    }
+    return lastBlock;
+  }
+
 
   /**
    * Find the HRegion based on a region specifier
@@ -2291,6 +2318,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean closeScanner = false;
       boolean isSmallScan = false;
       RpcCallContext context = RpcServer.getCurrentCall();
+      Object lastBlock = null;
+
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       if (request.hasCloseScanner()) {
         closeScanner = request.getCloseScanner();
@@ -2379,11 +2408,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               scanner, results, rows);
             if (!results.isEmpty()) {
               for (Result r : results) {
-                for (Cell cell : r.rawCells()) {
-                  if (context != null) {
-                    context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(cell));
-                  }
-                }
+                lastBlock = addSize(context, r, lastBlock);
               }
             }
             if (bypass != null && bypass.booleanValue()) {
@@ -2481,13 +2506,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   moreRows = scanner.nextRaw(values, scannerContext);
 
                   if (!values.isEmpty()) {
-                    for (Cell cell : values) {
-                      if (context != null) {
-                        context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(cell));
-                      }
-                    }
                     final boolean partial = scannerContext.partialResultFormed();
-                    results.add(Result.create(values, null, stale, partial));
+                    Result r = Result.create(values, null, stale, partial);
+                    lastBlock = addSize(context, r, lastBlock);
+                    results.add(r);
                     i++;
                   }
 

@@ -82,4 +82,7 @@ public interface RpcCallContext extends Delayable {
    * onerous.
    */
   void incrementResponseCellSize(long cellSize);
+
+  long getResponseBlockSize();
+  void incrementResponseBlockSize(long blockSize);
 }
