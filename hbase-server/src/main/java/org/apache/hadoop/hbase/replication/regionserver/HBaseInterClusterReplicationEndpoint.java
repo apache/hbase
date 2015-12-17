@@ -126,9 +126,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     int sleepMultiplier = 1;
 
     // Connect to peer cluster first, unless we have to stop
-    while (this.isRunning() && replicationSinkMgr.getSinks().size() == 0) {
+    while (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
       replicationSinkMgr.chooseSinks();
-      if (this.isRunning() && replicationSinkMgr.getSinks().size() == 0) {
+      if (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
         if (sleepForRetries("Waiting for peers", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -163,19 +163,24 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     List<Entry> entries = replicateContext.getEntries();
     String walGroupId = replicateContext.getWalGroupId();
     int sleepMultiplier = 1;
+    int numReplicated = 0;
 
     if (!peersSelected && this.isRunning()) {
       connectToPeers();
       peersSelected = true;
     }
 
-    if (replicationSinkMgr.getSinks().size() == 0) {
+    int numSinks = replicationSinkMgr.getNumSinks();
+    if (numSinks == 0) {
+      LOG.warn("No replication sinks found, returning without replicating. The source should retry"
+          + " with the same set of edits.");
       return false;
     }
+
     // minimum of: configured threads, number of 100-waledit batches,
     //  and number of current sinks
-    int n = Math.min(Math.min(this.maxThreads, entries.size()/100+1),
-      replicationSinkMgr.getSinks().size());
+    int n = Math.min(Math.min(this.maxThreads, entries.size()/100+1), numSinks);
+
     List<List<Entry>> entryLists = new ArrayList<List<Entry>>(n);
     if (n == 1) {
       entryLists.add(entries);
@@ -220,7 +225,11 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             // wait for all futures, remove successful parts
             // (only the remaining parts will be retried)
             Future<Integer> f = pool.take();
-            entryLists.set(f.get().intValue(), Collections.<Entry>emptyList());
+            int index = f.get().intValue();
+            int batchSize =  entryLists.get(index).size();
+            entryLists.set(index, Collections.<Entry>emptyList());
+            // Now, we have marked the batch as done replicating, record its size
+            numReplicated += batchSize;
           } catch (InterruptedException ie) {
             iox =  new IOException(ie);
           } catch (ExecutionException ee) {
@@ -231,6 +240,12 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         if (iox != null) {
           // if we had any exceptions, try again
           throw iox;
+        }
+        if (numReplicated != entries.size()) {
+          // Something went wrong here and we don't know what, let's just fail and retry.
+          LOG.warn("The number of edits replicated is different from the number received,"
+              + " failing for now.");
+          return false;
         }
         // update metrics
         this.metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),

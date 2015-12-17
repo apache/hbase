@@ -66,7 +66,7 @@ public class TestReplicationSinkManager {
 
     sinkManager.chooseSinks();
 
-    assertEquals(2, sinkManager.getSinks().size());
+    assertEquals(2, sinkManager.getNumSinks());
 
   }
 
@@ -80,7 +80,7 @@ public class TestReplicationSinkManager {
 
     sinkManager.chooseSinks();
 
-    assertEquals(1, sinkManager.getSinks().size());
+    assertEquals(1, sinkManager.getNumSinks());
   }
 
   @Test
@@ -92,14 +92,14 @@ public class TestReplicationSinkManager {
 
     sinkManager.chooseSinks();
     // Sanity check
-    assertEquals(1, sinkManager.getSinks().size());
+    assertEquals(1, sinkManager.getNumSinks());
 
     SinkPeer sinkPeer = new SinkPeer(serverNameA, mock(AdminService.BlockingInterface.class));
 
     sinkManager.reportBadSink(sinkPeer);
 
     // Just reporting a bad sink once shouldn't have an effect
-    assertEquals(1, sinkManager.getSinks().size());
+    assertEquals(1, sinkManager.getNumSinks());
 
   }
 
@@ -119,9 +119,9 @@ public class TestReplicationSinkManager {
 
     sinkManager.chooseSinks();
     // Sanity check
-    assertEquals(3, sinkManager.getSinks().size());
+    assertEquals(3, sinkManager.getNumSinks());
 
-    ServerName serverName = sinkManager.getSinks().get(0);
+    ServerName serverName = sinkManager.getSinksForTesting().get(0);
 
     SinkPeer sinkPeer = new SinkPeer(serverName, mock(AdminService.BlockingInterface.class));
 
@@ -132,12 +132,12 @@ public class TestReplicationSinkManager {
 
     // Reporting a bad sink more than the threshold count should remove it
     // from the list of potential sinks
-    assertEquals(2, sinkManager.getSinks().size());
+    assertEquals(2, sinkManager.getNumSinks());
 
     //
     // now try a sink that has some successes
     //
-    serverName = sinkManager.getSinks().get(0);
+    serverName = sinkManager.getSinksForTesting().get(0);
 
     sinkPeer = new SinkPeer(serverName, mock(AdminService.BlockingInterface.class));
     for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD-1; i++) {
@@ -147,17 +147,17 @@ public class TestReplicationSinkManager {
     sinkManager.reportBadSink(sinkPeer);
 
     // did not remove the sink, since we had one successful try
-    assertEquals(2, sinkManager.getSinks().size());
+    assertEquals(2, sinkManager.getNumSinks());
 
     for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD-2; i++) {
       sinkManager.reportBadSink(sinkPeer);
     }
     // still not remove, since the success reset the counter
-    assertEquals(2, sinkManager.getSinks().size());
+    assertEquals(2, sinkManager.getNumSinks());
 
     sinkManager.reportBadSink(sinkPeer);
     // but we exhausted the tries
-    assertEquals(1, sinkManager.getSinks().size());
+    assertEquals(1, sinkManager.getNumSinks());
   }
 
   @Test
@@ -173,7 +173,7 @@ public class TestReplicationSinkManager {
     sinkManager.chooseSinks();
     // Sanity check
 
-    List<ServerName> sinkList = sinkManager.getSinks();
+    List<ServerName> sinkList = sinkManager.getSinksForTesting();
     assertEquals(2, sinkList.size());
 
     ServerName serverNameA = sinkList.get(0);
@@ -189,7 +189,7 @@ public class TestReplicationSinkManager {
 
     // We've gone down to 0 good sinks, so the replication sinks
     // should have been refreshed now
-    assertEquals(2, sinkManager.getSinks().size());
+    assertEquals(2, sinkManager.getNumSinks());
   }
 
 }
