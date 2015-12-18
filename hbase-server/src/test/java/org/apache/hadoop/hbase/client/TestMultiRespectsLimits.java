@@ -75,7 +75,7 @@ public class TestMultiRespectsLimits {
     TEST_UTIL.loadTable(t, FAMILY, false);
 
     // Split the table to make sure that the chunking happens accross regions.
-    try (final Admin admin = TEST_UTIL.getAdmin()) {
+    try (final Admin admin = TEST_UTIL.getHBaseAdmin()) {
       admin.split(name);
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
@@ -139,7 +139,7 @@ public class TestMultiRespectsLimits {
     }
 
     // Make sure that a flush happens
-    try (final Admin admin = TEST_UTIL.getAdmin()) {
+    try (final Admin admin = TEST_UTIL.getHBaseAdmin()) {
       admin.flush(name);
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
