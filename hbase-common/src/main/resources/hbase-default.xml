@@ -1105,11 +1105,12 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
-    <description>A comma-separated list of Coprocessors that are loaded by
-    default on all tables. For any override coprocessor method, these classes
-    will be called in order. After implementing your own Coprocessor, just put
-    it in HBase's classpath and add the fully qualified class name here.
-    A coprocessor can also be loaded on demand by setting HTableDescriptor.</description>
+    <description>A comma-separated list of region observer or endpoint coprocessors
+    that are loaded by default on all tables. For any override coprocessor method,
+    these classes will be called in order. After implementing your own Coprocessor,
+    add it to HBase's classpath and add the fully qualified class name here.
+    A coprocessor can also be loaded on demand by setting HTableDescriptor or the
+    HBase shell.</description>
   </property>
   <property>
     <name>hbase.rest.port</name>
