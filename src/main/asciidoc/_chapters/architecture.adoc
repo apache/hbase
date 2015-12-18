@@ -1509,13 +1509,26 @@ Note that when the flush happens, MemStores that belong to the same region will 
 A MemStore flush can be triggered under any of the conditions listed below.
 The minimum flush unit is per region, not at individual MemStore level.
 
-. When a MemStore reaches the size specified by `hbase.hregion.memstore.flush.size`, all MemStores that belong to its region will be flushed out to disk.
-. When the overall MemStore usage reaches the value specified by `hbase.regionserver.global.memstore.upperLimit`, MemStores from various regions will be flushed out to disk to reduce overall MemStore usage in a RegionServer.
-  The flush order is based on the descending order of a region's MemStore usage.
-  Regions will have their MemStores flushed until the overall MemStore usage drops to or slightly below `hbase.regionserver.global.memstore.lowerLimit`.
-. When the number of WAL per region server reaches the value specified in `hbase.regionserver.max.logs`, MemStores from various regions will be flushed out to disk to reduce WAL count.
-  The flush order is based on time.
-  Regions with the oldest MemStores are flushed first until WAL count drops below `hbase.regionserver.max.logs`.
+. When a MemStore reaches the size specified by `hbase.hregion.memstore.flush.size`,
+  all MemStores that belong to its region will be flushed out to disk.
+
+. When the overall MemStore usage reaches the value specified by
+  `hbase.regionserver.global.memstore.upperLimit`, MemStores from various regions
+  will be flushed out to disk to reduce overall MemStore usage in a RegionServer.
++
+The flush order is based on the descending order of a region's MemStore usage.
++
+Regions will have their MemStores flushed until the overall MemStore usage drops
+to or slightly below `hbase.regionserver.global.memstore.lowerLimit`.
+
+. When the number of WAL log entries in a given region server's WAL reaches the
+  value specified in `hbase.regionserver.max.logs`, MemStores from various regions
+  will be flushed out to disk to reduce the number of logs in the WAL.
++
+The flush order is based on time.
++
+Regions with the oldest MemStores are flushed first until WAL count drops below
+`hbase.regionserver.max.logs`.
 
 [[hregion.scans]]
 ==== Scans
