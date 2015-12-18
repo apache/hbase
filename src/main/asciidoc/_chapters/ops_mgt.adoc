@@ -1361,7 +1361,10 @@ list_peers:: list all replication relationships known by this cluster
 enable_peer <ID>::
   Enable a previously-disabled replication relationship
 disable_peer <ID>::
-  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled.
+  Disable a replication relationship. HBase will no longer send edits to that
+  peer cluster, but it still keeps track of all the new WALs that it will need
+  to replicate if and when it is re-enabled. WALs are retained when enabling or disabling
+  replication as long as peers exist.
 remove_peer <ID>::
   Disable and remove a replication relationship. HBase will no longer send edits to that peer cluster or keep track of WALs.
 enable_table_replication <TABLE_NAME>::
@@ -1500,6 +1503,8 @@ This TTL-based method does not work well with replication, because archived logs
 The default behavior is augmented so that if a log is past its TTL, the cleaning thread looks up every queue until it finds the log, while caching queues it has found.
 If the log is not found in any queues, the log will be deleted.
 The next time the cleaning process needs to look for a log, it starts by using its cached list.
+
+NOTE: WALs are saved when replication is enabled or disabled as long as peers exist.
 
 [[rs.failover.details]]
 ==== Region Server Failover
