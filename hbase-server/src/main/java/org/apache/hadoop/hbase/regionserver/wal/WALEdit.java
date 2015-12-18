@@ -99,7 +99,7 @@ public class WALEdit implements Writable, HeapSize {
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
-  private final ArrayList<Cell> cells = new ArrayList<Cell>(1);
+  private ArrayList<Cell> cells = new ArrayList<Cell>(1);
 
   public static final WALEdit EMPTY_WALEDIT = new WALEdit();
 
@@ -168,6 +168,18 @@ public class WALEdit implements Writable, HeapSize {
 
   public ArrayList<Cell> getCells() {
     return cells;
+  }
+
+  /**
+   * This is not thread safe.
+   * This will change the WALEdit and shouldn't be used unless you are sure that nothing
+   * else depends on the contents being immutable.
+   *
+   * @param cells the list of cells that this WALEdit now contains.
+   */
+  @InterfaceAudience.Private
+  public void setCells(ArrayList<Cell> cells) {
+    this.cells = cells;
   }
 
   public NavigableMap<byte[], Integer> getAndRemoveScopes() {
