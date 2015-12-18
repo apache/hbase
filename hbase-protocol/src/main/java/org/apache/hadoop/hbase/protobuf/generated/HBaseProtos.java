@@ -17962,6 +17962,26 @@ public final class HBaseProtos {
      */
     com.google.protobuf.ByteString
         getSrcChecksumBytes();
+
+    // optional uint32 version_major = 7;
+    /**
+     * <code>optional uint32 version_major = 7;</code>
+     */
+    boolean hasVersionMajor();
+    /**
+     * <code>optional uint32 version_major = 7;</code>
+     */
+    int getVersionMajor();
+
+    // optional uint32 version_minor = 8;
+    /**
+     * <code>optional uint32 version_minor = 8;</code>
+     */
+    boolean hasVersionMinor();
+    /**
+     * <code>optional uint32 version_minor = 8;</code>
+     */
+    int getVersionMinor();
   }
   /**
    * Protobuf type {@code hbase.pb.VersionInfo}
@@ -18046,6 +18066,16 @@ public final class HBaseProtos {
             case 50: {
               bitField0_ |= 0x00000020;
               srcChecksum_ = input.readBytes();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              versionMajor_ = input.readUInt32();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              versionMinor_ = input.readUInt32();
               break;
             }
           }
@@ -18346,6 +18376,38 @@ public final class HBaseProtos {
       }
     }
 
+    // optional uint32 version_major = 7;
+    public static final int VERSION_MAJOR_FIELD_NUMBER = 7;
+    private int versionMajor_;
+    /**
+     * <code>optional uint32 version_major = 7;</code>
+     */
+    public boolean hasVersionMajor() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional uint32 version_major = 7;</code>
+     */
+    public int getVersionMajor() {
+      return versionMajor_;
+    }
+
+    // optional uint32 version_minor = 8;
+    public static final int VERSION_MINOR_FIELD_NUMBER = 8;
+    private int versionMinor_;
+    /**
+     * <code>optional uint32 version_minor = 8;</code>
+     */
+    public boolean hasVersionMinor() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional uint32 version_minor = 8;</code>
+     */
+    public int getVersionMinor() {
+      return versionMinor_;
+    }
+
     private void initFields() {
       version_ = "";
       url_ = "";
@@ -18353,6 +18415,8 @@ public final class HBaseProtos {
       user_ = "";
       date_ = "";
       srcChecksum_ = "";
+      versionMajor_ = 0;
+      versionMinor_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -18408,6 +18472,12 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(6, getSrcChecksumBytes());
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(7, versionMajor_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt32(8, versionMinor_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -18440,6 +18510,14 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, getSrcChecksumBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(7, versionMajor_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(8, versionMinor_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -18494,6 +18572,16 @@ public final class HBaseProtos {
         result = result && getSrcChecksum()
             .equals(other.getSrcChecksum());
       }
+      result = result && (hasVersionMajor() == other.hasVersionMajor());
+      if (hasVersionMajor()) {
+        result = result && (getVersionMajor()
+            == other.getVersionMajor());
+      }
+      result = result && (hasVersionMinor() == other.hasVersionMinor());
+      if (hasVersionMinor()) {
+        result = result && (getVersionMinor()
+            == other.getVersionMinor());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -18530,6 +18618,14 @@ public final class HBaseProtos {
       if (hasSrcChecksum()) {
         hash = (37 * hash) + SRC_CHECKSUM_FIELD_NUMBER;
         hash = (53 * hash) + getSrcChecksum().hashCode();
+      }
+      if (hasVersionMajor()) {
+        hash = (37 * hash) + VERSION_MAJOR_FIELD_NUMBER;
+        hash = (53 * hash) + getVersionMajor();
+      }
+      if (hasVersionMinor()) {
+        hash = (37 * hash) + VERSION_MINOR_FIELD_NUMBER;
+        hash = (53 * hash) + getVersionMinor();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -18656,6 +18752,10 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         srcChecksum_ = "";
         bitField0_ = (bitField0_ & ~0x00000020);
+        versionMajor_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        versionMinor_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -18708,6 +18808,14 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.srcChecksum_ = srcChecksum_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.versionMajor_ = versionMajor_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.versionMinor_ = versionMinor_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -18753,6 +18861,12 @@ public final class HBaseProtos {
           bitField0_ |= 0x00000020;
           srcChecksum_ = other.srcChecksum_;
           onChanged();
+        }
+        if (other.hasVersionMajor()) {
+          setVersionMajor(other.getVersionMajor());
+        }
+        if (other.hasVersionMinor()) {
+          setVersionMinor(other.getVersionMinor());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -19245,6 +19359,72 @@ public final class HBaseProtos {
   }
   bitField0_ |= 0x00000020;
         srcChecksum_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 version_major = 7;
+      private int versionMajor_ ;
+      /**
+       * <code>optional uint32 version_major = 7;</code>
+       */
+      public boolean hasVersionMajor() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional uint32 version_major = 7;</code>
+       */
+      public int getVersionMajor() {
+        return versionMajor_;
+      }
+      /**
+       * <code>optional uint32 version_major = 7;</code>
+       */
+      public Builder setVersionMajor(int value) {
+        bitField0_ |= 0x00000040;
+        versionMajor_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 version_major = 7;</code>
+       */
+      public Builder clearVersionMajor() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        versionMajor_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 version_minor = 8;
+      private int versionMinor_ ;
+      /**
+       * <code>optional uint32 version_minor = 8;</code>
+       */
+      public boolean hasVersionMinor() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional uint32 version_minor = 8;</code>
+       */
+      public int getVersionMinor() {
+        return versionMinor_;
+      }
+      /**
+       * <code>optional uint32 version_minor = 8;</code>
+       */
+      public Builder setVersionMinor(int value) {
+        bitField0_ |= 0x00000080;
+        versionMinor_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 version_minor = 8;</code>
+       */
+      public Builder clearVersionMinor() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        versionMinor_ = 0;
         onChanged();
         return this;
       }
@@ -20106,19 +20286,20 @@ public final class HBaseProtos {
       "\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_sig_bit" +
       "s\030\002 \002(\004\"T\n\023NamespaceDescriptor\022\014\n\004name\030\001" +
       " \002(\014\022/\n\rconfiguration\030\002 \003(\0132\030.hbase.pb.N",
-      "ameStringPair\"o\n\013VersionInfo\022\017\n\007version\030" +
-      "\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revision\030\003 \002(\t\022\014\n\004" +
-      "user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014src_checksum" +
-      "\030\006 \002(\t\"Q\n\020RegionServerInfo\022\020\n\010infoPort\030\001" +
-      " \001(\005\022+\n\014version_info\030\002 \001(\0132\025.hbase.pb.Ve" +
-      "rsionInfo*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLE" +
-      "SS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022" +
-      "\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO" +
-      "_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MI" +
-      "CROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SECOND",
-      "S\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\013HBaseProtosH\001\240\001\001"
+      "ameStringPair\"\235\001\n\013VersionInfo\022\017\n\007version" +
+      "\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revision\030\003 \002(\t\022\014\n" +
+      "\004user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014src_checksu" +
+      "m\030\006 \002(\t\022\025\n\rversion_major\030\007 \001(\r\022\025\n\rversio" +
+      "n_minor\030\010 \001(\r\"Q\n\020RegionServerInfo\022\020\n\010inf" +
+      "oPort\030\001 \001(\005\022+\n\014version_info\030\002 \001(\0132\025.hbas" +
+      "e.pb.VersionInfo*r\n\013CompareType\022\010\n\004LESS\020" +
+      "\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_E" +
+      "QUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020" +
+      "\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS\020",
+      "\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013\n" +
+      "\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DA" +
+      "YS\020\007B>\n*org.apache.hadoop.hbase.protobuf" +
+      ".generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -20274,7 +20455,7 @@ public final class HBaseProtos {
           internal_static_hbase_pb_VersionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_VersionInfo_descriptor,
-              new java.lang.String[] { "Version", "Url", "Revision", "User", "Date", "SrcChecksum", });
+              new java.lang.String[] { "Version", "Url", "Revision", "User", "Date", "SrcChecksum", "VersionMajor", "VersionMinor", });
           internal_static_hbase_pb_RegionServerInfo_descriptor =
             getDescriptor().getMessageTypes().get(25);
           internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable = new

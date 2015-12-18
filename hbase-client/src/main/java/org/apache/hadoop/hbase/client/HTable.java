@@ -438,7 +438,7 @@ public class HTable implements HTableInterface {
           try {
             ClientProtos.GetResponse response = getStub().get(controller, request);
             if (response == null) return null;
-            return ProtobufUtil.toResult(response.getResult());
+            return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           }

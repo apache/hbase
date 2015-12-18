@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -2100,7 +2101,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             ProtobufUtil.toResult(existence, region.getRegionInfo().getReplicaId() != 0);
         builder.setResult(pbr);
       } else if (r != null) {
-        ClientProtos.Result pbr = ProtobufUtil.toResult(r);
+        ClientProtos.Result pbr;
+        RpcCallContext call = RpcServer.getCurrentCall();
+        if (isClientCellBlockSupport(call) && controller instanceof PayloadCarryingRpcController
+            && VersionInfoUtil.hasMinimumVersion(call.getClientVersionInfo(), 1, 3)) {
+          pbr = ProtobufUtil.toResultNoData(r);
+          ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil.createCellScanner(r
+              .rawCells()));
+        } else {
+          pbr = ProtobufUtil.toResult(r);
+        }
         builder.setResult(pbr);
       }
       if (r != null) {
