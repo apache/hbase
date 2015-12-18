@@ -42,6 +42,18 @@ under the License.
     write data to HBase and run mapreduce jobs to process then store it back to
     HBase or external systems. Our production cluster has been running since Oct 2008.</dd>
 
+  <dt><a href="http://huaweibigdata.github.io/astro/">Project Astro</a></dt>
+  <dd>
+    Astro provides fast Spark SQL/DataFrame capabilities to HBase data,
+    featuring super-efficient access to multi-dimensional HBase rows through
+    native Spark execution in HBase coprocessor plus systematic and accurate
+    partition pruning and predicate pushdown from arbitrarily complex data
+    filtering logic. The batch load is optimized to run on the Spark execution
+    engine. Note that <a href="http://spark-packages.org/package/Huawei-Spark/Spark-SQL-on-HBase">Spark-SQL-on-HBase</a>
+    is the release site. Interested parties are free to make clones and claim
+    to be "latest(and active)", but they are not endorsed by the owner.
+  </dd>
+
   <dt><a href="http://axibase.com/products/axibase-time-series-database/">Axibase
     Time Series Database (ATSD)</a></dt>
   <dd>ATSD runs on top of HBase to collect, analyze and visualize time series
