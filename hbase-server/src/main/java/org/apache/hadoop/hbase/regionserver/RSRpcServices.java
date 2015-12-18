@@ -1011,17 +1011,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (context != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
         context.incrementResponseCellSize(CellUtil.estimatedHeapSizeOf(c));
-
         // We're using the last block being the same as the current block as
         // a proxy for pointing to a new block. This won't be exact.
         // If there are multiple gets that bounce back and forth
         // Then it's possible that this will over count the size of
         // referenced blocks. However it's better to over count and
-        // use two rpcs than to OOME the regionserver.
-        byte[] rowArray = c.getRowArray();
-        if (rowArray != lastBlock) {
-          context.incrementResponseBlockSize(rowArray.length);
-          lastBlock = rowArray;
+        // use two RPC's than to OOME the RegionServer.
+        byte[] valueArray = c.getValueArray();
+        if (valueArray != lastBlock) {
+          context.incrementResponseBlockSize(valueArray.length);
+          lastBlock = valueArray;
         }
       }
     }
