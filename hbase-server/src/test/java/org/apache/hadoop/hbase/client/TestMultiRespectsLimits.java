@@ -20,9 +20,12 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -110,7 +113,12 @@ public class TestMultiRespectsLimits {
   @Test
   public void testBlockMultiLimits() throws Exception {
     final TableName name = TableName.valueOf("testBlockMultiLimits");
-    Table t = TEST_UTIL.createTable(name, FAMILY);
+    HTableDescriptor desc = new HTableDescriptor(name);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
+    desc.addFamily(hcd);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    Table t = TEST_UTIL.getConnection().getTable(name);
 
     final HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     RpcServerInterface rpcServer = regionServer.getRpcServer();
@@ -122,14 +130,16 @@ public class TestMultiRespectsLimits {
     byte[][] cols = new byte[][]{
         Bytes.toBytes("0"), // Get this
         Bytes.toBytes("1"), // Buffer
-        Bytes.toBytes("2"), // Get This
-        Bytes.toBytes("3"), // Buffer
+        Bytes.toBytes("2"), // Buffer
+        Bytes.toBytes("3"), // Get This
+        Bytes.toBytes("4"), // Buffer
+        Bytes.toBytes("5"), // Buffer
     };
 
     // Set the value size so that one result will be less than the MAX_SIE
     // however the block being reference will be larger than MAX_SIZE.
     // This should cause the regionserver to try and send a result immediately.
-    byte[] value = new byte[MAX_SIZE - 200];
+    byte[] value = new byte[MAX_SIZE - 100];
     ThreadLocalRandom.current().nextBytes(value);
 
     for (byte[] col:cols) {
@@ -155,7 +165,7 @@ public class TestMultiRespectsLimits {
     gets.add(g0);
 
     Get g2 = new Get(row);
-    g2.addColumn(FAMILY, cols[2]);
+    g2.addColumn(FAMILY, cols[3]);
     gets.add(g2);
 
     Result[] results = t.get(gets);
