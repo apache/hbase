@@ -3253,7 +3253,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         scannerName = String.valueOf(scannerId);
         ttl = this.scannerLeaseTimeoutPeriod;
       }
-
+      if (request.hasRenew() && request.getRenew()) {
+        lease = leases.removeLease(scannerName);
+        if (lease != null && scanners.containsKey(scannerName)) {
+          leases.addLease(lease);
+        }
+        return builder.build();
+      }
       if (rows > 0) {
         // if nextCallSeq does not match throw Exception straight away. This needs to be
         // performed even before checking of Lease.

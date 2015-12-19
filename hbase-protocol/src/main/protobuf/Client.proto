@@ -254,6 +254,8 @@ message ScanRequest {
   optional uint32 number_of_rows = 4;
   optional bool close_scanner = 5;
   optional uint64 next_call_seq = 6;
+  // index 10 to match later versions
+  optional bool renew = 10 [default = false];
 }
 
 /**
