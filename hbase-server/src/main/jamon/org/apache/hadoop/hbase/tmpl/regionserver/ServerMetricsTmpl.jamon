@@ -18,10 +18,12 @@ limitations under the License.
 </%doc>
 <%args>
 MetricsRegionServerWrapper mWrap;
+MetricsHBaseServerWrapper mServerWrap;
 </%args>
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
+org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapper;
 org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.HRegionInfo;
@@ -62,7 +64,7 @@ java.lang.management.ManagementFactory;
             <& storeStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="tab_queueStats">
-            <& queueStats; mWrap = mWrap  &>
+            <& queueStats; mWrap = mWrap; mServerWrap = mServerWrap; &>
         </div>
     </div>
 </div>
@@ -183,16 +185,20 @@ MetricsRegionServerWrapper mWrap;
 <%def queueStats>
 <%args>
 MetricsRegionServerWrapper mWrap;
+MetricsHBaseServerWrapper mServerWrap;
 </%args>
 <table class="table table-striped">
 <tr>
     <th>Compaction Queue Size</th>
     <th>Flush Queue Size</th>
+    <th>Call Queue Size (bytes)</th>
 
 </tr>
 <tr>
     <td><% mWrap.getCompactionQueueSize() %></td>
     <td><% mWrap.getFlushQueueSize() %></td>
+    <td><% StringUtils.TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(),
+      "", 1) %></td>
 </tr>
 </table>
 </%def>

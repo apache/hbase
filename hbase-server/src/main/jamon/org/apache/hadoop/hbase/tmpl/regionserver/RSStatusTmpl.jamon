@@ -104,7 +104,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 
     <section>
     <h2>Server Metrics</h2>
-    <& ServerMetricsTmpl; mWrap = regionServer.getMetrics().getRegionServerWrapper(); &>
+    <& ServerMetricsTmpl; mWrap = regionServer.getMetrics().getRegionServerWrapper(); mServerWrap = regionServer.getRpcServer().getMetrics().getHBaseServerWrapper(); &>
     </section>
 
     <section>
