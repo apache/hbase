@@ -72,6 +72,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected long scannerId = -1L;
   protected boolean instantiated = false;
   protected boolean closed = false;
+  protected boolean renew = false;
   private Scan scan;
   private int caching = 1;
   protected final ClusterConnection cConnection;
@@ -209,7 +210,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           incRPCcallsMetrics();
           request =
               RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
-                this.scanMetrics != null);
+                this.scanMetrics != null, renew);
           ScanResponse response = null;
           controller = controllerFactory.newController();
           controller.setPriority(getTableName());
@@ -411,6 +412,15 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   public void setClose() {
     this.closed = true;
+  }
+
+  /**
+   * Indicate whether we make a call only to renew the lease, but without affected the scanner in
+   * any other way.
+   * @param val true if only the lease should be renewed
+   */
+  public void setRenew(boolean val) {
+    this.renew = val;
   }
 
   /**
