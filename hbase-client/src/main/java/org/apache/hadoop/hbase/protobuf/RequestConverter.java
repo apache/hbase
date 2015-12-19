@@ -497,7 +497,8 @@ public final class RequestConverter {
    * @return a scan request
    */
   public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
-      final boolean closeScanner, final long nextCallSeq, final boolean trackMetrics) {
+      final boolean closeScanner, final long nextCallSeq, final boolean trackMetrics,
+      final boolean renew) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
@@ -506,6 +507,7 @@ public final class RequestConverter {
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
     builder.setTrackScanMetrics(trackMetrics);
+    builder.setRenew(renew);
     return builder.build();
   }
 

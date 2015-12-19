@@ -17171,6 +17171,16 @@ public final class ClientProtos {
      * <code>optional bool track_scan_metrics = 9;</code>
      */
     boolean getTrackScanMetrics();
+
+    // optional bool renew = 10 [default = false];
+    /**
+     * <code>optional bool renew = 10 [default = false];</code>
+     */
+    boolean hasRenew();
+    /**
+     * <code>optional bool renew = 10 [default = false];</code>
+     */
+    boolean getRenew();
   }
   /**
    * Protobuf type {@code hbase.pb.ScanRequest}
@@ -17295,6 +17305,11 @@ public final class ClientProtos {
             case 72: {
               bitField0_ |= 0x00000100;
               trackScanMetrics_ = input.readBool();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              renew_ = input.readBool();
               break;
             }
           }
@@ -17493,6 +17508,22 @@ public final class ClientProtos {
       return trackScanMetrics_;
     }
 
+    // optional bool renew = 10 [default = false];
+    public static final int RENEW_FIELD_NUMBER = 10;
+    private boolean renew_;
+    /**
+     * <code>optional bool renew = 10 [default = false];</code>
+     */
+    public boolean hasRenew() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional bool renew = 10 [default = false];</code>
+     */
+    public boolean getRenew() {
+      return renew_;
+    }
+
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
@@ -17503,6 +17534,7 @@ public final class ClientProtos {
       clientHandlesPartials_ = false;
       clientHandlesHeartbeats_ = false;
       trackScanMetrics_ = false;
+      renew_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -17555,6 +17587,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeBool(9, trackScanMetrics_);
       }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeBool(10, renew_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -17599,6 +17634,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(9, trackScanMetrics_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(10, renew_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -17668,6 +17707,11 @@ public final class ClientProtos {
         result = result && (getTrackScanMetrics()
             == other.getTrackScanMetrics());
       }
+      result = result && (hasRenew() == other.hasRenew());
+      if (hasRenew()) {
+        result = result && (getRenew()
+            == other.getRenew());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -17716,6 +17760,10 @@ public final class ClientProtos {
       if (hasTrackScanMetrics()) {
         hash = (37 * hash) + TRACK_SCAN_METRICS_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getTrackScanMetrics());
+      }
+      if (hasRenew()) {
+        hash = (37 * hash) + RENEW_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getRenew());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -17867,6 +17915,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000080);
         trackScanMetrics_ = false;
         bitField0_ = (bitField0_ & ~0x00000100);
+        renew_ = false;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
 
@@ -17939,6 +17989,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000100;
         }
         result.trackScanMetrics_ = trackScanMetrics_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.renew_ = renew_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -17981,6 +18035,9 @@ public final class ClientProtos {
         }
         if (other.hasTrackScanMetrics()) {
           setTrackScanMetrics(other.getTrackScanMetrics());
+        }
+        if (other.hasRenew()) {
+          setRenew(other.getRenew());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -18482,6 +18539,39 @@ public final class ClientProtos {
       public Builder clearTrackScanMetrics() {
         bitField0_ = (bitField0_ & ~0x00000100);
         trackScanMetrics_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool renew = 10 [default = false];
+      private boolean renew_ ;
+      /**
+       * <code>optional bool renew = 10 [default = false];</code>
+       */
+      public boolean hasRenew() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional bool renew = 10 [default = false];</code>
+       */
+      public boolean getRenew() {
+        return renew_;
+      }
+      /**
+       * <code>optional bool renew = 10 [default = false];</code>
+       */
+      public Builder setRenew(boolean value) {
+        bitField0_ |= 0x00000200;
+        renew_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool renew = 10 [default = false];</code>
+       */
+      public Builder clearRenew() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        renew_ = false;
         onChanged();
         return this;
       }
@@ -34156,76 +34246,76 @@ public final class ClientProtos {
       " \001(\0162\025.hbase.pb.Consistency:\006STRONG\022\017\n\007c" +
       "aching\030\021 \001(\r\022\035\n\025allow_partial_results\030\022 " +
       "\001(\010\0226\n\rcf_time_range\030\023 \003(\0132\037.hbase.pb.Co" +
-      "lumnFamilyTimeRange\"\220\002\n\013ScanRequest\022)\n\006r" +
+      "lumnFamilyTimeRange\"\246\002\n\013ScanRequest\022)\n\006r" +
       "egion\030\001 \001(\0132\031.hbase.pb.RegionSpecifier\022\034",
       "\n\004scan\030\002 \001(\0132\016.hbase.pb.Scan\022\022\n\nscanner_" +
       "id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rclos" +
       "e_scanner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\022\037" +
       "\n\027client_handles_partials\030\007 \001(\010\022!\n\031clien" +
       "t_handles_heartbeats\030\010 \001(\010\022\032\n\022track_scan" +
-      "_metrics\030\t \001(\010\"\232\002\n\014ScanResponse\022\030\n\020cells" +
-      "_per_result\030\001 \003(\r\022\022\n\nscanner_id\030\002 \001(\004\022\024\n" +
-      "\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022!\n\007resu" +
-      "lts\030\005 \003(\0132\020.hbase.pb.Result\022\r\n\005stale\030\006 \001" +
-      "(\010\022\037\n\027partial_flag_per_result\030\007 \003(\010\022\036\n\026m",
-      "ore_results_in_region\030\010 \001(\010\022\031\n\021heartbeat" +
-      "_message\030\t \001(\010\022+\n\014scan_metrics\030\n \001(\0132\025.h" +
-      "base.pb.ScanMetrics\"\305\001\n\024BulkLoadHFileReq" +
-      "uest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSp" +
-      "ecifier\022>\n\013family_path\030\002 \003(\0132).hbase.pb." +
-      "BulkLoadHFileRequest.FamilyPath\022\026\n\016assig" +
-      "n_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030" +
-      "\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileResp" +
-      "onse\022\016\n\006loaded\030\001 \002(\010\"a\n\026CoprocessorServi" +
-      "ceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002(",
-      "\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"" +
-      "B\n\030CoprocessorServiceResult\022&\n\005value\030\001 \001" +
-      "(\0132\027.hbase.pb.NameBytesPair\"v\n\031Coprocess" +
-      "orServiceRequest\022)\n\006region\030\001 \002(\0132\031.hbase" +
-      ".pb.RegionSpecifier\022.\n\004call\030\002 \002(\0132 .hbas" +
-      "e.pb.CoprocessorServiceCall\"o\n\032Coprocess" +
-      "orServiceResponse\022)\n\006region\030\001 \002(\0132\031.hbas" +
-      "e.pb.RegionSpecifier\022&\n\005value\030\002 \002(\0132\027.hb" +
-      "ase.pb.NameBytesPair\"\226\001\n\006Action\022\r\n\005index" +
-      "\030\001 \001(\r\022)\n\010mutation\030\002 \001(\0132\027.hbase.pb.Muta",
-      "tionProto\022\032\n\003get\030\003 \001(\0132\r.hbase.pb.Get\0226\n" +
-      "\014service_call\030\004 \001(\0132 .hbase.pb.Coprocess" +
-      "orServiceCall\"k\n\014RegionAction\022)\n\006region\030" +
-      "\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\016\n\006atom" +
-      "ic\030\002 \001(\010\022 \n\006action\030\003 \003(\0132\020.hbase.pb.Acti" +
-      "on\"c\n\017RegionLoadStats\022\027\n\014memstoreLoad\030\001 " +
-      "\001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022comp" +
-      "actionPressure\030\003 \001(\005:\0010\"\332\001\n\021ResultOrExce" +
-      "ption\022\r\n\005index\030\001 \001(\r\022 \n\006result\030\002 \001(\0132\020.h" +
-      "base.pb.Result\022*\n\texception\030\003 \001(\0132\027.hbas",
-      "e.pb.NameBytesPair\022:\n\016service_result\030\004 \001" +
-      "(\0132\".hbase.pb.CoprocessorServiceResult\022," +
-      "\n\tloadStats\030\005 \001(\0132\031.hbase.pb.RegionLoadS" +
-      "tats\"x\n\022RegionActionResult\0226\n\021resultOrEx" +
-      "ception\030\001 \003(\0132\033.hbase.pb.ResultOrExcepti" +
-      "on\022*\n\texception\030\002 \001(\0132\027.hbase.pb.NameByt" +
-      "esPair\"x\n\014MultiRequest\022,\n\014regionAction\030\001" +
-      " \003(\0132\026.hbase.pb.RegionAction\022\022\n\nnonceGro" +
-      "up\030\002 \001(\004\022&\n\tcondition\030\003 \001(\0132\023.hbase.pb.C" +
-      "ondition\"\\\n\rMultiResponse\0228\n\022regionActio",
-      "nResult\030\001 \003(\0132\034.hbase.pb.RegionActionRes" +
-      "ult\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consistency\022\n\n" +
-      "\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\203\004\n\rClientServic" +
-      "e\0222\n\003Get\022\024.hbase.pb.GetRequest\032\025.hbase.p" +
-      "b.GetResponse\022;\n\006Mutate\022\027.hbase.pb.Mutat" +
-      "eRequest\032\030.hbase.pb.MutateResponse\0225\n\004Sc" +
-      "an\022\025.hbase.pb.ScanRequest\032\026.hbase.pb.Sca" +
-      "nResponse\022P\n\rBulkLoadHFile\022\036.hbase.pb.Bu" +
-      "lkLoadHFileRequest\032\037.hbase.pb.BulkLoadHF" +
-      "ileResponse\022X\n\013ExecService\022#.hbase.pb.Co",
-      "processorServiceRequest\032$.hbase.pb.Copro" +
-      "cessorServiceResponse\022d\n\027ExecRegionServe" +
-      "rService\022#.hbase.pb.CoprocessorServiceRe" +
+      "_metrics\030\t \001(\010\022\024\n\005renew\030\n \001(\010:\005false\"\232\002\n" +
+      "\014ScanResponse\022\030\n\020cells_per_result\030\001 \003(\r\022" +
+      "\022\n\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(" +
+      "\010\022\013\n\003ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase." +
+      "pb.Result\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag",
+      "_per_result\030\007 \003(\010\022\036\n\026more_results_in_reg" +
+      "ion\030\010 \001(\010\022\031\n\021heartbeat_message\030\t \001(\010\022+\n\014" +
+      "scan_metrics\030\n \001(\0132\025.hbase.pb.ScanMetric" +
+      "s\"\305\001\n\024BulkLoadHFileRequest\022)\n\006region\030\001 \002" +
+      "(\0132\031.hbase.pb.RegionSpecifier\022>\n\013family_" +
+      "path\030\002 \003(\0132).hbase.pb.BulkLoadHFileReque" +
+      "st.FamilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n" +
+      "\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(" +
+      "\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002" +
+      "(\010\"a\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(",
+      "\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013method_name\030\003" +
+      " \002(\t\022\017\n\007request\030\004 \002(\014\"B\n\030CoprocessorServ" +
+      "iceResult\022&\n\005value\030\001 \001(\0132\027.hbase.pb.Name" +
+      "BytesPair\"v\n\031CoprocessorServiceRequest\022)" +
+      "\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifie" +
+      "r\022.\n\004call\030\002 \002(\0132 .hbase.pb.CoprocessorSe" +
+      "rviceCall\"o\n\032CoprocessorServiceResponse\022" +
+      ")\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifi" +
+      "er\022&\n\005value\030\002 \002(\0132\027.hbase.pb.NameBytesPa" +
+      "ir\"\226\001\n\006Action\022\r\n\005index\030\001 \001(\r\022)\n\010mutation",
+      "\030\002 \001(\0132\027.hbase.pb.MutationProto\022\032\n\003get\030\003" +
+      " \001(\0132\r.hbase.pb.Get\0226\n\014service_call\030\004 \001(" +
+      "\0132 .hbase.pb.CoprocessorServiceCall\"k\n\014R" +
+      "egionAction\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R" +
+      "egionSpecifier\022\016\n\006atomic\030\002 \001(\010\022 \n\006action" +
+      "\030\003 \003(\0132\020.hbase.pb.Action\"c\n\017RegionLoadSt" +
+      "ats\022\027\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\rheapOccu" +
+      "pancy\030\002 \001(\005:\0010\022\035\n\022compactionPressure\030\003 \001" +
+      "(\005:\0010\"\332\001\n\021ResultOrException\022\r\n\005index\030\001 \001" +
+      "(\r\022 \n\006result\030\002 \001(\0132\020.hbase.pb.Result\022*\n\t",
+      "exception\030\003 \001(\0132\027.hbase.pb.NameBytesPair" +
+      "\022:\n\016service_result\030\004 \001(\0132\".hbase.pb.Copr" +
+      "ocessorServiceResult\022,\n\tloadStats\030\005 \001(\0132" +
+      "\031.hbase.pb.RegionLoadStats\"x\n\022RegionActi" +
+      "onResult\0226\n\021resultOrException\030\001 \003(\0132\033.hb" +
+      "ase.pb.ResultOrException\022*\n\texception\030\002 " +
+      "\001(\0132\027.hbase.pb.NameBytesPair\"x\n\014MultiReq" +
+      "uest\022,\n\014regionAction\030\001 \003(\0132\026.hbase.pb.Re" +
+      "gionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tcondit" +
+      "ion\030\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMultiR",
+      "esponse\0228\n\022regionActionResult\030\001 \003(\0132\034.hb" +
+      "ase.pb.RegionActionResult\022\021\n\tprocessed\030\002" +
+      " \001(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010TIMEL" +
+      "INE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.hbase.p" +
+      "b.GetRequest\032\025.hbase.pb.GetResponse\022;\n\006M" +
+      "utate\022\027.hbase.pb.MutateRequest\032\030.hbase.p" +
+      "b.MutateResponse\0225\n\004Scan\022\025.hbase.pb.Scan" +
+      "Request\032\026.hbase.pb.ScanResponse\022P\n\rBulkL" +
+      "oadHFile\022\036.hbase.pb.BulkLoadHFileRequest" +
+      "\032\037.hbase.pb.BulkLoadHFileResponse\022X\n\013Exe",
+      "cService\022#.hbase.pb.CoprocessorServiceRe" +
       "quest\032$.hbase.pb.CoprocessorServiceRespo" +
-      "nse\0228\n\005Multi\022\026.hbase.pb.MultiRequest\032\027.h" +
-      "base.pb.MultiResponseBB\n*org.apache.hado" +
-      "op.hbase.protobuf.generatedB\014ClientProto" +
-      "sH\001\210\001\001\240\001\001"
+      "nse\022d\n\027ExecRegionServerService\022#.hbase.p" +
+      "b.CoprocessorServiceRequest\032$.hbase.pb.C" +
+      "oprocessorServiceResponse\0228\n\005Multi\022\026.hba" +
+      "se.pb.MultiRequest\032\027.hbase.pb.MultiRespo" +
+      "nseBB\n*org.apache.hadoop.hbase.protobuf." +
+      "generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -34321,7 +34411,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_ScanRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ScanRequest_descriptor,
-              new java.lang.String[] { "Region", "Scan", "ScannerId", "NumberOfRows", "CloseScanner", "NextCallSeq", "ClientHandlesPartials", "ClientHandlesHeartbeats", "TrackScanMetrics", });
+              new java.lang.String[] { "Region", "Scan", "ScannerId", "NumberOfRows", "CloseScanner", "NextCallSeq", "ClientHandlesPartials", "ClientHandlesHeartbeats", "TrackScanMetrics", "Renew", });
           internal_static_hbase_pb_ScanResponse_descriptor =
             getDescriptor().getMessageTypes().get(13);
           internal_static_hbase_pb_ScanResponse_fieldAccessorTable = new

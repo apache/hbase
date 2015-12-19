@@ -2517,6 +2517,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         ttl = this.scannerLeaseTimeoutPeriod;
       }
       assert scanner != null;
+      if (request.hasRenew() && request.getRenew()) {
+        lease = regionServer.leases.removeLease(scannerName);
+        if (lease != null && scanners.containsKey(scannerName)) {
+          regionServer.leases.addLease(lease);
+        }
+        return builder.build();
+      }
       RpcCallContext context = RpcServer.getCurrentCall();
       Object lastBlock = null;
 
