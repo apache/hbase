@@ -97,6 +97,10 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     currentScannerCallable.setClose();
   }
 
+  public void setRenew(boolean val) {
+    currentScannerCallable.setRenew(val);
+  }
+
   public void setCaching(int caching) {
     currentScannerCallable.setCaching(caching);
   }

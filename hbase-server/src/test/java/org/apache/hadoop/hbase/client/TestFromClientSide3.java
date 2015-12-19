@@ -487,29 +487,4 @@ public class TestFromClientSide3 {
     assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
     table.close();
   }
-
-  @Test
-  public void testLeaseRenewal() throws Exception {
-    HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testLeaseRenewal"), FAMILY);
-    Put p = new Put(ROW_BYTES);
-    p.add(FAMILY, COL_QUAL, VAL_BYTES);
-    table.put(p);
-    p = new Put(ANOTHERROW);
-    p.add(FAMILY, COL_QUAL, VAL_BYTES);
-    table.put(p);
-    Scan s = new Scan();
-    s.setCaching(1);
-    ResultScanner rs = table.getScanner(s);
-    // make sure that calling renewLease does not impact the scan results
-    assertTrue(((AbstractClientScanner)rs).renewLease());
-    assertTrue(Arrays.equals(rs.next().getRow(), ANOTHERROW));
-    assertTrue(((AbstractClientScanner)rs).renewLease());
-    assertTrue(Arrays.equals(rs.next().getRow(), ROW_BYTES));
-    assertTrue(((AbstractClientScanner)rs).renewLease());
-    assertNull(rs.next());
-    assertFalse(((AbstractClientScanner)rs).renewLease());
-    rs.close();
-    table.close();
-  }
 }
