@@ -44,6 +44,14 @@ public final class VersionInfoUtil {
                                           int major,
                                           int minor) {
     if (versionInfo != null) {
+      if (versionInfo.hasVersionMajor() && versionInfo.hasVersionMinor()) {
+        int clientMajor = versionInfo.getVersionMajor();
+        if (clientMajor != major) {
+          return clientMajor > major;
+        }
+        int clientMinor = versionInfo.getVersionMinor();
+        return clientMinor >= minor;
+      }
       try {
         String[] components = versionInfo.getVersion().split("\\.");
 

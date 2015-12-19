@@ -227,6 +227,8 @@ message VersionInfo {
   required string user = 4;
   required string date = 5;
   required string src_checksum = 6;
+  optional uint32 version_major = 7;
+  optional uint32 version_minor = 8;
 }
 
 /**

@@ -3210,7 +3210,13 @@ public final class ProtobufUtil {
    */
   public static HBaseProtos.VersionInfo getVersionInfo() {
     HBaseProtos.VersionInfo.Builder builder = HBaseProtos.VersionInfo.newBuilder();
-    builder.setVersion(VersionInfo.getVersion());
+    String version = VersionInfo.getVersion();
+    builder.setVersion(version);
+    String[] components = version.split("\\.");
+    if (components != null && components.length > 2) {
+      builder.setVersionMajor(Integer.parseInt(components[0]));
+      builder.setVersionMinor(Integer.parseInt(components[1]));
+    }
     builder.setUrl(VersionInfo.getUrl());
     builder.setRevision(VersionInfo.getRevision());
     builder.setUser(VersionInfo.getUser());
