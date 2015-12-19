@@ -17,29 +17,16 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
-import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
-
-import org.apache.hadoop.conf.Configuration
-
-import scala.util.control.NonFatal
-
-class SerializableConfiguration(@transient var value: Configuration) extends Serializable {
-  private def writeObject(out: ObjectOutputStream): Unit = tryOrIOException {
-    out.defaultWriteObject()
-    value.write(out)
-  }
-
-  private def readObject(in: ObjectInputStream): Unit = tryOrIOException {
-    value = new Configuration(false)
-    value.readFields(in)
-  }
-
-  def tryOrIOException(block: => Unit) {
-    try {
-      block
-    } catch {
-      case e: IOException => throw e
-      case NonFatal(t) => throw new IOException(t)
-    }
-  }
+object HBaseSparkConf{
+  // This is the hbase configuration. User can either set them in SparkConf, which
+  // will take effect globally, or configure it per table, which will overwrite the value
+  // set in SparkConf. If not setted, the default value will take effect.
+  val BLOCK_CACHE_ENABLE = "spark.hbase.blockcache.enable"
+  // default block cache is set to true by default following hbase convention, but note that
+  // this potentially may slow down the system
+  val defaultBlockCacheEnable = true
+  val CACHE_SIZE = "spark.hbase.cacheSize"
+  val defaultCachingSize = 1000
+  val BATCH_NUM = "spark.hbase.batchNum"
+  val defaultBatchNum = 1000
 }

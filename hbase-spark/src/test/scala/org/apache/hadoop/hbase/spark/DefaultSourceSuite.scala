@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.spark
 
 import org.apache.hadoop.hbase.client.{Put, ConnectionFactory}
+import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{TableNotFoundException, TableName, HBaseTestingUtility}
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkContext, Logging}
+import org.apache.spark.{SparkConf, SparkContext, Logging}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 
 class DefaultSourceSuite extends FunSuite with
@@ -57,8 +58,11 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     logInfo(" - creating table " + t2TableName)
     TEST_UTIL.createTable(TableName.valueOf(t2TableName), Bytes.toBytes(columnFamily))
     logInfo(" - created table")
-
-    sc = new SparkContext("local", "test")
+    val sparkConf = new SparkConf
+    sparkConf.set(HBaseSparkConf.BLOCK_CACHE_ENABLE, "true")
+    sparkConf.set(HBaseSparkConf.BATCH_NUM, "100")
+    sparkConf.set(HBaseSparkConf.CACHE_SIZE, "100")
+    sc  = new SparkContext("local", "test", sparkConf)
 
     val connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration)
     try {
@@ -139,18 +143,14 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
       Map("hbase.columns.mapping" ->
         "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
-        "hbase.table" -> "t1",
-        "hbase.batching.num" -> "100",
-        "cachingNum" -> "100"))
+        "hbase.table" -> "t1"))
 
     df.registerTempTable("hbaseTable1")
 
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
       Map("hbase.columns.mapping" ->
         "KEY_FIELD INT :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
-        "hbase.table" -> "t2",
-        "hbase.batching.num" -> "100",
-        "cachingNum" -> "100"))
+        "hbase.table" -> "t2"))
 
     df.registerTempTable("hbaseTable2")
   }
@@ -635,49 +635,32 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     }
   }
 
-  test("Test bad hbase.batching.num type") {
-    intercept[IllegalArgumentException] {
-      df = sqlContext.load("org.apache.hadoop.hbase.spark",
-        Map("hbase.columns.mapping" ->
-          "KEY_FIELD FOOBAR :key, A_FIELD STRING c:a, B_FIELD STRING c:b, I_FIELD STRING c:i,",
-          "hbase.table" -> "t1", "hbase.batching.num" -> "foo"))
+  test("Test HBaseSparkConf matching") {
+    val df = sqlContext.load("org.apache.hadoop.hbase.spark.HBaseTestSource",
+      Map("cacheSize" -> "100",
+        "batchNum" -> "100",
+        "blockCacheingEnable" -> "true", "rowNum" -> "10"))
+    assert(df.count() == 10)
 
-      df.registerTempTable("hbaseIntWrongTypeTmp")
-
-      val result = sqlContext.sql("SELECT KEY_FIELD, " +
-        "B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
-
-      assert(result.count() == 5)
-
-      val localResult = result.take(5)
-      localResult.length
-
-      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
-      assert(executionRules.dynamicLogicExpression == null)
-
-
+    val df1 = sqlContext.load("org.apache.hadoop.hbase.spark.HBaseTestSource",
+      Map("cacheSize" -> "1000",
+        "batchNum" -> "100", "blockCacheingEnable" -> "true", "rowNum" -> "10"))
+    intercept[Exception] {
+      assert(df1.count() == 10)
     }
-  }
 
-  test("Test bad hbase.caching.num type") {
-    intercept[IllegalArgumentException] {
-      df = sqlContext.load("org.apache.hadoop.hbase.spark",
-        Map("hbase.columns.mapping" ->
-          "KEY_FIELD FOOBAR :key, A_FIELD STRING c:a, B_FIELD STRING c:b, I_FIELD STRING c:i,",
-          "hbase.table" -> "t1", "hbase.caching.num" -> "foo"))
+    val df2 = sqlContext.load("org.apache.hadoop.hbase.spark.HBaseTestSource",
+      Map("cacheSize" -> "100",
+        "batchNum" -> "1000", "blockCacheingEnable" -> "true", "rowNum" -> "10"))
+    intercept[Exception] {
+      assert(df2.count() == 10)
+    }
 
-      df.registerTempTable("hbaseIntWrongTypeTmp")
-
-      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, " +
-        "I_FIELD FROM hbaseIntWrongTypeTmp")
-
-      val localResult = result.take(10)
-      assert(localResult.length == 5)
-
-      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
-      assert(executionRules.dynamicLogicExpression == null)
-
-
+    val df3 = sqlContext.load("org.apache.hadoop.hbase.spark.HBaseTestSource",
+      Map("cacheSize" -> "100",
+        "batchNum" -> "100", "blockCacheingEnable" -> "false", "rowNum" -> "10"))
+    intercept[Exception] {
+      assert(df3.count() == 10)
     }
   }
 

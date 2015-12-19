@@ -21,7 +21,9 @@ import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.apache.hadoop.hbase.client._
-import org.apache.hadoop.hbase.spark.datasources.{HBaseTableScanRDD, HBaseRegion, SerializableConfiguration}
+import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableScanRDD
+import org.apache.hadoop.hbase.spark.datasources.SerializableConfiguration
 import org.apache.hadoop.hbase.types._
 import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositionedMutableByteRange}
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
@@ -49,8 +51,6 @@ class DefaultSource extends RelationProvider with Logging {
 
   val TABLE_KEY:String = "hbase.table"
   val SCHEMA_COLUMNS_MAPPING_KEY:String = "hbase.columns.mapping"
-  val BATCHING_NUM_KEY:String = "hbase.batching.num"
-  val CACHING_NUM_KEY:String = "hbase.caching.num"
   val HBASE_CONFIG_RESOURCES_LOCATIONS:String = "hbase.config.resources"
   val USE_HBASE_CONTEXT:String = "hbase.use.hbase.context"
   val PUSH_DOWN_COLUMN_FILTER:String = "hbase.push.down.column.filter"
@@ -71,35 +71,16 @@ class DefaultSource extends RelationProvider with Logging {
       new IllegalArgumentException("Invalid value for " + TABLE_KEY +" '" + tableName + "'")
 
     val schemaMappingString = parameters.getOrElse(SCHEMA_COLUMNS_MAPPING_KEY, "")
-    val batchingNumStr = parameters.getOrElse(BATCHING_NUM_KEY, "1000")
-    val cachingNumStr = parameters.getOrElse(CACHING_NUM_KEY, "1000")
     val hbaseConfigResources = parameters.getOrElse(HBASE_CONFIG_RESOURCES_LOCATIONS, "")
     val useHBaseReources = parameters.getOrElse(USE_HBASE_CONTEXT, "true")
     val usePushDownColumnFilter = parameters.getOrElse(PUSH_DOWN_COLUMN_FILTER, "true")
 
-    val batchingNum:Int = try {
-      batchingNumStr.toInt
-    } catch {
-      case e:NumberFormatException => throw
-        new IllegalArgumentException("Invalid value for " + BATCHING_NUM_KEY +" '"
-            + batchingNumStr + "'", e)
-    }
-
-    val cachingNum:Int = try {
-      cachingNumStr.toInt
-    } catch {
-      case e:NumberFormatException => throw
-        new IllegalArgumentException("Invalid value for " + CACHING_NUM_KEY +" '"
-            + cachingNumStr + "'", e)
-    }
-
     new HBaseRelation(tableName.get,
       generateSchemaMappingMap(schemaMappingString),
-      batchingNum.toInt,
-      cachingNum.toInt,
       hbaseConfigResources,
       useHBaseReources.equalsIgnoreCase("true"),
-      usePushDownColumnFilter.equalsIgnoreCase("true"))(sqlContext)
+      usePushDownColumnFilter.equalsIgnoreCase("true"),
+      parameters)(sqlContext)
   }
 
   /**
@@ -148,10 +129,6 @@ class DefaultSource extends RelationProvider with Logging {
  * @param tableName               HBase table that we plan to read from
  * @param schemaMappingDefinition SchemaMapping information to map HBase
  *                                Qualifiers to SparkSQL columns
- * @param batchingNum             The batching number to be applied to the
- *                                scan object
- * @param cachingNum              The caching number to be applied to the
- *                                scan object
  * @param configResources         Optional comma separated list of config resources
  *                                to get based on their URI
  * @param useHBaseContext         If true this will look to see if
@@ -162,13 +139,25 @@ class DefaultSource extends RelationProvider with Logging {
 case class HBaseRelation (val tableName:String,
                      val schemaMappingDefinition:
                      java.util.HashMap[String, SchemaQualifierDefinition],
-                     val batchingNum:Int,
-                     val cachingNum:Int,
                      val configResources:String,
                      val useHBaseContext:Boolean,
-                     val usePushDownColumnFilter:Boolean) (
+                     val usePushDownColumnFilter:Boolean,
+                     @transient parameters: Map[String, String] ) (
   @transient val sqlContext:SQLContext)
   extends BaseRelation with PrunedFilteredScan with Logging {
+
+  // The user supplied per table parameter will overwrite global ones in SparkConf
+  val blockCacheEnable = parameters.get(HBaseSparkConf.BLOCK_CACHE_ENABLE).map(_.toBoolean)
+    .getOrElse(
+      sqlContext.sparkContext.getConf.getBoolean(
+        HBaseSparkConf.BLOCK_CACHE_ENABLE, HBaseSparkConf.defaultBlockCacheEnable))
+  val cacheSize = parameters.get(HBaseSparkConf.CACHE_SIZE).map(_.toInt)
+    .getOrElse(
+      sqlContext.sparkContext.getConf.getInt(
+      HBaseSparkConf.CACHE_SIZE, HBaseSparkConf.defaultCachingSize))
+  val batchNum = parameters.get(HBaseSparkConf.BATCH_NUM).map(_.toInt)
+    .getOrElse(sqlContext.sparkContext.getConf.getInt(
+    HBaseSparkConf.BATCH_NUM,  HBaseSparkConf.defaultBatchNum))
 
   //create or get latest HBaseContext
   @transient val hbaseContext:HBaseContext = if (useHBaseContext) {
@@ -321,8 +310,9 @@ case class HBaseRelation (val tableName:String,
 
     if (resultRDD == null) {
       val scan = new Scan()
-      scan.setBatch(batchingNum)
-      scan.setCaching(cachingNum)
+      scan.setCacheBlocks(blockCacheEnable)
+      scan.setBatch(batchNum)
+      scan.setCaching(cacheSize)
       requiredQualifierDefinitionList.foreach( d =>
         scan.addColumn(d.columnFamilyBytes, d.qualifierBytes))
 

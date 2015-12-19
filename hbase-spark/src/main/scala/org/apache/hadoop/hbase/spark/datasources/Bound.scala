@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
-import org.apache.hadoop.hbase.spark.SparkSQLPushDownFilter
-import org.apache.spark.Partition
 import org.apache.hadoop.hbase.spark.hbase._
 
 /**

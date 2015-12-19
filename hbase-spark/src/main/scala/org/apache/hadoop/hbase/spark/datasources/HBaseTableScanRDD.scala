@@ -17,17 +17,11 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
-import java.util.concurrent.atomic.AtomicInteger
-
-import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client._
-import org.apache.hadoop.hbase.filter.Filter
 import org.apache.hadoop.hbase.spark.{ScanRange, SchemaQualifierDefinition, HBaseRelation, SparkSQLPushDownFilter}
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.spark.datasources.HBaseResources._
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.sql.catalyst.expressions.Row
-import org.apache.spark.{TaskContext, Logging, Partition}
+import org.apache.spark.{SparkEnv, TaskContext, Logging, Partition}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
@@ -37,6 +31,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
      @transient val filter: Option[SparkSQLPushDownFilter] = None,
      val columns: Seq[SchemaQualifierDefinition] = Seq.empty
      )extends RDD[Result](relation.sqlContext.sparkContext, Nil) with Logging  {
+  private def sparkConf = SparkEnv.get.conf
   var ranges = Seq.empty[Range]
   def addRange(r: ScanRange) = {
     val lower = if (r.lowerBound != null && r.lowerBound.length > 0) {
@@ -106,8 +101,9 @@ class HBaseTableScanRDD(relation: HBaseRelation,
         scan.addColumn(d.columnFamilyBytes, d.qualifierBytes)
       }
     }
-    scan.setBatch(relation.batchingNum)
-    scan.setCaching(relation.cachingNum)
+    scan.setCacheBlocks(relation.blockCacheEnable)
+    scan.setBatch(relation.batchNum)
+    scan.setCaching(relation.cacheSize)
     filter.foreach(scan.setFilter(_))
     scan
   }
