@@ -282,6 +282,7 @@ message ScanRequest {
   optional bool client_handles_partials = 7;
   optional bool client_handles_heartbeats = 8;
   optional bool track_scan_metrics = 9;
+  optional bool renew = 10 [default = false];
 }
 
 /**
