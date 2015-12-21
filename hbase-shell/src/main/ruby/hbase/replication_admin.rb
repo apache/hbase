@@ -23,7 +23,7 @@ java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
-java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
+java_import org.apache.hadoop.hbase.zookeeper.ZKConfig
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -62,7 +62,7 @@ module Hbase
 
         # Cluster Key is required for ReplicationPeerConfig for a custom replication endpoint
         if !endpoint_classname.nil? and cluster_key.nil?
-          cluster_key = ZKUtil.getZooKeeperClusterKey(@configuration)
+          cluster_key = ZKConfig.getZooKeeperClusterKey(@configuration)
         end
 
         # Optional parameters
