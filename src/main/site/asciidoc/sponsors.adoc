@@ -29,7 +29,7 @@ The below companies have been gracious enough to provide their commerical tool o
 
 * link:http://www.yourkit.com[YourKit] allows us to use their link:http://www.yourkit.com/overview/index.jsp[Java Profiler].
 * Some of us use link:http://www.jetbrains.com/idea[IntelliJ IDEA] thanks to link:http://www.jetbrains.com/[JetBrains].
-* Thank you to Boris at link:http://www.vectorportal.com/idea[Vector Portal] for granting us a license on the image on which our logo is based.
+* Thank you to Boris at link:http://www.vectorportal.com/[Vector Portal] for granting us a license on the image on which our logo is based.
 
 == Sponsoring the Apache Software Foundation">
 To contribute to the Apache Software Foundation, a good idea in our opinion, see the link:http://www.apache.org/foundation/sponsorship.html[ASF Sponsorship] page.
