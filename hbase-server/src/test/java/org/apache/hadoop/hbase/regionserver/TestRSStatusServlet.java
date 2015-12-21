@@ -48,6 +48,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 
 /**
  * Tests for the region server status page and its template.
@@ -57,6 +60,7 @@ public class TestRSStatusServlet {
   private static final Log LOG = LogFactory.getLog(TestRSStatusServlet.class);
   private HRegionServer rs;
   private RSRpcServices rpcServices;
+  private RpcServerInterface rpcServer;
 
   static final int FAKE_IPC_PORT = 1585;
   static final int FAKE_WEB_PORT = 1586;
@@ -73,9 +77,11 @@ public class TestRSStatusServlet {
   public void setupBasicMocks() throws IOException, ServiceException {
     rs = Mockito.mock(HRegionServer.class);
     rpcServices = Mockito.mock(RSRpcServices.class);
+    rpcServer = Mockito.mock(RpcServerInterface.class);
     Mockito.doReturn(HBaseConfiguration.create())
       .when(rs).getConfiguration();
     Mockito.doReturn(rpcServices).when(rs).getRSRpcServices();
+    Mockito.doReturn(rpcServer).when(rs).getRpcServer();
     Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(
       (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
     // Fake ZKW
@@ -97,6 +103,10 @@ public class TestRSStatusServlet {
     MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
     Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
     Mockito.doReturn(rms).when(rs).getRegionServerMetrics();
+
+    MetricsHBaseServer ms = Mockito.mock(MetricsHBaseServer.class);
+    Mockito.doReturn(new MetricsHBaseServerWrapperStub()).when(ms).getHBaseServerWrapper();
+    Mockito.doReturn(ms).when(rpcServer).getMetrics();
   }
   
   @Test
