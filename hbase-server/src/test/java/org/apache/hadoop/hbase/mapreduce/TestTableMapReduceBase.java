@@ -79,16 +79,17 @@ public abstract class TestTableMapReduceBase {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
     HTable table =
         UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
             OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
+    UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

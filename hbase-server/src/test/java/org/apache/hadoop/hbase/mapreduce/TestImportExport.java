@@ -112,8 +112,8 @@ public class TestImportExport {
   @BeforeClass
   public static void beforeClass() throws Exception {
     // Up the handlers; this test needs more than usual.
+    UTIL.getConfiguration().setBoolean("hbase.test.local.fileSystem", true);
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
-    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
     FQ_OUTPUT_DIR =
       new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();

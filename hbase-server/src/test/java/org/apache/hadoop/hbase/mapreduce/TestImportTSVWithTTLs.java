@@ -88,12 +88,13 @@ public class TestImportTSVWithTTLs implements Configurable {
     // need this where the default hfile version is not 3 (i.e. 0.98)
     conf.setInt("hfile.format.version", 3);
     conf.set("hbase.coprocessor.region.classes", TTLCheckingObserver.class.getName());
-    util.setJobWithoutMRCluster();
     util.startMiniCluster();
+    util.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
+    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 
