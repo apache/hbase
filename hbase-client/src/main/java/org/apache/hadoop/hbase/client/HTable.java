@@ -756,7 +756,7 @@ public class HTable implements HTableInterface, RegionLocator {
          try {
            ClientProtos.GetResponse response = getStub().get(controller, request);
            if (!response.hasResult()) return null;
-           return ProtobufUtil.toResult(response.getResult());
+           return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
          } catch (ServiceException se) {
            throw ProtobufUtil.getRemoteException(se);
          }

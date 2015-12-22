@@ -1591,6 +1591,7 @@ public final class ProtobufUtil {
     try {
       GetResponse response = client.get(null, request);
       if (!response.hasResult()) return null;
+      // We pass 'null' RpcController. So Result will be pure RB.
       return toResult(response.getResult());
     } catch (ServiceException se) {
       throw getRemoteException(se);
