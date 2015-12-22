@@ -42,7 +42,7 @@ under the License.
     write data to HBase and run mapreduce jobs to process then store it back to
     HBase or external systems. Our production cluster has been running since Oct 2008.</dd>
 
-  <dt><a href="http://huaweibigdata.github.io/astro/">Project Astro</a></dt>
+  <dt><a href="http://spark-packages.org/package/Huawei-Spark/Spark-SQL-on-HBase">Project Astro</a></dt>
   <dd>
     Astro provides fast Spark SQL/DataFrame capabilities to HBase data,
     featuring super-efficient access to multi-dimensional HBase rows through
