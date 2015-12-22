@@ -60,6 +60,7 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
@@ -121,7 +122,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
 
-      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Path tmpTableDir = UTIL.getRandomDir();
 
       testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
 
@@ -158,14 +159,12 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     setupCluster();
-    util.startMiniMapReduceCluster();
     try {
-      Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
+      Path tableDir = util.getRandomDir();
       TableName tableName = TableName.valueOf("testWithMapReduce");
       testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
         expectedNumSplits, shutdownCluster);
     } finally {
-      util.shutdownMiniMapReduceCluster();
       tearDownCluster();
     }
   }

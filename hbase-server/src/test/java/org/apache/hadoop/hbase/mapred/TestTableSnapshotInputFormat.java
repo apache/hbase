@@ -103,7 +103,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
       JobConf job = new JobConf(UTIL.getConfiguration());
-      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Path tmpTableDir = UTIL.getRandomDir();
 
       TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
         COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
@@ -166,7 +166,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 
       JobConf job = new JobConf(util.getConfiguration());
-      Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
+      Path tmpTableDir = util.getRandomDir();
 
       TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
         COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,

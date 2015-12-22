@@ -34,13 +34,12 @@ public class TestHRegionPartitioner {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
-    UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

@@ -155,7 +155,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
       Job job = new Job(UTIL.getConfiguration());
-      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Path tmpTableDir = UTIL.getRandomDir();
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
         new Scan(), TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
@@ -196,7 +196,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 
       Job job = new Job(util.getConfiguration());
-      Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
+      Path tmpTableDir = util.getRandomDir();
       Scan scan = new Scan(getStartRow(), getEndRow()); // limit the scan
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,

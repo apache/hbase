@@ -72,18 +72,17 @@ public class TestMultithreadedTableMapper {
   public static void beforeClass() throws Exception {
     // Up the handlers; this test needs more than usual.
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
     HTable table =
         UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
             OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
-    UTIL.startMiniMapReduceCluster();
     UTIL.waitUntilAllRegionsAssigned(MULTI_REGION_TABLE_NAME);
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 
