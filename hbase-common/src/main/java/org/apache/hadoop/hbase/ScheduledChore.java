@@ -228,7 +228,7 @@ public abstract class ScheduledChore implements Runnable {
         && getTimeBetweenRuns() > getMaximumAllowedTimeBetweenRuns();
   }
 
-  private synchronized double getMaximumAllowedTimeBetweenRuns() {
+  private double getMaximumAllowedTimeBetweenRuns() {
     // Threshold used to determine if the Chore's current run started too late
     return 1.5 * period;
   }
@@ -268,23 +268,23 @@ public abstract class ScheduledChore implements Runnable {
     choreServicer = null;
   }
 
-  public synchronized String getName() {
+  public String getName() {
     return name;
   }
 
-  public synchronized Stoppable getStopper() {
+  public Stoppable getStopper() {
     return stopper;
   }
 
-  public synchronized int getPeriod() {
+  public int getPeriod() {
     return period;
   }
 
-  public synchronized long getInitialDelay() {
+  public long getInitialDelay() {
     return initialDelay;
   }
 
-  public final synchronized TimeUnit getTimeUnit() {
+  public TimeUnit getTimeUnit() {
     return timeUnit;
   }
 
