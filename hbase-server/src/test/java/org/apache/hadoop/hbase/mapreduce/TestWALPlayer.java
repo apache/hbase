@@ -70,13 +70,12 @@ public class TestWALPlayer {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    TEST_UTIL.setJobWithoutMRCluster();
     cluster = TEST_UTIL.startMiniCluster();
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 

@@ -71,6 +71,7 @@ public class TestMultiTableInputFormat {
     // switch TIF to log at DEBUG level
     TEST_UTIL.enableDebug(MultiTableInputFormat.class);
     TEST_UTIL.enableDebug(MultiTableInputFormatBase.class);
+    TEST_UTIL.setJobWithoutMRCluster();
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
@@ -81,13 +82,10 @@ public class TestMultiTableInputFormat {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
       }
     }
-    // start MR cluster
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
   

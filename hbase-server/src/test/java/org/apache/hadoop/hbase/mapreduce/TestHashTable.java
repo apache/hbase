@@ -56,13 +56,12 @@ public class TestHashTable {
   
   @BeforeClass
   public static void beforeClass() throws Exception {
+    TEST_UTIL.setJobWithoutMRCluster();
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.startMiniMapReduceCluster();
   }
   
   @AfterClass
   public static void afterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
   

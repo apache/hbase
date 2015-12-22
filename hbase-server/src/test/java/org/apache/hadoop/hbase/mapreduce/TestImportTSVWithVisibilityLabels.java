@@ -122,12 +122,11 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
+    util.setJobWithoutMRCluster();
     util.startMiniCluster();
     // Wait for the labels table to become available
     util.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
-    Admin admin = new HBaseAdmin(util.getConfiguration());
-    util.startMiniMapReduceCluster();
   }
 
   private static void createLabels() throws IOException, InterruptedException {
@@ -151,7 +150,6 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @AfterClass
   public static void releaseCluster() throws Exception {
-    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 
