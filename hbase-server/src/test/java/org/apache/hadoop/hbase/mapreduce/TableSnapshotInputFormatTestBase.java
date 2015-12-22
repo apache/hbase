@@ -60,6 +60,7 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
@@ -158,14 +159,12 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     setupCluster();
-    util.startMiniMapReduceCluster();
     try {
       Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
       TableName tableName = TableName.valueOf("testWithMapReduce");
       testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
         expectedNumSplits, shutdownCluster);
     } finally {
-      util.shutdownMiniMapReduceCluster();
       tearDownCluster();
     }
   }

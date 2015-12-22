@@ -102,14 +102,12 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     conf = util.getConfiguration();
     conf.set("hbase.coprocessor.master.classes", OperationAttributesTestController.class.getName());
     conf.set("hbase.coprocessor.region.classes", OperationAttributesTestController.class.getName());
+    util.setJobWithoutMRCluster();
     util.startMiniCluster();
-    Admin admin = new HBaseAdmin(util.getConfiguration());
-    util.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
-    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 
