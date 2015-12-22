@@ -144,8 +144,9 @@ public class TestMultiParallel {
    * @throws NoSuchFieldException
    * @throws SecurityException
    */
-  @Ignore ("Nice bug flakey... expected 5 but was 4..") @Test(timeout=300000)
+  @Test(timeout=300000)
   public void testActiveThreadsCount() throws Exception {
+    UTIL.getConfiguration().setLong("hbase.htable.threads.coresize", slaves + 1);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration())) {
       ThreadPoolExecutor executor = HTable.getDefaultExecutor(UTIL.getConfiguration());
       try {
