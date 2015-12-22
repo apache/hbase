@@ -390,7 +390,6 @@ public class TestHFileOutputFormat  {
     byte[][] splitKeys = generateRandomSplitKeys(4);
     HBaseAdmin admin = null;
     try {
-      util.setJobWithoutMRCluster();
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
       admin = util.getHBaseAdmin();
@@ -404,6 +403,7 @@ public class TestHFileOutputFormat  {
       assertEquals("Should make 5 regions", numRegions, 5);
 
       // Generate the bulk load files
+      util.startMiniMapReduceCluster();
       runIncrementalPELoad(conf, table, testDir);
       // This doesn't write into the table, just makes files
       assertEquals("HFOF should not touch actual table",
@@ -472,6 +472,7 @@ public class TestHFileOutputFormat  {
           tableDigestBefore, util.checksumRows(table));
     } finally {
       if (admin != null) admin.close();
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -918,7 +919,6 @@ public class TestHFileOutputFormat  {
     generateRandomStartKeys(5);
 
     try {
-      util.setJobWithoutMRCluster();
       util.startMiniCluster();
       final FileSystem fs = util.getDFSCluster().getFileSystem();
       HBaseAdmin admin = new HBaseAdmin(conf);
@@ -935,6 +935,7 @@ public class TestHFileOutputFormat  {
       // Generate two bulk load files
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       for (int i = 0; i < 2; i++) {
         Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
@@ -973,6 +974,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -984,10 +986,9 @@ public class TestHFileOutputFormat  {
     generateRandomStartKeys(5);
 
     try {
-      util.setJobWithoutMRCluster();
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testExcludeMinorCompaction");
-      final FileSystem fs = util.getTestFileSystem();
+      final FileSystem fs = util.getDFSCluster().getFileSystem();
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table", 0, util.countRows(table));
@@ -1014,6 +1015,7 @@ public class TestHFileOutputFormat  {
       // Generate a bulk load file with more rows
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
       runIncrementalPELoad(conf, table, testDir);
 
       // Perform the actual load
@@ -1049,6 +1051,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
