@@ -103,7 +103,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   protected static final int DEFAULT_NUM_REGIONS = 50; // number of regions in pre-split tables
 
-  private boolean keepTableAtTheEnd = false;
+  private boolean keepObjectsAtTheEnd = false;
   protected HBaseCluster cluster;
 
   protected Connection connection;
@@ -144,11 +144,19 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   @Override
   public void cleanUpCluster() throws Exception {
-    if (!keepTableAtTheEnd) {
-      Admin admin = util.getHBaseAdmin();
+    if (!keepObjectsAtTheEnd) {
+      Admin admin = util.getAdmin();
       admin.disableTables("ittable-\\d+");
       admin.deleteTables("ittable-\\d+");
+      NamespaceDescriptor [] nsds = admin.listNamespaceDescriptors();
+      for(NamespaceDescriptor nsd:nsds ) {
+        if(nsd.getName().matches("itnamespace\\d+")) {
+          LOG.info("Removing namespace="+nsd.getName());
+          admin.deleteNamespace(nsd.getName());
+        }
+      }
     }
+
     enabledTables.clear();
     disabledTables.clear();
     deletedTables.clear();
@@ -938,9 +946,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       LOG.info("Running hbck");
       hbck = HbckTestingUtil.doFsck(util.getConfiguration(), false);
       if (HbckTestingUtil.inconsistencyFound(hbck)) {
-        // Find the inconsistency during HBCK. Leave table undropped so that
+        // Find the inconsistency during HBCK. Leave table and namespace undropped so that
         // we can check outside the test.
-        keepTableAtTheEnd = true;
+        keepObjectsAtTheEnd = true;
       }
       HbckTestingUtil.assertNoErrors(hbck);
       LOG.info("Finished hbck");
