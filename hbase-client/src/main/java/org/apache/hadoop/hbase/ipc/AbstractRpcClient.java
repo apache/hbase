@@ -24,13 +24,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,13 +34,16 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.io.compress.CompressionCodec;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * Provides the basics for a RpcClient implementation like configuration and Logging.
@@ -259,33 +255,6 @@ public abstract class AbstractRpcClient implements RpcClient {
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
       int defaultOperationTimeout) {
     return new BlockingRpcChannelImplementation(this, sn, ticket, defaultOperationTimeout);
-  }
-
-  /**
-   * Takes an Exception and the address we were trying to connect to and return an IOException with
-   * the input exception as the cause. The new exception provides the stack trace of the place where
-   * the exception is thrown and some extra diagnostics information. If the exception is
-   * ConnectException or SocketTimeoutException, return a new one of the same type; Otherwise return
-   * an IOException.
-   * @param addr target address
-   * @param exception the relevant exception
-   * @return an exception to throw
-   */
-  protected IOException wrapException(InetSocketAddress addr, Exception exception) {
-    if (exception instanceof ConnectException) {
-      // connection refused; include the host:port in the error
-      return (ConnectException) new ConnectException("Call to " + addr
-          + " failed on connection exception: " + exception).initCause(exception);
-    } else if (exception instanceof SocketTimeoutException) {
-      return (SocketTimeoutException) new SocketTimeoutException("Call to " + addr
-          + " failed because " + exception).initCause(exception);
-    } else if (exception instanceof ConnectionClosingException) {
-      return (ConnectionClosingException) new ConnectionClosingException("Call to " + addr
-          + " failed on local exception: " + exception).initCause(exception);
-    } else {
-      return (IOException) new IOException("Call to " + addr + " failed on local exception: "
-          + exception).initCause(exception);
-    }
   }
 
   /**
