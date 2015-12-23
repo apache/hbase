@@ -133,7 +133,7 @@ public class TableNamespaceManager {
     return nsTable;
   }
 
-  private synchronized boolean acquireSharedLock() throws IOException {
+  private boolean acquireSharedLock() throws IOException {
     try {
       return rwLock.readLock().tryLock(sharedLockTimeoutMs, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -141,11 +141,11 @@ public class TableNamespaceManager {
     }
   }
 
-  public synchronized void releaseSharedLock() {
+  public void releaseSharedLock() {
     rwLock.readLock().unlock();
   }
 
-  public synchronized boolean acquireExclusiveLock() {
+  public boolean acquireExclusiveLock() {
     try {
       return rwLock.writeLock().tryLock(exclusiveLockTimeoutMs, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -153,7 +153,7 @@ public class TableNamespaceManager {
     }
   }
 
-  public synchronized void releaseExclusiveLock() {
+  public void releaseExclusiveLock() {
     rwLock.writeLock().unlock();
   }
 
