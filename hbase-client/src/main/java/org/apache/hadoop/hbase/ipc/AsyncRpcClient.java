@@ -248,13 +248,10 @@ public class AsyncRpcClient extends AbstractRpcClient {
       Message response = timeout > 0 ? promise.get(timeout, TimeUnit.MILLISECONDS) : promise.get();
       return new Pair<>(response, pcrc.cellScanner());
     } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
+      throw wrapException(addr, e);
     } catch (TimeoutException e) {
-      throw new CallTimeoutException(promise.toString());
+      CallTimeoutException cte = new CallTimeoutException(promise.toString());
+      throw wrapException(addr, cte);
     }
   }
 
