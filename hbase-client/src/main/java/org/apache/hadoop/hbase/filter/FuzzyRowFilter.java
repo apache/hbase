@@ -93,7 +93,7 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   private void preprocessSearchKey(Pair<byte[], byte[]> p) {
-    if (UnsafeAccess.isAvailable() == false) {
+    if (UnsafeAccess.unaligned() == false) {
       return;
     }
     byte[] key = p.getFirst();
@@ -111,7 +111,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
-    if (UnsafeAccess.isAvailable() == false) {
+    if (UnsafeAccess.unaligned() == false) {
       return mask;
     }
     if (isPreprocessedMask(mask)) return mask;
@@ -320,7 +320,7 @@ public class FuzzyRowFilter extends FilterBase {
   static SatisfiesCode satisfies(boolean reverse, byte[] row, int offset, int length,
       byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
 
-    if (UnsafeAccess.isAvailable() == false) {
+    if (UnsafeAccess.unaligned() == false) {
       return satisfiesNoUnsafe(reverse, row, offset, length, fuzzyKeyBytes, fuzzyKeyMeta);
     }
 
