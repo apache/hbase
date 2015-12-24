@@ -600,7 +600,17 @@ public class ReplicationAdmin implements Closeable {
     if (repPeers == null || repPeers.size() <= 0) {
       throw new IllegalArgumentException("Found no peer cluster for replication.");
     }
+    
+    final TableName onlyTableNameQualifier = TableName.valueOf(tableName.getQualifierAsString());
+    
     for (ReplicationPeer repPeer : repPeers) {
+      Map<TableName, List<String>> tableCFMap = repPeer.getTableCFs();
+      // TODO Currently peer TableCFs will not include namespace so we need to check only for table
+      // name without namespace in it. Need to correct this logic once we fix HBASE-11386.
+      if (tableCFMap != null && !tableCFMap.containsKey(onlyTableNameQualifier)) {
+        continue;
+      }
+
       Configuration peerConf = repPeer.getConfiguration();
       HTableDescriptor htd = null;
       try (Connection conn = ConnectionFactory.createConnection(peerConf);
@@ -639,7 +649,8 @@ public class ReplicationAdmin implements Closeable {
       try {
         Pair<ReplicationPeerConfig, Configuration> pair = this.replicationPeers.getPeerConf(peerId);
         Configuration peerConf = pair.getSecond();
-        ReplicationPeer peer = new ReplicationPeerZKImpl(peerConf, peerId, pair.getFirst());
+        ReplicationPeer peer = new ReplicationPeerZKImpl(peerConf, peerId, pair.getFirst(),
+            parseTableCFsFromConfig(this.getPeerTableCFs(peerId)));
         s =
             zkw.getRecoverableZooKeeper().exists(peerConf.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
               null);
