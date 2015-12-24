@@ -560,6 +560,22 @@ module Hbase
       end
     end
 
+    define_test "scan should support FILTER with non-ASCII bytes" do
+      @test_table.put(4, "x:a", "\x82")
+      begin
+        res = @test_table._scan_internal FILTER => "SingleColumnValueFilter('x', 'a', >=, 'binary:\x82', true, true)"
+        assert_not_equal(res, {}, "Result is empty")
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['4'])
+        assert_not_nil(res['4']['x:a'])
+        assert_nil(res['1'])
+        assert_nil(res['2'])
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.delete(4, "x:a")
+      end
+    end
+
     define_test "mutation with TTL should expire" do
       @test_table.put('ttlTest', 'x:a', 'foo', { TTL => 1000 } )
       begin
