@@ -26,9 +26,12 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServerSource;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -40,6 +43,8 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestLeaseRenewal {
+  public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -118,5 +123,8 @@ public class TestLeaseRenewal {
     assertFalse(((AbstractClientScanner)rs).renewLease());
     rs.close();
     table.close();
+    MetricsHBaseServerSource serverSource = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
+        .getRpcServer().getMetrics().getMetricsSource();
+    HELPER.assertCounter("exceptions.OutOfOrderScannerNextException", 0, serverSource);
   }
 }
