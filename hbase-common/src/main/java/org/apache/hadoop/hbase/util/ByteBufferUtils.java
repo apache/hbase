@@ -47,6 +47,7 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
   private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -392,9 +393,12 @@ public final class ByteBufferUtils {
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
     } else {
-      for (int i = 0; i < length; ++i) {
-        putByte(out, destinationOffset + i, toByte(in, sourceOffset + i));
-      }
+      int outOldPos = out.position();
+      out.position(destinationOffset);
+      ByteBuffer inDup = in.duplicate();
+      inDup.position(sourceOffset).limit(sourceOffset + length);
+      out.put(inDup);
+      out.position(outOldPos);
     }
     return destinationOffset + length;
   }
@@ -414,15 +418,15 @@ public final class ByteBufferUtils {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.position()
           + out.arrayOffset(), length);
+      skip(out, length);
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, sourceOffset, out, out.position(), length);
+      skip(out, length);
     } else {
-      int destOffset = out.position();
-      for (int i = 0; i < length; ++i) {
-        putByte(out, destOffset + i, toByte(in, sourceOffset + i));
-      }
+      ByteBuffer inDup = in.duplicate();
+      inDup.position(sourceOffset).limit(sourceOffset + length);
+      out.put(inDup);
     }
-    skip(out, length);
   }
 
   /**
@@ -574,7 +578,7 @@ public final class ByteBufferUtils {
   }
 
   public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       long offset1Adj, offset2Adj;
       Object refObj1 = null, refObj2 = null;
       if (buf1.isDirect()) {
@@ -612,7 +616,7 @@ public final class ByteBufferUtils {
   }
 
   public static int compareTo(ByteBuffer buf1, int o1, int l1, byte[] buf2, int o2, int l2) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       long offset1Adj;
       Object refObj1 = null;
       if (buf1.isDirect()) {
@@ -725,7 +729,7 @@ public final class ByteBufferUtils {
    * @return short value at offset
    */
   public static short toShort(ByteBuffer buffer, int offset) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toShort(buffer, offset);
     } else {
       return buffer.getShort(offset);
@@ -739,7 +743,7 @@ public final class ByteBufferUtils {
    * @return int value at offset
    */
   public static int toInt(ByteBuffer buffer, int offset) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toInt(buffer, offset);
     } else {
       return buffer.getInt(offset);
@@ -753,7 +757,7 @@ public final class ByteBufferUtils {
    * @return long value at offset
    */
   public static long toLong(ByteBuffer buffer, int offset) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toLong(buffer, offset);
     } else {
       return buffer.getLong(offset);
@@ -767,7 +771,7 @@ public final class ByteBufferUtils {
    * @param val int to write out
    */
   public static void putInt(ByteBuffer buffer, int val) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       int newPos = UnsafeAccess.putInt(buffer, buffer.position(), val);
       buffer.position(newPos);
     } else {
@@ -810,7 +814,7 @@ public final class ByteBufferUtils {
    * @param val short to write out
    */
   public static void putShort(ByteBuffer buffer, short val) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       int newPos = UnsafeAccess.putShort(buffer, buffer.position(), val);
       buffer.position(newPos);
     } else {
@@ -825,7 +829,7 @@ public final class ByteBufferUtils {
    * @param val long to write out
    */
   public static void putLong(ByteBuffer buffer, long val) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       int newPos = UnsafeAccess.putLong(buffer, buffer.position(), val);
       buffer.position(newPos);
     } else {
@@ -870,9 +874,10 @@ public final class ByteBufferUtils {
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
     } else {
-      for (int i = 0; i < length; i++) {
-        out[destinationOffset + i] = in.get(sourceOffset + i);
-      }
+      int oldPos = in.position();
+      in.position(sourceOffset);
+      in.get(out, destinationOffset, length);
+      in.position(oldPos);
     }
   }
 

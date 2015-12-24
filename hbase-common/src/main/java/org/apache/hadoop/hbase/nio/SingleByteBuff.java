@@ -34,6 +34,7 @@ import sun.nio.ch.DirectBuffer;
 public class SingleByteBuff extends ByteBuff {
 
   private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
 
   // Underlying BB
   private final ByteBuffer buf;
@@ -237,7 +238,7 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public short getShort(int index) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toShort(unsafeRef, unsafeOffset + index);
     }
     return this.buf.getShort(index);
@@ -261,7 +262,7 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public int getInt(int index) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toInt(unsafeRef, unsafeOffset + index);
     }
     return this.buf.getInt(index);
@@ -285,7 +286,7 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public long getLong(int index) {
-    if (UNSAFE_AVAIL) {
+    if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toLong(unsafeRef, unsafeOffset + index);
     }
     return this.buf.getLong(index);

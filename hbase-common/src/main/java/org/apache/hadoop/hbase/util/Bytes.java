@@ -789,7 +789,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.toLong(bytes, offset);
     } else {
       long l = 0;
@@ -830,7 +830,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.putLong(bytes, offset, val);
     } else {
       for(int i = offset + 7; i > offset; i--) {
@@ -981,7 +981,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.toInt(bytes, offset);
     } else {
       int n = 0;
@@ -1065,7 +1065,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.putInt(bytes, offset, val);
     } else {
       for(int i= offset + 3; i > offset; i--) {
@@ -1135,7 +1135,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.toShort(bytes, offset);
     } else {
       short n = 0;
@@ -1173,7 +1173,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeAccess.isAvailable()) {
+    if (UnsafeAccess.unaligned()) {
       return UnsafeAccess.putShort(bytes, offset, val);
     } else {
       bytes[offset+1] = (byte) val;
@@ -1477,7 +1477,7 @@ public class Bytes implements Comparable<Bytes> {
 
       static final Unsafe theUnsafe;
       static {
-        if (UnsafeAccess.isAvailable()) {
+        if (UnsafeAccess.unaligned()) {
           theUnsafe = UnsafeAccess.theUnsafe;
         } else {
           // It doesn't matter what we throw;
