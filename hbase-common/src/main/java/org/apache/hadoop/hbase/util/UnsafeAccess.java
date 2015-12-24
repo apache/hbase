@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -39,6 +40,7 @@ public final class UnsafeAccess {
 
   /** The offset to the first element in a byte array. */
   public static final int BYTE_ARRAY_BASE_OFFSET;
+  private static boolean unaligned = false;
 
   static {
     theUnsafe = (Unsafe) AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -57,6 +59,15 @@ public final class UnsafeAccess {
 
     if(theUnsafe != null){
       BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
+      try {
+        // Using java.nio.Bits#unaligned() to check for unaligned-access capability
+        Class<?> clazz = Class.forName("java.nio.Bits");
+        Method m = clazz.getDeclaredMethod("unaligned");
+        m.setAccessible(true);
+        unaligned = (boolean) m.invoke(null);
+      } catch (Exception e) {
+        unaligned = false;
+      }
     } else{
       BYTE_ARRAY_BASE_OFFSET = -1;
     }
@@ -66,6 +77,14 @@ public final class UnsafeAccess {
   
   public static boolean isAvailable() {
     return theUnsafe != null;
+  }
+
+  /**
+   * @return true when running JVM is having sun's Unsafe package available in it and underlying
+   *         system having unaligned-access capability.
+   */
+  public static boolean unaligned() {
+    return unaligned;
   }
 
   public static final boolean littleEndian = ByteOrder.nativeOrder()

@@ -579,7 +579,7 @@ public class Bytes {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return toLongUnsafe(bytes, offset);
     } else {
       long l = 0;
@@ -620,7 +620,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return putLongUnsafe(bytes, offset, val);
     } else {
       for(int i = offset + 7; i > offset; i--) {
@@ -775,7 +775,7 @@ public class Bytes {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return toIntUnsafe(bytes, offset);
     } else {
       int n = 0;
@@ -871,7 +871,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return putIntUnsafe(bytes, offset, val);
     } else {
       for(int i= offset + 3; i > offset; i--) {
@@ -945,7 +945,7 @@ public class Bytes {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return toShortUnsafe(bytes, offset);
     } else {
       short n = 0;
@@ -983,7 +983,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
+    if (UnsafeComparer.unaligned()) {
       return putShortUnsafe(bytes, offset, val);
     } else {
       bytes[offset+1] = (byte) val;
@@ -1278,28 +1278,19 @@ public class Bytes {
       INSTANCE;
 
       static final Unsafe theUnsafe;
+      private static boolean unaligned = false;
 
       /** The offset to the first element in a byte array. */
       static final int BYTE_ARRAY_BASE_OFFSET;
 
       static {
-        theUnsafe = (Unsafe) AccessController.doPrivileged(
-            new PrivilegedAction<Object>() {
-              @Override
-              public Object run() {
-                try {
-                  Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                  f.setAccessible(true);
-                  return f.get(null);
-                } catch (NoSuchFieldException e) {
-                  // It doesn't matter what we throw;
-                  // it's swallowed in getBestComparer().
-                  throw new Error();
-                } catch (IllegalAccessException e) {
-                  throw new Error();
-                }
-              }
-            });
+        if (UnsafeAccess.unaligned()) {
+          theUnsafe = UnsafeAccess.theUnsafe;
+        } else {
+          // It doesn't matter what we throw;
+          // it's swallowed in getBestComparer().
+          throw new Error();
+        }
 
         BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
 
@@ -1307,6 +1298,7 @@ public class Bytes {
         if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
           throw new AssertionError();
         }
+        unaligned = UnsafeAccess.unaligned();
       }
 
       static final boolean littleEndian =
@@ -1364,6 +1356,14 @@ public class Bytes {
       public static boolean isAvailable()
       {
         return theUnsafe != null;
+      }
+
+      /**
+       * @return true when running JVM is having sun's Unsafe package available in it and underlying
+       *         system having unaligned-access capability.
+       */
+      public static boolean unaligned() {
+        return unaligned;
       }
 
       /**
