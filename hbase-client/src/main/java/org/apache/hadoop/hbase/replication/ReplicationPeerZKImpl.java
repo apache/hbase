@@ -55,8 +55,8 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
   private TableCFsTracker tableCFsTracker;
 
   /**
-   * Constructor that takes all the objects required to communicate with the
-   * specified peer, except for the region server addresses.
+   * Constructor that takes all the objects required to communicate with the specified peer, except
+   * for the region server addresses.
    * @param conf configuration object to this peer
    * @param id string representation of this peer's identifier
    * @param peerConfig configuration for the replication peer
@@ -66,6 +66,22 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
     this.conf = conf;
     this.peerConfig = peerConfig;
     this.id = id;
+  }
+  
+  /**
+   * Constructor that takes all the objects required to communicate with the specified peer, except
+   * for the region server addresses.
+   * @param conf configuration object to this peer
+   * @param id string representation of this peer's identifier
+   * @param peerConfig configuration for the replication peer
+   * @param tableCFs table-cf configuration for this peer
+   */
+  public ReplicationPeerZKImpl(Configuration conf, String id, ReplicationPeerConfig peerConfig,
+      Map<TableName, List<String>> tableCFs) throws ReplicationException {
+    this.conf = conf;
+    this.peerConfig = peerConfig;
+    this.id = id;
+    this.tableCFs = tableCFs;
   }
 
   /**
