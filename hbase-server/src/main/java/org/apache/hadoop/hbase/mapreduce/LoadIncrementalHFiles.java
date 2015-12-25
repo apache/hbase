@@ -827,6 +827,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                                   .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                   .withBlockSize(blocksize)
                                   .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding())
+                                  .withIncludesTags(true)
                                   .build();
       halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
           fs)

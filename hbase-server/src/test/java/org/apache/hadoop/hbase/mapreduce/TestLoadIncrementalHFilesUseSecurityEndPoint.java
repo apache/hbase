@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.junit.BeforeClass;
@@ -33,6 +35,12 @@ public class TestLoadIncrementalHFilesUseSecurityEndPoint extends TestLoadIncrem
       MAX_FILES_PER_REGION_PER_FAMILY);
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       "org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint");
+    // change default behavior so that tag values are returned with normal rpcs
+    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
+        KeyValueCodecWithTags.class.getCanonicalName());
+    // enable tags
+    util.getConfiguration().setInt("hfile.format.version", 3);
+
     util.startMiniCluster();
     setupNamespace();
   }
