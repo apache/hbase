@@ -37,7 +37,7 @@ public class HFileContextBuilder {
   /** Whether mvcc is to be included in the Read/Write **/
   private boolean includesMvcc = true;
   /** Whether tags are to be included in the Read/Write **/
-  private boolean includesTags;
+  private boolean includesTags = false;
   /** Compression algorithm used **/
   private Algorithm compression = Algorithm.NONE;
   /** Whether tags to be compressed or not **/
