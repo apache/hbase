@@ -64,7 +64,7 @@ public final class UnsafeAccess {
         Class<?> clazz = Class.forName("java.nio.Bits");
         Method m = clazz.getDeclaredMethod("unaligned");
         m.setAccessible(true);
-        unaligned = (boolean) m.invoke(null);
+        unaligned = (Boolean) m.invoke(null);
       } catch (Exception e) {
         unaligned = false;
       }
