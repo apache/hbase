@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -52,8 +54,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test cases for the "load" half of the HFileOutputFormat bulk load
@@ -62,6 +66,9 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestLoadIncrementalHFiles {
+  @Rule
+  public TestName tn = new TestName();
+
   private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
   private static final byte[] FAMILY = Bytes.toBytes("myfam");
   private static final String NAMESPACE = "bulkNS";
@@ -82,6 +89,9 @@ public class TestLoadIncrementalHFiles {
     util.getConfiguration().setInt(
       LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
       MAX_FILES_PER_REGION_PER_FAMILY);
+    // change default behavior so that tag values are returned with normal rpcs
+    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
+        KeyValueCodecWithTags.class.getCanonicalName());
     util.startMiniCluster();
 
     setupNamespace();
@@ -226,6 +236,14 @@ public class TestLoadIncrementalHFiles {
     );
   }
 
+  private HTableDescriptor buildHTD(TableName tableName, BloomType bloomType) {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
+    familyDesc.setBloomFilterType(bloomType);
+    htd.addFamily(familyDesc);
+    return htd;
+  }
+
   private void runTest(String testName, BloomType bloomType,
       byte[][][] hfileRanges) throws Exception {
     runTest(testName, bloomType, null, hfileRanges);
@@ -247,10 +265,7 @@ public class TestLoadIncrementalHFiles {
 
   private void runTest(String testName, TableName tableName, BloomType bloomType,
       boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges) throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
-    familyDesc.setBloomFilterType(bloomType);
-    htd.addFamily(familyDesc);
+    HTableDescriptor htd = buildHTD(tableName, bloomType);
     runTest(testName, htd, bloomType, preCreateTable, tableSplitKeys, hfileRanges);
   }
 
@@ -306,6 +321,51 @@ public class TestLoadIncrementalHFiles {
 
       util.deleteTable(tableName);
     }
+  }
+
+  /**
+   * Test that tags survive through a bulk load that needs to split hfiles.
+   *
+   * This test depends on the "hbase.client.rpc.codec" =  KeyValueCodecWithTags so that the client
+   * can get tags in the responses.
+   */
+  @Test(timeout = 60000)
+  public void htestTagsSurviveBulkLoadSplit() throws Exception {
+    Path dir = util.getDataTestDirOnTestFS(tn.getMethodName());
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+    // table has these split points
+    byte [][] tableSplitKeys = new byte[][] {
+            Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
+            Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"),
+    };
+
+    // creating an hfile that has values that span the split points.
+    byte[] from = Bytes.toBytes("ddd");
+    byte[] to = Bytes.toBytes("ooo");
+    HFileTestUtil.createHFileWithTags(util.getConfiguration(), fs,
+        new Path(familyDir, tn.getMethodName()+"_hfile"),
+        FAMILY, QUALIFIER, from, to, 1000);
+    int expectedRows = 1000;
+
+    TableName tableName = TableName.valueOf(tn.getMethodName());
+    HTableDescriptor htd = buildHTD(tableName, BloomType.NONE);
+    util.getHBaseAdmin().createTable(htd, tableSplitKeys);
+
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    String [] args= {dir.toString(), tableName.toString()};
+    loader.run(args);
+
+    Table table = util.getConnection().getTable(tableName);
+    try {
+      assertEquals(expectedRows, util.countRows(table));
+      HFileTestUtil.verifyTags(table);
+    } finally {
+      table.close();
+    }
+
+    util.deleteTable(tableName);
   }
 
   /**
