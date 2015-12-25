@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.security.token;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -210,5 +212,28 @@ public class ZKSecretWatcher extends ZooKeeperListener {
       // this can only happen from an error serializing the key
       watcher.abort("Failed serializing key "+key.getKeyId(), ioe);
     }
+  }
+  
+  /**
+   * refresh keys
+   */
+  synchronized void refreshKeys() {
+    try {
+      List<ZKUtil.NodeAndData> nodes =
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
+      refreshNodes(nodes);
+    } catch (KeeperException ke) {
+      LOG.fatal("Error reading data from zookeeper", ke);
+      watcher.abort("Error reading changed keys from zookeeper", ke);
+    }
+  }
+  
+  /**
+   * get token keys parent node
+   * @return token keys parent node
+   */
+  @VisibleForTesting
+  String getKeysParentZNode() {
+    return keysParentZNode;
   }
 }
