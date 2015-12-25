@@ -144,6 +144,27 @@ public class AuthenticationTokenSecretManager
       throw new InvalidToken("Token has expired");
     }
     AuthenticationKey masterKey = allKeys.get(identifier.getKeyId());
+    if(masterKey == null) {
+      if(zkWatcher.getWatcher().isAborted()) {
+        LOG.error("ZookeeperWatcher is abort");
+        throw new InvalidToken("Token keys could not be sync from zookeeper"
+            + " because of ZookeeperWatcher abort");
+      }
+      synchronized (this) {
+        if (!leaderElector.isAlive() || leaderElector.isStopped()) {
+          LOG.warn("Thread leaderElector[" + leaderElector.getName() + ":"
+              + leaderElector.getId() + "] is stoped or not alive");
+          leaderElector.start();
+          LOG.info("Thread leaderElector [" + leaderElector.getName() + ":"
+              + leaderElector.getId() + "] is started");
+        }
+      }
+      zkWatcher.refreshKeys();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sync token keys from zookeeper");
+      }
+      masterKey = allKeys.get(identifier.getKeyId());
+    }
     if (masterKey == null) {
       throw new InvalidToken("Unknown master key for token (id="+
           identifier.getKeyId()+")");
