@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.appendFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.compareOpFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -298,6 +300,19 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       closeTable(htable);
     }
     return Collections.emptyList();
+  }
+  
+  @Override
+  public boolean checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family,
+      ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations)
+          throws TIOError, TException {
+    try (final Table htable = getTable(table)) {
+      return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family),
+          byteBufferToByteArray(qualifier), compareOpFromThrift(compareOp),
+          byteBufferToByteArray(value), rowMutationsFromThrift(rowMutations));
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
   }
 
   @Override

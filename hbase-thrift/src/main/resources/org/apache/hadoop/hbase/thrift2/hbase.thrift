@@ -263,6 +263,21 @@ struct THRegionLocation {
   2: required THRegionInfo regionInfo
 }
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.filter.CompareFilter$CompareOp.
+ */
+enum TCompareOp {
+  LESS = 0,
+  LESS_OR_EQUAL = 1,
+  EQUAL = 2,
+  NOT_EQUAL = 3,
+  GREATER_OR_EQUAL = 4,
+  GREATER = 5,
+  NO_OP = 6
+}
+
+
 //
 // Exceptions
 //
@@ -556,4 +571,34 @@ service THBaseService {
   ) throws (
     1: TIOError io
   )
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it mutates the row.
+   *
+   * @return true if the row was mutated, false otherwise
+   */
+  bool checkAndMutate(
+    /** to check in and delete from */
+    1: required binary table,
+
+    /** row to check */
+    2: required binary row,
+
+    /** column family to check */
+    3: required binary family,
+
+    /** column qualifier to check */
+    4: required binary qualifier,
+
+    /** comparison to make on the value */
+    5: required TCompareOp compareOp,
+
+    /** the expected value to be compared against, if not provided the
+        check is for the non-existence of the column in question */
+    6: binary value,
+
+    /** row mutations to execute if the value matches */
+    7: required TRowMutations rowMutations
+  ) throws (1: TIOError io)
 }
