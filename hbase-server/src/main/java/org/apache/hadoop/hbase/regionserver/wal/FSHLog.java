@@ -97,6 +97,8 @@ import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
+
+
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS.
  * Only one WAL is ever being written at a time.  When a WAL hits a configured maximum size,
@@ -359,7 +361,9 @@ public class FSHLog implements WAL {
     public int compare(Path o1, Path o2) {
       long t1 = getFileNumFromFileName(o1);
       long t2 = getFileNumFromFileName(o2);
-      if (t1 == t2) return 0;
+      if (t1 == t2) {
+        return 0;
+      }
       return (t1 > t2) ? 1 : -1;
     }
   };
@@ -402,7 +406,7 @@ public class FSHLog implements WAL {
    * @param root path for stored and archived wals
    * @param logDir dir where wals are stored
    * @param conf configuration to use
-   * @throws IOException
+   * @throws IOException exception
    */
   public FSHLog(final FileSystem fs, final Path root, final String logDir, final Configuration conf)
       throws IOException {
@@ -410,7 +414,7 @@ public class FSHLog implements WAL {
   }
 
   /**
-   * Create an edit log at the given <code>dir</code> location.
+   * Create an edit log at the given directory location.
    *
    * You should never have to load an existing log. If there is a log at
    * startup, it should have already been processed and deleted by the time the
@@ -425,13 +429,13 @@ public class FSHLog implements WAL {
    * be registered before we do anything else; e.g. the
    * Constructor {@link #rollWriter()}.
    * @param failIfWALExists If true IOException will be thrown if files related to this wal
-   *        already exist.
+   *     already exist.
    * @param prefix should always be hostname and port in distributed env and
-   *        it will be URL encoded before being used.
-   *        If prefix is null, "wal" will be used
+   *     it will be URL encoded before being used.
+   *     If prefix is null, "wal" will be used
    * @param suffix will be url encoded. null is treated as empty. non-empty must start with
-   *        {@link DefaultWALProvider#WAL_FILE_NAME_DELIMITER}
-   * @throws IOException
+   *     {@link DefaultWALProvider#WAL_FILE_NAME_DELIMITER}
+   * @throws IOException exception
    */
   public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
       final String archiveDir, final Configuration conf,
@@ -593,7 +597,9 @@ public class FSHLog implements WAL {
   @VisibleForTesting
   OutputStream getOutputStream() {
     FSDataOutputStream fsdos = this.hdfs_out;
-    if (fsdos == null) return null;
+    if (fsdos == null) {
+      return null;
+    }
     return fsdos.getWrappedStream();
   }
 
@@ -628,7 +634,7 @@ public class FSHLog implements WAL {
 
   /**
    * Tell listeners about pre log roll.
-   * @throws IOException
+   * @throws IOException exception
    */
   private void tellListenersAboutPreLogRoll(final Path oldPath, final Path newPath)
   throws IOException {
@@ -641,7 +647,7 @@ public class FSHLog implements WAL {
 
   /**
    * Tell listeners about post log roll.
-   * @throws IOException
+   * @throws IOException exception
    */
   private void tellListenersAboutPostLogRoll(final Path oldPath, final Path newPath)
   throws IOException {
@@ -654,8 +660,7 @@ public class FSHLog implements WAL {
 
   /**
    * Run a sync after opening to set up the pipeline.
-   * @param nextWriter
-   * @param startTimeNanos
+   * @param nextWriter next writer
    */
   private void preemptiveSync(final ProtobufLogWriter nextWriter) {
     long startTimeNanos = System.nanoTime();
@@ -673,7 +678,9 @@ public class FSHLog implements WAL {
     rollWriterLock.lock();
     try {
       // Return if nothing to flush.
-      if (!force && (this.writer != null && this.numEntries.get() <= 0)) return null;
+      if (!force && (this.writer != null && this.numEntries.get() <= 0)) {
+        return null;
+      }
       byte [][] regionsToFlush = null;
       if (this.closed) {
         LOG.debug("WAL closed. Skipping rolling of writer");
@@ -728,7 +735,7 @@ public class FSHLog implements WAL {
 
   /**
    * Archive old logs. A WAL is eligible for archiving if all its WALEdits have been flushed.
-   * @throws IOException
+   * @throws IOException exception
    */
   private void cleanOldLogs() throws IOException {
     List<Path> logsToArchive = null;
@@ -738,9 +745,13 @@ public class FSHLog implements WAL {
       Path log = e.getKey();
       Map<byte[], Long> sequenceNums = e.getValue();
       if (this.sequenceIdAccounting.areAllLower(sequenceNums)) {
-        if (logsToArchive == null) logsToArchive = new ArrayList<Path>();
+        if (logsToArchive == null) {
+          logsToArchive = new ArrayList<Path>();
+        }
         logsToArchive.add(log);
-        if (LOG.isTraceEnabled()) LOG.trace("WAL file ready for archiving " + log);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("WAL file ready for archiving " + log);
+        }
       }
     }
     if (logsToArchive != null) {
@@ -770,7 +781,9 @@ public class FSHLog implements WAL {
     if (regions != null) {
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < regions.length; i++) {
-        if (i > 0) sb.append(", ");
+        if (i > 0) {
+          sb.append(", ");
+        }
         sb.append(Bytes.toStringBinary(regions[i]));
       }
       LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
@@ -836,7 +849,9 @@ public class FSHLog implements WAL {
         }
       } catch (FailedSyncBeforeLogCloseException e) {
         // If unflushed/unsynced entries on close, it is reason to abort.
-        if (isUnflushedEntries()) throw e;
+        if (isUnflushedEntries()) {
+          throw e;
+        }
         LOG.warn("Failed sync-before-close but no outstanding appends; closing WAL: " +
           e.getMessage());
       }
@@ -897,7 +912,9 @@ public class FSHLog implements WAL {
             try {
               blockOnSync(syncFuture);
             } catch (IOException ioe) {
-              if (LOG.isTraceEnabled()) LOG.trace("Stale sync exception", ioe);
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Stale sync exception", ioe);
+              }
             }
           }
         }
@@ -968,7 +985,15 @@ public class FSHLog implements WAL {
   public Path getCurrentFileName() {
     return computeFilename(this.filenum.get());
   }
-
+  
+  /**
+   * To support old API compatibility
+   * @return current file number (timestamp)
+   */
+  public long getFilenum() {
+    return filenum.get();
+  }
+  
   @Override
   public String toString() {
     return "FSHLog " + logFilePrefix + ":" + logFileSuffix + "(num " + filenum + ")";

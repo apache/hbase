@@ -15,40 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure;
+
+package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.zookeeper.KeeperException;
 
-/**
- * A life-cycle management interface for globally barriered procedures on
- * region servers.
- */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class RegionServerProcedureManager extends ProcedureManager {
-  /**
-   * Initialize a globally barriered procedure for region servers.
-   *
-   * @param rss Region Server service interface
-   * @throws KeeperException
-   */
-  public abstract void initialize(RegionServerServices rss) throws IOException;
+public interface IncrementalRestoreService extends Configurable{
 
-  /**
-   * Start accepting procedure requests.
-   */
-  public abstract void start();
-
-  /**
-   * Close <tt>this</tt> and all running procedure tasks
-   *
-   * @param force forcefully stop all running tasks
-   * @throws IOException
-   */
-  public abstract void stop(boolean force) throws IOException;
+  public void run(String logDirectory, String[] fromTables, String[] toTables)
+    throws IOException;
 }

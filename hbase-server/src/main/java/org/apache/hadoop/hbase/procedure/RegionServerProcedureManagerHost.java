@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Provides the globally barriered procedure framework and environment
@@ -39,7 +38,7 @@ public class RegionServerProcedureManagerHost extends
   private static final Log LOG = LogFactory
       .getLog(RegionServerProcedureManagerHost.class);
 
-  public void initialize(RegionServerServices rss) throws KeeperException {
+  public void initialize(RegionServerServices rss) throws IOException {
     for (RegionServerProcedureManager proc : procedures) {
       LOG.debug("Procedure " + proc.getProcedureSignature() + " is initializing");
       proc.initialize(rss);

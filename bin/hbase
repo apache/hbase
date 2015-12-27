@@ -99,6 +99,8 @@ if [ $# = 0 ]; then
   echo "  pe              Run PerformanceEvaluation"
   echo "  ltt             Run LoadTestTool"
   echo "  version         Print the version"
+  echo "  backup          backup tables for recovery"
+  echo "  restore         restore tables from existing backup image"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -303,6 +305,10 @@ elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer"
+elif [ "$COMMAND" = "backup" ] ; then
+  CLASS='org.apache.hadoop.hbase.backup.BackupClient'
+elif [ "$COMMAND" = "restore" ] ; then
+  CLASS='org.apache.hadoop.hbase.backup.RestoreClient'
 elif [ "$COMMAND" = "upgrade" ] ; then
   echo "This command was used to upgrade to HBase 0.96, it was removed in HBase 2.0.0."
   echo "Please follow the documentation at http://hbase.apache.org/book.html#upgrading."
