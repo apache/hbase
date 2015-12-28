@@ -14,15 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-require 'hbase'
+require 'hbase_constants'
 require 'shell'
-require 'shell/formatter'
 
 class NonInteractiveTest < Test::Unit::TestCase
   def setup
-    @formatter = ::Shell::Formatter::Console.new()
     @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-    @shell = Shell::Shell.new(@hbase, @formatter, false)
+    @shell = Shell::Shell.new(@hbase, false)
   end
 
   define_test "Shell::Shell noninteractive mode should throw" do

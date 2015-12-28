@@ -28,9 +28,8 @@ module Hbase
   class RSGroupAdmin
     include HBaseConstants
 
-    def initialize(connection, formatter)
+    def initialize(connection)
       @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdmin.newClient(connection)
-      @formatter = formatter
     end
 
     def close

@@ -31,10 +31,9 @@ module Hbase
   class RepAdmin
     include HBaseConstants
 
-    def initialize(configuration, formatter)
+    def initialize(configuration)
       @replication_admin = ReplicationAdmin.new(configuration)
       @configuration = configuration
-      @formatter = formatter
     end
 
     #----------------------------------------------------------------------------------------------

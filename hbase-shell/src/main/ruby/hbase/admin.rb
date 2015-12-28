@@ -31,10 +31,10 @@ module Hbase
   class Admin
     include HBaseConstants
 
-    def initialize(admin, formatter)
-      @admin = admin
-      @connection = @admin.getConnection()
-      @formatter = formatter
+    def initialize(connection)
+      @connection = connection
+      # Java Admin instance
+      @admin = @connection.getAdmin
     end
 
     def close
@@ -309,12 +309,6 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Parse arguments and update HTableDescriptor accordingly
-    def parse_htd_args(htd, arg)
-      htd.setNormalizationEnabled(JBoolean.valueOf(arg.delete(NORMALIZATION_ENABLED))) if arg[NORMALIZATION_ENABLED]
-    end
-
-    #----------------------------------------------------------------------------------------------
     # Creates a table
     def create(table_name, *args)
       # Fail if table name is not a string
@@ -392,24 +386,7 @@ module Hbase
         end
 
         # Done with splits; apply formerly-table_att parameters.
-        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
-        htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
-        htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
-        htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
-        htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
-        # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
-        # However, it has to be set before DURABILITY so that DURABILITY could overwrite if both args are set
-        if arg.include?(DEFERRED_LOG_FLUSH)
-          if arg.delete(DEFERRED_LOG_FLUSH).to_s.upcase == "TRUE"
-            htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("ASYNC_WAL"))
-          else
-            htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("SYNC_WAL"))
-          end
-        end
-        htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(DURABILITY))) if arg[DURABILITY]
-        parse_htd_args(htd, arg)
-        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
-        set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+        update_htd_from_arg(htd, arg)
 
         arg.each_key do |ignored_key|
           puts("An argument ignored (unknown or overridden): %s" % [ ignored_key ])
@@ -653,26 +630,7 @@ module Hbase
         end
 
         # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
-        raise(ArgumentError, "NAME argument in an unexpected place") if name
-        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
-        htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
-        htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
-        htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
-        parse_htd_args(htd, arg)
-        htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
-        # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
-        # However, it has to be set before DURABILITY so that DURABILITY could overwrite if both args are set
-        if arg.include?(DEFERRED_LOG_FLUSH)
-          if arg.delete(DEFERRED_LOG_FLUSH).to_s.upcase == "TRUE"
-            htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("ASYNC_WAL"))
-          else
-            htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("SYNC_WAL"))
-          end
-        end
-        htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(DURABILITY))) if arg[DURABILITY]
-        htd.setRegionReplication(JInteger.valueOf(arg.delete(REGION_REPLICATION))) if arg[REGION_REPLICATION]
-        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
-        set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+        update_htd_from_arg(htd, arg)
 
         # set a coprocessor attribute
         valid_coproc_keys = []
@@ -764,7 +722,7 @@ module Hbase
             rLoadSink = sl.getReplicationLoadSink()
             rSinkString << " AgeOfLastAppliedOp=" + rLoadSink.getAgeOfLastAppliedOp().to_s
             rSinkString << ", TimeStampsOfLastAppliedOp=" +
-			    (java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp())).toString()
+                (java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp())).toString()
             rLoadSourceList = sl.getReplicationLoadSourceList()
             index = 0
             while index < rLoadSourceList.size()
@@ -773,7 +731,7 @@ module Hbase
               rSourceString << ", AgeOfLastShippedOp=" + rLoadSource.getAgeOfLastShippedOp().to_s
               rSourceString << ", SizeOfLogQueue=" + rLoadSource.getSizeOfLogQueue().to_s
               rSourceString << ", TimeStampsOfLastShippedOp=" +
-			      (java.util.Date.new(rLoadSource.getTimeStampOfLastShippedOp())).toString()
+                  (java.util.Date.new(rLoadSource.getTimeStampOfLastShippedOp())).toString()
               rSourceString << ", Replication Lag=" + rLoadSource.getReplicationLag().to_s
               index = index + 1
             end
@@ -1185,6 +1143,30 @@ module Hbase
     # List all procedures
     def list_procedures()
       @admin.listProcedures()
+    end
+
+    # Parse arguments and update HTableDescriptor accordingly
+    def update_htd_from_arg(htd, arg)
+      htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
+      htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
+      htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
+      htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
+      htd.setNormalizationEnabled(
+        JBoolean.valueOf(arg[NORMALIZATION_ENABLED])) if arg[NORMALIZATION_ENABLED]
+      htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
+      # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
+      # However, it has to be set before DURABILITY so that DURABILITY could overwrite if both args are set
+      if arg.include?(DEFERRED_LOG_FLUSH)
+        if arg.delete(DEFERRED_LOG_FLUSH).to_s.upcase == "TRUE"
+          htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("ASYNC_WAL"))
+        else
+          htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf("SYNC_WAL"))
+        end
+      end
+      htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(DURABILITY))) if arg[DURABILITY]
+      htd.setRegionReplication(JInteger.valueOf(arg.delete(REGION_REPLICATION))) if arg[REGION_REPLICATION]
+      set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
+      set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
     end
   end
 end

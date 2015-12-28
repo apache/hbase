@@ -17,15 +17,13 @@
 # limitations under the License.
 #
 
-require 'hbase'
+require 'hbase_constants'
 require 'shell'
-require 'shell/formatter'
 
 class ShellTest < Test::Unit::TestCase
   def setup
-    @formatter = ::Shell::Formatter::Console.new()
     @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-    @shell = Shell::Shell.new(@hbase, @formatter)
+    @shell = Shell::Shell.new(@hbase)
   end
 
   define_test "Shell::Shell#hbase_admin should return an admin instance" do

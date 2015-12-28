@@ -26,7 +26,7 @@ module Shell
       end
 
       #wrap an execution of cmd to catch hbase exceptions
-      # cmd - command name to execture
+      # cmd - command name to execute
       # args - arguments to pass to the command
       def command_safe(debug, cmd = :command, *args)
         # send is internal ruby method to call 'cmd' with *args
@@ -50,6 +50,9 @@ module Shell
         end
       end
 
+      # Convenience functions to get different admins
+
+      # Returns HBase::Admin ruby class.
       def admin
         @shell.hbase_admin
       end
@@ -83,9 +86,9 @@ module Shell
       end
 
       #----------------------------------------------------------------------
-
+      # Creates formatter instance first time and then reuses it.
       def formatter
-        @shell.formatter
+        @formatter ||= ::Shell::Formatter::Console.new
       end
 
       def format_simple_command

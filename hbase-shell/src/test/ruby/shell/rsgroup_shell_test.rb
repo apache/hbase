@@ -17,16 +17,14 @@
 # limitations under the License.
 #
 
-require 'hbase'
+require 'hbase_constants'
 require 'shell'
-require 'shell/formatter'
 
 module Hbase
   class RSGroupShellTest < Test::Unit::TestCase
     def setup
-      @formatter = ::Shell::Formatter::Console.new
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-      @shell = Shell::Shell.new(@hbase, @formatter)
+      @shell = Shell::Shell.new(@hbase)
       connection = $TEST_CLUSTER.getConnection
       @rsgroup_admin =
           org.apache.hadoop.hbase.rsgroup.RSGroupAdmin.newClient(connection)
@@ -65,7 +63,7 @@ module Hbase
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
 
       count = 0
-      @hbase.rsgroup_admin(@formatter).get_rsgroup(group_name) do |line|
+      @hbase.rsgroup_admin().get_rsgroup(group_name) do |line|
         case count
         when 1
           assert_equal(hostPortStr, line)
@@ -77,22 +75,22 @@ module Hbase
       assert_equal(4, count)
 
       assert_equal(2,
-                   @hbase.rsgroup_admin(@formatter).list_rs_groups.count)
+                   @hbase.rsgroup_admin().list_rs_groups.count)
 
       # just run it to verify jruby->java api binding
-      @hbase.rsgroup_admin(@formatter).balance_rs_group(group_name)
+      @hbase.rsgroup_admin().balance_rs_group(group_name)
     end
 
     # we test exceptions that could be thrown by the ruby wrappers
     define_test 'Test bogus arguments' do
       assert_raise(ArgumentError) do
-        @hbase.rsgroup_admin(@formatter).get_rsgroup('foobar')
+        @hbase.rsgroup_admin().get_rsgroup('foobar')
       end
       assert_raise(ArgumentError) do
-        @hbase.rsgroup_admin(@formatter).get_rsgroup_of_server('foobar:123')
+        @hbase.rsgroup_admin().get_rsgroup_of_server('foobar:123')
       end
       assert_raise(ArgumentError) do
-        @hbase.rsgroup_admin(@formatter).get_rsgroup_of_table('foobar')
+        @hbase.rsgroup_admin().get_rsgroup_of_table('foobar')
       end
     end
   end

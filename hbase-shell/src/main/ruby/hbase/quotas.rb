@@ -36,9 +36,8 @@ end
 
 module Hbase
   class QuotasAdmin
-    def initialize(admin, formatter)
+    def initialize(admin)
       @admin = admin
-      @formatter = formatter
     end
 
     def close
