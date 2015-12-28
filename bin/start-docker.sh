@@ -20,6 +20,7 @@ set -e
 set -x
 
 eval "$(docker-machine env docker-vm)"
+eval "$(docker-machine env dinghy)"
 docker build -t hbase_native .
 
 

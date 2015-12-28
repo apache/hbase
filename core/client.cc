@@ -24,9 +24,13 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
+#include "if/ZooKeeper.pb.h"
+
 using namespace folly;
+using namespace hbase::pb;
 
 int main(int argc, char *argv[]) {
+  MetaRegionServer mrs;
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 

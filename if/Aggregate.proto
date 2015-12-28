@@ -1,0 +1,63 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package hbase.pb;
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "AggregateProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "Client.proto";
+
+message AggregateRequest {
+  /** The request passed to the AggregateService consists of three parts
+   *  (1) the (canonical) classname of the ColumnInterpreter implementation
+   *  (2) the Scan query
+   *  (3) any bytes required to construct the ColumnInterpreter object
+   *      properly
+   */
+  required string interpreter_class_name = 1;
+  required Scan scan = 2;
+  optional bytes  interpreter_specific_bytes = 3;
+}
+
+message AggregateResponse {
+  /**
+   * The AggregateService methods all have a response that either is a Pair
+   * or a simple object. When it is a Pair both first_part and second_part
+   * have defined values (and the second_part is not present in the response
+   * when the response is not a pair). Refer to the AggregateImplementation 
+   * class for an overview of the AggregateResponse object constructions. 
+   */ 
+  repeated bytes first_part = 1;
+  optional bytes second_part = 2;
+}
+
+/** Refer to the AggregateImplementation class for an overview of the 
+ *  AggregateService method implementations and their functionality.
+ */
+service AggregateService {
+  rpc GetMax (AggregateRequest) returns (AggregateResponse);
+  rpc GetMin (AggregateRequest) returns (AggregateResponse);
+  rpc GetSum (AggregateRequest) returns (AggregateResponse);
+  rpc GetRowNum (AggregateRequest) returns (AggregateResponse);
+  rpc GetAvg (AggregateRequest) returns (AggregateResponse);
+  rpc GetStd (AggregateRequest) returns (AggregateResponse);
+  rpc GetMedian (AggregateRequest) returns (AggregateResponse);
+}

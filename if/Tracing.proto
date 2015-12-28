@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,13 +14,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
+package hbase.pb;
 
-#pragma once
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "TracingProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-#include <folly/io/IOBuf.h>
-
-#include "if/Cell.pb.h"
-
-class Client {};
+//Used to pass through the information necessary to continue
+//a trace after an RPC is made. All we need is the traceid 
+//(so we know the overarching trace this message is a part of), and
+//the id of the current span when this message was sent, so we know 
+//what span caused the new span we will create when this message is received.
+message RPCTInfo {
+  optional int64 trace_id = 1;
+  optional int64 parent_id = 2;
+}
