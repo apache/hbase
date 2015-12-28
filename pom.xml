@@ -1826,6 +1826,9 @@
             <name>HBasePatchProcess</name>
         </property>
       </activation>
+      <properties>
+        <surefire.rerunFailingTestsCount>2</surefire.rerunFailingTestsCount>
+      </properties>
       <build>
         <plugins>
           <plugin>
