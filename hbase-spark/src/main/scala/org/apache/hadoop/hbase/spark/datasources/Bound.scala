@@ -87,3 +87,27 @@ object Ranges {
   }
 }
 
+object Points {
+  def and(r: Range, ps: Seq[Array[Byte]]): Seq[Array[Byte]] = {
+    ps.flatMap { p =>
+      if (ord.compare(r.lower.get.b, p) <= 0) {
+        // if region lower bound is less or equal to the point
+        if (r.upper.isDefined) {
+          // if region upper bound is defined
+          if (ord.compare(r.upper.get.b, p) > 0) {
+            // if the upper bound is greater than the point (because upper bound is exclusive)
+            Some(p)
+          } else {
+            None
+          }
+        } else {
+          // if the region upper bound is not defined (infinity)
+          Some(p)
+        }
+      } else {
+        None
+      }
+    }
+  }
+}
+

@@ -29,4 +29,6 @@ object HBaseSparkConf{
   val defaultCachingSize = 1000
   val BATCH_NUM = "spark.hbase.batchNum"
   val defaultBatchNum = 1000
+  val BULKGET_SIZE = "spark.hbase.bulkGetSize"
+  val defaultBulkGetSize = 1000
 }

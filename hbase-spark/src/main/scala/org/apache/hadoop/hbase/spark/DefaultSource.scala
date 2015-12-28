@@ -159,6 +159,10 @@ case class HBaseRelation (val tableName:String,
     .getOrElse(sqlContext.sparkContext.getConf.getInt(
     HBaseSparkConf.BATCH_NUM,  HBaseSparkConf.defaultBatchNum))
 
+  val bulkGetSize =  parameters.get(HBaseSparkConf.BULKGET_SIZE).map(_.toInt)
+    .getOrElse(sqlContext.sparkContext.getConf.getInt(
+    HBaseSparkConf.BULKGET_SIZE,  HBaseSparkConf.defaultBulkGetSize))
+
   //create or get latest HBaseContext
   @transient val hbaseContext:HBaseContext = if (useHBaseContext) {
     LatestHBaseContextCache.latest
@@ -267,6 +271,7 @@ case class HBaseRelation (val tableName:String,
       None
     }
     val hRdd = new HBaseTableScanRDD(this, pushDownFilterJava, requiredQualifierDefinitionList.seq)
+    pushDownRowKeyFilter.points.foreach(hRdd.addPoint(_))
     pushDownRowKeyFilter.ranges.foreach(hRdd.addRange(_))
     var resultRDD: RDD[Row] = {
       val tmp = hRdd.map{ r =>
@@ -277,34 +282,6 @@ case class HBaseRelation (val tableName:String,
         tmp
       } else {
         null
-      }
-    }
-
-    //If there are gets then we can get them from the driver and union that rdd in
-    // with the rest of the values.
-    if (getList.size() > 0) {
-      val connection =
-        ConnectionFactory.createConnection(hbaseContext.tmpHdfsConfiguration)
-      try {
-        val table = connection.getTable(TableName.valueOf(tableName))
-        try {
-          val results = table.get(getList)
-          val rowList = mutable.MutableList[Row]()
-          for (i <- 0 until results.length) {
-            val rowArray = requiredColumns.map(c =>
-              DefaultSourceStaticUtils.getValue(c, schemaMappingDefinition, results(i)))
-            rowList += Row.fromSeq(rowArray)
-          }
-          val getRDD = sqlContext.sparkContext.parallelize(rowList)
-          if (resultRDD == null) resultRDD = getRDD
-          else {
-            resultRDD = resultRDD.union(getRDD)
-          }
-        } finally {
-          table.close()
-        }
-      } finally {
-        connection.close()
       }
     }
 

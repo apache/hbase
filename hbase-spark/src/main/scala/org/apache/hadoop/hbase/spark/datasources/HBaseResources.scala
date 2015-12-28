@@ -38,6 +38,12 @@ case class ScanResource(tbr: TableResource, rs: ResultScanner) extends Resource 
   }
 }
 
+case class GetResource(tbr: TableResource, rs: Array[Result]) extends Resource {
+  def release() {
+    tbr.release()
+  }
+}
+
 trait ReferencedResource {
   var count: Int = 0
   def init(): Unit
@@ -100,6 +106,10 @@ case class TableResource(relation: HBaseRelation) extends ReferencedResource {
   def getScanner(scan: Scan): ScanResource = releaseOnException {
     ScanResource(this, table.getScanner(scan))
   }
+
+  def get(list: java.util.List[org.apache.hadoop.hbase.client.Get]) = releaseOnException {
+    GetResource(this, table.get(list))
+  }
 }
 
 case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
@@ -136,6 +146,10 @@ case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
 object HBaseResources{
   implicit def ScanResToScan(sr: ScanResource): ResultScanner = {
     sr.rs
+  }
+
+  implicit def GetResToResult(gr: GetResource): Array[Result] = {
+    gr.rs
   }
 
   implicit def TableResToTable(tr: TableResource): Table = {
