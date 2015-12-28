@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,13 +14,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-#pragma once
+// This file contains protocol buffers used for encryption
+package hbase.pb;
 
-#include <folly/io/IOBuf.h>
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "EncryptionProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-#include "if/Cell.pb.h"
-
-class Client {};
+message WrappedKey {
+  required string algorithm = 1;
+  required uint32 length = 2;
+  required bytes data = 3;
+  optional bytes iv = 4;
+  optional bytes hash = 5;
+}

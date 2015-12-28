@@ -21,7 +21,8 @@ def add_system_libs(names = []):
                 prebuilt_cxx_library(
                         name = name,
                         lib_name = name,
-                        lib_dir = "/usr/lib/x86_64-linux-gnu"
+                        lib_dir = "/usr/lib/x86_64-linux-gnu",
+                        visibility = [ 'PUBLIC', ],
                 )
                 rules.append(":" + name)
 
@@ -30,6 +31,7 @@ def add_system_libs(names = []):
 system_libs = [
         "double-conversion",
         "glog",
+        "protobuf",
         "gflags",
         "unwind",
         "lzma",
