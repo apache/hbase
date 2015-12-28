@@ -70,25 +70,23 @@ module Shell
   #----------------------------------------------------------------------
   class Shell
     attr_accessor :hbase
-    attr_accessor :formatter
     attr_accessor :interactive
     alias interactive? interactive
 
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase, formatter, interactive=true)
+    def initialize(hbase, interactive=true)
       self.hbase = hbase
-      self.formatter = formatter
       self.interactive = interactive
     end
 
     def hbase_admin
-      @hbase_admin ||= hbase.admin(formatter)
+      @hbase_admin ||= hbase.admin()
     end
 
     def hbase_taskmonitor
-      @hbase_taskmonitor ||= hbase.taskmonitor(formatter)
+      @hbase_taskmonitor ||= hbase.taskmonitor()
     end
 
     def hbase_table(name)
@@ -96,23 +94,23 @@ module Shell
     end
 
     def hbase_replication_admin
-      @hbase_replication_admin ||= hbase.replication_admin(formatter)
+      @hbase_replication_admin ||= hbase.replication_admin()
     end
 
     def hbase_security_admin
-      @hbase_security_admin ||= hbase.security_admin(formatter)
+      @hbase_security_admin ||= hbase.security_admin()
     end
 
     def hbase_visibility_labels_admin
-      @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin(formatter)
+      @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin()
     end
 
     def hbase_quotas_admin
-      @hbase_quotas_admin ||= hbase.quotas_admin(formatter)
+      @hbase_quotas_admin ||= hbase.quotas_admin()
     end
 
     def hbase_rsgroup_admin
-      @rsgroup_admin ||= hbase.rsgroup_admin(formatter)
+      @rsgroup_admin ||= hbase.rsgroup_admin()
     end
 
     def export_commands(where)
@@ -140,7 +138,7 @@ module Shell
       internal_command(command, :command, *args)
     end
 
-    #call a specific internal method in the command instance
+    # call a specific internal method in the command instance
     # command  - name of the command to call
     # method_name - name of the method on the command to call. Defaults to just 'command'
     # args - to be passed to the named method
@@ -149,8 +147,9 @@ module Shell
     end
 
     def print_banner
-      puts "HBase Shell; enter 'help<RETURN>' for list of supported commands."
-      puts 'Type "exit<RETURN>" to leave the HBase Shell'
+      puts 'HBase Shell'
+      puts 'Use "help" to get list of supported commands.'
+      puts 'Use "exit" to quit this interactive shell.'
       print 'Version '
       command('version')
       puts

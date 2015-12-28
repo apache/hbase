@@ -17,12 +17,11 @@
 # limitations under the License.
 #
 
-require 'hbase'
+require 'hbase_constants'
 
 module Hbase
   class HbaseTest < Test::Unit::TestCase
     def setup
-      @formatter = Shell::Formatter::Console.new()
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
     end
 
@@ -31,19 +30,19 @@ module Hbase
     end
 
     define_test "Hbase::Hbase#admin should create a new admin object when called the first time" do
-      assert_kind_of(::Hbase::Admin, @hbase.admin(@formatter))
+      assert_kind_of(::Hbase::Admin, @hbase.admin())
     end
 
     define_test "Hbase::Hbase#admin should create a new admin object every call" do
-      assert_not_same(@hbase.admin(@formatter), @hbase.admin(@formatter))
+      assert_not_same(@hbase.admin(), @hbase.admin())
     end
 
     define_test "Hbase::Hbase#table should create a new table object when called the first time" do
-      assert_kind_of(::Hbase::Table, @hbase.table('hbase:meta', @formatter))
+      assert_kind_of(::Hbase::Table, @hbase.table('hbase:meta', @shell))
     end
 
     define_test "Hbase::Hbase#table should create a new table object every call" do
-      assert_not_same(@hbase.table('hbase:meta', @formatter), @hbase.table('hbase:meta', @formatter))
+      assert_not_same(@hbase.table('hbase:meta', @shell), @hbase.table('hbase:meta', @shell))
     end
   end
 end

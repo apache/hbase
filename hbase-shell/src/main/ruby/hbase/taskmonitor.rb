@@ -71,9 +71,8 @@ module Hbase
     end
 
 
-    def initialize(configuration, formatter)
+    def initialize(configuration)
       @conf = configuration
-      @formatter = formatter
       @conn = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(@conf)
       @admin = @conn.getAdmin()
     end

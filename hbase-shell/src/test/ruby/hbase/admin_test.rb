@@ -18,9 +18,8 @@
 #
 
 require 'shell'
-require 'shell/formatter'
 require 'stringio'
-require 'hbase'
+require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
