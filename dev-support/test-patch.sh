@@ -856,15 +856,14 @@ runTests () {
 
     {color:red}-1 core tests{color}.  The patch failed these unit tests:
      $failed_tests"
-     BAD=1
-     #JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
+     JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
+     return 1
   else
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
-     #JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
-    #BAD=$?
-    BAD=0
+    JIRA_COMMENT=`$BASEDIR/dev-support/zombie-detector.sh ${BUILD_ID}`
+    return $?
   fi
 }
 
