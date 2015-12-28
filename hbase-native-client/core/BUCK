@@ -41,6 +41,7 @@ cxx_binary(
           "scanner.cc",
 	],
 	deps = [
+		"//if:if",
 		"//third-party:folly",
 		"//third-party:wangle",
 	],
