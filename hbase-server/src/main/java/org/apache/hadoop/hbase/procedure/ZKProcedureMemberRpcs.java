@@ -68,54 +68,49 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
    * @throws KeeperException if we can't reach zookeeper
    */
   public ZKProcedureMemberRpcs(final ZooKeeperWatcher watcher, final String procType)
-      throws IOException {
-    try {
-      this.zkController = new ZKProcedureUtil(watcher, procType) {
-        @Override
-        public void nodeCreated(String path) {
-          if (!isInProcedurePath(path)) {
-            return;
-          }
-
-          LOG.info("Received created event:" + path);
-          // if it is a simple start/end/abort then we just rewatch the node
-          if (isAcquiredNode(path)) {
-            waitForNewProcedures();
-            return;
-          } else if (isAbortNode(path)) {
-            watchForAbortedProcedures();
-            return;
-          }
-          String parent = ZKUtil.getParent(path);
-          // if its the end barrier, the procedure can be completed
-          if (isReachedNode(parent)) {
-            receivedReachedGlobalBarrier(path);
-            return;
-          } else if (isAbortNode(parent)) {
-            abort(path);
-            return;
-          } else if (isAcquiredNode(parent)) {
-            startNewSubprocedure(path);
-          } else {
-            LOG.debug("Ignoring created notification for node:" + path);
-          }
+      throws KeeperException {
+    this.zkController = new ZKProcedureUtil(watcher, procType) {
+      @Override
+      public void nodeCreated(String path) {
+        if (!isInProcedurePath(path)) {
+          return;
         }
 
-        @Override
-        public void nodeChildrenChanged(String path) {
-          if (path.equals(this.acquiredZnode)) {
-            LOG.info("Received procedure start children changed event: " + path);
-            waitForNewProcedures();
-          } else if (path.equals(this.abortZnode)) {
-            LOG.info("Received procedure abort children changed event: " + path);
-            watchForAbortedProcedures();
-          }
+        LOG.info("Received created event:" + path);
+        // if it is a simple start/end/abort then we just rewatch the node
+        if (isAcquiredNode(path)) {
+          waitForNewProcedures();
+          return;
+        } else if (isAbortNode(path)) {
+          watchForAbortedProcedures();
+          return;
         }
-      };
-    } catch (KeeperException e) {
-      // TODO Auto-generated catch block
-      throw new IOException(e);
-    }
+        String parent = ZKUtil.getParent(path);
+        // if its the end barrier, the procedure can be completed
+        if (isReachedNode(parent)) {
+          receivedReachedGlobalBarrier(path);
+          return;
+        } else if (isAbortNode(parent)) {
+          abort(path);
+          return;
+        } else if (isAcquiredNode(parent)) {
+          startNewSubprocedure(path);
+        } else {
+          LOG.debug("Ignoring created notification for node:" + path);
+        }
+      }
+
+      @Override
+      public void nodeChildrenChanged(String path) {
+        if (path.equals(this.acquiredZnode)) {
+          LOG.info("Received procedure start children changed event: " + path);
+          waitForNewProcedures();
+        } else if (path.equals(this.abortZnode)) {
+          LOG.info("Received procedure abort children changed event: " + path);
+          watchForAbortedProcedures();
+        }
+      }
+    };
   }
 
   public ZKProcedureUtil getZkController() {

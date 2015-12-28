@@ -54,7 +54,7 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
    * @throws KeeperException if an unexpected zk error occurs
    */
   public ZKProcedureCoordinatorRpcs(ZooKeeperWatcher watcher,
-      String procedureClass, String coordName) throws IOException {
+      String procedureClass, String coordName) throws KeeperException {
     this.watcher = watcher;
     this.procedureType = procedureClass;
     this.coordName = coordName;

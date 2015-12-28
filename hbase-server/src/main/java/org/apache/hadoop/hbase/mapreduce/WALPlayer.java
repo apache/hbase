@@ -85,9 +85,6 @@ public class WALPlayer extends Configured implements Tool {
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
-  public WALPlayer(){
-  }
-
   protected WALPlayer(final Configuration c) {
     super(c);
   }
@@ -97,7 +94,7 @@ public class WALPlayer extends Configured implements Tool {
    * This one can be used together with {@link KeyValueSortReducer}
    */
   static class WALKeyValueMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue> {
+  extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue> {
     private byte[] table;
 
     @Override
@@ -109,9 +106,7 @@ public class WALPlayer extends Configured implements Tool {
         if (Bytes.equals(table, key.getTablename().getName())) {
           for (Cell cell : value.getCells()) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            if (WALEdit.isMetaEditFamily(kv)) {
-              continue;
-            }
+            if (WALEdit.isMetaEditFamily(kv)) continue;
             context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)), kv);
           }
         }
@@ -137,7 +132,7 @@ public class WALPlayer extends Configured implements Tool {
    * a running HBase instance.
    */
   protected static class WALMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
+  extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
     private Map<TableName, TableName> tables = new TreeMap<TableName, TableName>();
 
     @Override
@@ -154,9 +149,7 @@ public class WALPlayer extends Configured implements Tool {
           Cell lastCell = null;
           for (Cell cell : value.getCells()) {
             // filtering WAL meta entries
-            if (WALEdit.isMetaEditFamily(cell)) {
-              continue;
-            }
+            if (WALEdit.isMetaEditFamily(cell)) continue;
 
             // Allow a subclass filter out this cell.
             if (filter(context, cell)) {
@@ -167,12 +160,8 @@ public class WALPlayer extends Configured implements Tool {
               if (lastCell == null || lastCell.getTypeByte() != cell.getTypeByte()
                   || !CellUtil.matchingRow(lastCell, cell)) {
                 // row or type changed, write out aggregate KVs.
-                if (put != null) {
-                  context.write(tableOut, put);
-                }
-                if (del != null) {
-                  context.write(tableOut, del);
-                }
+                if (put != null) context.write(tableOut, put);
+                if (del != null) context.write(tableOut, del);
                 if (CellUtil.isDelete(cell)) {
                   del = new Delete(CellUtil.cloneRow(cell));
                 } else {
@@ -188,12 +177,8 @@ public class WALPlayer extends Configured implements Tool {
             lastCell = cell;
           }
           // write residual KVs
-          if (put != null) {
-            context.write(tableOut, put);
-          }
-          if (del != null) {
-            context.write(tableOut, del);
-          }
+          if (put != null) context.write(tableOut, put);
+          if (del != null) context.write(tableOut, del);
         }
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -201,8 +186,7 @@ public class WALPlayer extends Configured implements Tool {
     }
 
     /**
-     * Filter cell
-     * @param cell cell
+     * @param cell
      * @return Return true if we are to emit this cell.
      */
     protected boolean filter(Context context, final Cell cell) {
@@ -213,7 +197,9 @@ public class WALPlayer extends Configured implements Tool {
     public void setup(Context context) throws IOException {
       String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
       String[] tablesToUse = context.getConfiguration().getStrings(TABLES_KEY);
-      if (tablesToUse == null || tableMap == null || tablesToUse.length != tableMap.length) {
+      if (tablesToUse == null && tableMap == null) {
+        // Then user wants all tables.
+      } else if (tablesToUse == null || tableMap == null || tablesToUse.length != tableMap.length) {
         // this can only happen when WALMapper is used directly by a class other than WALPlayer
         throw new IOException("No tables or incorrect table mapping specified.");
       }
@@ -229,9 +215,7 @@ public class WALPlayer extends Configured implements Tool {
 
   void setupTime(Configuration conf, String option) throws IOException {
     String val = conf.get(option);
-    if (null == val) {
-      return;
-    }
+    if (null == val) return;
     long ms;
     try {
       // first try to parse in user friendly form
@@ -311,8 +295,7 @@ public class WALPlayer extends Configured implements Tool {
     return job;
   }
 
-  /**
-   * Print usage
+  /*
    * @param errorMsg Error message.  Can be null.
    */
   private void usage(final String errorMsg) {
@@ -322,8 +305,7 @@ public class WALPlayer extends Configured implements Tool {
     System.err.println("Usage: " + NAME + " [options] <wal inputdir> <tables> [<tableMappings>]");
     System.err.println("Read all WAL entries for <tables>.");
     System.err.println("If no tables (\"\") are specific, all tables are imported.");
-    System.err.println("(Careful, even -ROOT- and hbase:meta entries will be imported"+
-      " in that case.)");
+    System.err.println("(Careful, even -ROOT- and hbase:meta entries will be imported in that case.)");
     System.err.println("Otherwise <tables> is a comma separated list of tables.\n");
     System.err.println("The WAL entries can be mapped to new set of tables via <tableMapping>.");
     System.err.println("<tableMapping> is a command separated list of targettables.");
@@ -336,10 +318,10 @@ public class WALPlayer extends Configured implements Tool {
     System.err.println("  -D" + WALInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println("  -D" + WALInputFormat.END_TIME_KEY + "=[date|ms]");
     System.err.println("   -D " + JOB_NAME_CONF_KEY
-      + "=jobName - use the specified mapreduce job name for the wal player");
+        + "=jobName - use the specified mapreduce job name for the wal player");
     System.err.println("For performance also consider the following options:\n"
-      + "  -Dmapreduce.map.speculative=false\n"
-      + "  -Dmapreduce.reduce.speculative=false");
+        + "  -Dmapreduce.map.speculative=false\n"
+        + "  -Dmapreduce.reduce.speculative=false");
   }
 
   /**

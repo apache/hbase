@@ -390,7 +390,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * @throws KeeperException if the zookeeper cluster cannot be reached
    */
   @Override
-  public void initialize(RegionServerServices rss) throws IOException {
+  public void initialize(RegionServerServices rss) throws KeeperException {
     this.rss = rss;
     ZooKeeperWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw,

@@ -49,7 +49,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
   private ProcedureMember member;
 
   @Override
-  public void initialize(RegionServerServices rss) throws IOException {
+  public void initialize(RegionServerServices rss) throws KeeperException {
     this.rss = rss;
     ZooKeeperWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw, getProcedureSignature());

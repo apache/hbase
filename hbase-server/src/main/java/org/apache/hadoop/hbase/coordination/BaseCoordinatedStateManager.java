@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hbase.coordination;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
-import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Server;
 
@@ -55,21 +51,8 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
    * Method to retrieve coordination for split log worker
    */
   public abstract  SplitLogWorkerCoordination getSplitLogWorkerCoordination();
-  
   /**
    * Method to retrieve coordination for split log manager
    */
   public abstract SplitLogManagerCoordination getSplitLogManagerCoordination();
-  /**
-   * Method to retrieve {@link org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs}
-   */
-  public abstract ProcedureCoordinatorRpcs
-    getProcedureCoordinatorRpcs(String procType, String coordNode) throws IOException;
-  
-  /**
-   * Method to retrieve {@link org.apache.hadoop.hbase.procedure.ProcedureMemberRpc}
-   */
-  public abstract ProcedureMemberRpcs
-    getProcedureMemberRpcs(String procType) throws IOException;
-    
 }

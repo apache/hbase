@@ -37,7 +37,7 @@ public abstract class RegionServerProcedureManager extends ProcedureManager {
    * @param rss Region Server service interface
    * @throws KeeperException
    */
-  public abstract void initialize(RegionServerServices rss) throws IOException;
+  public abstract void initialize(RegionServerServices rss) throws KeeperException;
 
   /**
    * Start accepting procedure requests.

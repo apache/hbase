@@ -209,18 +209,13 @@ public class DefaultWALProvider implements WALProvider {
   @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
     final Path walName = ((FSHLog)wal).getCurrentFileName();
-    return extractFileNumFromWAL(walName);
-  }
-
-  @VisibleForTesting
-  public static long extractFileNumFromWAL(final Path walName) {
     if (walName == null) {
       throw new IllegalArgumentException("The WAL path couldn't be null");
     }
     final String[] walPathStrs = walName.toString().split("\\" + WAL_FILE_NAME_DELIMITER);
     return Long.parseLong(walPathStrs[walPathStrs.length - (isMetaFile(walName) ? 2:1)]);
   }
-  
+
   /**
    * Pattern used to validate a WAL file name
    * see {@link #validateWALFilename(String)} for description.
