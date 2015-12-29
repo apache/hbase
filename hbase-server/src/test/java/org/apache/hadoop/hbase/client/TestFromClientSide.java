@@ -51,7 +51,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -120,6 +119,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 @SuppressWarnings ("deprecation")
 public class TestFromClientSide {
+  // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
   final Log LOG = LogFactory.getLog(getClass());
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");
@@ -3139,7 +3139,7 @@ public class TestFromClientSide {
         equals(value, CellUtil.cloneValue(key)));
   }
 
-  private void assertIncrementKey(Cell key, byte [] row, byte [] family,
+  static void assertIncrementKey(Cell key, byte [] row, byte [] family,
       byte [] qualifier, long value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
@@ -3363,7 +3363,7 @@ public class TestFromClientSide {
     return stamps;
   }
 
-  private boolean equals(byte [] left, byte [] right) {
+  static boolean equals(byte [] left, byte [] right) {
     if (left == null && right == null) return true;
     if (left == null && right.length == 0) return true;
     if (right == null && left.length == 0) return true;
@@ -4481,264 +4481,6 @@ public class TestFromClientSide {
     assertEquals(r.getColumnLatest(FAMILY, QUALIFIERS[0]).getTimestamp(),
         r.getColumnLatest(FAMILY, QUALIFIERS[2]).getTimestamp());
   }
-
-  @Test
-  public void testIncrementWithDeletes() throws Exception {
-    LOG.info("Starting testIncrementWithDeletes");
-    final TableName TABLENAME =
-        TableName.valueOf("testIncrementWithDeletes");
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final byte[] COLUMN = Bytes.toBytes("column");
-
-    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
-    TEST_UTIL.flush(TABLENAME);
-
-    Delete del = new Delete(ROW);
-    ht.delete(del);
-
-    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
-
-    Get get = new Get(ROW);
-    Result r = ht.get(get);
-    assertEquals(1, r.size());
-    assertEquals(5, Bytes.toLong(r.getValue(FAMILY, COLUMN)));
-  }
-
-  @Test
-  public void testIncrementingInvalidValue() throws Exception {
-    LOG.info("Starting testIncrementingInvalidValue");
-    final TableName TABLENAME = TableName.valueOf("testIncrementingInvalidValue");
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final byte[] COLUMN = Bytes.toBytes("column");
-    Put p = new Put(ROW);
-    // write an integer here (not a Long)
-    p.add(FAMILY, COLUMN, Bytes.toBytes(5));
-    ht.put(p);
-    try {
-      ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
-      fail("Should have thrown DoNotRetryIOException");
-    } catch (DoNotRetryIOException iox) {
-      // success
-    }
-    Increment inc = new Increment(ROW);
-    inc.addColumn(FAMILY, COLUMN, 5);
-    try {
-      ht.increment(inc);
-      fail("Should have thrown DoNotRetryIOException");
-    } catch (DoNotRetryIOException iox) {
-      // success
-    }
-  }
-
-  @Test
-  public void testIncrementInvalidArguments() throws Exception {
-    LOG.info("Starting testIncrementInvalidArguments");
-    final TableName TABLENAME = TableName.valueOf("testIncrementInvalidArguments");
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final byte[] COLUMN = Bytes.toBytes("column");
-    try {
-      // try null row
-      ht.incrementColumnValue(null, FAMILY, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
-      // success
-    }
-    try {
-      // try null family
-      ht.incrementColumnValue(ROW, null, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
-      // success
-    }
-    try {
-      // try null qualifier
-      ht.incrementColumnValue(ROW, FAMILY, null, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
-      // success
-    }
-    // try null row
-    try {
-      Increment incNoRow = new Increment((byte [])null);
-      incNoRow.addColumn(FAMILY, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
-    } catch (IllegalArgumentException iax) {
-      // success
-    } catch (NullPointerException npe) {
-      // success
-    }
-    // try null family
-    try {
-      Increment incNoFamily = new Increment(ROW);
-      incNoFamily.addColumn(null, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
-    } catch (IllegalArgumentException iax) {
-      // success
-    }
-    // try null qualifier
-    try {
-      Increment incNoQualifier = new Increment(ROW);
-      incNoQualifier.addColumn(FAMILY, null, 5);
-      fail("Should have thrown IllegalArgumentException");
-    } catch (IllegalArgumentException iax) {
-      // success
-    }
-  }
-
-  @Test
-  public void testIncrementOutOfOrder() throws Exception {
-    LOG.info("Starting testIncrementOutOfOrder");
-    final TableName TABLENAME = TableName.valueOf("testIncrementOutOfOrder");
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-
-    byte [][] QUALIFIERS = new byte [][] {
-      Bytes.toBytes("B"), Bytes.toBytes("A"), Bytes.toBytes("C")
-    };
-
-    Increment inc = new Increment(ROW);
-    for (int i=0; i<QUALIFIERS.length; i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-    }
-    ht.increment(inc);
-
-    // Verify expected results
-    Result r = ht.get(new Get(ROW));
-    Cell [] kvs = r.rawCells();
-    assertEquals(3, kvs.length);
-    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[1], 1);
-    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[0], 1);
-    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 1);
-
-    // Now try multiple columns again
-    inc = new Increment(ROW);
-    for (int i=0; i<QUALIFIERS.length; i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-    }
-    ht.increment(inc);
-
-    // Verify
-    r = ht.get(new Get(ROW));
-    kvs = r.rawCells();
-    assertEquals(3, kvs.length);
-    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[1], 2);
-    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[0], 2);
-    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
-  }
-
-  @Test
-  public void testIncrementOnSameColumn() throws Exception {
-    LOG.info("Starting testIncrementOnSameColumn");
-    final byte[] TABLENAME = Bytes.toBytes("testIncrementOnSameColumn");
-    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-
-    byte[][] QUALIFIERS =
-        new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
-
-    Increment inc = new Increment(ROW);
-    for (int i = 0; i < QUALIFIERS.length; i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-    }
-    ht.increment(inc);
-
-    // Verify expected results
-    Result r = ht.get(new Get(ROW));
-    Cell[] kvs = r.rawCells();
-    assertEquals(3, kvs.length);
-    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
-    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 1);
-    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 1);
-
-    // Now try multiple columns again
-    inc = new Increment(ROW);
-    for (int i = 0; i < QUALIFIERS.length; i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
-    }
-    ht.increment(inc);
-
-    // Verify
-    r = ht.get(new Get(ROW));
-    kvs = r.rawCells();
-    assertEquals(3, kvs.length);
-    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 2);
-    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 2);
-    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
-    
-    ht.close();
-  }
-
-  @Test
-  public void testIncrement() throws Exception {
-    LOG.info("Starting testIncrement");
-    final TableName TABLENAME = TableName.valueOf("testIncrement");
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-
-    byte [][] ROWS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
-        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
-    };
-    byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
-        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
-    };
-
-    // Do some simple single-column increments
-
-    // First with old API
-    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[0], 1);
-    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[1], 2);
-    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[2], 3);
-    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[3], 4);
-
-    // Now increment things incremented with old and do some new
-    Increment inc = new Increment(ROW);
-    inc.addColumn(FAMILY, QUALIFIERS[1], 1);
-    inc.addColumn(FAMILY, QUALIFIERS[3], 1);
-    inc.addColumn(FAMILY, QUALIFIERS[4], 1);
-    ht.increment(inc);
-
-    // Verify expected results
-    Result r = ht.get(new Get(ROW));
-    Cell [] kvs = r.rawCells();
-    assertEquals(5, kvs.length);
-    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
-    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 3);
-    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 3);
-    assertIncrementKey(kvs[3], ROW, FAMILY, QUALIFIERS[3], 5);
-    assertIncrementKey(kvs[4], ROW, FAMILY, QUALIFIERS[4], 1);
-
-    // Now try multiple columns by different amounts
-    inc = new Increment(ROWS[0]);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
-    }
-    ht.increment(inc);
-    // Verify
-    r = ht.get(new Get(ROWS[0]));
-    kvs = r.rawCells();
-    assertEquals(QUALIFIERS.length, kvs.length);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], i+1);
-    }
-
-    // Re-increment them
-    inc = new Increment(ROWS[0]);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
-    }
-    ht.increment(inc);
-    // Verify
-    r = ht.get(new Get(ROWS[0]));
-    kvs = r.rawCells();
-    assertEquals(QUALIFIERS.length, kvs.length);
-    for (int i=0;i<QUALIFIERS.length;i++) {
-      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
-    }
-  }
-
 
   @Test
   public void testClientPoolRoundRobin() throws IOException {

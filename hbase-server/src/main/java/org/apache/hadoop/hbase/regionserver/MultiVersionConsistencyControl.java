@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class MultiVersionConsistencyControl {
-  private static final long NO_WRITE_NUMBER = 0;
+  static final long NO_WRITE_NUMBER = 0;
   private volatile long memstoreRead = 0;
   private final Object readWaiters = new Object();
 

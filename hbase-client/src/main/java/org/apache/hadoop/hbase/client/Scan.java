@@ -269,6 +269,7 @@ public class Scan extends Query {
     this.familyMap = get.getFamilyMap();
     this.getScan = true;
     this.consistency = get.getConsistency();
+    this.setIsolationLevel(get.getIsolationLevel());
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
