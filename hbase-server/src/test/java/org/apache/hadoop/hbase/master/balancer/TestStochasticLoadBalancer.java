@@ -122,44 +122,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testMoveCost() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
-    for (int[] mockCluster : clusterStateMocks) {
-      BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
-      costFunction.init(cluster);
-      double cost = costFunction.cost();
-      assertEquals(0.0f, cost, 0.001);
-
-      // cluster region number is smaller than maxMoves=600
-      cluster.setNumRegions(200);
-      cluster.setNumMovedRegions(10);
-      cost = costFunction.cost();
-      assertEquals(0.05f, cost, 0.001);
-      cluster.setNumMovedRegions(100);
-      cost = costFunction.cost();
-      assertEquals(0.5f, cost, 0.001);
-      cluster.setNumMovedRegions(200);
-      cost = costFunction.cost();
-      assertEquals(1.0f, cost, 0.001);
-
-
-      // cluster region number is bigger than maxMoves=2500
-      cluster.setNumRegions(10000);
-      cluster.setNumMovedRegions(250);
-      cost = costFunction.cost();
-      assertEquals(0.1f, cost, 0.001);
-      cluster.setNumMovedRegions(1250);
-      cost = costFunction.cost();
-      assertEquals(0.5f, cost, 0.001);
-      cluster.setNumMovedRegions(2500);
-      cost = costFunction.cost();
-      assertEquals(1.0f, cost, 0.01);
-    }
-  }
-
-  @Test
   public void testSkewCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction
