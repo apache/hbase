@@ -22,6 +22,7 @@ require 'optparse'
 include Java
 
 import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.client.ConnectionFactory
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.zookeeper.ZKUtil
 import org.apache.commons.logging.Log
@@ -60,6 +61,7 @@ end
 
 def getServerNames(hostOrServers, config)
   ret = []
+  connection = ConnectionFactory.createConnection(config)
   
   for hostOrServer in hostOrServers
     # check whether it is already serverName. No need to connect to cluster
@@ -67,7 +69,7 @@ def getServerNames(hostOrServers, config)
     if parts.size() == 3
       ret << hostOrServer
     else 
-      admin = HBaseAdmin.new(config) if not admin
+      admin = connection.getAdmin() if not admin
       servers = getServers(admin)
 
       hostOrServer = hostOrServer.gsub(/:/, ",")
@@ -78,6 +80,7 @@ def getServerNames(hostOrServers, config)
   end
   
   admin.close() if admin
+  connection.close()
   return ret
 end
 

@@ -25,6 +25,7 @@
 include Java
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.HBaseAdmin
+import org.apache.hadoop.hbase.client.ConnectionFactory
 
 def usage(msg=nil)
   $stderr.puts 'Usage: shutdown_regionserver.rb <host:port>..'
@@ -41,8 +42,9 @@ ARGV.each do |x|
 end
 
 config = HBaseConfiguration.create()
+connection = ConnectionFactory.createConnection(config)
 begin
-  admin = HBaseAdmin.new(config)
+  admin = connection.getAdmin()
 rescue
   abort "Error: Couldn't instantiate HBaseAdmin"
 end
@@ -50,3 +52,5 @@ end
 ARGV.each do |hostport|
   admin.stopRegionServer(hostport)
 end
+admin.close()
+connection.close()

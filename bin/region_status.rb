@@ -67,12 +67,11 @@ org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
 config = HBaseConfiguration.create
 config.set 'fs.defaultFS', config.get(HConstants::HBASE_DIR)
 connection = ConnectionFactory.createConnection(config)
-
 # wait until the master is running
 admin = nil
 while true
   begin
-    admin = HBaseAdmin.new config
+    admin = connection.getAdmin()
     break
   rescue MasterNotRunningException => e
     print 'Waiting for master to start...\n'
@@ -119,7 +118,7 @@ while iter.hasNext
     # Gone too far, break
     break
   end
-  region = HRegionInfo.getHRegionInfo result
+  region = MetaTableAccessor::getHRegionInfo(result)
   if not region.isOffline
     # only include regions that should be online
     meta_count += 1
@@ -151,5 +150,7 @@ while true
     break
   end
 end
+admin.close()
+connection.close()
 
 exit server_count == meta_count ? 0 : 1

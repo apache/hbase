@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.EmptyWatcher
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.HTableDescriptor
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hbase.client.ConnectionFactory
 
 # Name of this script
 NAME = "copy_tables_desc"
@@ -56,18 +57,23 @@ c1.set(HConstants::ZOOKEEPER_QUORUM, parts1[0])
 c1.set("hbase.zookeeper.property.clientPort", parts1[1])
 c1.set(HConstants::ZOOKEEPER_ZNODE_PARENT, parts1[2])
 
-admin1 = HBaseAdmin.new(c1)
+connection1 = ConnectionFactory.createConnection(c1)
+admin1 = connection1.getAdmin()
 
 c2 = HBaseConfiguration.create()
 c2.set(HConstants::ZOOKEEPER_QUORUM, parts2[0])
 c2.set("hbase.zookeeper.property.clientPort", parts2[1])
 c2.set(HConstants::ZOOKEEPER_ZNODE_PARENT, parts2[2])
 
-admin2 = HBaseAdmin.new(c2)
+connection2 = ConnectionFactory.createConnection(c2)
+admin2 = connection2.getAdmin()
 
 for t in admin1.listTables()
   admin2.createTable(t)
 end
 
-
 puts "All descriptions were copied"
+admin1.close()
+admin2.close()
+connection1.close()
+connection2.close()
