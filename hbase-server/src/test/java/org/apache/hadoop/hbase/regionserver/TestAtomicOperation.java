@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -61,8 +61,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -134,16 +135,35 @@ public class TestAtomicOperation {
   }
 
   /**
-   * Test multi-threaded increments.
+   * Test multi-threaded increments. Take the fast but narrow consistency path through HRegion.
    */
   @Test
-  public void testIncrementMultiThreads() throws IOException {
+  public void testIncrementMultiThreadsFastPath() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    String oldValue = conf.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
+    conf.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, true);
+    try {
+      testIncrementMultiThreads(true);
+    } finally {
+      if (oldValue != null) conf.set(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, oldValue);
+    }
+  }
 
+  /**
+   * Test multi-threaded increments. Take the slow but consistent path through HRegion.
+   */
+  @Test
+  public void testIncrementMultiThreadsSlowPath() throws IOException {
+    testIncrementMultiThreads(false);
+  }
+
+  private void testIncrementMultiThreads(final boolean fast) throws IOException {
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
-    // create 100 threads, each will increment by its own quantity
+    // Create 100 threads, each will increment by its own quantity. All 100 threads update the
+    // same row over two column families.
     int numThreads = 100;
     int incrementsPerThread = 1000;
     Incrementer[] all = new Incrementer[numThreads];
@@ -167,9 +187,10 @@ public class TestAtomicOperation {
       } catch (InterruptedException e) {
       }
     }
-    assertICV(row, fam1, qual1, expectedTotal);
-    assertICV(row, fam1, qual2, expectedTotal*2);
-    assertICV(row, fam2, qual3, expectedTotal*3);
+
+    assertICV(row, fam1, qual1, expectedTotal, fast);
+    assertICV(row, fam1, qual2, expectedTotal*2, fast);
+    assertICV(row, fam2, qual3, expectedTotal*3, fast);
     LOG.info("testIncrementMultiThreads successfully verified that total is " +
              expectedTotal);
   }
@@ -178,9 +199,11 @@ public class TestAtomicOperation {
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount) throws IOException {
+                         long amount,
+                         boolean fast) throws IOException {
     // run a get and see?
     Get get = new Get(row);
+    if (fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.addColumn(familiy, qualifier);
     Result result = region.get(get);
     assertEquals(1, result.size());
@@ -211,20 +234,24 @@ public class TestAtomicOperation {
   }
 
   /**
-   * A thread that makes a few increment calls
+   * A thread that makes increment calls always on the same row, this.row against two column
+   * families on this row.
    */
   public static class Incrementer extends Thread {
 
     private final HRegion region;
     private final int numIncrements;
     private final int amount;
+    private final boolean fast;
 
 
-    public Incrementer(HRegion region,
-        int threadNumber, int amount, int numIncrements) {
+    public Incrementer(HRegion region, int threadNumber, int amount, int numIncrements) {
+      super("Incrementer." + threadNumber);
       this.region = region;
       this.numIncrements = numIncrements;
       this.amount = amount;
+      this.fast = region.getBaseConf().
+          getBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, false);
       setDaemon(true);
     }
 
@@ -237,13 +264,13 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
           inc.setDurability(Durability.ASYNC_WAL);
-          region.increment(inc);
-
-          // verify: Make sure we only see completed increments
-          Get g = new Get(row);
-          Result result = region.get(g);
-          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2, Bytes.toLong(result.getValue(fam1, qual2))); 
-          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3, Bytes.toLong(result.getValue(fam2, qual3)));
+          Result result = region.increment(inc);
+          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
+             Bytes.toLong(result.getValue(fam1, qual2)));
+          long fam1Increment = Bytes.toLong(result.getValue(fam1, qual1))*3;
+          long fam2Increment = Bytes.toLong(result.getValue(fam2, qual3));
+          assertEquals("fam1=" + fam1Increment + ", fam2=" + fam2Increment,
+            fam1Increment, fam2Increment);
         } catch (IOException e) {
           e.printStackTrace();
         }

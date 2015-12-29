@@ -1156,7 +1156,9 @@ public class FSHLog implements WAL {
       // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
       // edit with its edit/sequence id.  The below entry.getRegionSequenceId will wait on the
       // latch to be thrown.  TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri, memstoreCells);
+      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri,
+        /* Passing memstoreCells seems redundant when they are in edits.getCells already */
+        (memstoreCells != null)? memstoreCells: edits == null? null: edits.getCells());
       truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
