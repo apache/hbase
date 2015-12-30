@@ -986,7 +986,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return new KeyValue.KeyOnlyKeyValue(keyBuf.array(), keyBuf.arrayOffset()
             + keyPair.getSecond(), currKeyLen);
       } else {
-        return new ByteBufferedKeyOnlyKeyValue(keyBuf, keyPair.getSecond(), currKeyLen);
+        // Better to do a copy here instead of holding on to this BB so that
+        // we could release the blocks referring to this key. This key is specifically used 
+        // in HalfStoreFileReader to get the firstkey and lastkey by creating a new scanner
+        // every time. So holding onto the BB (incase of DBB) is not advised here.
+        byte[] key = new byte[currKeyLen];
+        ByteBufferUtils.copyFromBufferToArray(key, keyBuf, keyPair.getSecond(), 0, currKeyLen);
+        return new KeyValue.KeyOnlyKeyValue(key, 0, currKeyLen);
       }
     }
 

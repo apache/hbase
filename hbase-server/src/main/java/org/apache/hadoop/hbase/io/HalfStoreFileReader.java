@@ -314,6 +314,10 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       }
     } catch (IOException e) {
       LOG.warn("Failed seekBefore " + Bytes.toStringBinary(this.splitkey), e);
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
     }
     return null;
   }
@@ -335,6 +339,10 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         firstKeySeeked = true;
       } catch (IOException e) {
         LOG.warn("Failed seekTo first KV in the file", e);
+      } finally {
+        if(scanner != null) {
+          scanner.close();
+        }
       }
     }
     return this.firstKey;

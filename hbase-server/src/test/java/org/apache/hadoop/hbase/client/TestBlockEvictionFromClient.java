@@ -74,6 +74,8 @@ public class TestBlockEvictionFromClient {
   private static int NO_OF_THREADS = 3;
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[] ROW1 = Bytes.toBytes("testRow1");
+  private static byte[] ROW2 = Bytes.toBytes("testRow2");
+  private static byte[] ROW3 = Bytes.toBytes("testRow3");
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[][] FAMILIES_1 = new byte[1][0];
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -546,6 +548,57 @@ public class TestBlockEvictionFromClient {
       checkForBlockEviction(cache, true, false, false);
       getLatch.countDown();
       System.out.println("Gets should have returned the bloks");
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+
+  @Test
+  public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
+    HTable table = null;
+    try {
+      TableName tableName = TableName.valueOf("testBlockRefCountAfterSplits");
+      table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
+      // get the block cache and region
+      RegionLocator locator = table.getRegionLocator();
+      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      Region region =
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
+      Store store = region.getStores().iterator().next();
+      CacheConfig cacheConf = store.getCacheConfig();
+      cacheConf.setEvictOnClose(true);
+      BlockCache cache = cacheConf.getBlockCache();
+
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, data);
+      table.put(put);
+      region.flush(true);
+      put = new Put(ROW1);
+      put.addColumn(FAMILY, QUALIFIER, data);
+      table.put(put);
+      region.flush(true);
+      byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
+      put = new Put(ROW2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
+      table.put(put);
+      put = new Put(ROW3);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
+      table.put(put);
+      region.flush(true);
+      TEST_UTIL.getAdmin().split(tableName, ROW1);
+      List<HRegionInfo> tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
+      // Wait for splits
+      while (tableRegions.size() != 2) {
+        tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
+        Thread.sleep(100);
+      }
+      region.compact(true);
+      Iterator<CachedBlock> iterator = cache.iterator();
+      // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
+      // should be closed inorder to return those blocks
+      iterateBlockCache(cache, iterator);
     } finally {
       if (table != null) {
         table.close();
