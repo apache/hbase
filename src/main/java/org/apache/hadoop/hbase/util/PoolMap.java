@@ -86,12 +86,12 @@ public class PoolMap<K, V> implements Map<K, V> {
   public V remove(Object key) {
     Pool<V> pool = pools.remove(key);
     if (pool != null) {
-      remove((K) key, pool.get());
+      removeValue((K) key, pool.get());
     }
     return null;
   }
 
-  public boolean remove(K key, V value) {
+  public boolean removeValue(K key, V value) {
     Pool<V> pool = pools.get(key);
     boolean res = false;
     if (pool != null) {
