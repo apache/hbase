@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.util.Triple;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   private static final Log LOG = LogFactory.getLog(SimpleRegionNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
   private MasterServices masterServices;
+  private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
 
   /**
    * Set the master service.
@@ -84,6 +86,16 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       return (sz < sz2) ? -1 : ((sz == sz2) ? 0 : 1);
     }
   };
+
+  @Override
+  public void planSkipped(HRegionInfo hri, PlanType type) {
+    skippedCount[type.ordinal()]++;
+  }
+
+  @Override
+  public long getSkippedCount(NormalizationPlan.PlanType type) {
+    return skippedCount[type.ordinal()];
+  }
 
   /**
    * Computes next most "urgent" normalization action on the table.

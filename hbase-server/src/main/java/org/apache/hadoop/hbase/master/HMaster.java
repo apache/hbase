@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -1326,6 +1327,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return true;
   }
 
+  @VisibleForTesting
+  public RegionNormalizer getRegionNormalizer() {
+    return this.normalizer;
+  }
+
   /**
    * Perform normalization of cluster (invoked by {@link RegionNormalizerChore}).
    *
@@ -1353,11 +1359,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       Collections.shuffle(allEnabledTables);
 
       for (TableName table : allEnabledTables) {
-        if (quotaManager.getNamespaceQuotaManager() != null &&
-            quotaManager.getNamespaceQuotaManager().getState(table.getNamespaceAsString()) != null){
-          LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
-          continue;
-        }
         TableDescriptor tblDesc = getTableDescriptors().getDescriptor(table);
         if (table.isSystemTable() || (tblDesc != null &&
             tblDesc.getHTableDescriptor() != null &&
@@ -1366,7 +1367,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             + " table or doesn't have auto normalization turned on");
           continue;
         }
-        this.normalizer.computePlanForTable(table).execute(clusterConnection.getAdmin());
+        NormalizationPlan plan = this.normalizer.computePlanForTable(table);
+        plan.execute(clusterConnection.getAdmin());
       }
     }
     // If Region did not generate any plans, it means the cluster is already balanced.

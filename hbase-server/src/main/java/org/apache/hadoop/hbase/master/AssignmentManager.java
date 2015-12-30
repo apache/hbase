@@ -72,8 +72,10 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
@@ -1654,9 +1656,13 @@ public class AssignmentManager {
         }
       }
       RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
-      if (rl == null) continue;
+      if (rl == null) {
+        continue;
+      }
       HRegionLocation[] locations = rl.getRegionLocations();
-      if (locations == null) continue;
+      if (locations == null) {
+        continue;
+      }
       for (HRegionLocation hrl : locations) {
         if (hrl == null) continue;
         HRegionInfo regionInfo = hrl.getRegionInfo();
@@ -1996,7 +2002,9 @@ public class AssignmentManager {
    */
   public boolean waitOnRegionToClearRegionsInTransition(final HRegionInfo hri, long timeOut)
       throws InterruptedException {
-    if (!regionStates.isRegionInTransition(hri)) return true;
+    if (!regionStates.isRegionInTransition(hri)) {
+      return true;
+    }
     long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTime()
         + timeOut;
     // There is already a timeout monitor on regions in transition so I
@@ -2836,7 +2844,10 @@ public class AssignmentManager {
           regionStateListener.onRegionSplit(hri);
           errorMsg = onRegionReadyToSplit(current, hri, serverName, transition);
         } catch (IOException exp) {
-          errorMsg = StringUtils.stringifyException(exp);
+            if (exp instanceof QuotaExceededException) {
+              server.getRegionNormalizer().planSkipped(hri, PlanType.SPLIT);
+            }
+            errorMsg = StringUtils.stringifyException(exp);
         }
         break;
       case SPLIT_PONR:

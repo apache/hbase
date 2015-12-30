@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLog
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -248,6 +249,11 @@ public class TestCatalogJanitor {
 
     @Override
     public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override
+    public RegionNormalizer getRegionNormalizer() {
       return null;
     }
 

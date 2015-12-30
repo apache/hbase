@@ -26,10 +26,20 @@ import org.apache.hadoop.hbase.client.Admin;
  */
 @InterfaceAudience.Private
 public interface NormalizationPlan {
+  enum PlanType {
+    SPLIT,
+    MERGE,
+    NONE
+  }
 
   /**
    * Executes normalization plan on cluster (does actual splitting/merging work).
    * @param admin instance of Admin
    */
   void execute(Admin admin);
+
+  /**
+   * @return the type of this plan
+   */
+  PlanType getType();
 }

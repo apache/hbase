@@ -25,11 +25,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.namespace.TestNamespaceAuditor;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -63,9 +68,11 @@ public class TestSimpleRegionNormalizerOnCluster {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_NORMALIZER_ENABLED, true);
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
 
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(1);
+    TestNamespaceAuditor.waitForQuotaEnabled(TEST_UTIL);
     admin = TEST_UTIL.getHBaseAdmin();
   }
 
@@ -74,11 +81,27 @@ public class TestSimpleRegionNormalizerOnCluster {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 90000)
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationSplitOnCluster() throws Exception {
-    final TableName TABLENAME =
-      TableName.valueOf("testRegionNormalizationSplitOnCluster");
+    testRegionNormalizationSplitOnCluster(false);
+    testRegionNormalizationSplitOnCluster(true);
+  }
+
+  void testRegionNormalizationSplitOnCluster(boolean limitedByQuota) throws Exception {
+    TableName TABLENAME;
+    if (limitedByQuota) {
+      String nsp = "np2";
+      NamespaceDescriptor nspDesc =
+          NamespaceDescriptor.create(nsp)
+          .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
+          .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
+      admin.createNamespace(nspDesc);
+      TABLENAME = TableName.valueOf(nsp +
+        TableName.NAMESPACE_DELIM + "testRegionNormalizationSplitOnCluster");
+    } else {
+      TABLENAME = TableName.valueOf("testRegionNormalizationSplitOnCluster");
+    }
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
@@ -119,20 +142,25 @@ public class TestSimpleRegionNormalizerOnCluster {
 
     admin.flush(TABLENAME);
 
-    System.out.println(admin.getTableDescriptor(TABLENAME));
-
     assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
 
     // Now trigger a split and stop when the split is in progress
     Thread.sleep(5000); // to let region load to update
     m.normalizeRegions();
-
-    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME) < 6) {
-      LOG.info("Waiting for normalization split to complete");
-      Thread.sleep(100);
+    if (limitedByQuota) {
+      long skippedSplitcnt = 0;
+      do {
+        skippedSplitcnt = m.getRegionNormalizer().getSkippedCount(PlanType.SPLIT);
+        Thread.sleep(100);
+      } while (skippedSplitcnt == 0L);
+      assert(skippedSplitcnt > 0);
+    } else {
+      while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME) < 6) {
+        LOG.info("Waiting for normalization split to complete");
+        Thread.sleep(100);
+      }
+      assertEquals(6, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
     }
-
-    assertEquals(6, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
 
     admin.disableTable(TABLENAME);
     admin.deleteTable(TABLENAME);
