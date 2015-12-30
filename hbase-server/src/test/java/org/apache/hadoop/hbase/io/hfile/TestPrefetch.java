@@ -111,8 +111,8 @@ public class TestPrefetch {
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
-      byte[] k = TestHFileWriterV2.randomOrderedKey(RNG, i);
-      byte[] v = TestHFileWriterV2.randomValue(RNG);
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+      byte[] v = RandomKeyValueUtil.randomValue(RNG);
       int cfLen = RNG.nextInt(k.length - rowLen + 1);
       KeyValue kv = new KeyValue(
           k, 0, rowLen,

@@ -380,9 +380,9 @@ public class TestCacheOnWrite {
         .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
     byte[] cf = Bytes.toBytes("fam");
     for (int i = 0; i < NUM_KV; ++i) {
-      byte[] row = TestHFileWriterV2.randomOrderedKey(rand, i);
-      byte[] qualifier = TestHFileWriterV2.randomRowOrQualifier(rand);
-      byte[] value = TestHFileWriterV2.randomValue(rand);
+      byte[] row = RandomKeyValueUtil.randomOrderedKey(rand, i);
+      byte[] qualifier = RandomKeyValueUtil.randomRowOrQualifier(rand);
+      byte[] value = RandomKeyValueUtil.randomValue(rand);
       KeyValue kv;
       if(useTags) {
         Tag t = new Tag((byte) 1, "visibility");

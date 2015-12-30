@@ -89,7 +89,7 @@ public class TestLazyDataBlockDecompression {
    */
   private static void writeHFile(Configuration conf, CacheConfig cc, FileSystem fs, Path path,
       HFileContext cxt, int entryCount) throws IOException {
-    HFile.Writer writer = new HFileWriterFactory(conf, cc)
+    HFile.Writer writer = new HFile.WriterFactory(conf, cc)
         .withPath(fs, path)
         .withFileContext(cxt)
         .create();
@@ -100,8 +100,8 @@ public class TestLazyDataBlockDecompression {
     final byte[] qualifier = Bytes.toBytes("q");
 
     for (int i = 0; i < entryCount; i++) {
-      byte[] keyBytes = TestHFileWriterV2.randomOrderedKey(rand, i);
-      byte[] valueBytes = TestHFileWriterV2.randomValue(rand);
+      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
+      byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
       // make a real keyvalue so that hfile tool can examine it
       writer.append(new KeyValue(keyBytes, family, qualifier, valueBytes));
     }

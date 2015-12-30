@@ -241,7 +241,7 @@ public class HFile {
    * This variety of ways to construct writers is used throughout the code, and
    * we want to be able to swap writer implementations.
    */
-  public static abstract class WriterFactory {
+  public static class WriterFactory {
     protected final Configuration conf;
     protected final CacheConfig cacheConf;
     protected FileSystem fs;
@@ -309,12 +309,8 @@ public class HFile {
           else if (LOG.isDebugEnabled()) LOG.debug("Unable to set drop behind on " + path);
         }
       }
-      return createWriter(fs, path, ostream,
-                   comparator, fileContext);
+      return new HFileWriterImpl(conf, cacheConf, path, ostream, comparator, fileContext);
     }
-
-    protected abstract Writer createWriter(FileSystem fs, Path path, FSDataOutputStream ostream,
-        CellComparator comparator, HFileContext fileContext) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -351,7 +347,7 @@ public class HFile {
         " hfiles only (but it can read v2 files without having to update hfile.format.version " +
         "in hbase-site.xml)");
     case 3:
-      return new HFileWriterFactory(conf, cacheConf);
+      return new HFile.WriterFactory(conf, cacheConf);
     default:
       throw new IllegalArgumentException("Cannot create writer for HFile " +
           "format version " + version);

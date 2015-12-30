@@ -123,9 +123,9 @@ public class TestSeekBeforeWithInlineBlocks {
               .build();
             
             for (int i = 0; i < NUM_KV; i++) {
-              byte[] row = TestHFileWriterV2.randomOrderedKey(RAND, i);
-              byte[] qual = TestHFileWriterV2.randomRowOrQualifier(RAND);
-              byte[] value = TestHFileWriterV2.randomValue(RAND);
+              byte[] row = RandomKeyValueUtil.randomOrderedKey(RAND, i);
+              byte[] qual = RandomKeyValueUtil.randomRowOrQualifier(RAND);
+              byte[] value = RandomKeyValueUtil.randomValue(RAND);
               KeyValue kv = new KeyValue(row, FAM, qual, value);
   
               storeFileWriter.append(kv);

@@ -280,7 +280,7 @@ public class TestHFileBlockIndex {
       byte[] qualifier = Bytes.toBytes("q");
       for (int j = 0; j < 16; ++j) {
         byte[] k =
-            new KeyValue(TestHFileWriterV2.randomOrderedKey(rand, i * 16 + j), family, qualifier,
+            new KeyValue(RandomKeyValueUtil.randomOrderedKey(rand, i * 16 + j), family, qualifier,
                 EnvironmentEdgeManager.currentTime(), KeyValue.Type.Put).getKey();
         keys.add(k);
         if (j == 8) {
@@ -348,7 +348,7 @@ public class TestHFileBlockIndex {
     int secondaryIndexEntries[] = new int[numTotalKeys];
 
     for (int i = 0; i < numTotalKeys; ++i) {
-      byte[] k = TestHFileWriterV2.randomOrderedKey(rand, i * 2);
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i * 2);
       KeyValue cell = new KeyValue(k, Bytes.toBytes("f"), Bytes.toBytes("q"), 
           Bytes.toBytes("val"));
       //KeyValue cell = new KeyValue.KeyOnlyKeyValue(k, 0, k.length);
@@ -473,7 +473,7 @@ public class TestHFileBlockIndex {
       c.writeRoot(dos);
       assertEquals(c.getRootSize(), dos.size());
 
-      byte[] k = TestHFileWriterV2.randomOrderedKey(rand, i);
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
       numSubEntries += rand.nextInt(5) + 1;
       keys.add(k);
       c.add(k, getDummyFileOffset(i), getDummyOnDiskSize(i), numSubEntries);
@@ -556,12 +556,12 @@ public class TestHFileBlockIndex {
         byte[] family = Bytes.toBytes("f");
         byte[] qualifier = Bytes.toBytes("q");
         for (int i = 0; i < NUM_KV; ++i) {
-          byte[] row = TestHFileWriterV2.randomOrderedKey(rand, i);
+          byte[] row = RandomKeyValueUtil.randomOrderedKey(rand, i);
 
           // Key will be interpreted by KeyValue.KEY_COMPARATOR
           KeyValue kv =
               new KeyValue(row, family, qualifier, EnvironmentEdgeManager.currentTime(),
-                  TestHFileWriterV2.randomValue(rand));
+                  RandomKeyValueUtil.randomValue(rand));
           byte[] k = kv.getKey();
           writer.append(kv);
           keys[i] = k;

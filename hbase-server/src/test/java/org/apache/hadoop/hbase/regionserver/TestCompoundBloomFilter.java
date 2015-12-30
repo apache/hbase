@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -53,7 +54,6 @@ import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -144,7 +144,7 @@ public class TestCompoundBloomFilter {
   private List<KeyValue> createSortedKeyValues(Random rand, int n) {
     List<KeyValue> kvList = new ArrayList<KeyValue>(n);
     for (int i = 0; i < n; ++i)
-      kvList.add(TestHFileWriterV2.randomKeyValue(rand));
+      kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
     Collections.sort(kvList, CellComparator.COMPARATOR);
     return kvList;
   }
@@ -231,7 +231,7 @@ public class TestCompoundBloomFilter {
         Random rand = new Random(EVALUATION_SEED);
         int nTrials = NUM_KV[t] * 10;
         for (int i = 0; i < nTrials; ++i) {
-          byte[] query = TestHFileWriterV2.randomRowOrQualifier(rand);
+          byte[] query = RandomKeyValueUtil.randomRowOrQualifier(rand);
           if (isInBloom(scanner, query, bt, rand)) {
             numFalsePos += 1;
           }
@@ -280,16 +280,16 @@ public class TestCompoundBloomFilter {
 
   private boolean isInBloom(StoreFileScanner scanner, byte[] row, BloomType bt,
       Random rand) {
-    return isInBloom(scanner, row, TestHFileWriterV2.randomRowOrQualifier(rand));
+    return isInBloom(scanner, row, RandomKeyValueUtil.randomRowOrQualifier(rand));
   }
 
   private boolean isInBloom(StoreFileScanner scanner, byte[] row,
       byte[] qualifier) {
     Scan scan = new Scan(row, row);
-    scan.addColumn(Bytes.toBytes(TestHFileWriterV2.COLUMN_FAMILY_NAME), qualifier);
+    scan.addColumn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME), qualifier);
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-    when(hcd.getName()).thenReturn(Bytes.toBytes(TestHFileWriterV2.COLUMN_FAMILY_NAME));
+    when(hcd.getName()).thenReturn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
     when(store.getFamily()).thenReturn(hcd);
     return scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
   }
