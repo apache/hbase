@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mttr;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -266,6 +267,15 @@ public class IntegrationTestMTTR {
 
     loadTool = null;
   }
+  
+  private static boolean tablesOnMaster() {
+    boolean ret = true;
+    String value = util.getConfiguration().get("hbase.balancer.tablesOnMaster");
+    if( value != null && value.equalsIgnoreCase("none")) {
+      ret = false;
+    }
+    return ret;
+  }
 
   @Test
   public void testRestartRsHoldingTable() throws Exception {
@@ -274,6 +284,7 @@ public class IntegrationTestMTTR {
 
   @Test
   public void testKillRsHoldingMeta() throws Exception {
+    assumeFalse(tablesOnMaster());
     run(new ActionCallable(restartMetaAction), "KillRsHoldingMeta");
   }
 
