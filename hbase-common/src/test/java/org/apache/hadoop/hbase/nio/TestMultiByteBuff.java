@@ -342,4 +342,40 @@ public class TestMultiByteBuff {
     assertEquals(2, dst[0]);
     assertEquals(12, mbb1.position());
   }
+
+  @Test
+  public void testToBytes() throws Exception {
+    byte[] b = new byte[4];
+    byte[] b1 = new byte[8];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = (byte) i;
+    }
+    for (int i = 0; i < b1.length; i++) {
+      b1[i] = (byte) (b1.length + i);
+    }
+    ByteBuffer bb1 = ByteBuffer.wrap(b);
+    ByteBuffer bb2 = ByteBuffer.wrap(b1);
+    MultiByteBuff mbb1 = new MultiByteBuff(bb1, bb2);
+
+    // Test 1 Offset hitting exclusive second element
+    byte[] actual = mbb1.toBytes(6, 4);
+    assertTrue(Bytes.equals(actual, 0, actual.length,
+            b1, 2, 4));
+    // Test 2 offset hitting exclusive second element
+    // but continuing to the end of the second one
+    actual = mbb1.toBytes(5, 7);
+    assertTrue(Bytes.equals(actual, 0, actual.length,
+            b1, 1, 7));
+    // Test 3 with offset hitting in first element,
+    // continuing to next
+    actual = mbb1.toBytes(2, 7);
+    byte[] expected = new byte[7];
+    System.arraycopy(b, 2, expected, 0,  2);
+    System.arraycopy(b1, 0, expected, 2, 5);
+    assertTrue(Bytes.equals(actual, expected));
+    // Test 4 hitting only in first exclusively
+    actual = mbb1.toBytes(1, 3);
+    assertTrue(Bytes.equals(actual, 0, actual.length,
+            b, 1, 3));
+  }
 }

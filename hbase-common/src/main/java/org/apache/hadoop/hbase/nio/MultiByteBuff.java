@@ -1065,21 +1065,7 @@ public class MultiByteBuff extends ByteBuff {
   @Override
   public byte[] toBytes(int offset, int length) {
     byte[] output = new byte[length];
-    int itemIndex = getItemIndex(offset);
-    ByteBuffer item = this.items[itemIndex];
-    int toRead = item.limit() - offset;
-    int destinationOffset = 0;
-    while (length > 0) {
-      toRead = Math.min(length, toRead);
-      ByteBufferUtils.copyFromBufferToArray(output, item, offset, destinationOffset, toRead);
-      length -= toRead;
-      if (length == 0)
-        break;
-      destinationOffset += toRead;
-      offset = 0;
-      item = items[++itemIndex];
-      toRead = item.remaining();
-    }
+    this.get(offset, output, 0, length);
     return output;
   }
 
