@@ -266,9 +266,8 @@ public class ModifyNamespaceProcedure
   }
 
   private TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
-    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
+    return env.getMasterServices().getTableNamespaceManager();
   }
-
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
    * retrieve it.

@@ -348,7 +348,7 @@ public class CreateNamespaceProcedure
   }
 
   private static TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
-    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
+    return env.getMasterServices().getTableNamespaceManager();
   }
 
   /**

@@ -27,17 +27,17 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -55,12 +56,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import com.google.common.collect.Sets;
 
 /**
- * This is a helper class used internally to manage the namespace metadata that is stored in
- * TableName.NAMESPACE_TABLE_NAME. It also mirrors updates to the ZK store by forwarding updates to
- * {@link org.apache.hadoop.hbase.ZKNamespaceManager}.
- * 
- * WARNING: Do not use. Go via the higher-level {@link ClusterSchema} API instead. This manager
- * is likely to go aways anyways.
+ * This is a helper class used to manage the namespace
+ * metadata that is stored in TableName.NAMESPACE_TABLE_NAME
+ * It also mirrors updates to the ZK store by forwarding updates to
+ * {@link org.apache.hadoop.hbase.ZKNamespaceManager}
  */
 @InterfaceAudience.Private
 public class TableNamespaceManager {
@@ -91,7 +90,7 @@ public class TableNamespaceManager {
   private long exclusiveLockTimeoutMs;
   private long sharedLockTimeoutMs;
 
-  TableNamespaceManager(MasterServices masterServices) {
+  public TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.conf = masterServices.getConfiguration();
 
@@ -114,7 +113,7 @@ public class TableNamespaceManager {
       // Wait for the namespace table to be initialized.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while (!isTableAvailableAndInitialized()) {
+      while (!isTableAvailableAndInitialized(false)) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
           throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
@@ -270,29 +269,16 @@ public class TableNamespaceManager {
   }
 
   /**
-   * Create Namespace in a blocking manner; don't return till success.
-   * Note, by-passes notifying coprocessors and name checks. Use for system namespaces only.
-   * @throws IOException 
-   * @throws InterruptedException 
-   */
-  private void createNamespace(final NamespaceDescriptor namespaceDescriptor)
-  throws IOException {
-    ClusterSchema clusterSchema = this.masterServices.getClusterSchema();
-    clusterSchema.get(clusterSchema.
-      createNamespace(namespaceDescriptor, HConstants.NO_NONCE, HConstants.NO_NONCE));
-  }
-
-  /**
    * This method checks if the namespace table is assigned and then
-   * tries to create its Table reference. If it was already created before, it also makes
+   * tries to create its HTable. If it was already created before, it also makes
    * sure that the connection isn't closed.
    * @return true if the namespace table manager is ready to serve, false
    * otherwise
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  public synchronized boolean isTableAvailableAndInitialized()
-  throws IOException {
+  public synchronized boolean isTableAvailableAndInitialized(
+      final boolean createNamespaceAync) throws IOException {
     // Did we already get a table? If so, still make sure it's available
     if (isTableNamespaceManagerInitialized()) {
       return true;
@@ -307,10 +293,34 @@ public class TableNamespaceManager {
         zkNamespaceManager.start();
 
         if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
-          createNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
+          if (createNamespaceAync) {
+            masterServices.getMasterProcedureExecutor().submitProcedure(
+              new CreateNamespaceProcedure(
+                masterServices.getMasterProcedureExecutor().getEnvironment(),
+                NamespaceDescriptor.DEFAULT_NAMESPACE));
+            initGoodSofar = false;
+          }
+          else {
+            masterServices.createNamespaceSync(
+              NamespaceDescriptor.DEFAULT_NAMESPACE,
+              HConstants.NO_NONCE,
+              HConstants.NO_NONCE);
+          }
         }
         if (get(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()) == null) {
-          createNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE);
+          if (createNamespaceAync) {
+            masterServices.getMasterProcedureExecutor().submitProcedure(
+              new CreateNamespaceProcedure(
+                masterServices.getMasterProcedureExecutor().getEnvironment(),
+                NamespaceDescriptor.SYSTEM_NAMESPACE));
+            initGoodSofar = false;
+          }
+          else {
+            masterServices.createNamespaceSync(
+              NamespaceDescriptor.SYSTEM_NAMESPACE,
+              HConstants.NO_NONCE,
+              HConstants.NO_NONCE);
+          }
         }
 
         if (!initGoodSofar) {

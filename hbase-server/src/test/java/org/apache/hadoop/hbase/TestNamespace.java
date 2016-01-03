@@ -358,7 +358,7 @@ public class TestNamespace {
     runWithExpectedException(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        admin.listTableDescriptorsByNamespace("non_existant_namespace");
+        admin.listTableDescriptorsByNamespace("non_existing_namespace");
         return null;
       }
     }, NamespaceNotFoundException.class);

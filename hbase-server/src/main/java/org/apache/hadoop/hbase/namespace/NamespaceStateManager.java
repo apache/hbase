@@ -65,7 +65,7 @@ class NamespaceStateManager {
 
   /**
    * Gets an instance of NamespaceTableAndRegionInfo associated with namespace.
-   * @param name The name of the namespace
+   * @param The name of the namespace
    * @return An instance of NamespaceTableAndRegionInfo.
    */
   public NamespaceTableAndRegionInfo getState(String name) {
@@ -135,7 +135,7 @@ class NamespaceStateManager {
 
   private NamespaceDescriptor getNamespaceDescriptor(String namespaceAsString) {
     try {
-      return this.master.getClusterSchema().getNamespace(namespaceAsString);
+      return this.master.getNamespaceDescriptor(namespaceAsString);
     } catch (IOException e) {
       LOG.error("Error while fetching namespace descriptor for namespace : " + namespaceAsString);
       return null;
@@ -212,7 +212,7 @@ class NamespaceStateManager {
    * Initialize namespace state cache by scanning meta table.
    */
   private void initialize() throws IOException {
-    List<NamespaceDescriptor> namespaces = this.master.getClusterSchema().getNamespaces();
+    List<NamespaceDescriptor> namespaces = this.master.listNamespaceDescriptors();
     for (NamespaceDescriptor namespace : namespaces) {
       addNamespace(namespace.getName());
       List<TableName> tables = this.master.listTableNamesByNamespace(namespace.getName());

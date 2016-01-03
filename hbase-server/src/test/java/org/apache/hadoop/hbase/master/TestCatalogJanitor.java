@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
@@ -142,10 +143,11 @@ public class TestCatalogJanitor {
             ServerName.valueOf("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
-      FileSystem.get(this.c);
+      FileSystem fs = FileSystem.get(this.c);
       Path rootdir = FSUtils.getRootDir(this.c);
       FSUtils.setRootDir(this.c, rootdir);
-      Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
+      AdminProtos.AdminService.BlockingInterface hri =
+        Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
     }
 
     @Override
@@ -400,6 +402,48 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public void createNamespace(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void createNamespaceSync(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void modifyNamespace(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void deleteNamespace(
+        final String name,
+        final long nonceGroup,
+        final long nonce) throws IOException {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
         throws IOException {
       return false;  //To change body of implemented methods use File | Settings | File Templates.
@@ -492,28 +536,31 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public TableNamespaceManager getTableNamespaceManager() {
+      return null;
+    }
+
+    @Override
     public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
         boolean forcible) throws IOException {
     }
 
     @Override
     public boolean isInitialized() {
+      // Auto-generated method stub
       return false;
     }
 
     @Override
     public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
+      // Auto-generated method stub
       return 0;
     }
 
     @Override
     public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
+      // Auto-generated method stub
       return 0;
-    }
-
-    @Override
-    public ClusterSchema getClusterSchema() {
-      return null;
     }
   }
 

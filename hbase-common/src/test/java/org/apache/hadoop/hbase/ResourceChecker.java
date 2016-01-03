@@ -41,7 +41,7 @@ public class ResourceChecker {
 
   /**
    * Constructor
-   * @param tagLine The tagLine is added to the logs. Must not be null.
+   * @param tagLine - the tagLine is added to the logs. Must be be null.
    */
   public ResourceChecker(final String tagLine) {
     this.tagLine = tagLine;
