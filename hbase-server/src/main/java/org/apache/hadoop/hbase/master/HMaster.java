@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
@@ -97,17 +97,14 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
-import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
-import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
-import org.apache.hadoop.hbase.master.procedure.ModifyNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -185,7 +182,7 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
-public class HMaster extends HRegionServer implements MasterServices, Server {
+public class HMaster extends HRegionServer implements MasterServices {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   /**
@@ -256,8 +253,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // Tracker for region normalizer state
   private RegionNormalizerTracker regionNormalizerTracker;
 
-  /** Namespace stuff */
-  private TableNamespaceManager tableNamespaceManager;
+  private ClusterSchemaService clusterSchemaService;
 
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
@@ -368,9 +364,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Remaining steps of initialization occur in
    * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
-   *
-   * @throws KeeperException
-   * @throws IOException
    */
   public HMaster(final Configuration conf, CoordinatedStateManager csm)
       throws IOException, KeeperException {
@@ -570,10 +563,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /**
    * Initialize all ZK based system trackers.
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
-   * @throws CoordinatedStateException
    */
   void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException, CoordinatedStateException {
@@ -630,11 +619,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * <li>Ensure assignment of meta/namespace regions<li>
    * <li>Handle either fresh cluster start or master failover</li>
    * </ol>
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
-   * @throws CoordinatedStateException
    */
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
@@ -781,8 +765,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.catalogJanitorChore = new CatalogJanitor(this, this);
     getChoreService().scheduleChore(catalogJanitorChore);
 
-    status.setStatus("Starting namespace manager");
-    initNamespace();
+    status.setStatus("Starting cluster schema service");
+    initClusterSchemaService();
 
     if (this.cpHost != null) {
       try {
@@ -848,11 +832,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /**
    * Create a {@link ServerManager} instance.
-   * @param master
-   * @param services
-   * @return An instance of {@link ServerManager}
-   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
-   * @throws IOException
    */
   ServerManager createServerManager(final Server master,
       final MasterServices services)
@@ -888,12 +867,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
-   * @param status MonitoredTask
-   * @param previouslyFailedMetaRSs
-   * @param replicaId
-   * @throws InterruptedException
-   * @throws IOException
-   * @throws KeeperException
    */
   void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs, int replicaId)
       throws InterruptedException, IOException, KeeperException {
@@ -965,10 +938,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     status.setStatus("META assigned.");
   }
 
-  void initNamespace() throws IOException {
-    //create namespace manager
-    tableNamespaceManager = new TableNamespaceManager(this);
-    tableNamespaceManager.start();
+  void initClusterSchemaService() throws IOException, InterruptedException {
+    this.clusterSchemaService = new ClusterSchemaServiceImpl(this);
+    this.clusterSchemaService.startAndWait();
+    if (!this.clusterSchemaService.isRunning()) throw new HBaseIOException("Failed start");
   }
 
   void initQuotaManager() throws IOException {
@@ -1014,7 +987,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * This function returns a set of region server names under hbase:meta recovering region ZK node
    * @return Set of meta server names which were recorded in ZK
-   * @throws KeeperException
    */
   private Set<ServerName> getPreviouselyFailedMetaServersFromZK() throws KeeperException {
     Set<ServerName> result = new HashSet<ServerName>();
@@ -1048,11 +1020,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public TableStateManager getTableStateManager() {
     return tableStateManager;
-  }
-
-  @Override
-  public TableNamespaceManager getTableNamespaceManager() {
-    return tableNamespaceManager;
   }
 
   /*
@@ -1201,7 +1168,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /**
    * @return Get remote side's InetAddress
-   * @throws UnknownHostException
    */
   InetAddress getRemoteInetAddress(final int port,
       final long serverStartCode) throws UnknownHostException {
@@ -1338,7 +1304,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return true if normalization step was performed successfully, false otherwise
    *   (specifically, if HMaster hasn't been initialized properly or normalization
    *   is globally disabled)
-   * @throws IOException
    */
   public boolean normalizeRegions() throws IOException {
     if (!this.initialized) {
@@ -1478,9 +1443,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
-
+    checkInitialized();
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
-    ensureNamespaceExists(namespace);
+    this.clusterSchemaService.getNamespace(namespace);
 
     HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
@@ -2305,18 +2270,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   void checkInitialized() throws PleaseHoldException, ServerNotRunningYetException {
     checkServiceStarted();
-    if (!this.initialized) {
-      throw new PleaseHoldException("Master is initializing");
-    }
+    if (!isInitialized()) throw new PleaseHoldException("Master is initializing");
   }
 
-  void checkNamespaceManagerReady() throws IOException {
-    checkInitialized();
-    if (tableNamespaceManager == null ||
-        !tableNamespaceManager.isTableAvailableAndInitialized(true)) {
-      throw new IOException("Table Namespace Manager not ready yet, try again later");
-    }
-  }
   /**
    * Report whether this master is currently the active master or not.
    * If not active master, we are parked on ZK waiting to become active.
@@ -2411,7 +2367,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * Utility for constructing an instance of the passed HMaster class.
    * @param masterClass
-   * @param conf
    * @return HMaster instance.
    */
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
@@ -2452,138 +2407,110 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void createNamespace(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
-    checkNamespaceManagerReady();
-    if (cpHost != null) {
-      if (cpHost.preCreateNamespace(descriptor)) {
-        return;
-      }
-    }
-    createNamespaceSync(descriptor, nonceGroup, nonce);
-    if (cpHost != null) {
-      cpHost.postCreateNamespace(descriptor);
-    }
-  }
-
-  @Override
-  public void createNamespaceSync(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    LOG.info(getClientIdAuditPrefix() + " creating " + descriptor);
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateNamespaceProcedure(procedureExecutor.getEnvironment(), descriptor),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-  }
-
-  @Override
-  public void modifyNamespace(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
-    checkNamespaceManagerReady();
-    if (cpHost != null) {
-      if (cpHost.preModifyNamespace(descriptor)) {
-        return;
-      }
-    }
-    LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new ModifyNamespaceProcedure(procedureExecutor.getEnvironment(), descriptor),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-    if (cpHost != null) {
-      cpHost.postModifyNamespace(descriptor);
-    }
-  }
-
-  @Override
-  public void deleteNamespace(
-      final String name,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    checkNamespaceManagerReady();
-    if (cpHost != null) {
-      if (cpHost.preDeleteNamespace(name)) {
-        return;
-      }
-    }
-    LOG.info(getClientIdAuditPrefix() + " delete " + name);
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new DeleteNamespaceProcedure(procedureExecutor.getEnvironment(), name),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-    if (cpHost != null) {
-      cpHost.postDeleteNamespace(name);
-    }
+  public ClusterSchema getClusterSchema() {
+    return this.clusterSchemaService;
   }
 
   /**
-   * Ensure that the specified namespace exists, otherwise throws a NamespaceNotFoundException
-   *
-   * @param name the namespace to check
-   * @throws IOException if the namespace manager is not ready yet.
-   * @throws NamespaceNotFoundException if the namespace does not exists
+   * Create a new Namespace.
+   * @param namespaceDescriptor descriptor for new Namespace
+   * @param nonceGroup Identifier for the source of the request, a client or process.
+   * @param nonce A unique identifier for this operation from the client or process identified by
+   * <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
    */
-  private void ensureNamespaceExists(final String name)
-      throws IOException, NamespaceNotFoundException {
-    checkNamespaceManagerReady();
-    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
-    if (nsd == null) {
-      throw new NamespaceNotFoundException(name);
-    }
+  void createNamespace(final NamespaceDescriptor namespaceDescriptor, final long nonceGroup,
+      final long nonce)
+  throws IOException {
+    checkInitialized();
+    TableName.isLegalNamespaceName(Bytes.toBytes(namespaceDescriptor.getName()));
+    if (this.cpHost != null && this.cpHost.preCreateNamespace(namespaceDescriptor)) return;
+    LOG.info(getClientIdAuditPrefix() + " creating " + namespaceDescriptor);
+    // Execute the operation synchronously - wait for the operation to complete before continuing.
+    Future<ProcedureInfo> future =
+      getClusterSchema().createNamespace(namespaceDescriptor, nonceGroup, nonce);
+    getClusterSchema().get(future);
+    if (this.cpHost != null) this.cpHost.postCreateNamespace(namespaceDescriptor);
   }
 
-  @Override
-  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
-    checkNamespaceManagerReady();
+  /**
+   * Modify an existing Namespace.
+   * @param nonceGroup Identifier for the source of the request, a client or process.
+   * @param nonce A unique identifier for this operation from the client or process identified by
+   * <code>nonceGroup</code> (the source must ensure each operation gets a unique id).\
+   */
+  void modifyNamespace(final NamespaceDescriptor namespaceDescriptor, final long nonceGroup,
+      final long nonce)
+  throws IOException {
+    checkInitialized();
+    TableName.isLegalNamespaceName(Bytes.toBytes(namespaceDescriptor.getName()));
+    if (this.cpHost != null && this.cpHost.preModifyNamespace(namespaceDescriptor)) return;
+    LOG.info(getClientIdAuditPrefix() + " modify " + namespaceDescriptor);
+    // Execute the operation synchronously - wait for the operation to complete before continuing.
+    Future<ProcedureInfo> future =
+        getClusterSchema().modifyNamespace(namespaceDescriptor, nonceGroup, nonce);
+    getClusterSchema().get(future);
+    if (this.cpHost != null) this.cpHost.postModifyNamespace(namespaceDescriptor);
+  }
 
-    if (cpHost != null) {
-      cpHost.preGetNamespaceDescriptor(name);
-    }
+  /**
+   * Delete an existing Namespace. Only empty Namespaces (no tables) can be removed.
+   * @param nonceGroup Identifier for the source of the request, a client or process.
+   * @param nonce A unique identifier for this operation from the client or process identified by
+   * <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @throws IOException
+   */
+  void deleteNamespace(final String name, final long nonceGroup, final long nonce)
+  throws IOException {
+    checkInitialized();
+    if (this.cpHost != null && this.cpHost.preDeleteNamespace(name)) return;
+    LOG.info(getClientIdAuditPrefix() + " delete " + name);
+    // Execute the operation synchronously - wait for the operation to complete before continuing.
+    Future<ProcedureInfo> future = getClusterSchema().deleteNamespace(name, nonceGroup, nonce);
+    getClusterSchema().get(future);
+    if (this.cpHost != null) this.cpHost.postDeleteNamespace(name);
+  }
 
-    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
-    if (nsd == null) {
-      throw new NamespaceNotFoundException(name);
-    }
-
-    if (cpHost != null) {
-      cpHost.postGetNamespaceDescriptor(nsd);
-    }
-
+  /**
+   * Get a Namespace
+   * @param name Name of the Namespace
+   * @return Namespace descriptor for <code>name</code>
+   */
+  NamespaceDescriptor getNamespace(String name) throws IOException {
+    checkInitialized();
+    if (this.cpHost != null) this.cpHost.preGetNamespaceDescriptor(name);
+    NamespaceDescriptor nsd = this.clusterSchemaService.getNamespace(name);
+    if (this.cpHost != null) this.cpHost.postGetNamespaceDescriptor(nsd);
     return nsd;
   }
 
-  @Override
-  public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
-    checkNamespaceManagerReady();
-
-    final List<NamespaceDescriptor> descriptors = new ArrayList<NamespaceDescriptor>();
+  /**
+   * Get all Namespaces
+   * @return All Namespace descriptors
+   */
+  List<NamespaceDescriptor> getNamespaces() throws IOException {
+    checkInitialized();
+    final List<NamespaceDescriptor> nsds = new ArrayList<NamespaceDescriptor>();
     boolean bypass = false;
     if (cpHost != null) {
-      bypass = cpHost.preListNamespaceDescriptors(descriptors);
+      bypass = cpHost.preListNamespaceDescriptors(nsds);
     }
-
     if (!bypass) {
-      descriptors.addAll(tableNamespaceManager.list());
-
-      if (cpHost != null) {
-        cpHost.postListNamespaceDescriptors(descriptors);
-      }
+      nsds.addAll(this.clusterSchemaService.getNamespaces());
+      if (this.cpHost != null) this.cpHost.postListNamespaceDescriptors(nsds);
     }
-    return descriptors;
+    return nsds;
+  }
+
+  @Override
+  public List<TableName> listTableNamesByNamespace(String name) throws IOException {
+    checkInitialized();
+    return listTableNames(name, null, true);
+  }
+
+  @Override
+  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
+    checkInitialized();
+    return listTableDescriptors(name, null, null, true);
   }
 
   @Override
@@ -2617,18 +2544,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return procInfoList;
   }
 
-  @Override
-  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    ensureNamespaceExists(name);
-    return listTableDescriptors(name, null, null, true);
-  }
-
-  @Override
-  public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-    ensureNamespaceExists(name);
-    return listTableNames(name, null, true);
-  }
-
   /**
    * Returns the list of table descriptors that match the specified request
    *
@@ -2653,6 +2568,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         // request for all TableDescriptors
         Collection<HTableDescriptor> htds;
         if (namespace != null && namespace.length() > 0) {
+          // Do a check on the namespace existence. Will fail if does not exist.
+          this.clusterSchemaService.getNamespace(namespace);
           htds = tableDescriptors.getByNamespace(namespace).values();
         } else {
           htds = tableDescriptors.getAll().values();
@@ -2696,45 +2613,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   public List<TableName> listTableNames(final String namespace, final String regex,
       final boolean includeSysTables) throws IOException {
-    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
-
-    boolean bypass = false;
-    if (cpHost != null) {
-      bypass = cpHost.preGetTableNames(descriptors, regex);
-    }
-
+    List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    boolean bypass = cpHost != null? cpHost.preGetTableNames(htds, regex): false;
     if (!bypass) {
-      // get all descriptors
-      Collection<HTableDescriptor> htds;
-      if (namespace != null && namespace.length() > 0) {
-        htds = tableDescriptors.getByNamespace(namespace).values();
-      } else {
-        htds = tableDescriptors.getAll().values();
-      }
-
-      for (HTableDescriptor htd: htds) {
-        if (includeSysTables || !htd.getTableName().isSystemTable()) {
-          descriptors.add(htd);
-        }
-      }
-
-      // Retains only those matched by regular expression.
-      if (regex != null) {
-        filterTablesByRegex(descriptors, Pattern.compile(regex));
-      }
-
-      if (cpHost != null) {
-        cpHost.postGetTableNames(descriptors, regex);
-      }
+      htds.addAll(listTableDescriptors(namespace, regex, null, includeSysTables));
+      if (cpHost != null) cpHost.postGetTableNames(htds, regex);
     }
-
-    List<TableName> result = new ArrayList<TableName>(descriptors.size());
-    for (HTableDescriptor htd: descriptors) {
-      result.add(htd.getTableName());
-    }
+    List<TableName> result = new ArrayList<TableName>(htds.size());
+    for (HTableDescriptor htd: htds) result.add(htd.getTableName());
     return result;
   }
-
 
   /**
    * Removes the table descriptors that don't match the pattern.
