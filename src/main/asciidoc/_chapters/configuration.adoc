@@ -98,6 +98,11 @@ This section lists required services and some required system configuration.
 |JDK 7
 |JDK 8
 
+|1.2
+|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|yes
+|yes
+
 |1.1
 |link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
 |yes
@@ -115,11 +120,6 @@ This section lists required services and some required system configuration.
 deprecated `remove()` method of the `PoolMap` class and is under consideration. See
 link:https://issues.apache.org/jira/browse/HBASE-7608[HBASE-7608] for more information about JDK 8
 support.
-
-|0.96
-|yes
-|yes
-|N/A
 
 |0.94
 |yes
@@ -162,7 +162,7 @@ For example, assuming that a schema had 3 ColumnFamilies per region with an aver
 +
 Another related setting is the number of processes a user is allowed to run at once. In Linux and Unix, the number of processes is set using the `ulimit -u` command. This should not be confused with the `nproc` command, which controls the number of CPUs available to a given user. Under load, a `ulimit -u` that is too low can cause OutOfMemoryError exceptions. See Jack Levin's major HDFS issues thread on the hbase-users mailing list, from 2011.
 +
-Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user's ulimit configuration, look at the first line of the HBase log for that instance. A useful read setting config on you hadoop cluster is Aaron Kimballs' Configuration Parameters: What can you just ignore?
+Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user's ulimit configuration, look at the first line of the HBase log for that instance. A useful read setting config on your hadoop cluster is Aaron Kimball's Configuration Parameters: What can you just ignore?
 +
 .`ulimit` Settings on Ubuntu
 ====
@@ -210,23 +210,38 @@ Use the following legend to interpret this table:
 * "X" = not supported
 * "NT" = Not tested
 
-[cols="1,1,1,1,1,1,1", options="header"]
+[cols="1,1,1,1,1,1", options="header"]
 |===
-| | HBase-0.92.x | HBase-0.94.x | HBase-0.96.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x
-|Hadoop-0.20.205 | S | X | X | X | X | X
-|Hadoop-0.22.x | S | X | X | X | X | X
-|Hadoop-1.0.x  |X | X | X | X | X | X
-|Hadoop-1.1.x | NT | S | S | NT | X | X
-|Hadoop-0.23.x | X | S | NT | X | X | X
-|Hadoop-2.0.x-alpha | X | NT | X | X | X | X
-|Hadoop-2.1.0-beta | X | NT | S | X | X | X
-|Hadoop-2.2.0 | X | NT | S | S | NT | NT
-|Hadoop-2.3.x | X | NT | S | S | NT | NT
-|Hadoop-2.4.x | X | NT | S | S | S | S
-|Hadoop-2.5.x | X | NT | S | S | S | S
-|Hadoop-2.6.x | X | NT | NT | NT | S | S
-|Hadoop-2.7.x | X | NT | NT | NT | NT | NT
+| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x
+|Hadoop-1.0.x  | X | X | X | X | X
+|Hadoop-1.1.x | S | NT | X | X | X
+|Hadoop-0.23.x | S | X | X | X | X
+|Hadoop-2.0.x-alpha | NT | X | X | X | X
+|Hadoop-2.1.0-beta | NT | X | X | X | X
+|Hadoop-2.2.0 | NT | S | NT | NT | NT
+|Hadoop-2.3.x | NT | S | NT | NT | NT
+|Hadoop-2.4.x | NT | S | S | S | S
+|Hadoop-2.5.x | NT | S | S | S | S
+|Hadoop-2.6.0 | X | X | X | X | X
+|Hadoop-2.6.1+ | NT | NT | NT | NT | S
+|Hadoop-2.7.0 | X | X | X | X | X
+|Hadoop-2.7.1+ | NT | NT | NT | NT | S
 |===
+
+.Hadoop 2.6.x
+[TIP]
+====
+Hadoop distributions based on the 2.6.x line *must* have
+link:https://issues.apache.org/jira/browse/HADOOP-11710[HADOOP-11710] applied if you plan to run
+HBase on top of an HDFS Encryption Zone. Failure to do so will result in cluster failure and
+data loss. This patch is present in Apache Hadoop releases 2.6.1+.
+====
+
+.Hadoop 2.7.x
+[TIP]
+====
+Hadoop version 2.7.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable.
+====
 
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
@@ -396,7 +411,7 @@ Zookeeper binds to a well known port so clients may talk to HBase.
 
 === Distributed
 
-Distributed mode can be subdivided into distributed but all daemons run on a single node -- a.k.a _pseudo-distributed_ -- and _fully-distributed_ where the daemons are spread across all nodes in the cluster.
+Distributed mode can be subdivided into distributed but all daemons run on a single node -- a.k.a. _pseudo-distributed_ -- and _fully-distributed_ where the daemons are spread across all nodes in the cluster.
 The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
 
 Pseudo-distributed mode can run against the local filesystem or it can run against an instance of the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS.
@@ -526,7 +541,7 @@ HBase logs can be found in the _logs_ subdirectory.
 Check them out especially if HBase had trouble starting.
 
 HBase also puts up a UI listing vital attributes.
-By default it's deployed on the Master host at port 16010 (HBase RegionServers listen on port 16020 by default and put up an informational HTTP server at port 16030). If the Master is running on a host named `master.example.org` on the default port, point your browser at _http://master.example.org:16010_ to see the web interface.
+By default it's deployed on the Master host at port 16010 (HBase RegionServers listen on port 16020 by default and put up an informational HTTP server at port 16030). If the Master is running on a host named `master.example.org` on the default port, point your browser at pass:[http://master.example.org:16010] to see the web interface.
 
 Prior to HBase 0.98 the master UI was deployed on port 60010, and the HBase RegionServers UI on port 60030.
 
@@ -550,7 +565,7 @@ If you are running a distributed operation, be sure to wait until HBase has shut
 === _hbase-site.xml_ and _hbase-default.xml_
 
 Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-site.xml_ file, for HBase, site specific customizations go into the file _conf/hbase-site.xml_.
-For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_. 
+For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_.
 
 Not all configuration options make it out to _hbase-default.xml_.
 Configuration that it is thought rare anyone would change can exist only in code; the only way to turn up such configurations is via a reading of the source code itself.
@@ -558,7 +573,7 @@ Configuration that it is thought rare anyone would change can exist only in code
 Currently, changes here will require a cluster restart for HBase to notice the change.
 // hbase/src/main/asciidoc
 //
-include::../../../../target/asciidoc/hbase-default.adoc[]
+include::{docdir}/../../../target/asciidoc/hbase-default.adoc[]
 
 
 [[hbase.env.sh]]
@@ -590,7 +605,7 @@ ZooKeeper is where all these values are kept.
 Thus clients require the location of the ZooKeeper ensemble before they can do anything else.
 Usually this the ensemble location is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
 
-If you are configuring an IDE to run a HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests). 
+If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
 Minimally, a client of HBase needs several libraries in its `CLASSPATH` when connecting to a cluster, including:
 [source]
@@ -607,7 +622,7 @@ slf4j-log4j (slf4j-log4j12-1.5.8.jar)
 zookeeper (zookeeper-3.4.2.jar)
 ----
 
-An example basic _hbase-site.xml_ for client only might look as follows: 
+An example basic _hbase-site.xml_ for client only might look as follows:
 [source,xml]
 ----
 <?xml version="1.0"?>
@@ -903,7 +918,7 @@ See <<master.processes.loadbalancer,master.processes.loadbalancer>> for more inf
 ==== Disabling Blockcache
 
 Do not turn off block cache (You'd do it by setting `hbase.block.cache.size` to zero). Currently we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again.
-If your working set it such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you'll see index block size accounted near the top of the webpage).
+If your working set is such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you'll see index block size accounted near the top of the webpage).
 
 [[nagles]]
 ==== link:http://en.wikipedia.org/wiki/Nagle's_algorithm[Nagle's] or the small package problem
@@ -916,7 +931,7 @@ You might also see the graphs on the tail of link:https://issues.apache.org/jira
 ==== Better Mean Time to Recover (MTTR)
 
 This section is about configurations that will make servers come back faster after a fail.
-See the Deveraj Das an Nicolas Liochon blog post link:http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/[Introduction to HBase Mean Time to Recover (MTTR)] for a brief introduction.
+See the Deveraj Das and Nicolas Liochon blog post link:http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/[Introduction to HBase Mean Time to Recover (MTTR)] for a brief introduction.
 
 The issue link:https://issues.apache.org/jira/browse/HBASE-8389[HBASE-8354 forces Namenode into loop with lease recovery requests] is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments.
 The below suggested configurations are Varun's suggestions distilled and tested.
@@ -988,7 +1003,7 @@ See the link:http://docs.oracle.com/javase/6/docs/technotes/guides/management/ag
 Historically, besides above port mentioned, JMX opens two additional random TCP listening ports, which could lead to port conflict problem. (See link:https://issues.apache.org/jira/browse/HBASE-10289[HBASE-10289] for details)
 
 As an alternative, You can use the coprocessor-based JMX implementation provided by HBase.
-To enable it in 0.99 or above, add below property in _hbase-site.xml_: 
+To enable it in 0.99 or above, add below property in _hbase-site.xml_:
 
 [source,xml]
 ----
@@ -1019,7 +1034,7 @@ The registry port can be shared with connector port in most cases, so you only n
 However if you want to use SSL communication, the 2 ports must be configured to different values.
 
 By default the password authentication and SSL communication is disabled.
-To enable password authentication, you need to update _hbase-env.sh_          like below: 
+To enable password authentication, you need to update _hbase-env.sh_          like below:
 [source,bash]
 ----
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
@@ -1046,7 +1061,7 @@ keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
 keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
 ----
 
-And then update _hbase-env.sh_ like below: 
+And then update _hbase-env.sh_ like below:
 
 [source,bash]
 ----
@@ -1068,12 +1083,12 @@ Finally start `jconsole` on the client using the key store:
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 ----
 
-NOTE: To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_: 
+NOTE: To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_:
 
 [source,xml]
 ----
 <property>
-  <ame>hbase.coprocessor.master.classes</name>
+  <name>hbase.coprocessor.master.classes</name>
   <value>org.apache.hadoop.hbase.JMXListener</value>
 </property>
 ----

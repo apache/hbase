@@ -89,11 +89,11 @@ Additionally, each DataNode server will also have a TaskTracker/NodeManager log 
 [[rpc.logging]]
 ==== Enabling RPC-level logging
 
-Enabling the RPC-level logging on a RegionServer can often given insight on timings at the server.
+Enabling the RPC-level logging on a RegionServer can often give insight on timings at the server.
 Once enabled, the amount of log spewed is voluminous.
 It is not recommended that you leave this logging on for more than short bursts of time.
 To enable RPC-level logging, browse to the RegionServer UI and click on _Log Level_.
-Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (Thats right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
+Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (That's right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
 Analyze.
 
 To disable, set the logging level back to `INFO` level.
@@ -185,7 +185,7 @@ The key points here is to keep all these pauses low.
 CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
 
 This can be due to the size of the ParNew, which should be relatively small.
-If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
+If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if it's too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
 
 Add the below line in _hbase-env.sh_:
 [source,bourne]
@@ -443,7 +443,7 @@ java.lang.Thread.State: WAITING (on object monitor)
     at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.run(MemStoreFlusher.java:146)
 ----
 
-A handler thread that's waiting for stuff to do (like put, delete, scan, etc):
+A handler thread that's waiting for stuff to do (like put, delete, scan, etc.):
 
 [source]
 ----
@@ -558,6 +558,14 @@ You can also tail all the logs at the same time, edit files, etc.
 == Client
 
 For more information on the HBase client, see <<client,client>>.
+
+=== Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
+If either the client or server version is lower than 0.98.11/1.0.0 and the server
+has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
+requests that reach the server's `hbase.client.scanner.max.result.size` are likely
+to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
+to 2 MB but other versions default to larger values. For this reason, be very careful
+using 0.98.11 servers with any other client version.
 
 [[trouble.client.scantimeout]]
 === ScannerTimeoutException or UnknownScannerException
@@ -834,6 +842,31 @@ Two common use-cases for querying HDFS for HBase objects is research the degree 
 If there are a large number of StoreFiles for each ColumnFamily it could indicate the need for a major compaction.
 Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for the table.
 
+=== Unexpected Filesystem Growth
+
+If you see an unexpected spike in filesystem usage by HBase, two possible culprits
+are snapshots and WALs.
+
+Snapshots::
+  When you create a snapshot, HBase retains everything it needs to recreate the table's
+  state at that time of the snapshot. This includes deleted cells or expired versions.
+  For this reason, your snapshot usage pattern should be well-planned, and you should
+  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
+  and archives needed to restore snapshots are stored in
+  `/hbase/.archive/<_tablename_>/<_region_>/<_column_family_>/`.
+
+  *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
+  HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
+
+WAL::
+  Write-ahead logs (WALs) are stored in subdirectories of `/hbase/.logs/`, depending
+  on their status. Already-processed WALs are stored in `/hbase/.logs/oldWALs/` and
+  corrupt WALs are stored in `/hbase/.logs/.corrupt/` for examination.
+  If the size of any subdirectory of `/hbase/.logs/` is growing, examine the HBase
+  server logs to find the root cause for why WALs are not being processed correctly.
+
+*Do not* manage WALs manually via HDFS.
+
 [[trouble.network]]
 == Network
 
@@ -1037,7 +1070,7 @@ However, if the NotServingRegionException is logged ERROR, then the client ran o
 
 Fix your DNS.
 In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer as forward lookup.
-See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gorey details.
+See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gory details.
 
 [[brand.new.compressor]]
 ==== Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages

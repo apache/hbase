@@ -88,7 +88,7 @@ Multiple rack configurations carry the same potential issues as multiple switche
 * Poor switch capacity performance
 * Insufficient uplink to another rack
 
-If the the switches in your rack have appropriate switching capacity to handle all the hosts at full speed, the next most likely issue will be caused by homing more of your cluster across racks.
+If the switches in your rack have appropriate switching capacity to handle all the hosts at full speed, the next most likely issue will be caused by homing more of your cluster across racks.
 The easiest way to avoid issues when spanning multiple racks is to use port trunking to create a bonded uplink to other racks.
 The downside of this method however, is in the overhead of ports that could potentially be used.
 An example of this is, creating an 8Gbps port channel from rack A to rack B, using 8 of your 24 ports to communicate between racks gives you a poor ROI, using too few however can mean you're not getting the most out of your cluster.
@@ -102,14 +102,14 @@ Are all the network interfaces functioning correctly? Are you sure? See the Trou
 
 [[perf.network.call_me_maybe]]
 === Network Consistency and Partition Tolerance
-The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a distributed system can maintain two out of the following three charateristics: 
-- *C*onsistency -- all nodes see the same data. 
+The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a distributed system can maintain two out of the following three characteristics:
+- *C*onsistency -- all nodes see the same data.
 - *A*vailability -- every request receives a response about whether it succeeded or failed.
 - *P*artition tolerance -- the system continues to operate even if some of its components become unavailable to the others.
 
-HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/. 
+HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/.
 
-Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:http://old.eng.yammer.com/call-me-maybe-hbase/[blog post] and an link:http://old.eng.yammer.com/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
+Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/[blog post] and an link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
 
 [[jvm]]
 == Java
@@ -196,7 +196,8 @@ tableDesc.addFamily(cfDesc);
 ----
 ====
 
-See the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
+See the API documentation for
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
 
 [[perf.rs.memstore.size]]
 === `hbase.regionserver.global.memstore.size`
@@ -546,7 +547,7 @@ To disable the WAL, see <<wal.disable>>.
 === HBase Client: Group Puts by RegionServer
 
 In addition to using the writeBuffer, grouping `Put`s by RegionServer can reduce the number of client RPC calls per writeBuffer flush.
-There is a utility `HTableUtil` currently on TRUNK that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier.
+There is a utility `HTableUtil` currently on MASTER that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier.
 
 [[perf.hbase.write.mr.reducer]]
 === MapReduce: Skip The Reducer
@@ -555,7 +556,7 @@ When writing a lot of data to an HBase table from a MR job (e.g., with link:http
 When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other Reducers that will most likely be off-node.
 It's far more efficient to just write directly to HBase.
 
-For summary jobs where HBase is used as a source and a sink, then writes will be coming from the Reducer step (e.g., summarize values then write out result). This is a different processing problem than from the the above case.
+For summary jobs where HBase is used as a source and a sink, then writes will be coming from the Reducer step (e.g., summarize values then write out result). This is a different processing problem than from the above case.
 
 [[perf.one.region]]
 === Anti-Pattern: One Hot Region
@@ -564,7 +565,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.
 There are a variety of reasons that regions may appear "well split" but won't work with your data.
-As the HBase client communicates directly with the RegionServers, this can be obtained via link:hhttp://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#getRegionLocation(byte[])[Table.getRegionLocation].
+As the HBase client communicates directly with the RegionServers, this can be obtained via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#getRegionLocation(byte%5B%5D)[Table.getRegionLocation].
 
 See <<precreate.regions>>, as well as <<perf.configurations>>
 
@@ -606,7 +607,7 @@ When columns are selected explicitly with `scan.addColumn`, HBase will schedule 
 When rows have few columns and each column has only a few versions this can be inefficient.
 A seek operation is generally slower if does not seek at least past 5-10 columns/versions or 512-1024 bytes.
 
-In order to opportunistically look ahead a few columns/versions to see if the next column/version can be found that way before a seek operation is scheduled, a new attribute `Scan.HINT_LOOKAHEAD` can be set the on Scan object.
+In order to opportunistically look ahead a few columns/versions to see if the next column/version can be found that way before a seek operation is scheduled, a new attribute `Scan.HINT_LOOKAHEAD` can be set on the Scan object.
 The following code instructs the RegionServer to attempt two iterations of next before a seek is scheduled:
 
 [source,java]
@@ -676,7 +677,7 @@ Enabling Bloom Filters can save your having to go to disk and can help improve r
 link:http://en.wikipedia.org/wiki/Bloom_filter[Bloom filters] were developed over in link:https://issues.apache.org/jira/browse/HBASE-1200[HBase-1200 Add bloomfilters].
 For description of the development process -- why static blooms rather than dynamic -- and for an overview of the unique properties that pertain to blooms in HBase, as well as possible future directions, see the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] attached to link:https://issues.apache.org/jira/browse/HBASE-1200[HBASE-1200].
 The bloom filters described here are actually version two of blooms in HBase.
-In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.one-lab.org[European Commission One-Lab Project 034819].
+In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.one-lab.org/[European Commission One-Lab Project 034819].
 The core of the HBase bloom work was later pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
 Version 1 of HBase blooms never worked that well.
 Version 2 is a rewrite from scratch though again it starts with the one-lab work.
@@ -730,7 +731,7 @@ However, if hedged reads are enabled, the client waits some configurable amount 
 Whichever read returns first is used, and the other read request is discarded.
 Hedged reads can be helpful for times where a rare slow read is caused by a transient error such as a failing disk or flaky network connection.
 
-Because a HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer's hbase-site.xml and tuning the values to suit your environment.
+Because an HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer's hbase-site.xml and tuning the values to suit your environment.
 
 .Configuration for Hedged Reads
 * `dfs.client.hedged.read.threadpool.size` - the number of threads dedicated to servicing hedged reads.
@@ -781,7 +782,8 @@ Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
 For a large number of deletes, consider `Table.delete(List)`.
 
-See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29
+See
++++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29">hbase.client.Delete</a>+++.
 
 [[perf.hdfs]]
 == HDFS
@@ -868,7 +870,7 @@ If you are running on EC2 and post performance questions on the dist-list, pleas
 == Collocating HBase and MapReduce
 
 It is often recommended to have different clusters for HBase and MapReduce.
-A better qualification of this is: don't collocate a HBase that serves live requests with a heavy MR workload.
+A better qualification of this is: don't collocate an HBase that serves live requests with a heavy MR workload.
 OLTP and OLAP-optimized systems have conflicting requirements and one will lose to the other, usually the former.
 For example, short latency-sensitive disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as possible.
 MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate blocks in the <<block.cache>>.

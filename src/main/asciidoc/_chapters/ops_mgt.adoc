@@ -199,7 +199,7 @@ $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -t 600000
 
 By default, the canary tool only check the read operations, it's hard to find the problem in the
 write path. To enable the write sniffing, you can run canary with the `-writeSniffing` option.
-When the write sniffing is enabled, the canary tool will create a hbase table and make sure the
+When the write sniffing is enabled, the canary tool will create an hbase table and make sure the
 regions of the table distributed on all region servers. In each sniffing period, the canary will
 try to put data to these regions to check the write availability of each region server.
 ----
@@ -351,7 +351,7 @@ You can invoke it via the HBase cli with the 'wal' command.
 [NOTE]
 ====
 Prior to version 2.0, the WAL Pretty Printer was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
-In those versions, you can pring the contents of a WAL using the same configuration as above, but with the 'hlog' command.
+In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
 
 ----
  $ ./bin/hbase hlog hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
@@ -523,7 +523,7 @@ row9	c1	c2
 row10	c1	c2
 ----
 
-For ImportTsv to use this imput file, the command line needs to look like this:
+For ImportTsv to use this input file, the command line needs to look like this:
 
 ----
 
@@ -637,10 +637,14 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 [[compaction.tool]]
 === Offline Compaction Tool
 
-See the usage for the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[Compaction
-          Tool].
-Run it like this +./bin/hbase
-          org.apache.hadoop.hbase.regionserver.CompactionTool+
+See the usage for the
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
+Run it like:
+
+[source, bash]
+----
+$ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+----
 
 === `hbase clean`
 
@@ -777,7 +781,7 @@ To decommission a loaded RegionServer, run the following: +$
 ====
 The `HOSTNAME` passed to _graceful_stop.sh_ must match the hostname that hbase is using to identify RegionServers.
 Check the list of RegionServers in the master UI for how HBase is referring to servers.
-Its usually hostname but can also be FQDN.
+It's usually hostname but can also be FQDN.
 Whatever HBase is using, this is what you should pass the _graceful_stop.sh_ decommission script.
 If you pass IPs, the script is not yet smart enough to make a hostname (or FQDN) of it and so it will fail when it checks if server is currently running; the graceful unloading of regions will not run.
 ====
@@ -817,12 +821,12 @@ Hence, it is better to manage the balancer apart from `graceful_stop` reenabling
 [[draining.servers]]
 ==== Decommissioning several Regions Servers concurrently
 
-If you have a large cluster, you may want to decommission more than one machine at a time by gracefully stopping mutiple RegionServers concurrently.
+If you have a large cluster, you may want to decommission more than one machine at a time by gracefully stopping multiple RegionServers concurrently.
 To gracefully drain multiple regionservers at the same time, RegionServers can be put into a "draining" state.
 This is done by marking a RegionServer as a draining node by creating an entry in ZooKeeper under the _hbase_root/draining_ znode.
 This znode has format `name,port,startcode` just like the regionserver entries under _hbase_root/rs_ znode.
 
-Without this facility, decommissioning mulitple nodes may be non-optimal because regions that are being drained from one region server may be moved to other regionservers that are also draining.
+Without this facility, decommissioning multiple nodes may be non-optimal because regions that are being drained from one region server may be moved to other regionservers that are also draining.
 Marking RegionServers to be in the draining state prevents this from happening.
 See this link:http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html[blog
             post] for more details.
@@ -987,7 +991,7 @@ To configure metrics for a given region server, edit the _conf/hadoop-metrics2-h
 Restart the region server for the changes to take effect.
 
 To change the sampling rate for the default sink, edit the line beginning with `*.period`.
-To filter which metrics are emitted or to extend the metrics framework, see link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
+To filter which metrics are emitted or to extend the metrics framework, see http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
 
 .HBase Metrics and Ganglia
 [NOTE]
@@ -1010,15 +1014,15 @@ Rather than listing each metric which HBase emits by default, you can browse thr
 Different metrics are exposed for the Master process and each region server process.
 
 .Procedure: Access a JSON Output of Available Metrics
-. After starting HBase, access the region server's web UI, at `http://REGIONSERVER_HOSTNAME:60030` by default (or port 16030 in HBase 1.0+).
+. After starting HBase, access the region server's web UI, at pass:[http://REGIONSERVER_HOSTNAME:60030] by default (or port 16030 in HBase 1.0+).
 . Click the [label]#Metrics Dump# link near the top.
   The metrics for the region server are presented as a dump of the JMX bean in JSON format.
   This will dump out all metrics names and their values.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes `http://REGIONSERVER_HOSTNAME:60030/jmx?description=true`.
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:60030/jmx?description=true].
   Not all beans and attributes have descriptions.
-. To view metrics for the Master, connect to the Master's web UI instead (defaults to `http://localhost:60010` or port 16010 in HBase 1.0+) and click its [label]#Metrics
+. To view metrics for the Master, connect to the Master's web UI instead (defaults to pass:[http://localhost:60010] or port 16010 in HBase 1.0+) and click its [label]#Metrics
   Dump# link.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes `http://REGIONSERVER_HOSTNAME:60010/jmx?description=true`.
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:60010/jmx?description=true].
   Not all beans and attributes have descriptions.
 
 
@@ -1252,7 +1256,8 @@ Have a look in the Web UI.
 
 == Cluster Replication
 
-NOTE: This information was previously available at link:http://hbase.apache.org/replication.html[Cluster Replication].
+NOTE: This information was previously available at
+link:http://hbase.apache.org#replication[Cluster Replication].
 
 HBase provides a cluster replication mechanism which allows you to keep one cluster's state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes.
 Some use cases for cluster replication include:
@@ -1332,13 +1337,13 @@ list_peers:: list all replication relationships known by this cluster
 enable_peer <ID>::
   Enable a previously-disabled replication relationship
 disable_peer <ID>::
-  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled. 
+  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled.
 remove_peer <ID>::
   Disable and remove a replication relationship. HBase will no longer send edits to that peer cluster or keep track of WALs.
 enable_table_replication <TABLE_NAME>::
-  Enable the table replication switch for all it's column families. If the table is not found in the destination cluster then it will create one with the same name and column families. 
+  Enable the table replication switch for all its column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
-  Disable the table replication switch for all it's column families. 
+  Disable the table replication switch for all its column families.
 
 === Verifying Replicated Data
 
@@ -1457,7 +1462,7 @@ Speed is also limited by total size of the list of edits to replicate per slave,
 With this configuration, a master cluster region server with three slaves would use at most 192 MB to store data to replicate.
 This does not account for the data which was filtered but not garbage collected.
 
-Once the maximum size of edits has been buffered or the reader reaces the end of the WAL, the source thread stops reading and chooses at random a sink to replicate to (from the list that was generated by keeping only a subset of slave region servers). It directly issues a RPC to the chosen region server and waits for the method to return.
+Once the maximum size of edits has been buffered or the reader reaches the end of the WAL, the source thread stops reading and chooses at random a sink to replicate to (from the list that was generated by keeping only a subset of slave region servers). It directly issues a RPC to the chosen region server and waits for the method to return.
 If the RPC was successful, the source determines whether the current file has been emptied or it contains more data which needs to be read.
 If the file has been emptied, the source deletes the znode in the queue.
 Otherwise, it registers the new offset in the log's znode.
@@ -1629,6 +1634,197 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 * `status 'replication'` -- prints the status of each source and its sinks, sorted by hostname.
 * `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
 * `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
+
+== Running Multiple Workloads On a Single Cluster
+
+HBase provides the following mechanisms for managing the performance of a cluster
+handling multiple workloads:
+. <<quota>>
+. <<request-queues>>
+. <<multiple-typed-queues>>
+
+[[quota]]
+=== Quotas
+HBASE-11598 introduces quotas, which allow you to throttle requests based on
+the following limits:
+
+. <<request-quotas,The number or size of requests(read, write, or read+write) in a given timeframe>>
+. <<namespace-quotas,The number of tables allowed in a namespace>>
+
+These limits can be enforced for a specified user, table, or namespace.
+
+.Enabling Quotas
+
+Quotas are disabled by default. To enable the feature, set the `hbase.quota.enabled`
+property to `true` in _hbase-site.xml_ file for all cluster nodes.
+
+.General Quota Syntax
+. THROTTLE_TYPE can be expressed as READ, WRITE, or the default type(read + write).
+. Timeframes  can be expressed in the following units: `sec`, `min`, `hour`, `day`
+. Request sizes can be expressed in the following units: `B` (bytes), `K` (kilobytes),
+`M` (megabytes), `G` (gigabytes), `T` (terabytes), `P` (petabytes)
+. Numbers of requests are expressed as an integer followed by the string `req`
+. Limits relating to time are expressed as req/time or size/time. For instance `10req/day`
+or `100P/hour`.
+. Numbers of tables or regions are expressed as integers.
+
+[[request-quotas]]
+.Setting Request Quotas
+You can set quota rules ahead of time, or you can change the throttle at runtime. The change
+will propagate after the quota refresh period has expired. This expiration period
+defaults to 5 minutes. To change it, modify the `hbase.quota.refresh.period` property
+in `hbase-site.xml`. This property is expressed in milliseconds and defaults to `300000`.
+
+----
+# Limit user u1 to 10 requests per second
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
+
+# Limit user u1 to 10 read requests per second
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+
+# Limit user u1 to 10 M per day everywhere
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/day'
+
+# Limit user u1 to 10 M write size per sec
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+
+# Limit user u1 to 5k per minute on table t2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
+
+# Limit user u1 to 10 read requests per sec on table t2
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', TABLE => 't2', LIMIT => '10req/sec'
+
+# Remove an existing limit from user u1 on namespace ns2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
+
+# Limit all users to 10 requests per hour on namespace ns1
+hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/hour'
+
+# Limit all users to 10 T per hour on table t1
+hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10T/hour'
+
+# Remove all existing limits from user u1
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
+
+# List all quotas for user u1 in namespace ns2
+hbase> list_quotas USER => 'u1, NAMESPACE => 'ns2'
+
+# List all quotas for namespace ns2
+hbase> list_quotas NAMESPACE => 'ns2'
+
+# List all quotas for table t1
+hbase> list_quotas TABLE => 't1'
+
+# list all quotas
+hbase> list_quotas
+----
+
+You can also place a global limit and exclude a user or a table from the limit by applying the
+`GLOBAL_BYPASS` property.
+----
+hbase> set_quota NAMESPACE => 'ns1', LIMIT => '100req/min'               # a per-namespace request limit
+hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true                     # user u1 is not affected by the limit
+----
+
+[[namespace_quotas]]
+.Setting Namespace Quotas
+
+You can specify the maximum number of tables or regions allowed in a given namespace, either
+when you create the namespace or by altering an existing namespace, by setting the
+`hbase.namespace.quota.maxtables property`  on the namespace.
+
+.Limiting Tables Per Namespace
+----
+# Create a namespace with a max of 5 tables
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxtables'=>'5'}
+
+# Alter an existing namespace to have a max of 8 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxtables'=>'8'}
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns2'
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=>'hbase.namespace.quota.maxtables'}
+----
+
+.Limiting Regions Per Namespace
+----
+# Create a namespace with a max of 10 regions
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxregions'=>'10'
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns1'
+
+# Alter an existing namespace to have a max of 20 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxregions'=>'20'}
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=> 'hbase.namespace.quota.maxregions'}
+----
+
+[[request_queues]]
+=== Request Queues
+If no throttling policy is configured, when the RegionServer receives multiple requests,
+they are now placed into a queue waiting for a free execution slot (HBASE-6721).
+The simplest queue is a FIFO queue, where each request waits for all previous requests in the queue
+to finish before running. Fast or interactive queries can get stuck behind large requests.
+
+If you are able to guess how long a request will take, you can reorder requests by
+pushing the long requests to the end of the queue and allowing short requests to preempt
+them. Eventually, you must still execute the large requests and prioritize the new
+requests behind them. The short requests will be newer, so the result is not terrible,
+but still suboptimal compared to a mechanism which allows large requests to be split
+into multiple smaller ones.
+
+HBASE-10993 introduces such a system for deprioritizing long-running scanners. There
+are two types of queues, `fifo` and `deadline`. To configure the type of queue used,
+configure the `hbase.ipc.server.callqueue.type` property in `hbase-site.xml`. There
+is no way to estimate how long each request may take, so de-prioritization only affects
+scans, and is based on the number of “next” calls a scan request has made. An assumption
+is made that when you are doing a full table scan, your job is not likely to be interactive,
+so if there are concurrent requests, you can delay long-running scans up to a limit tunable by
+setting the `hbase.ipc.server.queue.max.call.delay` property. The slope of the delay is calculated
+by a simple square root of `(numNextCall * weight)` where the weight is
+configurable by setting the `hbase.ipc.server.scan.vtime.weight` property.
+
+[[multiple-typed-queues]]
+=== Multiple-Typed Queues
+
+You can also prioritize or deprioritize different kinds of requests by configuring
+a specified number of dedicated handlers and queues. You can segregate the scan requests
+in a single queue with a single handler, and all the other available queues can service
+short `Get` requests.
+
+You can adjust the IPC queues and handlers based on the type of workload, using static
+tuning options. This approach is an interim first step that will eventually allow
+you to change the settings at runtime, and to dynamically adjust values based on the load.
+
+.Multiple Queues
+
+To avoid contention and separate different kinds of requests, configure the
+`hbase.ipc.server.callqueue.handler.factor` property, which allows you to increase the number of
+queues and control how many handlers can share the same queue., allows admins to increase the number
+of queues and decide how many handlers share the same queue.
+
+Using more queues reduces contention when adding a task to a queue or selecting it
+from a queue. You can even configure one queue per handler. The trade-off is that
+if some queues contain long-running tasks, a handler may need to wait to execute from that queue
+rather than stealing from another queue which has waiting tasks.
+
+.Read and Write Queues
+With multiple queues, you can now divide read and write requests, giving more priority
+(more queues) to one or the other type. Use the `hbase.ipc.server.callqueue.read.ratio`
+property to choose to serve more reads or more writes.
+
+.Get and Scan Queues
+Similar to the read/write split, you can split gets and scans by tuning the `hbase.ipc.server.callqueue.scan.ratio`
+property to give more priority to gets or to scans. A scan ratio of `0.1` will give
+more queue/handlers to the incoming gets, which means that more gets can be processed
+at the same time and that fewer scans can be executed at the same time. A value of
+`0.9` will give more queue/handlers to scans, so the number of scans executed will
+increase and the number of gets will decrease.
+
 
 [[ops.backup]]
 == HBase Backup
@@ -1853,7 +2049,7 @@ Aside from the disk space necessary to store the data, one RS may not be able to
 [[ops.capacity.nodes.throughput]]
 ==== Read/Write throughput
 
-Number of nodes can also be driven by required thoughput for reads and/or writes.
+Number of nodes can also be driven by required throughput for reads and/or writes.
 The throughput one can get per node depends a lot on data (esp.
 key/value sizes) and request patterns, as well as node and system configuration.
 Planning should be done for peak load if it is likely that the load would be the main driver of the increase of the node count.
@@ -2018,7 +2214,7 @@ or in code it would be as follows:
 
 [source,java]
 ----
-void rename(Admin admin, String oldTableName, String newTableName) {
+void rename(Admin admin, String oldTableName, TableName newTableName) {
   String snapshotName = randomName();
   admin.disableTable(oldTableName);
   admin.snapshot(snapshotName, oldTableName);
