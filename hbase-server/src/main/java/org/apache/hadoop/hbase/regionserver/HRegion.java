@@ -3543,6 +3543,12 @@ public class HRegion implements HeapSize { // , Writable{
               continue;
             }
           }
+          boolean checkRowWithinBoundary = false;
+          // Check this edit is for this region.
+          if (!Bytes.equals(key.getEncodedRegionName(),
+              this.getRegionInfo().getEncodedNameAsBytes())) {
+            checkRowWithinBoundary = true;
+          }
 
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
@@ -3551,11 +3557,14 @@ public class HRegion implements HeapSize { // , Writable{
             if (kv.matchingFamily(WALEdit.METAFAMILY) ||
                 !Bytes.equals(key.getEncodedRegionName(),
                   this.getRegionInfo().getEncodedNameAsBytes())) {
-              //this is a special edit, we should handle it
-              CompactionDescriptor compaction = WALEdit.getCompaction(kv);
-              if (compaction != null) {
-                //replay the compaction
-                completeCompactionMarker(compaction);
+              // if region names don't match, skipp replaying compaction marker
+              if (!checkRowWithinBoundary) {
+                //this is a special edit, we should handle it
+                CompactionDescriptor compaction = WALEdit.getCompaction(kv);
+                if (compaction != null) {
+                  //replay the compaction
+                  completeCompactionMarker(compaction);
+                }
               }
 
               skippedEdits++;
@@ -3569,6 +3578,12 @@ public class HRegion implements HeapSize { // , Writable{
               // This should never happen.  Perhaps schema was changed between
               // crash and redeploy?
               LOG.warn("No family for " + kv);
+              skippedEdits++;
+              continue;
+            }
+            if (checkRowWithinBoundary && !rowIsInRange(this.getRegionInfo(),
+              kv.getRowArray(), kv.getRowOffset(), kv.getRowLength())) {
+              LOG.warn("Row of " + kv + " is not within region boundary");
               skippedEdits++;
               continue;
             }
@@ -4951,6 +4966,15 @@ public class HRegion implements HeapSize { // , Writable{
         (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
             (Bytes.compareTo(info.getEndKey(), row) > 0));
+  }
+
+  public static boolean rowIsInRange(HRegionInfo info, final byte [] row, final int offset,
+      final short length) {
+    return ((info.getStartKey().length == 0) ||
+        (Bytes.compareTo(info.getStartKey(), 0, info.getStartKey().length,
+          row, offset, length) <= 0)) &&
+        ((info.getEndKey().length == 0) ||
+          (Bytes.compareTo(info.getEndKey(), 0, info.getEndKey().length, row, offset, length) > 0));
   }
 
   /**

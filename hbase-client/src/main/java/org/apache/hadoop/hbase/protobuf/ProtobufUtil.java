@@ -2578,12 +2578,19 @@ public final class ProtobufUtil {
 
   public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
       List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
+    return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
+  }
+
+  @SuppressWarnings("deprecation")
+  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
+      byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     // compaction descriptor contains relative paths.
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
         .setTableName(ByteStringer.wrap(info.getTableName()))
-        .setEncodedRegionName(ByteStringer.wrap(info.getEncodedNameAsBytes()))
+        .setEncodedRegionName(ByteStringer.wrap(
+          regionName == null ? info.getEncodedNameAsBytes() : regionName))
         .setFamilyName(ByteStringer.wrap(family))
         .setStoreHomeDir(storeDir.getName()); //make relative
     for (Path inputPath : inputPaths) {
