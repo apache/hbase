@@ -828,6 +828,10 @@ public class TestHRegion {
 
   @Test
   public void testRecoveredEditsReplayCompaction() throws Exception {
+    testRecoveredEditsReplayCompaction(false);
+    testRecoveredEditsReplayCompaction(true);
+  }
+  public void testRecoveredEditsReplayCompaction(boolean mismatchedRegionName) throws Exception {
     String method = name.getMethodName();
     TableName tableName = TableName.valueOf(method);
     byte[] family = Bytes.toBytes("family");
@@ -873,9 +877,17 @@ public class TestHRegion {
       Path newFile = region.getRegionFileSystem().commitStoreFile(Bytes.toString(family),
           files[0].getPath());
 
+      byte[] encodedNameAsBytes = this.region.getRegionInfo().getEncodedNameAsBytes();
+      byte[] fakeEncodedNameAsBytes = new byte [encodedNameAsBytes.length];
+      for (int i=0; i < encodedNameAsBytes.length; i++) {
+        // Mix the byte array to have a new encodedName
+        fakeEncodedNameAsBytes[i] = (byte) (encodedNameAsBytes[i] + 1);
+      }
+
       CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(this.region
-          .getRegionInfo(), family, storeFiles, Lists.newArrayList(newFile), region
-          .getRegionFileSystem().getStoreDir(Bytes.toString(family)));
+        .getRegionInfo(), mismatchedRegionName ? fakeEncodedNameAsBytes : null, family,
+            storeFiles, Lists.newArrayList(newFile),
+            region.getRegionFileSystem().getStoreDir(Bytes.toString(family)));
 
       WALUtil.writeCompactionMarker(region.getWAL(), this.region.getTableDesc(),
           this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
@@ -897,14 +909,20 @@ public class TestHRegion {
       region.getTableDesc();
       region.getRegionInfo();
       region.close();
-      region = HRegion.openHRegion(region, null);
+      try {
+        region = HRegion.openHRegion(region, null);
+      } catch (WrongRegionException wre) {
+        fail("Matching encoded region name should not have produced WrongRegionException");
+      }
 
       // now check whether we have only one store file, the compacted one
       Collection<StoreFile> sfs = region.getStore(family).getStorefiles();
       for (StoreFile sf : sfs) {
         LOG.info(sf.getPath());
       }
-      assertEquals(1, region.getStore(family).getStorefilesCount());
+      if (!mismatchedRegionName) {
+        assertEquals(1, region.getStore(family).getStorefilesCount());
+      }
       files = FSUtils.listStatus(fs, tmpDir);
       assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
 
