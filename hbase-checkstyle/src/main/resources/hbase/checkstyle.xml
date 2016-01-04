@@ -41,7 +41,9 @@
     http://checkstyle.sourceforge.net/config_blocks.html -->
     <module name="EmptyBlock"/>
     <module name="LeftCurly"/>
-    <module name="NeedBraces"/>
+    <module name="NeedBraces">
+      <property name="allowSingleLineStatement" value="true"/>
+    </module>
 
     <!-- Class Design Checks
     http://checkstyle.sourceforge.net/config_design.html -->
@@ -77,7 +79,9 @@
 
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->
-    <module name="JavadocTagContinuationIndentation"/>
+    <module name="JavadocTagContinuationIndentation">
+      <property name="offset" value="2"/>
+    </module>
     <module name="NonEmptyAtclauseDescription"/>
 
     <!-- Miscellaneous Checks
