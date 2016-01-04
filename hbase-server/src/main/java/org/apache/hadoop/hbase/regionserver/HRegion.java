@@ -4130,11 +4130,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               continue;
             }
           }
+          boolean checkRowWithinBoundary = false;
           // Check this edit is for this region.
           if (!Bytes.equals(key.getEncodedRegionName(),
               this.getRegionInfo().getEncodedNameAsBytes())) {
-            skippedEdits++;
-            continue;
+            checkRowWithinBoundary = true;
           }
 
           boolean flush = false;
@@ -4142,11 +4142,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
             if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
-              //this is a special edit, we should handle it
-              CompactionDescriptor compaction = WALEdit.getCompaction(cell);
-              if (compaction != null) {
-                //replay the compaction
-                replayWALCompactionMarker(compaction, false, true, Long.MAX_VALUE);
+              // if region names don't match, skipp replaying compaction marker
+              if (!checkRowWithinBoundary) {
+                //this is a special edit, we should handle it
+                CompactionDescriptor compaction = WALEdit.getCompaction(cell);
+                if (compaction != null) {
+                  //replay the compaction
+                  replayWALCompactionMarker(compaction, false, true, Long.MAX_VALUE);
+                }
               }
               skippedEdits++;
               continue;
@@ -4159,6 +4162,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               // This should never happen.  Perhaps schema was changed between
               // crash and redeploy?
               LOG.warn("No family for " + cell);
+              skippedEdits++;
+              continue;
+            }
+            if (checkRowWithinBoundary && !rowIsInRange(this.getRegionInfo(),
+              cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())) {
+              LOG.warn("Row of " + cell + " is not within region boundary");
               skippedEdits++;
               continue;
             }
@@ -4232,8 +4241,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   void replayWALCompactionMarker(CompactionDescriptor compaction, boolean pickCompactionFiles,
       boolean removeFiles, long replaySeqId)
       throws IOException {
-    checkTargetRegion(compaction.getEncodedRegionName().toByteArray(),
-      "Compaction marker from WAL ", compaction);
+    try {
+      checkTargetRegion(compaction.getEncodedRegionName().toByteArray(),
+        "Compaction marker from WAL ", compaction);
+    } catch (WrongRegionException wre) {
+      if (RegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
+        // skip the compaction marker since it is not for this region
+        return;
+      }
+      throw wre;
+    }
 
     synchronized (writestate) {
       if (replaySeqId < lastReplayedOpenRegionSeqId) {
@@ -6588,6 +6605,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
             (Bytes.compareTo(info.getEndKey(), row) > 0));
+  }
+
+  public static boolean rowIsInRange(HRegionInfo info, final byte [] row, final int offset,
+      final short length) {
+    return ((info.getStartKey().length == 0) ||
+        (Bytes.compareTo(info.getStartKey(), 0, info.getStartKey().length,
+          row, offset, length) <= 0)) &&
+        ((info.getEndKey().length == 0) ||
+          (Bytes.compareTo(info.getEndKey(), 0, info.getEndKey().length, row, offset, length) > 0));
   }
 
   /**
