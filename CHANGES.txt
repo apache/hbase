@@ -14,6 +14,14 @@ Bug
     [HBASE-15054] - Allow 0.94 to compile with JDK8
     [HBASE-15059] - Allow 0.94 to compile against Hadoop 2.7.x
 
+Improvement
+
+    [HBASE-13344] - Add enforcer rule that matches our JDK support statement
+
+Task
+
+    [HBASE-14747] - Make it possible to build Javadoc and xref reports for 0.94 again
+
 Release 0.94.27 - 03/18/2015
 Sub-task
 
