@@ -1,4 +1,19 @@
 HBase Change Log
+Release 0.94.28 - 01/04/2016
+Sub-task
+
+    [HBASE-14748] - Update 0.94 apidocs and xref on website
+
+Bug
+
+    [HBASE-12921] - Port HBASE-5356 'region_mover.rb can hang if table region it belongs to is deleted' to 0.94
+    [HBASE-13454] - SecureClient#setupIOStreams should handle all Exceptions
+    [HBASE-13651] - Handle StoreFileScanner FileNotFoundException
+    [HBASE-14799] - Commons-collections object deserialization remote command execution vulnerability
+    [HBASE-14830] - Fix broken links in 0.94 generated docs
+    [HBASE-15054] - Allow 0.94 to compile with JDK8
+    [HBASE-15059] - Allow 0.94 to compile against Hadoop 2.7.x
+
 Release 0.94.27 - 03/18/2015
 Sub-task
 
