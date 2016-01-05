@@ -1607,21 +1607,8 @@ public class HMaster extends HRegionServer implements MasterServices {
             ExploringCompactionPolicy.class.getName());
     }
 
-    long majorCompactionPeriod = Long.MAX_VALUE;
-    String sv = htd.getConfigurationValue(HConstants.MAJOR_COMPACTION_PERIOD);
-    if (sv != null) {
-      majorCompactionPeriod = Long.parseLong(sv);
-    } else {
-      majorCompactionPeriod =
-          conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, majorCompactionPeriod);
-    }
-    String splitPolicyClassName = htd.getRegionSplitPolicyClassName();
-    if (splitPolicyClassName == null) {
-      splitPolicyClassName = conf.get(HConstants.HBASE_REGION_SPLIT_POLICY_KEY);
-    }
-
     int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
-    sv = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+    String sv = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
     if (sv != null) {
       blockingFileCount = Integer.parseInt(sv);
     } else {
@@ -1634,7 +1621,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (compactionPolicy == null) {
         compactionPolicy = className;
       }
-      if (className.equals(FIFOCompactionPolicy.class.getName()) == false) {
+      if (!compactionPolicy.equals(FIFOCompactionPolicy.class.getName())) {
         continue;
       }
       // FIFOCompaction
