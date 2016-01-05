@@ -315,6 +315,10 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public int compareRows(final Cell left, final Cell right) {
+    // left and right can be exactly the same at the beginning of a row
+    if (left == right) {
+      return 0;
+    }
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
           ((ByteBufferedCell) left).getRowPosition(), left.getRowLength(),
