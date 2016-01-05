@@ -186,6 +186,7 @@ message CreateNamespaceRequest {
 }
 
 message CreateNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DeleteNamespaceRequest {
@@ -195,6 +196,7 @@ message DeleteNamespaceRequest {
 }
 
 message DeleteNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ModifyNamespaceRequest {
@@ -204,6 +206,7 @@ message ModifyNamespaceRequest {
 }
 
 message ModifyNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message GetNamespaceDescriptorRequest {

@@ -1586,7 +1586,13 @@ public class TestMasterObserver {
     cp.enableBypass(true);
     cp.resetStates();
 
-    admin.modifyNamespace(NamespaceDescriptor.create(testNamespace).build());
+    boolean expected = false;
+    try {
+      admin.modifyNamespace(NamespaceDescriptor.create(testNamespace).build());
+    } catch (BypassCoprocessorException ce) {
+      expected = true;
+    }
+    assertTrue(expected);
     assertTrue("Test namespace should not have been modified",
         cp.preModifyNamespaceCalledOnly());
 
@@ -1594,7 +1600,13 @@ public class TestMasterObserver {
     assertTrue("Test namespace descriptor should have been called",
         cp.wasGetNamespaceDescriptorCalled());
 
-    admin.deleteNamespace(testNamespace);
+    expected = false;
+    try {
+      admin.deleteNamespace(testNamespace);
+    } catch (BypassCoprocessorException ce) {
+      expected = true;
+    }
+    assertTrue(expected);
     assertTrue("Test namespace should not have been deleted", cp.preDeleteNamespaceCalledOnly());
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
@@ -1614,7 +1626,13 @@ public class TestMasterObserver {
     cp.enableBypass(true);
     cp.resetStates();
 
-    admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
+    expected = false;
+    try {
+      admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
+    } catch (BypassCoprocessorException ce) {
+      expected = true;
+    }
+    assertTrue(expected);
     assertTrue("Test namespace should not be created", cp.preCreateNamespaceCalledOnly());
 
     // turn on bypass, run the test

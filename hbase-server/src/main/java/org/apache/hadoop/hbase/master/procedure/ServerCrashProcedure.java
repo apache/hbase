@@ -730,7 +730,7 @@ implements ServerProcedureInterface {
     boolean metaAssigned = false;
     // Is hbase:meta location available yet?
     if (mtl.isLocationAvailable(zkw)) {
-      ClusterConnection connection = env.getMasterServices().getConnection();
+      ClusterConnection connection = env.getMasterServices().getClusterConnection();
       // Is hbase:meta location good yet?
       long timeout =
         env.getMasterConfiguration().getLong(KEY_SHORT_WAIT_ON_META, DEFAULT_SHORT_WAIT_ON_META);

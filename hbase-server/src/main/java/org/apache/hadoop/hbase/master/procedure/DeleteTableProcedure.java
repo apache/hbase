@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -374,7 +374,7 @@ public class DeleteTableProcedure
    */
   private static void cleanAnyRemainingRows(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
-    ClusterConnection connection = env.getMasterServices().getConnection();
+    Connection connection = env.getMasterServices().getConnection();
     Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable =
         connection.getTable(TableName.META_TABLE_NAME)) {

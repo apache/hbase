@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -196,8 +197,7 @@ import sun.misc.SignalHandler;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
-public class HRegionServer extends HasThread implements
-    RegionServerServices, LastSequenceId {
+public class HRegionServer extends HasThread implements RegionServerServices, LastSequenceId {
 
   private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
@@ -1867,7 +1867,12 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public ClusterConnection getConnection() {
+  public Connection getConnection() {
+    return getClusterConnection();
+  }
+
+  @Override
+  public ClusterConnection getClusterConnection() {
     return this.clusterConnection;
   }
 

@@ -438,11 +438,11 @@ public class MasterProcedureTestingUtility {
   }
 
   public static long generateNonceGroup(final HMaster master) {
-    return master.getConnection().getNonceGenerator().getNonceGroup();
+    return master.getClusterConnection().getNonceGenerator().getNonceGroup();
   }
 
   public static long generateNonce(final HMaster master) {
-    return master.getConnection().getNonceGenerator().newNonce();
+    return master.getClusterConnection().getNonceGenerator().newNonce();
   }
 
   public static class InjectAbortOnLoadListener

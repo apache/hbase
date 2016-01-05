@@ -21,21 +21,20 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 
 import com.google.protobuf.Service;
@@ -45,6 +44,11 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
+  /**
+   * @return Master's instance of {@link ClusterSchema}
+   */
+  ClusterSchema getClusterSchema();
+
   /**
    * @return Master's instance of the {@link AssignmentManager}
    */
@@ -79,11 +83,6 @@ public interface MasterServices extends Server {
    * @return Master's instance of {@link MasterCoprocessorHost}
    */
   MasterCoprocessorHost getMasterCoprocessorHost();
-
-  /**
-   * @return Master's instance of {@link TableNamespaceManager}
-   */
-  TableNamespaceManager getTableNamespaceManager();
 
   /**
    * @return Master's instance of {@link MasterQuotaManager}
@@ -280,54 +279,6 @@ public interface MasterServices extends Server {
   boolean isInitialized();
 
   /**
-   * Create a new namespace
-   * @param descriptor descriptor which describes the new namespace
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
-   */
-  public void createNamespace(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
-  /**
-   * Create a new namespace synchronously.
-   * @param descriptor descriptor which describes the new namespace
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
-   */
-  public void createNamespaceSync(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
-  /**
-   * Modify an existing namespace
-   * @param descriptor descriptor which updates the existing namespace
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
-   */
-  public void modifyNamespace(
-      final NamespaceDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
-  /**
-   * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
-   * @param name namespace name
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
-   */
-  public void deleteNamespace(
-      final String name,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
-  /**
    * Abort a procedure.
    * @param procId ID of the procedure
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
@@ -336,21 +287,6 @@ public interface MasterServices extends Server {
    */
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
       throws IOException;
-
-  /**
-   * Get a namespace descriptor by name
-   * @param name name of namespace descriptor
-   * @return A descriptor
-   * @throws IOException
-   */
-  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException;
-
-  /**
-   * List available namespace descriptors
-   * @return A descriptor
-   * @throws IOException
-   */
-  public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException;
 
   /**
    * List procedures

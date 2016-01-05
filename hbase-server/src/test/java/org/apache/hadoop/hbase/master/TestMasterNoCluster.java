@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
@@ -62,8 +63,10 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 import com.google.protobuf.ServiceException;
@@ -80,6 +83,8 @@ import com.google.protobuf.ServiceException;
 public class TestMasterNoCluster {
   private static final Log LOG = LogFactory.getLog(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -122,7 +127,7 @@ public class TestMasterNoCluster {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test (timeout=30000)
+  @Test
   public void testStopDuringStart()
   throws IOException, KeeperException, InterruptedException {
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
@@ -141,7 +146,7 @@ public class TestMasterNoCluster {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test (timeout=30000)
+  @Test
   public void testFailover()
   throws IOException, KeeperException, InterruptedException, ServiceException {
     final long now = System.currentTimeMillis();
@@ -193,6 +198,9 @@ public class TestMasterNoCluster {
       }
 
       @Override
+      void initClusterSchemaService() throws IOException, InterruptedException {}
+
+      @Override
       ServerManager createServerManager(Server master, MasterServices services)
       throws IOException {
         ServerManager sm = super.createServerManager(master, services);
@@ -217,10 +225,6 @@ public class TestMasterNoCluster {
         } catch (IOException e) {
           return null;
         }
-      }
-
-      @Override
-      void initNamespace() {
       }
     };
     master.start();
@@ -266,6 +270,9 @@ public class TestMasterNoCluster {
       { }
 
       @Override
+      void initClusterSchemaService() throws IOException, InterruptedException {}
+
+      @Override
       void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException, CoordinatedStateException {
         super.initializeZKBasedSystemTrackers();
@@ -293,10 +300,6 @@ public class TestMasterNoCluster {
         } catch (IOException e) {
           return null;
         }
-      }
-
-      @Override
-      void initNamespace() {
       }
     };
     master.start();

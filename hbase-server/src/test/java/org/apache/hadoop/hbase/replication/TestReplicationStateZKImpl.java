@@ -191,5 +191,11 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     public ChoreService getChoreService() {
       return null;
     }
+
+    @Override
+    public ClusterConnection getClusterConnection() {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 }

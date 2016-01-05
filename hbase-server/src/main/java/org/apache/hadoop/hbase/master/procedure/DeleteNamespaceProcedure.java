@@ -383,7 +383,7 @@ public class DeleteNamespaceProcedure
   }
 
   private static TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
-    return env.getMasterServices().getTableNamespaceManager();
+    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
   }
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to

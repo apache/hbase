@@ -334,6 +334,12 @@ public class TestTokenAuthentication {
     public ChoreService getChoreService() {
       return null;
     }
+
+    @Override
+    public ClusterConnection getClusterConnection() {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 
   private static HBaseTestingUtility TEST_UTIL;

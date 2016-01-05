@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
@@ -43,12 +44,20 @@ public interface Server extends Abortable, Stoppable {
   ZooKeeperWatcher getZooKeeper();
 
   /**
-   * Returns a reference to the servers' cluster connection.
+   * Returns a reference to the servers' connection.
    *
    * Important note: this method returns a reference to Connection which is managed
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
-  ClusterConnection getConnection();
+  Connection getConnection();
+
+  /**
+   * Returns a reference to the servers' cluster connection. Prefer {@link #getConnection()}.
+   *
+   * Important note: this method returns a reference to Connection which is managed
+   * by Server itself, so callers must NOT attempt to close connection obtained.
+   */
+  ClusterConnection getClusterConnection();
 
   /**
    * Returns instance of {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}

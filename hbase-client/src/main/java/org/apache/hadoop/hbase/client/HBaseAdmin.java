@@ -28,12 +28,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -95,11 +95,13 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
@@ -135,6 +137,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTi
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
@@ -254,23 +257,10 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public boolean abortProcedure(
-      final long procId,
-      final boolean mayInterruptIfRunning) throws IOException {
-    Future<Boolean> future = abortProcedureAsync(procId, mayInterruptIfRunning);
-    try {
-      return future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting for procedure to be cancelled");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+  public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
+  throws IOException {
+    return get(abortProcedureAsync(procId, mayInterruptIfRunning), this.syncWaitTimeout,
+      TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -464,22 +454,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
       throws IOException {
-    Future<Void> future = createTableAsync(desc, splitKeys);
-    try {
-      // TODO: how long should we wait? spin forever?
-      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting" +
-          " for table to be enabled; meta scan was done");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+    get(createTableAsync(desc, splitKeys), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -550,20 +525,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void deleteTable(final TableName tableName) throws IOException {
-    Future<Void> future = deleteTableAsync(tableName);
-    try {
-      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting for table to be deleted");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+    get(deleteTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -641,21 +603,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void truncateTable(final TableName tableName, final boolean preserveSplits)
       throws IOException {
-    Future<Void> future = truncateTableAsync(tableName, preserveSplits);
-    try {
-      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting for table " + tableName
-          + " to be enabled.");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+    get(truncateTableAsync(tableName, preserveSplits), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -717,20 +665,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void enableTable(final TableName tableName)
   throws IOException {
-    Future<Void> future = enableTableAsync(tableName);
-    try {
-      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+    get(enableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -833,20 +768,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void disableTable(final TableName tableName)
   throws IOException {
-    Future<Void> future = disableTableAsync(tableName);
-    try {
-      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
-    } catch (TimeoutException e) {
-      throw new TimeoutIOException(e);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      } else {
-        throw new IOException(e.getCause());
-      }
-    }
+    get(disableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -1841,43 +1763,103 @@ public class HBaseAdmin implements Admin {
     return this.conf;
   }
 
+  /**
+   * Do a get with a timeout against the passed in <code>future<code>.
+   */
+  private static <T> T get(final Future<T> future, final long timeout, final TimeUnit units)
+  throws IOException {
+    try {
+      // TODO: how long should we wait? Spin forever?
+      return future.get(timeout, units);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupt while waiting on " + future);
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      } else {
+        throw new IOException(e.getCause());
+      }
+    }
+  }
+
   @Override
-  public void createNamespace(final NamespaceDescriptor descriptor) throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
+  public void createNamespace(final NamespaceDescriptor descriptor)
+  throws IOException {
+    get(createNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> createNamespaceAsync(final NamespaceDescriptor descriptor)
+  throws IOException {
+    CreateNamespaceResponse response =
+        executeCallable(new MasterCallable<CreateNamespaceResponse>(getConnection()) {
       @Override
-      public Void call(int callTimeout) throws Exception {
-        master.createNamespace(null,
+      public CreateNamespaceResponse call(int callTimeout) throws Exception {
+        return master.createNamespace(null,
           CreateNamespaceRequest.newBuilder()
             .setNamespaceDescriptor(ProtobufUtil
               .toProtoNamespaceDescriptor(descriptor)).build()
         );
-        return null;
       }
     });
+    return new NamespaceFuture(this, descriptor.getName(), response.getProcId()) {
+      @Override
+      public String getOperationType() {
+        return "CREATE_NAMESPACE";
+      }
+    };
   }
 
   @Override
-  public void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
+  public void modifyNamespace(final NamespaceDescriptor descriptor)
+  throws IOException {
+    get(modifyNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> modifyNamespaceAsync(final NamespaceDescriptor descriptor)
+  throws IOException {
+    ModifyNamespaceResponse response =
+        executeCallable(new MasterCallable<ModifyNamespaceResponse>(getConnection()) {
       @Override
-      public Void call(int callTimeout) throws Exception {
-        master.modifyNamespace(null, ModifyNamespaceRequest.newBuilder().
+      public ModifyNamespaceResponse call(int callTimeout) throws Exception {
+        return master.modifyNamespace(null, ModifyNamespaceRequest.newBuilder().
           setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(descriptor)).build());
-        return null;
       }
     });
+    return new NamespaceFuture(this, descriptor.getName(), response.getProcId()) {
+      @Override
+      public String getOperationType() {
+        return "MODIFY_NAMESPACE";
+      }
+    };
   }
 
   @Override
-  public void deleteNamespace(final String name) throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
+  public void deleteNamespace(final String name)
+  throws IOException {
+    get(deleteNamespaceAsync(name), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> deleteNamespaceAsync(final String name)
+  throws IOException {
+    DeleteNamespaceResponse response =
+        executeCallable(new MasterCallable<DeleteNamespaceResponse>(getConnection()) {
       @Override
-      public Void call(int callTimeout) throws Exception {
-        master.deleteNamespace(null, DeleteNamespaceRequest.newBuilder().
+      public DeleteNamespaceResponse call(int callTimeout) throws Exception {
+        return master.deleteNamespace(null, DeleteNamespaceRequest.newBuilder().
           setNamespaceName(name).build());
-        return null;
       }
     });
+    return new NamespaceFuture(this, name, response.getProcId()) {
+      @Override
+      public String getOperationType() {
+        return "DELETE_NAMESPACE";
+      }
+    };
   }
 
   @Override
@@ -3184,6 +3166,11 @@ public class HBaseAdmin implements Admin {
       this.tableName = tableName;
     }
 
+    @Override
+    public String toString() {
+      return getDescription();
+    }
+
     /**
      * @return the table name
      */
@@ -3222,7 +3209,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public void throwTimeoutException(long elapsedTime) throws TimeoutException {
         throw new TimeoutException("The operation: " + getOperationType() + " on table: " +
-            tableName.getNameAsString() + " not completed after " + elapsedTime + "msec");
+            tableName.getNameAsString() + " has not completed after " + elapsedTime + "ms");
       }
     }
 
@@ -3341,6 +3328,34 @@ public class HBaseAdmin implements Admin {
       }
       throw new TimeoutException("Only " + actualRegCount.get() + " of " + numRegs
           + " regions are online; retries exhausted.");
+    }
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  protected static abstract class NamespaceFuture extends ProcedureFuture<Void> {
+    private final String namespaceName;
+
+    public NamespaceFuture(final HBaseAdmin admin, final String namespaceName, final Long procId) {
+      super(admin, procId);
+      this.namespaceName = namespaceName;
+    }
+
+    /**
+     * @return the namespace name
+     */
+    protected String getNamespaceName() {
+      return namespaceName;
+    }
+
+    /**
+     * @return the operation type like CREATE_NAMESPACE, DELETE_NAMESPACE, etc.
+     */
+    public abstract String getOperationType();
+
+    @Override
+    public String toString() {
+      return "Operation: " + getOperationType() + ", Namespace: " + getNamespaceName();
     }
   }
 

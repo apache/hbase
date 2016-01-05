@@ -965,49 +965,77 @@ public interface Admin extends Abortable, Closeable {
   Configuration getConfiguration();
 
   /**
+   * Create a new namespace. Blocks until namespace has been successfully created or an exception
+   * is thrown.
+   *
+   * @param descriptor descriptor which describes the new namespace
+   */
+  void createNamespace(final NamespaceDescriptor descriptor)
+  throws IOException;
+
+  /**
    * Create a new namespace
    *
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @return the result of the async create namespace operation. Use Future.get(long, TimeUnit) to
+   *  wait on the operation to complete.
    */
-  void createNamespace(final NamespaceDescriptor descriptor)
-      throws IOException;
+  Future<Void> createNamespaceAsync(final NamespaceDescriptor descriptor)
+  throws IOException;
+
+  /**
+   * Modify an existing namespace.  Blocks until namespace has been successfully modified or an
+   * exception is thrown.
+   *
+   * @param descriptor descriptor which describes the new namespace
+   */
+  void modifyNamespace(final NamespaceDescriptor descriptor)
+  throws IOException;
 
   /**
    * Modify an existing namespace
    *
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @return the result of the async modify namespace operation. Use Future.get(long, TimeUnit) to
+   *  wait on the operation to complete.
    */
-  void modifyNamespace(final NamespaceDescriptor descriptor)
-      throws IOException;
+  Future<Void> modifyNamespaceAsync(final NamespaceDescriptor descriptor)
+  throws IOException;
+
+  /**
+   * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
+   * Blocks until namespace has been successfully deleted or an
+   * exception is thrown.
+   *
+   * @param name namespace name
+   */
+  void deleteNamespace(final String name) throws IOException;
 
   /**
    * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
    *
    * @param name namespace name
-   * @throws IOException
+   * @return the result of the async delete namespace operation. Use Future.get(long, TimeUnit) to
+   *  wait on the operation to complete.
    */
-  void deleteNamespace(final String name) throws IOException;
+  Future<Void> deleteNamespaceAsync(final String name) throws IOException;
 
   /**
    * Get a namespace descriptor by name
    *
    * @param name name of namespace descriptor
    * @return A descriptor
-   * @throws IOException
    */
   NamespaceDescriptor getNamespaceDescriptor(final String name)
-      throws IOException;
+  throws IOException;
 
   /**
    * List available namespace descriptors
    *
    * @return List of descriptors
-   * @throws IOException
    */
   NamespaceDescriptor[] listNamespaceDescriptors()
-    throws IOException;
+  throws IOException;
 
   /**
    * Get list of table descriptors by namespace
