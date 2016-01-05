@@ -64,7 +64,9 @@ public class MemcachedBlockCache implements BlockCache {
   public static final String MEMCACHED_CONFIG_KEY = "hbase.cache.memcached.servers";
   public static final String MEMCACHED_TIMEOUT_KEY = "hbase.cache.memcached.timeout";
   public static final String MEMCACHED_OPTIMEOUT_KEY = "hbase.cache.memcached.optimeout";
+  public static final String MEMCACHED_OPTIMIZE_KEY = "hbase.cache.memcached.spy.optimze";
   public static final long MEMCACHED_DEFAULT_TIMEOUT = 500;
+  public static final boolean MEMCACHED_OPTIMIZE_DEFAULT = false;
 
   private final MemcachedClient client;
   private final HFileBlockTranscoder tc = new HFileBlockTranscoder();
@@ -75,18 +77,16 @@ public class MemcachedBlockCache implements BlockCache {
 
     long opTimeout = c.getLong(MEMCACHED_OPTIMEOUT_KEY, MEMCACHED_DEFAULT_TIMEOUT);
     long queueTimeout = c.getLong(MEMCACHED_TIMEOUT_KEY, opTimeout + MEMCACHED_DEFAULT_TIMEOUT);
+    boolean optimize = c.getBoolean(MEMCACHED_OPTIMIZE_KEY, MEMCACHED_OPTIMIZE_DEFAULT);
 
     ConnectionFactoryBuilder builder = new ConnectionFactoryBuilder()
         .setOpTimeout(opTimeout)
         .setOpQueueMaxBlockTime(queueTimeout) // Cap the max time before anything times out
         .setFailureMode(FailureMode.Redistribute)
-        .setShouldOptimize(true)              // When regions move lots of reads happen together
-                                              // So combining them into single requests is nice.
+        .setShouldOptimize(optimize)
         .setDaemon(true)                      // Don't keep threads around past the end of days.
         .setUseNagleAlgorithm(false)          // Ain't nobody got time for that
-        .setReadBufferSize(HConstants.DEFAULT_BLOCKSIZE * 4 * 1024);  // 4 times larger than the
-                                                                      // default block just in case
-
+        .setReadBufferSize(HConstants.DEFAULT_BLOCKSIZE * 4 * 1024); // Much larger just in case
 
     // Assume only the localhost is serving memecached.
     // A la mcrouter or co-locating memcached with split regionservers.

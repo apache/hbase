@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,7 +77,6 @@ import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -95,25 +95,6 @@ public class ZKUtil {
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   public static final char ZNODE_PATH_SEPARATOR = '/';
   private static int zkDumpConnectionTimeOut;
-
-  // The Quorum for the ZK cluster can have one the following format (see examples below):
-  // (1). s1,s2,s3 (no client port in the list, the client port could be obtained from clientPort)
-  // (2). s1:p1,s2:p2,s3:p3 (with client port, which could be same or different for each server,
-  //      in this case, the clientPort would be ignored)
-  // (3). s1:p1,s2,s3:p3 (mix of (1) and (2) - if port is not specified in a server, it would use
-  //      the clientPort; otherwise, it would use the specified port)
-  @VisibleForTesting
-  public static class ZKClusterKey {
-    public String quorumString;
-    public int clientPort;
-    public String znodeParent;
-
-    ZKClusterKey(String quorumString, int clientPort, String znodeParent) {
-      this.quorumString = quorumString;
-      this.clientPort = clientPort;
-      this.znodeParent = znodeParent;
-    }
-  }
 
   /**
    * Creates a new connection to ZooKeeper, pulling settings and ensemble config
@@ -363,110 +344,6 @@ public class ZKUtil {
    */
   public static String getNodeName(String path) {
     return path.substring(path.lastIndexOf("/")+1);
-  }
-
-  /**
-   * Get the key to the ZK ensemble for this configuration without
-   * adding a name at the end
-   * @param conf Configuration to use to build the key
-   * @return ensemble key without a name
-   */
-  public static String getZooKeeperClusterKey(Configuration conf) {
-    return getZooKeeperClusterKey(conf, null);
-  }
-
-  /**
-   * Get the key to the ZK ensemble for this configuration and append
-   * a name at the end
-   * @param conf Configuration to use to build the key
-   * @param name Name that should be appended at the end if not empty or null
-   * @return ensemble key with a name (if any)
-   */
-  public static String getZooKeeperClusterKey(Configuration conf, String name) {
-    String ensemble = conf.get(HConstants.ZOOKEEPER_QUORUM).replaceAll(
-        "[\\t\\n\\x0B\\f\\r]", "");
-    StringBuilder builder = new StringBuilder(ensemble);
-    builder.append(":");
-    builder.append(conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
-    builder.append(":");
-    builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
-    if (name != null && !name.isEmpty()) {
-      builder.append(",");
-      builder.append(name);
-    }
-    return builder.toString();
-  }
-
-  /**
-   * Apply the settings in the given key to the given configuration, this is
-   * used to communicate with distant clusters
-   * @param conf configuration object to configure
-   * @param key string that contains the 3 required configuratins
-   * @throws IOException
-   */
-  public static void applyClusterKeyToConf(Configuration conf, String key)
-      throws IOException{
-    ZKClusterKey zkClusterKey = transformClusterKey(key);
-    conf.set(HConstants.ZOOKEEPER_QUORUM, zkClusterKey.quorumString);
-    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClusterKey.clientPort);
-    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkClusterKey.znodeParent);
-  }
-
-  /**
-   * Separate the given key into the three configurations it should contain:
-   * hbase.zookeeper.quorum, hbase.zookeeper.client.port
-   * and zookeeper.znode.parent
-   * @param key
-   * @return the three configuration in the described order
-   * @throws IOException
-   */
-  public static ZKClusterKey transformClusterKey(String key) throws IOException {
-    String[] parts = key.split(":");
-
-    if (parts.length == 3) {
-      return new ZKClusterKey(parts [0], Integer.parseInt(parts [1]), parts [2]);
-    }
-
-    if (parts.length > 3) {
-      // The quorum could contain client port in server:clientport format, try to transform more.
-      String zNodeParent = parts [parts.length - 1];
-      String clientPort = parts [parts.length - 2];
-
-      // The first part length is the total length minus the lengths of other parts and minus 2 ":"
-      int endQuorumIndex = key.length() - zNodeParent.length() - clientPort.length() - 2;
-      String quorumStringInput = key.substring(0, endQuorumIndex);
-      String[] serverHosts = quorumStringInput.split(",");
-
-      // The common case is that every server has its own client port specified - this means
-      // that (total parts - the ZNodeParent part - the ClientPort part) is equal to
-      // (the number of "," + 1) - "+ 1" because the last server has no ",".
-      if ((parts.length - 2) == (serverHosts.length + 1)) {
-        return new ZKClusterKey(quorumStringInput, Integer.parseInt(clientPort), zNodeParent);
-      }
-
-      // For the uncommon case that some servers has no port specified, we need to build the
-      // server:clientport list using default client port for servers without specified port.
-      return new ZKClusterKey(
-        ZKConfig.buildQuorumServerString(serverHosts, clientPort),
-        Integer.parseInt(clientPort),
-        zNodeParent);
-    }
-
-    throw new IOException("Cluster key passed " + key + " is invalid, the format should be:" +
-          HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_CLIENT_PORT + ":"
-          + HConstants.ZOOKEEPER_ZNODE_PARENT);
-  }
-
-  /**
-   * Standardize the ZK quorum string: make it a "server:clientport" list, separated by ','
-   * @param quorumStringInput a string contains a list of servers for ZK quorum
-   * @param clientPort the default client port
-   * @return the string for a list of "server:port" separated by ","
-   */
-  @VisibleForTesting
-  public static String standardizeQuorumServerString(String quorumStringInput, String clientPort) {
-    String[] serverHosts = quorumStringInput.split(",");
-    return ZKConfig.buildQuorumServerString(serverHosts, clientPort);
   }
 
   //
@@ -1010,7 +887,7 @@ public class ZKUtil {
               JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null
           && conf.get(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL) == null
           && conf.get(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL) == null) {
-              
+
         return false;
       }
     } catch(Exception e) {
@@ -1923,6 +1800,27 @@ public class ZKUtil {
       } else if (child.equals(zkw.getConfiguration().
           get("zookeeper.znode.replication.rs", "rs"))) {
         appendRSZnodes(zkw, znode, sb);
+      } else if (child.equals(zkw.getConfiguration().get(
+        ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY,
+        ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT))) {
+        appendHFileRefsZnodes(zkw, znode, sb);
+      }
+    }
+  }
+
+  private static void appendHFileRefsZnodes(ZooKeeperWatcher zkw, String hfileRefsZnode,
+      StringBuilder sb) throws KeeperException {
+    sb.append("\n").append(hfileRefsZnode).append(": ");
+    for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, hfileRefsZnode)) {
+      String znodeToProcess = ZKUtil.joinZNode(hfileRefsZnode, peerIdZnode);
+      sb.append("\n").append(znodeToProcess).append(": ");
+      List<String> peerHFileRefsZnodes = ZKUtil.listChildrenNoWatch(zkw, znodeToProcess);
+      int size = peerHFileRefsZnodes.size();
+      for (int i = 0; i < size; i++) {
+        sb.append(peerHFileRefsZnodes.get(i));
+        if (i != size - 1) {
+          sb.append(", ");
+        }
       }
     }
   }

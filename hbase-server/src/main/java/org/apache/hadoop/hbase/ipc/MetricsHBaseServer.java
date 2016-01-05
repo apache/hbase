@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -31,8 +32,10 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 @InterfaceAudience.Private
 public class MetricsHBaseServer {
   private MetricsHBaseServerSource source;
+  private MetricsHBaseServerWrapper serverWrapper;
 
   public MetricsHBaseServer(String serverName, MetricsHBaseServerWrapper wrapper) {
+    serverWrapper = wrapper;
     source = CompatibilitySingletonFactory.getInstance(MetricsHBaseServerSourceFactory.class)
                                           .create(serverName, wrapper);
   }
@@ -105,11 +108,17 @@ public class MetricsHBaseServer {
         source.notServingRegionException();
       } else if (throwable instanceof FailedSanityCheckException) {
         source.failedSanityException();
+      } else if (throwable instanceof MultiActionResultTooLarge) {
+        source.multiActionTooLargeException();
       }
     }
   }
 
   public MetricsHBaseServerSource getMetricsSource() {
     return source;
+  }
+
+  public MetricsHBaseServerWrapper getHBaseServerWrapper() {
+    return serverWrapper;
   }
 }

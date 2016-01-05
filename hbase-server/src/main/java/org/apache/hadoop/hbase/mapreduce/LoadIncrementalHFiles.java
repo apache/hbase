@@ -20,66 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.RegionServerCallable;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HalfStoreFileReader;
-import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -106,6 +46,64 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.RegionServerCallable;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint;
+import org.apache.hadoop.hbase.security.token.FsDelegationToken;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
  * @see #usage()
@@ -131,6 +129,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private FsDelegationToken fsDelegationToken;
   private String bulkToken;
   private UserProvider userProvider;
+  private int nrThreads;
 
   private LoadIncrementalHFiles() {}
 
@@ -151,6 +150,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
       assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
       maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
+      nrThreads = conf.getInt("hbase.loadincremental.threads.max",
+        Runtime.getRuntime().availableProcessors());
     }
   }
 
@@ -251,7 +252,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * region boundary, and each part is added back into the queue.
    * The import process finishes when the queue is empty.
    */
-  static class LoadQueueItem {
+  public static class LoadQueueItem {
     final byte[] family;
     final Path hfilePath;
 
@@ -343,24 +344,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @param table the table to load into
    * @throws TableNotFoundException if table does not yet exist
    */
-  @SuppressWarnings("deprecation")
   public void doBulkLoad(Path hfofDir, final Admin admin, Table table,
       RegionLocator regionLocator) throws TableNotFoundException, IOException  {
 
     if (!admin.isTableAvailable(regionLocator.getName())) {
-      throw new TableNotFoundException("Table " + table.getName() + "is not currently available.");
+      throw new TableNotFoundException("Table " + table.getName() + " is not currently available.");
     }
 
-    // initialize thread pools
-    int nrThreads = getConf().getInt("hbase.loadincremental.threads.max",
-      Runtime.getRuntime().availableProcessors());
-    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-    builder.setNameFormat("LoadIncrementalHFiles-%1$d");
-    ExecutorService pool = new ThreadPoolExecutor(nrThreads, nrThreads,
-        60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
-        builder.build());
-    ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
+    ExecutorService pool = createExecutorService();
 
     // LQI queue does not need to be threadsafe -- all operations on this queue
     // happen in this thread
@@ -377,30 +368,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 	    "option, consider removing the files and bulkload again without this option. " +
 	    "See HBASE-13985");
       }
-      discoverLoadQueue(queue, hfofDir, validateHFile);
-      // check whether there is invalid family name in HFiles to be bulkloaded
-      Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-      ArrayList<String> familyNames = new ArrayList<String>(families.size());
-      for (HColumnDescriptor family : families) {
-        familyNames.add(family.getNameAsString());
-      }
-      ArrayList<String> unmatchedFamilies = new ArrayList<String>();
-      Iterator<LoadQueueItem> queueIter = queue.iterator();
-      while (queueIter.hasNext()) {
-        LoadQueueItem lqi = queueIter.next();
-        String familyNameInHFile = Bytes.toString(lqi.family);
-        if (!familyNames.contains(familyNameInHFile)) {
-          unmatchedFamilies.add(familyNameInHFile);
-        }
-      }
-      if (unmatchedFamilies.size() > 0) {
-        String msg =
-            "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
-                + unmatchedFamilies + "; valid family names of table "
-                + table.getName() + " are: " + familyNames;
-        LOG.error(msg);
-        throw new IOException(msg);
-      }
+      prepareHFileQueue(hfofDir, table, queue, validateHFile);
+
       int count = 0;
 
       if (queue.isEmpty()) {
@@ -427,7 +396,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               + count + " with " + queue.size() + " files remaining to group or split");
         }
 
-        int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 10);
+        int maxRetries = getConf().getInt(HConstants.BULKLOAD_MAX_RETRIES_NUMBER, 10);
         maxRetries = Math.max(maxRetries, startEndKeys.getFirst().length + 1);
         if (maxRetries != 0 && count >= maxRetries) {
           throw new IOException("Retry attempted " + count +
@@ -473,6 +442,86 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     if (queue != null && !queue.isEmpty()) {
         throw new RuntimeException("Bulk load aborted with some files not yet loaded."
           + "Please check log for more details.");
+    }
+  }
+
+  /**
+   * Prepare a collection of {@link LoadQueueItem} from list of source hfiles contained in the
+   * passed directory and validates whether the prepared queue has all the valid table column
+   * families in it.
+   * @param hfilesDir directory containing list of hfiles to be loaded into the table
+   * @param table table to which hfiles should be loaded
+   * @param queue queue which needs to be loaded into the table
+   * @param validateHFile if true hfiles will be validated for its format
+   * @throws IOException If any I/O or network error occurred
+   */
+  public void prepareHFileQueue(Path hfilesDir, Table table, Deque<LoadQueueItem> queue,
+      boolean validateHFile) throws IOException {
+    discoverLoadQueue(queue, hfilesDir, validateHFile);
+    validateFamiliesInHFiles(table, queue);
+  }
+
+  // Initialize a thread pool
+  private ExecutorService createExecutorService() {
+    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
+    builder.setNameFormat("LoadIncrementalHFiles-%1$d");
+    ExecutorService pool = new ThreadPoolExecutor(nrThreads, nrThreads, 60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(), builder.build());
+    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    return pool;
+  }
+
+  /**
+   * Checks whether there is any invalid family name in HFiles to be bulk loaded.
+   */
+  private void validateFamiliesInHFiles(Table table, Deque<LoadQueueItem> queue)
+      throws IOException {
+    Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
+    List<String> familyNames = new ArrayList<String>(families.size());
+    for (HColumnDescriptor family : families) {
+      familyNames.add(family.getNameAsString());
+    }
+    List<String> unmatchedFamilies = new ArrayList<String>();
+    Iterator<LoadQueueItem> queueIter = queue.iterator();
+    while (queueIter.hasNext()) {
+      LoadQueueItem lqi = queueIter.next();
+      String familyNameInHFile = Bytes.toString(lqi.family);
+      if (!familyNames.contains(familyNameInHFile)) {
+        unmatchedFamilies.add(familyNameInHFile);
+      }
+    }
+    if (unmatchedFamilies.size() > 0) {
+      String msg =
+          "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
+              + unmatchedFamilies + "; valid family names of table " + table.getName() + " are: "
+              + familyNames;
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+  }
+
+  /**
+   * Used by the replication sink to load the hfiles from the source cluster. It does the following,
+   * 1. {@link LoadIncrementalHFiles#groupOrSplitPhase(Table, ExecutorService, Deque, Pair)} 2.
+   * {@link
+   * LoadIncrementalHFiles#bulkLoadPhase(Table, Connection, ExecutorService, Deque, Multimap)}
+   * @param table Table to which these hfiles should be loaded to
+   * @param conn Connection to use
+   * @param queue {@link LoadQueueItem} has hfiles yet to be loaded
+   * @param startEndKeys starting and ending row keys of the region
+   */
+  public void loadHFileQueue(final Table table, final Connection conn, Deque<LoadQueueItem> queue,
+      Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    ExecutorService pool = null;
+    try {
+      pool = createExecutorService();
+      Multimap<ByteBuffer, LoadQueueItem> regionGroups =
+          groupOrSplitPhase(table, pool, queue, startEndKeys);
+      bulkLoadPhase(table, conn, pool, queue, regionGroups);
+    } finally {
+      if (pool != null) {
+        pool.shutdown();
+      }
     }
   }
 
@@ -623,10 +672,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     String uniqueName = getUniqueName();
     HColumnDescriptor familyDesc = table.getTableDescriptor().getFamily(item.family);
+
     Path botOut = new Path(tmpDir, uniqueName + ".bottom");
     Path topOut = new Path(tmpDir, uniqueName + ".top");
-    splitStoreFile(getConf(), hfilePath, familyDesc, splitKey,
-        botOut, topOut);
+    splitStoreFile(getConf(), hfilePath, familyDesc, splitKey, botOut, topOut);
 
     FileSystem fs = tmpDir.getFileSystem(getConf());
     fs.setPermission(tmpDir, FsPermission.valueOf("-rwxrwxrwx"));
@@ -657,6 +706,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       final Pair<byte[][], byte[][]> startEndKeys)
       throws IOException {
     final Path hfilePath = item.hfilePath;
+    // fs is the source filesystem
+    if (fs == null) {
+      fs = hfilePath.getFileSystem(getConf());
+    }
     HFile.Reader hfr = HFile.createReader(fs, hfilePath,
         new CacheConfig(getConf()), getConf());
     final byte[] first, last;
@@ -756,7 +809,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * failure
    */
   protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
-      final TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
+      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
   throws IOException {
     final List<Pair<byte[], String>> famPaths =
       new ArrayList<Pair<byte[], String>>(lqis.size());
@@ -791,6 +844,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           //in user directory
           if(secureClient != null && !success) {
             FileSystem targetFs = FileSystem.get(getConf());
+         // fs is the source filesystem
+            if(fs == null) {
+              fs = lqis.iterator().next().hfilePath.getFileSystem(getConf());
+            }
             // Check to see if the source and target filesystems are the same
             // If they are the same filesystem, we will try move the files back
             // because previously we moved them to the staging directory.
@@ -887,6 +944,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                                   .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                   .withBlockSize(blocksize)
                                   .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding())
+                                  .withIncludesTags(true)
                                   .build();
       halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
           fs)
@@ -1042,6 +1100,19 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new LoadIncrementalHFiles(), args);
     System.exit(ret);
+  }
+
+  /**
+   * Called from replication sink, where it manages bulkToken(staging directory) by itself. This is
+   * used only when {@link SecureBulkLoadEndpoint} is configured in hbase.coprocessor.region.classes
+   * property. This directory is used as a temporary directory where all files are initially
+   * copied/moved from user given directory, set all the required file permissions and then from
+   * their it is finally loaded into a table. This should be set only when, one would like to manage
+   * the staging directory by itself. Otherwise this tool will handle this by itself.
+   * @param stagingDir staging directory path
+   */
+  public void setBulkToken(String stagingDir) {
+    this.bulkToken = stagingDir;
   }
 
 }

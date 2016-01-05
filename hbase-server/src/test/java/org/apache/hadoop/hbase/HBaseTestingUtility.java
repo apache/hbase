@@ -161,6 +161,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
   public static final boolean PRESPLIT_TEST_TABLE = true;
+
+  public static final String USE_LOCAL_FILESYSTEM = "hbase.test.local.fileSystem";
   /**
    * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
    * part of general shutdown.
@@ -394,6 +396,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       testPath, "mapred-local-dir");
 
     return testPath;
+  }
+
+  public void setJobWithoutMRCluster() throws IOException {
+    conf.set("hbase.fs.tmp.dir", getDataTestDirOnTestFS("hbase-staging").toString());
+    conf.setBoolean(HBaseTestingUtility.USE_LOCAL_FILESYSTEM, true);
   }
 
   private void createSubDirAndSystemProperty(
@@ -632,6 +639,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
     FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    if (this.conf.getBoolean(USE_LOCAL_FILESYSTEM, false)) {
+      FSUtils.setFsDefault(this.conf, new Path("file:///"));
+    }
   }
 
   public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])

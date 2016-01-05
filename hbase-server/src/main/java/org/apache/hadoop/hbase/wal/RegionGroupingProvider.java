@@ -185,7 +185,7 @@ class RegionGroupingProvider implements WALProvider {
   }
 
   private WAL getWAL(final String group) throws IOException {
-    WAL log = cached.get(walCacheLock);
+    WAL log = cached.get(group);
     if (null == log) {
       // only lock when need to create wal, and need to lock since
       // creating hlog on fs is time consuming

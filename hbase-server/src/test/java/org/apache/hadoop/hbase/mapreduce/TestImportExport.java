@@ -107,15 +107,14 @@ public class TestImportExport {
   public static void beforeClass() throws Exception {
     // Up the handlers; this test needs more than usual.
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
+    UTIL.setJobWithoutMRCluster();
     UTIL.startMiniCluster();
-    UTIL.startMiniMapReduceCluster();
     FQ_OUTPUT_DIR =
       new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

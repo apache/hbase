@@ -85,17 +85,16 @@ public interface WALActionsListener {
   );
 
   /**
-   *
    * @param htd
    * @param logKey
-   * @param logEdit
-   * TODO: Retire this in favor of {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)}
-   * It only exists to get scope when replicating.  Scope should be in the WALKey and not need
-   * us passing in a <code>htd</code>.
+   * @param logEdit TODO: Retire this in favor of
+   *          {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)} It only exists to get
+   *          scope when replicating. Scope should be in the WALKey and not need us passing in a
+   *          <code>htd</code>.
+   * @throws IOException If failed to parse the WALEdit
    */
-  void visitLogEntryBeforeWrite(
-    HTableDescriptor htd, WALKey logKey, WALEdit logEdit
-  );
+  void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit)
+      throws IOException;
 
   /**
    * For notification post append to the writer.  Used by metrics system at least.
@@ -136,7 +135,9 @@ public interface WALActionsListener {
     public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
     @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {}
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit)
+        throws IOException {
+    }
 
     @Override
     public void postAppend(final long entryLen, final long elapsedTimeMillis) {}

@@ -47,15 +47,15 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   private static final TableName t1_su = TableName.valueOf("t1_syncup");
   private static final TableName t2_su = TableName.valueOf("t2_syncup");
 
-  private static final byte[] famName = Bytes.toBytes("cf1");
+  protected static final byte[] famName = Bytes.toBytes("cf1");
   private static final byte[] qualName = Bytes.toBytes("q1");
 
-  private static final byte[] noRepfamName = Bytes.toBytes("norep");
+  protected static final byte[] noRepfamName = Bytes.toBytes("norep");
 
   private HTableDescriptor t1_syncupSource, t1_syncupTarget;
   private HTableDescriptor t2_syncupSource, t2_syncupTarget;
 
-  private Table ht1Source, ht2Source, ht1TargetAtPeer1, ht2TargetAtPeer1;
+  protected Table ht1Source, ht2Source, ht1TargetAtPeer1, ht2TargetAtPeer1;
 
   @Before
   public void setUp() throws Exception {
@@ -174,7 +174,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
   }
 
-  private void setupReplication() throws Exception {
+  protected void setupReplication() throws Exception {
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
     ReplicationAdmin admin2 = new ReplicationAdmin(conf2);
 
@@ -410,7 +410,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     }
   }
 
-  private void syncUp(HBaseTestingUtility ut) throws Exception {
+  protected void syncUp(HBaseTestingUtility ut) throws Exception {
     ReplicationSyncUp.setConfigure(ut.getConfiguration());
     String[] arguments = new String[] { null };
     new ReplicationSyncUp().run(arguments);

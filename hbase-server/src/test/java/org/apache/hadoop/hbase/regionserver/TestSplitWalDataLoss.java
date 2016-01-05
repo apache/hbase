@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,13 +55,14 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.mortbay.log.Log;
 
 /**
  * Testcase for https://issues.apache.org/jira/browse/HBASE-13811
  */
 @Category({ MediumTests.class })
 public class TestSplitWalDataLoss {
+
+  private static final Log LOG = LogFactory.getLog(TestSplitWalDataLoss.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -121,7 +124,7 @@ public class TestSplitWalDataLoss {
       table.put(new Put(Bytes.toBytes("row0")).addColumn(family, qualifier, Bytes.toBytes("val0")));
     }
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
-    Log.info("CHANGE OLDEST " + oldestSeqIdOfStore);
+    LOG.info("CHANGE OLDEST " + oldestSeqIdOfStore);
     assertTrue(oldestSeqIdOfStore > HConstants.NO_SEQNUM);
     rs.cacheFlusher.requestFlush(spiedRegion, false);
     synchronized (flushed) {

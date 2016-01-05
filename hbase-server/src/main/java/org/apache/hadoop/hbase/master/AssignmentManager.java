@@ -3720,7 +3720,7 @@ public class AssignmentManager extends ZooKeeperListener {
     invokeAssign(hri, false);
   }
 
-  private String onRegionSplit(ServerName sn, TransitionCode code,
+  private String checkInStateForSplit(ServerName sn,
       final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
     final RegionState rs_p = regionStates.getRegionState(p);
     RegionState rs_a = regionStates.getRegionState(a);
@@ -3729,6 +3729,32 @@ public class AssignmentManager extends ZooKeeperListener {
         && (rs_a == null || rs_a.isOpenOrSplittingNewOnServer(sn))
         && (rs_b == null || rs_b.isOpenOrSplittingNewOnServer(sn)))) {
       return "Not in state good for split";
+    }
+    return "";
+  }
+
+  private String onRegionSplitReverted(ServerName sn,
+      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
+    String s = checkInStateForSplit(sn, p, a, b);
+    if (!org.apache.commons.lang.StringUtils.isEmpty(s)) {
+      return s;
+    }
+    regionOnline(p, sn);
+    regionOffline(a);
+    regionOffline(b);
+
+    if (getTableStateManager().isTableState(p.getTable(),
+        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+      invokeUnAssign(p);
+    }
+    return null;
+  }
+
+  private String onRegionSplit(ServerName sn, TransitionCode code,
+      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
+    String s = checkInStateForSplit(sn, p, a, b);
+    if (!org.apache.commons.lang.StringUtils.isEmpty(s)) {
+      return s;
     }
 
     regionStates.updateRegionState(a, State.SPLITTING_NEW, sn);
@@ -3764,15 +3790,6 @@ public class AssignmentManager extends ZooKeeperListener {
       } catch (IOException ioe) {
         LOG.info("Failed to record split region " + p.getShortNameToLog());
         return "Failed to record the splitting in meta";
-      }
-    } else if (code == TransitionCode.SPLIT_REVERTED) {
-      regionOnline(p, sn);
-      regionOffline(a);
-      regionOffline(b);
-
-      if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        invokeUnAssign(p);
       }
     }
     return null;
@@ -4338,11 +4355,18 @@ public class AssignmentManager extends ZooKeeperListener {
       } catch (IOException exp) {
         errorMsg = StringUtils.stringifyException(exp);
       }
+      break;
     case SPLIT_PONR:
     case SPLIT:
+      errorMsg =
+      onRegionSplit(serverName, code, hri, HRegionInfo.convert(transition.getRegionInfo(1)),
+        HRegionInfo.convert(transition.getRegionInfo(2)));
+      break;
+
     case SPLIT_REVERTED:
       errorMsg =
-          onRegionSplit(serverName, code, hri, HRegionInfo.convert(transition.getRegionInfo(1)),
+          onRegionSplitReverted(serverName, hri,
+            HRegionInfo.convert(transition.getRegionInfo(1)),
             HRegionInfo.convert(transition.getRegionInfo(2)));
       if (org.apache.commons.lang.StringUtils.isEmpty(errorMsg)) {
         try {

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -105,7 +106,7 @@ public class ReplicationSinkManager {
    *
    * @return a replication sink to replicate to
    */
-  public SinkPeer getReplicationSink() throws IOException {
+  public synchronized SinkPeer getReplicationSink() throws IOException {
     if (endpoint.getLastRegionServerUpdate() > this.lastUpdateToPeers || sinks.isEmpty()) {
       LOG.info("Current list of sinks is out of date or empty, updating");
       chooseSinks();
@@ -127,7 +128,7 @@ public class ReplicationSinkManager {
    * @param sinkPeer
    *          The SinkPeer that had a failed replication attempt on it
    */
-  public void reportBadSink(SinkPeer sinkPeer) {
+  public synchronized void reportBadSink(SinkPeer sinkPeer) {
     ServerName serverName = sinkPeer.getServerName();
     int badReportCount = (badReportCounts.containsKey(serverName)
                     ? badReportCounts.get(serverName) : 0) + 1;
@@ -146,11 +147,14 @@ public class ReplicationSinkManager {
    * @param sinkPeer
    *          The SinkPeer that had a failed replication attempt on it
    */
-  public void reportSinkSuccess(SinkPeer sinkPeer) {
+  public synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
     badReportCounts.remove(sinkPeer.getServerName());
   }
 
-  void chooseSinks() {
+  /**
+   * Refresh the list of sinks.
+   */
+  public synchronized void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
     Collections.shuffle(slaveAddresses, random);
     int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
@@ -159,8 +163,13 @@ public class ReplicationSinkManager {
     badReportCounts.clear();
   }
 
-  List<ServerName> getSinks() {
-    return sinks;
+  public synchronized int getNumSinks() {
+    return sinks.size();
+  }
+
+  @VisibleForTesting
+  protected List<ServerName> getSinksForTesting() {
+    return Collections.unmodifiableList(sinks);
   }
 
   /**

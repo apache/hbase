@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Operation;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -316,6 +317,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private User user;
     private InetAddress remoteAddress;
 
+    private long responseCellSize = 0;
+    private long responseBlockSize = 0;
+    private boolean retryImmediatelySupported;
+
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
          long size, TraceInfo tinfo, final InetAddress remoteAddress) {
@@ -335,6 +340,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.tinfo = tinfo;
       this.user = connection.user;
       this.remoteAddress = remoteAddress;
+      this.retryImmediatelySupported = connection.retryImmediatelySupported;
     }
 
     /**
@@ -511,7 +517,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     @Override
-    public boolean isClientCellBlockSupport() {
+    public boolean isClientCellBlockSupported() {
       return this.connection != null && this.connection.codec != null;
     }
 
@@ -526,6 +532,24 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     public long getSize() {
       return this.size;
+    }
+
+    public long getResponseCellSize() {
+      return responseCellSize;
+    }
+
+    public void incrementResponseCellSize(long cellSize) {
+      responseCellSize += cellSize;
+    }
+
+    @Override
+    public long getResponseBlockSize() {
+      return responseBlockSize;
+    }
+
+    @Override
+    public void incrementResponseBlockSize(long blockSize) {
+      responseBlockSize += blockSize;
     }
 
     /**
@@ -562,6 +586,12 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     @Override
     public VersionInfo getClientVersionInfo() {
       return connection.getVersionInfo();
+    }
+
+
+    @Override
+    public boolean isRetryImmediatelySupported() {
+      return retryImmediatelySupported;
     }
   }
 
@@ -1248,6 +1278,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     // was authentication allowed with a fallback to simple auth
     private boolean authenticatedWithFallback;
 
+    private boolean retryImmediatelySupported = false;
+
     public UserGroupInformation attemptingUser = null; // user name before auth
     protected User user = null;
     protected UserGroupInformation ugi = null;
@@ -1704,6 +1736,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       }
       if (connectionHeader.hasVersionInfo()) {
+        // see if this connection will support RetryImmediatelyException
+        retryImmediatelySupported = VersionInfoUtil.hasMinimumVersion(getVersionInfo(), 1, 2);
+
         AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
             + " with version info: "
             + TextFormat.shortDebugString(connectionHeader.getVersionInfo()));
@@ -1711,6 +1746,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
             + " with unknown version info");
       }
+
+
     }
 
     /**
@@ -1988,15 +2025,20 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
       throws IOException {
-    this.reservoir = new BoundedByteBufferPool(
-      conf.getInt("hbase.ipc.server.reservoir.max.buffer.size",  1024 * 1024),
-      conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
-      // Make the max twice the number of handlers to be safe.
-      conf.getInt("hbase.ipc.server.reservoir.initial.max",
-        conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2),
-      // By default make direct byte buffers from the buffer pool.
-      conf.getBoolean("hbase.ipc.server.reservoir.direct.buffer", true));
+    
+    if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
+      this.reservoir = new BoundedByteBufferPool(
+          conf.getInt("hbase.ipc.server.reservoir.max.buffer.size", 1024 * 1024),
+          conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
+          // Make the max twice the number of handlers to be safe.
+          conf.getInt("hbase.ipc.server.reservoir.initial.max",
+              conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+                  HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2),
+          // By default make direct byte buffers from the buffer pool.
+          conf.getBoolean("hbase.ipc.server.reservoir.direct.buffer", true));
+    } else {
+      reservoir = null;
+    }
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;

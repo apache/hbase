@@ -238,7 +238,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   @Deprecated
   public boolean getWriteToWAL() {
-    return this.durability == Durability.SKIP_WAL;
+    return this.durability != Durability.SKIP_WAL;
   }
 
   /**

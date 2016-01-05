@@ -1591,6 +1591,7 @@ public final class ProtobufUtil {
     try {
       GetResponse response = client.get(null, request);
       if (!response.hasResult()) return null;
+      // We pass 'null' RpcController. So Result will be pure RB.
       return toResult(response.getResult());
     } catch (ServiceException se) {
       throw getRemoteException(se);
@@ -2608,12 +2609,19 @@ public final class ProtobufUtil {
 
   public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
       List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
+    return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
+  }
+
+  @SuppressWarnings("deprecation")
+  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
+      byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     // compaction descriptor contains relative paths.
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
         .setTableName(ByteStringer.wrap(info.getTableName()))
-        .setEncodedRegionName(ByteStringer.wrap(info.getEncodedNameAsBytes()))
+        .setEncodedRegionName(ByteStringer.wrap(
+          regionName == null ? info.getEncodedNameAsBytes() : regionName))
         .setFamilyName(ByteStringer.wrap(family))
         .setStoreHomeDir(storeDir.getName()); //make relative
     for (Path inputPath : inputPaths) {
@@ -3210,7 +3218,13 @@ public final class ProtobufUtil {
    */
   public static HBaseProtos.VersionInfo getVersionInfo() {
     HBaseProtos.VersionInfo.Builder builder = HBaseProtos.VersionInfo.newBuilder();
-    builder.setVersion(VersionInfo.getVersion());
+    String version = VersionInfo.getVersion();
+    builder.setVersion(version);
+    String[] components = version.split("\\.");
+    if (components != null && components.length > 2) {
+      builder.setVersionMajor(Integer.parseInt(components[0]));
+      builder.setVersionMinor(Integer.parseInt(components[1]));
+    }
     builder.setUrl(VersionInfo.getUrl());
     builder.setRevision(VersionInfo.getRevision());
     builder.setUser(VersionInfo.getUser());

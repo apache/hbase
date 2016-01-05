@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -27,7 +28,7 @@ import java.util.SortedSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
 import org.junit.Test;
@@ -160,6 +161,62 @@ public abstract class TestReplicationStateBasic {
   }
 
   @Test
+  public void testHfileRefsReplicationQueues() throws ReplicationException, KeeperException {
+    rp.init();
+    rq1.init(server1);
+    rqc.init();
+
+    List<String> files1 = new ArrayList<String>(3);
+    files1.add("file_1");
+    files1.add("file_2");
+    files1.add("file_3");
+    assertNull(rqc.getReplicableHFiles(ID_ONE));
+    assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
+    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE), null);
+    rq1.addHFileRefs(ID_ONE, files1);
+    assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
+    assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
+    List<String> files2 = new ArrayList<>(files1);
+    String removedString = files2.remove(0);
+    rq1.removeHFileRefs(ID_ONE, files2);
+    assertEquals(1, rqc.getReplicableHFiles(ID_ONE).size());
+    files2 = new ArrayList<>(1);
+    files2.add(removedString);
+    rq1.removeHFileRefs(ID_ONE, files2);
+    assertEquals(0, rqc.getReplicableHFiles(ID_ONE).size());
+    rp.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testRemovePeerForHFileRefs() throws ReplicationException, KeeperException {
+    rq1.init(server1);
+    rqc.init();
+
+    rp.init();
+    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE), null);
+    rp.addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO), null);
+
+    List<String> files1 = new ArrayList<String>(3);
+    files1.add("file_1");
+    files1.add("file_2");
+    files1.add("file_3");
+    rq1.addHFileRefs(ID_ONE, files1);
+    rq1.addHFileRefs(ID_TWO, files1);
+    assertEquals(2, rqc.getAllPeersFromHFileRefsQueue().size());
+    assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
+    assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
+
+    rp.removePeer(ID_ONE);
+    assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
+    assertNull(rqc.getReplicableHFiles(ID_ONE));
+    assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
+
+    rp.removePeer(ID_TWO);
+    assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
+    assertNull(rqc.getReplicableHFiles(ID_TWO));
+  }
+
+  @Test
   public void testReplicationPeers() throws Exception {
     rp.init();
 
@@ -202,7 +259,7 @@ public abstract class TestReplicationStateBasic {
       fail("There are no connected peers, should have thrown an IllegalArgumentException");
     } catch (IllegalArgumentException e) {
     }
-    assertEquals(KEY_ONE, ZKUtil.getZooKeeperClusterKey(rp.getPeerConf(ID_ONE).getSecond()));
+    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(rp.getPeerConf(ID_ONE).getSecond()));
     rp.removePeer(ID_ONE);
     rp.peerRemoved(ID_ONE);
     assertNumberOfPeers(1);

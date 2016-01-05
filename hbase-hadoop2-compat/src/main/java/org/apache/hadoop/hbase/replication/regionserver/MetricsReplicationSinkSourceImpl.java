@@ -26,11 +26,13 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
   private final MutableGaugeLong ageGauge;
   private final MutableCounterLong batchesCounter;
   private final MutableCounterLong opsCounter;
+  private final MutableCounterLong hfilesCounter;
 
   public MetricsReplicationSinkSourceImpl(MetricsReplicationSourceImpl rms) {
     ageGauge = rms.getMetricsRegistry().getLongGauge(SINK_AGE_OF_LAST_APPLIED_OP, 0L);
     batchesCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_BATCHES, 0L);
     opsCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_OPS, 0L);
+    hfilesCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_HFILES, 0L);
   }
 
   @Override public void setLastAppliedOpAge(long age) {
@@ -48,5 +50,10 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
   @Override
   public long getLastAppliedOpAge() {
     return ageGauge.value();
+  }
+
+  @Override
+  public void incrAppliedHFiles(long hfiles) {
+    hfilesCounter.incr(hfiles);
   }
 }

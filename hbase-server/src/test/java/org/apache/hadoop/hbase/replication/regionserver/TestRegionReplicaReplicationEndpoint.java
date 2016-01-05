@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -129,7 +129,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // assert peer configuration is correct
     peerConfig = admin.getPeerConfig(peerId);
     assertNotNull(peerConfig);
-    assertEquals(peerConfig.getClusterKey(), ZKUtil.getZooKeeperClusterKey(HTU.getConfiguration()));
+    assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
+        HTU.getConfiguration()));
     assertEquals(peerConfig.getReplicationEndpointImpl(),
       RegionReplicaReplicationEndpoint.class.getName());
     admin.close();
@@ -162,7 +163,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // assert peer configuration is correct
     peerConfig = admin.getPeerConfig(peerId);
     assertNotNull(peerConfig);
-    assertEquals(peerConfig.getClusterKey(), ZKUtil.getZooKeeperClusterKey(HTU.getConfiguration()));
+    assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
+        HTU.getConfiguration()));
     assertEquals(peerConfig.getReplicationEndpointImpl(),
       RegionReplicaReplicationEndpoint.class.getName());
     admin.close();

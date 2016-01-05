@@ -1,5 +1,6 @@
-#!/bin/bash
-##
+#
+# Copyright The Apache Software Foundation
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,26 +16,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-##
-# script to find hanging test from Jenkins build output
-# usage: ./findHangingTest.sh <url of Jenkins build console>
 #
-`curl -k -o jenkins.out "$1"`
-expecting=Running
-cat jenkins.out | while read line; do
- if [[ "$line" =~ "Running org.apache.hadoop" ]]; then
-  if [[ "$expecting" =~ "Running" ]]; then 
-   expecting=Tests
-  else
-   echo "Hanging test: $prevLine"
-  fi
- fi
- if [[ "$line" =~ "Tests run" ]]; then
-  expecting=Running
- fi
- if [[ "$line" =~ "Forking command line" ]]; then
-  a=$line
- else
-  prevLine=$line
- fi
-done
+
+module Shell
+  module Commands
+    class LocateRegion < Command
+      def help
+        return <<-EOF
+Locate the region given a table name and a row-key
+
+  hbase> locate_region 'tableName', 'key0'
+EOF
+      end
+
+      def command(table, row_key)
+        now = Time.now
+
+        region_location = admin.locate_region(table, row_key)
+        hri = region_location.getRegionInfo()
+
+        formatter.header([ "HOST", "REGION" ])
+        formatter.row([region_location.getHostnamePort(), hri.toString()])
+        formatter.footer(now, 1)
+      end
+    end
+  end
+end

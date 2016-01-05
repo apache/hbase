@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
     implements MetricsHBaseServerSource {
 
+
   private final MetricsHBaseServerWrapper wrapper;
   private final MutableCounterLong authorizationSuccesses;
   private final MutableCounterLong authorizationFailures;
@@ -47,6 +48,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableCounterLong exceptionsSanity;
   private final MutableCounterLong exceptionsNSRE;
   private final MutableCounterLong exceptionsMoved;
+  private final MutableCounterLong exceptionsMultiTooLarge;
 
 
   private MutableHistogram queueCallTime;
@@ -81,6 +83,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         .newCounter(EXCEPTIONS_MOVED_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsNSRE = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsMultiTooLarge = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
 
     this.authenticationSuccesses = this.getMetricsRegistry().newCounter(
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0L);
@@ -157,6 +161,11 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void tooBusyException() {
     exceptionsBusy.incr();
+  }
+
+  @Override
+  public void multiActionTooLargeException() {
+    exceptionsMultiTooLarge.incr();
   }
 
   @Override

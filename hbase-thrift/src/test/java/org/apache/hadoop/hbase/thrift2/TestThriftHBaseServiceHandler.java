@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
@@ -67,6 +68,7 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -125,10 +127,14 @@ public class TestThriftHBaseServiceHandler {
     for (int i = 0; i < columnValuesA.size(); i++) {
       TColumnValue a = columnValuesA.get(i);
       TColumnValue b = columnValuesB.get(i);
-      assertArrayEquals(a.getFamily(), b.getFamily());
-      assertArrayEquals(a.getQualifier(), b.getQualifier());
-      assertArrayEquals(a.getValue(), b.getValue());
+      assertTColumnValueEqual(a, b);
     }
+  }
+
+  public void assertTColumnValueEqual(TColumnValue a, TColumnValue b) {
+    assertArrayEquals(a.getFamily(), b.getFamily());
+    assertArrayEquals(a.getQualifier(), b.getQualifier());
+    assertArrayEquals(a.getValue(), b.getValue());
   }
 
   @BeforeClass
@@ -684,6 +690,56 @@ public class TestThriftHBaseServiceHandler {
     }
   }
 
+  @Test
+  public void testPutTTL() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutTTL".getBytes();
+    ByteBuffer table = wrap(tableAname);
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+
+    // Add some dummy data
+    columnValues.add(
+        new TColumnValue(
+            wrap(familyAname),
+            wrap(qualifierAname),
+            wrap(Bytes.toBytes(1L))));
+
+
+    TPut put = new TPut(wrap(rowName), columnValues);
+    put.setColumnValues(columnValues);
+
+    Map<ByteBuffer, ByteBuffer> attributes = new HashMap<>();
+
+    // Time in ms for the kv's to live.
+    long ttlTimeMs = 2000L;
+
+    // the _ttl attribute is a number of ms ttl for key values in this put.
+    attributes.put(wrap(Bytes.toBytes("_ttl")), wrap(Bytes.toBytes(ttlTimeMs)));
+    // Attach the attributes
+    put.setAttributes(attributes);
+    // Send it.
+    handler.put(table, put);
+
+    // Now get the data back
+    TGet getOne = new TGet(wrap(rowName));
+    TResult resultOne = handler.get(table, getOne);
+
+    // It's there.
+    assertArrayEquals(rowName, resultOne.getRow());
+    assertEquals(1, resultOne.getColumnValuesSize());
+
+    // Sleep 30 seconds just to make 100% sure that the key value should be expired.
+    Thread.sleep(ttlTimeMs * 15);
+
+    TGet getTwo = new TGet(wrap(rowName));
+    TResult resultTwo = handler.get(table, getTwo);
+
+
+    // Nothing should be there since it's ttl'd out.
+    assertNull(resultTwo.getRow());
+    assertEquals(0, resultTwo.getColumnValuesSize());
+  }
+
   /**
    * Padding numbers to make comparison of sort order easier in a for loop
    *
@@ -1036,6 +1092,57 @@ public class TestThriftHBaseServiceHandler {
     tIncrement.setDurability(TDurability.FSYNC_WAL);
     increment = incrementFromThrift(tIncrement);
     assertEquals(increment.getDurability(), Durability.FSYNC_WAL);
+  }
+
+  @Test
+  public void testCheckAndMutate() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+    ByteBuffer row = wrap("row".getBytes());
+    ByteBuffer family = wrap(familyAname);
+    ByteBuffer qualifier = wrap(qualifierAname);
+    ByteBuffer value = wrap(valueAname);
+
+    // Create a mutation to write to 'B', our "mutate" of "checkAndMutate"
+    List<TColumnValue> columnValuesB = new ArrayList<TColumnValue>();
+    TColumnValue columnValueB = new TColumnValue(family, wrap(qualifierBname), wrap(valueBname));
+    columnValuesB.add(columnValueB);
+    TPut putB = new TPut(row, columnValuesB);
+    putB.setColumnValues(columnValuesB);
+
+    TRowMutations tRowMutations = new TRowMutations(row,
+        Arrays.<TMutation> asList(TMutation.put(putB)));
+
+    // Empty table when we begin
+    TResult result = handler.get(table, new TGet(row));
+    assertEquals(0, result.getColumnValuesSize());
+
+    // checkAndMutate -- condition should fail because the value doesn't exist.
+    assertFalse("Expected condition to not pass",
+        handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value,
+            tRowMutations));
+
+    List<TColumnValue> columnValuesA = new ArrayList<TColumnValue>();
+    TColumnValue columnValueA = new TColumnValue(family, qualifier, value);
+    columnValuesA.add(columnValueA);
+
+    // Put an update 'A'
+    handler.put(table, new TPut(row, columnValuesA));
+
+    // Verify that the update is there
+    result = handler.get(table, new TGet(row));
+    assertEquals(1, result.getColumnValuesSize());
+    assertTColumnValueEqual(columnValueA, result.getColumnValues().get(0));
+
+    // checkAndMutate -- condition should pass since we added the value
+    assertTrue("Expected condition to pass",
+        handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value,
+            tRowMutations));
+
+    result = handler.get(table, new TGet(row));
+    assertEquals(2, result.getColumnValuesSize());
+    assertTColumnValueEqual(columnValueA, result.getColumnValues().get(0));
+    assertTColumnValueEqual(columnValueB, result.getColumnValues().get(1));
   }
 }
 

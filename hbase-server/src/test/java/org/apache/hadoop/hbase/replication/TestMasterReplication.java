@@ -19,15 +19,21 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -35,6 +41,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -51,10 +58,15 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
@@ -80,6 +92,7 @@ public class TestMasterReplication {
 
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
+  private static final byte[] famName1 = Bytes.toBytes("f1");
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
@@ -104,7 +117,11 @@ public class TestMasterReplication {
     baseConfiguration.setInt("hbase.regionserver.maxlogs", 10);
     baseConfiguration.setLong("hbase.master.logcleaner.ttl", 10);
     baseConfiguration.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
-        HConstants.REPLICATION_ENABLE_DEFAULT);
+      HConstants.REPLICATION_ENABLE_DEFAULT);
+    baseConfiguration.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    baseConfiguration.set("hbase.replication.source.fs.conf.provider",
+      TestSourceFSConfigurationProvider.class.getCanonicalName());
+    baseConfiguration.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
     baseConfiguration.setBoolean("dfs.support.append", true);
     baseConfiguration.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     baseConfiguration.setStrings(
@@ -113,6 +130,9 @@ public class TestMasterReplication {
 
     table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
+    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    table.addFamily(fam);
+    fam = new HColumnDescriptor(famName1);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
@@ -131,14 +151,7 @@ public class TestMasterReplication {
     int numClusters = 2;
     Table[] htables = null;
     try {
-      startMiniClusters(numClusters);
-      createTableOnClusters(table);
-
-      htables = getHTablesOnClusters(tableName);
-
-      // Test the replication scenarios of 0 -> 1 -> 0
-      addPeer("1", 0, 1);
-      addPeer("1", 1, 0);
+      htables = setUpClusterTablesAndPeers(numClusters);
 
       int[] expectedCounts = new int[] { 2, 2 };
 
@@ -158,12 +171,64 @@ public class TestMasterReplication {
   }
 
   /**
-   * Tests the cyclic replication scenario of 0 -> 1 -> 2 -> 0 by adding and
-   * deleting rows to a table in each clusters and ensuring that the each of
-   * these clusters get the appropriate mutations. It also tests the grouping
-   * scenario where a cluster needs to replicate the edits originating from
-   * itself and also the edits that it received using replication from a
-   * different cluster. The scenario is explained in HBASE-9158
+   * It tests the replication scenario involving 0 -> 1 -> 0. It does it by bulk loading a set of
+   * HFiles to a table in each cluster, checking if it's replicated.
+   */
+  @Test(timeout = 300000)
+  public void testHFileCyclicReplication() throws Exception {
+    LOG.info("testHFileCyclicReplication");
+    int numClusters = 2;
+    Table[] htables = null;
+    try {
+      htables = setUpClusterTablesAndPeers(numClusters);
+
+      // Load 100 rows for each hfile range in cluster '0' and validate whether its been replicated
+      // to cluster '1'.
+      byte[][][] hfileRanges =
+          new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+              new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
+      int numOfRows = 100;
+      int[] expectedCounts =
+          new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
+
+      loadAndValidateHFileReplication("testHFileCyclicReplication_01", 0, new int[] { 1 }, row,
+        famName, htables, hfileRanges, numOfRows, expectedCounts, true);
+
+      // Load 200 rows for each hfile range in cluster '1' and validate whether its been replicated
+      // to cluster '0'.
+      hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("gggg"), Bytes.toBytes("iiii") },
+          new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
+      numOfRows = 200;
+      int[] newExpectedCounts = new int[] { hfileRanges.length * numOfRows + expectedCounts[0],
+          hfileRanges.length * numOfRows + expectedCounts[1] };
+
+      loadAndValidateHFileReplication("testHFileCyclicReplication_10", 1, new int[] { 0 }, row,
+        famName, htables, hfileRanges, numOfRows, newExpectedCounts, true);
+
+    } finally {
+      close(htables);
+      shutDownMiniClusters();
+    }
+  }
+
+  private Table[] setUpClusterTablesAndPeers(int numClusters) throws Exception {
+    Table[] htables;
+    startMiniClusters(numClusters);
+    createTableOnClusters(table);
+
+    htables = getHTablesOnClusters(tableName);
+    // Test the replication scenarios of 0 -> 1 -> 0
+    addPeer("1", 0, 1);
+    addPeer("1", 1, 0);
+    return htables;
+  }
+
+  /**
+   * Tests the cyclic replication scenario of 0 -> 1 -> 2 -> 0 by adding and deleting rows to a
+   * table in each clusters and ensuring that the each of these clusters get the appropriate
+   * mutations. It also tests the grouping scenario where a cluster needs to replicate the edits
+   * originating from itself and also the edits that it received using replication from a different
+   * cluster. The scenario is explained in HBASE-9158
    */
   @Test(timeout = 300000)
   public void testCyclicReplication2() throws Exception {
@@ -207,6 +272,119 @@ public class TestMasterReplication {
       // cluster 0's id
       // and hence not replicated to cluster 0
       wait(row4, htables[0], true);
+    } finally {
+      close(htables);
+      shutDownMiniClusters();
+    }
+  }
+
+  /**
+   * It tests the multi slave hfile replication scenario involving 0 -> 1, 2. It does it by bulk
+   * loading a set of HFiles to a table in master cluster, checking if it's replicated in its peers.
+   */
+  @Test(timeout = 300000)
+  public void testHFileMultiSlaveReplication() throws Exception {
+    LOG.info("testHFileMultiSlaveReplication");
+    int numClusters = 3;
+    Table[] htables = null;
+    try {
+      startMiniClusters(numClusters);
+      createTableOnClusters(table);
+
+      // Add a slave, 0 -> 1
+      addPeer("1", 0, 1);
+
+      htables = getHTablesOnClusters(tableName);
+
+      // Load 100 rows for each hfile range in cluster '0' and validate whether its been replicated
+      // to cluster '1'.
+      byte[][][] hfileRanges =
+          new byte[][][] { new byte[][] { Bytes.toBytes("mmmm"), Bytes.toBytes("oooo") },
+              new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("rrr") }, };
+      int numOfRows = 100;
+
+      int[] expectedCounts =
+          new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
+
+      loadAndValidateHFileReplication("testHFileCyclicReplication_0", 0, new int[] { 1 }, row,
+        famName, htables, hfileRanges, numOfRows, expectedCounts, true);
+
+      // Validate data is not replicated to cluster '2'.
+      assertEquals(0, utilities[2].countRows(htables[2]));
+
+      rollWALAndWait(utilities[0], htables[0].getName(), row);
+
+      // Add one more slave, 0 -> 2
+      addPeer("2", 0, 2);
+
+      // Load 200 rows for each hfile range in cluster '0' and validate whether its been replicated
+      // to cluster '1' and '2'. Previous data should be replicated to cluster '2'.
+      hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("ssss"), Bytes.toBytes("uuuu") },
+          new byte[][] { Bytes.toBytes("vvv"), Bytes.toBytes("xxx") }, };
+      numOfRows = 200;
+
+      int[] newExpectedCounts = new int[] { hfileRanges.length * numOfRows + expectedCounts[0],
+          hfileRanges.length * numOfRows + expectedCounts[1], hfileRanges.length * numOfRows };
+
+      loadAndValidateHFileReplication("testHFileCyclicReplication_1", 0, new int[] { 1, 2 }, row,
+        famName, htables, hfileRanges, numOfRows, newExpectedCounts, true);
+
+    } finally {
+      close(htables);
+      shutDownMiniClusters();
+    }
+  }
+  
+  /**
+   * It tests the bulk loaded hfile replication scenario to only explicitly specified table column
+   * families. It does it by bulk loading a set of HFiles belonging to both the CFs of table and set
+   * only one CF data to replicate.
+   */
+  @Test(timeout = 300000)
+  public void testHFileReplicationForConfiguredTableCfs() throws Exception {
+    LOG.info("testHFileReplicationForConfiguredTableCfs");
+    int numClusters = 2;
+    Table[] htables = null;
+    try {
+      startMiniClusters(numClusters);
+      createTableOnClusters(table);
+
+      htables = getHTablesOnClusters(tableName);
+      // Test the replication scenarios only 'f' is configured for table data replication not 'f1'
+      addPeer("1", 0, 1, tableName.getNameAsString() + ":" + Bytes.toString(famName));
+
+      // Load 100 rows for each hfile range in cluster '0' for table CF 'f'
+      byte[][][] hfileRanges =
+          new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+              new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("fff") }, };
+      int numOfRows = 100;
+      int[] expectedCounts =
+          new int[] { hfileRanges.length * numOfRows, hfileRanges.length * numOfRows };
+
+      loadAndValidateHFileReplication("load_f", 0, new int[] { 1 }, row, famName, htables,
+        hfileRanges, numOfRows, expectedCounts, true);
+
+      // Load 100 rows for each hfile range in cluster '0' for table CF 'f1'
+      hfileRanges = new byte[][][] { new byte[][] { Bytes.toBytes("gggg"), Bytes.toBytes("iiii") },
+          new byte[][] { Bytes.toBytes("jjj"), Bytes.toBytes("lll") }, };
+      numOfRows = 100;
+
+      int[] newExpectedCounts =
+          new int[] { hfileRanges.length * numOfRows + expectedCounts[0], expectedCounts[1] };
+
+      loadAndValidateHFileReplication("load_f1", 0, new int[] { 1 }, row, famName1, htables,
+        hfileRanges, numOfRows, newExpectedCounts, false);
+
+      // Validate data replication for CF 'f1'
+
+      // Source cluster table should contain data for the families
+      wait(0, htables[0], hfileRanges.length * numOfRows + expectedCounts[0]);
+
+      // Sleep for enough time so that the data is still not replicated for the CF which is not
+      // configured for replication
+      Thread.sleep((NB_RETRIES / 2) * SLEEP_TIME);
+      // Peer cluster should have only configured CF data
+      wait(1, htables[1], expectedCounts[1]);
     } finally {
       close(htables);
       shutDownMiniClusters();
@@ -336,6 +514,17 @@ public class TestMasterReplication {
       close(replicationAdmin);
     }
   }
+  
+  private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
+      throws Exception {
+    ReplicationAdmin replicationAdmin = null;
+    try {
+      replicationAdmin = new ReplicationAdmin(configurations[masterClusterNumber]);
+      replicationAdmin.addPeer(id, utilities[slaveClusterNumber].getClusterKey(), tableCfs);
+    } finally {
+      close(replicationAdmin);
+    }
+  }
 
   private void disablePeer(String id, int masterClusterNumber) throws Exception {
     ReplicationAdmin replicationAdmin = null;
@@ -413,8 +602,56 @@ public class TestMasterReplication {
     wait(row, target, false);
   }
 
-  private void wait(byte[] row, Table target, boolean isDeleted)
-      throws Exception {
+  private void loadAndValidateHFileReplication(String testName, int masterNumber,
+      int[] slaveNumbers, byte[] row, byte[] fam, Table[] tables, byte[][][] hfileRanges,
+      int numOfRows, int[] expectedCounts, boolean toValidate) throws Exception {
+    HBaseTestingUtility util = utilities[masterNumber];
+
+    Path dir = util.getDataTestDirOnTestFS(testName);
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(fam));
+
+    int hfileIdx = 0;
+    for (byte[][] range : hfileRanges) {
+      byte[] from = range[0];
+      byte[] to = range[1];
+      HFileTestUtil.createHFile(util.getConfiguration(), fs,
+        new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
+    }
+
+    Table source = tables[masterNumber];
+    final TableName tableName = source.getName();
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+    String[] args = { dir.toString(), tableName.toString() };
+    loader.run(args);
+
+    if (toValidate) {
+      for (int slaveClusterNumber : slaveNumbers) {
+        wait(slaveClusterNumber, tables[slaveClusterNumber], expectedCounts[slaveClusterNumber]);
+      }
+    }
+  }
+
+  private void wait(int slaveNumber, Table target, int expectedCount)
+      throws IOException, InterruptedException {
+    int count = 0;
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i == NB_RETRIES - 1) {
+        fail("Waited too much time for bulkloaded data replication. Current count=" + count
+            + ", expected count=" + expectedCount);
+      }
+      count = utilities[slaveNumber].countRows(target);
+      if (count != expectedCount) {
+        LOG.info("Waiting more time for bulkloaded data replication.");
+        Thread.sleep(SLEEP_TIME);
+      } else {
+        break;
+      }
+    }
+  }
+
+  private void wait(byte[] row, Table target, boolean isDeleted) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i == NB_RETRIES - 1) {
@@ -436,6 +673,47 @@ public class TestMasterReplication {
         break;
       }
     }
+  }
+
+  private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
+      final byte[] row) throws IOException {
+    final Admin admin = utility.getHBaseAdmin();
+    final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
+
+    // find the region that corresponds to the given row.
+    HRegion region = null;
+    for (HRegion candidate : cluster.getRegions(table)) {
+      if (HRegion.rowIsInRange(candidate.getRegionInfo(), row)) {
+        region = candidate;
+        break;
+      }
+    }
+    assertNotNull("Couldn't find the region for row '" + Arrays.toString(row) + "'", region);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    // listen for successful log rolls
+    final WALActionsListener listener = new WALActionsListener.Base() {
+          @Override
+          public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+            latch.countDown();
+          }
+        };
+    region.getWAL().registerWALActionsListener(listener);
+
+    // request a roll
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+      region.getRegionInfo().getRegionName()));
+
+    // wait
+    try {
+      latch.await();
+    } catch (InterruptedException exception) {
+      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later " +
+          "replication tests fail, it's probably because we should still be waiting.");
+      Thread.currentThread().interrupt();
+    }
+    region.getWAL().unregisterWALActionsListener(listener);
   }
 
   /**

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -26,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 
@@ -104,5 +107,15 @@ public interface ReplicationSourceInterface {
    * @return printable stats
    */
   String getStats();
+
+  /**
+   * Add hfile names to the queue to be replicated.
+   * @param tableName Name of the table these files belongs to
+   * @param family Name of the family these files belong to
+   * @param files files whose names needs to be added to the queue to be replicated
+   * @throws ReplicationException If failed to add hfile references
+   */
+  void addHFileRefs(TableName tableName, byte[] family, List<String> files)
+      throws ReplicationException;
 
 }

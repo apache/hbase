@@ -267,6 +267,7 @@ Shell.load_command_group(
     alter_status
     alter_async
     get_table
+    locate_region
   ],
   :aliases => {
     'describe' => ['desc']

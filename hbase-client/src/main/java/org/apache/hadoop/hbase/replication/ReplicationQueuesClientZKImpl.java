@@ -84,4 +84,41 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
       throw e;
     }
   }
+
+  @Override
+  public int getHFileRefsNodeChangeVersion() throws KeeperException {
+    Stat stat = new Stat();
+    try {
+      ZKUtil.getDataNoWatch(this.zookeeper, this.hfileRefsZNode, stat);
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed to get stat of replication hfile references node.", e);
+      throw e;
+    }
+    return stat.getCversion();
+  }
+
+  @Override
+  public List<String> getAllPeersFromHFileRefsQueue() throws KeeperException {
+    List<String> result = null;
+    try {
+      result = ZKUtil.listChildrenNoWatch(this.zookeeper, this.hfileRefsZNode);
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed to get list of all peers in hfile references node.", e);
+      throw e;
+    }
+    return result;
+  }
+
+  @Override
+  public List<String> getReplicableHFiles(String peerId) throws KeeperException {
+    String znode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    List<String> result = null;
+    try {
+      result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed to get list of hfile references for peerId=" + peerId, e);
+      throw e;
+    }
+    return result;
+  }
 }
