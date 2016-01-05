@@ -77,7 +77,9 @@
 
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->
-    <module name="JavadocTagContinuationIndentation"/>
+    <module name="JavadocTagContinuationIndentation">
+      <property name="offset" value="2"/>
+    </module>
     <module name="NonEmptyAtclauseDescription"/>
 
     <!-- Miscellaneous Checks
