@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class MasterDumpServlet extends StateDumpServlet {
@@ -79,7 +81,8 @@ public class MasterDumpServlet extends StateDumpServlet {
     
     out.println("\n\nStacks:");
     out.println(LINE);
-    ReflectionUtils.printThreadInfo(out, "");
+    PrintStream ps = new PrintStream(os, false, "UTF-8");
+    Threads.printThreadInfo(ps, "");
     
     out.println("\n\nMaster configuration:");
     out.println(LINE);
