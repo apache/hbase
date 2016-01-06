@@ -219,6 +219,11 @@ public final class ByteBufferArray {
     long end = offset + len;
     int startBuffer = (int) (offset / bufferSize), startBufferOffset = (int) (offset % bufferSize);
     int endBuffer = (int) (end / bufferSize), endBufferOffset = (int) (end % bufferSize);
+    // Last buffer in the array is a dummy one with 0 capacity. Avoid sending back that
+    if (endBuffer == this.bufferCount) {
+      endBuffer--;
+      endBufferOffset = bufferSize;
+    }
     assert startBuffer >= 0 && startBuffer < bufferCount;
     assert endBuffer >= 0 && endBuffer < bufferCount
         || (endBuffer == bufferCount && endBufferOffset == 0);
