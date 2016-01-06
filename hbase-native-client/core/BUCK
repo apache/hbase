@@ -48,3 +48,18 @@ cxx_binary(
     'PUBLIC',
   ],
 )
+
+cxx_test(
+  name = "core_test",
+  headers = [
+    "test_env.h",
+  ],
+  srcs = [
+    "HBaseNativeClientTestEnv.cc",
+    "SampleNativeClientTest.cc",
+  ],
+  deps = [
+    ":core",
+  ],
+  run_test_separately = True,
+)
