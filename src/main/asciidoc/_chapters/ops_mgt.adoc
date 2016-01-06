@@ -79,7 +79,7 @@ There is a Canary class can help users to canary-test the HBase cluster status, 
 To see the usage, use the `--help` parameter.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help
+$ ${HBASE_HOME}/bin/hbase canary -help
 
 Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
@@ -127,7 +127,7 @@ Following are some examples based on the previous given case.
 ==== Canary test for every column family (store) of every region of every table
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary
+$ ${HBASE_HOME}/bin/hbase canary
 
 3/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf1 in 2ms
 13/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf2 in 2ms
@@ -148,7 +148,7 @@ This is a default behavior of the this tool does.
 You can also test one or more specific tables.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary test-01 test-02
+$ ${HBASE_HOME}/bin/hbase canary test-01 test-02
 ----
 
 ==== Canary test with RegionServer granularity
@@ -156,7 +156,7 @@ $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary test-01 test-02
 This will pick one small piece of data from each RegionServer, and can also put your RegionServer name as input options for canary-test specific RegionServer.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -regionserver
+$ ${HBASE_HOME}/bin/hbase canary -regionserver
 
 13/12/09 06:05:17 INFO tool.Canary: Read from table:test-01 on region server:rs2 in 72ms
 13/12/09 06:05:17 INFO tool.Canary: Read from table:test-02 on region server:rs3 in 34ms
@@ -168,7 +168,7 @@ $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -regionserver
 This will test both table test-01 and test-02.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -e test-0[1-2]
+$ ${HBASE_HOME}/bin/hbase canary -e test-0[1-2]
 ----
 
 ==== Run canary test as daemon mode
@@ -177,13 +177,13 @@ Run repeatedly with interval defined in option `-interval` whose default value i
 This daemon will stop itself and return non-zero error code if any error occurs, due to the default value of option -f is true.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -daemon
+$ ${HBASE_HOME}/bin/hbase canary -daemon
 ----
 
 Run repeatedly with internal 5 seconds and will not stop itself even if errors occur in the test.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -daemon -interval 50000 -f false
+$ ${HBASE_HOME}/bin/hbase canary -daemon -interval 50000 -f false
 ----
 
 ==== Force timeout if canary test stuck
@@ -193,7 +193,7 @@ Because of this we provide a timeout option to kill the canary test and return a
 This run sets the timeout value to 60 seconds, the default value is 600 seconds.
 
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -t 600000
+$ ${HBASE_HOME}/bin/hbase canary -t 600000
 ----
 
 ==== Enable write sniffing in canary
@@ -204,12 +204,12 @@ When the write sniffing is enabled, the canary tool will create a hbase table an
 regions of the table distributed on all region servers. In each sniffing period, the canary will
 try to put data to these regions to check the write availability of each region server.
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -writeSniffing
+$ ${HBASE_HOME}/bin/hbase canary -writeSniffing
 ----
 
 The default write table is `hbase:canary` and can be specified by the option `-writeTable`.
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -writeSniffing -writeTable ns:canary
+$ ${HBASE_HOME}/bin/hbase canary -writeSniffing -writeTable ns:canary
 ----
 
 The default value size of each put is 10 bytes and you can set it by the config key:

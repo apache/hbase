@@ -98,6 +98,7 @@ if [ $# = 0 ]; then
   echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
   echo "  pe              Run PerformanceEvaluation"
   echo "  ltt             Run LoadTestTool"
+  echo "  canary          Run the Canary tool"
   echo "  version         Print the version"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
@@ -361,6 +362,9 @@ elif [ "$COMMAND" = "pe" ] ; then
 elif [ "$COMMAND" = "ltt" ] ; then
   CLASS='org.apache.hadoop.hbase.util.LoadTestTool'
   HBASE_OPTS="$HBASE_OPTS $HBASE_LTT_OPTS"
+elif [ "$COMMAND" = "canary" ] ; then
+  CLASS='org.apache.hadoop.hbase.tool.Canary'
+  HBASE_OPTS="$HBASE_OPTS $HBASE_CANARY_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
 else
