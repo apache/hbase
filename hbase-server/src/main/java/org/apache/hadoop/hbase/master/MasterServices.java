@@ -103,75 +103,125 @@ public interface MasterServices extends Server {
    * Create a table using the given table definition.
    * @param desc The table definition
    * @param splitKeys Starting row keys for the initial table regions.  If null
+   * @param nonceGroup
+   * @param nonce
    *     a single region is created.
    */
-  long createTable(HTableDescriptor desc, byte[][] splitKeys)
-      throws IOException;
+  long createTable(
+      final HTableDescriptor desc,
+      final byte[][] splitKeys,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Delete a table
    * @param tableName The table name
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  long deleteTable(final TableName tableName) throws IOException;
+  long deleteTable(
+      final TableName tableName,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Truncate a table
    * @param tableName The table name
    * @param preserveSplits True if the splits should be preserved
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  public void truncateTable(final TableName tableName, boolean preserveSplits) throws IOException;
+  public void truncateTable(
+      final TableName tableName,
+      final boolean preserveSplits,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
    * @param tableName The table name
    * @param descriptor The updated table descriptor
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
+  void modifyTable(
+      final TableName tableName,
+      final HTableDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce)
       throws IOException;
 
   /**
    * Enable an existing table
    * @param tableName The table name
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  long enableTable(final TableName tableName) throws IOException;
+  long enableTable(
+      final TableName tableName,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Disable an existing table
    * @param tableName The table name
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  long disableTable(final TableName tableName) throws IOException;
+  long disableTable(
+      final TableName tableName,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
 
   /**
    * Add a new column to an existing table
    * @param tableName The table name
    * @param column The column definition
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  void addColumn(final TableName tableName, final HColumnDescriptor column)
+  void addColumn(
+      final TableName tableName,
+      final HColumnDescriptor column,
+      final long nonceGroup,
+      final long nonce)
       throws IOException;
 
   /**
    * Modify the column descriptor of an existing column in an existing table
    * @param tableName The table name
    * @param descriptor The updated column definition
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  void modifyColumn(TableName tableName, HColumnDescriptor descriptor)
+  void modifyColumn(
+      final TableName tableName,
+      final HColumnDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce)
       throws IOException;
 
   /**
    * Delete a column from an existing table
    * @param tableName The table name
    * @param columnName The column name
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  void deleteColumn(final TableName tableName, final byte[] columnName)
+  void deleteColumn(
+      final TableName tableName,
+      final byte[] columnName,
+      final long nonceGroup,
+      final long nonce)
       throws IOException;
 
   /**

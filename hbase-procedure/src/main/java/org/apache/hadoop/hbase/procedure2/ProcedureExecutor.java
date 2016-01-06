@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.base.Preconditions;
@@ -134,14 +136,17 @@ public class ProcedureExecutor<TEnvironment> {
     private static final int DEFAULT_ACKED_EVICT_TTL = 5 * 60000; // 5min
 
     private final Map<Long, ProcedureResult> completed;
+    private final Map<NonceKey, Long> nonceKeysToProcIdsMap;
     private final ProcedureStore store;
     private final Configuration conf;
 
     public CompletedProcedureCleaner(final Configuration conf, final ProcedureStore store,
-        final Map<Long, ProcedureResult> completedMap) {
+        final Map<Long, ProcedureResult> completedMap,
+        final Map<NonceKey, Long> nonceKeysToProcIdsMap) {
       // set the timeout interval that triggers the periodic-procedure
       setTimeout(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
       this.completed = completedMap;
+      this.nonceKeysToProcIdsMap = nonceKeysToProcIdsMap;
       this.store = store;
       this.conf = conf;
     }
@@ -171,6 +176,11 @@ public class ProcedureExecutor<TEnvironment> {
           }
           store.delete(entry.getKey());
           it.remove();
+
+          NonceKey nonceKey = result.getNonceKey();
+          if (nonceKey != null) {
+            nonceKeysToProcIdsMap.remove(nonceKey);
+          }
         }
       }
     }
@@ -223,6 +233,13 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private final ConcurrentHashMap<Long, Procedure> procedures =
     new ConcurrentHashMap<Long, Procedure>();
+
+  /**
+   * Helper map to lookup whether the procedure already issued from the same client.
+   * This map contains every root procedure.
+   */
+  private ConcurrentHashMap<NonceKey, Long> nonceKeysToProcIdsMap =
+      new ConcurrentHashMap<NonceKey, Long>();
 
   /**
    * Timeout Queue that contains Procedures in a WAITING_TIMEOUT state
@@ -292,6 +309,12 @@ public class ProcedureExecutor<TEnvironment> {
       if (!proc.hasParent() && !proc.isFinished()) {
         rollbackStack.put(proc.getProcId(), new RootProcedureState());
       }
+
+      // add the nonce to the map
+      if (proc.getNonceKey() != null) {
+        nonceKeysToProcIdsMap.put(proc.getNonceKey(), proc.getProcId());
+      }
+
       if (proc.getState() == ProcedureState.RUNNABLE) {
         runnablesCount++;
       }
@@ -317,6 +340,7 @@ public class ProcedureExecutor<TEnvironment> {
         }
         assert !rollbackStack.containsKey(proc.getProcId());
         completed.put(proc.getProcId(), newResultFromProcedure(proc));
+
         continue;
       }
 
@@ -439,7 +463,8 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // Add completed cleaner
-    waitingTimeout.add(new CompletedProcedureCleaner(conf, store, completed));
+    waitingTimeout.add(
+      new CompletedProcedureCleaner(conf, store, completed, nonceKeysToProcIdsMap));
   }
 
   public void stop() {
@@ -470,6 +495,7 @@ public class ProcedureExecutor<TEnvironment> {
     completed.clear();
     rollbackStack.clear();
     procedures.clear();
+    nonceKeysToProcIdsMap.clear();
     waitingTimeout.clear();
     runnables.clear();
     lastProcId.set(-1);
@@ -512,13 +538,53 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the procedure id, that can be used to monitor the operation
    */
   public long submitProcedure(final Procedure proc) {
+    return submitProcedure(proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  /**
+   * Add a new root-procedure to the executor.
+   * @param proc the new procedure to execute.
+   * @param nonceGroup
+   * @param nonce
+   * @return the procedure id, that can be used to monitor the operation
+   */
+  public long submitProcedure(
+      final Procedure proc,
+      final long nonceGroup,
+      final long nonce) {
     Preconditions.checkArgument(proc.getState() == ProcedureState.INITIALIZING);
     Preconditions.checkArgument(isRunning());
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(!proc.hasParent());
 
-    // Initialize the Procedure ID
-    proc.setProcId(nextProcId());
+    Long currentProcId;
+
+    // The following part of the code has to be synchronized to prevent multiple request
+    // with the same nonce to execute at the same time.
+    synchronized (this) {
+      // Check whether the proc exists.  If exist, just return the proc id.
+      // This is to prevent the same proc to submit multiple times (it could happen
+      // when client could not talk to server and resubmit the same request).
+      NonceKey noncekey = null;
+      if (nonce != HConstants.NO_NONCE) {
+        noncekey = new NonceKey(nonceGroup, nonce);
+        currentProcId = nonceKeysToProcIdsMap.get(noncekey);
+        if (currentProcId != null) {
+          // Found the proc
+          return currentProcId;
+        }
+      }
+
+      // Initialize the Procedure ID
+      currentProcId = nextProcId();
+      proc.setProcId(currentProcId);
+
+      // This is new procedure. Set the noncekey and insert into the map.
+      if (noncekey != null) {
+        proc.setNonceKey(noncekey);
+        nonceKeysToProcIdsMap.put(noncekey, currentProcId);
+      }
+    } // end of synchronized (this)
 
     // Commit the transaction
     store.insert(proc, null);
@@ -528,14 +594,14 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Create the rollback stack for the procedure
     RootProcedureState stack = new RootProcedureState();
-    rollbackStack.put(proc.getProcId(), stack);
+    rollbackStack.put(currentProcId, stack);
 
     // Submit the new subprocedures
-    assert !procedures.containsKey(proc.getProcId());
-    procedures.put(proc.getProcId(), proc);
-    sendProcedureAddedNotification(proc.getProcId());
+    assert !procedures.containsKey(currentProcId);
+    procedures.put(currentProcId, proc);
+    sendProcedureAddedNotification(currentProcId);
     runnables.addBack(proc);
-    return proc.getProcId();
+    return currentProcId;
   }
 
   public ProcedureResult getResult(final long procId) {
@@ -1090,8 +1156,10 @@ public class ProcedureExecutor<TEnvironment> {
 
   private static ProcedureResult newResultFromProcedure(final Procedure proc) {
     if (proc.isFailed()) {
-      return new ProcedureResult(proc.getStartTime(), proc.getLastUpdate(), proc.getException());
+      return new ProcedureResult(
+        proc.getNonceKey(), proc.getStartTime(), proc.getLastUpdate(), proc.getException());
     }
-    return new ProcedureResult(proc.getStartTime(), proc.getLastUpdate(), proc.getResult());
+    return new ProcedureResult(
+      proc.getNonceKey(), proc.getStartTime(), proc.getLastUpdate(), proc.getResult());
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -42,7 +43,7 @@ public class TestProcedureConf {
       TEST_UTIL.startMiniCluster();
       cluster = TEST_UTIL.getHBaseCluster();
       HMaster m = cluster.getMaster();
-      long procid = m.createTable(htd, null);
+      long procid = m.createTable(htd, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
       assertTrue(procid > 0);
     } finally {
       if (cluster != null) {
@@ -62,7 +63,7 @@ public class TestProcedureConf {
       TEST_UTIL.startMiniCluster();
       cluster = TEST_UTIL.getHBaseCluster();
       HMaster m = cluster.getMaster();
-      long procid = m.createTable(htd, null);
+      long procid = m.createTable(htd, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
       assertTrue(procid < 0);
     } finally {
       if (cluster != null) {
@@ -82,7 +83,7 @@ public class TestProcedureConf {
       TEST_UTIL.startMiniCluster();
       cluster = TEST_UTIL.getHBaseCluster();
       HMaster m = cluster.getMaster();
-      long procid = m.createTable(htd, null);
+      long procid = m.createTable(htd, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
       assertTrue(procid < 0);
     } finally {
       if (cluster != null) {

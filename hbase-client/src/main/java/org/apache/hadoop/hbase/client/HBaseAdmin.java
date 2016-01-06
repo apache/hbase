@@ -206,6 +206,8 @@ public class HBaseAdmin implements Admin {
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
+  private NonceGenerator ng;
+
   /**
    * Constructor.
    * See {@link #HBaseAdmin(Connection connection)}
@@ -261,6 +263,8 @@ public class HBaseAdmin implements Admin {
       "hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
 
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
+
+    this.ng = this.connection.getNonceGenerator();
   }
 
   @Override
@@ -637,7 +641,8 @@ public class HBaseAdmin implements Admin {
         new MasterCallable<CreateTableResponse>(getConnection()) {
       @Override
       public CreateTableResponse call(int callTimeout) throws ServiceException {
-        CreateTableRequest request = RequestConverter.buildCreateTableRequest(desc, splitKeys);
+        CreateTableRequest request = RequestConverter.buildCreateTableRequest(
+          desc, splitKeys, ng.getNonceGroup(), ng.newNonce());
         return master.createTable(null, request);
       }
     });
@@ -807,7 +812,8 @@ public class HBaseAdmin implements Admin {
         new MasterCallable<DeleteTableResponse>(getConnection()) {
       @Override
       public DeleteTableResponse call(int callTimeout) throws ServiceException {
-        DeleteTableRequest req = RequestConverter.buildDeleteTableRequest(tableName);
+        DeleteTableRequest req =
+            RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce());
         return master.deleteTable(null,req);
       }
     });
@@ -919,7 +925,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public Void call(int callTimeout) throws ServiceException {
         TruncateTableRequest req = RequestConverter.buildTruncateTableRequest(
-          tableName, preserveSplits);
+          tableName, preserveSplits, ng.getNonceGroup(), ng.newNonce());
         master.truncateTable(null, req);
         return null;
       }
@@ -1055,7 +1061,8 @@ public class HBaseAdmin implements Admin {
       @Override
       public EnableTableResponse call(int callTimeout) throws ServiceException {
         LOG.info("Started enable of " + tableName);
-        EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
+        EnableTableRequest req =
+            RequestConverter.buildEnableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce());
         return master.enableTable(null,req);
       }
     });
@@ -1242,7 +1249,8 @@ public class HBaseAdmin implements Admin {
       @Override
       public DisableTableResponse call(int callTimeout) throws ServiceException {
         LOG.info("Started disable of " + tableName);
-        DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
+        DisableTableRequest req =
+            RequestConverter.buildDisableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce());
         return master.disableTable(null, req);
       }
     });
@@ -1521,7 +1529,8 @@ public class HBaseAdmin implements Admin {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, column);
+        AddColumnRequest req = RequestConverter.buildAddColumnRequest(
+          tableName, column, ng.getNonceGroup(), ng.newNonce());
         master.addColumn(null,req);
         return null;
       }
@@ -1568,7 +1577,8 @@ public class HBaseAdmin implements Admin {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(tableName, columnName);
+        DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(
+          tableName, columnName, ng.getNonceGroup(), ng.newNonce());
         master.deleteColumn(null,req);
         return null;
       }
@@ -1617,7 +1627,8 @@ public class HBaseAdmin implements Admin {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(tableName, descriptor);
+        ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(
+          tableName, descriptor, ng.getNonceGroup(), ng.newNonce());
         master.modifyColumn(null,req);
         return null;
       }
@@ -2452,7 +2463,8 @@ public class HBaseAdmin implements Admin {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        ModifyTableRequest request = RequestConverter.buildModifyTableRequest(tableName, htd);
+        ModifyTableRequest request = RequestConverter.buildModifyTableRequest(
+          tableName, htd, ng.getNonceGroup(), ng.newNonce());
         master.modifyTable(null, request);
         return null;
       }
