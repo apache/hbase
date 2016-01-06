@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.util.Triple;
 
 import java.util.ArrayList;
@@ -90,10 +92,12 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
    * Action may be either a split, or a merge, or no action.
    *
    * @param table table to normalize
+   * @param types desired types of NormalizationPlan
    * @return normalization plan to execute
    */
   @Override
-  public NormalizationPlan computePlanForTable(TableName table) throws HBaseIOException {
+  public NormalizationPlan computePlanForTable(TableName table, List<PlanType> types)
+      throws HBaseIOException {
     if (table == null || table.isSystemTable()) {
       LOG.debug("Normalization of system table " + table + " isn't allowed");
       return EmptyNormalizationPlan.getInstance();
@@ -134,7 +138,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
 
     // now; if the largest region is >2 times large than average, we split it, split
     // is more high priority normalization action than merge.
-    if (largestRegion.getSecond() > 2 * avgRegionSize) {
+    if (types.contains(PlanType.SPLIT) && largestRegion.getSecond() > 2 * avgRegionSize) {
       LOG.debug("Table " + table + ", largest region "
         + largestRegion.getFirst().getRegionNameAsString() + " has size "
         + largestRegion.getSecond() + ", more than 2 times than avg size, splitting");
@@ -155,7 +159,8 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     }
     Triple<HRegionInfo, Long, Integer> candidateRegion = regionsWithSize.get(candidateIdx);
     Triple<HRegionInfo, Long, Integer> candidateRegion2 = regionsWithSize.get(candidateIdx+1);
-    if (candidateRegion.getSecond() + candidateRegion2.getSecond() < avgRegionSize) {
+    if (types.contains(PlanType.MERGE) &&
+        candidateRegion.getSecond() + candidateRegion2.getSecond() < avgRegionSize) {
       LOG.debug("Table " + table + ", smallest region size: " + candidateRegion.getSecond()
         + " and its smallest neighbor size: " + candidateRegion2.getSecond()
         + ", less than the avg size, merging them");

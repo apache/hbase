@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 
 import java.io.IOException;
 
@@ -39,6 +40,11 @@ public class MergeNormalizationPlan implements NormalizationPlan {
   public MergeNormalizationPlan(HRegionInfo firstRegion, HRegionInfo secondRegion) {
     this.firstRegion = firstRegion;
     this.secondRegion = secondRegion;
+  }
+
+  @Override
+  public PlanType getType() {
+    return PlanType.MERGE;
   }
 
   HRegionInfo getFirstRegion() {

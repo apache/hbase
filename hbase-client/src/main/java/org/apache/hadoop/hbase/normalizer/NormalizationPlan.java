@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.normalizer;
+package org.apache.hadoop.hbase.normalizer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -26,10 +26,20 @@ import org.apache.hadoop.hbase.client.Admin;
  */
 @InterfaceAudience.Private
 public interface NormalizationPlan {
+  enum PlanType {
+    SPLIT,
+    MERGE,
+    NONE
+  }
 
   /**
    * Executes normalization plan on cluster (does actual splitting/merging work).
    * @param admin instance of Admin
    */
   void execute(Admin admin);
+
+  /**
+   * @return the type of this plan
+   */
+  PlanType getType();
 }

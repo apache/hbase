@@ -18,10 +18,14 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 
 /**
  * Performs "normalization" of regions on the cluster, making sure that suboptimal
@@ -45,7 +49,9 @@ public interface RegionNormalizer {
   /**
    * Computes next optimal normalization plan.
    * @param table table to normalize
+   * @param types desired types of NormalizationPlan
    * @return Next (perhaps most urgent) normalization action to perform
    */
-  NormalizationPlan computePlanForTable(TableName table) throws HBaseIOException;
+  NormalizationPlan computePlanForTable(TableName table, List<PlanType> types)
+      throws HBaseIOException;
 }

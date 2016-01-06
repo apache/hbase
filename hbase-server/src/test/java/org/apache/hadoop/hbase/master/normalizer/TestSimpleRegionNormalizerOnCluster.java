@@ -113,7 +113,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     }
 
     HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
-    htd.setNormalizationEnabled(true);
+    htd.setNormalizationMode("MS");
     admin.modifyTable(TABLENAME, htd);
 
     admin.flush(TABLENAME);
@@ -178,7 +178,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     }
 
     HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
-    htd.setNormalizationEnabled(true);
+    htd.setNormalizationMode("MS");
     admin.modifyTable(TABLENAME, htd);
 
     admin.flush(TABLENAME);

@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -1337,13 +1338,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
           continue;
         }
-        if (table.isSystemTable() || (getTableDescriptors().get(table) != null &&
-          !getTableDescriptors().get(table).isNormalizationEnabled())) {
-          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
-            + " table or doesn't have auto normalization turned on");
+        if (table.isSystemTable()) {
+          LOG.debug("Skipping normalization for table: " + table + ", as it's system table");
           continue;
         }
-        this.normalizer.computePlanForTable(table).execute(clusterConnection.getAdmin());
+        List<PlanType> types = null;
+        if (getTableDescriptors().get(table) != null) {
+          types = getTableDescriptors().get(table).getDesiredNormalizationTypes();
+          if (types == null) {
+            LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
+                + " table or doesn't have auto normalization turned on");
+            continue;
+          }
+        }
+        this.normalizer.computePlanForTable(table, types).execute(clusterConnection.getAdmin());
       }
     }
     // If Region did not generate any plans, it means the cluster is already balanced.
