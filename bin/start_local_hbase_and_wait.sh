@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -15,8 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM pjameson/buck-folly-watchman
+$PWD/../bin/start-hbase.sh
 
-RUN apt-get install -y libprotobuf-dev protobuf-compiler clang-format-3.7 vim maven inetutils-ping
-
-WORKDIR /usr/local/src/hbase/hbase-native-client
+until [ $(curl -s -o /dev/null -I -w "%{http_code}" http://localhost:16010) == "200" ]
+do
+     printf "Waiting for local HBase cluster to start\n"
+     sleep 1
+done
