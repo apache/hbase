@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -170,7 +171,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         // Add TTL directly to the KV so we can vary them when packing more than one KV
         // into puts
         if (ttl > 0) {
-          tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
+          tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
         }
       }
       Put put = new Put(rowKey.copyBytes());

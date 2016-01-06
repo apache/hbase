@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
@@ -280,7 +281,7 @@ public class TestPrefixTreeEncoding {
           kvset.add(kv);
         } else {
           KeyValue kv = new KeyValue(getRowKey(batchId, i), CF_BYTES, getQualifier(j), 0l,
-              getValue(batchId, i, j), new Tag[] { new Tag((byte) 1, "metaValue1") });
+              getValue(batchId, i, j), new Tag[] { new ArrayBackedTag((byte) 1, "metaValue1") });
           kvset.add(kv);
         }
       }
@@ -308,7 +309,7 @@ public class TestPrefixTreeEncoding {
           kvset.add(kv);
         } else {
           KeyValue kv = new KeyValue(getRowKey(batchId, i), CF_BYTES, getQualifier(j), 0l,
-              getValue(batchId, i, j), new Tag[] { new Tag((byte) 1, "metaValue1") });
+              getValue(batchId, i, j), new Tag[] { new ArrayBackedTag((byte) 1, "metaValue1") });
           kvset.add(kv);
         }
       }

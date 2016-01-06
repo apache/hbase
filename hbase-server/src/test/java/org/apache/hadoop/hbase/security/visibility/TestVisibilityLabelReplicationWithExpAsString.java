@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -183,7 +184,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
           boolean foundNonVisTag = false;
           for(Tag t : TestCoprocessorForTagsAtSink.tags) {
             if(t.getType() == NON_VIS_TAG_TYPE) {
-              assertEquals(TEMP, Bytes.toString(t.getValue()));
+              assertEquals(TEMP, Bytes.toString(TagUtil.cloneValue(t)));
               foundNonVisTag = true;
               break;
             }

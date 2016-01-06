@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -167,8 +168,8 @@ public class TestHFileBlock {
       if (!useTag) {
         keyValues.add(new KeyValue(row, family, qualifier, timestamp, value));
       } else {
-        keyValues.add(new KeyValue(row, family, qualifier, timestamp, value, new Tag[] { new Tag(
-            (byte) 1, Bytes.toBytes("myTagVal")) }));
+        keyValues.add(new KeyValue(row, family, qualifier, timestamp, value,
+            new Tag[] { new ArrayBackedTag((byte) 1, Bytes.toBytes("myTagVal")) }));
       }
     }
 

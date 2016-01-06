@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -124,7 +125,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param qualifier
    * @param ts
    * @param value
-   * @param tags - Specify the Tags as an Array {@link KeyValue.Tag}
+   * @param tags - Specify the Tags as an Array
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tags) {
@@ -138,7 +139,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
-                             Tag[] tags) {
+      Tag[] tags) {
     return new KeyValue(this.row, 0, this.row == null ? 0 : this.row.length,
         family, 0, family == null ? 0 : family.length,
         qualifier, ts, KeyValue.Type.Put, value, tags != null ? Arrays.asList(tags) : null);
@@ -219,11 +220,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
                 c.getQualifierLength()));
     stringMap.put("timestamp", c.getTimestamp());
     stringMap.put("vlen", c.getValueLength());
-    List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    List<Tag> tags = CellUtil.getTags(c);
     if (tags != null) {
       List<String> tagsString = new ArrayList<String>();
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(t.getValue()));
+        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(t)));
       }
       stringMap.put("tag", tagsString);
     }

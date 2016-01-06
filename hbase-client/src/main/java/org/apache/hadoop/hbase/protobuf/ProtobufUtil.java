@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -580,20 +581,17 @@ public final class ProtobufUtil {
           if (qv.hasTimestamp()) {
             ts = qv.getTimestamp();
           }
-          byte[] tags;
+          byte[] allTagsBytes;
           if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-            Object[] array = Tag.asList(tags, 0, (short)tags.length).toArray();
-            Tag[] tagArray = new Tag[array.length];
-            for(int i = 0; i< array.length; i++) {
-              tagArray[i] = (Tag)array[i];
-            }
+            allTagsBytes = qv.getTags().toByteArray();
             if(qv.hasDeleteType()) {
               byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
               put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType()), null, tags));
+                  fromDeleteType(qv.getDeleteType()), null, allTagsBytes));
             } else {
-              put.addImmutable(family, qualifier, ts, value, tagArray);
+              List<Tag> tags = TagUtil.asList(allTagsBytes, 0, (short)allTagsBytes.length);
+              Tag[] tagsArray = new Tag[tags.size()];
+              put.addImmutable(family, qualifier, ts, value, tags.toArray(tagsArray));
             }
           } else {
             if(qv.hasDeleteType()) {

@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -1779,28 +1780,24 @@ public class HStore implements Store {
    * @return true if the cell is expired
    */
   static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
-    // Do not create an Iterator or Tag objects unless the cell actually has tags.
-    if (cell.getTagsLength() > 0) {
-      // Look for a TTL tag first. Use it instead of the family setting if
-      // found. If a cell has multiple TTLs, resolve the conflict by using the
-      // first tag encountered.
-      Iterator<Tag> i = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
-      while (i.hasNext()) {
-        Tag t = i.next();
-        if (TagType.TTL_TAG_TYPE == t.getType()) {
-          // Unlike in schema cell TTLs are stored in milliseconds, no need
-          // to convert
-          long ts = cell.getTimestamp();
-          assert t.getTagLength() == Bytes.SIZEOF_LONG;
-          long ttl = Bytes.toLong(t.getBuffer(), t.getTagOffset(), t.getTagLength());
-          if (ts + ttl < now) {
-            return true;
-          }
-          // Per cell TTLs cannot extend lifetime beyond family settings, so
-          // fall through to check that
-          break;
+    // Look for a TTL tag first. Use it instead of the family setting if
+    // found. If a cell has multiple TTLs, resolve the conflict by using the
+    // first tag encountered.
+    Iterator<Tag> i = CellUtil.tagsIterator(cell);
+    while (i.hasNext()) {
+      Tag t = i.next();
+      if (TagType.TTL_TAG_TYPE == t.getType()) {
+        // Unlike in schema cell TTLs are stored in milliseconds, no need
+        // to convert
+        long ts = cell.getTimestamp();
+        assert t.getValueLength() == Bytes.SIZEOF_LONG;
+        long ttl = TagUtil.getValueAsLong(t);
+        if (ts + ttl < now) {
+          return true;
         }
+        // Per cell TTLs cannot extend lifetime beyond family settings, so
+        // fall through to check that
+        break;
       }
     }
     return false;

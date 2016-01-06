@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -66,7 +67,7 @@ public final class MobConstants {
 
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";
   public static final String MOB_CACHE_EVICT_REMAIN_RATIO = "hbase.mob.cache.evict.remain.ratio";
-  public static final Tag MOB_REF_TAG = new Tag(TagType.MOB_REFERENCE_TAG_TYPE,
+  public static final Tag MOB_REF_TAG = new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE,
       HConstants.EMPTY_BYTE_ARRAY);
 
   public static final float DEFAULT_EVICT_REMAIN_RATIO = 0.5f;

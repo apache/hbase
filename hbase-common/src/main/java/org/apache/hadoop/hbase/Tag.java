@@ -19,201 +19,60 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
+
 /**
- * Tags are part of cells and helps to add metadata about the KVs.
- * Metadata could be ACLs per cells, visibility labels, etc.
+ * Tags are part of cells and helps to add metadata about them.
+ * Metadata could be ACLs, visibility labels, etc.
+ * <p>
+ * Each Tag is having a type (one byte) and value part. The max value length for a Tag is 65533.
+ * <p>
+ * See {@link TagType} for reserved tag types.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Tag {
+public interface Tag {
+
   public final static int TYPE_LENGTH_SIZE = Bytes.SIZEOF_BYTE;
   public final static int TAG_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
   public final static int INFRASTRUCTURE_SIZE = TYPE_LENGTH_SIZE + TAG_LENGTH_SIZE;
   public static final int MAX_TAG_LENGTH = (2 * Short.MAX_VALUE) + 1 - TAG_LENGTH_SIZE;
 
-  private final byte type;
-  private final byte[] bytes;
-  private int offset = 0;
-  private int length = 0;
-
-  /**
-   * The special tag will write the length of each tag and that will be
-   * followed by the type and then the actual tag.
-   * So every time the length part is parsed we need to add + 1 byte to it to
-   * get the type and then get the actual tag.
-   */
-  public Tag(byte tagType, String tag) {
-    this(tagType, Bytes.toBytes(tag));
-  }
-
-  /**
-   * Format for a tag :
-   * {@code <length of tag - 2 bytes><type code - 1 byte><tag>} tag length is serialized
-   * using 2 bytes only but as this will be unsigned, we can have max tag length of
-   * (Short.MAX_SIZE * 2) +1. It includes 1 byte type length and actual tag bytes length.
-   */
-  public Tag(byte tagType, byte[] tag) {
-    int tagLength = tag.length + TYPE_LENGTH_SIZE;
-    if (tagLength > MAX_TAG_LENGTH) {
-      throw new IllegalArgumentException(
-          "Invalid tag data being passed. Its length can not exceed " + MAX_TAG_LENGTH);
-    }
-    length = TAG_LENGTH_SIZE + tagLength;
-    bytes = new byte[length];
-    int pos = Bytes.putAsShort(bytes, 0, tagLength);
-    pos = Bytes.putByte(bytes, pos, tagType);
-    Bytes.putBytes(bytes, pos, tag, 0, tag.length);
-    this.type = tagType;
-  }
-
-  /**
-   * Creates a Tag from the specified byte array and offset. Presumes
-   * <code>bytes</code> content starting at <code>offset</code> is formatted as
-   * a Tag blob.
-   * The bytes to include the tag type, tag length and actual tag bytes.
-   * @param offset offset to start of Tag
-   */
-  public Tag(byte[] bytes, int offset) {
-    this(bytes, offset, getLength(bytes, offset));
-  }
-
-  private static int getLength(byte[] bytes, int offset) {
-    return TAG_LENGTH_SIZE + Bytes.readAsInt(bytes, offset, TAG_LENGTH_SIZE);
-  }
-
-  /**
-   * Creates a Tag from the specified byte array, starting at offset, and for length
-   * <code>length</code>. Presumes <code>bytes</code> content starting at <code>offset</code> is
-   * formatted as a Tag blob.
-   */
-  public Tag(byte[] bytes, int offset, int length) {
-    if (length > MAX_TAG_LENGTH) {
-      throw new IllegalArgumentException(
-          "Invalid tag data being passed. Its length can not exceed " + MAX_TAG_LENGTH);
-    }
-    this.bytes = bytes;
-    this.offset = offset;
-    this.length = length;
-    this.type = bytes[offset + TAG_LENGTH_SIZE];
-  }
-
-  /**
-   * @return The byte array backing this Tag.
-   */
-  public byte[] getBuffer() {
-    return this.bytes;
-  }
-
   /**
    * @return the tag type
    */
-  public byte getType() {
-    return this.type;
-  }
+  byte getType();
 
   /**
-   * @return Length of actual tag bytes within the backed buffer
+   * @return Offset of tag value within the backed buffer
    */
-  public int getTagLength() {
-    return this.length - INFRASTRUCTURE_SIZE;
-  }
+  int getValueOffset();
 
   /**
-   * @return Offset of actual tag bytes within the backed buffer
+   * @return Length of tag value within the backed buffer
    */
-  public int getTagOffset() {
-    return this.offset + INFRASTRUCTURE_SIZE;
-  }
+  int getValueLength();
 
   /**
-   * Returns tag value in a new byte array.
-   * Primarily for use client-side. If server-side, use
-   * {@link #getBuffer()} with appropriate {@link #getTagOffset()} and {@link #getTagLength()}
-   * instead to save on allocations.
-   * @return tag value in a new byte array.
+   * Tells whether or not this Tag is backed by a byte array.
+   * @return true when this Tag is backed by byte array
    */
-  public byte[] getValue() {
-    int tagLength = getTagLength();
-    byte[] tag = new byte[tagLength];
-    Bytes.putBytes(tag, 0, bytes, getTagOffset(), tagLength);
-    return tag;
-  }
+  boolean hasArray();
 
   /**
-   * Creates the list of tags from the byte array b. Expected that b is in the
-   * expected tag format
-   * @param b
-   * @param offset
-   * @param length
-   * @return List of tags
+   * @return The array containing the value bytes.
+   * @throws UnsupportedOperationException
+   *           when {@link #hasArray()} return false. Use {@link #getValueByteBuffer()} in such
+   *           situation
    */
-  public static List<Tag> asList(byte[] b, int offset, int length) {
-    List<Tag> tags = new ArrayList<Tag>();
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen = Bytes.readAsInt(b, pos, TAG_LENGTH_SIZE);
-      tags.add(new Tag(b, pos, tagLen + TAG_LENGTH_SIZE));
-      pos += TAG_LENGTH_SIZE + tagLen;
-    }
-    return tags;
-  }
+  byte[] getValueArray();
 
   /**
-   * Write a list of tags into a byte array
-   * @param tags
-   * @return the serialized tag data as bytes
+   * @return The {@link java.nio.ByteBuffer} containing the value bytes.
    */
-  public static byte[] fromList(List<Tag> tags) {
-    int length = 0;
-    for (Tag tag: tags) {
-      length += tag.length;
-    }
-    byte[] b = new byte[length];
-    int pos = 0;
-    for (Tag tag: tags) {
-      System.arraycopy(tag.bytes, tag.offset, b, pos, tag.length);
-      pos += tag.length;
-    }
-    return b;
-  }
-
-  /**
-   * Retrieve the first tag from the tags byte array matching the passed in tag type
-   * @param b
-   * @param offset
-   * @param length
-   * @param type
-   * @return null if there is no tag of the passed in tag type
-   */
-  public static Tag getTag(byte[] b, int offset, int length, byte type) {
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen = Bytes.readAsInt(b, pos, TAG_LENGTH_SIZE);
-      if(b[pos + TAG_LENGTH_SIZE] == type) {
-        return new Tag(b, pos, tagLen + TAG_LENGTH_SIZE);
-      }
-      pos += TAG_LENGTH_SIZE + tagLen;
-    }
-    return null;
-  }
-
-  /**
-   * Returns the total length of the entire tag entity
-   */
-  int getLength() {
-    return this.length;
-  }
-
-  /**
-   * Returns the offset of the entire tag entity
-   */
-  int getOffset() {
-    return this.offset;
-  }
+  ByteBuffer getValueByteBuffer();
 }

@@ -1405,7 +1405,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           byte[] tag = generateData(this.rand, TAG_LENGTH);
           Tag[] tags = new Tag[opts.noOfTags];
           for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new Tag((byte) n, tag);
+            Tag t = new ArrayBackedTag((byte) n, tag);
             tags[n] = t;
           }
           KeyValue kv = new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP,
@@ -1493,7 +1493,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           byte[] tag = generateData(this.rand, TAG_LENGTH);
           Tag[] tags = new Tag[opts.noOfTags];
           for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new Tag((byte) n, tag);
+            Tag t = new ArrayBackedTag((byte) n, tag);
             tags[n] = t;
           }
           KeyValue kv = new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP,

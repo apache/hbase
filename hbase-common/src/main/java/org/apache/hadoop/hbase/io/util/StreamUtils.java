@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -127,9 +128,10 @@ public class StreamUtils {
    *          Offset in the input array where varInt is available
    * @return A pair of integers in which first value is the actual decoded varInt value and second
    *         value as number of bytes taken by this varInt for it's storage in the input array.
-   * @throws IOException
+   * @throws IOException When varint is malformed and not able to be read correctly
    */
-  public static Pair<Integer, Integer> readRawVarint32(byte[] input, int offset) throws IOException {
+  public static Pair<Integer, Integer> readRawVarint32(byte[] input, int offset)
+      throws IOException {
     int newOffset = offset;
     byte tmp = input[newOffset++];
     if (tmp >= 0) {
@@ -157,6 +159,47 @@ public class StreamUtils {
             // Discard upper 32 bits.
             for (int i = 0; i < 5; i++) {
               tmp = input[newOffset++];
+              if (tmp >= 0) {
+                return new Pair<Integer, Integer>(result, newOffset - offset);
+              }
+            }
+            throw new IOException("Malformed varint");
+          }
+        }
+      }
+    }
+    return new Pair<Integer, Integer>(result, newOffset - offset);
+  }
+
+  public static Pair<Integer, Integer> readRawVarint32(ByteBuffer input, int offset)
+      throws IOException {
+    int newOffset = offset;
+    byte tmp = input.get(newOffset++);
+    if (tmp >= 0) {
+      return new Pair<Integer, Integer>((int) tmp, newOffset - offset);
+    }
+    int result = tmp & 0x7f;
+    tmp = input.get(newOffset++);
+    if (tmp >= 0) {
+      result |= tmp << 7;
+    } else {
+      result |= (tmp & 0x7f) << 7;
+      tmp = input.get(newOffset++);
+      if (tmp >= 0) {
+        result |= tmp << 14;
+      } else {
+        result |= (tmp & 0x7f) << 14;
+        tmp = input.get(newOffset++);
+        if (tmp >= 0) {
+          result |= tmp << 21;
+        } else {
+          result |= (tmp & 0x7f) << 21;
+          tmp = input.get(newOffset++);
+          result |= tmp << 28;
+          if (tmp < 0) {
+            // Discard upper 32 bits.
+            for (int i = 0; i < 5; i++) {
+              tmp = input.get(newOffset++);
               if (tmp >= 0) {
                 return new Pair<Integer, Integer>(result, newOffset - offset);
               }

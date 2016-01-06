@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Durability;
@@ -325,7 +327,7 @@ public class TestTags {
             if (CellUtil.matchingRow(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
-              assertEquals(bigTagLen, tag.getTagLength());
+              assertEquals(bigTagLen, tag.getValueLength());
             } else {
               assertEquals(0, TestCoprocessorForTags.tags.size());
             }
@@ -350,7 +352,7 @@ public class TestTags {
             if (CellUtil.matchingRow(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
-              assertEquals(bigTagLen, tag.getTagLength());
+              assertEquals(bigTagLen, tag.getValueLength());
             } else {
               assertEquals(0, TestCoprocessorForTags.tags.size());
             }
@@ -403,7 +405,7 @@ public class TestTags {
       List<Tag> tags = TestCoprocessorForTags.tags;
       assertEquals(3L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(1, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -421,7 +423,7 @@ public class TestTags {
       // We cannot assume the ordering of tags
       List<String> tagValues = new ArrayList<String>();
       for (Tag tag: tags) {
-        tagValues.add(Bytes.toString(tag.getValue()));
+        tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
       assertTrue(tagValues.contains("tag2"));
@@ -445,7 +447,7 @@ public class TestTags {
       tags = TestCoprocessorForTags.tags;
       assertEquals(4L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(1, tags.size());
-      assertEquals("tag2", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag2", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -466,7 +468,7 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(1, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -483,7 +485,7 @@ public class TestTags {
       // We cannot assume the ordering of tags
       tagValues.clear();
       for (Tag tag: tags) {
-        tagValues.add(Bytes.toString(tag.getValue()));
+        tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
       assertTrue(tagValues.contains("tag2"));
@@ -506,7 +508,7 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(1, tags.size());
-      assertEquals("tag2", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag2", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
     } finally {
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
@@ -569,7 +571,7 @@ public class TestTags {
             if (cf == null) {
               cf = CellUtil.cloneFamily(kv);
             }
-            Tag tag = new Tag((byte) 1, attribute);
+            Tag tag = new ArrayBackedTag((byte) 1, attribute);
             List<Tag> tagList = new ArrayList<Tag>();
             tagList.add(tag);
 
@@ -611,7 +613,7 @@ public class TestTags {
           CellScanner cellScanner = result.cellScanner();
           if (cellScanner.advance()) {
             Cell cell = cellScanner.current();
-            tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+            tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
                 cell.getTagsLength());
           }
         }

@@ -39,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -385,7 +386,7 @@ public class TestCacheOnWrite {
       byte[] value = RandomKeyValueUtil.randomValue(rand);
       KeyValue kv;
       if(useTags) {
-        Tag t = new Tag((byte) 1, "visibility");
+        Tag t = new ArrayBackedTag((byte) 1, "visibility");
         List<Tag> tagList = new ArrayList<Tag>();
         tagList.add(t);
         Tag[] tags = new Tag[1];
@@ -434,7 +435,7 @@ public class TestCacheOnWrite {
           String valueStr = "value_" + rowStr + "_" + qualStr;
           for (int iTS = 0; iTS < 5; ++iTS) {
             if (useTags) {
-              Tag t = new Tag((byte) 1, "visibility");
+              Tag t = new ArrayBackedTag((byte) 1, "visibility");
               Tag[] tags = new Tag[1];
               tags[0] = t;
               KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -148,7 +149,7 @@ public class TestEncodedSeekers {
         byte[] value = dataGenerator.generateRandomSizeValue(key, col);
         if (includeTags) {
           Tag[] tag = new Tag[1];
-          tag[0] = new Tag((byte) 1, "Visibility");
+          tag[0] = new ArrayBackedTag((byte) 1, "Visibility");
           KeyValue kv = new KeyValue(key, CF_BYTES, col, HConstants.LATEST_TIMESTAMP, value, tag);
           put.add(kv);
         } else {

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -1124,7 +1125,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         byte[] tag = generateData(this.rand, TAG_LENGTH);
         Tag[] tags = new Tag[noOfTags];
         for (int n = 0; n < noOfTags; n++) {
-          Tag t = new Tag((byte) n, tag);
+          Tag t = new ArrayBackedTag((byte) n, tag);
           tags[n] = t;
         }
         KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,
@@ -1195,7 +1196,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         byte[] tag = generateData(this.rand, TAG_LENGTH);
         Tag[] tags = new Tag[noOfTags];
         for (int n = 0; n < noOfTags; n++) {
-          Tag t = new Tag((byte) n, tag);
+          Tag t = new ArrayBackedTag((byte) n, tag);
           tags[n] = t;
         }
         KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,

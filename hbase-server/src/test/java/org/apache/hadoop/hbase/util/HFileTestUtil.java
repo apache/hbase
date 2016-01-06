@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.util;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -98,14 +101,11 @@ public class HFileTestUtil {
         KeyValue kv = new KeyValue(key, family, qualifier, now, key);
         if (withTag) {
           // add a tag.  Arbitrarily chose mob tag since we have a helper already.
-          Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, key);
+          Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, key);
           kv = MobUtils.createMobRefKeyValue(kv, key, tableNameTag);
 
           // verify that the kv has the tag.
-          byte[] ta = kv.getTagsArray();
-          int toff = kv.getTagsOffset();
-          int tlen = kv.getTagsLength();
-          Tag t = Tag.getTag(ta, toff, tlen, TagType.MOB_TABLE_NAME_TAG_TYPE);
+          Tag t = CellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
           if (t == null) {
             throw new IllegalStateException("Tag didn't stick to KV " + kv.toString());
           }
@@ -130,15 +130,12 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        byte[] ta = c.getTagsArray();
-        int toff = c.getTagsOffset();
-        int tlen = c.getTagsLength();
-        Tag t = Tag.getTag(ta, toff, tlen, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        Tag t = CellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
         if (t == null) {
           fail(c.toString() + " has null tag");
           continue;
         }
-        byte[] tval = t.getValue();
+        byte[] tval = TagUtil.cloneValue(t);
         assertArrayEquals(c.toString() + " has tag" + Bytes.toString(tval),
             r.getRow(), tval);
       }

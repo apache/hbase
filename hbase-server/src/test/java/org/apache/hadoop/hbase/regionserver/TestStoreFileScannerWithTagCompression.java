@@ -31,9 +31,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -86,7 +88,7 @@ public class TestStoreFileScannerWithTagCompression {
           kv.getRowLength()));
       List<Tag> tags = KeyValueUtil.ensureKeyValue(kv).getTags();
       assertEquals(1, tags.size());
-      assertEquals("tag3", Bytes.toString(tags.get(0).getValue()));
+      assertEquals("tag3", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
     } finally {
       s.close();
     }
@@ -97,9 +99,9 @@ public class TestStoreFileScannerWithTagCompression {
     byte[] qualifier = Bytes.toBytes("q");
     long now = System.currentTimeMillis();
     byte[] b = Bytes.toBytes("k1");
-    Tag t1 = new Tag((byte) 1, "tag1");
-    Tag t2 = new Tag((byte) 2, "tag2");
-    Tag t3 = new Tag((byte) 3, "tag3");
+    Tag t1 = new ArrayBackedTag((byte) 1, "tag1");
+    Tag t2 = new ArrayBackedTag((byte) 2, "tag2");
+    Tag t3 = new ArrayBackedTag((byte) 3, "tag3");
     try {
       writer.append(new KeyValue(b, fam, qualifier, now, b, new Tag[] { t1 }));
       b = Bytes.toBytes("k3");

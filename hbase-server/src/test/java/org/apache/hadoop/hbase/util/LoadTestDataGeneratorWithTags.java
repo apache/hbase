@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.MultiThreadedAction.DefaultDataGenerator;
@@ -77,7 +78,7 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
             minTagLength + random.nextInt(maxTagLength - minTagLength));
         tags = new ArrayList<Tag>();
         for (int n = 0; n < numTags; n++) {
-          tags.add(new Tag((byte) 127, tag));
+          tags.add(new ArrayBackedTag((byte) 127, tag));
         }
         Cell updatedCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
             cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(),

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -280,8 +281,8 @@ public class RedundantKVGenerator {
       }
 
       if (useTags) {
-        result.add(new KeyValue(row, family, qualifier, timestamp, value, new Tag[] { new Tag(
-            (byte) 1, "value1") }));
+        result.add(new KeyValue(row, family, qualifier, timestamp, value,
+            new Tag[] { new ArrayBackedTag((byte) 1, "value1") }));
       } else {
         result.add(new KeyValue(row, family, qualifier, timestamp, value));
       }
@@ -365,7 +366,7 @@ public class RedundantKVGenerator {
       }
       if (useTags) {
         KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value,
-            new Tag[] { new Tag((byte) 1, "value1") });
+            new Tag[] { new ArrayBackedTag((byte) 1, "value1") });
         ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());

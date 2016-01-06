@@ -24,10 +24,12 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -79,7 +81,8 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
                 byte[] modifiedVisExpression = visibilityLabelsService
                     .encodeVisibilityForReplication(visTags, serializationFormat);
                 if (modifiedVisExpression != null) {
-                  nonVisTags.add(new Tag(TagType.STRING_VIS_TAG_TYPE, modifiedVisExpression));
+                  nonVisTags
+                      .add(new ArrayBackedTag(TagType.STRING_VIS_TAG_TYPE, modifiedVisExpression));
                 }
               } catch (Exception ioe) {
                 LOG.error(
@@ -92,7 +95,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
                 continue;
               }
               // Recreate the cell with the new tags and the existing tags
-              Cell newCell = new TagRewriteCell(cell, Tag.fromList(nonVisTags));
+              Cell newCell = new TagRewriteCell(cell, TagUtil.fromList(nonVisTags));
               newEdit.add(newCell);
             } else {
               newEdit.add(cell);

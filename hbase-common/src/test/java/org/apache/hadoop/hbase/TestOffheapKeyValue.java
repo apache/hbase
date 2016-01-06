@@ -43,8 +43,8 @@ public class TestOffheapKeyValue {
   private static final byte[] fam2 = Bytes.toBytes(FAM2);
   private static final byte[] qual1 = Bytes.toBytes(QUAL1);
   private static final byte[] qual2 = Bytes.toBytes(QUAL2);
-  private static final Tag t1 = new Tag((byte) 1, Bytes.toBytes("TAG1"));
-  private static final Tag t2 = new Tag((byte) 2, Bytes.toBytes("TAG2"));
+  private static final Tag t1 = new ArrayBackedTag((byte) 1, Bytes.toBytes("TAG1"));
+  private static final Tag t2 = new ArrayBackedTag((byte) 2, Bytes.toBytes("TAG2"));
   private static final ArrayList<Tag> tags = new ArrayList<Tag>();
   static {
     tags.add(t1);
@@ -158,17 +158,17 @@ public class TestOffheapKeyValue {
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
     // change tags to handle both onheap and offheap stuff
-    List<Tag> resTags =
-        Tag.asList(offheapKV.getTagsArray(), offheapKV.getTagsOffset(), offheapKV.getTagsLength());
+    List<Tag> resTags = TagUtil.asList(offheapKV.getTagsArray(), offheapKV.getTagsOffset(),
+        offheapKV.getTagsLength());
     Tag tag1 = resTags.get(0);
     assertEquals(t1.getType(), tag1.getType());
-    assertEquals(Bytes.toString(t1.getValue()), Bytes.toString(getTagValue(tag1)));
+    assertEquals(TagUtil.getValueAsString(t1), TagUtil.getValueAsString(tag1));
     Tag tag2 = resTags.get(1);
     assertEquals(tag2.getType(), tag2.getType());
-    assertEquals(Bytes.toString(t2.getValue()), Bytes.toString(getTagValue(tag2)));
-    Tag res = Tag.getTag(offheapKV.getTagsArray(), 0, offheapKV.getTagsLength(), (byte) 2);
-    assertEquals(Bytes.toString(t2.getValue()), Bytes.toString(getTagValue(tag2)));
-    res = Tag.getTag(offheapKV.getTagsArray(), 0, offheapKV.getTagsLength(), (byte) 3);
+    assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
+    Tag res = CellUtil.getTag(offheapKV, (byte) 2);
+    assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
+    res = CellUtil.getTag(offheapKV, (byte) 3);
     assertNull(res);
   }
 
@@ -194,12 +194,5 @@ public class TestOffheapKeyValue {
         offheapKeyOnlyKV.getQualifierLength()));
     assertEquals(0L, offheapKeyOnlyKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKeyOnlyKV.getTypeByte());
-  }
-  // TODO : Can be moved to TagUtil
-  private static byte[] getTagValue(Tag tag) {
-    int tagLength = tag.getTagLength();
-    byte[] tagBytes = new byte[tagLength];
-    System.arraycopy(tag.getBuffer(), tag.getTagOffset(), tagBytes, 0, tagLength);
-    return tagBytes;
   }
 }

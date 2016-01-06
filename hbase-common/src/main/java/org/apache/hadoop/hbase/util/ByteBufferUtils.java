@@ -751,6 +751,29 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Converts a ByteBuffer to an int value
+   *
+   * @param buf The ByteBuffer
+   * @param offset Offset to int value
+   * @param length Number of bytes used to store the int value.
+   * @return the int value
+   * @throws IllegalArgumentException
+   *           if there's not enough bytes left in the buffer after the given offset
+   */
+  public static int readAsInt(ByteBuffer buf, int offset, final int length) {
+    if (offset + length > buf.limit()) {
+      throw new IllegalArgumentException("offset (" + offset + ") + length (" + length
+          + ") exceed the" + " limit of the buffer: " + buf.limit());
+    }
+    int n = 0;
+    for(int i = offset; i < (offset + length); i++) {
+      n <<= 8;
+      n ^= toByte(buf, i) & 0xFF;
+    }
+    return n;
+  }
+
+  /**
    * Reads a long value at the given buffer's offset.
    * @param buffer
    * @param offset

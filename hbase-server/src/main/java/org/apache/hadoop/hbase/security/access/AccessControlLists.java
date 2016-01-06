@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -658,8 +659,7 @@ public class AccessControlLists {
        return null;
      }
      List<Permission> results = Lists.newArrayList();
-     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
      while (tagsIterator.hasNext()) {
        Tag tag = tagsIterator.next();
        if (tag.getType() == ACL_TAG_TYPE) {
@@ -668,7 +668,12 @@ public class AccessControlLists {
          // use the builder
          AccessControlProtos.UsersAndPermissions.Builder builder = 
            AccessControlProtos.UsersAndPermissions.newBuilder();
-         ProtobufUtil.mergeFrom(builder, tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
+         if (tag.hasArray()) {
+           ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(),
+               tag.getValueLength());
+         } else {
+           ProtobufUtil.mergeFrom(builder,TagUtil.cloneValue(tag));
+         }
          ListMultimap<String,Permission> kvPerms =
            ProtobufUtil.toUsersAndPermissions(builder.build());
          // Are there permissions for this user?

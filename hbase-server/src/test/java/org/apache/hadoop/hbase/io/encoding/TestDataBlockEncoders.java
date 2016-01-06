@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeSeeker;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
@@ -136,10 +137,10 @@ public class TestDataBlockEncoders {
     } else {
       byte[] metaValue1 = Bytes.toBytes("metaValue1");
       byte[] metaValue2 = Bytes.toBytes("metaValue2");
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue1) }));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue2) }));
+      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+          new Tag[] { new ArrayBackedTag((byte) 1, metaValue1) }));
+      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+          new Tag[] { new ArrayBackedTag((byte) 1, metaValue2) }));
     }
     testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }
@@ -160,10 +161,10 @@ public class TestDataBlockEncoders {
     if (includesTags) {
       byte[] metaValue1 = Bytes.toBytes("metaValue1");
       byte[] metaValue2 = Bytes.toBytes("metaValue2");
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue1) }));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue2) }));
+      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+          new Tag[] { new ArrayBackedTag((byte) 1, metaValue1) }));
+      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+          new Tag[] { new ArrayBackedTag((byte) 1, metaValue2) }));
     } else {
       kvList.add(new KeyValue(row, family, qualifier, -1l, Type.Put, value));
       kvList.add(new KeyValue(row, family, qualifier, -2l, Type.Put, value));
@@ -416,10 +417,10 @@ public class TestDataBlockEncoders {
     byte[] value0 = new byte[] { 'd' };
     byte[] value1 = new byte[] { 0x00 };
     if (includesTags) {
-      kvList.add(new KeyValue(row, family, qualifier0, 0, value0, new Tag[] { new Tag((byte) 1,
-          "value1") }));
-      kvList.add(new KeyValue(row, family, qualifier1, 0, value1, new Tag[] { new Tag((byte) 1,
-          "value1") }));
+      kvList.add(new KeyValue(row, family, qualifier0, 0, value0,
+          new Tag[] { new ArrayBackedTag((byte) 1, "value1") }));
+      kvList.add(new KeyValue(row, family, qualifier1, 0, value1,
+          new Tag[] { new ArrayBackedTag((byte) 1, "value1") }));
     } else {
       kvList.add(new KeyValue(row, family, qualifier0, 0, Type.Put, value0));
       kvList.add(new KeyValue(row, family, qualifier1, 0, Type.Put, value1));

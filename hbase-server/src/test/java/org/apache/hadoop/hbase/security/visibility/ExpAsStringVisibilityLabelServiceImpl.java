@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -73,7 +76,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
 
   private static final byte[] DUMMY_VALUE = new byte[0];
   private static final byte STRING_SERIALIZATION_FORMAT = 2;
-  private static final Tag STRING_SERIALIZATION_FORMAT_TAG = new Tag(
+  private static final Tag STRING_SERIALIZATION_FORMAT_TAG = new ArrayBackedTag(
       TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE,
       new byte[] { STRING_SERIALIZATION_FORMAT });
   private final ExpressionParser expressionParser = new ExpressionParser();
@@ -281,28 +284,27 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
         boolean visibilityTagPresent = false;
         // Save an object allocation where we can
         if (cell.getTagsLength() > 0) {
-          Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength());
+          Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
           while (tagsItr.hasNext()) {
             boolean includeKV = true;
             Tag tag = tagsItr.next();
             if (tag.getType() == VISIBILITY_TAG_TYPE) {
               visibilityTagPresent = true;
-              int offset = tag.getTagOffset();
-              int endOffset = offset + tag.getTagLength();
+              int offset = tag.getValueOffset();
+              int endOffset = offset + tag.getValueLength();
               while (offset < endOffset) {
-                short len = Bytes.toShort(tag.getBuffer(), offset);
+                short len = getTagValuePartAsShort(tag, offset);
                 offset += 2;
                 if (len < 0) {
                   // This is a NOT label.
                   len = (short) (-1 * len);
-                  String label = Bytes.toString(tag.getBuffer(), offset, len);
+                  String label = Bytes.toString(tag.getValueArray(), offset, len);
                   if (authLabelsFinal.contains(label)) {
                     includeKV = false;
                     break;
                   }
                 } else {
-                  String label = Bytes.toString(tag.getBuffer(), offset, len);
+                  String label = Bytes.toString(tag.getValueArray(), offset, len);
                   if (!authLabelsFinal.contains(label)) {
                     includeKV = false;
                     break;
@@ -353,7 +355,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       dos.writeShort(bLabel.length);
       dos.write(bLabel);
     }
-    return new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray());
+    return new ArrayBackedTag(VISIBILITY_TAG_TYPE, baos.toByteArray());
   }
 
   private void extractLabels(ExpressionNode node, List<String> labels, List<String> notLabels) {
@@ -423,8 +425,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       for (Tag tag : deleteVisTags) {
         matchFound = false;
         for (Tag givenTag : putVisTags) {
-          if (Bytes.equals(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength(),
-              givenTag.getBuffer(), givenTag.getTagOffset(), givenTag.getTagLength())) {
+          if (TagUtil.matchingValue(tag, givenTag)) {
             matchFound = true;
             break;
           }
@@ -459,15 +460,15 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
           visibilityString.append(VisibilityConstants.CLOSED_PARAN
               + VisibilityConstants.OR_OPERATOR);
         }
-        int offset = tag.getTagOffset();
-        int endOffset = offset + tag.getTagLength();
+        int offset = tag.getValueOffset();
+        int endOffset = offset + tag.getValueLength();
         boolean expressionStart = true;
         while (offset < endOffset) {
-          short len = Bytes.toShort(tag.getBuffer(), offset);
+          short len = getTagValuePartAsShort(tag, offset);
           offset += 2;
           if (len < 0) {
             len = (short) (-1 * len);
-            String label = Bytes.toString(tag.getBuffer(), offset, len);
+            String label = getTagValuePartAsString(tag, offset, len);
             if (expressionStart) {
               visibilityString.append(VisibilityConstants.OPEN_PARAN
                   + VisibilityConstants.NOT_OPERATOR + CellVisibility.quote(label));
@@ -476,7 +477,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
                   + VisibilityConstants.NOT_OPERATOR + CellVisibility.quote(label));
             }
           } else {
-            String label = Bytes.toString(tag.getBuffer(), offset, len);
+            String label = getTagValuePartAsString(tag, offset, len);
             if (expressionStart) {
               visibilityString.append(VisibilityConstants.OPEN_PARAN + CellVisibility.quote(label));
             } else {
@@ -495,5 +496,21 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       return Bytes.toBytes(visibilityString.toString());
     }
     return null;
+  }
+
+  private static short getTagValuePartAsShort(Tag t, int offset) {
+    if (t.hasArray()) {
+      return Bytes.toShort(t.getValueArray(), offset);
+    }
+    return ByteBufferUtils.toShort(t.getValueByteBuffer(), offset);
+  }
+
+  private static String getTagValuePartAsString(Tag t, int offset, int length) {
+    if (t.hasArray()) {
+      return Bytes.toString(t.getValueArray(), offset, length);
+    }
+    byte[] b = new byte[length];
+    ByteBufferUtils.copyFromBufferToArray(b, t.getValueByteBuffer(), offset, 0, length);
+    return Bytes.toString(b);
   }
 }

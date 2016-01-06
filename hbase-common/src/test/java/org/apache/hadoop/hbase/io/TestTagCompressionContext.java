@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -97,7 +98,7 @@ public class TestTagCompressionContext {
   private KeyValue createKVWithTags(int noOfTags) {
     List<Tag> tags = new ArrayList<Tag>();
     for (int i = 0; i < noOfTags; i++) {
-      tags.add(new Tag((byte) i, "tagValue" + i));
+      tags.add(new ArrayBackedTag((byte) i, "tagValue" + i));
     }
     KeyValue kv = new KeyValue(ROW, CF, Q, 1234L, V, tags);
     return kv;

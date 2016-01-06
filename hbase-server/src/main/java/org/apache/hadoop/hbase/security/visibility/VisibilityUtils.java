@@ -35,11 +35,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -74,7 +76,7 @@ public class VisibilityUtils {
   public static final String VISIBILITY_LABEL_GENERATOR_CLASS =
       "hbase.regionserver.scan.visibility.label.generator.class";
   public static final String SYSTEM_LABEL = "system";
-  public static final Tag SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG = new Tag(
+  public static final Tag SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG = new ArrayBackedTag(
       TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE,
       VisibilityConstants.SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG_VAL);
   private static final String COMMA = ",";
@@ -209,16 +211,13 @@ public class VisibilityUtils {
    */
   public static Byte extractVisibilityTags(Cell cell, List<Tag> tags) {
     Byte serializationFormat = null;
-    if (cell.getTagsLength() > 0) {
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-          cell.getTagsLength());
-      while (tagsIterator.hasNext()) {
-        Tag tag = tagsIterator.next();
-        if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
-          serializationFormat = tag.getBuffer()[tag.getTagOffset()];
-        } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
-          tags.add(tag);
-        }
+    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    while (tagsIterator.hasNext()) {
+      Tag tag = tagsIterator.next();
+      if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
+        serializationFormat = TagUtil.getValueAsByte(tag);
+      } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
+        tags.add(tag);
       }
     }
     return serializationFormat;
@@ -239,30 +238,23 @@ public class VisibilityUtils {
   public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags,
       List<Tag> nonVisTags) {
     Byte serializationFormat = null;
-    if (cell.getTagsLength() > 0) {
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-          cell.getTagsLength());
-      while (tagsIterator.hasNext()) {
-        Tag tag = tagsIterator.next();
-        if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
-          serializationFormat = tag.getBuffer()[tag.getTagOffset()];
-        } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
-          visTags.add(tag);
-        } else {
-          // ignore string encoded visibility expressions, will be added in replication handling
-          nonVisTags.add(tag);
-        }
+    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    while (tagsIterator.hasNext()) {
+      Tag tag = tagsIterator.next();
+      if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
+        serializationFormat = TagUtil.getValueAsByte(tag);
+      } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
+        visTags.add(tag);
+      } else {
+        // ignore string encoded visibility expressions, will be added in replication handling
+        nonVisTags.add(tag);
       }
     }
     return serializationFormat;
   }
 
   public static boolean isVisibilityTagsPresent(Cell cell) {
-    if (cell.getTagsLength() == 0) {
-      return false;
-    }
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == VISIBILITY_TAG_TYPE) {
@@ -322,7 +314,7 @@ public class VisibilityUtils {
     if (node.isSingleNode()) {
       getLabelOrdinals(node, labelOrdinals, auths, checkAuths, ordinalProvider);
       writeLabelOrdinalsToStream(labelOrdinals, dos);
-      tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
+      tags.add(new ArrayBackedTag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
       baos.reset();
     } else {
       NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
@@ -330,14 +322,14 @@ public class VisibilityUtils {
         for (ExpressionNode child : nlNode.getChildExps()) {
           getLabelOrdinals(child, labelOrdinals, auths, checkAuths, ordinalProvider);
           writeLabelOrdinalsToStream(labelOrdinals, dos);
-          tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
+          tags.add(new ArrayBackedTag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
           baos.reset();
           labelOrdinals.clear();
         }
       } else {
         getLabelOrdinals(nlNode, labelOrdinals, auths, checkAuths, ordinalProvider);
         writeLabelOrdinalsToStream(labelOrdinals, dos);
-        tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
+        tags.add(new ArrayBackedTag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
         baos.reset();
       }
     }

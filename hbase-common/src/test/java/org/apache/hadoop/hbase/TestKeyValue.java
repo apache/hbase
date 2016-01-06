@@ -442,7 +442,7 @@ public class TestKeyValue extends TestCase {
     byte[] metaValue1 = Bytes.toBytes("metaValue1");
     byte[] metaValue2 = Bytes.toBytes("metaValue2");
     KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, new Tag[] {
-        new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2) });
+        new ArrayBackedTag((byte) 1, metaValue1), new ArrayBackedTag((byte) 2, metaValue2) });
     assertTrue(kv.getTagsLength() > 0);
     assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), row, 0,
       row.length));
@@ -458,44 +458,42 @@ public class TestKeyValue extends TestCase {
     boolean meta1Ok = false, meta2Ok = false;
     for (Tag tag : tags) {
       if (tag.getType() == (byte) 1) {
-        if (Bytes.equals(tag.getValue(), metaValue1)) {
+        if (Bytes.equals(TagUtil.cloneValue(tag), metaValue1)) {
           meta1Ok = true;
         }
       } else {
-        if (Bytes.equals(tag.getValue(), metaValue2)) {
+        if (Bytes.equals(TagUtil.cloneValue(tag), metaValue2)) {
           meta2Ok = true;
         }
       }
     }
     assertTrue(meta1Ok);
     assertTrue(meta2Ok);
-    Iterator<Tag> tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(),
-        kv.getTagsLength());
+    Iterator<Tag> tagItr = CellUtil.tagsIterator(kv);
     //Iterator<Tag> tagItr = kv.tagsIterator();
     assertTrue(tagItr.hasNext());
     Tag next = tagItr.next();
-    assertEquals(10, next.getTagLength());
+    assertEquals(10, next.getValueLength());
     assertEquals((byte) 1, next.getType());
-    Bytes.equals(next.getValue(), metaValue1);
+    Bytes.equals(TagUtil.cloneValue(next), metaValue1);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
-    assertEquals(10, next.getTagLength());
+    assertEquals(10, next.getValueLength());
     assertEquals((byte) 2, next.getType());
-    Bytes.equals(next.getValue(), metaValue2);
+    Bytes.equals(TagUtil.cloneValue(next), metaValue2);
     assertFalse(tagItr.hasNext());
 
-    tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(),
-        kv.getTagsLength());
+    tagItr = CellUtil.tagsIterator(kv);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
-    assertEquals(10, next.getTagLength());
+    assertEquals(10, next.getValueLength());
     assertEquals((byte) 1, next.getType());
-    Bytes.equals(next.getValue(), metaValue1);
+    Bytes.equals(TagUtil.cloneValue(next), metaValue1);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
-    assertEquals(10, next.getTagLength());
+    assertEquals(10, next.getValueLength());
     assertEquals((byte) 2, next.getType());
-    Bytes.equals(next.getValue(), metaValue2);
+    Bytes.equals(TagUtil.cloneValue(next), metaValue2);
     assertFalse(tagItr.hasNext());
   }
 

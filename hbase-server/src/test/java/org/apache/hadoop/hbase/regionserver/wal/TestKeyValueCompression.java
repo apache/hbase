@@ -24,9 +24,10 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -108,7 +109,7 @@ public class TestKeyValueCompression {
     byte[] value = Bytes.toBytes("myValue");
     List<Tag> tags = new ArrayList<Tag>(noOfTags);
     for (int i = 1; i <= noOfTags; i++) {
-      tags.add(new Tag((byte) i, Bytes.toBytes("tagValue" + i)));
+      tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }
     return new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
   }

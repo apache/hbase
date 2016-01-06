@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
@@ -69,7 +71,7 @@ public class TestWALCellCodecWithCompression {
     KeyValue kv = (KeyValue) decoder.current();
     List<Tag> tags = kv.getTags();
     assertEquals(1, tags.size());
-    assertEquals("tagValue1", Bytes.toString(tags.get(0).getValue()));
+    assertEquals("tagValue1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
     decoder.advance();
     kv = (KeyValue) decoder.current();
     tags = kv.getTags();
@@ -78,8 +80,8 @@ public class TestWALCellCodecWithCompression {
     kv = (KeyValue) decoder.current();
     tags = kv.getTags();
     assertEquals(2, tags.size());
-    assertEquals("tagValue1", Bytes.toString(tags.get(0).getValue()));
-    assertEquals("tagValue2", Bytes.toString(tags.get(1).getValue()));
+    assertEquals("tagValue1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+    assertEquals("tagValue2", Bytes.toString(TagUtil.cloneValue(tags.get(1))));
   }
 
   private KeyValue createKV(int noOfTags) {
@@ -89,7 +91,7 @@ public class TestWALCellCodecWithCompression {
     byte[] value = Bytes.toBytes("myValue");
     List<Tag> tags = new ArrayList<Tag>(noOfTags);
     for (int i = 1; i <= noOfTags; i++) {
-      tags.add(new Tag((byte) i, Bytes.toBytes("tagValue" + i)));
+      tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }
     return new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
   }

@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -90,7 +92,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     } catch (IOException e) {
       // We write to a byte array. No Exception can happen.
     }
-    LABELS_TABLE_TAGS[0] = new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray());
+    LABELS_TABLE_TAGS[0] = new ArrayBackedTag(VISIBILITY_TAG_TYPE, baos.toByteArray());
   }
 
   public DefaultVisibilityLabelServiceImpl() {
@@ -481,42 +483,37 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       @Override
       public boolean evaluate(Cell cell) throws IOException {
         boolean visibilityTagPresent = false;
-        // Save an object allocation where we can
-        if (cell.getTagsLength() > 0) {
-          Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength());
-          while (tagsItr.hasNext()) {
-            boolean includeKV = true;
-            Tag tag = tagsItr.next();
-            if (tag.getType() == VISIBILITY_TAG_TYPE) {
-              visibilityTagPresent = true;
-              int offset = tag.getTagOffset();
-              int endOffset = offset + tag.getTagLength();
-              while (offset < endOffset) {
-                Pair<Integer, Integer> result = StreamUtils
-                    .readRawVarint32(tag.getBuffer(), offset);
-                int currLabelOrdinal = result.getFirst();
-                if (currLabelOrdinal < 0) {
-                  // check for the absence of this label in the Scan Auth labels
-                  // ie. to check BitSet corresponding bit is 0
-                  int temp = -currLabelOrdinal;
-                  if (bs.get(temp)) {
-                    includeKV = false;
-                    break;
-                  }
-                } else {
-                  if (!bs.get(currLabelOrdinal)) {
-                    includeKV = false;
-                    break;
-                  }
+        Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+        while (tagsItr.hasNext()) {
+          boolean includeKV = true;
+          Tag tag = tagsItr.next();
+          if (tag.getType() == VISIBILITY_TAG_TYPE) {
+            visibilityTagPresent = true;
+            int offset = tag.getValueOffset();
+            int endOffset = offset + tag.getValueLength();
+            while (offset < endOffset) {
+              Pair<Integer, Integer> result = TagUtil.readVIntValuePart(tag, offset);
+              int currLabelOrdinal = result.getFirst();
+              if (currLabelOrdinal < 0) {
+                // check for the absence of this label in the Scan Auth labels
+                // ie. to check BitSet corresponding bit is 0
+                int temp = -currLabelOrdinal;
+                if (bs.get(temp)) {
+                  includeKV = false;
+                  break;
                 }
-                offset += result.getSecond();
+              } else {
+                if (!bs.get(currLabelOrdinal)) {
+                  includeKV = false;
+                  break;
+                }
               }
-              if (includeKV) {
-                // We got one visibility expression getting evaluated to true. Good to include this
-                // KV in the result then.
-                return true;
-              }
+              offset += result.getSecond();
+            }
+            if (includeKV) {
+              // We got one visibility expression getting evaluated to true. Good to include this
+              // KV in the result then.
+              return true;
             }
           }
         }
@@ -596,8 +593,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       for (Tag tag : deleteVisTags) {
         matchFound = false;
         for (Tag givenTag : putVisTags) {
-          if (Bytes.equals(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength(),
-              givenTag.getBuffer(), givenTag.getTagOffset(), givenTag.getTagLength())) {
+          if (TagUtil.matchingValue(tag, givenTag)) {
             matchFound = true;
             break;
           }
@@ -621,10 +617,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private static void getSortedTagOrdinals(List<List<Integer>> fullTagsList, Tag tag)
       throws IOException {
     List<Integer> tagsOrdinalInSortedOrder = new ArrayList<Integer>();
-    int offset = tag.getTagOffset();
-    int endOffset = offset + tag.getTagLength();
+    int offset = tag.getValueOffset();
+    int endOffset = offset + tag.getValueLength();
     while (offset < endOffset) {
-      Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
+      Pair<Integer, Integer> result = TagUtil.readVIntValuePart(tag, offset);
       tagsOrdinalInSortedOrder.add(result.getFirst());
       offset += result.getSecond();
     }
@@ -678,11 +674,11 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
           visibilityString.append(VisibilityConstants.CLOSED_PARAN).append(
               VisibilityConstants.OR_OPERATOR);
         }
-        int offset = tag.getTagOffset();
-        int endOffset = offset + tag.getTagLength();
+        int offset = tag.getValueOffset();
+        int endOffset = offset + tag.getValueLength();
         boolean expressionStart = true;
         while (offset < endOffset) {
-          Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
+          Pair<Integer, Integer> result = TagUtil.readVIntValuePart(tag, offset);
           int currLabelOrdinal = result.getFirst();
           if (currLabelOrdinal < 0) {
             int temp = -currLabelOrdinal;

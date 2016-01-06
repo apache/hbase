@@ -894,7 +894,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     int tagsLength = 0;
     if (tags != null && tags.length > 0) {
       for (Tag t: tags) {
-        tagsLength += t.getLength();
+        tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
       }
     }
     checkForTagsLength(tagsLength);
@@ -928,7 +928,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (tagsLength > 0) {
       pos = Bytes.putAsShort(buffer, pos, tagsLength);
       for (Tag t : tags) {
-        pos = Bytes.putBytes(buffer, pos, t.getBuffer(), t.getOffset(), t.getLength());
+        int tlen = t.getValueLength();
+        pos = Bytes.putAsShort(buffer, pos, tlen + Tag.TYPE_LENGTH_SIZE);
+        pos = Bytes.putByte(buffer, pos, t.getType());
+        TagUtil.copyValueTo(t, buffer, pos);
+        pos += tlen;
       }
     }
     return keyValueLength;
@@ -1013,7 +1017,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     int tagsLength = 0;
     if (tags != null && !tags.isEmpty()) {
       for (Tag t : tags) {
-        tagsLength += t.getLength();
+        tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
       }
     }
     checkForTagsLength(tagsLength);
@@ -1053,7 +1057,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (tagsLength > 0) {
       pos = Bytes.putAsShort(bytes, pos, tagsLength);
       for (Tag t : tags) {
-        pos = Bytes.putBytes(bytes, pos, t.getBuffer(), t.getOffset(), t.getLength());
+        int tlen = t.getValueLength();
+        pos = Bytes.putAsShort(bytes, pos, tlen + Tag.TYPE_LENGTH_SIZE);
+        pos = Bytes.putByte(bytes, pos, t.getType());
+        TagUtil.copyValueTo(t, bytes, pos);
+        pos += tlen;
       }
     }
     return bytes;
@@ -1176,7 +1184,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (tags != null) {
       List<String> tagsString = new ArrayList<String>();
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" +Bytes.toStringBinary(t.getValue()));
+        tagsString.add((t.getType()) + ":" + TagUtil.getValueAsString(t));
       }
       stringMap.put("tag", tagsString);
     }
@@ -1558,7 +1566,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (tagsLength == 0) {
       return EMPTY_ARRAY_LIST;
     }
-    return Tag.asList(getTagsArray(), getTagsOffset(), tagsLength);
+    return TagUtil.asList(getTagsArray(), getTagsOffset(), tagsLength);
   }
 
   /**
@@ -2386,7 +2394,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   public static KeyValue cloneAndAddTags(Cell c, List<Tag> newTags) {
     List<Tag> existingTags = null;
     if(c.getTagsLength() > 0) {
-      existingTags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+      existingTags = CellUtil.getTags(c);
       existingTags.addAll(newTags);
     } else {
       existingTags = newTags;

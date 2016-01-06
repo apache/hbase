@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -84,7 +85,7 @@ public class TestReseekTo {
             Bytes.toBytes(value));
         writer.append(kv);
       } else if (tagUsage == TagUsage.ONLY_TAG) {
-        Tag t = new Tag((byte) 1, "myTag1");
+        Tag t = new ArrayBackedTag((byte) 1, "myTag1");
         Tag[] tags = new Tag[1];
         tags[0] = t;
         kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
@@ -92,7 +93,7 @@ public class TestReseekTo {
         writer.append(kv);
       } else {
         if (key % 4 == 0) {
-          Tag t = new Tag((byte) 1, "myTag1");
+          Tag t = new ArrayBackedTag((byte) 1, "myTag1");
           Tag[] tags = new Tag[1];
           tags[0] = t;
           kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),

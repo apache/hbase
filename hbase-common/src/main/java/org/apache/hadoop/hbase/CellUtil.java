@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
+import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -108,8 +110,8 @@ public final class CellUtil {
 
   /**
    * Returns tag value in a new byte array. If server-side, use
-   * {@link Tag#getBuffer()} with appropriate {@link Tag#getTagOffset()} and
-   * {@link Tag#getTagLength()} instead to save on allocations.
+   * {@link Tag#getValueArray()} with appropriate {@link Tag#getValueOffset()} and
+   * {@link Tag#getValueLength()} instead to save on allocations.
    * @param cell
    * @return tag value in a new byte array.
    */
@@ -749,7 +751,10 @@ public final class CellUtil {
    * @param offset
    * @param length
    * @return iterator for the tags
+   * @deprecated As of 2.0.0 and will be removed in 3.0.0
+   *             Instead use {@link #tagsIterator(Cell)}
    */
+  @Deprecated
   public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {
     return new Iterator<Tag>() {
       private int pos = offset;
@@ -764,7 +769,7 @@ public final class CellUtil {
       public Tag next() {
         if (hasNext()) {
           int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
-          Tag tag = new Tag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
+          Tag tag = new ArrayBackedTag(tags, pos, curTagLen + TAG_LENGTH_SIZE);
           this.pos += Bytes.SIZEOF_SHORT + curTagLen;
           return tag;
         }
@@ -776,6 +781,115 @@ public final class CellUtil {
         throw new UnsupportedOperationException();
       }
     };
+  }
+
+  private static Iterator<Tag> tagsIterator(final ByteBuffer tags, final int offset,
+      final int length) {
+    return new Iterator<Tag>() {
+      private int pos = offset;
+      private int endOffset = offset + length - 1;
+
+      @Override
+      public boolean hasNext() {
+        return this.pos < endOffset;
+      }
+
+      @Override
+      public Tag next() {
+        if (hasNext()) {
+          int curTagLen = ByteBufferUtils.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
+          Tag tag = new OffheapTag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
+          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
+          return tag;
+        }
+        return null;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  private static final Iterator<Tag> EMPTY_TAGS_ITR = new Iterator<Tag>() {
+    @Override
+    public boolean hasNext() {
+      return false;
+    }
+
+    @Override
+    public Tag next() {
+      return null;
+    }
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+  };
+
+  /**
+   * Util method to iterate through the tags in the given cell.
+   *
+   * @param cell The Cell over which tags iterator is needed.
+   * @return iterator for the tags
+   */
+  public static Iterator<Tag> tagsIterator(final Cell cell) {
+    final int tagsLength = cell.getTagsLength();
+    // Save an object allocation where we can
+    if (tagsLength == 0) {
+      return EMPTY_TAGS_ITR;
+    }
+    if (cell instanceof ByteBufferedCell) {
+      return tagsIterator(((ByteBufferedCell) cell).getTagsByteBuffer(),
+          ((ByteBufferedCell) cell).getTagsPosition(), tagsLength);
+    }
+    return tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
+  }
+
+  /**
+   * @param cell The Cell
+   * @return Tags in the given Cell as a List
+   */
+  public static List<Tag> getTags(Cell cell) {
+    List<Tag> tags = new ArrayList<Tag>();
+    Iterator<Tag> tagsItr = tagsIterator(cell);
+    while (tagsItr.hasNext()) {
+      tags.add(tagsItr.next());
+    }
+    return tags;
+  }
+
+  /**
+   * Retrieve Cell's first tag, matching the passed in type
+   *
+   * @param cell The Cell
+   * @param type Type of the Tag to retrieve
+   * @return null if there is no tag of the passed in tag type
+   */
+  public static Tag getTag(Cell cell, byte type){
+    boolean bufferBacked = cell instanceof ByteBufferedCell;
+    int length = cell.getTagsLength();
+    int offset = bufferBacked? ((ByteBufferedCell)cell).getTagsPosition():cell.getTagsOffset();
+    int pos = offset;
+    while (pos < offset + length) {
+      int tagLen;
+      if (bufferBacked) {
+        ByteBuffer tagsBuffer = ((ByteBufferedCell)cell).getTagsByteBuffer();
+        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
+        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
+          return new OffheapTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE);
+        }
+      } else {
+        tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
+        if (cell.getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
+          return new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE);
+        }
+      }
+      pos += TAG_LENGTH_SIZE + tagLen;
+    }
+    return null;
   }
 
   /**

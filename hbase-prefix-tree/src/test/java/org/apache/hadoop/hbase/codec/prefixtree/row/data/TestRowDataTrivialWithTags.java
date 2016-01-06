@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -46,9 +47,9 @@ public class TestRowDataTrivialWithTags extends BaseTestRowData{
   static List<KeyValue> d = Lists.newArrayList();
   static {
     List<Tag> tagList = new ArrayList<Tag>();
-    Tag t = new Tag((byte) 1, "visisbility");
+    Tag t = new ArrayBackedTag((byte) 1, "visisbility");
     tagList.add(t);
-    t = new Tag((byte) 2, "ACL");
+    t = new ArrayBackedTag((byte) 2, "ACL");
     tagList.add(t);
     d.add(new KeyValue(rA, cf, cq0, ts, v0, tagList));
     d.add(new KeyValue(rB, cf, cq0, ts, v0, tagList));

@@ -69,6 +69,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
@@ -94,6 +95,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -3667,8 +3669,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (int i = 0; i < listSize; i++) {
         Cell cell = cells.get(i);
         List<Tag> newTags = new ArrayList<Tag>();
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
-          cell.getTagsOffset(), cell.getTagsLength());
+        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell);
 
         // Carry forward existing tags
 
@@ -3685,11 +3686,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // above may change when there are more tag based features in core.
         if (m.getTTL() != Long.MAX_VALUE) {
           // Add a cell TTL tag
-          newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(m.getTTL())));
+          newTags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(m.getTTL())));
         }
 
         // Rewrite the cell with the updated set of tags
-        cells.set(i, new TagRewriteCell(cell, Tag.fromList(newTags)));
+        cells.set(i, new TagRewriteCell(cell, TagUtil.fromList(newTags)));
       }
     }
   }
@@ -7073,8 +7074,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
     if (cell.getTagsLength() <= 0) return tags;
     List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags; 
-    Iterator<Tag> i =
-        CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+    Iterator<Tag> i = CellUtil.tagsIterator(cell);
     while (i.hasNext()) newTags.add(i.next());
     return newTags;
   }
@@ -7178,11 +7178,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
                 if (mutate.getTTL() != Long.MAX_VALUE) {
                   // Add the new TTL tag
-                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
+                  newTags.add(
+                      new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
                 }
 
                 // Rebuild tags
-                byte[] tagBytes = Tag.fromList(newTags);
+                byte[] tagBytes = TagUtil.fromList(newTags);
 
                 // allocate an empty cell once
                 newCell = new KeyValue(row.length, cell.getFamilyLength(),
@@ -7216,9 +7217,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
                 if (mutate.getTTL() != Long.MAX_VALUE) {
                   List<Tag> newTags = new ArrayList<Tag>(1);
-                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
+                  newTags.add(
+                      new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
                   // Add the new TTL tag
-                  newCell = new TagRewriteCell(cell, Tag.fromList(newTags));
+                  newCell = new TagRewriteCell(cell, TagUtil.fromList(newTags));
                 } else {
                   newCell = cell;
                 }
@@ -7439,7 +7441,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
               // Add the TTL tag if the mutation carried one
               if (mutation.getTTL() != Long.MAX_VALUE) {
-                newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutation.getTTL())));
+                newTags.add(
+                    new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutation.getTTL())));
               }
 
               Cell newKV = new KeyValue(row, 0, row.length,
