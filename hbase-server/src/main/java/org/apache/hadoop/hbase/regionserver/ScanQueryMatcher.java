@@ -283,27 +283,33 @@ public class ScanQueryMatcher {
       if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    int ret = this.rowComparator.compareRows(curCell, cell);
-    if (!this.isReversed) {
-      if (ret <= -1) {
-        return MatchCode.DONE;
-      } else if (ret >= 1) {
-        // could optimize this, if necessary?
-        // Could also be called SEEK_TO_CURRENT_ROW, but this
-        // should be rare/never happens.
-        return MatchCode.SEEK_NEXT_ROW;
+    if (curCell != null) {
+      int ret = this.rowComparator.compareRows(curCell, cell);
+      if (!this.isReversed) {
+        if (ret <= -1) {
+          return MatchCode.DONE;
+        } else if (ret >= 1) {
+          // could optimize this, if necessary?
+          // Could also be called SEEK_TO_CURRENT_ROW, but this
+          // should be rare/never happens.
+          return MatchCode.SEEK_NEXT_ROW;
+        }
+      } else {
+        if (ret <= -1) {
+          return MatchCode.SEEK_NEXT_ROW;
+        } else if (ret >= 1) {
+          return MatchCode.DONE;
+        }
       }
     } else {
-      if (ret <= -1) {
-        return MatchCode.SEEK_NEXT_ROW;
-      } else if (ret >= 1) {
-        return MatchCode.DONE;
-      }
+      // Since the curCell is null it means we are already sure that we have moved over to the next row
+      return MatchCode.DONE;
     }
 
     // optimize case.
-    if (this.stickyNextRow)
+    if (this.stickyNextRow) {
       return MatchCode.SEEK_NEXT_ROW;
+    }
 
     if (this.columns.done()) {
       stickyNextRow = true;

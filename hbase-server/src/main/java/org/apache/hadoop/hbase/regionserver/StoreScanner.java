@@ -507,8 +507,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
     // rows. Else it is possible we are still traversing the same row so we must perform the row
     // comparison.
-    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null
-        || !CellUtil.matchingRow(cell, matcher.curCell)) {
+    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null) {
       this.countPerRow = 0;
       matcher.setToNewRow(cell);
     }
@@ -534,7 +533,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
       prevCell = cell;
-
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       qcode = optimize(qcode, cell);
       switch (qcode) {
@@ -553,6 +551,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (!matcher.moreRowsMayExistAfter(cell)) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
+          matcher.curCell = null;
           seekToNextRow(cell);
           break LOOP;
         }
@@ -580,6 +579,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (!matcher.moreRowsMayExistAfter(cell)) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
+          matcher.curCell = null;
           seekToNextRow(cell);
         } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
           seekAsDirection(matcher.getKeyForNextColumn(cell));
@@ -596,6 +596,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         continue;
 
       case DONE:
+        matcher.curCell = null;
         return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
 
       case DONE_SCAN:
@@ -608,7 +609,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         if (!matcher.moreRowsMayExistAfter(cell)) {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         }
-
+        matcher.curCell = null;
         seekToNextRow(cell);
         break;
 
@@ -751,7 +752,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     if ((matcher.curCell == null) || !CellUtil.matchingRows(cell, matcher.curCell)) {
       this.countPerRow = 0;
-      matcher.reset();
+      // The setToNewRow will call reset internally
       matcher.setToNewRow(cell);
     }
   }
