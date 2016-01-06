@@ -28,5 +28,13 @@ if [[ ! -d third-party/googletest ]]; then
         git clone https://github.com/google/googletest.git third-party/googletest
 fi
 
+if [[ ! -d ~/.m2 ]]; then
+    echo "~/.m2 directory doesn't exist. Check Apache Maven is installed."
+    exit 1
+fi;
 
-docker run -v ${PWD}/..:/usr/local/src/hbase -it hbase_native  /bin/bash
+docker run -p 16010:16010/tcp \
+           -e "JAVA_HOME=/usr/lib/jvm/java-8-oracle" \
+           -v ${PWD}/..:/usr/local/src/hbase \
+           -v ~/.m2:/root/.m2 \
+           -it hbase_native  /bin/bash
