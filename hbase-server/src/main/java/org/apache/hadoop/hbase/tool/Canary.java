@@ -193,6 +193,10 @@ public final class Canary implements Tool {
       Table table = null;
       HTableDescriptor tableDesc = null;
       try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("reading table descriptor for table %s",
+            region.getTable()));
+        }
         table = connection.getTable(region.getTable());
         tableDesc = table.getTableDescriptor();
       } catch (IOException e) {
@@ -229,20 +233,24 @@ public final class Canary implements Tool {
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.addFamily(column.getName());
           scan.setMaxResultSize(1L);
+          scan.setSmall(true);
         }
 
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("reading from table %s region %s column family %s and key %s",
+            tableDesc.getTableName(), region.getRegionNameAsString(), column.getNameAsString(),
+            Bytes.toStringBinary(startKey)));
+        }
         try {
+          stopWatch.start();
           if (startKey.length > 0) {
-            stopWatch.start();
             table.get(get);
-            stopWatch.stop();
-            sink.publishReadTiming(region, column, stopWatch.getTime());
           } else {
-            stopWatch.start();
             rs = table.getScanner(scan);
-            stopWatch.stop();
-            sink.publishReadTiming(region, column, stopWatch.getTime());
+            rs.next();
           }
+          stopWatch.stop();
+          sink.publishReadTiming(region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(region, column, e);
         } finally {
@@ -283,6 +291,12 @@ public final class Canary implements Tool {
           byte[] value = new byte[writeValueSize];
           Bytes.random(value);
           put.addColumn(column.getName(), HConstants.EMPTY_BYTE_ARRAY, value);
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("writing to table %s region %s column family %s and key %s",
+              tableDesc.getTableName(), region.getRegionNameAsString(), column.getNameAsString(),
+              Bytes.toStringBinary(rowToCheck)));
+          }
           try {
             long startTime = System.currentTimeMillis();
             table.put(put);
@@ -334,6 +348,11 @@ public final class Canary implements Tool {
         table = connection.getTable(tableName);
         startKey = region.getStartKey();
         // Can't do a get on empty start row so do a Scan of first element if any instead.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("reading from region server %s table %s region %s and key %s",
+            serverName, region.getTable(), region.getRegionNameAsString(),
+            Bytes.toStringBinary(startKey)));
+        }
         if (startKey.length > 0) {
           get = new Get(startKey);
           get.setCacheBlocks(false);
@@ -347,8 +366,10 @@ public final class Canary implements Tool {
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.setCaching(1);
           scan.setMaxResultSize(1L);
+          scan.setSmall(true);
           stopWatch.start();
           ResultScanner s = table.getScanner(scan);
+          s.next();
           s.close();
           stopWatch.stop();
         }
@@ -544,8 +565,6 @@ public final class Canary implements Tool {
     long startTime = 0;
     long currentTimeLength = 0;
     // Get a connection to use in below.
-    // try-with-resources jdk7 construct. See
-    // http://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
     try (Connection connection = ConnectionFactory.createConnection(this.conf)) {
       do {
         // Do monitor !!
@@ -610,8 +629,8 @@ public final class Canary implements Tool {
     System.err.println("      only works in regionserver mode.");
     System.err.println("   -daemon        Continuous check at defined intervals.");
     System.err.println("   -interval <N>  Interval between checks (sec)");
-    System.err.println("   -e             Use region/regionserver as regular expression");
-    System.err.println("      which means the region/regionserver is regular expression pattern");
+    System.err.println("   -e             Use table/regionserver as regular expression");
+    System.err.println("      which means the table/regionserver is regular expression pattern");
     System.err.println("   -f <B>         stop whole program if first error occurs," +
         " default is true");
     System.err.println("   -t <N>         timeout for a check, default is 600000 (milisecs)");
@@ -688,6 +707,7 @@ public final class Canary implements Tool {
       this.executor = executor;
     }
 
+    @Override
     public abstract void run();
 
     protected boolean initAdmin() {
@@ -790,11 +810,17 @@ public final class Canary implements Tool {
         HTableDescriptor[] tds = null;
         Set<String> tmpTables = new TreeSet<String>();
         try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("reading list of tables"));
+          }
+          tds = this.admin.listTables(pattern);
+          if (tds == null) {
+            tds = new HTableDescriptor[0];
+          }
           for (String monitorTarget : monitorTargets) {
             pattern = Pattern.compile(monitorTarget);
-            tds = this.admin.listTables(pattern);
-            if (tds != null) {
-              for (HTableDescriptor td : tds) {
+            for (HTableDescriptor td : tds) {
+              if (pattern.matcher(td.getNameAsString()).matches()) {
                 tmpTables.add(td.getNameAsString());
               }
             }
@@ -823,6 +849,9 @@ public final class Canary implements Tool {
      * canary entry point to monitor all the tables.
      */
     private List<Future<Void>> sniff(TaskType taskType) throws Exception {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("reading list of tables"));
+      }
       List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())
@@ -875,7 +904,7 @@ public final class Canary implements Tool {
       int numberOfRegions = (int)(numberOfServers * regionsLowerLimit);
       LOG.info("Number of live regionservers: " + numberOfServers + ", "
           + "pre-splitting the canary table into " + numberOfRegions + " regions "
-          + "(current  lower limi of regions per server is " + regionsLowerLimit
+          + "(current lower limit of regions per server is " + regionsLowerLimit
           + " and you can change it by config: "
           + HConstants.HBASE_CANARY_WRITE_PERSERVER_REGIONS_LOWERLIMIT_KEY + " )");
       HTableDescriptor desc = new HTableDescriptor(writeTableName);
@@ -918,6 +947,10 @@ public final class Canary implements Tool {
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink, String tableName,
       ExecutorService executor, TaskType taskType) throws Exception {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("checking table is enabled and getting table descriptor for table %s",
+        tableName));
+    }
     if (admin.isTableEnabled(TableName.valueOf(tableName))) {
       return Canary.sniff(admin, sink, admin.getTableDescriptor(TableName.valueOf(tableName)),
         executor, taskType);
@@ -932,6 +965,11 @@ public final class Canary implements Tool {
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink,
       HTableDescriptor tableDesc, ExecutorService executor, TaskType taskType) throws Exception {
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("reading list of regions for table %s", tableDesc.getTableName()));
+    }
+
     Table table = null;
     try {
       table = admin.getConnection().getTable(tableDesc.getTableName());
@@ -1036,6 +1074,9 @@ public final class Canary implements Tool {
       List<String> foundTableNames = new ArrayList<String>();
       TableName[] tableNames = null;
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("reading list of tables"));
+      }
       try {
         tableNames = this.admin.listTableNames();
       } catch (IOException e) {
@@ -1121,6 +1162,9 @@ public final class Canary implements Tool {
       Table table = null;
       RegionLocator regionLocator = null;
       try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("reading list of tables and locations"));
+        }
         HTableDescriptor[] tableDescs = this.admin.listTables();
         List<HRegionInfo> regions = null;
         for (HTableDescriptor tableDesc : tableDescs) {
