@@ -433,6 +433,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
     Set<ServerName> toKill = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
     toStart.addAll(initial.getServers());
     toKill.addAll(current.getServers());
+    
+    ServerName master = initial.getMaster();
 
     for (ServerName server : current.getServers()) {
       toStart.remove(server);
@@ -447,7 +449,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       try {
         if (!clusterManager.isRunning(ServiceType.HBASE_REGIONSERVER,
                 sn.getHostname(),
-                sn.getPort())) {
+                sn.getPort())
+                && master.getPort() != sn.getPort()) {
           LOG.info("Restoring cluster - starting initial region server: " + sn.getHostAndPort());
           startRegionServer(sn.getHostname(), sn.getPort());
         }
@@ -460,7 +463,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       try {
         if (clusterManager.isRunning(ServiceType.HBASE_REGIONSERVER,
                 sn.getHostname(),
-                sn.getPort())) {
+                sn.getPort())
+                && master.getPort() != sn.getPort()){
           LOG.info("Restoring cluster - stopping initial region server: " + sn.getHostAndPort());
           stopRegionServer(sn);
         }
