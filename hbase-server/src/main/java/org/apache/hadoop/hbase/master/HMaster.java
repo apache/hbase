@@ -333,6 +333,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // handle table states
   private TableStateManager tableStateManager;
+  
+  private long splitPlanCount;
+  private long mergePlanCount;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -1340,6 +1343,11 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
         NormalizationPlan plan = this.normalizer.computePlanForTable(table, types);
         plan.execute(clusterConnection.getAdmin());
+        if (plan.getType() == PlanType.SPLIT) {
+          splitPlanCount++;
+        } else if (plan.getType() == PlanType.MERGE) {
+          mergePlanCount++;
+        }
       }
     }
     // If Region did not generate any plans, it means the cluster is already balanced.
@@ -2334,6 +2342,20 @@ public class HMaster extends HRegionServer implements MasterServices {
       return 0;
     }
     return regionStates.getAverageLoad();
+  }
+  
+  /*
+   * @return the count of region split plans executed
+   */
+  public long getSplitPlanCount() {
+    return splitPlanCount;
+  }
+
+  /*
+   * @return the count of region merge plans executed
+   */
+  public long getMergePlanCount() {
+    return mergePlanCount;
   }
 
   @Override
