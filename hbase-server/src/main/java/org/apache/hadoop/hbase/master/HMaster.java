@@ -218,8 +218,12 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -1929,7 +1933,12 @@ MasterServices, Server {
     } catch (IOException e) {
       warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
     }
-
+    // Verify compaction policy
+    try{
+      checkCompactionPolicy(conf, htd);
+    } catch(IOException e){
+      warnOrThrowExceptionForFailure(false, CONF_KEY, e.getMessage(), e);
+    }
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
       String message = "Table should have at least one column family.";
@@ -1982,6 +1991,64 @@ MasterServices, Server {
       }
 
       // TODO: should we check coprocessors and encryption ?
+    }
+  }
+
+  private void checkCompactionPolicy(Configuration conf, HTableDescriptor htd)
+      throws IOException {
+    // FIFO compaction has some requirements
+    // Actually FCP ignores periodic major compactions
+    String className =
+        htd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+    if (className == null) {
+      className =
+          conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+            ExploringCompactionPolicy.class.getName());
+    }
+
+    int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
+    String sv = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+    if (sv != null) {
+      blockingFileCount = Integer.parseInt(sv);
+    } else {
+      blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
+    }
+
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      String compactionPolicy =
+          hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+      if (compactionPolicy == null) {
+        compactionPolicy = className;
+      }
+      if (!compactionPolicy.equals(FIFOCompactionPolicy.class.getName())) {
+        continue;
+      }
+      // FIFOCompaction
+      String message = null;
+
+      // 1. Check TTL
+      if (hcd.getTimeToLive() == HColumnDescriptor.DEFAULT_TTL) {
+        message = "Default TTL is not supported for FIFO compaction";
+        throw new IOException(message);
+      }
+
+      // 2. Check min versions
+      if (hcd.getMinVersions() > 0) {
+        message = "MIN_VERSION > 0 is not supported for FIFO compaction";
+        throw new IOException(message);
+      }
+
+      // 3. blocking file count
+      String sbfc = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+      if (sbfc != null) {
+        blockingFileCount = Integer.parseInt(sbfc);
+      }
+      if (blockingFileCount < 1000) {
+        message =
+            "blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
+                + " is below recommended minimum of 1000";
+        throw new IOException(message);
+      }
     }
   }
 
