@@ -1819,27 +1819,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * We are trying to remove / relax the region read lock for compaction.
      * Let's see what are the potential race conditions among the operations (user scan,
      * region split, region close and region bulk load).
-     * 
+     *
      *  user scan ---> region read lock
      *  region split --> region close first --> region write lock
      *  region close --> region write lock
      *  region bulk load --> region write lock
-     *  
+     *
      * read lock is compatible with read lock. ---> no problem with user scan/read
      * region bulk load does not cause problem for compaction (no consistency problem, store lock
      *  will help the store file accounting).
      * They can run almost concurrently at the region level.
-     * 
+     *
      * The only remaining race condition is between the region close and compaction.
      * So we will evaluate, below, how region close intervenes with compaction if compaction does
      * not acquire region read lock.
-     * 
+     *
      * Here are the steps for compaction:
      * 1. obtain list of StoreFile's
      * 2. create StoreFileScanner's based on list from #1
      * 3. perform compaction and save resulting files under tmp dir
      * 4. swap in compacted files
-     * 
+     *
      * #1 is guarded by store lock. This patch does not change this --> no worse or better
      * For #2, we obtain smallest read point (for region) across all the Scanners (for both default
      * compactor and stripe compactor).
@@ -1851,7 +1851,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * This will not conflict with compaction.
      * For #3, it can be performed in parallel to other operations.
      * For #4 bulk load and compaction don't conflict with each other on the region level
-     *   (for multi-family atomicy). 
+     *   (for multi-family atomicy).
      * Region close and compaction are guarded pretty well by the 'writestate'.
      * In HRegion#doClose(), we have :
      * synchronized (writestate) {
@@ -2573,6 +2573,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public RegionScanner getScanner(Scan scan) throws IOException {
    return getScanner(scan, true);
+  }
+
+  @Override
+  public RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
+      throws IOException {
+    return getScanner(scan, additionalScanners, true);
   }
 
   public RegionScanner getScanner(Scan scan, boolean copyCellsFromSharedMem) throws IOException {
@@ -7073,7 +7079,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
     if (cell.getTagsLength() <= 0) return tags;
-    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags; 
+    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags;
     Iterator<Tag> i = CellUtil.tagsIterator(cell);
     while (i.hasNext()) newTags.add(i.next());
     return newTags;
@@ -7349,7 +7355,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // They are subtley different in quiet a few ways. This came out only
   // after study. I am not sure that many of the differences are intentional.
-  // TODO: St.Ack 20150907 
+  // TODO: St.Ack 20150907
 
   @Override
   public Result increment(Increment mutation, long nonceGroup, long nonce)
@@ -7363,7 +7369,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<Cell> allKVs = new ArrayList<Cell>(mutation.size());
-    
+
     Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
     long size = 0;
     long txid = 0;
@@ -8166,7 +8172,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
       getRegionInfo().getTable(), WALKey.NO_SEQUENCE_ID, 0, null,
       HConstants.NO_NONCE, HConstants.NO_NONCE, getMVCC());
-    
+
     // Call append but with an empty WALEdit.  The returned sequence id will not be associated
     // with any edit and we can be sure it went in after all outstanding appends.
     try {
