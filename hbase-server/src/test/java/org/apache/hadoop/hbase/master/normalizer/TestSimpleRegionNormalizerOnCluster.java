@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.namespace.TestNamespaceAuditor;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -137,7 +137,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     }
 
     HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
-    htd.setNormalizationEnabled(true);
+    htd.setNormalizationMode("MS");
     admin.modifyTable(TABLENAME, htd);
 
     admin.flush(TABLENAME);
@@ -207,7 +207,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     }
 
     HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
-    htd.setNormalizationEnabled(true);
+    htd.setNormalizationMode("MS");
     admin.modifyTable(TABLENAME, htd);
 
     admin.flush(TABLENAME);

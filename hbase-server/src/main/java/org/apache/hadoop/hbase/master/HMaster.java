@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -114,6 +113,8 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -1323,14 +1324,21 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       for (TableName table : allEnabledTables) {
         TableDescriptor tblDesc = getTableDescriptors().getDescriptor(table);
-        if (table.isSystemTable() || (tblDesc != null &&
-            tblDesc.getHTableDescriptor() != null &&
-            !tblDesc.getHTableDescriptor().isNormalizationEnabled())) {
-          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
-            + " table or doesn't have auto normalization turned on");
+        if (table.isSystemTable()) {
+          LOG.debug("Skipping normalization for table: " + table + ", as it's system table");
           continue;
         }
-        NormalizationPlan plan = this.normalizer.computePlanForTable(table);
+        List<PlanType> types = null;
+        if (tblDesc != null &&
+            tblDesc.getHTableDescriptor() != null) {
+          types = tblDesc.getHTableDescriptor().getDesiredNormalizationTypes();
+          if (types == null) {
+            LOG.debug("Skipping normalization for table: " + table + ", as it"
+                + " doesn't have auto normalization turned on");
+            continue;
+          }
+        }
+        NormalizationPlan plan = this.normalizer.computePlanForTable(table, types);
         plan.execute(clusterConnection.getAdmin());
       }
     }

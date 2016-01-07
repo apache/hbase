@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 
 /**
  * Plan which signifies that no normalization is required,
