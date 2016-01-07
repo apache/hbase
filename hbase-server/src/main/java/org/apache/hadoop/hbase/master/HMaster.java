@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
@@ -324,6 +325,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private WALProcedureStore procedureStore;
+
+  private long splitPlanCount;
+  private long mergePlanCount;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -1370,7 +1374,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             continue;
           }
         }
-        this.normalizer.computePlanForTable(table, types).execute(clusterConnection.getAdmin());
+       NormalizationPlan plan = this.normalizer.computePlanForTable(table, types);
+        plan.execute(clusterConnection.getAdmin());
+        if (plan.getType() == PlanType.SPLIT) {
+          splitPlanCount++;
+        } else if (plan.getType() == PlanType.MERGE) {
+          mergePlanCount++;
+        }
       }
     }
     // If Region did not generate any plans, it means the cluster is already balanced.
@@ -2368,6 +2378,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       return 0;
     }
     return regionStates.getAverageLoad();
+  }
+  
+  /*
+   * @return the count of region split plans executed
+   */
+  public long getSplitPlanCount() {
+    return splitPlanCount;
+  }
+
+  /*
+   * @return the count of region merge plans executed
+   */
+  public long getMergePlanCount() {
+    return mergePlanCount;
   }
 
   @Override

@@ -74,6 +74,10 @@ public class MetricsMasterSourceImpl
     // masterWrapper can be null because this function is called inside of init.
     if (masterWrapper != null) {
       metricsRecordBuilder
+          .addGauge(Interns.info(MERGE_PLAN_COUNT_NAME, MERGE_PLAN_COUNT_DESC),
+              masterWrapper.getMergePlanCount())
+          .addGauge(Interns.info(SPLIT_PLAN_COUNT_NAME, SPLIT_PLAN_COUNT_DESC),
+              masterWrapper.getSplitPlanCount())
           .addGauge(Interns.info(MASTER_ACTIVE_TIME_NAME,
               MASTER_ACTIVE_TIME_DESC), masterWrapper.getActiveTime())
           .addGauge(Interns.info(MASTER_START_TIME_NAME,
