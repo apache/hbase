@@ -45,7 +45,7 @@
     of commodity hardware.
   </description>
   <url>http://hbase.apache.org</url>
-
+  <inceptionYear>2007</inceptionYear>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
     <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
@@ -326,6 +326,16 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-remote-resources-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
           <!--Making a release I've been using mvn 3.0 and specifying the apache-release
               profile on the command line as follows:
@@ -449,6 +459,11 @@
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
+          <artifactId>buildnumber-maven-plugin</artifactId>
+          <version>1.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.5</version>
         </plugin>
@@ -503,6 +518,35 @@
                     <execute></execute>
                   </action>
                 </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <versionRange>[1.5,)</versionRange>
+                    <goals>
+                      <goal>process</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute></execute>
+                  </action>
+                </pluginExecution>
+                  <pluginExecution>
+                    <pluginExecutionFilter>
+                      <groupId>org.codehaus.mojo</groupId>
+                      <artifactId>buildnumber-maven-plugin</artifactId>
+                      <versionRange>[1.3,)</versionRange>
+                      <goals>
+                        <goal>create-timestamp</goal>
+                      </goals>
+                    </pluginExecutionFilter>
+                    <action>
+                      <execute>
+                        <runOnConfiguration>true</runOnConfiguration>
+                        <runOnIncremental>true</runOnIncremental>
+                      </execute>
+                    </action>
+                  </pluginExecution>
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
@@ -523,7 +567,8 @@
               <exclude>**/target/**</exclude>
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
-              <exclude>**/conf/*</exclude>
+              <!-- No material contents -->
+              <exclude>conf/regionservers</exclude>
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude> <!-- vector graphics -->
               <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
@@ -532,6 +577,8 @@
 	      <exclude>docs/*</exclude> <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
+              <!-- non-standard notice file from jruby included by reference -->
+              <exclude>**/src/main/resources/META-INF/LEGAL</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
@@ -550,6 +597,16 @@
           <include>hbase-default.xml</include>
         </includes>
       </resource>
+<!--
+      <resource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>META-INF/LICENSE</include>
+          <include>META-INF/NOTICE</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+-->
       <resource>
         <directory>${project.build.directory}</directory>
         <includes>
@@ -564,6 +621,15 @@
           <exclude>hbase-site.xml</exclude>
         </excludes>
       </testResource>
+<!--
+      <testResource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>META-INF/NOTICE</include>
+        </includes>
+        <filtering>true</filtering>
+      </testResource>
+-->
     </testResources>
 
     <plugins>
@@ -778,6 +844,16 @@
             <goals>
               <goal>jar-no-fork</goal>
             </goals>
+<!--
+            <configuration>
+              <excludes>
+                <exclude>META-INF/NOTICE</exclude>
+              </excludes>
+              <includes>
+                <include>${project.build.outputDirectory}/META-INF/NOTICE</include>
+              </includes>
+            </configuration>
+-->
           </execution>
         </executions>
       </plugin>
@@ -1068,10 +1144,131 @@
           </additionalConfig>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create-timestamp</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <timestampFormat>yyyy</timestampFormat>
+          <timestampPropertyName>build.year</timestampPropertyName>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <executions>
+          <!--
+            This is different from the default execution because we have
+            to build aggregate information for bundled dependencies.
+          -->
+          <execution>
+            <id>build-legal-for-assembly</id>
+            <!-- has to run before the default -->
+<!--
+            <phase>prepare-package</phase>
+-->
+            <phase>process-sources</phase>
+            <goals>
+              <goal>process</goal>
+            </goals>
+            <configuration>
+              <appendedResourcesDirectory>src/assembly</appendedResourcesDirectory>
+              <outputDirectory>${project.build.directory}/maven-shared-archive-resources-for-assembly</outputDirectory>
+              <resources>
+                <resource>src/assembly/resource</resource>
+              </resources>
+              <supplementalModels>
+                <supplementalModel>src/assembly/resources/supplemental-models.xml</supplementalModel>
+              </supplementalModels>
+              <properties>
+                <bundled-dependencies>true</bundled-dependencies>
+                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+              </properties>
+              <resourceBundles>
+                <resourceBundle>org.apache:apache-jar-resource-bundle:1.4</resourceBundle>
+              </resourceBundles>
+              <attach>false</attach>
+              <attachToMain>false</attachToMain>
+              <attachToTest>false</attachToTest>
+            </configuration>
+          </execution>
+<!--
+          <execution>
+            <id>default</id>
+          </execution>
+-->
+        </executions>
+      </plugin>
+      <!--
+         Build an aggregation of our templated NOTICE file and the NOTICE files in our dependencies.
+         If MASSEMBLY-382 is fixed we could do this in the assembly
+         Currently relies on env, bash, find, and cat.
+      -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <!-- put all of the NOTICE files out of our dependencies -->
+            <id>unpack-dependency-notices</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
+              <includes>**\/NOTICE,**\/NOTICE.txt</includes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <id>concat-NOTICE-files</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>env</executable>
+              <arguments>
+                <argument>bash</argument>
+                <argument>-c</argument>
+                <argument>cat maven-shared-archive-resources-for-assembly/META-INF/NOTICE \
+                  `find ${project.build.directory}/dependency -iname NOTICE -or -iname NOTICE.txt` \
+                </argument>
+              </arguments>
+              <outputFile>${project.build.directory}/NOTICE.aggregate</outputFile>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- /end building aggregation of NOTICE files -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.5.3</version>
+        <inherited>true</inherited>
+        <extensions>true</extensions>
+      </plugin>
     </plugins>
   </build>
 
   <properties>
+    <!-- override on command line to have generated LICENSE files include
+         diagnostic info for verifying notice requirements -->
+    <license.debug.print.included>false</license.debug.print.included>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>

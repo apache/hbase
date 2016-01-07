@@ -4,7 +4,6 @@
 <xsl:template match="configuration">
 <!--
 /**
- * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
