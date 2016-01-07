@@ -2519,7 +2519,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    return getScanner(scan, null);
   }
 
-  protected RegionScanner getScanner(Scan scan,
+  @Override
+  public RegionScanner getScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
@@ -7066,7 +7067,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
     if (cell.getTagsLength() <= 0) return tags;
-    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags; 
+    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags;
     Iterator<Tag> i =
         CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
     while (i.hasNext()) newTags.add(i.next());
@@ -7355,7 +7356,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // They are subtley different in quiet a few ways. This came out only
   // after study. I am not sure that many of the differences are intentional.
-  // TODO: St.Ack 20150907 
+  // TODO: St.Ack 20150907
 
   @Override
   public Result increment(Increment mutation, long nonceGroup, long nonce)
@@ -7368,7 +7369,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<Cell> allKVs = new ArrayList<Cell>(mutation.size());
-    
+
     Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
     long size = 0;
     long txid = 0;
@@ -8169,7 +8170,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
       getRegionInfo().getTable(), WALKey.NO_SEQUENCE_ID, 0, null,
       HConstants.NO_NONCE, HConstants.NO_NONCE, getMVCC());
-    
+
     // Call append but with an empty WALEdit.  The returned sequence id will not be associated
     // with any edit and we can be sure it went in after all outstanding appends.
     try {
