@@ -91,7 +91,12 @@ if (toRemove > 0) {
             entry.getValue(), conf) %></td>
     <td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
             </%for>
-            <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
+            <%if numOfRITOverThreshold > 0 %>
+                    <tr BGCOLOR="#D7DF01" >
+            <%else>
+                    <tr>
+            </%if>
+            <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
             </tr>
     <tr> <td> Total number of Regions in Transition</td><td><% totalRITs %> </td><td></td>
     </table>
