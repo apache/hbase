@@ -511,8 +511,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
     // rows. Else it is possible we are still traversing the same row so we must perform the row
     // comparison.
-    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.row == null ||
-        !Bytes.equals(row, offset, length, matcher.row, matcher.rowOffset, matcher.rowLength)) {
+    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.row == null) {
       this.countPerRow = 0;
       matcher.setRow(row, offset, length);
     }
@@ -560,6 +559,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(cell)) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
+            // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
+            // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
+            // another compareRow to say the current row is DONE
+            matcher.row = null;
             seekToNextRow(cell);
             break LOOP;
           }
@@ -587,6 +590,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(cell)) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
+            // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
+            // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
+            // another compareRow to say the current row is DONE
+            matcher.row = null;
             seekToNextRow(cell);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
             seekAsDirection(matcher.getKeyForNextColumn(cell));
@@ -603,6 +610,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           continue;
 
         case DONE:
+          // We are sure that this row is done and we are in the next row.
+          // So subsequent StoresScanner.next() call need not do another compare
+          // and set the matcher.row
+          matcher.row = null;
           return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
 
         case DONE_SCAN:
@@ -615,7 +626,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (!matcher.moreRowsMayExistAfter(cell)) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
-
+          // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
+          // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
+          // another compareRow to say the current row is DONE
+          matcher.row = null;
           seekToNextRow(cell);
           break;
 
