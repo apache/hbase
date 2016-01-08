@@ -64,6 +64,9 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
       "hbase.hstore.min.locality.to.skip.major.compact";
 
+  public static final String HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT =
+      "hbase.hfile.compaction.discharger.thread.count";
+
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
 

@@ -62,12 +62,12 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.util.StringUtils;
@@ -246,25 +246,37 @@ public class TestRegionMergeTransactionOnCluster {
         count += hrfs.getStoreFiles(colFamily.getName()).size();
       }
       admin.compactRegion(mergedRegionInfo.getRegionName());
-      // wait until merged region doesn't have reference file
+      // clean up the merged region store files
+      // wait until merged region have reference file
       long timeout = System.currentTimeMillis() + waitTime;
+      int newcount = 0;
       while (System.currentTimeMillis() < timeout) {
-        if (!hrfs.hasReferences(tableDescriptor)) {
+        for(HColumnDescriptor colFamily : columnFamilies) {
+          newcount += hrfs.getStoreFiles(colFamily.getName()).size();
+        }
+        if(newcount > count) {
           break;
         }
         Thread.sleep(50);
       }
-      int newcount = 0;
-      for(HColumnDescriptor colFamily : columnFamilies) {
-        newcount += hrfs.getStoreFiles(colFamily.getName()).size();
-      }
       assertTrue(newcount > count);
-      // clean up the merged region store files
-      List<HRegion> regions = 
-          TEST_UTIL.getHBaseCluster().getRegions(tableDescriptor.getName());
-      for (HRegion region : regions) {
-        CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, region);
+      List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
+          .getRegionServerThreads();
+      for (RegionServerThread rs : regionServerThreads) {
+        CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null,
+            rs.getRegionServer(), false);
         cleaner.chore();
+        Thread.sleep(1000);
+      }
+      int newcount1 = 0;
+      while (System.currentTimeMillis() < timeout) {
+        for(HColumnDescriptor colFamily : columnFamilies) {
+          newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
+        }
+        if(newcount1 <= 1) {
+          break;
+        }
+        Thread.sleep(50);
       }
       // run CatalogJanitor to clean merge references in hbase:meta and archive the
       // files of merging regions

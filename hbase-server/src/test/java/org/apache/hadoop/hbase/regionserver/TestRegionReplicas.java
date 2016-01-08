@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.*;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,9 +48,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
@@ -454,8 +455,18 @@ public class TestRegionReplicas {
       LOG.info("Force Major compaction on primary region " + hriPrimary);
       primaryRegion.compact(true);
       Assert.assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
+      List<RegionServerThread> regionServerThreads = HTU.getMiniHBaseCluster()
+          .getRegionServerThreads();
+      HRegionServer hrs = null;
+      for (RegionServerThread rs : regionServerThreads) {
+        if (rs.getRegionServer()
+            .getOnlineRegion(primaryRegion.getRegionInfo().getRegionName()) != null) {
+          hrs = rs.getRegionServer();
+          break;
+        }
+      }
       CompactedHFilesDischarger cleaner =
-          new CompactedHFilesDischarger(100, null, (HRegion) primaryRegion);
+          new CompactedHFilesDischarger(100, null, hrs, false);
       cleaner.chore();
       // scan all the hfiles on the secondary.
       // since there are no read on the secondary when we ask locations to

@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -151,7 +150,6 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
@@ -814,20 +812,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
     long maxSeqId = initializeStores(reporter, status);
-    // Start the CompactedHFilesDischarger here. This chore helps to remove the compacted files
-    // that will no longer be used in reads.
-    if (this.getRegionServerServices() != null) {
-      ChoreService choreService = this.getRegionServerServices().getChoreService();
-      if (choreService != null) {
-        // Default is 2 mins. The default value for TTLCleaner is 5 mins so we set this to
-        // 2 mins so that compacted files can be archived before the TTLCleaner runs
-        int cleanerInterval =
-            conf.getInt("hbase.hfile.compactions.cleaner.interval", 2 * 60 * 1000);
-        this.compactedFileDischarger =
-            new CompactedHFilesDischarger(cleanerInterval, this.getRegionServerServices(), this);
-        choreService.scheduleChore(compactedFileDischarger);
-      }
-    }
     this.mvcc.advanceTo(maxSeqId);
     if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
       // Recover any edits if available.

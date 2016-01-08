@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,10 +40,12 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -62,6 +66,7 @@ public class TestCompactedHFilesDischarger {
   private static CountDownLatch latch = new CountDownLatch(3);
   private static AtomicInteger counter = new AtomicInteger(0);
   private static AtomicInteger scanCompletedCounter = new AtomicInteger(0);
+  private RegionServerServices rss;
 
   @Before
   public void setUp() throws Exception {
@@ -71,6 +76,10 @@ public class TestCompactedHFilesDischarger {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
+    rss = mock(RegionServerServices.class);
+    List<Region> regions = new ArrayList<Region>();
+    regions.add(region);
+    when(rss.getOnlineRegions()).thenReturn(regions);
   }
 
   @After
@@ -86,7 +95,7 @@ public class TestCompactedHFilesDischarger {
   public void testCompactedHFilesCleaner() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, (HRegion) region);
+        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -152,7 +161,7 @@ public class TestCompactedHFilesDischarger {
   public void testCleanerWithParallelScannersAfterCompaction() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, (HRegion) region);
+        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -223,7 +232,7 @@ public class TestCompactedHFilesDischarger {
   public void testCleanerWithParallelScanners() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, (HRegion) region);
+        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));

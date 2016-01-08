@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.backup.example;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,10 +44,11 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,6 +82,7 @@ public class TestZooKeeperTableArchiveClient {
   private static ZKTableArchiveClient archivingClient;
   private final List<Path> toCleanup = new ArrayList<Path>();
   private static ClusterConnection CONNECTION;
+  private static RegionServerServices rss;
 
   /**
    * Setup the config for the cluster
@@ -93,6 +97,7 @@ public class TestZooKeeperTableArchiveClient {
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
     ZKUtil.createWithParents(watcher, archivingZNode);
+    rss = mock(RegionServerServices.class);
   }
 
   private static void setupConf(Configuration conf) {
@@ -173,8 +178,11 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    List<Region> regions = new ArrayList<Region>();
+    regions.add(region);
+    when(rss.getOnlineRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
-        new CompactedHFilesDischarger(100, stop, region);
+        new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
     compactionCleaner.chore();
     // get the current hfiles in the archive directory
@@ -223,15 +231,21 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    List<Region> regions = new ArrayList<Region>();
+    regions.add(region);
+    when(rss.getOnlineRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
-        new CompactedHFilesDischarger(100, stop, region);
+        new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
     compactionCleaner.chore();
     // create the another table that we don't archive
     hcd = new HColumnDescriptor(TEST_FAM);
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
-    final CompactedHFilesDischarger compactionCleaner1 =
-        new CompactedHFilesDischarger(100, stop, otherRegion);
+    regions = new ArrayList<Region>();
+    regions.add(otherRegion);
+    when(rss.getOnlineRegions()).thenReturn(regions);
+    final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
+        rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
     compactionCleaner1.chore();
     // get the current hfiles in the archive directory
