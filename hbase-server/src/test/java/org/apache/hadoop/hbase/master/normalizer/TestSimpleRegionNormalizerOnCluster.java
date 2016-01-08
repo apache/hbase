@@ -155,11 +155,19 @@ public class TestSimpleRegionNormalizerOnCluster {
       } while (skippedSplitcnt == 0L);
       assert(skippedSplitcnt > 0);
     } else {
-      while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME) < 6) {
-        LOG.info("Waiting for normalization split to complete");
-        Thread.sleep(100);
+      while (true) {
+        List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
+        int cnt = 0;
+        for (HRegion region : regions) {
+          String regionName = region.getRegionInfo().getRegionNameAsString();
+          if (regionName.startsWith("testRegionNormalizationSplitOnCluster,zzzzz")) {
+            cnt++;
+          }
+        }
+        if (cnt >= 2) {
+          break;
+        }
       }
-      assertEquals(6, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
     }
 
     admin.disableTable(TABLENAME);
