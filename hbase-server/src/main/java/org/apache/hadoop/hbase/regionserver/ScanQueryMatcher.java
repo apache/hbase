@@ -278,27 +278,23 @@ public class ScanQueryMatcher {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    if (row != null) {
-      int ret = this.rowComparator.compareRows(row, this.rowOffset, this.rowLength,
+    int ret = this.rowComparator.compareRows(row, this.rowOffset, this.rowLength,
         cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-      if (!this.isReversed) {
-        if (ret <= -1) {
-          return MatchCode.DONE;
-        } else if (ret >= 1) {
-          // could optimize this, if necessary?
-          // Could also be called SEEK_TO_CURRENT_ROW, but this
-          // should be rare/never happens.
-          return MatchCode.SEEK_NEXT_ROW;
-        }
-      } else {
-        if (ret <= -1) {
-          return MatchCode.SEEK_NEXT_ROW;
-        } else if (ret >= 1) {
-          return MatchCode.DONE;
-        }
+    if (!this.isReversed) {
+      if (ret <= -1) {
+        return MatchCode.DONE;
+      } else if (ret >= 1) {
+        // could optimize this, if necessary?
+        // Could also be called SEEK_TO_CURRENT_ROW, but this
+        // should be rare/never happens.
+        return MatchCode.SEEK_NEXT_ROW;
       }
     } else {
-      return MatchCode.DONE;
+      if (ret <= -1) {
+        return MatchCode.SEEK_NEXT_ROW;
+      } else if (ret >= 1) {
+        return MatchCode.DONE;
+      }
     }
 
     // optimize case.

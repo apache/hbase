@@ -474,7 +474,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     byte[] row = cell.getRowArray();
     int offset = cell.getRowOffset();
     short length = cell.getRowLength();
-    if (limit < 0 || matcher.row == null) {
+    if (limit < 0 || matcher.row == null || !Bytes.equals(row, offset, length, matcher.row,
+        matcher.rowOffset, matcher.rowLength)) {
       this.countPerRow = 0;
       matcher.setRow(row, offset, length);
     }
@@ -511,10 +512,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(cell)) {
               return false;
             }
-            // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
-            // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
-            // another compareRow to say the current row is DONE
-            matcher.row = null;
             seekToNextRow(cell);
             break LOOP;
           }
@@ -535,10 +532,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (!matcher.moreRowsMayExistAfter(cell)) {
               return false;
             }
-            // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
-            // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
-            // another compareRow to say the current row is DONE
-            matcher.row = null;
             seekToNextRow(cell);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
             seekAsDirection(matcher.getKeyForNextColumn(cell));
@@ -552,10 +545,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           continue;
 
         case DONE:
-          // We are sure that this row is done and we are in the next row.
-          // So subsequent StoresScanner.next() call need not do another compare
-          // and set the matcher.row
-          matcher.row = null;
           return true;
 
         case DONE_SCAN:
@@ -568,10 +557,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (!matcher.moreRowsMayExistAfter(cell)) {
             return false;
           }
-          // Setting the matcher.row = null, will mean that after the subsequent seekToNextRow()
-          // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
-          // another compareRow to say the current row is DONE
-          matcher.row = null;
+
           seekToNextRow(cell);
           break;
 
