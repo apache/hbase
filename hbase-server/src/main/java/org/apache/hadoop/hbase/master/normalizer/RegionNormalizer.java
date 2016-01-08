@@ -50,8 +50,8 @@ public interface RegionNormalizer {
    * Computes next optimal normalization plan.
    * @param table table to normalize
    * @param types desired types of NormalizationPlan
-   * @return Next (perhaps most urgent) normalization action to perform
+   * @return normalization actions to perform. Null if no action to take
    */
-  NormalizationPlan computePlanForTable(TableName table, List<PlanType> types)
+  List<NormalizationPlan> computePlanForTable(TableName table, List<PlanType> types)
       throws HBaseIOException;
 }

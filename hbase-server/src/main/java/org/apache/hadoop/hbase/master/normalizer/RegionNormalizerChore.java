@@ -39,7 +39,7 @@ public class RegionNormalizerChore extends ScheduledChore {
 
   public RegionNormalizerChore(HMaster master) {
     super(master.getServerName() + "-RegionNormalizerChore", master,
-      master.getConfiguration().getInt("hbase.normalizer.period", 1800000));
+      master.getConfiguration().getInt("hbase.normalizer.period", 300000));
     this.master = master;
   }
 

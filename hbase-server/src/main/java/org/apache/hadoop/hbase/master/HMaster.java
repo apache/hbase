@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
@@ -1351,7 +1352,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             continue;
           }
         }
-        this.normalizer.computePlanForTable(table, types).execute(clusterConnection.getAdmin());
+        List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table, types);
+        if (plans != null) {
+          for (NormalizationPlan plan : plans) {
+            plan.execute(clusterConnection.getAdmin());
+          }
+        }
       }
     }
     // If Region did not generate any plans, it means the cluster is already balanced.
