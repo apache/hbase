@@ -1374,12 +1374,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             continue;
           }
         }
-       NormalizationPlan plan = this.normalizer.computePlanForTable(table, types);
-        plan.execute(clusterConnection.getAdmin());
-        if (plan.getType() == PlanType.SPLIT) {
-          splitPlanCount++;
-        } else if (plan.getType() == PlanType.MERGE) {
-          mergePlanCount++;
+        List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table, types);
+        if (plans != null) {
+          for (NormalizationPlan plan : plans) {
+            plan.execute(clusterConnection.getAdmin());
+            if (plan.getType() == PlanType.SPLIT) {
+              splitPlanCount++;
+            } else if (plan.getType() == PlanType.MERGE) {
+              mergePlanCount++;
+            }
+          }
         }
       }
     }
