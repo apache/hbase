@@ -1881,10 +1881,8 @@ public class HConnectionManager {
       if (zkw == null){
         return;
       }
-      synchronized (masterAndZKLock) {
-        if (keepAliveZookeeperUserCount.decrementAndGet() <= 0 ){
-          keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
-        }
+      if (keepAliveZookeeperUserCount.decrementAndGet() <= 0) {
+        keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
       }
     }
 
