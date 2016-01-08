@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
-import org.apache.hadoop.hbase.util.Triple;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -87,8 +86,12 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       new Comparator<NormalizationPlan>() {
     @Override
     public int compare(NormalizationPlan plan, NormalizationPlan plan2) {
-      if (plan instanceof SplitNormalizationPlan) return -1;
-      if (plan2 instanceof SplitNormalizationPlan) return 1;
+      if (plan instanceof SplitNormalizationPlan) {
+        return -1;
+      }
+      if (plan2 instanceof SplitNormalizationPlan) {
+        return 1;
+      }
       return 0;
     }
   };
