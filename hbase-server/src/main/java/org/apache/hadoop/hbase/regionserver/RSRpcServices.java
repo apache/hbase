@@ -699,11 +699,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           continue;
         }
         if (action.hasGet()) {
-          Get get = ProtobufUtil.toGet(action.getGet());
-          if (context != null) {
-            r = get(get, ((HRegion) region), closeCallBack, context);
-          } else {
-            r = region.get(get);
+          long before = EnvironmentEdgeManager.currentTime();
+          try {
+            Get get = ProtobufUtil.toGet(action.getGet());
+            if (context != null) {
+              r = get(get, ((HRegion) region), closeCallBack, context);
+            } else {
+              r = region.get(get);
+            }
+          } finally {
+            if (regionServer.metricsRegionServer != null) {
+              regionServer.metricsRegionServer.updateGet(
+                EnvironmentEdgeManager.currentTime() - before);
+            }
           }
         } else if (action.hasServiceCall()) {
           resultOrExceptionBuilder = ResultOrException.newBuilder();
