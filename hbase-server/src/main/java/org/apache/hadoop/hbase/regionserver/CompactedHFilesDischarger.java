@@ -73,6 +73,9 @@ public class CompactedHFilesDischarger extends ScheduledChore {
 
   @Override
   public void chore() {
+    // Noop if rss is null. This will never happen in a normal condition except for cases
+    // when the test case is not spinning up a cluster
+    if (regionServerServices == null) return;
     List<Region> onlineRegions = regionServerServices.getOnlineRegions();
     if (onlineRegions != null) {
       for (Region region : onlineRegions) {
