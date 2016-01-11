@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -395,7 +396,7 @@ public class ReplicationSource extends Thread
           sleepMultiplier = 1;
           // if there was nothing to ship and it's not an error
           // set "ageOfLastShippedOp" to <now> to indicate that we're current
-          this.metrics.setAgeOfLastShippedOp(System.currentTimeMillis());
+          this.metrics.setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime());
         }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
