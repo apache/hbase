@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -467,6 +468,51 @@ public class TestLoadIncrementalHFiles {
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
     HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
         Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    Path bottomOut = new Path(dir, "bottom.out");
+    Path topOut = new Path(dir, "top.out");
+
+    LoadIncrementalHFiles.splitStoreFile(
+        util.getConfiguration(), testIn,
+        familyDesc, Bytes.toBytes("ggg"),
+        bottomOut,
+        topOut);
+
+    int rowCount = verifyHFile(bottomOut);
+    rowCount += verifyHFile(topOut);
+    assertEquals(1000, rowCount);
+  }
+
+  @Test
+  public void testSplitStoreFileWithNoneToNone() throws IOException {
+    testSplitStoreFileWithDifferentEncoding(DataBlockEncoding.NONE, DataBlockEncoding.NONE);
+  }
+
+  @Test
+  public void testSplitStoreFileWithEncodedToEncoded() throws IOException {
+    testSplitStoreFileWithDifferentEncoding(DataBlockEncoding.DIFF, DataBlockEncoding.DIFF);
+  }
+
+  @Test
+  public void testSplitStoreFileWithEncodedToNone() throws IOException {
+    testSplitStoreFileWithDifferentEncoding(DataBlockEncoding.DIFF, DataBlockEncoding.NONE);
+  }
+
+  @Test
+  public void testSplitStoreFileWithNoneToEncoded() throws IOException {
+    testSplitStoreFileWithDifferentEncoding(DataBlockEncoding.NONE, DataBlockEncoding.DIFF);
+  }
+
+  private void testSplitStoreFileWithDifferentEncoding(DataBlockEncoding bulkloadEncoding,
+      DataBlockEncoding cfEncoding) throws IOException {
+    Path dir = util.getDataTestDirOnTestFS("testSplitHFileWithDifferentEncoding");
+    FileSystem fs = util.getTestFileSystem();
+    Path testIn = new Path(dir, "testhfile");
+    HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
+    familyDesc.setDataBlockEncoding(cfEncoding);
+    HFileTestUtil.createHFileWithDataBlockEncoding(
+        util.getConfiguration(), fs, testIn, bulkloadEncoding,
+        FAMILY, QUALIFIER, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
     Path topOut = new Path(dir, "top.out");
