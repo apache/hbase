@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -45,8 +44,8 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeSeeker;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -256,9 +255,7 @@ public class TestDataBlockEncoders {
     for (KeyValue kv : kvs) {
       encoder.encode(kv, encodingContext, dos);
     }
-    BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
-    baos.writeTo(stream);
-    encoder.endBlockEncoding(encodingContext, dos, stream.getBuffer());
+    encoder.endBlockEncoding(encodingContext, dos, baos.getBuffer());
     byte[] encodedData = new byte[baos.size() - ENCODED_DATA_OFFSET];
     System.arraycopy(baos.toByteArray(), ENCODED_DATA_OFFSET, encodedData, 0, encodedData.length);
     if (useOffheapData) {
@@ -398,9 +395,7 @@ public class TestDataBlockEncoders {
       for (KeyValue kv : kvList) {
         encoder.encode(kv, encodingContext, dos);
       }
-      BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
-      baos.writeTo(stream);
-      encoder.endBlockEncoding(encodingContext, dos, stream.getBuffer());
+      encoder.endBlockEncoding(encodingContext, dos, baos.getBuffer());
       byte[] encodedData = baos.toByteArray();
 
       testAlgorithm(encodedData, unencodedDataBuf, encoder);

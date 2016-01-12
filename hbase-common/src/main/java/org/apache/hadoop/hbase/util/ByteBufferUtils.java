@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.io.ByteBufferSupportOutputStream;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -141,8 +141,8 @@ public final class ByteBufferUtils {
      // We have writeInt in ByteBufferOutputStream so that it can directly write
      // int to underlying
      // ByteBuffer in one step.
-     if (out instanceof ByteBufferOutputStream) {
-       ((ByteBufferOutputStream) out).writeInt(value);
+     if (out instanceof ByteBufferSupportOutputStream) {
+       ((ByteBufferSupportOutputStream) out).writeInt(value);
      } else {
        StreamUtils.writeInt(out, value);
      }
@@ -179,9 +179,10 @@ public final class ByteBufferUtils {
    */
   public static void copyBufferToStream(OutputStream out, ByteBuffer in,
       int offset, int length) throws IOException {
-    if (in.hasArray()) {
-      out.write(in.array(), in.arrayOffset() + offset,
-          length);
+    if (out instanceof ByteBufferSupportOutputStream) {
+      ((ByteBufferSupportOutputStream) out).write(in, offset, length);
+    } else if (in.hasArray()) {
+      out.write(in.array(), in.arrayOffset() + offset, length);
     } else {
       for (int i = 0; i < length; ++i) {
         out.write(toByte(in, offset + i));
@@ -904,19 +905,6 @@ public final class ByteBufferUtils {
     }
   }
 
-  public static void writeByteBuffer(OutputStream out, ByteBuffer b, int offset, int length)
-      throws IOException {
-    // We have write which takes ByteBuffer in ByteBufferOutputStream so that it
-    // can directly write
-    // bytes from the src ByteBuffer to the destination ByteBuffer. This avoid
-    // need for temp array
-    // creation and copy
-    if (out instanceof ByteBufferOutputStream) {
-      ((ByteBufferOutputStream) out).write(b, offset, length);
-    } else {
-      ByteBufferUtils.copyBufferToStream(out, b, offset, length);
-    }
-  }
   // For testing purpose
   public static String toStringBinary(final ByteBuffer b, int off, int len) {
     StringBuilder result = new StringBuilder();

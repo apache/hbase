@@ -254,7 +254,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements HeapSize, Clone
       length = keyLen + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     }
     ByteBufferUtils.putInt(out, length);
-    ByteBufferUtils.writeByteBuffer(out, this.buf, this.offset, length);
+    ByteBufferUtils.copyBufferToStream(out, this.buf, this.offset, length);
     return length + Bytes.SIZEOF_INT;
   }
 
