@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -57,7 +58,21 @@ public class HFileTestUtil {
       FileSystem fs, Path path,
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException {
-    createHFile(configuration, fs, path, family, qualifier, startKey, endKey,
+      createHFile(configuration, fs, path, DataBlockEncoding.NONE, family, qualifier,
+        startKey, endKey, numRows, false);
+  }
+
+  /**
+   * Create an HFile with the given number of rows between a given
+   * start key and end key @ family:qualifier.  The value will be the key value.
+   * This file will use certain data block encoding algorithm.
+   */
+  public static void createHFileWithDataBlockEncoding(
+      Configuration configuration,
+      FileSystem fs, Path path, DataBlockEncoding encoding,
+      byte[] family, byte[] qualifier,
+      byte[] startKey, byte[] endKey, int numRows) throws IOException {
+      createHFile(configuration, fs, path, encoding, family, qualifier, startKey, endKey,
         numRows, false);
   }
 
@@ -71,7 +86,8 @@ public class HFileTestUtil {
       FileSystem fs, Path path,
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException {
-    createHFile(configuration, fs, path, family, qualifier, startKey, endKey, numRows, true);
+      createHFile(configuration, fs, path, DataBlockEncoding.NONE, family, qualifier,
+        startKey, endKey, numRows, true);
   }
 
   /**
@@ -82,11 +98,12 @@ public class HFileTestUtil {
    */
   public static void createHFile(
       Configuration configuration,
-      FileSystem fs, Path path,
+      FileSystem fs, Path path, DataBlockEncoding encoding,
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows, boolean withTag) throws IOException {
     HFileContext meta = new HFileContextBuilder()
         .withIncludesTags(withTag)
+        .withDataBlockEncoding(encoding)
         .build();
     HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
         .withPath(fs, path)
