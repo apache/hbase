@@ -3728,8 +3728,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       try {
         Result r = null;
         if (action.hasGet()) {
-          Get get = ProtobufUtil.toGet(action.getGet());
-          r = region.get(get);
+          long before = EnvironmentEdgeManager.currentTimeMillis();
+          try {
+            Get get = ProtobufUtil.toGet(action.getGet());
+            r = region.get(get);
+          } finally {
+            if (metricsRegionServer != null) {
+              metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTimeMillis() - before);
+            }
+          }
         } else if (action.hasServiceCall()) {
           resultOrExceptionBuilder = ResultOrException.newBuilder();
           try {
