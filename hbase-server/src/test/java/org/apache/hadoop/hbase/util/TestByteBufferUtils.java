@@ -387,6 +387,15 @@ public class TestByteBufferUtils {
     assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()) < 0);
     bb2.put(6, (byte) 4);
     assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()) > 0);
+    // Assert reverse comparing BB and bytearray works.
+    ByteBuffer bb3 = ByteBuffer.allocate(135);
+    fillBB(bb3, (byte)0);
+    byte[] b3 = new byte[135];
+    fillArray(b3, (byte)1);
+    int result = ByteBufferUtils.compareTo(b3, 0, b3.length, bb3, 0, bb3.remaining());
+    assertTrue(result > 0);
+    result = ByteBufferUtils.compareTo(bb3, 0, bb3.remaining(), b3, 0, b3.length);
+    assertTrue(result < 0);
   }
 
   private static void fillBB(ByteBuffer bb, byte b) {

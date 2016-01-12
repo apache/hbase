@@ -34,6 +34,8 @@ import sun.nio.ch.DirectBuffer;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+  justification="If exception, presume unaligned")
 public final class UnsafeAccess {
 
   private static final Log LOG = LogFactory.getLog(UnsafeAccess.class);
@@ -51,7 +53,6 @@ public final class UnsafeAccess {
   // copyMemory method. A limit is imposed to allow for safepoint polling
   // during a large copy
   static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
-
   static {
     theUnsafe = (Unsafe) AccessController.doPrivileged(new PrivilegedAction<Object>() {
       @Override
@@ -76,7 +77,7 @@ public final class UnsafeAccess {
         m.setAccessible(true);
         unaligned = (boolean) m.invoke(null);
       } catch (Exception e) {
-        unaligned = false;
+        unaligned = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed.
       }
     } else{
       BYTE_ARRAY_BASE_OFFSET = -1;

@@ -819,6 +819,8 @@ public final class CellUtil {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
+      justification="Intentional")
     public Tag next() {
       return null;
     }

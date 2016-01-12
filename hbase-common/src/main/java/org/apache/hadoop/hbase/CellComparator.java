@@ -171,9 +171,14 @@ public class CellComparator implements Comparator<Cell>, Serializable {
           right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
     }
     if (right instanceof ByteBufferedCell) {
-      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getFamilyByteBuffer(),
-          ((ByteBufferedCell) right).getFamilyPosition(), right.getFamilyLength(),
-          left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength()));
+      // Notice how we flip the order of the compare here. We used to negate the return value but
+      // see what FindBugs says
+      // http://findbugs.sourceforge.net/bugDescriptions.html#RV_NEGATING_RESULT_OF_COMPARETO
+      // It suggest flipping the order to get same effect and 'safer'.
+      return ByteBufferUtils.compareTo(
+          left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+          ((ByteBufferedCell)right).getFamilyByteBuffer(),
+          ((ByteBufferedCell)right).getFamilyPosition(), right.getFamilyLength());
     }
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
         right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
@@ -210,10 +215,14 @@ public class CellComparator implements Comparator<Cell>, Serializable {
           right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
     }
     if (right instanceof ByteBufferedCell) {
-      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getQualifierByteBuffer(),
-          ((ByteBufferedCell) right).getQualifierPosition(),
-          right.getQualifierLength(), left.getQualifierArray(), left.getQualifierOffset(),
-          left.getQualifierLength()));
+      // Notice how we flip the order of the compare here. We used to negate the return value but
+      // see what FindBugs says
+      // http://findbugs.sourceforge.net/bugDescriptions.html#RV_NEGATING_RESULT_OF_COMPARETO
+      // It suggest flipping the order to get same effect and 'safer'.
+      return ByteBufferUtils.compareTo(left.getQualifierArray(),
+          left.getQualifierOffset(), left.getQualifierLength(),
+          ((ByteBufferedCell)right).getQualifierByteBuffer(),
+          ((ByteBufferedCell)right).getQualifierPosition(), right.getQualifierLength());
     }
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
@@ -331,9 +340,13 @@ public class CellComparator implements Comparator<Cell>, Serializable {
           right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
     if (right instanceof ByteBufferedCell) {
-      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getRowByteBuffer(),
-          ((ByteBufferedCell) right).getRowPosition(), right.getRowLength(),
-          left.getRowArray(), left.getRowOffset(), left.getRowLength()));
+      // Notice how we flip the order of the compare here. We used to negate the return value but
+      // see what FindBugs says
+      // http://findbugs.sourceforge.net/bugDescriptions.html#RV_NEGATING_RESULT_OF_COMPARETO
+      // It suggest flipping the order to get same effect and 'safer'.
+      return ByteBufferUtils.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+          ((ByteBufferedCell)right).getRowByteBuffer(),
+          ((ByteBufferedCell)right).getRowPosition(), right.getRowLength());
     }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());

@@ -38,6 +38,7 @@ import sun.nio.ch.DirectBuffer;
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
  */
+@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class ByteBufferUtils {
@@ -616,6 +617,33 @@ public final class ByteBufferUtils {
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
+  public static int compareTo(byte [] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    // This method is nearly same as the compareTo that follows but hard sharing code given
+    // byte array and bytebuffer types and this is a hot code path
+    if (UNSAFE_UNALIGNED) {
+      long offset2Adj;
+      Object refObj2 = null;
+      if (buf2.isDirect()) {
+        offset2Adj = o2 + ((DirectBuffer)buf2).address();
+      } else {
+        offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        refObj2 = buf2.array();
+      }
+      return compareToUnsafe(buf1, o1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l1,
+          refObj2, offset2Adj, l2);
+    }
+    int end1 = o1 + l1;
+    int end2 = o2 + l2;
+    for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
+      int a = buf1[i] & 0xFF;
+      int b = buf2.get(i) & 0xFF;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return l1 - l2;
+  }
+
   public static int compareTo(ByteBuffer buf1, int o1, int l1, byte[] buf2, int o2, int l2) {
     if (UNSAFE_UNALIGNED) {
       long offset1Adj;
@@ -626,8 +654,8 @@ public final class ByteBufferUtils {
         offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
         refObj1 = buf1.array();
       }
-      return compareToUnsafe(refObj1, offset1Adj, l1, buf2, o2
-          + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l2);
+      return compareToUnsafe(refObj1, offset1Adj, l1,
+          buf2, o2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l2);
     }
     int end1 = o1 + l1;
     int end2 = o2 + l2;

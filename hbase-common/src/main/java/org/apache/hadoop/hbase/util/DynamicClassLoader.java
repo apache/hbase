@@ -99,7 +99,9 @@ public class DynamicClassLoader extends ClassLoaderBase {
     }
   }
 
-  private void initTempDir(final Configuration conf) {
+  // FindBugs: Making synchronized to avoid IS2_INCONSISTENT_SYNC complaints about
+  // remoteDirFs and jarModifiedTime being part synchronized protected.
+  private synchronized void initTempDir(final Configuration conf) {
     jarModifiedTime = new HashMap<String, Long>();
     String localDirPath = conf.get(
       LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;

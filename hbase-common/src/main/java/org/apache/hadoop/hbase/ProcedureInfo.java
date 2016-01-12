@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.NonceKey;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ProcedureInfo {
+public class ProcedureInfo implements Cloneable {
   private final long procId;
   private final String procName;
   private final String procOwner;
@@ -72,6 +72,8 @@ public class ProcedureInfo {
     this.result = result;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
+      justification="Intentional; calling super class clone doesn't make sense here.")
   public ProcedureInfo clone() {
     return new ProcedureInfo(
       procId, procName, procOwner, procState, parentId, exception, lastUpdate, startTime, result);

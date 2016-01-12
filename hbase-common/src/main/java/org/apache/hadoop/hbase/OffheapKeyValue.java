@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * memory.
  */
 @InterfaceAudience.Private
-public class OffheapKeyValue extends ByteBufferedCell implements HeapSize, Cloneable,
-    SettableSequenceId, Streamable {
+public class OffheapKeyValue extends ByteBufferedCell
+  implements HeapSize, SettableSequenceId, Streamable {
 
   protected final ByteBuffer buf;
   protected final int offset;
