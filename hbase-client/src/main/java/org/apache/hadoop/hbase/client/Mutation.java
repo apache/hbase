@@ -83,6 +83,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   private static final String OP_ATTRIBUTE_TTL = "_ttl";
 
+  protected static final String RETURN_RESULTS = "_rr_";
+
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;

@@ -7163,7 +7163,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         if (this.coprocessorHost != null) {
           Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
-          if (r != null) return r;
+          if (r != null) return increment.isReturnResults() ? r : null;
         }
         // Process increments a Store/family at a time.
         long now = EnvironmentEdgeManager.currentTime();
@@ -7237,7 +7237,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     // Request a cache flush.  Do it outside update lock.
     if (isFlushSize(this.addAndGetGlobalMemstoreSize(accumulatedResultSize))) requestFlush();
-    return Result.create(allKVs);
+    return increment.isReturnResults() ? Result.create(allKVs) : null;
   }
 
   private Result slowButConsistentIncrement(Increment increment, long nonceGroup, long nonce)
