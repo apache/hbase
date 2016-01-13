@@ -2907,7 +2907,6 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
             <id>devapi</id>
             <reports>
               <report>aggregate</report>
-              <report>test-aggregate</report>
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
@@ -2920,50 +2919,6 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
               </sourceFileExcludes>
               <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
               <quiet>true</quiet>
-              <linksource>true</linksource>
-              <sourcetab>2</sourcetab>
-              <validateLinks>true</validateLinks>
-              <fixClassComment>true</fixClassComment>
-              <fixFieldComment>true</fixFieldComment>
-              <fixMethodComment>true</fixMethodComment>
-              <fixTags>all</fixTags>
-              <notimestamp>true</notimestamp>
-              <!-- Pass some options straight to the javadoc executable since it is easier -->
-              <additionalJOption>-J-Xmx2G</additionalJOption>
-              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
-              <additionalDependencies>
-                <additionalDependency>
-                  <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
-                </additionalDependency>
-                <additionalDependency>
-                  <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
-                  <version>${hamcrest.version}</version>
-                </additionalDependency>
-              </additionalDependencies>
-              <inherited>false</inherited>
-            </configuration>
-          </reportSet>
-          <reportSet>
-            <id>testdevapi</id>
-            <reports>
-              <report>test-aggregate</report>
-            </reports>
-            <configuration>
-              <destDir>testdevapidocs</destDir>
-              <name>Developer API</name>
-              <description>The full HBase API, including private and unstable APIs</description>
-              <sourceFileExcludes>
-                <exclude>**/generated/*</exclude>
-                <exclude>**/protobuf/*</exclude>
-                <exclude>**/*.scala</exclude>
-              </sourceFileExcludes>
-              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
-              <quiet>true</quiet>
-              <linksource>true</linksource>
-              <sourcetab>2</sourcetab>
               <validateLinks>true</validateLinks>
               <fixClassComment>true</fixClassComment>
               <fixFieldComment>true</fixFieldComment>
@@ -3014,58 +2969,6 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
               <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
               <quiet>true</quiet>
-              <linksource>true</linksource>
-              <sourcetab>2</sourcetab>
-              <validateLinks>true</validateLinks>
-              <fixClassComment>true</fixClassComment>
-              <fixFieldComment>true</fixFieldComment>
-              <fixMethodComment>true</fixMethodComment>
-              <fixTags>all</fixTags>
-              <notimestamp>true</notimestamp>
-              <!-- Pass some options straight to the javadoc executable since it is easier -->
-              <additionalJOption>-J-Xmx2G</additionalJOption>
-              <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
-              <additionalDependencies>
-                <additionalDependency>
-                  <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
-                </additionalDependency>
-                <additionalDependency>
-                  <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
-                  <version>${hamcrest.version}</version>
-                </additionalDependency>
-              </additionalDependencies>
-              <inherited>false</inherited>
-            </configuration>
-          </reportSet>
-          <reportSet>
-            <id>testuserapi</id>
-            <reports>
-              <report>test-aggregate</report>
-            </reports>
-            <configuration>
-              <destDir>testapidocs</destDir>
-              <name>User API</name>
-              <description>The HBase Application Programmer's API</description>
-              <excludePackageNames>
-                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
-              </excludePackageNames>
-              <!-- switch on dependency-driven aggregation -->
-              <includeDependencySources>false</includeDependencySources>
-              <dependencySourceIncludes>
-                <!-- include ONLY dependencies I control -->
-                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
-              </dependencySourceIncludes>
-              <outputDirectory>${project.reporting.outputDirectory}/devapidocs</outputDirectory>
-              <name>Developer API</name>
-              <description>The full HBase API, including private and unstable APIs</description>
-              <sourceFilesExclude>**/generated/*</sourceFilesExclude>
-              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
-              <quiet>true</quiet>
-              <linksource>true</linksource>
-              <sourcetab>2</sourcetab>
               <validateLinks>true</validateLinks>
               <fixClassComment>true</fixClassComment>
               <fixFieldComment>true</fixFieldComment>
