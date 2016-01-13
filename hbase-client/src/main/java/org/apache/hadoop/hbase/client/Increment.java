@@ -90,6 +90,18 @@ public class Increment extends Mutation implements Comparable<Row> {
   }
 
   /**
+   * @return current setting for returnResults
+   */
+  public boolean isReturnResults() {
+    byte[] v = getAttribute(RETURN_RESULTS);
+    return v == null ? true : Bytes.toBoolean(v);
+  }
+
+  public Increment setReturnResults(boolean returnResults) {
+    setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
+    return this;
+  }
+  /**
    * Add the specified KeyValue to this operation.
    * @param cell individual Cell
    * @return this

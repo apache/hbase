@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,12 +32,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -50,6 +44,10 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Run Increment tests that use the HBase clients; {@link HTable}.
@@ -89,30 +87,18 @@ public class TestIncrementsFromClientSide {
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
     conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
-    // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   @Before
   public void before() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     if (this.fast) {
-      // If fast is set, set our configuration and then do a rolling restart of the one
-      // regionserver so it picks up the new config. Doing this should be faster than starting
-      // and stopping a cluster for each test.
       this.oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY =
           conf.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
       conf.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, this.fast);
-      HRegionServer rs =
-          TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
-      TEST_UTIL.getHBaseCluster().startRegionServer();
-      rs.stop("Restart");
-      while(!rs.isStopped()) {
-        Threads.sleep(100);
-        LOG.info("Restarting " + rs);
-      }
-      TEST_UTIL.waitUntilNoRegionsInTransition(10000);
     }
+    // We need more than one region server in this test
+    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   @After
@@ -124,13 +110,6 @@ public class TestIncrementsFromClientSide {
             this.oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
       }
     }
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
-  public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -183,6 +162,35 @@ public class TestIncrementsFromClientSide {
       // success
     }
   }
+
+  @Test
+  public void testIncrementReturnValue() throws Exception {
+    LOG.info("Starting " + this.name.getMethodName());
+    final TableName TABLENAME =
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+    Put p = new Put(ROW);
+    p.add(FAMILY, COLUMN, Bytes.toBytes(5L));
+    ht.put(p);
+
+    Increment inc = new Increment(ROW);
+    inc.addColumn(FAMILY, COLUMN, 5L);
+
+    Result r = ht.increment(inc);
+    long result = Bytes.toLong(r.getValue(FAMILY, COLUMN));
+    assertEquals(10, result);
+
+    if (this.fast) {
+      inc = new Increment(ROW);
+      inc.addColumn(FAMILY, COLUMN, 5L);
+      inc.setReturnResults(false);
+      r = ht.increment(inc);
+      assertTrue(r.getExists() == null);
+    }
+
+  }
+
 
   @Test
   public void testIncrementInvalidArguments() throws Exception {

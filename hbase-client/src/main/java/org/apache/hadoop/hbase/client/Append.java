@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Append extends Mutation {
-  private static final String RETURN_RESULTS = "_rr_";
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
