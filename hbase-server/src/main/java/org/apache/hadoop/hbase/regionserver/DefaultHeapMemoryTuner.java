@@ -124,126 +124,21 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
 
   @Override
   public TunerResult tune(TunerContext context) {
-    long blockedFlushCount = context.getBlockedFlushCount();
-    long unblockedFlushCount = context.getUnblockedFlushCount();
-    long evictCount = context.getEvictCount();
-    long cacheMissCount = context.getCacheMissCount();
-    long totalFlushCount = blockedFlushCount+unblockedFlushCount;
-    rollingStatsForCacheMisses.insertDataValue(cacheMissCount);
-    rollingStatsForFlushes.insertDataValue(totalFlushCount);
-    rollingStatsForEvictions.insertDataValue(evictCount);
-    StepDirection newTuneDirection = StepDirection.NEUTRAL;
+    float curMemstoreSize = context.getCurMemStoreSize();
+    float curBlockCacheSize = context.getCurBlockCacheSize();
+    addToRollingStats(context);
+
     if (ignoreInitialPeriods < numPeriodsToIgnore) {
       // Ignoring the first few tuner periods
       ignoreInitialPeriods++;
       rollingStatsForTunerSteps.insertDataValue(0);
       return NO_OP_TUNER_RESULT;
     }
-    String tunerLog = "";
-    // We can consider memstore or block cache to be sufficient if
-    // we are using only a minor fraction of what have been already provided to it.
-    boolean earlyMemstoreSufficientCheck = totalFlushCount == 0
-            || context.getCurMemStoreUsed() < context.getCurMemStoreSize()*sufficientMemoryLevel;
-    boolean earlyBlockCacheSufficientCheck = evictCount == 0 ||
-            context.getCurBlockCacheUsed() < context.getCurBlockCacheSize()*sufficientMemoryLevel;
+    StepDirection newTuneDirection = getTuneDirection(context);
+
     float newMemstoreSize;
     float newBlockCacheSize;
-    if (earlyMemstoreSufficientCheck && earlyBlockCacheSufficientCheck) {
-      // Both memstore and block cache memory seems to be sufficient. No operation required.
-      newTuneDirection = StepDirection.NEUTRAL;
-    } else if (earlyMemstoreSufficientCheck) {
-      // Increase the block cache size and corresponding decrease in memstore size.
-      newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
-    } else if (earlyBlockCacheSufficientCheck) {
-      // Increase the memstore size and corresponding decrease in block cache size.
-      newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
-    } else {
-      // Early checks for sufficient memory failed. Tuning memory based on past statistics.
-      // Boolean indicator to show if we need to revert previous step or not.
-      boolean isReverting = false;
-      switch (prevTuneDirection) {
-      // Here we are using number of evictions rather than cache misses because it is more
-      // strong indicator for deficient cache size. Improving caching is what we
-      // would like to optimize for in steady state.
-      case INCREASE_BLOCK_CACHE_SIZE:
-        if ((double)evictCount > rollingStatsForEvictions.getMean() ||
-            (double)totalFlushCount > rollingStatsForFlushes.getMean() +
-            rollingStatsForFlushes.getDeviation()/2.00) {
-          // Reverting previous step as it was not useful.
-          // Tuning failed to decrease evictions or tuning resulted in large number of flushes.
-          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
-          tunerLog += "Reverting previous tuning.";
-          if ((double)evictCount > rollingStatsForEvictions.getMean()) {
-            tunerLog += " As could not decrease evctions sufficiently.";
-          } else {
-            tunerLog += " As number of flushes rose significantly.";
-          }
-          isReverting = true;
-        }
-        break;
-      case INCREASE_MEMSTORE_SIZE:
-        if ((double)totalFlushCount > rollingStatsForFlushes.getMean() ||
-            (double)evictCount > rollingStatsForEvictions.getMean() +
-            rollingStatsForEvictions.getDeviation()/2.00) {
-          // Reverting previous step as it was not useful.
-          // Tuning failed to decrease flushes or tuning resulted in large number of evictions.
-          newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
-          tunerLog += "Reverting previous tuning.";
-          if ((double)totalFlushCount > rollingStatsForFlushes.getMean()) {
-            tunerLog += " As could not decrease flushes sufficiently.";
-          } else {
-            tunerLog += " As number of evictions rose significantly.";
-          }
-          isReverting = true;
-        }
-        break;
-      default:
-        // Last step was neutral, revert doesn't not apply here.
-        break;
-      }
-      // If we are not reverting. We try to tune memory sizes by looking at cache misses / flushes.
-      if (!isReverting){
-        // mean +- deviation*0.8 is considered to be normal
-        // below it its consider low and above it is considered high.
-        // We can safely assume that the number cache misses, flushes are normally distributed over
-        // past periods and hence on all the above mentioned classes (normal, high and low)
-        // are likely to occur with probability 56%, 22%, 22% respectively. Hence there is at
-        // least ~10% probability that we will not fall in NEUTRAL step.
-        // This optimization solution is feedback based and we revert when we
-        // dont find our steps helpful. Hence we want to do tuning only when we have clear
-        // indications because too many unnecessary tuning may affect the performance of cluster.
-        if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
-            rollingStatsForCacheMisses.getDeviation()*0.80 &&
-            (double)totalFlushCount < rollingStatsForFlushes.getMean() -
-            rollingStatsForFlushes.getDeviation()*0.80) {
-          // Everything is fine no tuning required
-          newTuneDirection = StepDirection.NEUTRAL;
-        } else if ((double)cacheMissCount > rollingStatsForCacheMisses.getMean() +
-            rollingStatsForCacheMisses.getDeviation()*0.80 &&
-            (double)totalFlushCount < rollingStatsForFlushes.getMean() -
-            rollingStatsForFlushes.getDeviation()*0.80) {
-          // more misses , increasing cache size
-          newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
-          tunerLog +=
-              "Increasing block cache size as observed increase in number of cache misses.";
-        } else if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
-            rollingStatsForCacheMisses.getDeviation()*0.80 &&
-            (double)totalFlushCount > rollingStatsForFlushes.getMean() +
-            rollingStatsForFlushes.getDeviation()*0.80) {
-          // more flushes , increasing memstore size
-          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
-          tunerLog += "Increasing memstore size as observed increase in number of flushes.";
-        } else if (blockedFlushCount > 0 && prevTuneDirection == StepDirection.NEUTRAL) {
-          // we do not want blocked flushes
-          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
-          tunerLog += "Increasing memstore size as observed "
-                      + blockedFlushCount + " blocked flushes.";
-        } else {
-          // Default. Not enough facts to do tuning.
-          newTuneDirection = StepDirection.NEUTRAL;
-        }
-      }
-    }
+
     // Adjusting step size for tuning to get to steady state or restart from steady state.
     // Even if the step size was 4% and 32 GB memory size, we will be shifting 1 GB back and forth
     // per tuner operation and it can affect the performance of cluster so we keep on decreasing
@@ -265,20 +160,30 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     }
     if (step < minimumStepSize) {
       // If step size is too small then we do nothing.
+      LOG.debug("Tuner step size is too low; we will not perform any tuning this time.");
       step = 0.0f;
       newTuneDirection = StepDirection.NEUTRAL;
     }
     // Increase / decrease the memstore / block cahce sizes depending on new tuner step.
+    float globalMemstoreLowerMark = HeapMemorySizeUtil.getGlobalMemStoreLowerMark(conf,
+        curMemstoreSize);
+    // We don't want to exert immediate pressure on memstore. So, we decrease its size gracefully;
+    // we set a minimum bar in the middle of the total memstore size and the lower limit.
+    float minMemstoreSize = ((globalMemstoreLowerMark + 1) * curMemstoreSize) / 2.00f;
+
     switch (newTuneDirection) {
     case INCREASE_BLOCK_CACHE_SIZE:
-        newBlockCacheSize = context.getCurBlockCacheSize() + step;
-        newMemstoreSize = context.getCurMemStoreSize() - step;
+        if (curMemstoreSize - step < minMemstoreSize) {
+          step = curMemstoreSize - minMemstoreSize;
+        }
+        newMemstoreSize = curMemstoreSize - step;
+        newBlockCacheSize = curBlockCacheSize + step;
         rollingStatsForTunerSteps.insertDataValue(-(int)(step*100000));
         decayingTunerStepSizeSum = (decayingTunerStepSizeSum - step)/2.00f;
         break;
     case INCREASE_MEMSTORE_SIZE:
-        newBlockCacheSize = context.getCurBlockCacheSize() - step;
-        newMemstoreSize = context.getCurMemStoreSize() + step;
+        newBlockCacheSize = curBlockCacheSize - step;
+        newMemstoreSize = curMemstoreSize + step;
         rollingStatsForTunerSteps.insertDataValue((int)(step*100000));
         decayingTunerStepSizeSum = (decayingTunerStepSizeSum + step)/2.00f;
         break;
@@ -301,11 +206,144 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     }
     TUNER_RESULT.setBlockCacheSize(newBlockCacheSize);
     TUNER_RESULT.setMemstoreSize(newMemstoreSize);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(tunerLog);
-    }
     prevTuneDirection = newTuneDirection;
     return TUNER_RESULT;
+  }
+
+  /**
+   * Determine best direction of tuning base on given context.
+   * @param context The tuner context.
+   * @return tuning direction.
+   */
+  private StepDirection getTuneDirection(TunerContext context) {
+    StepDirection newTuneDirection = StepDirection.NEUTRAL;
+    long blockedFlushCount = context.getBlockedFlushCount();
+    long unblockedFlushCount = context.getUnblockedFlushCount();
+    long evictCount = context.getEvictCount();
+    long cacheMissCount = context.getCacheMissCount();
+    long totalFlushCount = blockedFlushCount+unblockedFlushCount;
+    float curMemstoreSize = context.getCurMemStoreSize();
+    float curBlockCacheSize = context.getCurBlockCacheSize();
+    StringBuilder tunerLog = new StringBuilder();
+    // We can consider memstore or block cache to be sufficient if
+    // we are using only a minor fraction of what have been already provided to it.
+    boolean earlyMemstoreSufficientCheck = totalFlushCount == 0
+        || context.getCurMemStoreUsed() < curMemstoreSize * sufficientMemoryLevel;
+    boolean earlyBlockCacheSufficientCheck = evictCount == 0 ||
+        context.getCurBlockCacheUsed() < curBlockCacheSize * sufficientMemoryLevel;
+    if (earlyMemstoreSufficientCheck && earlyBlockCacheSufficientCheck) {
+      // Both memstore and block cache memory seems to be sufficient. No operation required.
+      newTuneDirection = StepDirection.NEUTRAL;
+    } else if (earlyMemstoreSufficientCheck) {
+      // Increase the block cache size and corresponding decrease in memstore size.
+      newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
+    } else if (earlyBlockCacheSufficientCheck) {
+      // Increase the memstore size and corresponding decrease in block cache size.
+      newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+    } else {
+      // Early checks for sufficient memory failed. Tuning memory based on past statistics.
+      // Boolean indicator to show if we need to revert previous step or not.
+      boolean isReverting = false;
+      switch (prevTuneDirection) {
+      // Here we are using number of evictions rather than cache misses because it is more
+      // strong indicator for deficient cache size. Improving caching is what we
+      // would like to optimize for in steady state.
+      case INCREASE_BLOCK_CACHE_SIZE:
+        if ((double)evictCount > rollingStatsForEvictions.getMean() ||
+            (double)totalFlushCount > rollingStatsForFlushes.getMean() +
+                rollingStatsForFlushes.getDeviation()/2.00) {
+          // Reverting previous step as it was not useful.
+          // Tuning failed to decrease evictions or tuning resulted in large number of flushes.
+          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+          tunerLog.append("We will revert previous tuning");
+          if ((double)evictCount > rollingStatsForEvictions.getMean()) {
+            tunerLog.append(" because we could not decrease evictions sufficiently.");
+          } else {
+            tunerLog.append(" because the number of flushes rose significantly.");
+          }
+          isReverting = true;
+        }
+        break;
+      case INCREASE_MEMSTORE_SIZE:
+        if ((double)totalFlushCount > rollingStatsForFlushes.getMean() ||
+            (double)evictCount > rollingStatsForEvictions.getMean() +
+                rollingStatsForEvictions.getDeviation()/2.00) {
+          // Reverting previous step as it was not useful.
+          // Tuning failed to decrease flushes or tuning resulted in large number of evictions.
+          newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
+          tunerLog.append("We will revert previous tuning");
+          if ((double)totalFlushCount > rollingStatsForFlushes.getMean()) {
+            tunerLog.append(" because we could not decrease flushes sufficiently.");
+          } else {
+            tunerLog.append(" because number of evictions rose significantly.");
+          }
+          isReverting = true;
+        }
+        break;
+      default:
+        // Last step was neutral, revert doesn't not apply here.
+        break;
+      }
+      // If we are not reverting. We try to tune memory sizes by looking at cache misses / flushes.
+      if (!isReverting){
+        // mean +- deviation*0.8 is considered to be normal
+        // below it its consider low and above it is considered high.
+        // We can safely assume that the number cache misses, flushes are normally distributed over
+        // past periods and hence on all the above mentioned classes (normal, high and low)
+        // are likely to occur with probability 56%, 22%, 22% respectively. Hence there is at
+        // least ~10% probability that we will not fall in NEUTRAL step.
+        // This optimization solution is feedback based and we revert when we
+        // dont find our steps helpful. Hence we want to do tuning only when we have clear
+        // indications because too many unnecessary tuning may affect the performance of cluster.
+        if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
+            (double)totalFlushCount < rollingStatsForFlushes.getMean() -
+                rollingStatsForFlushes.getDeviation()*0.80) {
+          // Everything is fine no tuning required
+          newTuneDirection = StepDirection.NEUTRAL;
+        } else if ((double)cacheMissCount > rollingStatsForCacheMisses.getMean() +
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
+            (double)totalFlushCount < rollingStatsForFlushes.getMean() -
+                rollingStatsForFlushes.getDeviation()*0.80) {
+          // more misses , increasing cache size
+          newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
+          tunerLog.append(
+              "Going to increase block cache size due to increase in number of cache misses.");
+        } else if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
+            (double)totalFlushCount > rollingStatsForFlushes.getMean() +
+                rollingStatsForFlushes.getDeviation()*0.80) {
+          // more flushes , increasing memstore size
+          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+          tunerLog.append("Going to increase memstore size due to increase in number of flushes.");
+        } else if (blockedFlushCount > 0 && prevTuneDirection == StepDirection.NEUTRAL) {
+          // we do not want blocked flushes
+          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+          tunerLog.append("Going to increase memstore size due to"
+              + blockedFlushCount + " blocked flushes.");
+        } else {
+          // Default. Not enough facts to do tuning.
+          tunerLog.append("Going to do nothing because we "
+              + "could not determine best tuning direction");
+          newTuneDirection = StepDirection.NEUTRAL;
+        }
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(tunerLog.toString());
+    }
+    return newTuneDirection;
+  }
+
+  /**
+   * Add the given context to the rolling tuner stats.
+   * @param context The tuner context.
+   */
+  private void addToRollingStats(TunerContext context) {
+    rollingStatsForCacheMisses.insertDataValue(context.getCacheMissCount());
+    rollingStatsForFlushes.insertDataValue(context.getBlockedFlushCount() +
+        context.getUnblockedFlushCount());
+    rollingStatsForEvictions.insertDataValue(context.getEvictCount());
   }
 
   @Override
