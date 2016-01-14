@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.compress.Compressor;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
@@ -64,7 +65,25 @@ public class ChangeCompressionAction extends Action {
 
     // Since not every compression algorithm is supported,
     // let's use the same algorithm for all column families.
-    Algorithm algo = possibleAlgos[random.nextInt(possibleAlgos.length)];
+
+    // If an unsupported compression algorithm is chosen, pick a different one.
+    // This is to work around the issue that modifyTable() does not throw remote
+    // exception.
+    Algorithm algo;
+    do {
+      algo = possibleAlgos[random.nextInt(possibleAlgos.length)];
+
+      try {
+        Compressor c = algo.getCompressor();
+
+        // call returnCompressor() to release the Compressor
+        algo.returnCompressor(c);
+        break;
+      } catch (Throwable t) {
+        LOG.info("Performing action: Changing compression algorithms to " + algo +
+                " is not supported, pick another one");
+      }
+    } while (true);
 
     LOG.debug("Performing action: Changing compression algorithms on "
       + tableNameString + " to " + algo);
