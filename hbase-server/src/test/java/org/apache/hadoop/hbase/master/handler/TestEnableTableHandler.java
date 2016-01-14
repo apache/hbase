@@ -20,8 +20,12 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -100,24 +104,42 @@ public class TestEnableTableHandler {
     cluster.waitForRegionServerToStop(rs.getRegionServer().getServerName(), 10000);
 
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    LOG.debug("Now enabling table " + tableName);
 
     admin.enableTable(tableName);
     assertTrue(admin.isTableEnabled(tableName));
     JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
     LOG.info("Started new regionserver " + rs2.getRegionServer().getServerName());
-    m.getAssignmentManager().assign(admin.getTableRegions(tableName));
+    cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
+        rs2.getRegionServer().getServerName().getPort(), 60000);
+
+    // This second region assign action seems to be useless since design of
+    // this case is to make sure that table enabled when no RS up could get
+    // assigned after RS come back
+    List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getTableRegions(tableName);
+    assertEquals(1, regions.size());
+    for (HRegionInfo region : regions) {
+      TEST_UTIL.getHBaseAdmin().assign(region.getEncodedNameAsBytes());
+    }
+    LOG.debug("Waiting for table assigned " + tableName);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
     List<HRegionInfo> onlineRegions = admin.getOnlineRegions(
         rs2.getRegionServer().getServerName());
     for (HRegionInfo hri: onlineRegions) LOG.info("Online " + hri);
-    assertTrue("Does not have at least one region " + onlineRegions.size(),
-      onlineRegions.size() >= 1);
-    // Disabling this assert. Saw this which seems legit:
-    //   TestEnableTableHandler.testEnableTableWithNoRegionServers:115 
-    // expected:<testEnableTableWithNoRegionServers> but was:<hbase:namespace>
-    // assertEquals(tableName, onlineRegions.get(0).getTable());
+    ArrayList<HRegionInfo> tableRegions = filterTableRegions(tableName, onlineRegions);
+    assertEquals(1, tableRegions.size());
   }
 
+  private ArrayList<HRegionInfo> filterTableRegions(final TableName tableName,
+      List<HRegionInfo> onlineRegions) {
+    return Lists.newArrayList(Iterables.filter(onlineRegions, new Predicate<HRegionInfo>() {
+      @Override
+      public boolean apply(HRegionInfo input) {
+        return input.getTable().equals(tableName);
+      }
+    }));
+  }
 
   @Test(timeout = 300000)
   public void testDisableTableAndRestart() throws Exception {
