@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -82,7 +83,7 @@ public class TestAtomicOperation {
   private static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
 
-  Region region = null;
+  HRegion region = null;
   private HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   // Test names
@@ -144,13 +145,13 @@ public class TestAtomicOperation {
    * Test multi-threaded increments.
    */
   @Test
-  public void testIncrementMultiThreads() throws IOException {
+  public void testIncrementMultiThreads(final boolean fast) throws IOException {
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
-    // create 25 threads, each will increment by its own quantity
-    int numThreads = 25;
+    // Create 100 threads, each will increment by its own quantity
+    int numThreads = 100;
     int incrementsPerThread = 1000;
     Incrementer[] all = new Incrementer[numThreads];
     int expectedTotal = 0;
@@ -173,9 +174,9 @@ public class TestAtomicOperation {
         LOG.info("Ignored", e);
       }
     }
-    assertICV(row, fam1, qual1, expectedTotal);
-    assertICV(row, fam1, qual2, expectedTotal*2);
-    assertICV(row, fam2, qual3, expectedTotal*3);
+    assertICV(row, fam1, qual1, expectedTotal, fast);
+    assertICV(row, fam1, qual2, expectedTotal*2, fast);
+    assertICV(row, fam2, qual3, expectedTotal*3, fast);
     LOG.info("testIncrementMultiThreads successfully verified that total is " + expectedTotal);
   }
 
@@ -183,9 +184,11 @@ public class TestAtomicOperation {
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount) throws IOException {
+                         long amount,
+                         boolean fast) throws IOException {
     // run a get and see?
     Get get = new Get(row);
+    if (fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.addColumn(familiy, qualifier);
     Result result = region.get(get);
     assertEquals(1, result.size());
@@ -511,13 +514,13 @@ public class TestAtomicOperation {
   }
 
   public static class AtomicOperation extends Thread {
-    protected final Region region;
+    protected final HRegion region;
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
     protected final Random r = new Random();
 
-    public AtomicOperation(Region region, int numOps, AtomicLong timeStamps,
+    public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {
       this.region = region;
       this.numOps = numOps;
@@ -579,8 +582,8 @@ public class TestAtomicOperation {
   }
 
   private class PutThread extends TestThread {
-    private Region region;
-    PutThread(TestContext ctx, Region region) {
+    private HRegion region;
+    PutThread(TestContext ctx, HRegion region) {
       super(ctx);
       this.region = region;
     }
@@ -596,8 +599,8 @@ public class TestAtomicOperation {
   }
 
   private class CheckAndPutThread extends TestThread {
-    private Region region;
-    CheckAndPutThread(TestContext ctx, Region region) {
+    private HRegion region;
+    CheckAndPutThread(TestContext ctx, HRegion region) {
       super(ctx);
       this.region = region;
    }

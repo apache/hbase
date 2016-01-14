@@ -29,7 +29,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestIncrement {
   @Test
-  public void test() {
+  public void testIncrementInstance() {
     final long expected = 13;
     Increment inc = new Increment(new byte [] {'r'});
     int total = 0;
