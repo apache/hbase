@@ -309,9 +309,9 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       if (!suspendQueue) suspendQueue = true;
 
       if (isTableProcedure(procedure)) {
-        suspendTableQueue(event, getTableName(procedure));
+        waitTableEvent(event, procedure, suspendQueue);
       } else if (isServerProcedure(procedure)) {
-        suspendServerQueue(event, getServerName(procedure));
+        waitServerEvent(event, procedure, suspendQueue);
       } else {
         // TODO: at the moment we only have Table and Server procedures
         // if you are implementing a non-table/non-server procedure, you have two options: create
@@ -324,15 +324,21 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     return true;
   }
 
-  private void suspendTableQueue(ProcedureEvent event, TableName tableName) {
+  private void waitTableEvent(ProcedureEvent event, Procedure procedure, boolean suspendQueue) {
+    final TableName tableName = getTableName(procedure);
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
+
     schedLock.lock();
     try {
       TableQueue queue = getTableQueue(tableName);
-      if (!queue.setSuspended(true)) return;
+      if (queue.isSuspended()) return;
 
-      if (LOG.isDebugEnabled()) {
+      // TODO: if !suspendQueue
+
+      if (isDebugEnabled) {
         LOG.debug("Suspend table queue " + tableName);
       }
+      queue.setSuspended(true);
       removeFromRunQueue(tableRunQueue, queue);
       event.suspendTableQueue(queue);
     } finally {
@@ -340,16 +346,22 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
-  private void suspendServerQueue(ProcedureEvent event, ServerName serverName) {
+  private void waitServerEvent(ProcedureEvent event, Procedure procedure, boolean suspendQueue) {
+    final ServerName serverName = getServerName(procedure);
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
+
     schedLock.lock();
     try {
       // TODO: This will change once we have the new AM
       ServerQueue queue = getServerQueue(serverName);
-      if (!queue.setSuspended(true)) return;
+      if (queue.isSuspended()) return;
 
-      if (LOG.isDebugEnabled()) {
+      // TODO: if !suspendQueue
+
+      if (isDebugEnabled) {
         LOG.debug("Suspend server queue " + serverName);
       }
+      queue.setSuspended(true);
       removeFromRunQueue(serverRunQueue, queue);
       event.suspendServerQueue(queue);
     } finally {
@@ -358,18 +370,20 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   public void suspend(ProcedureEvent event) {
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
     synchronized (event) {
       event.setReady(false);
-      if (LOG.isDebugEnabled()) {
+      if (isDebugEnabled) {
         LOG.debug("Suspend event " + event);
       }
     }
   }
 
   public void wake(ProcedureEvent event) {
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
     synchronized (event) {
       event.setReady(true);
-      if (LOG.isDebugEnabled()) {
+      if (isDebugEnabled) {
         LOG.debug("Wake event " + event);
       }
 
@@ -467,7 +481,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     Queue<TableName> node = AvlTree.get(tableMap, tableName);
     if (node != null) return (TableQueue)node;
 
-    node = new TableQueue(tableName, getTablePriority(tableName));
+    NamespaceQueue nsQueue = getNamespaceQueue(tableName.getNamespaceAsString());
+    node = new TableQueue(tableName, nsQueue, getTablePriority(tableName));
     tableMap = AvlTree.insert(tableMap, node);
     return (TableQueue)node;
   }
@@ -491,6 +506,18 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   private static TableName getTableName(Procedure proc) {
     return ((TableProcedureInterface)proc).getTableName();
+  }
+
+  // ============================================================================
+  //  Namespace Queue Lookup Helpers
+  // ============================================================================
+  private NamespaceQueue getNamespaceQueue(String namespace) {
+    Queue<String> node = AvlTree.get(namespaceMap, namespace);
+    if (node != null) return (NamespaceQueue)node;
+
+    node = new NamespaceQueue(namespace);
+    namespaceMap = AvlTree.insert(namespaceMap, node);
+    return (NamespaceQueue)node;
   }
 
   // ============================================================================
@@ -559,10 +586,22 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   public static class TableQueue extends QueueImpl<TableName> {
+    private final NamespaceQueue namespaceQueue;
+
     private TableLock tableLock = null;
 
-    public TableQueue(TableName tableName, int priority) {
+    public TableQueue(TableName tableName, NamespaceQueue namespaceQueue, int priority) {
       super(tableName, priority);
+      this.namespaceQueue = namespaceQueue;
+    }
+
+    public NamespaceQueue getNamespaceQueue() {
+      return namespaceQueue;
+    }
+
+    @Override
+    public synchronized boolean isAvailable() {
+      return super.isAvailable() && !namespaceQueue.hasExclusiveLock();
     }
 
     // TODO: We can abort pending/in-progress operation if the new call is
@@ -584,9 +623,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         case CREATE:
         case DELETE:
         case DISABLE:
-        case EDIT:
         case ENABLE:
           return true;
+        case EDIT:
+          // we allow concurrent edit on the NS table
+          return !tpi.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
         case READ:
           return false;
         default:
@@ -595,10 +636,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       throw new UnsupportedOperationException("unexpected type " + tpi.getTableOperationType());
     }
 
-    private synchronized boolean trySharedLock(final TableLockManager lockManager,
+    private synchronized boolean tryZkSharedLock(final TableLockManager lockManager,
         final String purpose) {
-      if (hasExclusiveLock()) return false;
-
       // Take zk-read-lock
       TableName tableName = getKey();
       tableLock = lockManager.readLock(tableName, purpose);
@@ -609,14 +648,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         tableLock = null;
         return false;
       }
-
-      trySharedLock();
       return true;
     }
 
-    private synchronized void releaseSharedLock(final TableLockManager lockManager) {
+    private synchronized void releaseZkSharedLock(final TableLockManager lockManager) {
       releaseTableLock(lockManager, isSingleSharedLock());
-      releaseSharedLock();
     }
 
     private synchronized boolean tryZkExclusiveLock(final TableLockManager lockManager,
@@ -653,8 +689,44 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
+  /**
+   * the namespace is currently used just as a rwlock, not as a queue.
+   * because ns operation are not frequent enough. so we want to avoid
+   * having to move table queues around for suspend/resume.
+   */
+  private static class NamespaceQueue extends Queue<String> {
+    public NamespaceQueue(String namespace) {
+      super(namespace);
+    }
+
+    @Override
+    public boolean requireExclusiveLock(Procedure proc) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void add(final Procedure proc, final boolean addToFront) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Procedure poll() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isEmpty() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int size() {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   // ============================================================================
-  //  Locking Helpers
+  //  Table Locking Helpers
   // ============================================================================
   /**
    * Try to acquire the exclusive lock on the specified table.
@@ -666,8 +738,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   public boolean tryAcquireTableExclusiveLock(final TableName table, final String purpose) {
     schedLock.lock();
     TableQueue queue = getTableQueue(table);
-    boolean hasXLock = queue.tryExclusiveLock();
-    if (!hasXLock) {
+    if (!queue.getNamespaceQueue().trySharedLock()) {
+      return false;
+    }
+
+    if (!queue.tryExclusiveLock()) {
+      queue.getNamespaceQueue().releaseSharedLock();
       schedLock.unlock();
       return false;
     }
@@ -676,10 +752,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     schedLock.unlock();
 
     // Zk lock is expensive...
-    hasXLock = queue.tryZkExclusiveLock(lockManager, purpose);
+    boolean hasXLock = queue.tryZkExclusiveLock(lockManager, purpose);
     if (!hasXLock) {
       schedLock.lock();
       queue.releaseExclusiveLock();
+      queue.getNamespaceQueue().releaseSharedLock();
       addToRunQueue(tableRunQueue, queue);
       schedLock.unlock();
     }
@@ -700,6 +777,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     schedLock.lock();
     queue.releaseExclusiveLock();
+    queue.getNamespaceQueue().releaseSharedLock();
     addToRunQueue(tableRunQueue, queue);
     schedLock.unlock();
   }
@@ -712,7 +790,29 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * @return true if we were able to acquire the lock on the table, otherwise false.
    */
   public boolean tryAcquireTableSharedLock(final TableName table, final String purpose) {
-    return getTableQueueWithLock(table).trySharedLock(lockManager, purpose);
+    schedLock.lock();
+    TableQueue queue = getTableQueue(table);
+    if (!queue.getNamespaceQueue().trySharedLock()) {
+      return false;
+    }
+
+    if (!queue.trySharedLock()) {
+      queue.getNamespaceQueue().releaseSharedLock();
+      schedLock.unlock();
+      return false;
+    }
+
+    schedLock.unlock();
+
+    // Zk lock is expensive...
+    boolean hasXLock = queue.tryZkSharedLock(lockManager, purpose);
+    if (!hasXLock) {
+      schedLock.lock();
+      queue.releaseSharedLock();
+      queue.getNamespaceQueue().releaseSharedLock();
+      schedLock.unlock();
+    }
+    return hasXLock;
   }
 
   /**
@@ -720,7 +820,17 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * @param table the name of the table that has the shared lock
    */
   public void releaseTableSharedLock(final TableName table) {
-    getTableQueueWithLock(table).releaseSharedLock(lockManager);
+    schedLock.lock();
+    TableQueue queue = getTableQueue(table);
+    schedLock.unlock();
+
+    // Zk lock is expensive...
+    queue.releaseZkSharedLock(lockManager);
+
+    schedLock.lock();
+    queue.releaseSharedLock();
+    queue.getNamespaceQueue().releaseSharedLock();
+    schedLock.unlock();
   }
 
   /**
@@ -763,12 +873,57 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   // ============================================================================
+  //  Namespace Locking Helpers
+  // ============================================================================
+  /**
+   * Try to acquire the exclusive lock on the specified namespace.
+   * @see #releaseNamespaceExclusiveLock(String)
+   * @param nsName Namespace to lock
+   * @return true if we were able to acquire the lock on the namespace, otherwise false.
+   */
+  public boolean tryAcquireNamespaceExclusiveLock(final String nsName) {
+    schedLock.lock();
+    try {
+      TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
+      if (!tableQueue.trySharedLock()) return false;
+
+      NamespaceQueue nsQueue = getNamespaceQueue(nsName);
+      boolean hasLock = nsQueue.tryExclusiveLock();
+      if (!hasLock) {
+        tableQueue.releaseSharedLock();
+      }
+      return hasLock;
+    } finally {
+      schedLock.unlock();
+    }
+  }
+
+  /**
+   * Release the exclusive lock
+   * @see #tryAcquireNamespaceExclusiveLock(String)
+   * @param nsName the namespace that has the exclusive lock
+   */
+  public void releaseNamespaceExclusiveLock(final String nsName) {
+    schedLock.lock();
+    try {
+      TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
+      tableQueue.releaseSharedLock();
+
+      NamespaceQueue queue = getNamespaceQueue(nsName);
+      queue.releaseExclusiveLock();
+    } finally {
+      schedLock.unlock();
+    }
+  }
+
+  // ============================================================================
   //  Server Locking Helpers
   // ============================================================================
   /**
-   * Release the exclusive lock
-   * @see #tryAcquireServerExclusiveLock(ServerName)
-   * @param serverName the server that has the exclusive lock
+   * Try to acquire the exclusive lock on the specified server.
+   * @see #releaseServerExclusiveLock(ServerName)
+   * @param serverName Server to lock
+   * @return true if we were able to acquire the lock on the server, otherwise false.
    */
   public boolean tryAcquireServerExclusiveLock(final ServerName serverName) {
     schedLock.lock();

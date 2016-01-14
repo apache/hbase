@@ -104,7 +104,7 @@ public class DeleteNamespaceProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Error trying to delete the namespace" + namespaceName
+      LOG.warn("Error trying to delete the namespace " + namespaceName
         + " (in state=" + state + ")", e);
 
       setFailure("master-delete-namespace", e);
@@ -212,12 +212,13 @@ public class DeleteNamespaceProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    return getTableNamespaceManager(env).acquireExclusiveLock();
+    if (env.waitInitialized(this)) return false;
+    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(getNamespaceName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    getTableNamespaceManager(env).releaseExclusiveLock();
+    env.getProcedureQueue().releaseNamespaceExclusiveLock(getNamespaceName());
   }
 
   @Override
@@ -228,6 +229,10 @@ public class DeleteNamespaceProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.EDIT;
+  }
+
+  private String getNamespaceName() {
+    return namespaceName;
   }
 
   /**
