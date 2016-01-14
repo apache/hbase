@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
@@ -113,6 +114,12 @@ public class VersionInfo {
     }
   }
 
+  public static void writeTo(PrintStream out) {
+    for (String line : versionReport()) {
+      out.println(line);
+    }
+  }
+
   public static void logVersion() {
     for (String line : versionReport()) {
       LOG.info(line);
@@ -120,6 +127,6 @@ public class VersionInfo {
   }
 
   public static void main(String[] args) {
-    logVersion();
+    writeTo(System.out);
   }
 }
