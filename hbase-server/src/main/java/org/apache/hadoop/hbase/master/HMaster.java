@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -276,14 +277,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   // flag set after we complete initialization once active,
   // it is not private since it's used in unit tests
-  volatile boolean initialized = false;
+  private final ProcedureEvent initialized = new ProcedureEvent("master initialized");
 
   // flag set after master services are started,
   // initialization may have not completed yet.
   volatile boolean serviceStarted = false;
 
   // flag set after we complete assignMeta.
-  private volatile boolean serverCrashProcessingEnabled = false;
+  private final ProcedureEvent serverCrashProcessingEnabled =
+    new ProcedureEvent("server crash processing");
 
   LoadBalancer balancer;
   private RegionNormalizer normalizer;
@@ -776,7 +778,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     configurationManager.registerObserver(this.balancer);
 
     // Set master as 'initialized'.
-    initialized = true;
+    setInitialized(true);
 
     status.setStatus("Starting quota manager");
     initQuotaManager();
@@ -995,8 +997,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // servers. This is required so that if meta is assigning to a server which dies after
     // assignMeta starts assignment, ServerCrashProcedure can re-assign it. Otherwise, we will be
     // stuck here waiting forever if waitForMeta is specified.
-    if (!serverCrashProcessingEnabled) {
-      serverCrashProcessingEnabled = true;
+    if (!isServerCrashProcessingEnabled()) {
+      setServerCrashProcessingEnabled(true);
       this.serverManager.processQueuedDeadServers();
     }
 
@@ -1224,7 +1226,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   public boolean balance() throws IOException {
     // if master not initialized, don't run balancer.
-    if (!this.initialized) {
+    if (!isInitialized()) {
       LOG.debug("Master has not been initialized, don't run balancer.");
       return false;
     }
@@ -1315,7 +1317,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws CoordinatedStateException
    */
   public boolean normalizeRegions() throws IOException, CoordinatedStateException {
-    if (!this.initialized) {
+    if (!isInitialized()) {
       LOG.debug("Master has not been initialized, don't run region normalizer.");
       return false;
     }
@@ -1621,7 +1623,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  private void checkCompactionPolicy(Configuration conf, HTableDescriptor htd) 
+  private void checkCompactionPolicy(Configuration conf, HTableDescriptor htd)
       throws IOException {
     // FIFO compaction has some requirements
     // Actually FCP ignores periodic major compactions
@@ -1678,7 +1680,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
   }
-  
+
   // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
   private static void warnOrThrowExceptionForFailure(boolean logWarn, String confKey,
       String message, Exception cause) throws IOException {
@@ -2270,7 +2272,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   void checkInitialized() throws PleaseHoldException, ServerNotRunningYetException {
     checkServiceStarted();
-    if (!this.initialized) {
+    if (!isInitialized()) {
       throw new PleaseHoldException("Master is initializing");
     }
   }
@@ -2305,6 +2307,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   @Override
   public boolean isInitialized() {
+    return initialized.isReady();
+  }
+
+  @VisibleForTesting
+  public void setInitialized(boolean isInitialized) {
+    procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
+  }
+
+  public ProcedureEvent getInitializedEvent() {
     return initialized;
   }
 
@@ -2315,12 +2326,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   @Override
   public boolean isServerCrashProcessingEnabled() {
-    return this.serverCrashProcessingEnabled;
+    return serverCrashProcessingEnabled.isReady();
   }
 
   @VisibleForTesting
   public void setServerCrashProcessingEnabled(final boolean b) {
-    this.serverCrashProcessingEnabled = b;
+    procedureExecutor.getEnvironment().setEventReady(serverCrashProcessingEnabled, b);
+  }
+
+  public ProcedureEvent getServerCrashProcessingEnabledEvent() {
+    return serverCrashProcessingEnabled;
   }
 
   /**

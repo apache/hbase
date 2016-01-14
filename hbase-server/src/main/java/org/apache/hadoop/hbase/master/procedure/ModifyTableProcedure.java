@@ -215,10 +215,8 @@ public class ModifyTableProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (!env.isInitialized()) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(
-      getTableName(),
-      EventType.C_M_MODIFY_TABLE.toString());
+    if (env.waitInitialized(this)) return false;
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "modify table");
   }
 
   @Override

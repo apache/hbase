@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,23 +35,29 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
-public class TestMasterProcedureQueue {
-  private static final Log LOG = LogFactory.getLog(TestMasterProcedureQueue.class);
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-  private MasterProcedureQueue queue;
+@Category({MasterTests.class, SmallTests.class})
+public class TestMasterProcedureScheduler {
+  private static final Log LOG = LogFactory.getLog(TestMasterProcedureScheduler.class);
+
+  private MasterProcedureScheduler queue;
   private Configuration conf;
 
   @Before
   public void setUp() throws IOException {
     conf = HBaseConfiguration.create();
-    queue = new MasterProcedureQueue(conf, new TableLockManager.NullTableLockManager());
+    queue = new MasterProcedureScheduler(conf, new TableLockManager.NullTableLockManager());
   }
 
   @After
@@ -65,7 +67,7 @@ public class TestMasterProcedureQueue {
 
   @Test
   public void testConcurrentCreateDelete() throws Exception {
-    final MasterProcedureQueue procQueue = queue;
+    final MasterProcedureScheduler procQueue = queue;
     final TableName table = TableName.valueOf("testtb");
     final AtomicBoolean running = new AtomicBoolean(true);
     final AtomicBoolean failure = new AtomicBoolean(false);
@@ -135,9 +137,14 @@ public class TestMasterProcedureQueue {
 
     for (int j = 1; j <= NUM_ITEMS; ++j) {
       for (int i = 1; i <= NUM_TABLES; ++i) {
-        Long procId = queue.poll();
+        Procedure proc = queue.poll();
+        assertTrue(proc != null);
+        TableName tableName = ((TestTableProcedure)proc).getTableName();
+        queue.tryAcquireTableExclusiveLock(tableName, "test");
+        queue.releaseTableExclusiveLock(tableName);
+        queue.completionCleanup(proc);
         assertEquals(--count, queue.size());
-        assertEquals(i * 1000 + j, procId.longValue());
+        assertEquals(i * 1000 + j, proc.getProcId());
       }
     }
     assertEquals(0, queue.size());
@@ -164,7 +171,7 @@ public class TestMasterProcedureQueue {
     assertFalse(queue.markTableAsDeleted(tableName));
 
     // fetch item and take a lock
-    assertEquals(1, queue.poll().longValue());
+    assertEquals(1, queue.poll().getProcId());
     // take the xlock
     assertTrue(queue.tryAcquireTableExclusiveLock(tableName, "write"));
     // table can't be deleted because we have the lock
@@ -195,7 +202,7 @@ public class TestMasterProcedureQueue {
 
     for (int i = 1; i <= nitems; ++i) {
       // fetch item and take a lock
-      assertEquals(i, queue.poll().longValue());
+      assertEquals(i, queue.poll().getProcId());
       // take the rlock
       assertTrue(queue.tryAcquireTableSharedLock(tableName, "read " + i));
       // table can't be deleted because we have locks and/or items in the queue
@@ -233,24 +240,24 @@ public class TestMasterProcedureQueue {
           TableProcedureInterface.TableOperationType.READ));
 
     // Fetch the 1st item and take the write lock
-    Long procId = queue.poll();
-    assertEquals(1, procId.longValue());
+    long procId = queue.poll().getProcId();
+    assertEquals(1, procId);
     assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
 
     // Fetch the 2nd item and verify that the lock can't be acquired
-    assertEquals(null, queue.poll());
+    assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
     queue.releaseTableExclusiveLock(tableName);
 
     // Fetch the 2nd item and take the read lock
-    procId = queue.poll();
-    assertEquals(2, procId.longValue());
+    procId = queue.poll().getProcId();
+    assertEquals(2, procId);
     assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
 
     // Fetch the 3rd item and verify that the lock can't be acquired
-    procId = queue.poll();
-    assertEquals(3, procId.longValue());
+    procId = queue.poll().getProcId();
+    assertEquals(3, procId);
     assertEquals(false, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
 
     // release the rdlock of item 2 and take the wrlock for the 3d item
@@ -258,19 +265,19 @@ public class TestMasterProcedureQueue {
     assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
 
     // Fetch 4th item and verify that the lock can't be acquired
-    assertEquals(null, queue.poll());
+    assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
     queue.releaseTableExclusiveLock(tableName);
 
     // Fetch the 4th item and take the read lock
-    procId = queue.poll();
-    assertEquals(4, procId.longValue());
+    procId = queue.poll().getProcId();
+    assertEquals(4, procId);
     assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
 
     // Fetch the 4th item and take the read lock
-    procId = queue.poll();
-    assertEquals(5, procId.longValue());
+    procId = queue.poll().getProcId();
+    assertEquals(5, procId);
     assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
 
     // Release 4th and 5th read-lock
@@ -370,11 +377,11 @@ public class TestMasterProcedureQueue {
   }
 
   public static class TestTableProcSet {
-    private final MasterProcedureQueue queue;
+    private final MasterProcedureScheduler queue;
     private Map<Long, TableProcedureInterface> procsMap =
       new ConcurrentHashMap<Long, TableProcedureInterface>();
 
-    public TestTableProcSet(final MasterProcedureQueue queue) {
+    public TestTableProcSet(final MasterProcedureScheduler queue) {
       this.queue = queue;
     }
 
@@ -394,8 +401,8 @@ public class TestMasterProcedureQueue {
       TableProcedureInterface proc = null;
       boolean avail = false;
       while (!avail) {
-        Long procId = queue.poll();
-        proc = procId != null ? procsMap.remove(procId) : null;
+        Procedure xProc = queue.poll();
+        proc = xProc != null ? procsMap.remove(xProc.getProcId()) : null;
         if (proc == null) break;
         switch (proc.getTableOperationType()) {
           case CREATE:
@@ -411,7 +418,7 @@ public class TestMasterProcedureQueue {
         }
         if (!avail) {
           addFront(proc);
-          LOG.debug("yield procId=" + procId);
+          LOG.debug("yield procId=" + proc);
         }
       }
       return proc;

@@ -55,9 +55,9 @@ public interface ProcedureRunnableSet {
 
   /**
    * Fetch one Procedure from the queue
-   * @return the Procedure ID to execute, or null if nothing present.
+   * @return the Procedure to execute, or null if nothing present.
    */
-  Long poll();
+  Procedure poll();
 
   /**
    * In case the class is blocking on poll() waiting for items to be added,

@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureSimpleRunQueue implements ProcedureRunnableSet {
-  private final Deque<Long> runnables = new ArrayDeque<Long>();
+  private final Deque<Procedure> runnables = new ArrayDeque<Procedure>();
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
 
@@ -40,7 +40,7 @@ public class ProcedureSimpleRunQueue implements ProcedureRunnableSet {
   public void addFront(final Procedure proc) {
     lock.lock();
     try {
-      runnables.addFirst(proc.getProcId());
+      runnables.addFirst(proc);
       waitCond.signal();
     } finally {
       lock.unlock();
@@ -51,7 +51,7 @@ public class ProcedureSimpleRunQueue implements ProcedureRunnableSet {
   public void addBack(final Procedure proc) {
     lock.lock();
     try {
-      runnables.addLast(proc.getProcId());
+      runnables.addLast(proc);
       waitCond.signal();
     } finally {
       lock.unlock();
@@ -65,7 +65,7 @@ public class ProcedureSimpleRunQueue implements ProcedureRunnableSet {
 
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("WA_AWAIT_NOT_IN_LOOP")
-  public Long poll() {
+  public Procedure poll() {
     lock.lock();
     try {
       if (runnables.isEmpty()) {
