@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.User;
@@ -85,12 +87,12 @@ public class MasterProcedureEnv {
     }
   }
 
-  private final MasterProcedureQueue procQueue;
+  private final MasterProcedureScheduler procSched;
   private final MasterServices master;
 
   public MasterProcedureEnv(final MasterServices master) {
     this.master = master;
-    this.procQueue = new MasterProcedureQueue(master.getConfiguration(),
+    this.procSched = new MasterProcedureScheduler(master.getConfiguration(),
       master.getTableLockManager());
   }
 
@@ -114,8 +116,8 @@ public class MasterProcedureEnv {
     return master.getMasterCoprocessorHost();
   }
 
-  public MasterProcedureQueue getProcedureQueue() {
-    return procQueue;
+  public MasterProcedureScheduler getProcedureQueue() {
+    return procSched;
   }
 
   public boolean isRunning() {
@@ -124,5 +126,29 @@ public class MasterProcedureEnv {
 
   public boolean isInitialized() {
     return master.isInitialized();
+  }
+
+  public boolean waitInitialized(Procedure proc) {
+    return procSched.waitEvent(((HMaster)master).getInitializedEvent(), proc);
+  }
+
+  public boolean waitServerCrashProcessingEnabled(Procedure proc) {
+    return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
+  }
+
+  public void wake(ProcedureEvent event) {
+    procSched.wake(event);
+  }
+
+  public void suspend(ProcedureEvent event) {
+    procSched.suspend(event);
+  }
+
+  public void setEventReady(ProcedureEvent event, boolean isReady) {
+    if (isReady) {
+      procSched.wake(event);
+    } else {
+      procSched.suspend(event);
+    }
   }
 }

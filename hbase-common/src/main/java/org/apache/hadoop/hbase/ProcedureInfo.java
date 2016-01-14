@@ -222,10 +222,10 @@ public class ProcedureInfo {
       procProto.getOwner(),
       procProto.getState(),
       procProto.hasParentId() ? procProto.getParentId() : -1,
-          procProto.getState() == ProcedureState.ROLLEDBACK ? procProto.getException() : null,
+      procProto.hasException() ? procProto.getException() : null,
       procProto.getLastUpdate(),
       procProto.getStartTime(),
-      procProto.getState() == ProcedureState.FINISHED ? procProto.getResult().toByteArray() : null);
+      procProto.hasResult() ? procProto.getResult().toByteArray() : null);
   }
 
   /**
