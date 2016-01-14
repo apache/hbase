@@ -28,6 +28,10 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface ServerProcedureInterface {
+  public enum ServerOperationType {
+    CRASH_HANDLER
+  };
+
   /**
    * @return Name of this server instance.
    */
@@ -37,4 +41,12 @@ public interface ServerProcedureInterface {
    * @return True if this server has an hbase:meta table region.
    */
   boolean hasMetaTableRegion();
+
+  /**
+   * Given an operation type we can take decisions about what to do with pending operations.
+   * e.g. if we get a crash handler and we have some assignment operation pending
+   * we can abort those operations.
+   * @return the operation type that the procedure is executing.
+   */
+  ServerOperationType getServerOperationType();
 }

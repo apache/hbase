@@ -205,7 +205,9 @@ public class CreateNamespaceProcedure
         return true;
       }
 
-      return false;
+      if (env.waitInitialized(this)) {
+        return false;
+      }
     }
     return getTableNamespaceManager(env).acquireExclusiveLock();
   }

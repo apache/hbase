@@ -553,13 +553,13 @@ implements ServerProcedureInterface {
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (!env.getMasterServices().isServerCrashProcessingEnabled()) return false;
-    return env.getProcedureQueue().tryAcquireServerExclusiveLock(this);
+    if (env.waitServerCrashProcessingEnabled(this)) return false;
+    return env.getProcedureQueue().tryAcquireServerExclusiveLock(getServerName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseServerExclusiveLock(this);
+    env.getProcedureQueue().releaseServerExclusiveLock(getServerName());
   }
 
   @Override
@@ -749,6 +749,11 @@ implements ServerProcedureInterface {
   @Override
   public boolean hasMetaTableRegion() {
     return this.carryingMeta;
+  }
+
+  @Override
+  public ServerOperationType getServerOperationType() {
+    return ServerOperationType.CRASH_HANDLER;
   }
 
   /**

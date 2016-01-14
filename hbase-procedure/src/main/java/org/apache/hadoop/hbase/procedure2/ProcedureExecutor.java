@@ -785,8 +785,7 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private void execLoop() {
     while (isRunning()) {
-      Long procId = runnables.poll();
-      Procedure proc = procId != null ? procedures.get(procId) : null;
+      Procedure proc = runnables.poll();
       if (proc == null) continue;
 
       try {

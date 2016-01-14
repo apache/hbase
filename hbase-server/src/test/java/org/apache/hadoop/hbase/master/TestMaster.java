@@ -128,14 +128,14 @@ public class TestMaster {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     try {
-      m.initialized = false; // fake it, set back later
+      m.setInitialized(false); // fake it, set back later
       HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
       m.move(meta.getEncodedNameAsBytes(), null);
       fail("Region should not be moved since master is not initialized");
     } catch (IOException ioe) {
       assertTrue(ioe instanceof PleaseHoldException);
     } finally {
-      m.initialized = true;
+      m.setInitialized(true);
     }
   }
 
@@ -172,13 +172,13 @@ public class TestMaster {
     try {
       List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
 
-      master.initialized = false; // fake it, set back later
+      master.setInitialized(false); // fake it, set back later
       admin.move(tableRegions.get(0).getEncodedNameAsBytes(), null);
       fail("Region should not be moved since master is not initialized");
     } catch (IOException ioe) {
       assertTrue(StringUtils.stringifyException(ioe).contains("PleaseHoldException"));
     } finally {
-      master.initialized = true;
+      master.setInitialized(true);
       TEST_UTIL.deleteTable(tableName);
     }
   }

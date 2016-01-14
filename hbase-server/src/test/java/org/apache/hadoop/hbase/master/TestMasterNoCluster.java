@@ -306,7 +306,7 @@ public class TestMasterNoCluster {
 
     try {
       // Wait till master is initialized.
-      while (!master.initialized) Threads.sleep(10);
+      while (!master.isInitialized()) Threads.sleep(10);
       LOG.info("Master is initialized");
 
       assertFalse("The dead server should not be pulled in",

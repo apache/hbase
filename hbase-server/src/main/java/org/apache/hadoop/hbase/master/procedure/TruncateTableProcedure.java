@@ -182,7 +182,7 @@ public class TruncateTableProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (!env.isInitialized()) return false;
+    if (env.waitInitialized(this)) return false;
     return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "truncate table");
   }
 
