@@ -192,12 +192,13 @@ public class ModifyNamespaceProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    return getTableNamespaceManager(env).acquireExclusiveLock();
+    if (env.waitInitialized(this)) return false;
+    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(getNamespaceName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    getTableNamespaceManager(env).releaseExclusiveLock();
+    env.getProcedureQueue().releaseNamespaceExclusiveLock(getNamespaceName());
   }
 
   @Override
@@ -208,6 +209,10 @@ public class ModifyNamespaceProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.EDIT;
+  }
+
+  private String getNamespaceName() {
+    return newNsDescriptor.getName();
   }
 
   /**

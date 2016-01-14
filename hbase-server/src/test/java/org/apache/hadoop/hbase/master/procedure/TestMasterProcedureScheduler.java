@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -289,6 +290,58 @@ public class TestMasterProcedureScheduler {
     assertTrue("queue should be deleted", queue.markTableAsDeleted(tableName));
   }
 
+  @Test
+  public void testVerifyNamespaceRwLocks() throws Exception {
+    String nsName1 = "ns1";
+    String nsName2 = "ns2";
+    TableName tableName1 = TableName.valueOf(nsName1, "testtb");
+    TableName tableName2 = TableName.valueOf(nsName2, "testtb");
+    queue.addBack(new TestNamespaceProcedure(1, nsName1,
+          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(new TestTableProcedure(2, tableName1,
+          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(new TestTableProcedure(3, tableName2,
+          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(new TestNamespaceProcedure(4, nsName2,
+          TableProcedureInterface.TableOperationType.EDIT));
+
+    // Fetch the 1st item and take the write lock
+    long procId = queue.poll().getProcId();
+    assertEquals(1, procId);
+    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(nsName1));
+
+    // System tables have 2 as default priority
+    Procedure proc = queue.poll();
+    assertEquals(4, proc.getProcId());
+    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(nsName2));
+    queue.releaseNamespaceExclusiveLock(nsName2);
+    queue.yield(proc);
+
+    // table on ns1 is locked, so we get table on ns2
+    procId = queue.poll().getProcId();
+    assertEquals(3, procId);
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName2, "lock " + procId));
+
+    // ns2 is not available (TODO we may avoid this one)
+    proc = queue.poll();
+    assertEquals(4, proc.getProcId());
+    assertEquals(false, queue.tryAcquireNamespaceExclusiveLock(nsName2));
+    queue.yield(proc);
+
+    // release the ns1 lock
+    queue.releaseNamespaceExclusiveLock(nsName1);
+
+    // we are now able to execute table of ns1
+    procId = queue.poll().getProcId();
+    assertEquals(2, procId);
+
+    queue.releaseTableExclusiveLock(tableName2);
+
+    // we are now able to execute ns2
+    procId = queue.poll().getProcId();
+    assertEquals(4, procId);
+  }
+
   /**
    * Verify that "write" operations for a single table are serialized,
    * but different tables can be executed in parallel.
@@ -438,7 +491,7 @@ public class TestMasterProcedureScheduler {
     }
   }
 
-  public static class TestTableProcedure extends Procedure<Void>
+  public static class TestTableProcedure extends TestProcedure
       implements TableProcedureInterface {
     private final TableOperationType opType;
     private final TableName tableName;
@@ -448,9 +501,9 @@ public class TestMasterProcedureScheduler {
     }
 
     public TestTableProcedure(long procId, TableName tableName, TableOperationType opType) {
+      super(procId);
       this.tableName = tableName;
       this.opType = opType;
-      setProcId(procId);
     }
 
     @Override
@@ -462,26 +515,31 @@ public class TestMasterProcedureScheduler {
     public TableOperationType getTableOperationType() {
       return opType;
     }
+  }
 
-    @Override
-    protected Procedure[] execute(Void env) {
-      return null;
+  public static class TestNamespaceProcedure extends TestProcedure
+      implements TableProcedureInterface {
+    private final TableOperationType opType;
+    private final String nsName;
+
+    public TestNamespaceProcedure() {
+      throw new UnsupportedOperationException("recovery should not be triggered here");
+    }
+
+    public TestNamespaceProcedure(long procId, String nsName, TableOperationType opType) {
+      super(procId);
+      this.nsName = nsName;
+      this.opType = opType;
     }
 
     @Override
-    protected void rollback(Void env) {
-      throw new UnsupportedOperationException();
+    public TableName getTableName() {
+      return TableName.NAMESPACE_TABLE_NAME;
     }
 
     @Override
-    protected boolean abort(Void env) {
-      throw new UnsupportedOperationException();
+    public TableOperationType getTableOperationType() {
+      return opType;
     }
-
-    @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {}
-
-    @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {}
   }
 }

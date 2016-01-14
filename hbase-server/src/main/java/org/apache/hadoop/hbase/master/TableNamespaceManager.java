@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.NavigableSet;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -70,35 +68,14 @@ public class TableNamespaceManager {
   private ZKNamespaceManager zkNamespaceManager;
   private boolean initialized;
 
-  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-
   public static final String KEY_MAX_REGIONS = "hbase.namespace.quota.maxregions";
   public static final String KEY_MAX_TABLES = "hbase.namespace.quota.maxtables";
   static final String NS_INIT_TIMEOUT = "hbase.master.namespace.init.timeout";
   static final int DEFAULT_NS_INIT_TIMEOUT = 300000;
 
-  /** Configuration key for time out for trying to acquire table locks */
-  private static final String TABLE_WRITE_LOCK_TIMEOUT_MS =
-    "hbase.table.write.lock.timeout.ms";
-  /** Configuration key for time out for trying to acquire table locks */
-  private static final String TABLE_READ_LOCK_TIMEOUT_MS =
-    "hbase.table.read.lock.timeout.ms";
-  private static final long DEFAULT_TABLE_WRITE_LOCK_TIMEOUT_MS = 600 * 1000; //10 min default
-  private static final long DEFAULT_TABLE_READ_LOCK_TIMEOUT_MS = 600 * 1000; //10 min default
-
-  private long exclusiveLockTimeoutMs;
-  private long sharedLockTimeoutMs;
-
   public TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.conf = masterServices.getConfiguration();
-
-    this.exclusiveLockTimeoutMs = conf.getLong(
-      TABLE_WRITE_LOCK_TIMEOUT_MS,
-      DEFAULT_TABLE_WRITE_LOCK_TIMEOUT_MS);
-    this.sharedLockTimeoutMs = conf.getLong(
-      TABLE_READ_LOCK_TIMEOUT_MS,
-      DEFAULT_TABLE_READ_LOCK_TIMEOUT_MS);
   }
 
   public void start() throws IOException {
@@ -132,30 +109,6 @@ public class TableNamespaceManager {
       throw new IOException(this.getClass().getName() + " isn't ready to serve");
     }
     return nsTable;
-  }
-
-  private boolean acquireSharedLock() throws IOException {
-    try {
-      return rwLock.readLock().tryLock(sharedLockTimeoutMs, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
-  }
-
-  public void releaseSharedLock() {
-    rwLock.readLock().unlock();
-  }
-
-  public boolean acquireExclusiveLock() {
-    try {
-      return rwLock.writeLock().tryLock(exclusiveLockTimeoutMs, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      return false;
-    }
-  }
-
-  public void releaseExclusiveLock() {
-    rwLock.writeLock().unlock();
   }
 
   /*
@@ -225,13 +178,7 @@ public class TableNamespaceManager {
         Sets.newTreeSet(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR);
     ResultScanner scanner =
         getNamespaceTable().getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
-    boolean locked = false;
     try {
-      locked = acquireSharedLock();
-      if (!locked) {
-        throw new IOException(
-          "Fail to acquire lock to scan namespace list.  Some namespace DDL is in progress.");
-      }
       for(Result r : scanner) {
         byte[] val = CellUtil.cloneValue(r.getColumnLatestCell(
           HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
@@ -241,9 +188,6 @@ public class TableNamespaceManager {
       }
     } finally {
       scanner.close();
-      if (locked) {
-        releaseSharedLock();
-      }
     }
     return ret;
   }
