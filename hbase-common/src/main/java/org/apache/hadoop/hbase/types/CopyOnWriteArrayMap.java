@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -693,8 +694,10 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_ALWAYS_FALSE",
+      justification="Intentional")
     public boolean equals(Object o) {
-      return false;
+      return false; // FindBugs: Causes EQ_ALWAYS_FALSE. Suppressed.
     }
 
     @Override
@@ -771,7 +774,12 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
+      justification="Intentional")
     public Entry<K, V> next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
       return holder.entries[index++];
     }
 

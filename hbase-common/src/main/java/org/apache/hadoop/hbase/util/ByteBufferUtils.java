@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableUtils;
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
  */
+@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class ByteBufferUtils {
