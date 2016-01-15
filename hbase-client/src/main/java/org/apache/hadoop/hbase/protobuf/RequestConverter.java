@@ -495,7 +495,7 @@ public final class RequestConverter {
     builder.setScan(ProtobufUtil.toScan(scan));
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
-    builder.setTrackScanMetrics(scan != null && scan.isScanMetricsEnabled());
+    builder.setTrackScanMetrics(scan.isScanMetricsEnabled());
     return builder.build();
   }
 
