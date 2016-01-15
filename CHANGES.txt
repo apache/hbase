@@ -1,5 +1,77 @@
 HBase Change Log
 
+Release 0.98.17 - 1/22/2016
+
+** Sub-task
+    * [HBASE-14863] - Add missing test/resources/log4j files in hbase modules
+
+** Brainstorming
+    * [HBASE-14869] - Better request latency and size histograms
+
+** Bug
+    * [HBASE-13796] - ZKUtil doesn't clean quorum setting properly
+    * [HBASE-14425] - In Secure Zookeeper cluster superuser will not have sufficient permission if multiple values are configured in "hbase.superuser"
+    * [HBASE-14512] - Cache UGI groups
+    * [HBASE-14531] - graceful_stop.sh "if [ "$local" ]" condition unexpected behaviour
+    * [HBASE-14597] - Fix Groups cache in multi-threaded env
+    * [HBASE-14674] - Rpc handler / task monitoring seems to be broken after 0.98
+    * [HBASE-14689] - Addendum and unit test for HBASE-13471
+    * [HBASE-14761] - Deletes with and without visibility expression do not delete the matching mutation
+    * [HBASE-14771] - RpcServer#getRemoteAddress always returns null
+    * [HBASE-14782] - FuzzyRowFilter skips valid rows
+    * [HBASE-14788] - Splitting a region does not support the hbase.rs.evictblocksonclose config when closing source region
+    * [HBASE-14791] - Batch Deletes in MapReduce jobs (0.98)
+    * [HBASE-14793] - Allow limiting size of block into L1 block cache.
+    * [HBASE-14799] - Commons-collections object deserialization remote command execution vulnerability 
+    * [HBASE-14806] - Missing sources.jar for several modules when building HBase
+    * [HBASE-14822] - Renewing leases of scanners doesn't work
+    * [HBASE-14840] - Sink cluster reports data replication request as success though the data is not replicated
+    * [HBASE-14893] - Race between mutation on region and region closing operation leads to NotServingRegionException
+    * [HBASE-14904] - Mark Base[En|De]coder LimitedPrivate and fix binary compat issue
+    * [HBASE-14905] - VerifyReplication does not honour versions option
+    * [HBASE-14923] - VerifyReplication should not mask the exception during result comparison 
+    * [HBASE-14926] - Hung ThriftServer; no timeout on read from client; if client crashes, worker thread gets stuck reading
+    * [HBASE-14928] - Start row should be set for query through HBase REST gateway involving globbing option
+    * [HBASE-14930] - check_compatibility.sh needs smarter exit codes
+    * [HBASE-14940] - Make our unsafe based ops more safe
+    * [HBASE-14960] - Fallback to using default RPCControllerFactory if class cannot be loaded
+    * [HBASE-14968] - ConcurrentModificationException in region close resulting in the region staying in closing state
+    * [HBASE-14974] - Total number of Regions in Transition number on UI incorrect
+    * [HBASE-14975] - Don't color the total RIT line yellow if it's zero
+    * [HBASE-14987] - Compaction marker whose region name doesn't match current region's needs to be handled
+    * [HBASE-14989] - Implementation of Mutation.getWriteToWAL() is backwards
+    * [HBASE-15009] - Update test-patch.sh on branches; to fix curtailed build report
+    * [HBASE-15011] - turn off the jdk8 javadoc linter. :(
+    * [HBASE-15015] - Checktyle plugin shouldn't check Jamon-generated Java classes
+    * [HBASE-15022] - undefined method `getZooKeeperClusterKey' for Java::OrgApacheHadoopHbaseZookeeper::ZKUtil:Class
+    * [HBASE-15032] - hbase shell scan filter string assumes UTF-8 encoding
+    * [HBASE-15035] - bulkloading hfiles with tags that require splits do not preserve tags
+    * [HBASE-15039] - HMaster and RegionServers should try to refresh token keys from zk when facing InvalidToken
+    * [HBASE-15052] - Use EnvironmentEdgeManager in ReplicationSource 
+    * [HBASE-15080] - Remove synchronized block from MasterServiceStubMaker#releaseZooKeeperWatcher()
+    * [HBASE-15085] - IllegalStateException was thrown when scanning on bulkloaded HFiles
+
+** Improvement
+    * [HBASE-14468] - Compaction improvements: FIFO compaction policy
+    * [HBASE-14805] - status should show the master in shell
+    * [HBASE-14862] - Add support for reporting p90 for histogram metrics
+    * [HBASE-14866] - VerifyReplication should use peer configuration in peer connection
+    * [HBASE-14976] - Add RPC call queues to the web ui
+    * [HBASE-15038] - ExportSnapshot should support separate configurations for source and destination clusters
+    * [HBASE-15066] - Small improvements to Canary tool
+
+** New Feature
+    * [HBASE-14355] - Scan different TimeRange for each column family
+
+** Task
+    * [HBASE-14516] - categorize hadoop-compat tests
+
+** Test
+    * [HBASE-14584] - TestNamespacesInstanceModel fails on jdk8
+    * [HBASE-14758] - Add UT case for unchecked error/exception thrown in AsyncProcess#sendMultiAction
+    * [HBASE-14839] - [branch-1] Backport test categories so that patch backport is easier
+
+
 Release 0.98.16 - 11/16/2015
 
 ** Sub-task
