@@ -499,6 +499,8 @@ public class MultiRowRangeFilter extends FilterBase {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification="This compareTo is not of this Object, but of referenced RowRange")
     public int compareTo(RowRange other) {
       return Bytes.compareTo(this.startRow, other.startRow);
     }
