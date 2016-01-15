@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,12 +62,12 @@ import com.google.common.base.Strings;
 
 @Category({SecurityTests.class, SmallTests.class})
 public class TestHBaseSaslRpcClient {
-  
+
   static {
     System.setProperty("java.security.krb5.realm", "DOMAIN.COM");
     System.setProperty("java.security.krb5.kdc", "DOMAIN.COM");
   }
-  
+
   static final String DEFAULT_USER_NAME = "principal";
   static final String DEFAULT_USER_PASSWORD = "password";
 
@@ -84,33 +83,18 @@ public class TestHBaseSaslRpcClient {
   }
 
   @Test
-  public void testSaslQOPNotEmpty() throws Exception {
+  public void testSaslClientUsesGivenRpcProtection() throws Exception {
     Token<? extends TokenIdentifier> token = createTokenMockWithCredentials(DEFAULT_USER_NAME,
         DEFAULT_USER_PASSWORD);
-    // default QOP is authentication
-    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false);
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
-        AUTHENTICATION.getSaslQop()));
-
-    // check with specific QOPs
-    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
-        "authentication");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
-        AUTHENTICATION.getSaslQop()));
-
-    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
-        "privacy");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
-        PRIVACY.getSaslQop()));
-
-    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
-        "integrity");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
-        INTEGRITY.getSaslQop()));
-
-    exception.expect(IllegalArgumentException.class);
-    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
-        "wrongvalue");
+    for (SaslUtil.QualityOfProtection qop : SaslUtil.QualityOfProtection.values()) {
+      String negotiatedQop = new HBaseSaslRpcClient(AuthMethod.DIGEST, token,
+          "principal/host@DOMAIN.COM", false, qop.name()) {
+        public String getQop() {
+          return saslProps.get(Sasl.QOP);
+        }
+      }.getQop();
+      assertEquals(negotiatedQop, qop.getSaslQop());
+    }
   }
 
   @Test
@@ -210,7 +194,7 @@ public class TestHBaseSaslRpcClient {
     boolean inState = false;
     boolean outState = false;
 
-    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST, 
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
         createTokenMockWithCredentials(principal, password), principal, false) {
       @Override
       public SaslClient createDigestSaslClient(String[] mechanismNames,
@@ -225,7 +209,7 @@ public class TestHBaseSaslRpcClient {
         return Mockito.mock(SaslClient.class);
       }
     };
-    
+
     try {
       rpcClient.getInputStream(Mockito.mock(InputStream.class));
     } catch(IOException ex) {
@@ -245,7 +229,7 @@ public class TestHBaseSaslRpcClient {
 
   private boolean assertIOExceptionThenSaslClientIsNull(String principal, String password) {
     try {
-      new HBaseSaslRpcClient(AuthMethod.DIGEST, 
+      new HBaseSaslRpcClient(AuthMethod.DIGEST,
           createTokenMockWithCredentials(principal, password), principal, false) {
         @Override
         public SaslClient createDigestSaslClient(String[] mechanismNames,
@@ -253,7 +237,7 @@ public class TestHBaseSaslRpcClient {
                 throws IOException {
           return null;
         }
-  
+
         @Override
         public SaslClient createKerberosSaslClient(String[] mechanismNames,
             String userFirstPart, String userSecondPart) throws IOException {
@@ -279,7 +263,7 @@ public class TestHBaseSaslRpcClient {
   private boolean assertSuccessCreationDigestPrincipal(String principal, String password) {
     HBaseSaslRpcClient rpcClient = null;
     try {
-      rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST, 
+      rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
           createTokenMockWithCredentials(principal, password), principal, false);
     } catch(Exception ex) {
       LOG.error(ex.getMessage(), ex);

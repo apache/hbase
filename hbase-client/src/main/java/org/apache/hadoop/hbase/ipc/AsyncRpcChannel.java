@@ -32,7 +32,6 @@ import io.netty.util.concurrent.Promise;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -104,8 +103,7 @@ public class AsyncRpcChannel {
   final String serviceName;
   final InetSocketAddress address;
 
-  private int ioFailureCounter = 0;
-  private int connectFailureCounter = 0;
+  private int failureCounter = 0;
 
   boolean useSasl;
   AuthMethod authMethod;
@@ -134,7 +132,7 @@ public class AsyncRpcChannel {
    * @param bootstrap to construct channel on
    * @param client    to connect with
    * @param ticket of user which uses connection
-   *               @param serviceName name of service to connect to
+   * @param serviceName name of service to connect to
    * @param address to connect to
    */
   public AsyncRpcChannel(Bootstrap bootstrap, final AsyncRpcClient client, User ticket, String
@@ -166,11 +164,7 @@ public class AsyncRpcChannel {
           @Override
           public void operationComplete(final ChannelFuture f) throws Exception {
             if (!f.isSuccess()) {
-              if (f.cause() instanceof SocketException) {
-                retryOrClose(bootstrap, connectFailureCounter++, f.cause());
-              } else {
-                retryOrClose(bootstrap, ioFailureCounter++, f.cause());
-              }
+              retryOrClose(bootstrap, failureCounter++, client.failureSleep, f.cause());
               return;
             }
             channel = f.channel();
@@ -263,13 +257,8 @@ public class AsyncRpcChannel {
               // Handle Sasl failure. Try to potentially get new credentials
               handleSaslConnectionFailure(retryCount, cause, realTicket);
 
-              // Try to reconnect
-              client.newTimeout(new TimerTask() {
-                @Override
-                public void run(Timeout timeout) throws Exception {
-                  connect(bootstrap);
-                }
-              }, random.nextInt(reloginMaxBackoff) + 1, TimeUnit.MILLISECONDS);
+              retryOrClose(bootstrap, failureCounter++, random.nextInt(reloginMaxBackoff) + 1,
+                  cause);
             } catch (IOException | InterruptedException e) {
               close(e);
             }
@@ -286,16 +275,18 @@ public class AsyncRpcChannel {
    * Retry to connect or close
    *
    * @param bootstrap      to connect with
-   * @param connectCounter amount of tries
+   * @param failureCount   failure count
    * @param e              exception of fail
    */
-  private void retryOrClose(final Bootstrap bootstrap, int connectCounter, Throwable e) {
-    if (connectCounter < client.maxRetries) {
+  private void retryOrClose(final Bootstrap bootstrap, int failureCount,
+      long timeout, Throwable e) {
+    if (failureCount < client.maxRetries) {
       client.newTimeout(new TimerTask() {
-        @Override public void run(Timeout timeout) throws Exception {
+        @Override
+        public void run(Timeout timeout) throws Exception {
           connect(bootstrap);
         }
-      }, client.failureSleep, TimeUnit.MILLISECONDS);
+      }, timeout, TimeUnit.MILLISECONDS);
     } else {
       client.failedServers.addToFailedServers(address);
       close(e);
