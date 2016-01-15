@@ -189,12 +189,8 @@ public class FuzzyRowFilter extends FilterBase {
                 @Override
                 public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
                     Pair<byte[], Pair<byte[], byte[]>> o2) {
-                  int compare = Bytes.compareTo(o1.getFirst(), o2.getFirst());
-                  if (!isReversed()) {
-                    return compare;
-                  } else {
-                    return -compare;
-                  }
+                  return isReversed()? Bytes.compareTo(o2.getFirst(), o1.getFirst()):
+                    Bytes.compareTo(o1.getFirst(), o2.getFirst());
                 }
               });
     }

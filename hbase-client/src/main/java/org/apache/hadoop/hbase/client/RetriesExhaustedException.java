@@ -85,8 +85,7 @@ public class RetriesExhaustedException extends IOException {
   public RetriesExhaustedException(final int numRetries,
                                    final List<ThrowableWithExtraContext> exceptions) {
     super(getMessage(numRetries, exceptions),
-        (exceptions != null && !exceptions.isEmpty() ?
-            exceptions.get(exceptions.size() - 1).t : null));
+      exceptions.isEmpty()? null: exceptions.get(exceptions.size() - 1).t);
   }
 
   private static String getMessage(String callableVitals, int numTries,
