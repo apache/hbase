@@ -53,7 +53,7 @@ public class BinaryComparator extends ByteArrayComparable {
 
   @Override
   public int compareTo(ByteBuffer value, int offset, int length) {
-    return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
+    return -(ByteBufferUtils.compareTo(value, offset, length, this.value, 0, this.value.length));
   }
 
   /**

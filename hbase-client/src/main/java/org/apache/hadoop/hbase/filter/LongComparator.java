@@ -89,6 +89,8 @@ public class LongComparator extends ByteArrayComparable {
      */
     boolean areSerializedFieldsEqual(LongComparator other) {
         if (other == this) return true;
+        if (!(other instanceof LongComparator)) return false;
+
         return super.areSerializedFieldsEqual(other);
     }
 }

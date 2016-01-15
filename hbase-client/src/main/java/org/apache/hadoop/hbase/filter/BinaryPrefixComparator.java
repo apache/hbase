@@ -58,7 +58,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
     if (this.value.length <= length) {
       length = this.value.length;
     }
-    return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
+    return -(ByteBufferUtils.compareTo(value, offset, length, this.value, 0, this.value.length));
   }
 
   /**

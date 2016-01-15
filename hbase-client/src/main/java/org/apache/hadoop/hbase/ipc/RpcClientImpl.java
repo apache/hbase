@@ -383,7 +383,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       }
     }
 
-    private synchronized UserInformation getUserInfo(UserGroupInformation ugi) {
+    private UserInformation getUserInfo(UserGroupInformation ugi) {
       if (ugi == null || authMethod == AuthMethod.DIGEST) {
         // Don't send user for token auth
         return null;
@@ -804,9 +804,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       byte [] preamble = new byte [rpcHeaderLen + 2];
       System.arraycopy(HConstants.RPC_HEADER, 0, preamble, 0, rpcHeaderLen);
       preamble[rpcHeaderLen] = HConstants.RPC_CURRENT_VERSION;
-      synchronized (this) {
-        preamble[rpcHeaderLen + 1] = authMethod.code;
-      }
+      preamble[rpcHeaderLen + 1] = authMethod.code;
       outStream.write(preamble);
       outStream.flush();
     }
@@ -882,8 +880,6 @@ public class RpcClientImpl extends AbstractRpcClient {
      * threads.
      * @see #readResponse()
      */
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-        justification="Findbugs is misinterpreting locking missing fact that this.outLock is held")
     private void writeRequest(Call call, final int priority, Span span) throws IOException {
       RequestHeader.Builder builder = RequestHeader.newBuilder();
       builder.setCallId(call.id);
@@ -917,8 +913,8 @@ public class RpcClientImpl extends AbstractRpcClient {
         checkIsOpen(); // Now we're checking that it didn't became idle in between.
 
         try {
-          call.callStats.setRequestSizeBytes(IPCUtil.write(this.out, header, call.param,
-              cellBlock));
+          call.callStats.setRequestSizeBytes(
+              IPCUtil.write(this.out, header, call.param, cellBlock));
         } catch (IOException e) {
           // We set the value inside the synchronized block, this way the next in line
           //  won't even try to write. Otherwise we might miss a call in the calls map?
@@ -936,18 +932,12 @@ public class RpcClientImpl extends AbstractRpcClient {
 
       // We added a call, and may be started the connection close. In both cases, we
       //  need to notify the reader.
-      doNotify();
+      synchronized (this) {
+        notifyAll();
+      }
 
       // Now that we notified, we can rethrow the exception if any. Otherwise we're good.
       if (writeException != null) throw writeException;
-    }
-
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
-        justification="Presume notifyAll is because we are closing/shutting down")
-    private synchronized void doNotify() {
-      // Make a separate method so can do synchronize and add findbugs annotation; only one
-      // annotation at at time in source 1.7.
-      notifyAll(); // Findbugs: NN_NAKED_NOTIFY
     }
 
     /* Receive a response.

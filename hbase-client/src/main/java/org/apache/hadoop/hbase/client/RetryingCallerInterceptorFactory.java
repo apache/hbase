@@ -59,8 +59,6 @@ class RetryingCallerInterceptorFactory {
    *         {@link RetryingCallerInterceptor} object according to the
    *         configuration.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-      justification="Convert thrown exception to unchecked")
   public RetryingCallerInterceptor build() {
     RetryingCallerInterceptor ret = NO_OP_INTERCEPTOR;
     if (failFast) {

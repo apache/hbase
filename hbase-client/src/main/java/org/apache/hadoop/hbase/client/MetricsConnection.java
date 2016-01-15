@@ -105,7 +105,7 @@ public class MetricsConnection {
   }
 
   @VisibleForTesting
-  protected static final class CallTracker {
+  protected final class CallTracker {
     private final String name;
     @VisibleForTesting final Timer callTimer;
     @VisibleForTesting final Histogram reqHist;
