@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -181,7 +180,6 @@ public class Tag {
    * @return the serialized tag data as bytes
    */
   public static byte[] fromList(List<Tag> tags) {
-    if (tags == null || tags.size() <= 0) return null;
     int length = 0;
     for (Tag tag: tags) {
       length += tag.length;
@@ -227,30 +225,5 @@ public class Tag {
    */
   int getOffset() {
     return this.offset;
-  }
-
-
-  /**
-   * @return A List<Tag> of any Tags found in <code>cell</code> else null.
-   */
-  public static List<Tag> carryForwardTags(final Cell cell) {
-    return carryForwardTags(null, cell);
-  }
-
-  /**
-   * @return Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if
-   * it is carrying no Tags AND the passed in <code>tagsOrNull</code> is null (else we return new
-   * List<Tag> with Tags found).
-   */
-  public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final Cell cell) {
-    List<Tag> tags = tagsOrNull;
-    if (cell.getTagsLength() <= 0) return tags;
-    Iterator<Tag> itr =
-        CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-    if (tags == null) tags = new ArrayList<Tag>();
-    while (itr.hasNext()) {
-      tags.add(itr.next());
-    }
-    return tags;
   }
 }

@@ -549,7 +549,7 @@ public class TestTags {
 
   public static class TestCoprocessorForTags extends BaseRegionObserver {
 
-    public static volatile boolean checkTagPresence = false;
+    public static boolean checkTagPresence = false;
     public static List<Tag> tags = null;
 
     @Override
