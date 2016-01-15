@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Wrapper around Hadoop's DNS class to hide reflection.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+  justification="If exception, presume HAS_NEW_DNS_GET_DEFAULT_HOST_API false")
 public final class DNS {
   private static boolean HAS_NEW_DNS_GET_DEFAULT_HOST_API;
   private static Method GET_DEFAULT_HOST_METHOD;
@@ -35,7 +37,7 @@ public final class DNS {
           .getMethod("getDefaultHost", String.class, String.class, boolean.class);
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = true;
     } catch (Exception e) {
-      HAS_NEW_DNS_GET_DEFAULT_HOST_API = false;
+      HAS_NEW_DNS_GET_DEFAULT_HOST_API = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed
     }
   }
 

@@ -32,6 +32,8 @@ import sun.misc.Unsafe;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+  justification="If exception, presume unaligned")
 public final class UnsafeAccess {
 
   private static final Log LOG = LogFactory.getLog(UnsafeAccess.class);
@@ -66,7 +68,7 @@ public final class UnsafeAccess {
         m.setAccessible(true);
         unaligned = (boolean) m.invoke(null);
       } catch (Exception e) {
-        unaligned = false;
+        unaligned = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed.
       }
     } else{
       BYTE_ARRAY_BASE_OFFSET = -1;

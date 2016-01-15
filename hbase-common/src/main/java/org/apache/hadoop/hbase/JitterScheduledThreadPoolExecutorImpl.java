@@ -93,6 +93,19 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     }
 
     @Override
+    public boolean equals(Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      return obj instanceof Delayed? compareTo((Delayed)obj) == 0: false;
+    }
+
+    @Override
+    public int hashCode() {
+      return this.wrapped.hashCode();
+    }
+
+    @Override
     public void run() {
       wrapped.run();
     }
@@ -123,5 +136,4 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
       return wrapped.get(timeout, unit);
     }
   }
-
 }
