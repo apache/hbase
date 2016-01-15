@@ -335,7 +335,7 @@ public abstract class Compactor {
     int minFilesToCompact = Math.max(2,
         conf.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,
             /* old name */ conf.getInt("hbase.hstore.compactionThreshold", 3)));
-    long shippedCallSizeLimit = minFilesToCompact * HConstants.DEFAULT_BLOCKSIZE;
+    long shippedCallSizeLimit = (long) minFilesToCompact * HConstants.DEFAULT_BLOCKSIZE;
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);

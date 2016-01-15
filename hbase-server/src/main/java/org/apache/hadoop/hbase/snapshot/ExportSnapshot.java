@@ -270,7 +270,7 @@ public class ExportSnapshot extends Configured implements Tool {
       InputStream in = openSourceFile(context, inputInfo);
       int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
       if (Integer.MAX_VALUE != bandwidthMB) {
-        in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024);
+        in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024L);
       }
 
       try {
