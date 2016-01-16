@@ -24,6 +24,7 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
@@ -117,7 +118,15 @@ public class TestSplitWalDataLoss {
     }).when(spiedRegion).internalFlushCacheAndCommit(Matchers.<WAL> any(),
       Matchers.<MonitoredTask> any(), Matchers.<PrepareFlushResult> any(),
       Matchers.<Collection<Store>> any());
-    rs.onlineRegions.put(rs.onlineRegions.keySet().iterator().next(), spiedRegion);
+    // Find region key; don't pick up key for hbase:meta by mistake.
+    String key = null;
+    for (Map.Entry<String, Region> entry: rs.onlineRegions.entrySet()) {
+      if (entry.getValue().getRegionInfo().getTable().equals(this.tableName)) {
+        key = entry.getKey();
+        break;
+      }
+    }
+    rs.onlineRegions.put(key, spiedRegion);
     Connection conn = testUtil.getConnection();
 
     try (Table table = conn.getTable(tableName)) {
