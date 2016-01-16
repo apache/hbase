@@ -197,8 +197,7 @@ MetricsHBaseServerWrapper mServerWrap;
 <tr>
     <td><% mWrap.getCompactionQueueSize() %></td>
     <td><% mWrap.getFlushQueueSize() %></td>
-    <td><% StringUtils.TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(),
-      "", 1) %></td>
+    <td><% StringUtils.humanReadableInt(mServerWrap.getTotalQueueSize()) %></td>
 </tr>
 </table>
 </%def>
