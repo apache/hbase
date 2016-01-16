@@ -188,6 +188,8 @@ for ref in 1 2; do
       echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
       exit 2
     fi
+    # grab sha for future reference
+    SHA[${ref}]=$(git rev-parse --short HEAD)
     popd > /dev/null
   fi
 
@@ -207,6 +209,7 @@ for ref in 1 2; do
           echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
           exit 2
         fi
+        SHA[${ref}]=$(git rev-parse --short HEAD)
         popd > /dev/null
       done
 
@@ -259,7 +262,8 @@ fi
 
 # Generate command line arguments for Java ACC.
 JAVA_ACC_COMMAND+=(-l HBase)
-JAVA_ACC_COMMAND+=(-v1 ${COMMIT[1]} -v2 ${COMMIT[2]})
+JAVA_ACC_COMMAND+=(-v1 ${COMMIT[1]}${SHA[1]+"/${SHA[1]}"})
+JAVA_ACC_COMMAND+=(-v2 ${COMMIT[2]}${SHA[2]+"/${SHA[2]}"})
 JAVA_ACC_COMMAND+=(-d1 ${JARS[1]} -d2 ${JARS[2]})
 JAVA_ACC_COMMAND+=(-report-path \
     ${SCRIPT_DIRECTORY}/target/compatibility/report/${COMMIT[1]}_${COMMIT[2]}_compat_report.html)
