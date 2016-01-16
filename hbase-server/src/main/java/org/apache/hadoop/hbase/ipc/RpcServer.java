@@ -2533,7 +2533,7 @@ public class RpcServer implements RpcServerInterface {
    */
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
-    if (call != null && call.connection.socket != null) {
+    if (call != null && call.connection != null && call.connection.socket != null) {
       return call.connection.socket.getInetAddress();
     }
     return null;
