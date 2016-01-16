@@ -194,6 +194,8 @@ for ref in 1 2; do
       echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
       exit 2
     fi
+    # grab sha for future reference
+    SHA[${ref}]=$(git rev-parse --short HEAD)
     popd > /dev/null
   fi
 
@@ -213,6 +215,7 @@ for ref in 1 2; do
           echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
           exit 2
         fi
+        SHA[${ref}]=$(git rev-parse --short HEAD)
         popd > /dev/null
       done
 
