@@ -346,7 +346,7 @@ public class RpcServer implements RpcServerInterface {
      * cleanup.
      */
     void done() {
-      if (this.cellBlock != null) {
+      if (this.cellBlock != null && reservoir != null) {
         // Return buffer to reservoir now we are done with it.
         reservoir.putBuffer(this.cellBlock);
         this.cellBlock = null;
