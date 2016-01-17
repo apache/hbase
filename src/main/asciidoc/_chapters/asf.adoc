@@ -35,13 +35,13 @@ HBase is a project in the Apache Software Foundation and as such there are respo
 [[asf.devprocess]]
 === ASF Development Process
 
-See the link:http://www.apache.org/dev/#committers[Apache Development Process page]            for all sorts of information on how the ASF is structured (e.g., PMC, committers, contributors), to tips on contributing and getting involved, and how open-source works at ASF. 
+See the link:http://www.apache.org/dev/#committers[Apache Development Process page]            for all sorts of information on how the ASF is structured (e.g., PMC, committers, contributors), to tips on contributing and getting involved, and how open-source works at ASF.
 
 [[asf.reporting]]
 === ASF Board Reporting
 
 Once a quarter, each project in the ASF portfolio submits a report to the ASF board.
 This is done by the HBase project lead and the committers.
-See link:http://www.apache.org/foundation/board/reporting[ASF board reporting] for more information. 
+See link:http://www.apache.org/foundation/board/reporting[ASF board reporting] for more information.
 
 :numbered:

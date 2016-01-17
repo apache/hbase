@@ -65,7 +65,7 @@ The dependencies only need to be available on the local `CLASSPATH`.
 The following example runs the bundled HBase link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
 If you have not set the environment variables expected in the command (the parts prefixed by a `$` sign and surrounded by curly braces), you can use the actual system paths instead.
 Be sure to use the correct version of the HBase JAR for your system.
-The backticks (``` symbols) cause ths shell to execute the sub-commands, setting the output of `hbase classpath` (the command to dump HBase CLASSPATH) to `HADOOP_CLASSPATH`.
+The backticks (``` symbols) cause the shell to execute the sub-commands, setting the output of `hbase classpath` (the command to dump HBase CLASSPATH) to `HADOOP_CLASSPATH`.
 This example assumes you use a BASH-compatible shell.
 
 [source,bash]
@@ -279,7 +279,7 @@ That is where the logic for map-task assignment resides.
 
 The following is an example of using HBase as a MapReduce source in read-only manner.
 Specifically, there is a Mapper instance but no Reducer, and nothing is being emitted from the Mapper.
-There job would be defined as follows...
+The job would be defined as follows...
 
 [source,java]
 ----
@@ -592,7 +592,7 @@ public class MyMapper extends TableMapper<Text, LongWritable> {
 == Speculative Execution
 
 It is generally advisable to turn off speculative execution for MapReduce jobs that use HBase as a source.
-This can either be done on a per-Job basis through properties, on on the entire cluster.
+This can either be done on a per-Job basis through properties, or on the entire cluster.
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
 See <<spec.ex,spec.ex>> for more information.
@@ -613,7 +613,7 @@ The following example shows a Cascading `Flow` which "sinks" data into an HBase 
 // emits two fields: "offset" and "line"
 Tap source = new Hfs( new TextLine(), inputFileLhs );
 
-// store data in a HBase cluster
+// store data in an HBase cluster
 // accepts fields "num", "lower", and "upper"
 // will automatically scope incoming fields to their proper familyname, "left" or "right"
 Fields keyFields = new Fields( "num" );

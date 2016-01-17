@@ -55,7 +55,7 @@ These jobs were consistently found to be waiting on map and reduce tasks assigne
 
 .Datanodes:
 * Two 12-core processors
-* Six Enerprise SATA disks
+* Six Enterprise SATA disks
 * 24GB of RAM
 * Two bonded gigabit NICs
 

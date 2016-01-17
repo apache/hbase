@@ -76,7 +76,7 @@ NOTE: Spawning HBase Shell commands in this way is slow, so keep that in mind wh
 
 .Passing Commands to the HBase Shell
 ====
-You can pass commands to the HBase Shell in non-interactive mode (see <<hbasee.shell.noninteractive,hbasee.shell.noninteractive>>) using the `echo` command and the `|` (pipe) operator.
+You can pass commands to the HBase Shell in non-interactive mode (see <<hbase.shell.noninteractive,hbase.shell.noninteractive>>) using the `echo` command and the `|` (pipe) operator.
 Be sure to escape characters in the HBase commands which would otherwise be interpreted by the shell.
 Some debug-level output has been truncated from the example below.
 

@@ -89,11 +89,11 @@ Additionally, each DataNode server will also have a TaskTracker/NodeManager log 
 [[rpc.logging]]
 ==== Enabling RPC-level logging
 
-Enabling the RPC-level logging on a RegionServer can often given insight on timings at the server.
+Enabling the RPC-level logging on a RegionServer can often give insight on timings at the server.
 Once enabled, the amount of log spewed is voluminous.
 It is not recommended that you leave this logging on for more than short bursts of time.
 To enable RPC-level logging, browse to the RegionServer UI and click on _Log Level_.
-Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (Thats right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
+Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (That's right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
 Analyze.
 
 To disable, set the logging level back to `INFO` level.
@@ -185,7 +185,7 @@ The key points here is to keep all these pauses low.
 CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
 
 This can be due to the size of the ParNew, which should be relatively small.
-If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
+If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if it's too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
 
 Add the below line in _hbase-env.sh_:
 [source,bourne]
@@ -443,7 +443,7 @@ java.lang.Thread.State: WAITING (on object monitor)
     at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.run(MemStoreFlusher.java:146)
 ----
 
-A handler thread that's waiting for stuff to do (like put, delete, scan, etc):
+A handler thread that's waiting for stuff to do (like put, delete, scan, etc.):
 
 [source]
 ----
@@ -849,7 +849,7 @@ are snapshots and WALs.
 
 Snapshots::
   When you create a snapshot, HBase retains everything it needs to recreate the table's
-  state at that time of tne snapshot. This includes deleted cells or expired versions.
+  state at that time of the snapshot. This includes deleted cells or expired versions.
   For this reason, your snapshot usage pattern should be well-planned, and you should
   prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
   and archives needed to restore snapshots are stored in
@@ -1070,7 +1070,7 @@ However, if the NotServingRegionException is logged ERROR, then the client ran o
 
 Fix your DNS.
 In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer as forward lookup.
-See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gorey details.
+See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gory details.
 
 [[brand.new.compressor]]
 ==== Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages

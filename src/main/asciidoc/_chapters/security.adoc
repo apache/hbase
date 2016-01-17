@@ -236,7 +236,21 @@ To enable it, do the following.
 
 <<security.gateway.thrift>> describes how to configure the Thrift gateway to authenticate to HBase on the client's behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in link:https://issues.apache.org/jira/browse/HBASE-12640[HBASE-12640] for Thrift 1, but is currently not available for Thrift 2.
 
-*To allow proxy users*, add the following to the _hbase-site.xml_ file for every HBase node:
+*To enable the `doAs` feature*, add the following to the _hbase-site.xml_ file for every Thrift gateway:
+
+[source,xml]
+----
+<property>
+  <name>hbase.regionserver.thrift.http</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.thrift.support.proxyuser</name>
+  <value>true/value>
+</property>
+----
+
+*To allow proxy users* when using `doAs` impersonation, add the following to the _hbase-site.xml_ file for every HBase node:
 
 [source,xml]
 ----
@@ -254,21 +268,9 @@ To enable it, do the following.
 </property>
 ----
 
-*To enable the `doAs` feature*, add the following to the _hbase-site.xml_ file for every Thrift gateway:
-
-[source,xml]
-----
-<property>
-  <name>hbase.regionserver.thrift.http</name>
-  <value>true</value>
-</property>
-<property>
-  <name>hbase.thrift.support.proxyuser</name>
-  <value>true/value>
-</property>
-----
-
-Take a look at the link:https://github.com/apache/hbase/blob/master/hbase-examples/src/main/java/org/apache/hadoop/hbase/thrift/HttpDoAsClient.java[demo client] to get an overall idea of how to use this feature in your client.
+Take a look at the
+link:https://github.com/apache/hbase/blob/master/hbase-examples/src/main/java/org/apache/hadoop/hbase/thrift/HttpDoAsClient.java[demo client]
+to get an overall idea of how to use this feature in your client.
 
 === Client-side Configuration for Secure Operation - REST Gateway
 
@@ -306,6 +308,10 @@ To enable REST gateway Kerberos authentication for client access, add the follow
 [source,xml]
 ----
 <property>
+  <name>hbase.rest.support.proxyuser</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.rest.authentication.type</name>
   <value>kerberos</value>
 </property>
@@ -331,7 +337,7 @@ To enable REST gateway Kerberos authentication for client access, add the follow
 Substitute the keytab for HTTP for _$KEYTAB_.
 
 HBase REST gateway supports different 'hbase.rest.authentication.type': simple, kerberos.
-You can also implement a custom authentication by implemening Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
+You can also implement a custom authentication by implementing Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
 For more information, refer to link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication].
 
 [[security.rest.gateway]]
@@ -343,7 +349,7 @@ To the HBase server, all requests are from the REST gateway user.
 The actual users are unknown.
 You can turn on the impersonation support.
 With impersonation, the REST gateway user is a proxy user.
-The HBase server knows the acutal/real user of each request.
+The HBase server knows the actual/real user of each request.
 So it can apply proper authorizations.
 
 To turn on REST gateway impersonation, we need to configure HBase servers (masters and region servers) to allow proxy users; configure REST gateway to enable impersonation.
@@ -1117,7 +1123,7 @@ NOTE: Visibility labels are not currently applied for superusers.
 | Interpretation
 
 | fulltime
-| Allow accesss to users associated with the fulltime label.
+| Allow access to users associated with the fulltime label.
 
 | !public
 | Allow access to users not associated with the public label.
@@ -1332,11 +1338,21 @@ static Table createTableAndWriteDataWithLabels(TableName tableName, String... la
 ----
 ====
 
-<<reading_cells_with_labels>>
+[[reading_cells_with_labels]]
 ==== Reading Cells with Labels
-When you issue a Scan or Get, HBase uses your default set of authorizations to filter out cells that you do not have access to. A superuser can set the default set of authorizations for a given user by using the `set_auths` HBase Shell command or the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,%20java.lang.String[],%20java.lang.String)[VisibilityClient.setAuths()] method.
 
-You can specify a different authorization during the Scan or Get, by passing the AUTHORIZATIONS option in HBase Shell, or the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()] method if you use the API. This authorization will be combined with your default set as an additional filter. It will further filter your results, rather than giving you additional authorization.
+When you issue a Scan or Get, HBase uses your default set of authorizations to
+filter out cells that you do not have access to. A superuser can set the default
+set of authorizations for a given user by using the `set_auths` HBase Shell command
+or the
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,%20java.lang.String\[\],%20java.lang.String)[VisibilityClient.setAuths()] method.
+
+You can specify a different authorization during the Scan or Get, by passing the
+AUTHORIZATIONS option in HBase Shell, or the
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()]
+method if you use the API. This authorization will be combined with your default
+set as an additional filter. It will further filter your results, rather than
+giving you additional authorization.
 
 .HBase Shell
 ====
@@ -1582,8 +1598,10 @@ Rotate the Master Key::
 === Secure Bulk Load
 
 Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the MapReduce job to HBase.
-Secure bulk loading is implemented by a coprocessor, named link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html
-[SecureBulkLoadEndpoint], which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to _/tmp/hbase-staging/_.
+Secure bulk loading is implemented by a coprocessor, named
+link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint],
+which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to
+_/tmp/hbase-staging/_.
 
 .Secure Bulk Load Algorithm
 

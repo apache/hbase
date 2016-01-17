@@ -125,7 +125,7 @@ This directory also stores images used in the HBase Reference Guide.
 
 The website's pages are written in an HTML-like XML dialect called xdoc, which
 has a reference guide at
-link:http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
+http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
 You can edit these files in a plain-text editor, an IDE, or an XML editor such
 as XML Mind XML Editor (XXE) or Oxygen XML Author.
 
@@ -159,7 +159,7 @@ artifacts to the 0.94/ directory of the `asf-site` branch.
 
 The HBase Reference Guide is written in Asciidoc and built using link:http://asciidoctor.org[AsciiDoctor].
 The following cheat sheet is included for your reference. More nuanced and comprehensive documentation
-is available at link:http://asciidoctor.org/docs/user-manual/.
+is available at http://asciidoctor.org/docs/user-manual/.
 
 .AsciiDoc Cheat Sheet
 [cols="1,1,a",options="header"]
@@ -186,7 +186,8 @@ is available at link:http://asciidoctor.org/docs/user-manual/.
 include\::path/to/app.rb[]
 ----
 ................
-| Include only part of a separate file | Similar to Javadoc | See link:http://asciidoctor.org/docs/user-manual/#by-tagged-regions
+| Include only part of a separate file | Similar to Javadoc
+| See http://asciidoctor.org/docs/user-manual/#by-tagged-regions
 | Filenames, directory names, new terms | italic | \_hbase-default.xml_
 | External naked URLs | A link with the URL as link text |
 ----
@@ -285,7 +286,11 @@ Title:: content
 Title::
   content
 ----
-| Sidebars, quotes, or other blocks of text | a block of text, formatted differently from the default | Delimited using different delimiters, see link:http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary. Some of the examples above use delimiters like \...., ----,====.
+| Sidebars, quotes, or other blocks of text
+| a block of text, formatted differently from the default
+| Delimited using different delimiters,
+see http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary.
+Some of the examples above use delimiters like \...., ----,====.
 ........
 [example]
 ====

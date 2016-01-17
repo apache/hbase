@@ -57,7 +57,7 @@ Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. U
 
 .Example /etc/hosts File for Ubuntu
 ====
-The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble. 
+The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
 [listing]
 ----
 127.0.0.1 localhost

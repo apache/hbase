@@ -77,7 +77,7 @@ of the <<security>> chapter.
 
 === Using REST Endpoints
 
-The following examples use the placeholder server `http://example.com:8000`, and
+The following examples use the placeholder server pass:[http://example.com:8000], and
 the following commands can all be run using `curl` or `wget` commands. You can request
 plain text (the default), XML , or JSON output by adding no header for plain text,
 or the header "Accept: text/xml" for XML or "Accept: application/json" for JSON.
@@ -741,7 +741,7 @@ the data, and deletes the table.
 [source,jython]
 ----
 import java.lang
-from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, HConstants
+from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, HConstants, TableName
 from org.apache.hadoop.hbase.client import HBaseAdmin, HTable, Get
 from org.apache.hadoop.hbase.io import Cell, RowResult
 
@@ -753,7 +753,7 @@ conf = HBaseConfiguration()
 # Create a table named 'test' that has two column families,
 # one named 'content, and the other 'anchor'.  The colons
 # are required for column family names.
-tablename = "test"
+tablename = TableName.valueOf("test")
 
 desc = HTableDescriptor(tablename)
 desc.addFamily(HColumnDescriptor("content:"))

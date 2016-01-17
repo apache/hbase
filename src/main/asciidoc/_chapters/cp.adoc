@@ -27,254 +27,212 @@
 :icons: font
 :experimental:
 
-HBase Coprocessors are modeled after the Coprocessors which are part of Google's BigTable
-(http://research.google.com/people/jeff/SOCC2010-keynote-slides.pdf pages 41-42.). +
-Coprocessor is a framework that provides an easy way to run your custom code directly on
-Region Server.
-The information in this chapter is primarily sourced and heavily reused from:
+HBase Coprocessors are modeled after Google BigTable's coprocessor implementation
+(http://research.google.com/people/jeff/SOCC2010-keynote-slides.pdf pages 41-42.).
+
+The coprocessor framework provides mechanisms for running your custom code directly on
+the RegionServers managing your data. Efforts are ongoing to bridge gaps between HBase's
+implementation and BigTable's architecture. For more information see
+link:https://issues.apache.org/jira/browse/HBASE-4047[HBASE-4047].
+
+The information in this chapter is primarily sourced and heavily reused from the following
+resources:
 
 . Mingjie Lai's blog post
 link:https://blogs.apache.org/hbase/entry/coprocessor_introduction[Coprocessor Introduction].
 . Gaurav Bhardwaj's blog post
 link:http://www.3pillarglobal.com/insights/hbase-coprocessors[The How To Of HBase Coprocessors].
 
-
-
-== Coprocessor Framework
-
-When working with any data store (like RDBMS or HBase) you fetch the data (in case of RDBMS you
-might use SQL query and in case of HBase you use either Get or Scan). To fetch only relevant data
-you filter it (for RDBMS you put conditions in 'WHERE' predicate and in HBase you use
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]).
-After fetching the desired data, you perform your business computation on the data.
-This scenario is close to ideal for "small data", where few thousand rows and a bunch of columns
-are returned from the data store. Now imagine a scenario where there are billions of rows and
-millions of columns and you want to perform some computation which requires all the data, like
-calculating average or sum. Even if you are interested in just few columns, you still have to
-fetch all the rows. There are a few drawbacks in this approach as described below:
-
-. In this approach the data transfer (from data store to client side) will become the bottleneck,
-and the time required to complete the operation is limited by the rate at which data transfer
-takes place.
-. It's not always possible to hold so much data in memory and perform computation.
-. Bandwidth is one of the most precious resources in any data center. Operations like this may
-saturate your data center’s bandwidth and will severely impact the performance of your cluster.
-. Your client code is becoming thick as you are maintaining the code for calculating average or
-summation on client side. Not a major drawback when talking of severe issues like
-performance/bandwidth but still worth giving consideration.
-
-In a scenario like this it's better to move the computation (i.e. user's custom code) to the data
-itself (Region Server). Coprocessor helps you achieve this but you can do more than that.
-There is another advantage that your code runs in parallel (i.e. on all Regions).
-To give an idea of Coprocessor's capabilities, different people give different analogies.
-The three most famous analogies for Coprocessor are:
-[[cp_analogies]]
-Triggers and Stored Procedure:: This is the most common analogy for Coprocessor. Observer
-Coprocessor is compared to triggers because like triggers they execute your custom code when
-certain event occurs (like Get or Put etc.). Similarly Endpoints Coprocessor is compared to the
-stored procedures and you can perform custom computation on data directly inside the region server.
-
-MapReduce:: As in MapReduce you move the computation to the data in the same way. Coprocessor
-executes your custom computation directly on Region Servers, i.e. where data resides. That's why
-some people compare Coprocessor to a small MapReduce jobs.
-
-AOP:: Some people compare it to _Aspect Oriented Programming_ (AOP). As in AOP, you apply advice
-(on occurrence of specific event) by intercepting the request and then running some custom code
-(probably cross-cutting concerns) and then forwarding the request on its path as if nothing
-happened (or even return it back). Similarly in Coprocessor you have this facility of intercepting
-the request and running custom code and then forwarding it on its path (or returning it).
-
-
-Although Coprocessor derives its roots from Google's Bigtable but it deviates from it largely in
-its design. Currently there are efforts going on to bridge this gap. For more information see
+[WARNING]
+.Use Coprocessors At Your Own Risk
+====
+Coprocessors are an advanced feature of HBase and are intended to be used by system
+developers only. Because coprocessor code runs directly on the RegionServer and has
+direct access to your data, they introduce the risk of data corruption, man-in-the-middle
+attacks, or other malicious data access. Currently, there is no mechanism to prevent
+data corruption by coprocessors, though work is underway on
 link:https://issues.apache.org/jira/browse/HBASE-4047[HBASE-4047].
++
+In addition, there is no resource isolation, so a well-intentioned but misbehaving
+coprocessor can severely degrade cluster performance and stability.
+====
 
-In HBase, to implement a Coprocessor certain steps must be followed as described below:
+== Coprocessor Overview
 
-. Either your class should extend one of the Coprocessor classes (like
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver]
-) or it should implement Coprocessor interfaces (like
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/Coprocessor.html[Coprocessor],
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/CoprocessorService.html[CoprocessorService]).
+In HBase, you fetch data using a `Get` or `Scan`, whereas in an RDBMS you use a SQL
+query. In order to fetch only the relevant data, you filter it using a HBase
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]
+, whereas in an RDBMS you use a `WHERE` predicate.
 
-. Load the Coprocessor: Currently there are two ways to load the Coprocessor. +
-Static:: Loading from configuration
-Dynammic:: Loading via 'hbase shell' or via Java code using HTableDescriptor class). +
-For more details see <<cp_loading,Loading Coprocessors>>.
+After fetching the data, you perform computations on it. This paradigm works well
+for "small data" with a few thousand rows and several columns. However, when you scale
+to billions of rows and millions of columns, moving large amounts of data across your
+network will create bottlenecks at the network layer, and the client needs to be powerful
+enough and have enough memory to handle the large amounts of data and the computations.
+In addition, the client code can grow large and complex.
 
-. Finally your client-side code to call the Coprocessor. This is the easiest step, as HBase
-handles the Coprocessor transparently and you don't have to do much to call the Coprocessor.
+In this scenario, coprocessors might make sense. You can put the business computation
+code into a coprocessor which runs on the RegionServer, in the same location as the
+data, and returns the result to the client.
 
+This is only one scenario where using coprocessors can provide benefit. Following
+are some analogies which may help to explain some of the benefits of coprocessors.
+
+[[cp_analogies]]
+=== Coprocessor Analogies
+
+Triggers and Stored Procedure::
+  An Observer coprocessor is similar to a trigger in a RDBMS in that it executes
+  your code either before or after a specific event (such as a `Get` or `Put`)
+  occurs. An endpoint coprocessor is similar to a stored procedure in a RDBMS
+  because it allows you to perform custom computations on the data on the
+  RegionServer itself, rather than on the client.
+
+MapReduce::
+  MapReduce operates on the principle of moving the computation to the location of
+  the data. Coprocessors operate on the same principal.
+
+AOP::
+  If you are familiar with Aspect Oriented Programming (AOP), you can think of a coprocessor
+  as applying advice by intercepting a request and then running some custom code,
+  before passing the request on to its final destination (or even changing the destination).
+
+
+=== Coprocessor Implementation Overview
+
+. Either your class should extend one of the Coprocessor classes, such as
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver],
+or it should implement the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/Coprocessor.html[Coprocessor]
+or
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/CoprocessorService.html[CoprocessorService]
+interface.
+
+. Load the coprocessor, either statically (from the configuration) or dynamically,
+using HBase Shell. For more details see <<cp_loading,Loading Coprocessors>>.
+
+. Call the coprocessor from your client-side code. HBase handles the coprocessor
+trapsparently.
 
 The framework API is provided in the
-// Below URL is more than 100 characters long.
 link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]
-package. +
-Coprocessors are not designed to be used by the end users but by developers. Coprocessors are
-executed directly on region server; therefore a faulty/malicious code can bring your region server
-down. Currently there is no mechanism to prevent this, but there are efforts going on for this.
-For more, see link:https://issues.apache.org/jira/browse/HBASE-4047[HBASE-4047]. +
-Two different types of Coprocessors are provided by the framework, based on their functionality.
-
-
+package.
 
 == Types of Coprocessors
 
-Coprocessor can be broadly divided into two categories: Observer and Endpoint.
+=== Observer Coprocessors
 
-=== Observer
-Observer Coprocessor are easy to understand. People coming from RDBMS background can compare them
-to the triggers available in relational databases. Folks coming from programming background can
-visualize it like advice (before and after only) available in AOP (Aspect Oriented Programming).
-See <<cp_analogies, Coprocessor Analogy>> +
-Coprocessors allows you to hook your custom code in two places during the life cycle of an event. +
-First is just _before_ the occurrence of the event (just like 'before' advice in AOP or triggers
-like 'before update'). All methods providing this kind feature will start with the prefix `pre`. +
-For example if you want your custom code to get executed just before the `Put` operation, you can
-use the override the
-// Below URL is more than 100 characters long.
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`prePut`]
-method of
-// Below URL is more than 100 characters long.
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionCoprocessor].
-This method has following signature:
-[source,java]
-----
-public void prePut (final ObserverContext e, final Put put, final WALEdit edit,final Durability
-durability) throws IOException;
-----
+Observer coprocessors are triggered either before or after a specific event occurs.
+Observers that happen before an event use methods that start with a `pre` prefix,
+such as link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`prePut`]. Observers that happen just after an event override methods that start
+with a `post` prefix, such as link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`postPut`].
 
-Secondly, the Observer Coprocessor also provides hooks for your code to get executed just _after_
-the occurrence of the event (similar to after advice in AOP terminology or 'after update' triggers
-). The methods giving this functionality will start with the prefix `post`. For example, if you
-want your code to be executed after the 'Put' operation, you should consider overriding
-// Below URL is more than 100 characters long.
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`postPut`]
-method of
-// Below URL is more than 100 characters long.
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionCoprocessor]:
-[source,java]
-----
-public void postPut(final ObserverContext e, final Put put, final WALEdit edit, final Durability
-durability) throws IOException;
-----
 
-In short, the following conventions are generally followed: +
-Override _preXXX()_ method if you want your code to be executed just before the occurrence of the
-event. +
-Override _postXXX()_ method if you want your code to be executed just after the occurrence of the
-event. +
+==== Use Cases for Observer Coprocessors
+Security::
+  Before performing a `Get` or `Put` operation, you can check for permission using
+  `preGet` or `prePut` methods.
 
-.Use Cases for Observer Coprocessors:
-Few use cases of the Observer Coprocessor are:
+Referential Integrity::
+  HBase does not directly support the RDBMS concept of refential integrity, also known
+  as foreign keys. You can use a coprocessor to enforce such integrity. For instance,
+  if you have a business rule that every insert to the `users` table must be followed
+  by a corresponding entry in the `user_daily_attendance` table, you could implement
+  a coprocessor to use the `prePut` method on `user` to insert a record into `user_daily_attendance`.
 
-. *Security*: Before performing any operation (like 'Get', 'Put') you can check for permission in
-the 'preXXX' methods.
-
-. *Referential Integrity*: Unlike traditional RDBMS, HBase doesn't have the concept of referential
-integrity (foreign key). Suppose for example you have a requirement that whenever you insert a
-record in 'users' table, a corresponding entry should also be created in 'user_daily_attendance'
-table. One way you could solve this is by using two 'Put' one for each table, this way you are
-throwing the responsibility (of the referential integrity) to the user. A better way is to use
-Coprocessor and overriding 'postPut' method in which you write the code to insert the record in
-'user_daily_attendance' table. This way client code is more lean and clean.
-
-. *Secondary Index*: Coprocessor can be used to maintain secondary indexes. For more information
-see link:http://wiki.apache.org/hadoop/Hbase/SecondaryIndexing[SecondaryIndexing].
+Secondary Indexes::
+  You can use a coprocessor to maintain secondary indexes. For more information, see
+  link:http://wiki.apache.org/hadoop/Hbase/SecondaryIndexing[SecondaryIndexing].
 
 
 ==== Types of Observer Coprocessor
 
-Observer Coprocessor comes in following flavors:
+RegionObserver::
+  A RegionObserver coprocessor allows you to observe events on a region, such as `Get`
+  and `Put` operations. See
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver].
+  Consider overriding the convenience class
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver],
+  which implements the `RegionObserver` interface and will not break if new methods are added.
 
-. *RegionObserver*: This Coprocessor provides the facility to hook your code when the events on
-region are triggered. Most common example include 'preGet' and 'postGet' for 'Get' operation and
-'prePut' and 'postPut' for 'Put' operation. For exhaustive list of supported methods (events) see
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver].
+RegionServerObserver::
+  A RegionServerObserver allows you to observe events related to the RegionServer's
+  operation, such as starting, stopping, or performing merges, commits, or rollbacks.
+  See
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionServerObserver.html[RegionServerObserver].
+  Consider overriding the convenience class
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterRegionServerObserver.html[BaseMasterRegionServerObserver]
+  which implements both `MasterObserver` and `RegionServerObserver` interfaces and
+  will not break if new methods are added.
 
-. *Region Server Observer*: Provides hook for the events related to the RegionServer, such as
-stopping the RegionServer and performing operations before or after merges, commits, or rollbacks.
-For more details please refer
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionServerObserver.html[RegionServerObserver].
+MasterOvserver::
+  A MasterObserver allows you to observe events related to the HBase Master, such
+  as table creation, deletion, or schema modification. See
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/MasterObserver.html[MasterObserver].
+  Consider overriding the convenience class
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterRegionServerObserver.html[BaseMasterRegionServerObserver],
+  which implements both `MasterObserver` and `RegionServerObserver` interfaces and
+  will not break if new methods are added.
 
-. *Master Observer*: This observer provides hooks for DDL like operation, such as create, delete,
-modify table. For entire list of available methods see
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/MasterObserver.html[MasterObserver].
+WalObserver::
+  A WalObserver allows you to observe events related to writes to the Write-Ahead
+  Log (WAL). See
+  link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html[WALObserver].
+  Consider overriding the convenience class
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseWALObserver.html[BaseWALObserver],
+  which implements the `WalObserver` interface and will not break if new methods are added.
 
-. *WAL Observer*: Provides hooks for WAL (Write-Ahead-Log) related operation. It has only two
-method 'preWALWrite()' and 'postWALWrite()'. For more details see
-// Below URL is more than 100 characters long.
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html[WALObserver].
-
-For example see <<cp_example,Examples>>
+<<cp_example,Examples>> provides working examples of observer coprocessors.
 
 
 === Endpoint Coprocessor
 
-Endpoint Coprocessor can be compared to stored procedure found in RDBMS.
-See <<cp_analogies, Coprocessor Analogy>>. They help in performing computation which is not
-possible either through Observer Coprocessor or otherwise. For example, calculating average or
-summation over the entire table that spans across multiple regions. They do so by providing a hook
-for your custom code and then running it across all regions. +
-With Endpoints Coprocessor you can create your own dynamic RPC protocol and thus can provide
-communication between client and region server, hence enabling you to run your custom code on
-region server (on each region of a table). +
-Unlike observer Coprocessor (where your custom code is
-executed transparently when events like 'Get' operation occurs), in Endpoint Coprocessor you have
-to explicitly invoke the Coprocessor by using the
-// Below URL is more than 100 characters long.
+Endpoint processors allow you to perform computation at the location of the data.
+See <<cp_analogies, Coprocessor Analogy>>. An example is the need to calculate a running
+average or summation for an entire table which spans hundreds of regions.
+
+In contract to observer coprocessors, where your code is run transparently, endpoint
+coprocessors must be explicitly invoked using the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
 method available in
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
-(or
-// Below URL is more than 100 characters long.
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTableInterface.html[HTableInterface]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTableInterface.html[HTableInterface],
 or
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable]).
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable].
 
-From version 0.96, implementing Endpoint Coprocessor is not straight forward. Now it is done with
-the help of Google's Protocol Buffer. For more details on Protocol Buffer, please see
+Starting with HBase 0.96, endpoint coprocessors are implemented using Google Protocol
+Buffers (protobuf). For more details on protobuf, see Google's
 link:https://developers.google.com/protocol-buffers/docs/proto[Protocol Buffer Guide].
-Endpoints Coprocessor written in version 0.94 are not compatible with with version 0.96 or later
-(for more details, see
-link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]),
-so if your are upgrading your HBase cluster from version 0.94 (or before) to 0.96 (or later) you
-have to rewrite your Endpoint coprocessor.
+Endpoints Coprocessor written in version 0.94 are not compatible with version 0.96 or later.
+See
+link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]). To upgrade your
+HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
+coprocessor.
 
-For example see <<cp_example,Examples>>
-
+<<cp_example,Examples>> provides working examples of endpoint coprocessors.
 
 [[cp_loading]]
 == Loading Coprocessors
 
-_Loading  of Coprocessor refers to the process of making your custom Coprocessor implementation
-available to the the HBase, so that when a requests comes in or an event takes place the desired
-functionality implemented in your custom code gets executed. +
-Coprocessor can be loaded broadly in two ways. One is static (loading through configuration files)
-and the other one is dynamic loading (using hbase shell or java code).
+To make your coprocessor available to HBase, it must be _loaded_, either statically
+(through the HBase configuration) or dynamically (using HBase Shell or the Java API).
 
 === Static Loading
-Static loading means that your Coprocessor will take effect only when you restart your HBase and
-there is a reason for it. In this you make changes 'hbase-site.xml' and therefore have to restart
-HBase for your changes to take place. +
-Following are the steps for loading Coprocessor statically.
 
-. Define the Coprocessor in hbase-site.xml: Define a <property> element which consist of two
-sub elements <name> and <value> respectively.
+Follow these steps to statically load your coprocessor. Keep in mind that you must
+restart HBase to unload a coprocessor that has been loaded statically.
+
+. Define the Coprocessor in _hbase-site.xml_, with a <property> element with a <name>
+and a <value> sub-element. The <name> should be one of the following:
 +
-.. <name> can have one of the following values:
+- `hbase.coprocessor.region.classes` for RegionObservers and Endpoints.
+- `hbase.coprocessor.wal.classes` for WALObservers.
+- `hbase.coprocessor.master.classes` for MasterObservers.
 +
-... 'hbase.coprocessor.region.classes' for RegionObservers and Endpoints.
-... 'hbase.coprocessor.wal.classes' for WALObservers.
-... 'hbase.coprocessor.master.classes' for MasterObservers.
-.. <value> must contain the fully qualified class name of your class implmenting the Coprocessor.
+<value> must contain the fully-qualified class name of your coprocessor's implementation
+class.
 +
 For example to load a Coprocessor (implemented in class SumEndPoint.java) you have to create
-following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directiory):
+following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directory):
 +
 [source,xml]
 ----
@@ -283,6 +241,7 @@ following entry in RegionServer's 'hbase-site.xml' file (generally located under
     <value>org.myname.hbase.coprocessor.endpoint.SumEndPoint</value>
 </property>
 ----
++
 If multiple classes are specified for loading, the class names must be comma-separated.
 The framework attempts to load all the configured classes using the default class loader.
 Therefore, the jar file must reside on the server-side HBase classpath.
@@ -297,34 +256,32 @@ When calling out to registered observers, the framework executes their callbacks
 sorted order of their priority. +
 Ties are broken arbitrarily.
 
-. Put your code on classpth of HBase: There are various ways to do so, like adding jars on
-classpath etc. One easy way to do this is to drop the jar (containing you code and all the
-dependencies) in 'lib' folder of the HBase installation.
+. Put your code HBase's classpath. One easy way to do this is to drop the jar
+  (containing you code and all the dependencies) into the `lib/` directory in the
+  HBase installation.
 
-. Restart the HBase.
+. Restart HBase.
 
 
-==== Unloading Static Coprocessor
-Unloading static Coprocessor is easy. Following are the steps:
+=== Static Unloading
 
-. Delete the Coprocessor's entry from the 'hbase-site.xml' i.e. remove the <property> tag.
+. Delete the coprocessor's <property> element, including sub-elements, from `hbase-site.xml`.
+. Restart HBase.
+. Optionally, remove the coprocessor's JAR file from the classpath or HBase's `lib/`
+  directory.
 
-. Restart the Hbase.
-
-. Optionally remove the Coprocessor jar file from the classpath (or from the lib directory if you
-copied it over there). Removing the coprocessor JARs from HBase’s classpath is a good practice.
 
 === Dynamic Loading
-Dynamic loading refers to the process of loading Coprocessor without restarting HBase. This may
-sound better than the static loading (and in some scenarios it may) but there is a caveat, dynamic
-loaded Coprocessor applies to the table only for which it was loaded while same is not true for
-static loading as it applies to all the tables. Due to this difference sometimes dynamically
-loaded Coprocessor are also called *Table Coprocessor* (as they applies only to a single table)
-while statically loaded Coprocessor are called *System Coprocessor* (as they applies to all the
-tables). +
-To dynamically load the Coprocessor you have to take the table offline hence during this time you
-won't be able to process any request involving this table. +
-There are three ways to dynamically load Coprocessor as shown below:
+
+You can also load a coprocessor dynamically, without restarting HBase. This may seem
+preferable to static loading, but dynamically loaded coprocessors are loaded on a
+per-table basis, and are only available to the table for which they were loaded. For
+this reason, dynamically loaded tables are sometimes called *Table Coprocessor*.
+
+In addition, dynamically loading a coprocessor acts as a schema change on the table,
+and the table must be taken offline to load the coprocessor.
+
+There are three ways to dynamically load Coprocessor.
 
 [NOTE]
 .Assumptions
@@ -332,26 +289,25 @@ There are three ways to dynamically load Coprocessor as shown below:
 The below mentioned instructions makes the following assumptions:
 
 * A JAR called `coprocessor.jar` contains the Coprocessor implementation along with all of its
-dependencies if any.
+dependencies.
 * The JAR is available in HDFS in some location like
 `hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar`.
 ====
 
-. *Using Shell*: You can load the Coprocessor using the HBase shell as follows:
-.. Disable Table: Take table offline by disabling it. Suppose if the table name is 'users', then
-to disable it enter following command:
+==== Using HBase Shell
+
+. Disable the table using HBase Shell:
 +
 [source]
 ----
-hbase(main):001:0> disable 'users'
+hbase> disable 'users'
 ----
 
-.. Load the Coprocessor: The Coprocessor jar should be on HDFS and should be accessible to HBase,
-to load the Coprocessor use following command:
+. Load the Coprocessor, using a command like the following:
 +
 [source]
 ----
-hbase(main):002:0> alter 'users', METHOD => 'table_att', 'Coprocessor'=>'hdfs://<namenode>:<port>/
+hbase alter 'users', METHOD => 'table_att', 'Coprocessor'=>'hdfs://<namenode>:<port>/
 user/<hadoop-user>/coprocessor.jar| org.myname.hbase.Coprocessor.RegionObserverExample|1073741823|
 arg1=1,arg2=2'
 ----
@@ -370,30 +326,25 @@ observers registered at the same hook using priorities. This field can be left b
 case the framework will assign a default priority value.
 * Arguments (Optional): This field is passed to the Coprocessor implementation. This is optional.
 
-.. Enable the table: To enable table type following command:
+. Enable the table.
 +
 ----
 hbase(main):003:0> enable 'users'
 ----
-.. Verification: This is optional but generally good practice to see if your Coprocessor is
-loaded successfully. Enter following command:
+
+. Verify that the coprocessor loaded:
 +
 ----
 hbase(main):04:0> describe 'users'
 ----
 +
-You must see some output like this:
-+
-----
-DESCRIPTION ENABLED
-'users', {TABLE_ATTRIBUTES => {coprocessor$1 => true 'hdfs://<namenode>:<port>/user/<hadoop-user>/
-coprocessor.jar| org.myname.hbase.Coprocessor.RegionObserverExample|1073741823|'}, {NAME =>
-'personalDet'.....
-----
+The coprocessor should be listed in the `TABLE_ATTRIBUTES`.
 
+==== Using the Java API (all HBase versions)
 
-. *Using setValue()* method of HTableDescriptor: This is done entirely in Java as follows:
-+
+The following Java code shows how to use the `setValue()` method of `HTableDescriptor`
+to load a coprocessor on the `users` table.
+
 [source,java]
 ----
 TableName tableName = TableName.valueOf("users");
@@ -416,12 +367,14 @@ admin.modifyTable(tableName, hTableDescriptor);
 admin.enableTable(tableName);
 ----
 
-. *Using addCoprocessor()* method of HTableDescriptor: This method is available from 0.96 version
-onwards.
-+
+==== Using the Java API (HBase 0.96+ only)
+
+In HBase 0.96 and newer, the `addCoprocessor()` method of `HTableDescriptor` provides
+an easier way to load a coprocessor dynamically.
+
 [source,java]
 ----
-String tableName = "users";
+TableName tableName = TableName.valueOf("users");
 String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 HBaseAdmin admin = new HBaseAdmin(conf);
@@ -439,26 +392,42 @@ admin.modifyTable(tableName, hTableDescriptor);
 admin.enableTable(tableName);
 ----
 
-====
 WARNING: There is no guarantee that the framework will load a given Coprocessor successfully.
 For example, the shell command neither guarantees a jar file exists at a particular location nor
 verifies whether the given class is actually contained in the jar file.
-====
 
 
-==== Unloading Dynamic Coprocessor
-. Using shell: Run following command from HBase shell to remove Coprocessor from a table.
+=== Dynamic Unloading
+
+==== Using HBase Shell
+
+. Disable the table.
 +
 [source]
 ----
-hbase(main):003:0> alter 'users', METHOD => 'table_att_unset',
-hbase(main):004:0*   NAME => 'coprocessor$1'
+hbase> disable 'users'
 ----
 
-. Using HtableDescriptor: Simply reload the table definition _without_ setting the value of
-Coprocessor either in setValue() or addCoprocessor() methods. This will remove the Coprocessor
-attached to this table, if any. For example:
+. Alter the table to remove the coprocessor.
 +
+[source]
+----
+hbase> alter 'users', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
+----
+
+. Enable the table.
++
+[source]
+----
+hbase> enable 'users'
+----
+
+==== Using the Java API
+
+Reload the table definition without setting the value of the coprocessor either by
+using `setValue()` or `addCoprocessor()` methods. This will remove any coprocessor
+attached to the table.
+
 [source,java]
 ----
 TableName tableName = TableName.valueOf("users");
@@ -477,26 +446,23 @@ hTableDescriptor.addFamily(columnFamily2);
 admin.modifyTable(tableName, hTableDescriptor);
 admin.enableTable(tableName);
 ----
-+
-Optionally you can also use removeCoprocessor() method of HTableDescriptor class.
 
+In HBase 0.96 and newer, you can instead use the `removeCoprocessor()` method of the
+`HTableDescriptor` class.
 
 
 [[cp_example]]
 == Examples
-HBase ships Coprocessor examples for Observer Coprocessor see
-// Below URL is more than 100 characters long.
+HBase ships examples for Observer Coprocessor in
 link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/ZooKeeperScanPolicyObserver.html[ZooKeeperScanPolicyObserver]
-and for Endpoint Coprocessor see
-// Below URL is more than 100 characters long.
+and for Endpoint Coprocessor in
 link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/RowCountEndpoint.html[RowCountEndpoint]
 
 A more detailed example is given below.
 
-For the sake of example let's take an hypothetical case. Suppose there is a HBase table called
-'users'. The table has two column families 'personalDet' and 'salaryDet' containing personal
-details and salary details respectively. Below is the graphical representation of the 'users'
-table.
+These examples assume a table called `users`, which has two column families `personalDet`
+and `salaryDet`, containing personal and salary details. Below is the graphical representation
+of the `users` table.
 
 .Users Table
 [width="100%",cols="7",options="header,footer"]
@@ -509,26 +475,22 @@ table.
 |====================
 
 
-
 === Observer Example
-For the purpose of demonstration of Coprocessor we are assuming that 'admin' is a special person
-and his details shouldn't be visible or returned to any client querying the 'users' table. +
-To implement this functionality we will take the help of Observer Coprocessor.
-Following are the implementation steps:
+
+The following Observer coprocessor prevents the details of the user `admin` from being
+returned in a `Get` or `Scan` of the `users` table.
 
 . Write a class that extends the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver]
 class.
 
-. Override the 'preGetOp()' method (Note that 'preGet()' method is now deprecated). The reason for
-overriding this method is to check if the client has queried for the rowkey with value 'admin' or
-not. If the client has queried rowkey with 'admin' value then return the call without allowing the
-system to perform the get operation thus saving on performance, otherwise process the request as
-normal.
+. Override the `preGetOp()` method (the `preGet()` method is deprecated) to check
+whether the client has queried for the rowkey with value `admin`. If so, return an
+empty result. Otherwise, process the request as normal.
 
-. Put your code and dependencies in the jar file.
+. Put your code and dependencies in a JAR file.
 
-. Place the jar in HDFS where HBase can locate it.
+. Place the JAR in HDFS where HBase can locate it.
 
 . Load the Coprocessor.
 
@@ -536,8 +498,7 @@ normal.
 
 Following are the implementation of the above steps:
 
-. For Step 1 and Step 2, below is the code.
-+
+
 [source,java]
 ----
 public class RegionObserverExample extends BaseRegionObserver {
@@ -568,10 +529,10 @@ public class RegionObserverExample extends BaseRegionObserver {
     }
 }
 ----
-Overriding the 'preGetOp()' will only work for 'Get' operation. For 'Scan' operation it won't help
-you. To deal with it you have to override another method called 'preScannerOpen()' method, and
-add a Filter explicitly for admin as shown below:
-+
+
+Overriding the `preGetOp()` will only work for `Get` operations. You also need to override
+the `preScannerOpen()` method to filter the `admin` row from scan results.
+
 [source,java]
 ----
 @Override
@@ -583,12 +544,11 @@ final RegionScanner s) throws IOException {
     return s;
 }
 ----
-+
-This method works but there is a _side effect_. If the client has used any Filter in his scan,
-then that Filter won't have any effect because our filter has replaced it. +
-Another option you can try is to deliberately remove the admin from result. This approach is
-shown below:
-+
+
+This method works but there is a _side effect_. If the client has used a filter in
+its scan, that filter will be replaced by this filter. Instead, you can explicitly
+remove any `admin` results from the scan:
+
 [source,java]
 ----
 @Override
@@ -597,9 +557,9 @@ final List results, final int limit, final boolean hasMore) throws IOException {
 	Result result = null;
     Iterator iterator = results.iterator();
     while (iterator.hasNext()) {
-		result = iterator.next();
+    result = iterator.next();
         if (Bytes.equals(result.getRow(), ROWKEY)) {
-			iterator.remove();
+            iterator.remove();
             break;
         }
     }
@@ -607,76 +567,12 @@ final List results, final int limit, final boolean hasMore) throws IOException {
 }
 ----
 
-. Step 3: It's pretty convenient to export the above program in a jar file. Let's assume that was
-exported in a file called 'coprocessor.jar'.
-
-. Step 4: Copy the jar to HDFS. You may use command like this:
-+
-[source]
-----
-hadoop fs -copyFromLocal coprocessor.jar coprocessor.jar
-----
-
-. Step 5: Load the Coprocessor, see <<cp_loading,Loading of Coprocessor>>.
-
-. Step 6: Run the following program to test. The first part is testing 'Get' and second 'Scan'.
-+
-[source,java]
-----
-Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase verion 1.x.x or above.
-Connection connection = ConnectionFactory.createConnection(conf);
-TableName tableName = TableName.valueOf("users");
-Table table = connection.getTable(tableName);
-
-//Use below code HBase verion 0.98.xx or below.
-//HConnection connection = HConnectionManager.createConnection(conf);
-//HTableInterface table = connection.getTable("users");
-
-Get get = new Get(Bytes.toBytes("admin"));
-Result result = table.get(get);
-for (Cell c : result.rawCells()) {
-    System.out.println(Bytes.toString(CellUtil.cloneRow(c))
-        + "==> " + Bytes.toString(CellUtil.cloneFamily(c))
-        + "{" + Bytes.toString(CellUtil.cloneQualifier(c))
-        + ":" + Bytes.toLong(CellUtil.cloneValue(c)) + "}");
-}
-Scan scan = new Scan();
-ResultScanner scanner = table.getScanner(scan);
-for (Result res : scanner) {
-    for (Cell c : res.rawCells()) {
-        System.out.println(Bytes.toString(CellUtil.cloneRow(c))
-        + " ==> " + Bytes.toString(CellUtil.cloneFamily(c))
-        + " {" + Bytes.toString(CellUtil.cloneQualifier(c))
-        + ":" + Bytes.toLong(CellUtil.cloneValue(c))
-        + "}");
-    }
-}
-----
-
 === Endpoint Example
 
-In our hypothetical example (See Users Table), to demonstrate the Endpoint Coprocessor we see a
-trivial use case in which we will try to calculate the total (Sum) of gross salary of all
-employees. One way of implementing Endpoint Coprocessor (for version 0.96 and above) is as follows:
+Still using the `users` table, this example implements a coprocessor to calculate
+the sum of all employee salaries, using an endpoint coprocessor.
 
 . Create a '.proto' file defining your service.
-
-. Execute the 'protoc' command to generate the Java code from the above '.proto' file.
-
-. Write a class that should:
-.. Extend the above generated service class.
-.. It should also implement two interfaces Coprocessor and CoprocessorService.
-.. Override the service method.
-
-. Load the Coprocessor.
-
-. Write a client code to call Coprocessor.
-
-Implementation detail of the above steps is as follows:
-
-. Step 1: Create a 'proto' file to define your service, request and response. Let's call this file
-"sum.proto". Below is the content of the 'sum.proto' file.
 +
 [source]
 ----
@@ -700,26 +596,25 @@ service SumService {
 }
 ----
 
-. Step 2: Compile the proto file using proto compiler (for detailed instructions see the
-link:https://developers.google.com/protocol-buffers/docs/overview[official documentation]).
+. Execute the `protoc` command to generate the Java code from the above .proto' file.
 +
 [source]
 ----
+$ mkdir src
 $ protoc --java_out=src ./sum.proto
 ----
 +
-[note]
-----
-(Note: It is necessary for you to create the src folder).
-This will generate a class call "Sum.java".
-----
+This will generate a class call `Sum.java`.
 
-. Step 3: Write your Endpoint Coprocessor: Firstly your class should extend the service just
-defined above (i.e. Sum.SumService). Second it should implement Coprocessor and CoprocessorService
-interfaces. Third, override the 'getService()', 'start()', 'stop()' and 'getSum()' methods.
-Below is the full code:
+. Write a class that extends the generated service class, implement the `Coprocessor`
+and `CoprocessorService` classes, and override the service method.
 +
-[source,java]
+WARNING: If you load a coprocessor from `hbase-site.xml` and then load the same coprocessor
+again using HBase Shell, it will be loaded a second time. The same class will
+exist twice, and the second instance will have a higher ID (and thus a lower priority).
+The effect is that the duplicate coprocessor is effectively ignored.
++
+[source, java]
 ----
 public class SumEndPoint extends SumService implements Coprocessor, CoprocessorService {
 
@@ -779,22 +674,16 @@ public class SumEndPoint extends SumService implements Coprocessor, CoprocessorS
     }
 }
 ----
-
-. Step 4: Load the Coprocessor. See <<cp_loading,loading of Coprocessor>>.
-
-. Step 5: Now we have to write the client code to test it. To do so in your main method, write the
-following code as shown below:
 +
-[source,java]
+[source, java]
 ----
-
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase verion 1.x.x or above.
+// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
 
-//Use below code HBase verion 0.98.xx or below.
+//Use below code HBase version 0.98.xx or below.
 //HConnection connection = HConnectionManager.createConnection(conf);
 //HTableInterface table = connection.getTable("users");
 
@@ -820,6 +709,86 @@ e.printStackTrace();
     e.printStackTrace();
 }
 ----
+
+. Load the Coprocessor.
+
+. Write a client code to call the Coprocessor.
+
+
+== Guidelines For Deploying A Coprocessor
+
+Bundling Coprocessors::
+  You can bundle all classes for a coprocessor into a
+  single JAR on the RegionServer's classpath, for easy deployment. Otherwise,
+  place all dependencies  on the RegionServer's classpath so that they can be
+  loaded during RegionServer start-up.  The classpath for a RegionServer is set
+  in the RegionServer's `hbase-env.sh` file.
+Automating Deployment::
+  You can use a tool such as Puppet, Chef, or
+  Ansible to ship the JAR for the coprocessor  to the required location on your
+  RegionServers' filesystems and restart each RegionServer,  to automate
+  coprocessor deployment. Details for such set-ups are out of scope of  this
+  document.
+Updating a Coprocessor::
+  Deploying a new version of a given coprocessor is not as simple as disabling it,
+  replacing the JAR, and re-enabling the coprocessor. This is because you cannot
+  reload a class in a JVM unless you delete all the current references to it.
+  Since the current JVM has reference to the existing coprocessor, you must restart
+  the JVM, by restarting the RegionServer, in order to replace it. This behavior
+  is not expected to change.
+Coprocessor Logging::
+  The Coprocessor framework does not provide an API for logging beyond standard Java
+  logging.
+Coprocessor Configuration::
+  If you do not want to load coprocessors from the HBase Shell, you can add their configuration
+  properties to `hbase-site.xml`. In <<load_coprocessor_in_shell>>, two arguments are
+  set: `arg1=1,arg2=2`. These could have been added to `hbase-site.xml` as follows:
+[source,xml]
+----
+<property>
+  <name>arg1</name>
+  <value>1</value>
+</property>
+<property>
+  <name>arg2</name>
+  <value>2</value>
+</property>
+----
+Then you can read the configuration using code like the following:
+[source,java]
+----
+Configuration conf = HBaseConfiguration.create();
+// Use below code for HBase version 1.x.x or above.
+Connection connection = ConnectionFactory.createConnection(conf);
+TableName tableName = TableName.valueOf("users");
+Table table = connection.getTable(tableName);
+
+//Use below code HBase version 0.98.xx or below.
+//HConnection connection = HConnectionManager.createConnection(conf);
+//HTableInterface table = connection.getTable("users");
+
+Get get = new Get(Bytes.toBytes("admin"));
+Result result = table.get(get);
+for (Cell c : result.rawCells()) {
+    System.out.println(Bytes.toString(CellUtil.cloneRow(c))
+        + "==> " + Bytes.toString(CellUtil.cloneFamily(c))
+        + "{" + Bytes.toString(CellUtil.cloneQualifier(c))
+        + ":" + Bytes.toLong(CellUtil.cloneValue(c)) + "}");
+}
+Scan scan = new Scan();
+ResultScanner scanner = table.getScanner(scan);
+for (Result res : scanner) {
+    for (Cell c : res.rawCells()) {
+        System.out.println(Bytes.toString(CellUtil.cloneRow(c))
+        + " ==> " + Bytes.toString(CellUtil.cloneFamily(c))
+        + " {" + Bytes.toString(CellUtil.cloneQualifier(c))
+        + ":" + Bytes.toLong(CellUtil.cloneValue(c))
+        + "}");
+    }
+}
+----
+
+
 
 
 == Monitor Time Spent in Coprocessors
