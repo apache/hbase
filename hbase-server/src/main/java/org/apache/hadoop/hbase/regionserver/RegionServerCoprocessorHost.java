@@ -278,6 +278,8 @@ public class RegionServerCoprocessorHost extends
 
     private RegionServerServices regionServerServices;
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
+        justification="Intentional; FB has trouble detecting isAssignableFrom")
     public RegionServerEnvironment(final Class<?> implClass,
         final Coprocessor impl, final int priority, final int seq,
         final Configuration conf, final RegionServerServices services) {
@@ -285,7 +287,7 @@ public class RegionServerCoprocessorHost extends
       this.regionServerServices = services;
       for (Object itf : ClassUtils.getAllInterfaces(implClass)) {
         Class<?> c = (Class<?>) itf;
-        if (SingletonCoprocessorService.class.isAssignableFrom(c)) {
+        if (SingletonCoprocessorService.class.isAssignableFrom(c)) {// FindBugs: BC_UNCONFIRMED_CAST
           this.regionServerServices.registerService(
             ((SingletonCoprocessorService) impl).getService());
           break;

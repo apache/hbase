@@ -124,7 +124,7 @@ public class AuthenticationTokenSecretManager
   }
 
   @Override
-  protected byte[] createPassword(AuthenticationTokenIdentifier identifier) {
+  protected synchronized byte[] createPassword(AuthenticationTokenIdentifier identifier) {
     long now = EnvironmentEdgeManager.currentTime();
     AuthenticationKey secretKey = currentKey;
     identifier.setKeyId(secretKey.getKeyId());
@@ -229,7 +229,7 @@ public class AuthenticationTokenSecretManager
     return true;
   }
 
-  AuthenticationKey getCurrentKey() {
+  synchronized AuthenticationKey getCurrentKey() {
     return currentKey;
   }
 
@@ -338,8 +338,11 @@ public class AuthenticationTokenSecretManager
 
         // clear any expired
         removeExpiredKeys();
-
-        if (lastKeyUpdate + keyUpdateInterval < now) {
+        long localLastKeyUpdate;
+        synchronized (this) {
+          localLastKeyUpdate = lastKeyUpdate;
+        }
+        if (localLastKeyUpdate + keyUpdateInterval < now) {
           // roll a new master key
           rollCurrentKey();
         }

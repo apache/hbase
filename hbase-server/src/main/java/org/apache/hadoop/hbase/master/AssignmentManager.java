@@ -924,6 +924,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param coordination coordination for opening region
    * @param ord details about opening region
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="Needs work; says access to ConcurrentHashMaps not ATOMIC!!!")
   void handleRegion(final RegionTransition rt, OpenRegionCoordination coordination,
                     OpenRegionCoordination.OpenRegionDetails ord) {
     if (rt == null) {
@@ -1047,9 +1050,11 @@ public class AssignmentManager extends ZooKeeperListener {
             // No need to use putIfAbsent, or extra synchronization since
             // this whole handleRegion block is locked on the encoded region
             // name, and failedOpenTracker is updated only in this block
+            // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION
             failedOpenTracker.put(encodedName, failedOpenCount);
           }
           if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
+            // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION
             regionStates.updateRegionState(rt, State.FAILED_OPEN);
             // remove the tracking info to save memory, also reset
             // the count for next open initiative
@@ -3637,18 +3642,24 @@ public class AssignmentManager extends ZooKeeperListener {
       EventType.RS_ZK_REQUEST_REGION_SPLIT, EventType.RS_ZK_REGION_SPLIT);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="Modification of Maps not ATOMIC!!!! FIX!!!")
   private void onRegionFailedOpen(
       final HRegionInfo hri, final ServerName sn) {
     String encodedName = hri.getEncodedName();
+    // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION Worth fixing!!!
     AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
     if (failedOpenCount == null) {
       failedOpenCount = new AtomicInteger();
       // No need to use putIfAbsent, or extra synchronization since
       // this whole handleRegion block is locked on the encoded region
       // name, and failedOpenTracker is updated only in this block
+      // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION
       failedOpenTracker.put(encodedName, failedOpenCount);
     }
     if (failedOpenCount.incrementAndGet() >= maximumAttempts && !hri.isMetaRegion()) {
+      // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION
       regionStates.updateRegionState(hri, State.FAILED_OPEN);
       // remove the tracking info to save memory, also reset
       // the count for next open initiative

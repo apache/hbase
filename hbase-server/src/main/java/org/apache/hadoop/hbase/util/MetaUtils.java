@@ -104,11 +104,8 @@ public class MetaUtils {
    * @return HRegion for meta region
    * @throws IOException e
    */
-  public HRegion getMetaRegion() throws IOException {
-    if (this.metaRegion == null) {
-      openMetaRegion();
-    }
-    return this.metaRegion;
+  public synchronized HRegion getMetaRegion() throws IOException {
+    return this.metaRegion == null? openMetaRegion(): this.metaRegion;
   }
 
   /**

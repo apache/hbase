@@ -83,6 +83,8 @@ import com.google.common.base.Preconditions;
  * </ul>
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="HE_EQUALS_USE_HASHCODE",
+  justification="Fix!!! Fine for now bug FIXXXXXXX!!!!")
 public class HFileBlock implements Cacheable {
 
   /**

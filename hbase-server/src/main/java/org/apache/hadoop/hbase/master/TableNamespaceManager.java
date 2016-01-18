@@ -59,12 +59,15 @@ import com.google.common.collect.Sets;
  * {@link org.apache.hadoop.hbase.ZKNamespaceManager}
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="TODO: synchronize access on nsTable but it is done in tiers above and this " +
+    "class is going away/shrinking")
 public class TableNamespaceManager {
   private static final Log LOG = LogFactory.getLog(TableNamespaceManager.class);
 
   private Configuration conf;
   private MasterServices masterServices;
-  private Table nsTable = null;
+  private Table nsTable = null; // FindBugs: IS2_INCONSISTENT_SYNC TODO: Access is not synchronized
   private ZKNamespaceManager zkNamespaceManager;
   private boolean initialized;
 

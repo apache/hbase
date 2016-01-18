@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.util.Pair;
  * it fallbacks to the archived path.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
+  justification="To be fixed but warning suppressed for now")
 public class HFileLink extends FileLink {
   private static final Log LOG = LogFactory.getLog(HFileLink.class);
 

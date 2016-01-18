@@ -1963,7 +1963,6 @@ public class HRegionServer extends HasThread implements
   public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
     TransitionCode code = context.getCode();
     long openSeqNum = context.getOpenSeqNum();
-    long masterSystemTime = context.getMasterSystemTime();
     HRegionInfo[] hris = context.getHris();
 
     ReportRegionStateTransitionRequest.Builder builder =

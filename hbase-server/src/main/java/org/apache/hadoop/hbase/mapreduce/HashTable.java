@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -135,17 +134,18 @@ public class HashTable extends Configured implements Tool {
         p.setProperty("endTimestamp", Long.toString(endTime));
       }
       
-      FSDataOutputStream out = fs.create(path);
-      p.store(new OutputStreamWriter(out, Charsets.UTF_8), null);
-      out.close();
+      try (OutputStreamWriter osw = new OutputStreamWriter(fs.create(path), Charsets.UTF_8)) {
+        p.store(osw, null);
+      }
     }
-    
+
     void readPropertiesFile(FileSystem fs, Path path) throws IOException {
-      FSDataInputStream in = fs.open(path);
       Properties p = new Properties();
-      p.load(new InputStreamReader(in, Charsets.UTF_8));
-      in.close();
-      
+      try (FSDataInputStream in = fs.open(path)) {
+        try (InputStreamReader isr = new InputStreamReader(in, Charsets.UTF_8)) {
+          p.load(isr);
+        }
+      }
       tableName = p.getProperty("table");
       families = p.getProperty("columnFamilies");
       batchSize = Long.parseLong(p.getProperty("targetBatchSize"));

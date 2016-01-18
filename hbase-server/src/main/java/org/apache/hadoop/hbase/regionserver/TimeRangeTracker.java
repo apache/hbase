@@ -91,6 +91,8 @@ public class TimeRangeTracker implements Writable {
    * If required, update the current TimestampRange to include timestamp
    * @param timestamp the timestamp value to include
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
+      justification="Intentional")
   void includeTimestamp(final long timestamp) {
     // Do test outside of synchronization block.  Synchronization in here can be problematic
     // when many threads writing one Store -- they can all pile up trying to add in here.

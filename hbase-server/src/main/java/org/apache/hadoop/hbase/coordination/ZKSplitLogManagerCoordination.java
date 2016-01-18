@@ -175,7 +175,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       return;
     }
     Task task = findOrCreateOrphanTask(path);
-    if (task.isOrphan() && (task.incarnation == 0)) {
+    if (task.isOrphan() && (task.incarnation.get() == 0)) {
       LOG.info("resubmitting unassigned orphan task " + path);
       // ignore failure to resubmit. The timeout-monitor will handle it later
       // albeit in a more crude fashion
@@ -228,7 +228,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       version = -1;
     }
     LOG.info("resubmitting task " + path);
-    task.incarnation++;
+    task.incarnation.incrementAndGet();
     boolean result = resubmit(this.details.getServerName(), path, version);
     if (!result) {
       task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());

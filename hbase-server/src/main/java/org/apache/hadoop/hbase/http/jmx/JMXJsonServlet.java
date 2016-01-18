@@ -152,6 +152,8 @@ public class JMXJsonServlet extends HttpServlet {
    *          The servlet response we are creating
    */
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER",
+    justification="TODO: See HBASE-15122")
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
       if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(), request, response)) {

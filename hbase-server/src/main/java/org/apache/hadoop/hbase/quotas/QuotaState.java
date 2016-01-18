@@ -21,6 +21,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="FindBugs seems confused; says globalLimiter and lastUpdate " +
+  "are mostly synchronized...but to me it looks like they are totally synchronized")
 public class QuotaState {
   private long lastUpdate = 0;
   private long lastQuery = 0;

@@ -98,7 +98,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * by this Handler.
    * @return a string representing the method call without parameters
    */
-  public String getRPC() {
+  public synchronized String getRPC() {
     return getRPC(false);
   }
 
@@ -166,7 +166,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @return true if the monitored handler is currently servicing an RPC call
    * to a database command.
    */
-  public boolean isOperationRunning() {
+  public synchronized boolean isOperationRunning() {
     if(!isRPCRunning()) {
       return false;
     }
@@ -212,7 +212,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   @Override
-  public void markComplete(String status) {
+  public synchronized void markComplete(String status) {
     super.markComplete(status);
     this.params = null;
     this.packet = null;

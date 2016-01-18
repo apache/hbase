@@ -108,7 +108,7 @@ public class ImportTsv extends Configured implements Tool {
    * If table didn't exist and was created in dry-run mode, this flag is
    * flipped to delete it when MR ends.
    */
-  private static boolean dryRunTableCreated;
+  private static boolean DRY_RUN_TABLE_CREATED;
 
   public static class TsvParser {
     /**
@@ -477,117 +477,119 @@ public class ImportTsv extends Configured implements Tool {
         // See if a non-default Mapper was set
         String mapperClassName = conf.get(MAPPER_CONF_KEY);
         Class mapperClass =
-          mapperClassName != null ? Class.forName(mapperClassName) : DEFAULT_MAPPER;
+            mapperClassName != null ? Class.forName(mapperClassName) : DEFAULT_MAPPER;
 
-          TableName tableName = TableName.valueOf(args[0]);
-          Path inputDir = new Path(args[1]);
-          String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
-          job = Job.getInstance(conf, jobName);
-          job.setJarByClass(mapperClass);
-          FileInputFormat.setInputPaths(job, inputDir);
-          job.setInputFormatClass(TextInputFormat.class);
-          job.setMapperClass(mapperClass);
-          job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-          String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
-          String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
-          if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
-            String fileLoc = conf.get(CREDENTIALS_LOCATION);
-            Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
-            job.getCredentials().addAll(cred);
-          }
+        TableName tableName = TableName.valueOf(args[0]);
+        Path inputDir = new Path(args[1]);
+        String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
+        job = Job.getInstance(conf, jobName);
+        job.setJarByClass(mapperClass);
+        FileInputFormat.setInputPaths(job, inputDir);
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setMapperClass(mapperClass);
+        job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+        String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
+        String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
+        if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
+          String fileLoc = conf.get(CREDENTIALS_LOCATION);
+          Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
+          job.getCredentials().addAll(cred);
+        }
 
-          if (hfileOutPath != null) {
-            if (!admin.tableExists(tableName)) {
-              LOG.warn(format("Table '%s' does not exist.", tableName));
-              if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
-                // TODO: this is backwards. Instead of depending on the existence of a table,
-                // create a sane splits file for HFileOutputFormat based on data sampling.
-                createTable(admin, tableName, columns);
-                if (isDryRun) {
-                  LOG.warn("Dry run: Table will be deleted at end of dry run.");
-                  dryRunTableCreated = true;
-                }
-              } else {
-                String errorMsg =
-                    format("Table '%s' does not exist and '%s' is set to no.", tableName,
-                        CREATE_TABLE_CONF_KEY);
-                LOG.error(errorMsg);
-                throw new TableNotFoundException(errorMsg);
-              }
-            }
-            try (Table table = connection.getTable(tableName);
-                RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-              boolean noStrict = conf.getBoolean(NO_STRICT_COL_FAMILY, false);
-              // if no.strict is false then check column family
-              if(!noStrict) {
-                ArrayList<String> unmatchedFamilies = new ArrayList<String>();
-                Set<String> cfSet = getColumnFamilies(columns);
-                HTableDescriptor tDesc = table.getTableDescriptor();
-                for (String cf : cfSet) {
-                  if(tDesc.getFamily(Bytes.toBytes(cf)) == null) {
-                    unmatchedFamilies.add(cf);
-                  }
-                }
-                if(unmatchedFamilies.size() > 0) {
-                  ArrayList<String> familyNames = new ArrayList<String>();
-                  for (HColumnDescriptor family : table.getTableDescriptor().getFamilies()) {
-                    familyNames.add(family.getNameAsString());
-                  }
-                  String msg =
-                      "Column Families " + unmatchedFamilies + " specified in " + COLUMNS_CONF_KEY
-                      + " does not match with any of the table " + tableName
-                      + " column families " + familyNames + ".\n"
-                      + "To disable column family check, use -D" + NO_STRICT_COL_FAMILY
-                      + "=true.\n";
-                  usage(msg);
-                  System.exit(-1);
+        if (hfileOutPath != null) {
+          if (!admin.tableExists(tableName)) {
+            LOG.warn(format("Table '%s' does not exist.", tableName));
+            if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
+              // TODO: this is backwards. Instead of depending on the existence of a table,
+              // create a sane splits file for HFileOutputFormat based on data sampling.
+              createTable(admin, tableName, columns);
+              if (isDryRun) {
+                LOG.warn("Dry run: Table will be deleted at end of dry run.");
+                synchronized (ImportTsv.class) {
+                  DRY_RUN_TABLE_CREATED = true;
                 }
               }
-              if (mapperClass.equals(TsvImporterTextMapper.class)) {
-                job.setMapOutputValueClass(Text.class);
-                job.setReducerClass(TextSortReducer.class);
-              } else {
-                job.setMapOutputValueClass(Put.class);
-                job.setCombinerClass(PutCombiner.class);
-                job.setReducerClass(PutSortReducer.class);
-              }
-              if (!isDryRun) {
-                Path outputDir = new Path(hfileOutPath);
-                FileOutputFormat.setOutputPath(job, outputDir);
-                HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
-                    regionLocator);
-              }
-            }
-          } else {
-            if (!admin.tableExists(tableName)) {
-              String errorMsg = format("Table '%s' does not exist.", tableName);
+            } else {
+              String errorMsg =
+                  format("Table '%s' does not exist and '%s' is set to no.", tableName,
+                      CREATE_TABLE_CONF_KEY);
               LOG.error(errorMsg);
               throw new TableNotFoundException(errorMsg);
             }
+          }
+          try (Table table = connection.getTable(tableName);
+              RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+            boolean noStrict = conf.getBoolean(NO_STRICT_COL_FAMILY, false);
+            // if no.strict is false then check column family
+            if(!noStrict) {
+              ArrayList<String> unmatchedFamilies = new ArrayList<String>();
+              Set<String> cfSet = getColumnFamilies(columns);
+              HTableDescriptor tDesc = table.getTableDescriptor();
+              for (String cf : cfSet) {
+                if(tDesc.getFamily(Bytes.toBytes(cf)) == null) {
+                  unmatchedFamilies.add(cf);
+                }
+              }
+              if(unmatchedFamilies.size() > 0) {
+                ArrayList<String> familyNames = new ArrayList<String>();
+                for (HColumnDescriptor family : table.getTableDescriptor().getFamilies()) {
+                  familyNames.add(family.getNameAsString());
+                }
+                String msg =
+                    "Column Families " + unmatchedFamilies + " specified in " + COLUMNS_CONF_KEY
+                    + " does not match with any of the table " + tableName
+                    + " column families " + familyNames + ".\n"
+                    + "To disable column family check, use -D" + NO_STRICT_COL_FAMILY
+                    + "=true.\n";
+                usage(msg);
+                System.exit(-1);
+              }
+            }
             if (mapperClass.equals(TsvImporterTextMapper.class)) {
-              usage(TsvImporterTextMapper.class.toString()
-                  + " should not be used for non bulkloading case. use "
-                  + TsvImporterMapper.class.toString()
-                  + " or custom mapper whose value type is Put.");
-              System.exit(-1);
+              job.setMapOutputValueClass(Text.class);
+              job.setReducerClass(TextSortReducer.class);
+            } else {
+              job.setMapOutputValueClass(Put.class);
+              job.setCombinerClass(PutCombiner.class);
+              job.setReducerClass(PutSortReducer.class);
             }
             if (!isDryRun) {
-              // No reducers. Just write straight to table. Call initTableReducerJob
-              // to set up the TableOutputFormat.
-              TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null, job);
+              Path outputDir = new Path(hfileOutPath);
+              FileOutputFormat.setOutputPath(job, outputDir);
+              HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+                  regionLocator);
             }
-            job.setNumReduceTasks(0);
           }
-          if (isDryRun) {
-            job.setOutputFormatClass(NullOutputFormat.class);
-            job.getConfiguration().setStrings("io.serializations",
-                job.getConfiguration().get("io.serializations"),
-                MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-                KeyValueSerialization.class.getName());
+        } else {
+          if (!admin.tableExists(tableName)) {
+            String errorMsg = format("Table '%s' does not exist.", tableName);
+            LOG.error(errorMsg);
+            throw new TableNotFoundException(errorMsg);
           }
-          TableMapReduceUtil.addDependencyJars(job);
-          TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-              com.google.common.base.Function.class /* Guava used by TsvParser */);
+          if (mapperClass.equals(TsvImporterTextMapper.class)) {
+            usage(TsvImporterTextMapper.class.toString()
+                + " should not be used for non bulkloading case. use "
+                + TsvImporterMapper.class.toString()
+                + " or custom mapper whose value type is Put.");
+            System.exit(-1);
+          }
+          if (!isDryRun) {
+            // No reducers. Just write straight to table. Call initTableReducerJob
+            // to set up the TableOutputFormat.
+            TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null, job);
+          }
+          job.setNumReduceTasks(0);
+        }
+        if (isDryRun) {
+          job.setOutputFormatClass(NullOutputFormat.class);
+          job.getConfiguration().setStrings("io.serializations",
+              job.getConfiguration().get("io.serializations"),
+              MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+              KeyValueSerialization.class.getName());
+        }
+        TableMapReduceUtil.addDependencyJars(job);
+        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+            com.google.common.base.Function.class /* Guava used by TsvParser */);
       }
     }
     return job;
@@ -617,7 +619,8 @@ public class ImportTsv extends Configured implements Tool {
       }
       admin.deleteTable(tableName);
     } catch (IOException e) {
-      LOG.error(format("***Dry run: Failed to delete table '%s'.***\n%s", tableName, e.toString()));
+      LOG.error(format("***Dry run: Failed to delete table '%s'.***%n%s", tableName,
+          e.toString()));
       return;
     }
     LOG.info(format("Dry run: Deleted table '%s'.", tableName));
@@ -659,7 +662,7 @@ public class ImportTsv extends Configured implements Tool {
       "input data. Another special column" + TsvParser.TIMESTAMPKEY_COLUMN_SPEC +
       " designates that this column should be\n" +
       "used as timestamp for each record. Unlike " + TsvParser.ROWKEY_COLUMN_SPEC + ", " +
-      TsvParser.TIMESTAMPKEY_COLUMN_SPEC + " is optional.\n" +
+      TsvParser.TIMESTAMPKEY_COLUMN_SPEC + " is optional." + "\n" +
       "You must specify at most one column as timestamp key for each imported record.\n" +
       "Record with invalid timestamps (blank, non-numeric) will be treated as bad record.\n" +
       "Note: if you use this option, then '" + TIMESTAMP_CONF_KEY + "' option will be ignored.\n" +
@@ -770,10 +773,16 @@ public class ImportTsv extends Configured implements Tool {
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
 
-    dryRunTableCreated = false;
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    synchronized (ImportTsv.class) {
+      DRY_RUN_TABLE_CREATED = false;
+    }
+    Job job = createSubmittableJob(getConf(), args);
     boolean success = job.waitForCompletion(true);
-    if (dryRunTableCreated) {
+    boolean delete = false;
+    synchronized (ImportTsv.class) {
+      delete = DRY_RUN_TABLE_CREATED;
+    }
+    if (delete) {
       deleteTable(getConf(), args);
     }
     return success ? 0 : 1;

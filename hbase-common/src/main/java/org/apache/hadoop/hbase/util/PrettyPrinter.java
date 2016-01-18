@@ -30,13 +30,11 @@ public class PrettyPrinter {
     NONE
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_BOXED_PRIMITIVE_FOR_PARSING",
-      justification="I don't get what FB is complaining about")
   public static String format(final String value, final Unit unit) {
     StringBuilder human = new StringBuilder();
     switch (unit) {
       case TIME_INTERVAL:
-        human.append(humanReadableTTL(Long.valueOf(value)));
+        human.append(humanReadableTTL(Long.parseLong(value)));
         break;
       default:
         human.append(value);
