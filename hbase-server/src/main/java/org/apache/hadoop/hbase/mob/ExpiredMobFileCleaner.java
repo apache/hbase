@@ -89,6 +89,8 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     System.err.println(" familyName       The column family name");
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+      justification="Intentional")
   public int run(String[] args) throws Exception {
     if (args.length != 2) {
       printUsage();

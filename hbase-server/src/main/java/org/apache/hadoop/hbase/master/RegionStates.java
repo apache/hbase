@@ -424,8 +424,6 @@ public class RegionStates {
       if (!serverName.equals(oldServerName)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Onlined " + hri.getShortNameToLog() + " on " + serverName);
-        } else {
-          LOG.debug("Onlined " + hri.getShortNameToLog() + " on " + serverName);
         }
         addToServerHoldings(serverName, hri);
         addToReplicaMapping(hri);

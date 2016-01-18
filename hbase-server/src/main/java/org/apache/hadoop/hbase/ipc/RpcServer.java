@@ -322,6 +322,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private long responseBlockSize = 0;
     private boolean retryImmediatelySupported;
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+        justification="Can't figure why this complaint is happening... see below")
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
          long size, TraceInfo tinfo, final InetAddress remoteAddress) {
@@ -339,15 +341,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
-      this.user = connection == null ? null : connection.user;
+      this.user = connection == null? null: connection.user; // FindBugs: NP_NULL_ON_SOME_PATH
       this.remoteAddress = remoteAddress;
-      this.retryImmediatelySupported = connection.retryImmediatelySupported;
+      this.retryImmediatelySupported =
+          connection == null? null: connection.retryImmediatelySupported;
     }
 
     /**
      * Call is done. Execution happened and we returned results to client. It is now safe to
      * cleanup.
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+        justification="Presume the lock on processing request held by caller is protection enough")
     void done() {
       if (this.cellBlock != null && reservoir != null) {
         // Return buffer to reservoir now we are done with it.
@@ -599,7 +604,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     @Override
-    public void setCallBack(RpcCallback callback) {
+    public synchronized void setCallBack(RpcCallback callback) {
       this.callback = callback;
     }
 
@@ -779,6 +784,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+      justification="selector access is not synchronized; seems fine but concerned changing " +
+        "it will have per impact")
     public void run() {
       LOG.info(getName() + ": starting");
       while (running) {
@@ -1280,15 +1288,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private boolean useWrap = false;
     // Fake 'call' for failed authorization response
     private static final int AUTHORIZATION_FAILED_CALLID = -1;
-    private final Call authFailedCall =
-      new Call(AUTHORIZATION_FAILED_CALLID, null, null, null, null, null, this, null, 0, null,
-        null);
+    private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null, null,
+        null, null, this, null, 0, null, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
-    private final Call saslCall =
-      new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
+    private final Call saslCall = new Call(SASL_CALLID, null, null, null, null, null, this, null,
+        0, null, null);
 
     // was authentication allowed with a fallback to simple auth
     private boolean authenticatedWithFallback;
@@ -2177,7 +2184,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   }
 
   @Override
-  public void refreshAuthManager(PolicyProvider pp) {
+  public synchronized void refreshAuthManager(PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
     this.authManager.refresh(this.conf, pp);
@@ -2403,7 +2410,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * @throws org.apache.hadoop.security.authorize.AuthorizationException
    *         when the client isn't authorized to talk the protocol
    */
-  public void authorize(UserGroupInformation user, ConnectionHeader connection, InetAddress addr)
+  public synchronized void authorize(UserGroupInformation user, ConnectionHeader connection,
+      InetAddress addr)
   throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());

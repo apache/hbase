@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -473,7 +474,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     private int currMemstoreTSLen;
     private long currMemstoreTS;
     // Updated but never read?
-    protected volatile int blockFetches;
+    protected AtomicInteger blockFetches = new AtomicInteger(0);
     protected final HFile.Reader reader;
     private int currTagsLen;
     // buffer backed keyonlyKV
@@ -877,6 +878,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      * @return the next block, or null if there are no more data blocks
      * @throws IOException
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+        justification="Yeah, unnecessary null check; could do w/ clean up")
     protected HFileBlock readNextDataBlock() throws IOException {
       long lastDataBlockOffset = reader.getTrailer().getLastDataBlockOffset();
       if (curBlock == null)
@@ -885,8 +888,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       HFileBlock block = this.curBlock;
 
       do {
-        if (block.getOffset() >= lastDataBlockOffset)
+        if (block.getOffset() >= lastDataBlockOffset) {
           return null;
+        }
 
         if (block.getOffset() < 0) {
           throw new IOException("Invalid block file offset: " + block);
@@ -898,7 +902,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             + block.getOnDiskSizeWithHeader(),
             block.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
             isCompaction, true, null, getEffectiveDataBlockEncoding());
-        if (block != null && !block.getBlockType().isData()) {
+        if (block != null && !block.getBlockType().isData()) { // Findbugs: NP_NULL_ON_SOME_PATH
           // Whatever block we read we will be returning it unless
           // it is a datablock. Just in case the blocks are non data blocks
           reader.returnBlock(block);
@@ -1228,7 +1232,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       updateCurrBlockRef(newBlock);
       blockBuffer = newBlock.getBufferWithoutHeader();
       readKeyValueLen();
-      blockFetches++;
+      blockFetches.incrementAndGet();
 
       // Reset the next indexed key
       this.nextIndexedKey = null;
@@ -1667,7 +1671,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       updateCurrBlockRef(newBlock);
       ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
       seeker.setCurrentBuffer(encodedBuffer);
-      blockFetches++;
+      blockFetches.incrementAndGet();
 
       // Reset the next indexed key
       this.nextIndexedKey = null;

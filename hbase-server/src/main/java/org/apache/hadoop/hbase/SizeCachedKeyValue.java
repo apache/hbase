@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * See https://issues.apache.org/jira/browse/HBASE-13448
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS")
 public class SizeCachedKeyValue extends KeyValue {
-
   private static final int HEAP_SIZE_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
 
   private short rowLen;

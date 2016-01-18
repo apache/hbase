@@ -455,9 +455,11 @@ public class RegionMover extends AbstractHBaseTool {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DLS_DEAD_LOCAL_STORE",
+      justification="FB is wrong; its size is read")
   private void unloadRegions(Admin admin, String server, ArrayList<String> regionServers,
       boolean ack, List<HRegionInfo> movedRegions) throws Exception {
-    List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();// FindBugs: DLS_DEAD_LOCAL_STORE
     regionsToMove = getRegions(this.conf, server);
     if (regionsToMove.size() == 0) {
       LOG.info("No Regions to move....Quitting now");
@@ -597,7 +599,7 @@ public class RegionMover extends AbstractHBaseTool {
    * Move Regions without Acknowledging.Usefule in case of RS shutdown as we might want to shut the
    * RS down anyways and not abort on a stuck region. Improves movement performance
    */
-  private class MoveWithoutAck implements Callable<Boolean> {
+  private static class MoveWithoutAck implements Callable<Boolean> {
     private Admin admin;
     private HRegionInfo region;
     private String targetServer;
@@ -764,7 +766,7 @@ public class RegionMover extends AbstractHBaseTool {
       try {
         br = new BufferedReader(new FileReader(f));
         while ((line = br.readLine()) != null) {
-          line.trim();
+          line = line.trim();
           if (!line.equals("")) {
             excludeServers.add(line);
           }

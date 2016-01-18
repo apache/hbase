@@ -280,6 +280,8 @@ public final class SnapshotInfo extends Configured implements Tool {
   private SnapshotManifest snapshotManifest;
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intentional")
   public int run(String[] args) throws IOException, InterruptedException {
     final Configuration conf = getConf();
     boolean listSnapshots = false;
@@ -317,7 +319,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           printUsageAndExit();
         }
       } catch (Exception e) {
-        printUsageAndExit();
+        printUsageAndExit(); // FindBugs: REC_CATCH_EXCEPTION
       }
     }
 

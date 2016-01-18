@@ -34,6 +34,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="FindBugs seems confused; says bypassGlobals, namepaceLimiters, and " +
+    "tableLimiters are mostly synchronized...but to me it looks like they are totally synchronized")
 public class UserQuotaState extends QuotaState {
   private Map<String, QuotaLimiter> namespaceLimiters = null;
   private Map<TableName, QuotaLimiter> tableLimiters = null;
@@ -96,7 +99,7 @@ public class UserQuotaState extends QuotaState {
   }
 
   @Override
-  public void setQuotas(final Quotas quotas) {
+  public synchronized void setQuotas(final Quotas quotas) {
     super.setQuotas(quotas);
     bypassGlobals = quotas.getBypassGlobals();
   }
@@ -105,7 +108,7 @@ public class UserQuotaState extends QuotaState {
    * Add the quota information of the specified table.
    * (This operation is part of the QuotaState setup)
    */
-  public void setQuotas(final TableName table, Quotas quotas) {
+  public synchronized void setQuotas(final TableName table, Quotas quotas) {
     tableLimiters = setLimiter(tableLimiters, table, quotas);
   }
 

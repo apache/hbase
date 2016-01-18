@@ -2174,6 +2174,9 @@ public class AssignmentManager {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="Worth fixing but not the end of the world.")
   private String onRegionFailedOpen(final RegionState current,
       final HRegionInfo hri, final ServerName serverName) {
     // The region must be opening on this server.
@@ -2189,6 +2192,7 @@ public class AssignmentManager {
     }
 
     String encodedName = hri.getEncodedName();
+    // FindBugs: AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION Worth fixing!!!
     AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
     if (failedOpenCount == null) {
       failedOpenCount = new AtomicInteger();

@@ -78,7 +78,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   private TaskExecutor splitTaskExecutor;
 
   private final Object taskReadyLock = new Object();
-  volatile int taskReadySeq = 0;
+  private AtomicInteger taskReadySeq = new AtomicInteger(0);
   private volatile String currentTask = null;
   private int currentVersion;
   private volatile boolean shouldStop = false;
@@ -106,7 +106,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     if (path.equals(watcher.splitLogZNode)) {
       if (LOG.isTraceEnabled()) LOG.trace("tasks arrived or departed on " + path);
       synchronized (taskReadyLock) {
-        taskReadySeq++;
+        this.taskReadySeq.incrementAndGet();
         taskReadyLock.notify();
       }
     }
@@ -400,14 +400,14 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * policy puts an upper-limit on the number of simultaneous log splitting that could be happening
    * in a cluster.
    * <p>
-   * Synchronization using {@link #taskReadyLock} ensures that it will try to grab every task that
-   * has been put up
+   * Synchronization using <code>taskReadyLock</code> ensures that it will try to grab every task
+   * that has been put up
    * @throws InterruptedException
    */
   @Override
   public void taskLoop() throws InterruptedException {
     while (!shouldStop) {
-      int seq_start = taskReadySeq;
+      int seq_start = taskReadySeq.get();
       List<String> paths = null;
       paths = getTaskList();
       if (paths == null) {
@@ -441,7 +441,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       }
       SplitLogCounters.tot_wkr_task_grabing.incrementAndGet();
       synchronized (taskReadyLock) {
-        while (seq_start == taskReadySeq) {
+        while (seq_start == taskReadySeq.get()) {
           taskReadyLock.wait(checkInterval);
           if (server != null) {
             // check to see if we have stale recovering regions in our internal memory state
@@ -527,7 +527,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
   @Override
   public int getTaskReadySeq() {
-    return taskReadySeq;
+    return taskReadySeq.get();
   }
 
   @Override

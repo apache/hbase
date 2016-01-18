@@ -28,6 +28,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="FindBugs seems confused; says globalLimiter and lastUpdate " +
+  "are mostly synchronized...but to me it looks like they are totally synchronized")
 public class QuotaState {
   protected long lastUpdate = 0;
   protected long lastQuery = 0;
@@ -77,7 +80,7 @@ public class QuotaState {
    * Setup the global quota information.
    * (This operation is part of the QuotaState setup)
    */
-  public void setQuotas(final Quotas quotas) {
+  public synchronized void setQuotas(final Quotas quotas) {
     if (quotas.hasThrottle()) {
       globalLimiter = QuotaLimiterFactory.fromThrottle(quotas.getThrottle());
     } else {

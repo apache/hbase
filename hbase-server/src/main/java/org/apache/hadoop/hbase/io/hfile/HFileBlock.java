@@ -109,8 +109,8 @@ public class HFileBlock implements Cacheable {
      new byte[HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM];
 
   // How to get the estimate correctly? if it is a singleBB?
-  public static final int MULTI_BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
-      new MultiByteBuff(ByteBuffer.wrap(new byte[0], 0, 0)).getClass(), false);
+  public static final int MULTI_BYTE_BUFFER_HEAP_SIZE =
+      (int)ClassSize.estimateBase(MultiByteBuff.class, false);
 
   // meta.usesHBaseChecksum+offset+nextBlockOnDiskSizeWithHeader
   public static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT

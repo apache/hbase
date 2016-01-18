@@ -189,7 +189,7 @@ implements HeapSize, Map<K,V> {
    *
    * @return currently available bytes
    */
-  public long getMemFree() {
+  public synchronized long getMemFree() {
     return memFree;
   }
 
@@ -208,7 +208,7 @@ implements HeapSize, Map<K,V> {
    * @return currently used memory in bytes
    */
   public long getMemUsed() {
-    return (memTotal - memFree); // FindBugs IS2_INCONSISTENT_SYNC
+    return (memTotal - getMemFree()); // FindBugs IS2_INCONSISTENT_SYNC
   }
 
   /**
@@ -227,7 +227,7 @@ implements HeapSize, Map<K,V> {
    *
    * @return number of misses
    */
-  public long getMissCount() {
+  public synchronized long getMissCount() {
     return missCount; // FindBugs IS2_INCONSISTENT_SYNC
   }
 
@@ -239,7 +239,7 @@ implements HeapSize, Map<K,V> {
    */
   public double getHitRatio() {
     return (double)((double)hitCount/
-      ((double)(hitCount+missCount)));
+      ((double)(hitCount + getMissCount())));
   }
 
   /**
@@ -269,7 +269,7 @@ implements HeapSize, Map<K,V> {
    * @return memory usage of map in bytes
    */
   public long heapSize() {
-    return (memTotal - memFree);
+    return (memTotal - getMemFree());
   }
 
   //--------------------------------------------------------------------------
@@ -824,6 +824,8 @@ implements HeapSize, Map<K,V> {
    *
    * @return Set of entries in hash
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+      justification="Unused debugging function that reads only")
   public Set<Entry<K,V>> entryTableSet() {
     Set<Entry<K,V>> entrySet = new HashSet<Entry<K,V>>();
     Entry [] table = entries; // FindBugs IS2_INCONSISTENT_SYNC

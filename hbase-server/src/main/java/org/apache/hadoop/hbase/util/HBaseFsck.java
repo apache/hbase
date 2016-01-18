@@ -3564,9 +3564,8 @@ public class HBaseFsck extends Configured implements Closeable {
       this.metaEntry = metaEntry;
     }
 
-    public int getReplicaId() {
-      if (metaEntry != null) return metaEntry.getReplicaId();
-      return deployedReplicaId;
+    public synchronized int getReplicaId() {
+      return metaEntry != null? metaEntry.getReplicaId(): deployedReplicaId;
     }
 
     public synchronized void addServer(HRegionInfo hri, ServerName server) {

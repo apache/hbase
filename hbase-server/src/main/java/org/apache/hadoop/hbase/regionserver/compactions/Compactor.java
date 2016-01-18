@@ -332,7 +332,7 @@ public abstract class Compactor {
 
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    int minFilesToCompact = Math.max(2,
+    long minFilesToCompact = Math.max(2L,
         conf.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,
             /* old name */ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     long shippedCallSizeLimit = (long) minFilesToCompact * HConstants.DEFAULT_BLOCKSIZE;

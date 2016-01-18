@@ -488,6 +488,8 @@ public class HFile {
    * @return an appropriate instance of HFileReader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
+      justification="Intentional")
   private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
       long size, CacheConfig cacheConf, HFileSystem hfs, Configuration conf) throws IOException {
     FixedFileTrailer trailer = null;
@@ -498,7 +500,7 @@ public class HFile {
       switch (trailer.getMajorVersion()) {
       case 2:
         LOG.debug("Opening HFile v2 with v3 reader");
-        // Fall through.
+        // Fall through. FindBugs: SF_SWITCH_FALLTHROUGH
       case 3 :
         return new HFileReaderImpl(path, trailer, fsdis, size, cacheConf, hfs, conf);
       default:

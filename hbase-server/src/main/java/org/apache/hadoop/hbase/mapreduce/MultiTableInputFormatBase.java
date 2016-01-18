@@ -110,9 +110,7 @@ public abstract class MultiTableInputFormatBase extends
         @Override
         public void close() throws IOException {
           trr.close();
-          if (connection != null) {
-            connection.close();
-          }
+          connection.close();
         }
 
         @Override
@@ -145,9 +143,7 @@ public abstract class MultiTableInputFormatBase extends
       // If there is an exception make sure that all
       // resources are closed and released.
       trr.close();
-      if (connection != null) {
-        connection.close();
-      }
+      connection.close();
       throw ioe;
     }
   }

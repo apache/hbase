@@ -338,12 +338,6 @@ public class TableAuthManager implements Closeable {
 
   private boolean authorize(List<TablePermission> perms,
                             TableName table, byte[] family,
-                            Permission.Action action) {
-    return authorize(perms, table, family, null, action);
-  }
-
-  private boolean authorize(List<TablePermission> perms,
-                            TableName table, byte[] family,
                             byte[] qualifier, Permission.Action action) {
     if (perms != null) {
       for (TablePermission p : perms) {

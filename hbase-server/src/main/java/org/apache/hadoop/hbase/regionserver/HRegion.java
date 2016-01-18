@@ -393,7 +393,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Set when a flush has been requested.
     volatile boolean flushRequested = false;
     // Number of compactions running.
-    volatile int compacting = 0;
+    AtomicInteger compacting = new AtomicInteger(0);
     // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
     // Set if region is read-only
@@ -824,7 +824,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     this.writestate.setReadOnly(ServerRegionReplicaUtil.isReadOnly(this));
     this.writestate.flushRequested = false;
-    this.writestate.compacting = 0;
+    this.writestate.compacting.set(0);
 
     if (this.writestate.writesEnabled) {
       // Remove temporary data left over from old regions
@@ -1368,6 +1368,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.closing.set(closing);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK_EXCEPTION_PATH",
+      justification="I think FindBugs is confused")
   private Map<byte[], List<StoreFile>> doClose(final boolean abort, MonitoredTask status)
       throws IOException {
     if (isClosed()) {
@@ -1405,7 +1407,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     // block waiting for the lock for closing
-    lock.writeLock().lock();
+    lock.writeLock().lock(); // FindBugs: Complains UL_UNRELEASED_LOCK_EXCEPTION_PATH but seems fine
     this.closing.set(true);
     status.setStatus("Disabling writes for close");
     try {
@@ -1537,7 +1539,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean interrupted = false;
       try {
-        while (writestate.compacting > 0 || writestate.flushing) {
+        while (writestate.compacting.get() > 0 || writestate.flushing) {
           LOG.debug("waiting for " + writestate.compacting + " compactions"
             + (writestate.flushing ? " & cache flush" : "") + " to complete for region " + this);
           try {
@@ -1894,7 +1896,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         synchronized (writestate) {
           if (writestate.writesEnabled) {
             wasStateSet = true;
-            ++writestate.compacting;
+            writestate.compacting.incrementAndGet();
           } else {
             String msg = "NOT compacting region " + this + ". Writes disabled.";
             LOG.info(msg);
@@ -1920,8 +1922,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } finally {
         if (wasStateSet) {
           synchronized (writestate) {
-            --writestate.compacting;
-            if (writestate.compacting <= 0) {
+            writestate.compacting.decrementAndGet();
+            if (writestate.compacting.get() <= 0) {
               writestate.notifyAll();
             }
           }
@@ -2164,6 +2166,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DLS_DEAD_LOCAL_STORE",
+      justification="FindBugs seems confused about trxId")
   protected PrepareFlushResult internalPrepareFlushCache(final WAL wal, final long myseqid,
       final Collection<Store> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker)
   throws IOException {
@@ -2395,6 +2399,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return false;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+      justification="Intentional; notify is about completed flush")
   protected FlushResult internalFlushCacheAndCommit(
         final WAL wal, MonitoredTask status, final PrepareFlushResult prepareResult,
         final Collection<Store> storesToFlush)
@@ -4448,6 +4454,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @VisibleForTesting
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+    justification="Intentional; post memstore flush")
   void replayWALFlushCommitMarker(FlushDescriptor flush) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Committing flush " + this);
 
@@ -4684,6 +4692,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return prepareFlushResult;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+      justification="Intentional; cleared the memstore")
   void replayWALRegionEventMarker(RegionEventDescriptor regionEvent) throws IOException {
     checkTargetRegion(regionEvent.getEncodedRegionName().toByteArray(),
       "RegionEvent marker from WAL ", regionEvent);
@@ -4914,6 +4924,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return refreshStoreFiles(false);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+      justification="Notify is about post replay. Intentional")
   protected boolean refreshStoreFiles(boolean force) throws IOException {
     if (!force && ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
       return false; // if primary nothing to do
@@ -7838,6 +7850,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
+    justification="Intentional")
   public void startRegionOperation(Operation op) throws IOException {
     switch (op) {
     case GET:  // read operations

@@ -46,6 +46,8 @@ import java.util.RandomAccess;
  * <p>
  * Iterators are read-only. They cannot be used to remove elements.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UG_SYNC_SET_UNSYNC_GET",
+  justification="TODO: synchronization in here needs review!!!")
 public class SortedList<E> implements List<E>, RandomAccess {
   private volatile List<E> list;
   private final Comparator<? super E> comparator;
@@ -80,7 +82,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
    * method to get a reference for iterating over using the RandomAccess
    * pattern.
    */
-  public List<E> get() {
+  public List<E> get() { // FindBugs: UG_SYNC_SET_UNSYNC_GET complaint. Fix!!
     return list;
   }
 
@@ -185,7 +187,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
   }
 
   @Override
-  public E get(int index) {
+  public synchronized E get(int index) {
     return list.get(index);
   }
 

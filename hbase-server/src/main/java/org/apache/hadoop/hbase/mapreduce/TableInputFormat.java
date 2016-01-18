@@ -111,6 +111,8 @@ implements Configurable {
    *   org.apache.hadoop.conf.Configuration)
    */
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intentional")
   public void setConf(Configuration configuration) {
     this.conf = configuration;
 

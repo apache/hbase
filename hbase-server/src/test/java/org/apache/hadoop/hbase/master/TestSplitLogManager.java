@@ -345,7 +345,7 @@ public class TestSplitLogManager {
     assertTrue(task == task2);
     LOG.debug("task = " + task);
     assertEquals(1L, tot_mgr_resubmit.get());
-    assertEquals(1, task.incarnation);
+    assertEquals(1, task.incarnation.get());
     assertEquals(0, task.unforcedResubmits.get());
     assertTrue(task.isOrphan());
     assertTrue(task.isUnassigned());

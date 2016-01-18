@@ -45,6 +45,9 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="FindBugs seems confused; says limit and tlimit " +
+  "are mostly synchronized...but to me it looks like they are totally synchronized")
 public abstract class RateLimiter {
   public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
   private long tunit = 1000;           // Timeunit factor for translating to ms.
@@ -73,7 +76,7 @@ public abstract class RateLimiter {
    * @param limit The max value available resource units can be refilled to.
    * @param timeUnit Timeunit factor for translating to ms.
    */
-  public void set(final long limit, final TimeUnit timeUnit) {
+  public synchronized void set(final long limit, final TimeUnit timeUnit) {
     switch (timeUnit) {
     case MILLISECONDS:
       tunit = 1;
@@ -99,10 +102,11 @@ public abstract class RateLimiter {
 
   public String toString() {
     String rateLimiter = this.getClass().getSimpleName();
-    if (limit == Long.MAX_VALUE) {
+    if (getLimit() == Long.MAX_VALUE) {
       return rateLimiter + "(Bypass)";
     }
-    return rateLimiter + "(avail=" + avail + " limit=" + limit + " tunit=" + tunit + ")";
+    return rateLimiter + "(avail=" + getAvailable() + " limit=" + getLimit() +
+        " tunit=" + getTimeUnitInMillis() + ")";
   }
 
   /**
@@ -120,7 +124,7 @@ public abstract class RateLimiter {
   }
 
   public synchronized boolean isBypass() {
-    return limit == Long.MAX_VALUE;
+    return getLimit() == Long.MAX_VALUE;
   }
 
   public synchronized long getLimit() {
@@ -131,7 +135,7 @@ public abstract class RateLimiter {
     return avail;
   }
 
-  protected long getTimeUnitInMillis() {
+  protected synchronized long getTimeUnitInMillis() {
     return tunit;
   }
 
@@ -195,7 +199,7 @@ public abstract class RateLimiter {
    */
   public synchronized long waitInterval(final long amount) {
     // TODO Handle over quota?
-    return (amount <= avail) ? 0 : getWaitInterval(limit, avail, amount);
+    return (amount <= avail) ? 0 : getWaitInterval(getLimit(), avail, amount);
   }
 
   // These two method are for strictly testing purpose only

@@ -643,7 +643,6 @@ public class ExportSnapshot extends Configured implements Tool {
     @Override
     public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
       Configuration conf = context.getConfiguration();
-      String snapshotName = conf.get(CONF_SNAPSHOT_NAME);
       Path snapshotDir = new Path(conf.get(CONF_SNAPSHOT_DIR));
       FileSystem fs = FileSystem.get(snapshotDir.toUri(), conf);
 

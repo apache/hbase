@@ -60,7 +60,7 @@ public class MemStoreChunkPool {
   final static float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
 
   // Static reference to the MemStoreChunkPool
-  private static MemStoreChunkPool globalInstance;
+  private static MemStoreChunkPool GLOBAL_INSTANCE;
   /** Boolean whether we have disabled the memstore chunk pool entirely. */
   static boolean chunkPoolDisabled = false;
 
@@ -179,12 +179,14 @@ public class MemStoreChunkPool {
    * @param conf
    * @return the global MemStoreChunkPool instance
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DC_DOUBLECHECK",
+      justification="Intentional")
   static MemStoreChunkPool getPool(Configuration conf) {
-    if (globalInstance != null) return globalInstance;
+    if (GLOBAL_INSTANCE != null) return GLOBAL_INSTANCE;
 
     synchronized (MemStoreChunkPool.class) {
       if (chunkPoolDisabled) return null;
-      if (globalInstance != null) return globalInstance;
+      if (GLOBAL_INSTANCE != null) return GLOBAL_INSTANCE;
       float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY, POOL_MAX_SIZE_DEFAULT);
       if (poolSizePercentage <= 0) {
         chunkPoolDisabled = true;
@@ -210,8 +212,8 @@ public class MemStoreChunkPool {
       int initialCount = (int) (initialCountPercentage * maxCount);
       LOG.info("Allocating MemStoreChunkPool with chunk size " + StringUtils.byteDesc(chunkSize)
           + ", max count " + maxCount + ", initial count " + initialCount);
-      globalInstance = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
-      return globalInstance;
+      GLOBAL_INSTANCE = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
+      return GLOBAL_INSTANCE;
     }
   }
 

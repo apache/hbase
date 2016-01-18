@@ -354,7 +354,7 @@ public class HFileWriterImpl implements HFile.Writer {
     // (table,startrow,hash) so can't be treated as plain byte arrays. Just skip
     // out without
     // trying to do this optimization.
-    if (comparator != null && comparator instanceof MetaCellComparator) {
+    if (comparator instanceof MetaCellComparator) {
       return right;
     }
     int diff = comparator.compareRows(left, right);

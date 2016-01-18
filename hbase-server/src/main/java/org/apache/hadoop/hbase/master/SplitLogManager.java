@@ -643,7 +643,7 @@ public class SplitLogManager {
     public volatile ServerName cur_worker_name;
     public volatile TaskBatch batch;
     public volatile TerminationStatus status;
-    public volatile int incarnation;
+    public volatile AtomicInteger incarnation = new AtomicInteger(0);
     public final AtomicInteger unforcedResubmits = new AtomicInteger();
     public volatile boolean resubmitThresholdReached;
 
@@ -655,7 +655,6 @@ public class SplitLogManager {
     }
 
     public Task() {
-      incarnation = 0;
       last_version = -1;
       status = IN_PROGRESS;
       setUnassigned();

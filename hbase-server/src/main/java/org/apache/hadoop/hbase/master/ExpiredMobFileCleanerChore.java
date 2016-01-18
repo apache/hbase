@@ -61,6 +61,8 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
   }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intentional")
   protected void chore() {
     try {
       TableDescriptors htds = master.getTableDescriptors();
