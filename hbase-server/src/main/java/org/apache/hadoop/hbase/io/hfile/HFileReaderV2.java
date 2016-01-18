@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -692,6 +692,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
      * @return the next block, or null if there are no more data blocks
      * @throws IOException
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+        justification="Yeah, unnecessary null check; could do w/ clean up")
     protected HFileBlock readNextDataBlock() throws IOException {
       long lastDataBlockOffset = reader.getTrailer().getLastDataBlockOffset();
       if (block == null)
@@ -700,8 +702,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       HFileBlock curBlock = block;
 
       do {
-        if (curBlock.getOffset() >= lastDataBlockOffset)
+        if (curBlock.getOffset() >= lastDataBlockOffset) {
           return null;
+        }
 
         if (curBlock.getOffset() < 0) {
           throw new IOException("Invalid block file offset: " + block);
@@ -943,7 +946,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       blockBuffer = block.getBufferWithoutHeader();
       readKeyValueLen();
-      blockFetches++;
+      blockFetches.incrementAndGet();
 
       // Reset the next indexed key
       this.nextIndexedKey = null;
@@ -1205,7 +1208,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
-      blockFetches++;
+      blockFetches.incrementAndGet();
 
       // Reset the next indexed key
       this.nextIndexedKey = null;

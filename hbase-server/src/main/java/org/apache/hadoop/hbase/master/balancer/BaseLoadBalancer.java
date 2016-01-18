@@ -537,17 +537,21 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       switch (action.type) {
       case NULL: break;
       case ASSIGN_REGION:
+        // FindBugs: Having the assert quietens FB BC_UNCONFIRMED_CAST warnings
+        assert action instanceof AssignRegionAction: action.getClass();
         AssignRegionAction ar = (AssignRegionAction) action;
         regionsPerServer[ar.server] = addRegion(regionsPerServer[ar.server], ar.region);
         regionMoved(ar.region, -1, ar.server);
         break;
       case MOVE_REGION:
+        assert action instanceof MoveRegionAction: action.getClass();
         MoveRegionAction mra = (MoveRegionAction) action;
         regionsPerServer[mra.fromServer] = removeRegion(regionsPerServer[mra.fromServer], mra.region);
         regionsPerServer[mra.toServer] = addRegion(regionsPerServer[mra.toServer], mra.region);
         regionMoved(mra.region, mra.fromServer, mra.toServer);
         break;
       case SWAP_REGIONS:
+        assert action instanceof SwapRegionsAction: action.getClass();
         SwapRegionsAction a = (SwapRegionsAction) action;
         regionsPerServer[a.fromServer] = replaceRegion(regionsPerServer[a.fromServer], a.fromRegion, a.toRegion);
         regionsPerServer[a.toServer] = replaceRegion(regionsPerServer[a.toServer], a.toRegion, a.fromRegion);
@@ -1055,7 +1059,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void setClusterStatus(ClusterStatus st) {
+  public synchronized void setClusterStatus(ClusterStatus st) {
     this.clusterStatus = st;
     regionFinder.setClusterStatus(st);
   }

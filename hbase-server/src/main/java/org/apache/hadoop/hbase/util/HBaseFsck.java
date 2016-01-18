@@ -54,21 +54,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.TreeMultimap;
-import com.google.protobuf.ServiceException;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -90,11 +79,11 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
@@ -145,6 +134,15 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.TreeMultimap;
+import com.google.protobuf.ServiceException;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -262,7 +260,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private Path sidelineDir = null;
 
   private boolean rerun = false; // if we tried to fix something, rerun hbck
-  private static boolean summary = false; // if we want to print less output
+  private static boolean SUMMARY = false; // if we want to print less output
   private boolean checkMetaOnly = false;
   private boolean checkRegionBoundaries = false;
   private boolean ignorePreCheckPermission = false; // if pre-check permission
@@ -3561,9 +3559,8 @@ public class HBaseFsck extends Configured implements Closeable {
       this.metaEntry = metaEntry;
     }
 
-    public int getReplicaId() {
-      if (metaEntry != null) return metaEntry.getReplicaId();
-      return deployedReplicaId;
+    public synchronized int getReplicaId() {
+      return metaEntry != null? metaEntry.getReplicaId(): deployedReplicaId;
     }
 
     public synchronized void addServer(HRegionInfo hri, ServerName server) {
@@ -3867,7 +3864,7 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       errorList.add(errorCode);
-      if (!summary) {
+      if (!getSUMMARY()) {
         System.out.println("ERROR: " + message);
       }
       errorCount++;
@@ -3909,7 +3906,7 @@ public class HBaseFsck extends Configured implements Closeable {
      */
     @Override
     public synchronized void report(String message) {
-      if (! summary) {
+      if (!getSUMMARY()) {
         System.out.println("ERROR: " + message);
       }
       showProgress = 0;
@@ -3935,9 +3932,13 @@ public class HBaseFsck extends Configured implements Closeable {
 
     @Override
     public synchronized void print(String message) {
-      if (!summary) {
+      if (!getSUMMARY()) {
         System.out.println(message);
       }
+    }
+
+    private synchronized static boolean getSUMMARY() {
+      return SUMMARY;
     }
 
     @Override
@@ -3961,7 +3962,7 @@ public class HBaseFsck extends Configured implements Closeable {
     @Override
     public synchronized void progress() {
       if (showProgress++ == progressThreshold) {
-        if (!summary) {
+        if (!getSUMMARY()) {
           System.out.print(".");
         }
         showProgress = 0;
@@ -4191,8 +4192,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
    */
-  void setSummary() {
-    summary = true;
+  synchronized static void setSummary() {
+    SUMMARY = true;
   }
 
   /**

@@ -83,6 +83,8 @@ public class Import {
   /**
    * A mapper that just writes out KeyValues.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification="Writables are going away and this has been this way forever")
   public static class KeyValueImporter extends TableMapper<ImmutableBytesWritable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;

@@ -312,6 +312,8 @@ public class DisableTableProcedure
    * Rollback of table state change in prepareDisable()
    * @param env MasterProcedureEnv
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+      justification="Intended")
   private void undoTableStateChange(final MasterProcedureEnv env) {
     if (!skipTableStateCheck) {
       try {
@@ -322,6 +324,7 @@ public class DisableTableProcedure
         }
       } catch (Exception e) {
         // Ignore exception.
+        LOG.trace(e.getMessage());
       }
     }
   }

@@ -68,10 +68,15 @@ public class IdReadWriteLock {
   /** For testing */
   @VisibleForTesting
   int purgeAndGetEntryPoolSize() {
-    System.gc();
+    gc();
     Threads.sleep(200);
     lockPool.purge();
     return lockPool.size();
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_GC", justification="Intentional")
+  private void gc() {
+    System.gc();
   }
 
   @VisibleForTesting

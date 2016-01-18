@@ -94,8 +94,7 @@ public class HMasterCommandLine extends ServerCommandLine {
 
     if (cmd.hasOption("minRegionServers")) {
       String val = cmd.getOptionValue("minRegionServers");
-      getConf().setInt("hbase.regions.server.count.min",
-                  Integer.valueOf(val));
+      getConf().setInt("hbase.regions.server.count.min", Integer.parseInt(val));
       LOG.debug("minRegionServers set to " + val);
     }
 
@@ -103,7 +102,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     if (cmd.hasOption("minServers")) {
       String val = cmd.getOptionValue("minServers");
       getConf().setInt("hbase.regions.server.count.min",
-                  Integer.valueOf(val));
+                  Integer.parseInt(val));
       LOG.debug("minServers set to " + val);
     }
 
@@ -116,13 +115,13 @@ public class HMasterCommandLine extends ServerCommandLine {
     // master when we are in local/standalone mode. Useful testing)
     if (cmd.hasOption("localRegionServers")) {
       String val = cmd.getOptionValue("localRegionServers");
-      getConf().setInt("hbase.regionservers", Integer.valueOf(val));
+      getConf().setInt("hbase.regionservers", Integer.parseInt(val));
       LOG.debug("localRegionServers set to " + val);
     }
     // How many masters to startup inside this process; useful testing
     if (cmd.hasOption("masters")) {
       String val = cmd.getOptionValue("masters");
-      getConf().setInt("hbase.masters", Integer.valueOf(val));
+      getConf().setInt("hbase.masters", Integer.parseInt(val));
       LOG.debug("masters set to " + val);
     }
 

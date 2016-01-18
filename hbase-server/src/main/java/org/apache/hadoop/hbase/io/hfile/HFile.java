@@ -450,7 +450,7 @@ public class HFile {
      * Return the file context of the HFile this reader belongs to
      */
     HFileContext getFileContext();
-    
+
     boolean isPrimaryReplicaReader();
 
     void setPrimaryReplicaReader(boolean isPrimaryReplicaReader);
@@ -468,6 +468,8 @@ public class HFile {
    * @return an appropriate instance of HFileReader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
+      justification="Intentional")
   private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
       long size, CacheConfig cacheConf, HFileSystem hfs, Configuration conf) throws IOException {
     FixedFileTrailer trailer = null;

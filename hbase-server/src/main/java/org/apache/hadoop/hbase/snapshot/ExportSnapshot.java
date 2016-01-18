@@ -271,7 +271,7 @@ public class ExportSnapshot extends Configured implements Tool {
       InputStream in = openSourceFile(context, inputInfo);
       int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
       if (Integer.MAX_VALUE != bandwidthMB) {
-        in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024);
+        in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024L * 1024L);
       }
 
       try {
@@ -648,7 +648,6 @@ public class ExportSnapshot extends Configured implements Tool {
     @Override
     public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
       Configuration conf = context.getConfiguration();
-      String snapshotName = conf.get(CONF_SNAPSHOT_NAME);
       Path snapshotDir = new Path(conf.get(CONF_SNAPSHOT_DIR));
       FileSystem fs = FileSystem.get(snapshotDir.toUri(), conf);
 

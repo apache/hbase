@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -37,15 +37,12 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
  * Common functionality needed by all versions of {@link HFile} readers.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
 public abstract class AbstractHFileReader
     implements HFile.Reader, Configurable {
   /** Stream to read from. Does checksum verifications in file system */
-  protected FSDataInputStream istream; // UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD
 
   /** The file system stream of the underlying {@link HFile} that
    * does not do checksum verification in the file system */
-  protected FSDataInputStream istreamNoFsChecksum;  // UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD
 
   /** Data block index reader keeping the root data index in memory */
   protected HFileBlockIndex.BlockIndexReader dataBlockIndexReader;
@@ -289,7 +286,7 @@ public abstract class AbstractHFileReader
     protected int currMemstoreTSLen;
     protected long currMemstoreTS;
 
-    protected int blockFetches;
+    protected AtomicInteger blockFetches = new AtomicInteger();
 
     protected final HFile.Reader reader;
 

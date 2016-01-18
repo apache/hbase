@@ -47,6 +47,8 @@ public class ZKDataMigrator extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ZKDataMigrator.class);
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intended")
   public int run(String[] as) throws Exception {
     Configuration conf = getConf();
     ZooKeeperWatcher zkw = null;

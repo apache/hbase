@@ -90,7 +90,7 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
 
     // setup filesystem

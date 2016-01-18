@@ -570,6 +570,8 @@ public class StoreFile {
     return sb.toString();
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
+      justification="Will not overflow")
   public static class WriterBuilder {
     private final Configuration conf;
     private final CacheConfig cacheConf;
@@ -582,7 +584,6 @@ public class StoreFile {
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
-    private boolean shouldDropCacheBehind = false;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
@@ -650,8 +651,8 @@ public class StoreFile {
       return this;
     }
 
-    public WriterBuilder withShouldDropCacheBehind(boolean shouldDropCacheBehind) {
-      this.shouldDropCacheBehind = shouldDropCacheBehind;
+    public WriterBuilder withShouldDropCacheBehind(boolean shouldDropCacheBehind/*NOT USED!!*/) {
+      // TODO: HAS NO EFFECT!!! FIX!!
       return this;
     }
     /**
@@ -756,9 +757,6 @@ public class StoreFile {
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     private Cell lastDeleteFamilyCell = null;
     private long deleteFamilyCnt = 0;
-
-    /** Bytes per Checksum */
-    protected int bytesPerChecksum;
 
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set

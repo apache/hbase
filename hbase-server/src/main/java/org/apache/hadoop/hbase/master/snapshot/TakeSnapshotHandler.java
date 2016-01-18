@@ -154,6 +154,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    * call should get implemented for each snapshot flavor.
    */
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intentional")
   public void process() {
     String msg = "Running " + snapshot.getType() + " table snapshot " + snapshot.getName() + " "
         + eventType + " on table " + snapshotTable;
@@ -205,7 +207,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       status.markComplete(msg);
       LOG.info(msg);
       metricsSnapshot.addSnapshot(status.getCompletionTimestamp() - status.getStartTime());
-    } catch (Exception e) {
+    } catch (Exception e) { // FindBugs: REC_CATCH_EXCEPTION
       status.abort("Failed to complete snapshot " + snapshot.getName() + " on table " +
           snapshotTable + " because " + e.getMessage());
       String reason = "Failed taking snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)

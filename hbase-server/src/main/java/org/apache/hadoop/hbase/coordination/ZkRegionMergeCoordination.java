@@ -92,6 +92,8 @@ public class ZkRegionMergeCoordination implements RegionMergeCoordination {
    */
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intended")
   public void waitForRegionMergeTransaction(RegionServerServices services,
       HRegionInfo mergedRegionInfo, HRegion region_a, HRegion region_b, RegionMergeDetails details)
       throws IOException {

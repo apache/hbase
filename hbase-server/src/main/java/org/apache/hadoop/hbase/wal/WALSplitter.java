@@ -2276,9 +2276,7 @@ public class WALSplitter {
       } else {
         ((Put) m).add(cell);
       }
-      if (m != null) {
-        m.setDurability(durability);
-      }
+      m.setDurability(durability);
       previousCell = cell;
     }
 

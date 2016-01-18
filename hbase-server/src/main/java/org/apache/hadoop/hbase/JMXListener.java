@@ -60,7 +60,7 @@ public class JMXListener implements Coprocessor {
    * only 1 JMX instance is allowed, otherwise there is port conflict even if
    * we only load regionserver coprocessor on master
    */
-  private static JMXConnectorServer jmxCS = null;
+  private static JMXConnectorServer JMX_CS = null;
 
   public static JMXServiceURL buildJMXServiceURL(int rmiRegistryPort,
       int rmiConnectorPort) throws IOException {
@@ -137,8 +137,13 @@ public class JMXListener implements Coprocessor {
 
     try {
       // Start the JMXListener with the connection string
-      jmxCS = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, jmxEnv, mbs);
-      jmxCS.start();
+      synchronized(JMXListener.class) {
+        if (JMX_CS != null) {
+          throw new RuntimeException("Started by another thread?");
+        }
+        JMX_CS = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, jmxEnv, mbs);
+        JMX_CS.start();
+      }
       LOG.info("ConnectorServer started!");
     } catch (IOException e) {
       LOG.error("fail to start connector server!", e);
@@ -148,10 +153,10 @@ public class JMXListener implements Coprocessor {
 
   public void stopConnectorServer() throws IOException {
     synchronized(JMXListener.class) {
-      if (jmxCS != null) {
-        jmxCS.stop();
+      if (JMX_CS != null) {
+        JMX_CS.stop();
         LOG.info("ConnectorServer stopped!");
-        jmxCS = null;
+        JMX_CS = null;
       }
     }
   }
@@ -186,7 +191,7 @@ public class JMXListener implements Coprocessor {
     }
 
     synchronized(JMXListener.class) {
-      if (jmxCS != null) {
+      if (JMX_CS != null) {
         LOG.info("JMXListener has been started at Registry port " + rmiRegistryPort);
       }
       else {

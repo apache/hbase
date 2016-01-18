@@ -43,18 +43,20 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  * target cluster is an HBase cluster.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
+  justification="Thinks zkw needs to be synchronized access but should be fine as is.")
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
   private static final Log LOG = LogFactory.getLog(HBaseReplicationEndpoint.class);
 
-  private ZooKeeperWatcher zkw = null;
+  private ZooKeeperWatcher zkw = null; // FindBugs: MT_CORRECTNESS
 
   private List<ServerName> regionServers = new ArrayList<ServerName>(0);
-  private volatile long lastRegionServerUpdate;
+  private long lastRegionServerUpdate;
 
   protected void disconnect() {
-    if (zkw != null){
+    if (zkw != null) {
       zkw.close();
     }
   }
@@ -181,7 +183,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Set the list of region servers for that peer
    * @param regionServers list of addresses for the region servers
    */
-  public void setRegionServers(List<ServerName> regionServers) {
+  public synchronized void setRegionServers(List<ServerName> regionServers) {
     this.regionServers = regionServers;
     lastRegionServerUpdate = System.currentTimeMillis();
   }

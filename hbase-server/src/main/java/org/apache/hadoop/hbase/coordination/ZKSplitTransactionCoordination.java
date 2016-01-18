@@ -140,6 +140,8 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
    * the node is removed or is not in pending_split state any more, we abort the split.
    */
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
+    justification="Intended")
   public void waitForSplitTransaction(final RegionServerServices services, Region parent,
       HRegionInfo hri_a, HRegionInfo hri_b, SplitTransactionDetails sptd) throws IOException {
     ZkSplitTransactionDetails zstd = (ZkSplitTransactionDetails) sptd;

@@ -99,6 +99,11 @@ public class ImportTsv extends Configured implements Tool {
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
   public final static String CREATE_TABLE_CONF_KEY = "create.table";
   public final static String NO_STRICT_COL_FAMILY = "no.strict";
+  /**
+   * If table didn't exist and was created in dry-run mode, this flag is
+   * flipped to delete it when MR ends.
+   */
+  private static boolean DRY_RUN_TABLE_CREATED;
 
   public static class TsvParser {
     /**
@@ -496,6 +501,12 @@ public class ImportTsv extends Configured implements Tool {
                 LOG.error(errorMsg);
                 throw new TableNotFoundException(errorMsg);
               }
+            } else {
+              String errorMsg =
+                  format("Table '%s' does not exist and '%s' is set to no.", tableName,
+                      CREATE_TABLE_CONF_KEY);
+              LOG.error(errorMsg);
+              throw new TableNotFoundException(errorMsg);
             }
             try (Table table = connection.getTable(tableName);
                 RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
@@ -535,22 +546,18 @@ public class ImportTsv extends Configured implements Tool {
               } else {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
+
               }
               HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
                   regionLocator);
             }
-          } else {
-            if (!admin.tableExists(tableName)) {
-              String errorMsg = format("Table '%s' does not exist.", tableName);
-              LOG.error(errorMsg);
-              throw new TableNotFoundException(errorMsg);
-            }
             if (mapperClass.equals(TsvImporterTextMapper.class)) {
-              usage(TsvImporterTextMapper.class.toString()
-                  + " should not be used for non bulkloading case. use "
-                  + TsvImporterMapper.class.toString()
-                  + " or custom mapper whose value type is Put.");
-              System.exit(-1);
+              job.setMapOutputValueClass(Text.class);
+              job.setReducerClass(TextSortReducer.class);
+            } else {
+              job.setMapOutputValueClass(Put.class);
+              job.setCombinerClass(PutCombiner.class);
+              job.setReducerClass(PutSortReducer.class);
             }
             // No reducers. Just write straight to table. Call initTableReducerJob
             // to set up the TableOutputFormat.
@@ -562,6 +569,7 @@ public class ImportTsv extends Configured implements Tool {
           TableMapReduceUtil.addDependencyJars(job);
           TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
               com.google.common.base.Function.class /* Guava used by TsvParser */);
+
       }
     }
     return job;
@@ -579,7 +587,7 @@ public class ImportTsv extends Configured implements Tool {
       tableName, cfSet));
     admin.createTable(htd);
   }
-  
+
   private static Set<String> getColumnFamilies(String[] columns) {
     Set<String> cfSet = new HashSet<String>();
     for (String aColumn : columns) {
@@ -616,7 +624,7 @@ public class ImportTsv extends Configured implements Tool {
       "input data. Another special column" + TsvParser.TIMESTAMPKEY_COLUMN_SPEC +
       " designates that this column should be\n" +
       "used as timestamp for each record. Unlike " + TsvParser.ROWKEY_COLUMN_SPEC + ", " +
-      TsvParser.TIMESTAMPKEY_COLUMN_SPEC + " is optional.\n" +
+      TsvParser.TIMESTAMPKEY_COLUMN_SPEC + " is optional." + "\n" +
       "You must specify at most one column as timestamp key for each imported record.\n" +
       "Record with invalid timestamps (blank, non-numeric) will be treated as bad record.\n" +
       "Note: if you use this option, then '" + TIMESTAMP_CONF_KEY + "' option will be ignored.\n" +
@@ -724,8 +732,17 @@ public class ImportTsv extends Configured implements Tool {
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
 
-    Job job = createSubmittableJob(getConf(), otherArgs);
-    return job.waitForCompletion(true) ? 0 : 1;
+
+    synchronized (ImportTsv.class) {
+      DRY_RUN_TABLE_CREATED = false;
+    }
+    Job job = createSubmittableJob(getConf(), args);
+    boolean success = job.waitForCompletion(true);
+    boolean delete = false;
+    synchronized (ImportTsv.class) {
+      delete = DRY_RUN_TABLE_CREATED;
+    }
+    return success ? 0 : 1;
   }
 
   public static void main(String[] args) throws Exception {

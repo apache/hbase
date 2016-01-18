@@ -117,6 +117,8 @@ import com.google.protobuf.Service;
  * visibility labels
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
+  justification="FIX visibilityLabelService; Make Synchronized!!!")
 public class VisibilityController extends BaseMasterAndRegionObserver implements
     VisibilityLabelsService.Interface, CoprocessorService {
 
@@ -134,7 +136,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
-  private VisibilityLabelService visibilityLabelService;
+  private VisibilityLabelService visibilityLabelService; // FindBugs: MT_CORRECTNESS FIX!!!
 
   /** if we are active, usually true, only not true if "hbase.security.authorization"
     has been set to false in site configuration */
@@ -272,8 +274,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     // Read the entire labels table and populate the zk
     if (e.getEnvironment().getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = true;
-      this.accessControllerAvailable = CoprocessorHost.getLoadedCoprocessors()
+      synchronized (this) {
+        this.accessControllerAvailable = CoprocessorHost.getLoadedCoprocessors()
           .contains(AccessController.class.getName());
+      }
       // Defer the init of VisibilityLabelService on labels region until it is in recovering state.
       if (!e.getEnvironment().getRegion().isRecovering()) {
         initVisibilityLabelService(e.getEnvironment());
