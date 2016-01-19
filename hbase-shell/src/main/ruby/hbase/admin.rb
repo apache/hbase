@@ -280,10 +280,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Parse arguments and update HTableDescriptor accordingly
     def parse_htd_args(htd, arg)
-      if arg.has_key?(NORMALIZATION_MODE)
-        mode = arg.delete(NORMALIZATION_MODE)
-        htd.setValue(NORMALIZATION_MODE, mode)
-      end
+      htd.setNormalizationEnabled(JBoolean.valueOf(arg.delete(NORMALIZATION_ENABLED))) if arg[NORMALIZATION_ENABLED]
     end
 
     #----------------------------------------------------------------------------------------------
