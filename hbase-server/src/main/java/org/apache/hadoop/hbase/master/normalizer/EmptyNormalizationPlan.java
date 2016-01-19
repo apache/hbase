@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
 
 /**
  * Plan which signifies that no normalization is required,
@@ -45,10 +44,5 @@ public final class EmptyNormalizationPlan implements NormalizationPlan {
    */
   @Override
   public void execute(Admin admin) {
-  }
-
-  @Override
-  public PlanType getType() {
-    return PlanType.NONE;
   }
 }

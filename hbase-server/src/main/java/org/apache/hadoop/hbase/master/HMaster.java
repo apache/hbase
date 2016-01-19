@@ -114,8 +114,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -1341,20 +1340,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
           continue;
         }
-        if (table.isSystemTable()) {
-          LOG.debug("Skipping normalization for table: " + table + ", as it's system table");
+        if (table.isSystemTable() || (getTableDescriptors().get(table) != null &&
+            !getTableDescriptors().get(table).isNormalizationEnabled())) {
+          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
+              + " table or doesn't have auto normalization turned on");
           continue;
         }
-        List<PlanType> types = null;
-        if (getTableDescriptors().get(table) != null) {
-          types = getTableDescriptors().get(table).getDesiredNormalizationTypes();
-          if (types == null) {
-            LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
-                + " table or doesn't have auto normalization turned on");
-            continue;
-          }
-        }
-        List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table, types);
+        List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
         if (plans != null) {
           for (NormalizationPlan plan : plans) {
             plan.execute(clusterConnection.getAdmin());
