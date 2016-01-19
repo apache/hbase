@@ -659,15 +659,15 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   /**
    * Try to acquire the exclusive lock on the specified table.
    * other operations in the table-queue will be executed after the lock is released.
+   * @param procedure the procedure trying to acquire the lock
    * @param table Table to lock
-   * @param purpose Human readable reason for locking the table
    * @return true if we were able to acquire the lock on the table, otherwise false.
    */
-  public boolean tryAcquireTableExclusiveLock(final TableName table, final String purpose) {
+  public boolean tryAcquireTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock.lock();
     TableQueue queue = getTableQueue(table);
-    boolean hasXLock = queue.tryExclusiveLock();
-    if (!hasXLock) {
+
+    if (!queue.tryExclusiveLock(procedure.getProcId())) {
       schedLock.unlock();
       return false;
     }
@@ -676,7 +676,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     schedLock.unlock();
 
     // Zk lock is expensive...
-    hasXLock = queue.tryZkExclusiveLock(lockManager, purpose);
+    boolean hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
     if (!hasXLock) {
       schedLock.lock();
       queue.releaseExclusiveLock();
@@ -688,9 +688,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   /**
    * Release the exclusive lock taken with tryAcquireTableWrite()
+   * @param procedure the procedure releasing the lock
    * @param table the name of the table that has the exclusive lock
    */
-  public void releaseTableExclusiveLock(final TableName table) {
+  public void releaseTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock.lock();
     TableQueue queue = getTableQueue(table);
     schedLock.unlock();
@@ -707,19 +708,29 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   /**
    * Try to acquire the shared lock on the specified table.
    * other "read" operations in the table-queue may be executed concurrently,
+   * @param procedure the procedure trying to acquire the lock
    * @param table Table to lock
-   * @param purpose Human readable reason for locking the table
    * @return true if we were able to acquire the lock on the table, otherwise false.
    */
-  public boolean tryAcquireTableSharedLock(final TableName table, final String purpose) {
-    return getTableQueueWithLock(table).trySharedLock(lockManager, purpose);
+  public boolean tryAcquireTableSharedLock(final Procedure procedure, final TableName table) {
+    return tryAcquireTableQueueSharedLock(procedure, table) != null;
+  }
+
+  private TableQueue tryAcquireTableQueueSharedLock(final Procedure procedure,
+      final TableName table) {
+    TableQueue queue = getTableQueueWithLock(table);
+    if (!queue.trySharedLock(lockManager, procedure.toString())) {
+      return null;
+    }
+    return queue;
   }
 
   /**
    * Release the shared lock taken with tryAcquireTableRead()
+   * @param procedure the procedure releasing the lock
    * @param table the name of the table that has the shared lock
    */
-  public void releaseTableSharedLock(final TableName table) {
+  public void releaseTableSharedLock(final Procedure procedure, final TableName table) {
     getTableQueueWithLock(table).releaseSharedLock(lockManager);
   }
 
@@ -738,7 +749,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       TableQueue queue = getTableQueue(table);
       if (queue == null) return true;
 
-      if (queue.isEmpty() && queue.acquireDeleteLock()) {
+      if (queue.isEmpty() && queue.tryExclusiveLock(0)) {
         // remove the table from the run-queue and the map
         if (IterableList.isLinked(queue)) {
           tableRunQueue.remove(queue);
@@ -766,15 +777,18 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   //  Server Locking Helpers
   // ============================================================================
   /**
-   * Release the exclusive lock
-   * @see #tryAcquireServerExclusiveLock(ServerName)
-   * @param serverName the server that has the exclusive lock
+   * Try to acquire the exclusive lock on the specified server.
+   * @see #releaseServerExclusiveLock(Procedure,ServerName)
+   * @param procedure the procedure trying to acquire the lock
+   * @param serverName Server to lock
+   * @return true if we were able to acquire the lock on the server, otherwise false.
    */
-  public boolean tryAcquireServerExclusiveLock(final ServerName serverName) {
+  public boolean tryAcquireServerExclusiveLock(final Procedure procedure,
+      final ServerName serverName) {
     schedLock.lock();
     try {
       ServerQueue queue = getServerQueue(serverName);
-      if (queue.tryExclusiveLock()) {
+      if (queue.tryExclusiveLock(procedure.getProcId())) {
         removeFromRunQueue(serverRunQueue, queue);
         return true;
       }
@@ -786,10 +800,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   /**
    * Release the exclusive lock
-   * @see #tryAcquireServerExclusiveLock(ServerName)
+   * @see #tryAcquireServerExclusiveLock(Procedure,ServerName)
+   * @param procedure the procedure releasing the lock
    * @param serverName the server that has the exclusive lock
    */
-  public void releaseServerExclusiveLock(final ServerName serverName) {
+  public void releaseServerExclusiveLock(final Procedure procedure,
+      final ServerName serverName) {
     schedLock.lock();
     try {
       ServerQueue queue = getServerQueue(serverName);
@@ -802,20 +818,24 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   /**
    * Try to acquire the shared lock on the specified server.
-   * @see #releaseServerSharedLock(ServerName)
+   * @see #releaseServerSharedLock(Procedure,ServerName)
+   * @param procedure the procedure releasing the lock
    * @param serverName Server to lock
    * @return true if we were able to acquire the lock on the server, otherwise false.
    */
-  public boolean tryAcquireServerSharedLock(final ServerName serverName) {
+  public boolean tryAcquireServerSharedLock(final Procedure procedure,
+      final ServerName serverName) {
     return getServerQueueWithLock(serverName).trySharedLock();
   }
 
   /**
    * Release the shared lock taken
-   * @see #tryAcquireServerSharedLock(ServerName)
+   * @see #tryAcquireServerSharedLock(Procedure,ServerName)
+   * @param procedure the procedure releasing the lock
    * @param serverName the server that has the shared lock
    */
-  public void releaseServerSharedLock(final ServerName serverName) {
+  public void releaseServerSharedLock(final Procedure procedure,
+      final ServerName serverName) {
     getServerQueueWithLock(serverName).releaseSharedLock();
   }
 
@@ -826,8 +846,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     boolean isAvailable();
     boolean isEmpty();
     int size();
+
     void add(Procedure proc, boolean addFront);
     boolean requireExclusiveLock(Procedure proc);
+    Procedure peek();
     Procedure poll();
 
     boolean isSuspended();
@@ -842,7 +864,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     private Queue<TKey> iterPrev = null;
     private boolean suspended = false;
 
-    private boolean exclusiveLock = false;
+    private long exclusiveLockProcIdOwner = Long.MIN_VALUE;
     private int sharedLock = 0;
 
     private final TKey key;
@@ -886,7 +908,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
 
     public synchronized boolean hasExclusiveLock() {
-      return this.exclusiveLock;
+      return this.exclusiveLockProcIdOwner != Long.MIN_VALUE;
     }
 
     public synchronized boolean trySharedLock() {
@@ -903,24 +925,21 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return sharedLock == 1;
     }
 
-    public synchronized boolean tryExclusiveLock() {
+    public synchronized boolean tryExclusiveLock(long procIdOwner) {
+      assert procIdOwner != Long.MIN_VALUE;
       if (isLocked()) return false;
-      exclusiveLock = true;
+      exclusiveLockProcIdOwner = procIdOwner;
       return true;
     }
 
     public synchronized void releaseExclusiveLock() {
-      exclusiveLock = false;
-    }
-
-    public synchronized boolean acquireDeleteLock() {
-      return tryExclusiveLock();
+      exclusiveLockProcIdOwner = Long.MIN_VALUE;
     }
 
     // This should go away when we have the new AM and its events
     // and we move xlock to the lock-event-queue.
     public synchronized boolean isAvailable() {
-      return !exclusiveLock && !isEmpty();
+      return !hasExclusiveLock() && !isEmpty();
     }
 
     // ======================================================================
@@ -968,6 +987,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     protected void addBack(final Procedure proc) {
       runnables.addLast(proc);
+    }
+
+    public Procedure peek() {
+      return runnables.peek();
     }
 
     @Override
