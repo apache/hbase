@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
@@ -76,9 +77,11 @@ public class TestMasterProcedureScheduler {
       @Override
       public void run() {
         try {
+          TestTableProcedure proc = new TestTableProcedure(1, table,
+              TableProcedureInterface.TableOperationType.CREATE);
           while (running.get() && !failure.get()) {
-            if (procQueue.tryAcquireTableExclusiveLock(table, "create")) {
-              procQueue.releaseTableExclusiveLock(table);
+            if (procQueue.tryAcquireTableExclusiveLock(proc, table)) {
+              procQueue.releaseTableExclusiveLock(proc, table);
             }
           }
         } catch (Throwable e) {
@@ -92,9 +95,11 @@ public class TestMasterProcedureScheduler {
       @Override
       public void run() {
         try {
+          TestTableProcedure proc = new TestTableProcedure(2, table,
+              TableProcedureInterface.TableOperationType.DELETE);
           while (running.get() && !failure.get()) {
-            if (procQueue.tryAcquireTableExclusiveLock(table, "delete")) {
-              procQueue.releaseTableExclusiveLock(table);
+            if (procQueue.tryAcquireTableExclusiveLock(proc, table)) {
+              procQueue.releaseTableExclusiveLock(proc, table);
             }
             procQueue.markTableAsDeleted(table);
           }
@@ -141,8 +146,8 @@ public class TestMasterProcedureScheduler {
         Procedure proc = queue.poll();
         assertTrue(proc != null);
         TableName tableName = ((TestTableProcedure)proc).getTableName();
-        queue.tryAcquireTableExclusiveLock(tableName, "test");
-        queue.releaseTableExclusiveLock(tableName);
+        queue.tryAcquireTableExclusiveLock(proc, tableName);
+        queue.releaseTableExclusiveLock(proc, tableName);
         queue.completionCleanup(proc);
         assertEquals(--count, queue.size());
         assertEquals(i * 1000 + j, proc.getProcId());
@@ -172,14 +177,15 @@ public class TestMasterProcedureScheduler {
     assertFalse(queue.markTableAsDeleted(tableName));
 
     // fetch item and take a lock
-    assertEquals(1, queue.poll().getProcId());
+    Procedure proc = queue.poll();
+    assertEquals(1, proc.getProcId());
     // take the xlock
-    assertTrue(queue.tryAcquireTableExclusiveLock(tableName, "write"));
+    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
     // table can't be deleted because we have the lock
     assertEquals(0, queue.size());
     assertFalse(queue.markTableAsDeleted(tableName));
     // release the xlock
-    queue.releaseTableExclusiveLock(tableName);
+    queue.releaseTableExclusiveLock(proc, tableName);
     // complete the table deletion
     assertTrue(queue.markTableAsDeleted(tableName));
   }
@@ -201,20 +207,22 @@ public class TestMasterProcedureScheduler {
     // table can't be deleted because one item is in the queue
     assertFalse(queue.markTableAsDeleted(tableName));
 
-    for (int i = 1; i <= nitems; ++i) {
+    Procedure[] procs = new Procedure[nitems];
+    for (int i = 0; i < nitems; ++i) {
       // fetch item and take a lock
-      assertEquals(i, queue.poll().getProcId());
+      Procedure proc = procs[i] = queue.poll();
+      assertEquals(i + 1, proc.getProcId());
       // take the rlock
-      assertTrue(queue.tryAcquireTableSharedLock(tableName, "read " + i));
+      assertTrue(queue.tryAcquireTableSharedLock(proc, tableName));
       // table can't be deleted because we have locks and/or items in the queue
       assertFalse(queue.markTableAsDeleted(tableName));
     }
 
-    for (int i = 1; i <= nitems; ++i) {
+    for (int i = 0; i < nitems; ++i) {
       // table can't be deleted because we have locks
       assertFalse(queue.markTableAsDeleted(tableName));
       // release the rlock
-      queue.releaseTableSharedLock(tableName);
+      queue.releaseTableSharedLock(procs[i], tableName);
     }
 
     // there are no items and no lock in the queeu
@@ -241,49 +249,49 @@ public class TestMasterProcedureScheduler {
           TableProcedureInterface.TableOperationType.READ));
 
     // Fetch the 1st item and take the write lock
-    long procId = queue.poll().getProcId();
-    assertEquals(1, procId);
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
+    Procedure proc = queue.poll();
+    assertEquals(1, proc.getProcId());
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
 
     // Fetch the 2nd item and verify that the lock can't be acquired
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.releaseTableExclusiveLock(tableName);
+    queue.releaseTableExclusiveLock(proc, tableName);
 
     // Fetch the 2nd item and take the read lock
-    procId = queue.poll().getProcId();
-    assertEquals(2, procId);
-    assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
+    Procedure rdProc = queue.poll();
+    assertEquals(2, rdProc.getProcId());
+    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc, tableName));
 
     // Fetch the 3rd item and verify that the lock can't be acquired
-    procId = queue.poll().getProcId();
-    assertEquals(3, procId);
-    assertEquals(false, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
+    Procedure wrProc = queue.poll();
+    assertEquals(3, wrProc.getProcId());
+    assertEquals(false, queue.tryAcquireTableExclusiveLock(wrProc, tableName));
 
     // release the rdlock of item 2 and take the wrlock for the 3d item
-    queue.releaseTableSharedLock(tableName);
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName, "write " + procId));
+    queue.releaseTableSharedLock(rdProc, tableName);
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(wrProc, tableName));
 
     // Fetch 4th item and verify that the lock can't be acquired
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.releaseTableExclusiveLock(tableName);
+    queue.releaseTableExclusiveLock(wrProc, tableName);
 
     // Fetch the 4th item and take the read lock
-    procId = queue.poll().getProcId();
-    assertEquals(4, procId);
-    assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
+    rdProc = queue.poll();
+    assertEquals(4, rdProc.getProcId());
+    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc, tableName));
 
     // Fetch the 4th item and take the read lock
-    procId = queue.poll().getProcId();
-    assertEquals(5, procId);
-    assertEquals(true, queue.tryAcquireTableSharedLock(tableName, "read " + procId));
+    Procedure rdProc2 = queue.poll();
+    assertEquals(5, rdProc2.getProcId());
+    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc2, tableName));
 
     // Release 4th and 5th read-lock
-    queue.releaseTableSharedLock(tableName);
-    queue.releaseTableSharedLock(tableName);
+    queue.releaseTableSharedLock(rdProc, tableName);
+    queue.releaseTableSharedLock(rdProc2, tableName);
 
     // remove table queue
     assertEquals(0, queue.size());
@@ -306,36 +314,36 @@ public class TestMasterProcedureScheduler {
           TableProcedureInterface.TableOperationType.EDIT));
 
     // Fetch the 1st item and take the write lock
-    long procId = queue.poll().getProcId();
-    assertEquals(1, procId);
-    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(nsName1));
+    Procedure procNs1 = queue.poll();
+    assertEquals(1, procNs1.getProcId());
+    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(procNs1, nsName1));
 
     // System tables have 2 as default priority
-    Procedure proc = queue.poll();
-    assertEquals(4, proc.getProcId());
-    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(nsName2));
-    queue.releaseNamespaceExclusiveLock(nsName2);
-    queue.yield(proc);
+    Procedure procNs2 = queue.poll();
+    assertEquals(4, procNs2.getProcId());
+    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(procNs2, nsName2));
+    queue.releaseNamespaceExclusiveLock(procNs2, nsName2);
+    queue.yield(procNs2);
 
     // table on ns1 is locked, so we get table on ns2
-    procId = queue.poll().getProcId();
-    assertEquals(3, procId);
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(tableName2, "lock " + procId));
+    procNs2 = queue.poll();
+    assertEquals(3, procNs2.getProcId());
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(procNs2, tableName2));
 
     // ns2 is not available (TODO we may avoid this one)
-    proc = queue.poll();
-    assertEquals(4, proc.getProcId());
-    assertEquals(false, queue.tryAcquireNamespaceExclusiveLock(nsName2));
-    queue.yield(proc);
+    Procedure procNs2b = queue.poll();
+    assertEquals(4, procNs2b.getProcId());
+    assertEquals(false, queue.tryAcquireNamespaceExclusiveLock(procNs2b, nsName2));
+    queue.yield(procNs2b);
 
     // release the ns1 lock
-    queue.releaseNamespaceExclusiveLock(nsName1);
+    queue.releaseNamespaceExclusiveLock(procNs1, nsName1);
 
     // we are now able to execute table of ns1
-    procId = queue.poll().getProcId();
+    long procId = queue.poll().getProcId();
     assertEquals(2, procId);
 
-    queue.releaseTableExclusiveLock(tableName2);
+    queue.releaseTableExclusiveLock(procNs2, tableName2);
 
     // we are now able to execute ns2
     procId = queue.poll().getProcId();
@@ -373,7 +381,7 @@ public class TestMasterProcedureScheduler {
         public void run() {
           while (opsCount.get() > 0) {
             try {
-              TableProcedureInterface proc = procSet.acquire();
+              Procedure proc = procSet.acquire();
               if (proc == null) {
                 queue.signalAll();
                 if (opsCount.get() > 0) {
@@ -381,14 +389,14 @@ public class TestMasterProcedureScheduler {
                 }
                 break;
               }
+
+              TableName tableId = procSet.getTableName(proc);
               synchronized (concurrentTables) {
-                assertTrue("unexpected concurrency on " + proc.getTableName(),
-                  concurrentTables.add(proc.getTableName()));
+                assertTrue("unexpected concurrency on " + tableId, concurrentTables.add(tableId));
               }
               assertTrue(opsCount.decrementAndGet() >= 0);
               try {
-                long procId = ((Procedure)proc).getProcId();
-                TableName tableId = proc.getTableName();
+                long procId = proc.getProcId();
                 int concurrent = concurrentCount.incrementAndGet();
                 assertTrue("inc-concurrent="+ concurrent +" 1 <= concurrent <= "+ NUM_TABLES,
                   concurrent >= 1 && concurrent <= NUM_TABLES);
@@ -399,7 +407,7 @@ public class TestMasterProcedureScheduler {
                 assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_TABLES);
               } finally {
                 synchronized (concurrentTables) {
-                  assertTrue(concurrentTables.remove(proc.getTableName()));
+                  assertTrue(concurrentTables.remove(tableId));
                 }
                 procSet.release(proc);
               }
@@ -431,43 +439,36 @@ public class TestMasterProcedureScheduler {
 
   public static class TestTableProcSet {
     private final MasterProcedureScheduler queue;
-    private Map<Long, TableProcedureInterface> procsMap =
-      new ConcurrentHashMap<Long, TableProcedureInterface>();
 
     public TestTableProcSet(final MasterProcedureScheduler queue) {
       this.queue = queue;
     }
 
-    public void addBack(TableProcedureInterface tableProc) {
-      Procedure proc = (Procedure)tableProc;
-      procsMap.put(proc.getProcId(), tableProc);
+    public void addBack(Procedure proc) {
       queue.addBack(proc);
     }
 
-    public void addFront(TableProcedureInterface tableProc) {
-      Procedure proc = (Procedure)tableProc;
-      procsMap.put(proc.getProcId(), tableProc);
+    public void addFront(Procedure proc) {
       queue.addFront(proc);
     }
 
-    public TableProcedureInterface acquire() {
-      TableProcedureInterface proc = null;
+    public Procedure acquire() {
+      Procedure proc = null;
       boolean avail = false;
       while (!avail) {
-        Procedure xProc = queue.poll();
-        proc = xProc != null ? procsMap.remove(xProc.getProcId()) : null;
+        proc = queue.poll();
         if (proc == null) break;
-        switch (proc.getTableOperationType()) {
+        switch (getTableOperationType(proc)) {
           case CREATE:
           case DELETE:
           case EDIT:
-            avail = queue.tryAcquireTableExclusiveLock(proc.getTableName(),
-              "op="+ proc.getTableOperationType());
+            avail = queue.tryAcquireTableExclusiveLock(proc, getTableName(proc));
             break;
           case READ:
-            avail = queue.tryAcquireTableSharedLock(proc.getTableName(),
-              "op="+ proc.getTableOperationType());
+            avail = queue.tryAcquireTableSharedLock(proc, getTableName(proc));
             break;
+          default:
+            throw new UnsupportedOperationException();
         }
         if (!avail) {
           addFront(proc);
@@ -477,17 +478,25 @@ public class TestMasterProcedureScheduler {
       return proc;
     }
 
-    public void release(TableProcedureInterface proc) {
-      switch (proc.getTableOperationType()) {
+    public void release(Procedure proc) {
+      switch (getTableOperationType(proc)) {
         case CREATE:
         case DELETE:
         case EDIT:
-          queue.releaseTableExclusiveLock(proc.getTableName());
+          queue.releaseTableExclusiveLock(proc, getTableName(proc));
           break;
         case READ:
-          queue.releaseTableSharedLock(proc.getTableName());
+          queue.releaseTableSharedLock(proc, getTableName(proc));
           break;
       }
+    }
+
+    public TableName getTableName(Procedure proc) {
+      return ((TableProcedureInterface)proc).getTableName();
+    }
+
+    public TableProcedureInterface.TableOperationType getTableOperationType(Procedure proc) {
+      return ((TableProcedureInterface)proc).getTableOperationType();
     }
   }
 
