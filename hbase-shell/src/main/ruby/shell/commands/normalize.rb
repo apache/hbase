@@ -22,7 +22,7 @@ module Shell
     class Normalize < Command
       def help
         return <<-EOF
-Trigger region normalizer for all tables which have NORMALIZATION_MODE flag set. Returns true
+Trigger region normalizer for all tables which have NORMALIZATION_ENABLED flag set. Returns true
  if normalizer ran successfully, false otherwise. Note that this command has no effect
  if region normalizer is disabled (make sure it's turned on using 'normalizer_switch' command).
 

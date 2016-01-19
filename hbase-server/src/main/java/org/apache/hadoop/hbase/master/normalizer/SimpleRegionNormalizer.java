@@ -27,8 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,12 +89,10 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
    * Action may be either a split, or a merge, or no action.
    *
    * @param table table to normalize
-   * @param types desired types of NormalizationPlan
    * @return normalization plan to execute
    */
   @Override
-  public List<NormalizationPlan> computePlanForTable(TableName table, List<PlanType> types)
-      throws HBaseIOException {
+  public List<NormalizationPlan> computePlanForTable(TableName table) throws HBaseIOException {
     if (table == null || table.isSystemTable()) {
       LOG.debug("Normalization of system table " + table + " isn't allowed");
       return null;
@@ -135,7 +132,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       long regionSize = getRegionSize(hri);
       // if the region is > 2 times larger than average, we split it, split
       // is more high priority normalization action than merge.
-      if (types.contains(PlanType.SPLIT) && regionSize > 2 * avgRegionSize) {
+      if (regionSize > 2 * avgRegionSize) {
         LOG.debug("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
             + regionSize + ", more than twice avg size, splitting");
         plans.add(new SplitNormalizationPlan(hri, null));
@@ -145,7 +142,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
         }
         HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
         long regionSize2 = getRegionSize(hri2);
-        if (types.contains(PlanType.MERGE) && regionSize + regionSize2 < avgRegionSize) {
+        if (regionSize + regionSize2 < avgRegionSize) {
           LOG.debug("Table " + table + ", small region size: " + regionSize
             + " plus its neighbor size: " + regionSize2
             + ", less than the avg size " + avgRegionSize + ", merging them");

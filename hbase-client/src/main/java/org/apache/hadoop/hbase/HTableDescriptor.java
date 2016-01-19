@@ -44,8 +44,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan;
-import org.apache.hadoop.hbase.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -203,14 +201,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em>INTERNAL</em> Used by shell/rest interface to access this metadata
-   * attribute which denotes the allowed types of action (split/merge) when the table is treated
-   * by region normalizer.
+   * attribute which denotes if the table should be treated by region normalizer.
    *
-   * @see #getDesiredNormalizationTypes()
+   * @see #isNormalizationEnabled()
    */
-  public static final String NORMALIZATION_MODE = "NORMALIZATION_MODE";
-  private static final ImmutableBytesWritable NORMALIZATION_MODE_KEY =
-      new ImmutableBytesWritable(Bytes.toBytes(NORMALIZATION_MODE));
+  public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
+  private static final ImmutableBytesWritable NORMALIZATION_ENABLED_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(NORMALIZATION_ENABLED));
 
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
@@ -239,6 +236,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final boolean DEFAULT_COMPACTION_ENABLED = true;
 
   /**
+   * Constant that denotes whether the table is normalized by default.
+   */
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
+
+  /**
    * Constant that denotes the maximum default size of the memstore after which
    * the contents are flushed to the store files
    */
@@ -262,7 +264,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         String.valueOf(DEFAULT_DEFERRED_LOG_FLUSH));
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
-    DEFAULT_VALUES.put(NORMALIZATION_MODE, "");
+    DEFAULT_VALUES.put(NORMALIZATION_ENABLED, String.valueOf(DEFAULT_NORMALIZATION_ENABLED));
     for (String s : DEFAULT_VALUES.keySet()) {
       RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
     }
@@ -655,42 +657,22 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Check if normalization flag of the table. If flag is
-   * empty then region normalizer won't attempt to normalize this table.
+   * Check if normalization enable flag of the table is true. If flag is
+   * false then no region normalizer won't attempt to normalize this table.
    *
-   * @return List of PlanType if region normalization is enabled for this table
-   *         null means region normalization is disabled
+   * @return true if region normalization is enabled for this table
    */
-  public List<PlanType> getDesiredNormalizationTypes() {
-    byte [] value = getValue(NORMALIZATION_MODE_KEY);
-    if (value == null) {
-      return null;
-    }
-    String strValue = Bytes.toString(value);
-    if (strValue.isEmpty()) {
-      return null;
-    }
-    List<NormalizationPlan.PlanType> types = new ArrayList<>();
-    if (strValue.toUpperCase().contains("M")) {
-      types.add(PlanType.MERGE);
-    }
-    if (strValue.toUpperCase().contains("S")) {
-      types.add(PlanType.SPLIT);
-    }
-    return types;
+  public boolean isNormalizationEnabled() {
+    return isSomething(NORMALIZATION_ENABLED_KEY, DEFAULT_NORMALIZATION_ENABLED);
   }
 
   /**
-   * Setting the types of action for table normalization mode flag.
+   * Setting the table normalization enable flag.
    *
-   * @param types String containing desired types of action:
-   *        "M" for region merge
-   *        "S" for region split
-   *        "MS" for region merge / split
+   * @param isEnable True if enable normalization.
    */
-  public HTableDescriptor setNormalizationMode(final String types) {
-    setValue(NORMALIZATION_MODE_KEY, types == null || types.isEmpty() ? null :
-      new ImmutableBytesWritable(Bytes.toBytes(types.toUpperCase())));
+  public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
+    setValue(NORMALIZATION_ENABLED_KEY, isEnable ? TRUE : FALSE);
     return this;
   }
 

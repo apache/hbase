@@ -23,8 +23,7 @@ module Shell
       def help
         return <<-EOF
 Enable/Disable region normalizer. Returns previous normalizer state.
-When normalizer is enabled, it handles all tables with 'NORMALIZATION_MODE' flag containing
-types of normalization actions.
+When normalizer is enabled, it handles all tables with 'NORMALIZATION_ENABLED' => true.
 Examples:
 
   hbase> normalizer_switch true
