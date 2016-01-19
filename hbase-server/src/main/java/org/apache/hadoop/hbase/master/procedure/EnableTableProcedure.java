@@ -235,12 +235,12 @@ public class EnableTableProcedure
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(tableName, "enable table");
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, tableName);
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(tableName);
+    env.getProcedureQueue().releaseTableExclusiveLock(this, tableName);
   }
 
   @Override

@@ -554,12 +554,12 @@ implements ServerProcedureInterface {
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
     if (env.waitServerCrashProcessingEnabled(this)) return false;
-    return env.getProcedureQueue().tryAcquireServerExclusiveLock(getServerName());
+    return env.getProcedureQueue().tryAcquireServerExclusiveLock(this, getServerName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseServerExclusiveLock(getServerName());
+    env.getProcedureQueue().releaseServerExclusiveLock(this, getServerName());
   }
 
   @Override

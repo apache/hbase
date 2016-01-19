@@ -207,12 +207,12 @@ public class CreateNamespaceProcedure
         return false;
       }
     }
-    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(getNamespaceName());
+    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseNamespaceExclusiveLock(getNamespaceName());
+    env.getProcedureQueue().releaseNamespaceExclusiveLock(this, getNamespaceName());
   }
 
   @Override

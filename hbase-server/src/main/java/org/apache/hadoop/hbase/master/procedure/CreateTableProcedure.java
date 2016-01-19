@@ -269,12 +269,12 @@ public class CreateTableProcedure
     if (!getTableName().isSystemTable() && env.waitInitialized(this)) {
       return false;
     }
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "create table");
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(getTableName());
+    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
   }
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {

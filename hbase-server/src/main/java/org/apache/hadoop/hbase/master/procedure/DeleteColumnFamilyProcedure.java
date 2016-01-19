@@ -202,12 +202,12 @@ public class DeleteColumnFamilyProcedure
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(tableName, "delete family");
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, tableName);
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(tableName);
+    env.getProcedureQueue().releaseTableExclusiveLock(this, tableName);
   }
 
   @Override

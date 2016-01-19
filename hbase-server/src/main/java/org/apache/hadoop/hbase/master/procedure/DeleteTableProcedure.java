@@ -201,12 +201,12 @@ public class DeleteTableProcedure
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "delete table");
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(getTableName());
+    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
   }
 
   @Override
