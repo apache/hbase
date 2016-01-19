@@ -501,12 +501,6 @@ public class ImportTsv extends Configured implements Tool {
                 LOG.error(errorMsg);
                 throw new TableNotFoundException(errorMsg);
               }
-            } else {
-              String errorMsg =
-                  format("Table '%s' does not exist and '%s' is set to no.", tableName,
-                      CREATE_TABLE_CONF_KEY);
-              LOG.error(errorMsg);
-              throw new TableNotFoundException(errorMsg);
             }
             try (Table table = connection.getTable(tableName);
                 RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
@@ -546,18 +540,22 @@ public class ImportTsv extends Configured implements Tool {
               } else {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
-
               }
               HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
                   regionLocator);
             }
+          } else {
+            if (!admin.tableExists(tableName)) {
+              String errorMsg = format("Table '%s' does not exist.", tableName);
+              LOG.error(errorMsg);
+              throw new TableNotFoundException(errorMsg);
+            }
             if (mapperClass.equals(TsvImporterTextMapper.class)) {
-              job.setMapOutputValueClass(Text.class);
-              job.setReducerClass(TextSortReducer.class);
-            } else {
-              job.setMapOutputValueClass(Put.class);
-              job.setCombinerClass(PutCombiner.class);
-              job.setReducerClass(PutSortReducer.class);
+              usage(TsvImporterTextMapper.class.toString()
+                  + " should not be used for non bulkloading case. use "
+                  + TsvImporterMapper.class.toString()
+                  + " or custom mapper whose value type is Put.");
+              System.exit(-1);
             }
             // No reducers. Just write straight to table. Call initTableReducerJob
             // to set up the TableOutputFormat.
