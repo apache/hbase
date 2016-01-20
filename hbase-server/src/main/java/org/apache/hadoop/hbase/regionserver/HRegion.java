@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -142,6 +143,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.Stor
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -150,8 +152,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputCont
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -213,6 +215,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final int maxWaitForSeqId;
   private static final String MAX_WAIT_FOR_SEQ_ID_KEY = "hbase.hregion.max.wait.for.sequenceid.ms";
   private static final int DEFAULT_MAX_WAIT_FOR_SEQ_ID = 30000;
+
+  /**
+   * Set region to take the fast increment path. Constraint is that caller can only access the
+   * Cell via Increment; intermixing Increment with other Mutations will give indeterminate
+   * results. A Get with {@link IsolationLevel#READ_UNCOMMITTED} will get the latest increment
+   * or an Increment of zero will do the same.
+   */
+  public static final String INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY =
+      "hbase.increment.fast.but.narrow.consistency";
+  private final boolean incrementFastButNarrowConsistency;
 
   /**
    * This is the global default value for durability. All tables/mutations not
@@ -745,6 +757,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           false :
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+
+    // See #INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY for what this flag is about.
+    this.incrementFastButNarrowConsistency =
+      this.conf.getBoolean(INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, false);
   }
 
   void setHTableSpecificConf() {
@@ -3667,30 +3683,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
         Cell cell = cells.get(i);
-        List<Tag> newTags = new ArrayList<Tag>();
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
-          cell.getTagsOffset(), cell.getTagsLength());
-
-        // Carry forward existing tags
-
-        while (tagIterator.hasNext()) {
-
-          // Add any filters or tag specific rewrites here
-
-          newTags.add(tagIterator.next());
-        }
-
-        // Cell TTL handling
-
-        // Check again if we need to add a cell TTL because early out logic
-        // above may change when there are more tag based features in core.
-        if (m.getTTL() != Long.MAX_VALUE) {
-          // Add a cell TTL tag
-          newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(m.getTTL())));
-        }
+        List<Tag> newTags = Tag.carryForwardTags(null, cell);
+        newTags = carryForwardTTLTag(newTags, m);
 
         // Rewrite the cell with the updated set of tags
-
         cells.set(i, new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
           cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
           cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
@@ -7214,7 +7210,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.writeRequestsCount.increment();
     RowLock rowLock = null;
     WALKey walKey = null;
-    MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
     boolean doRollBackMemstore = false;
     try {
       rowLock = getRowLock(row);
@@ -7256,67 +7251,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
                 // Process cell tags
                 // Make a union of the set of tags in the old and new KVs
-                List<Tag> newTags = carryForwardTags(oldCell, new ArrayList<Tag>());
-                newTags = carryForwardTags(cell, newTags);
+                List<Tag> tags = Tag.carryForwardTags(null, oldCell);
+                tags = Tag.carryForwardTags(tags, cell);
+                tags = carryForwardTTLTag(tags, mutate);
 
-                // Cell TTL handling
+                newCell = getNewCell(row, ts, cell, oldCell, Tag.fromList(tags));
 
-                if (mutate.getTTL() != Long.MAX_VALUE) {
-                  // Add the new TTL tag
-                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
-                }
-
-                // Rebuild tags
-                byte[] tagBytes = Tag.fromList(newTags);
-
-                // allocate an empty cell once
-                newCell = new KeyValue(row.length, cell.getFamilyLength(),
-                    cell.getQualifierLength(), ts, KeyValue.Type.Put,
-                    oldCell.getValueLength() + cell.getValueLength(),
-                    tagBytes.length);
-                // copy in row, family, and qualifier
-                System.arraycopy(cell.getRowArray(), cell.getRowOffset(),
-                  newCell.getRowArray(), newCell.getRowOffset(), cell.getRowLength());
-                System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(),
-                  newCell.getFamilyArray(), newCell.getFamilyOffset(),
-                  cell.getFamilyLength());
-                System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(),
-                  newCell.getQualifierArray(), newCell.getQualifierOffset(),
-                  cell.getQualifierLength());
-                // copy in the value
-                System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
-                  newCell.getValueArray(), newCell.getValueOffset(),
-                  oldCell.getValueLength());
-                System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
-                  newCell.getValueArray(),
-                  newCell.getValueOffset() + oldCell.getValueLength(),
-                  cell.getValueLength());
-                // Copy in tag data
-                System.arraycopy(tagBytes, 0, newCell.getTagsArray(), newCell.getTagsOffset(),
-                  tagBytes.length);
                 idx++;
               } else {
                 // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP
                 CellUtil.updateLatestStamp(cell, now);
 
                 // Cell TTL handling
-
-                if (mutate.getTTL() != Long.MAX_VALUE) {
-                  List<Tag> newTags = new ArrayList<Tag>(1);
-                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutate.getTTL())));
-                  // Add the new TTL tag
-                  newCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
-                      cell.getRowLength(),
-                    cell.getFamilyArray(), cell.getFamilyOffset(),
-                      cell.getFamilyLength(),
-                    cell.getQualifierArray(), cell.getQualifierOffset(),
-                      cell.getQualifierLength(),
-                    cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
-                    cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
-                    newTags);
-                } else {
-                  newCell = cell;
-                }
+                newCell = getNewCell(mutate, cell);
               }
 
               // Give coprocessors a chance to update the new cell
@@ -7363,10 +7310,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
             walKey = this.appendEmptyEdit(this.wal);
           }
-
-          // now start my own transaction
-          writeEntry = walKey.getWriteEntry();
-
+          // Do a get on the write entry... this will block until sequenceid is assigned... w/o it,
+          // TestAtomicOperation fails.
+          walKey.getWriteEntry();
 
           // Actually write to Memstore now
           if (!tempMemstore.isEmpty()) {
@@ -7379,7 +7325,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               } else {
                 // otherwise keep older versions around
                 for (Cell cell: entry.getValue()) {
-                  CellUtil.setSequenceId(cell, writeEntry.getWriteNumber());
+                  // This stamping of sequenceid seems redundant; it is happening down in
+                  // FSHLog when we consume edits off the ring buffer.
+                  CellUtil.setSequenceId(cell, walKey.getWriteEntry().getWriteNumber());
                   size += store.add(cell);
                   doRollBackMemstore = true;
                 }
@@ -7410,11 +7358,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock.release();
       }
       // if the wal sync was unsuccessful, remove keys from memstore
+      WriteEntry we = walKey != null? walKey.getWriteEntry(): null;
       if (doRollBackMemstore) {
         rollbackMemstore(allKVs);
-        if (writeEntry != null) mvcc.complete(writeEntry);
-      } else if (writeEntry != null) {
-        mvcc.completeAndWait(writeEntry);
+        if (we != null) mvcc.complete(we);
+      } else if (we != null) {
+        mvcc.completeAndWait(we);
       }
 
       closeRegionOperation(op);
@@ -7430,6 +7379,57 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     return mutate.isReturnResults() ? Result.create(allKVs) : null;
+  }
+
+  private static Cell getNewCell(final byte [] row, final long ts, final Cell cell,
+      final Cell oldCell, final byte [] tagBytes) {
+    // allocate an empty cell once
+    Cell newCell = new KeyValue(row.length, cell.getFamilyLength(),
+        cell.getQualifierLength(), ts, KeyValue.Type.Put,
+        oldCell.getValueLength() + cell.getValueLength(),
+        tagBytes == null? 0: tagBytes.length);
+    // copy in row, family, and qualifier
+    System.arraycopy(cell.getRowArray(), cell.getRowOffset(),
+      newCell.getRowArray(), newCell.getRowOffset(), cell.getRowLength());
+    System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(),
+      newCell.getFamilyArray(), newCell.getFamilyOffset(),
+      cell.getFamilyLength());
+    System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(),
+      newCell.getQualifierArray(), newCell.getQualifierOffset(),
+      cell.getQualifierLength());
+    // copy in the value
+    System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
+      newCell.getValueArray(), newCell.getValueOffset(),
+      oldCell.getValueLength());
+    System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
+      newCell.getValueArray(),
+      newCell.getValueOffset() + oldCell.getValueLength(),
+      cell.getValueLength());
+    // Copy in tag data
+    if (tagBytes != null) {
+      System.arraycopy(tagBytes, 0, newCell.getTagsArray(), newCell.getTagsOffset(),
+        tagBytes.length);
+    }
+    return newCell;
+  }
+
+  private static Cell getNewCell(final Mutation mutate, final Cell cell) {
+    Cell newCell = null;
+    if (mutate.getTTL() != Long.MAX_VALUE) {
+      // Add the new TTL tag
+      newCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
+          cell.getRowLength(),
+        cell.getFamilyArray(), cell.getFamilyOffset(),
+          cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(),
+          cell.getQualifierLength(),
+        cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
+        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+        carryForwardTTLTag(mutate));
+    } else {
+      newCell = cell;
+    }
+    return newCell;
   }
 
   public Result increment(Increment increment) throws IOException {
@@ -7448,175 +7448,226 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public Result increment(Increment mutation, long nonceGroup, long nonce)
   throws IOException {
     Operation op = Operation.INCREMENT;
-    byte [] row = mutation.getRow();
-    checkRow(row, op.toString());
-    checkFamilies(mutation.getFamilyCellMap().keySet());
-    boolean flush = false;
-    Durability durability = getEffectiveDurability(mutation.getDurability());
-    boolean writeToWAL = durability != Durability.SKIP_WAL;
-    WALEdit walEdits = null;
-    List<Cell> allKVs = new ArrayList<Cell>(mutation.size());
-
-    Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
-    long size = 0;
-    long txid = 0;
     checkReadOnly();
     checkResources();
-    // Lock row
+    checkRow(mutation.getRow(), op.toString());
+    checkFamilies(mutation.getFamilyCellMap().keySet());
     startRegionOperation(op);
     this.writeRequestsCount.increment();
+    try {
+      // Which Increment is it? Narrow increment-only consistency or slow (default) and general
+      // row-wide consistency.
+
+      // So, difference between fastAndNarrowConsistencyIncrement and slowButConsistentIncrement is
+      // that the former holds the row lock until the sync completes; this allows us to reason that
+      // there are no other writers afoot when we read the current increment value. The row lock
+      // means that we do not need to wait on mvcc reads to catch up to writes before we proceed
+      // with the read, the root of the slowdown seen in HBASE-14460. The fast-path also does not
+      // wait on mvcc to complete before returning to the client. We also reorder the write so that
+      // the update of memstore happens AFTER sync returns; i.e. the write pipeline does less
+      // zigzagging now.
+      //
+      // See the comment on INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY
+      // for the constraints that apply when you take this code path; it is correct but only if
+      // Increments are used mutating an Increment Cell; mixing concurrent Put+Delete and Increment
+      // will yield indeterminate results.
+      return this.incrementFastButNarrowConsistency?
+        fastAndNarrowConsistencyIncrement(mutation, nonceGroup, nonce):
+        slowButConsistentIncrement(mutation, nonceGroup, nonce);
+    } finally {
+      if (this.metricsRegion != null) this.metricsRegion.updateIncrement();
+      closeRegionOperation(op);
+    }
+  }
+
+  /**
+   * The bulk of this method is a bulk-and-paste of the slowButConsistentIncrement but with some
+   * reordering to enable the fast increment (reordering allows us to also drop some state
+   * carrying Lists and variables so the flow here is more straight-forward). We copy-and-paste
+   * because cannot break down the method further into smaller pieces. Too much state. Will redo
+   * in trunk and tip of branch-1 to undo duplication here and in append, checkAnd*, etc. For why
+   * this route is 'faster' than the alternative slowButConsistentIncrement path, see the comment
+   * in calling method.
+   * @return Resulting increment
+   * @throws IOException
+   */
+  private Result fastAndNarrowConsistencyIncrement(Increment increment, long nonceGroup,
+      long nonce)
+  throws IOException {
+    long accumulatedResultSize = 0;
+    WALKey walKey = null;
+    long txid = 0;
+    // This is all kvs accumulated during this increment processing. Includes increments where the
+    // increment is zero: i.e. client just wants to get current state of the increment w/o
+    // changing it. These latter increments by zero are NOT added to the WAL.
+    List<Cell> allKVs = new ArrayList<Cell>(increment.size());
+    Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
+    RowLock rowLock = getRowLock(increment.getRow());
+    try {
+      lock(this.updatesLock.readLock());
+      try {
+        if (this.coprocessorHost != null) {
+          Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
+          if (r != null) return r;
+        }
+        long now = EnvironmentEdgeManager.currentTime();
+        final boolean writeToWAL = effectiveDurability != Durability.SKIP_WAL;
+        WALEdit walEdits = null;
+        // Process increments a Store/family at a time.
+        // Accumulate edits for memstore to add later after we've added to WAL.
+        Map<Store, List<Cell>> forMemStore = new HashMap<Store, List<Cell>>();
+        for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
+          byte [] columnFamilyName = entry.getKey();
+          List<Cell> increments = entry.getValue();
+          Store store = this.stores.get(columnFamilyName);
+          // Do increment for this store; be sure to 'sort' the increments first so increments
+          // match order in which we get back current Cells when we get.
+          List<Cell> results = applyIncrementsToColumnFamily(increment, columnFamilyName,
+              sort(increments, store.getComparator()), now,
+              MultiVersionConcurrencyControl.NO_WRITE_NUMBER, allKVs,
+              IsolationLevel.READ_UNCOMMITTED);
+          if (!results.isEmpty()) {
+            forMemStore.put(store, results);
+            // Prepare WAL updates
+            if (writeToWAL) {
+              if (walEdits == null) walEdits = new WALEdit();
+              walEdits.getCells().addAll(results);
+            }
+          }
+        }
+
+        // Actually write to WAL now. If walEdits is non-empty, we write the WAL.
+        if (walEdits != null && !walEdits.isEmpty()) {
+          // Using default cluster id, as this can only happen in the originating cluster.
+          // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey
+          // here instead of WALKey directly to support legacy coprocessors.
+          walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, nonceGroup, nonce,
+            getMVCC());
+          txid =
+            this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdits, true);
+        } else {
+          // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
+          walKey = appendEmptyEdit(this.wal);
+        }
+        // Get WriteEntry. Will wait on assign of the sequence id. I seem to need this in
+        // hbase-1.2... post-12751.
+        walKey.getWriteEntry();
+
+        if (txid != 0) syncOrDefer(txid, effectiveDurability);
+
+        // Now write to memstore.
+        for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
+          Store store = entry.getKey();
+          List<Cell> results = entry.getValue();
+          if (store.getFamily().getMaxVersions() == 1) {
+            // Upsert if VERSIONS for this CF == 1. Use write sequence id rather than read point
+            // when doing fast increment.
+            accumulatedResultSize += store.upsert(results, getSmallestReadPoint());
+          } else {
+            // Otherwise keep older versions around
+            for (Cell cell: results) {
+              accumulatedResultSize += store.add(cell);
+            }
+          }
+        }
+
+        // Tell mvcc this write is complete.
+        this.mvcc.complete(walKey.getWriteEntry());
+        walKey = null;
+      } finally {
+        this.updatesLock.readLock().unlock();
+      }
+    } finally {
+      // walKey is not null if above processing failed... cleanup the mvcc transaction.
+      if (walKey != null) this.mvcc.complete(walKey.getWriteEntry());
+      rowLock.release();
+    }
+    // Request a cache flush.  Do it outside update lock.
+    if (isFlushSize(this.addAndGetGlobalMemstoreSize(accumulatedResultSize))) requestFlush();
+    return increment.isReturnResults() ? Result.create(allKVs) : null;
+  }
+
+  private Result slowButConsistentIncrement(Increment increment, long nonceGroup, long nonce)
+  throws IOException {
     RowLock rowLock = null;
     WALKey walKey = null;
-    MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
     boolean doRollBackMemstore = false;
-    TimeRange tr = mutation.getTimeRange();
+    long accumulatedResultSize = 0;
+    List<Cell> allKVs = new ArrayList<Cell>(increment.size());
+    List<Cell> memstoreCells = new ArrayList<Cell>();
+    Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
     try {
-      rowLock = getRowLock(row);
-      assert rowLock != null;
+      rowLock = getRowLock(increment.getRow());
+      long txid = 0;
       try {
         lock(this.updatesLock.readLock());
         try {
-          // wait for all prior MVCC transactions to finish - while we hold the row lock
-          // (so that we are guaranteed to see the latest state)
-          mvcc.await();
+          // Wait for all prior MVCC transactions to finish - while we hold the row lock
+          // (so that we are guaranteed to see the latest increment)
+          this.mvcc.await();
           if (this.coprocessorHost != null) {
-            Result r = this.coprocessorHost.preIncrementAfterRowLock(mutation);
-            if (r != null) {
-              return r;
-            }
+            Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
+            if (r != null) return r;
           }
           long now = EnvironmentEdgeManager.currentTime();
-          // Process each family
-          for (Map.Entry<byte [], List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
-            Store store = stores.get(family.getKey());
-            List<Cell> kvs = new ArrayList<Cell>(family.getValue().size());
-
-            List<Cell> results = doGet(store, row, family, tr);
-
-            // Iterate the input columns and update existing values if they were
-            // found, otherwise add new column initialized to the increment amount
-
-            // Avoid as much copying as possible. We may need to rewrite and
-            // consolidate tags. Bytes are only copied once.
-            // Would be nice if KeyValue had scatter/gather logic
-            int idx = 0;
-            // HERE WE DIVERGE FROM APPEND
-            List<Cell> edits = family.getValue();
-            for (int i = 0; i < edits.size(); i++) {
-              Cell cell = edits.get(i);
-              long amount = Bytes.toLong(CellUtil.cloneValue(cell));
-              boolean noWriteBack = (amount == 0);
-
-              List<Tag> newTags = carryForwardTags(cell, new ArrayList<Tag>());
-
-              Cell c = null;
-              long ts = now;
-              if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), cell)) {
-                c = results.get(idx);
-                ts = Math.max(now, c.getTimestamp());
-                if(c.getValueLength() == Bytes.SIZEOF_LONG) {
-                  amount += Bytes.toLong(c.getValueArray(), c.getValueOffset(), Bytes.SIZEOF_LONG);
-                } else {
-                  // throw DoNotRetryIOException instead of IllegalArgumentException
-                  throw new org.apache.hadoop.hbase.DoNotRetryIOException(
-                      "Attempted to increment field that isn't 64 bits wide");
-                }
-                // Carry tags forward from previous version
-                newTags = carryForwardTags(c, newTags);
-                if (i < (edits.size() - 1) && !CellUtil.matchingQualifier(cell, edits.get(i + 1))) {
-                  idx++;
-                }
+          final boolean writeToWAL = effectiveDurability != Durability.SKIP_WAL;
+          WALEdit walEdits = null;
+          // Process increments a Store/family at a time.
+          // Accumulate edits for memstore to add later after we've added to WAL.
+          Map<Store, List<Cell>> forMemStore = new HashMap<Store, List<Cell>>();
+          for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
+            byte [] columnFamilyName = entry.getKey();
+            List<Cell> increments = entry.getValue();
+            Store store = this.stores.get(columnFamilyName);
+            // Do increment for this store; be sure to 'sort' the increments first so increments
+            // match order in which we get back current Cells when we get.
+            List<Cell> results = applyIncrementsToColumnFamily(increment, columnFamilyName,
+                sort(increments, store.getComparator()), now,
+                MultiVersionConcurrencyControl.NO_WRITE_NUMBER, allKVs, null);
+            if (!results.isEmpty()) {
+              forMemStore.put(store, results);
+              // Prepare WAL updates
+              if (writeToWAL) {
+                if (walEdits == null) walEdits = new WALEdit();
+                walEdits.getCells().addAll(results);
               }
-
-              // Append new incremented KeyValue to list
-              byte[] q = CellUtil.cloneQualifier(cell);
-              byte[] val = Bytes.toBytes(amount);
-
-              // Add the TTL tag if the mutation carried one
-              if (mutation.getTTL() != Long.MAX_VALUE) {
-                newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(mutation.getTTL())));
-              }
-
-              Cell newKV = new KeyValue(row, 0, row.length,
-                family.getKey(), 0, family.getKey().length,
-                q, 0, q.length,
-                ts,
-                KeyValue.Type.Put,
-                val, 0, val.length,
-                newTags);
-
-              // Give coprocessors a chance to update the new cell
-              if (coprocessorHost != null) {
-                newKV = coprocessorHost.postMutationBeforeWAL(
-                    RegionObserver.MutationType.INCREMENT, mutation, c, newKV);
-              }
-              allKVs.add(newKV);
-
-              if (!noWriteBack) {
-                kvs.add(newKV);
-
-                // Prepare WAL updates
-                if (writeToWAL) {
-                  if (walEdits == null) {
-                    walEdits = new WALEdit();
-                  }
-                  walEdits.add(newKV);
-                }
-              }
-            }
-
-            //store the kvs to the temporary memstore before writing WAL
-            if (!kvs.isEmpty()) {
-              tempMemstore.put(store, kvs);
             }
           }
-
-          // Actually write to WAL now
+          // Actually write to WAL now. If walEdits is non-empty, we write the WAL.
           if (walEdits != null && !walEdits.isEmpty()) {
-            if (writeToWAL) {
-              // Using default cluster id, as this can only happen in the originating
-              // cluster. A slave cluster receives the final value (not the delta)
-              // as a Put.
-              // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-              walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-                  this.htableDescriptor.getTableName(),
-                  WALKey.NO_SEQUENCE_ID,
-                  nonceGroup,
-                  nonce,
-                  mvcc);
-              txid = this.wal.append(this.htableDescriptor, this.getRegionInfo(),
-                  walKey, walEdits, true);
-            } else {
-              recordMutationWithoutWal(mutation.getFamilyCellMap());
-            }
-          }
-          if (walKey == null) {
+            // Using default cluster id, as this can only happen in the originating cluster.
+            // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey
+            // here instead of WALKey directly to support legacy coprocessors.
+            walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, nonceGroup, nonce,
+              getMVCC());
+            txid =
+              this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdits, true);
+          } else {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
             walKey = this.appendEmptyEdit(this.wal);
           }
+          // Get WriteEntry. Will wait on assign of the sequence id.
+          walKey.getWriteEntry();
 
-          // now start my own transaction
-          writeEntry = walKey.getWriteEntry();
-
-          // Actually write to Memstore now
-          if (!tempMemstore.isEmpty()) {
-            for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
-              Store store = entry.getKey();
-              if (store.getFamily().getMaxVersions() == 1) {
-                // upsert if VERSIONS for this CF == 1
-                // Is this right? It immediately becomes visible? St.Ack 20150907
-                size += store.upsert(entry.getValue(), getSmallestReadPoint());
-              } else {
-                // otherwise keep older versions around
-                for (Cell cell : entry.getValue()) {
-                  CellUtil.setSequenceId(cell, writeEntry.getWriteNumber());
-                  size += store.add(cell);
-                  doRollBackMemstore = true;
-                }
+          // Now write to memstore, a family at a time.
+          for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
+            Store store = entry.getKey();
+            List<Cell> results = entry.getValue();
+            if (store.getFamily().getMaxVersions() == 1) {
+              // Upsert if VERSIONS for this CF == 1
+              accumulatedResultSize += store.upsert(results, getSmallestReadPoint());
+              // TODO: St.Ack 20151222 Why no rollback in this case?
+            } else {
+              // Otherwise keep older versions around
+              for (Cell cell: results) {
+                // Why we need this?
+                CellUtil.setSequenceId(cell, walKey.getWriteEntry().getWriteNumber());
+                accumulatedResultSize += store.add(cell);
+                doRollBackMemstore = true;
               }
             }
-            size = this.addAndGetGlobalMemstoreSize(size);
-            flush = isFlushSize(size);
           }
         } finally {
           this.updatesLock.readLock().unlock();
@@ -7626,7 +7677,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock = null;
       }
       // sync the transaction log outside the rowlock
-      if(txid != 0){
+      if(txid != 0) {
         syncOrDefer(txid, durability);
       }
       doRollBackMemstore = false;
@@ -7636,24 +7687,155 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
-        for(List<Cell> cells: tempMemstore.values()) {
-          rollbackMemstore(cells);
-        }
-        if (writeEntry != null) mvcc.complete(writeEntry);
-      } else if (writeEntry != null) {
-        mvcc.completeAndWait(writeEntry);
-      }
-      closeRegionOperation(Operation.INCREMENT);
-      if (this.metricsRegion != null) {
-        this.metricsRegion.updateIncrement();
+        rollbackMemstore(memstoreCells);
+        if (walKey != null) mvcc.complete(walKey.getWriteEntry());
+      } else {
+        if (walKey != null) mvcc.completeAndWait(walKey.getWriteEntry());
       }
     }
 
-    if (flush) {
-      // Request a cache flush.  Do it outside update lock.
-      requestFlush();
+    // Request a cache flush.  Do it outside update lock.
+    if (isFlushSize(this.addAndGetGlobalMemstoreSize(accumulatedResultSize))) requestFlush();
+    return increment.isReturnResults() ? Result.create(allKVs) : null;
+  }
+
+  /**
+   * @return Sorted list of <code>cells</code> using <code>comparator</code>
+   */
+  private static List<Cell> sort(List<Cell> cells, final Comparator<Cell> comparator) {
+    Collections.sort(cells, comparator);
+    return cells;
+  }
+
+  /**
+   * Apply increments to a column family.
+   * @param sortedIncrements The passed in increments to apply MUST be sorted so that they match
+   * the order that they appear in the Get results (get results will be sorted on return).
+   * Otherwise, we won't be able to find the existing values if the cells are not specified in
+   * order by the client since cells are in an array list.
+   * @islation Isolation level to use when running the 'get'. Pass null for default.
+   * @return Resulting increments after <code>sortedIncrements</code> have been applied to current
+   * values (if any -- else passed increment is the final result).
+   * @throws IOException
+   */
+  private List<Cell> applyIncrementsToColumnFamily(Increment increment, byte[] columnFamilyName,
+      List<Cell> sortedIncrements, long now, long mvccNum, List<Cell> allKVs,
+      final IsolationLevel isolation)
+  throws IOException {
+    List<Cell> results = new ArrayList<Cell>(sortedIncrements.size());
+    byte [] row = increment.getRow();
+    // Get previous values for all columns in this family
+    List<Cell> currentValues =
+        getIncrementCurrentValue(increment, columnFamilyName, sortedIncrements, isolation);
+    // Iterate the input columns and update existing values if they were found, otherwise
+    // add new column initialized to the increment amount
+    int idx = 0;
+    for (int i = 0; i < sortedIncrements.size(); i++) {
+      Cell inc = sortedIncrements.get(i);
+      long incrementAmount = getLongValue(inc);
+      // If increment amount == 0, then don't write this Increment to the WAL.
+      boolean writeBack = (incrementAmount != 0);
+      // Carry forward any tags that might have been added by a coprocessor.
+      List<Tag> tags = Tag.carryForwardTags(inc);
+
+      Cell currentValue = null;
+      long ts = now;
+      if (idx < currentValues.size() && CellUtil.matchingQualifier(currentValues.get(idx), inc)) {
+        currentValue = currentValues.get(idx);
+        ts = Math.max(now, currentValue.getTimestamp());
+        incrementAmount += getLongValue(currentValue);
+        // Carry forward all tags
+        tags = Tag.carryForwardTags(tags, currentValue);
+        if (i < (sortedIncrements.size() - 1) &&
+            !CellUtil.matchingQualifier(inc, sortedIncrements.get(i + 1))) idx++;
+      }
+
+      // Append new incremented KeyValue to list
+      byte [] qualifier = CellUtil.cloneQualifier(inc);
+      byte [] incrementAmountInBytes = Bytes.toBytes(incrementAmount);
+      tags = carryForwardTTLTag(tags, increment);
+
+      Cell newValue = new KeyValue(row, 0, row.length,
+        columnFamilyName, 0, columnFamilyName.length,
+        qualifier, 0, qualifier.length,
+        ts, KeyValue.Type.Put,
+        incrementAmountInBytes, 0, incrementAmountInBytes.length,
+        tags);
+
+      // Don't set an mvcc if none specified. The mvcc may be assigned later in case where we
+      // write the memstore AFTER we sync our edit to the log.
+      if (mvccNum != MultiVersionConcurrencyControl.NO_WRITE_NUMBER) {
+        CellUtil.setSequenceId(newValue, mvccNum);
+      }
+
+      // Give coprocessors a chance to update the new cell
+      if (coprocessorHost != null) {
+        newValue = coprocessorHost.postMutationBeforeWAL(
+            RegionObserver.MutationType.INCREMENT, increment, currentValue, newValue);
+      }
+      allKVs.add(newValue);
+      if (writeBack) {
+        results.add(newValue);
+      }
     }
-    return mutation.isReturnResults() ? Result.create(allKVs) : null;
+    return results;
+  }
+
+  /**
+   * @return Get the long out of the passed in Cell
+   * @throws DoNotRetryIOException
+   */
+  private static long getLongValue(final Cell cell) throws DoNotRetryIOException {
+    int len = cell.getValueLength();
+    if (len != Bytes.SIZEOF_LONG) {
+      // throw DoNotRetryIOException instead of IllegalArgumentException
+      throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
+    }
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), len);
+  }
+
+  /**
+   * Do a specific Get on passed <code>columnFamily</code> and column qualifiers
+   * from <code>incrementCoordinates</code> only.
+   * @param increment
+   * @param columnFamily
+   * @param incrementCoordinates
+   * @return Return the Cells to Increment
+   * @throws IOException
+   */
+  private List<Cell> getIncrementCurrentValue(final Increment increment, byte [] columnFamily,
+      final List<Cell> increments, final IsolationLevel isolation)
+  throws IOException {
+    Get get = new Get(increment.getRow());
+    if (isolation != null) get.setIsolationLevel(isolation);
+    for (Cell cell: increments) {
+      get.addColumn(columnFamily, CellUtil.cloneQualifier(cell));
+    }
+    TimeRange tr = increment.getTimeRange();
+    if (tr != null) {
+      get.setTimeRange(tr.getMin(), tr.getMax());
+    }
+    return get(get, false);
+  }
+
+  private static List<Tag> carryForwardTTLTag(final Mutation mutation) {
+    return carryForwardTTLTag(null, mutation);
+  }
+
+  /**
+   * @return Carry forward the TTL tag if the increment is carrying one
+   */
+  private static List<Tag> carryForwardTTLTag(final List<Tag> tagsOrNull,
+      final Mutation mutation) {
+    long ttl = mutation.getTTL();
+    if (ttl == Long.MAX_VALUE) return tagsOrNull;
+    List<Tag> tags = tagsOrNull;
+    // If we are making the array in here, given we are the last thing checked, we'll be only thing
+    // in the array so set its size to '1' (I saw this being done in earlier version of
+    // tag-handling).
+    if (tags == null) tags = new ArrayList<Tag>(1);
+    tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
+    return tags;
   }
 
   //

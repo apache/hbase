@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -998,11 +997,6 @@ public final class HConstants {
 
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
-  /**
-   * The byte array represents for NO_NEXT_INDEXED_KEY;
-   * The actual value is irrelevant because this is always compared by reference.
-   */
-  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
   public static final String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =

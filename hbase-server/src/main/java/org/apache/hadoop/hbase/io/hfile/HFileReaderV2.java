@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
@@ -597,7 +598,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         } else {
           // The comparison with no_next_index_key has to be checked
           if (this.nextIndexedKey != null &&
-              (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || reader
+              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || reader
               .getComparator()
                   .compareOnlyKeyPortion(key, nextIndexedKey) < 0)) {
             // The reader shall continue to scan the current data block instead

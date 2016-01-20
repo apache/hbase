@@ -94,18 +94,18 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     }
 
     @Override
-    public Writer createWriter(FileSystem fs, Path path, 
+    public Writer createWriter(FileSystem fs, Path path,
         FSDataOutputStream ostream,
         KVComparator comparator, HFileContext context) throws IOException {
       context.setIncludesTags(false);// HFile V2 does not deal with tags at all!
-      return new HFileWriterV2(conf, cacheConf, fs, path, ostream, 
+      return new HFileWriterV2(conf, cacheConf, fs, path, ostream,
           comparator, context);
       }
     }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf,
-      FileSystem fs, Path path, FSDataOutputStream ostream, 
+      FileSystem fs, Path path, FSDataOutputStream ostream,
       final KVComparator comparator, final HFileContext context) throws IOException {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path, null) : ostream,

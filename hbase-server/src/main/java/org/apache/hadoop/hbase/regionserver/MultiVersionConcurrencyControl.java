@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
   private static final Log LOG = LogFactory.getLog(MultiVersionConcurrencyControl.class);
+  static final long NO_WRITE_NUMBER = 0;
 
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
@@ -155,7 +156,7 @@ public class MultiVersionConcurrencyControl {
    * changes completely) so we can clean up the outstanding transaction.
    *
    * How much is the read point advanced?
-   * 
+   *
    * Let S be the set of all write numbers that are completed. Set the read point to the highest
    * numbered write of S.
    *

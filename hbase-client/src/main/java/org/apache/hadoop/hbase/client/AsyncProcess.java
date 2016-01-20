@@ -1581,23 +1581,27 @@ class AsyncProcess {
     }
 
     private String buildDetailedErrorMsg(String string, int index) {
-      String error = string + "; called for " + index +
-          ", actionsInProgress " + actionsInProgress.get() + "; replica gets: ";
+      StringBuilder error = new StringBuilder(string);
+      error.append("; called for ").
+        append(index).
+        append(", actionsInProgress ").
+        append(actionsInProgress.get()).
+        append("; replica gets: ");
       if (replicaGetIndices != null) {
         for (int i = 0; i < replicaGetIndices.length; ++i) {
-          error += replicaGetIndices[i] + ", ";
+          error.append(replicaGetIndices[i]).append(", ");
         }
       } else {
-        error += (hasAnyReplicaGets ? "all" : "none");
+        error.append(hasAnyReplicaGets ? "all" : "none");
       }
-      error += "; results ";
+      error.append("; results ");
       if (results != null) {
         for (int i = 0; i < results.length; ++i) {
           Object o = results[i];
-          error += ((o == null) ? "null" : o.toString()) + ", ";
+          error.append(((o == null) ? "null" : o.toString())).append(", ");
         }
       }
-      return error;
+      return error.toString();
     }
 
     @Override

@@ -148,6 +148,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    *         the specified range
    * @throws IOException
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="I thought I'd fixed it but FB still complains; see below")
   private List<HRegionLocation> locateRegionsInRange(byte[] startKey,
       byte[] endKey, boolean reload) throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
@@ -166,9 +168,10 @@ public class ReversedScannerCallable extends ScannerCallable {
       if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
         regionList.add(regionLocation);
       } else {
+        // FindBugs: NP_NULL_ON_SOME_PATH Complaining about regionLocation
         throw new DoNotRetryIOException("Does hbase:meta exist hole? Locating row "
             + Bytes.toStringBinary(currentKey) + " returns incorrect region "
-            + regionLocation.getRegionInfo());
+            + (regionLocation != null? regionLocation.getRegionInfo(): null));
       }
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)

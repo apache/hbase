@@ -281,7 +281,6 @@ public class FSHLog implements WAL {
 
   private final int slowSyncNs;
 
-  private final static Object [] NO_ARGS = new Object []{};
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
   // triggered one by one in a short time). Using it as a workaround to slow
@@ -508,16 +507,16 @@ public class FSHLog implements WAL {
         FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
     this.logrollsize =
       (long)(blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
-    
+
     float memstoreRatio = conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY,
-      conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY, 
+      conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY,
         HeapMemorySizeUtil.DEFAULT_MEMSTORE_SIZE));
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if(maxLogsDefined){
       LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
     }
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 
-        Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));    
+    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
+        Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));
     this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
         FSUtils.getDefaultReplication(fs, this.fullPathLogDir));
     this.lowReplicationRollLimit =
@@ -572,7 +571,7 @@ public class FSHLog implements WAL {
     int maxLogs = Math.round(mu.getMax() * memstoreSizeRatio * 2 / logRollSize);
     return maxLogs;
   }
-  
+
   /**
    * Get the backing files associated with this WAL.
    * @return may be null if there are no files.
@@ -1085,8 +1084,6 @@ public class FSHLog implements WAL {
     long sequence = this.disruptor.getRingBuffer().next();
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
-      // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
-      // edit with its edit/sequence id.
       // TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
       entry = new FSWALEntry(sequence, key, edits, htd, hri, inMemstore);
       truck.loadPayload(entry, scope.detach());

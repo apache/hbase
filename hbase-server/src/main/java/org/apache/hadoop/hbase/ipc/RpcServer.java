@@ -1959,11 +1959,23 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       data = null;
       if (!channel.isOpen())
         return;
-      try {socket.shutdownOutput();} catch(Exception ignored) {} // FindBugs DE_MIGHT_IGNORE
-      if (channel.isOpen()) {
-        try {channel.close();} catch(Exception ignored) {}
+      try {socket.shutdownOutput();} catch(Exception ignored) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(ignored);
+        }
       }
-      try {socket.close();} catch(Exception ignored) {}
+      if (channel.isOpen()) {
+        try {channel.close();} catch(Exception ignored) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(ignored);
+          }
+        }
+      }
+      try {socket.close();} catch(Exception ignored) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(ignored);
+        }
+      }
     }
 
     private UserGroupInformation createUser(ConnectionHeader head) {

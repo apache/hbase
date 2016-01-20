@@ -237,7 +237,7 @@ public final class Compression {
       }
   };
 
-    private final Configuration conf;
+    private final transient Configuration conf; // FindBugs: SE_BAD_FIELD so just made it transient
     private final String compressName;
     /** data input buffer size to absorb small reads from application. */
     private static final int DATA_IBUF_SIZE = 1 * 1024;
