@@ -407,6 +407,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
       if (kvs.shouldUseScanner(scan, store, expiredTimestampCutoff)) {
         scanners.add(kvs);
+      } else {
+        kvs.close();
       }
     }
     return scanners;
@@ -549,6 +551,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         if (storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
           // do what SEEK_NEXT_ROW does.
           if (!matcher.moreRowsMayExistAfter(cell)) {
+            close(false);// Do all cleanup except heap.close()
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
           matcher.curCell = null;
@@ -577,6 +580,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
           if (!matcher.moreRowsMayExistAfter(cell)) {
+            close(false);// Do all cleanup except heap.close()
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
           matcher.curCell = null;
@@ -607,6 +611,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         // This is just a relatively simple end of scan fix, to short-cut end
         // us if there is an endKey in the scan.
         if (!matcher.moreRowsMayExistAfter(cell)) {
+          close(false);// Do all cleanup except heap.close()
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         }
         matcher.curCell = null;
