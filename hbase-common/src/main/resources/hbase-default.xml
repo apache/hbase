@@ -580,12 +580,6 @@ possible configurations would overwhelm and obscure the important.
     <description>Period at which the region balancer runs in the Master.</description>
   </property>
   <property>
-    <name>hbase.normalizer.enabled</name>
-    <value>false</value>
-    <description>If set to true, Master will try to keep region size
-      within each table approximately the same.</description>
-  </property>
-  <property>
     <name>hbase.normalizer.period</name>
     <value>1800000</value>
     <description>Period at which the region normalizer runs in the Master.</description>

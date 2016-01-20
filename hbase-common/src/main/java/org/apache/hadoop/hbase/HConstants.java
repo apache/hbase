@@ -134,10 +134,6 @@ public final class HConstants {
   public static final String HBASE_MASTER_NORMALIZER_CLASS =
     "hbase.master.normalizer.class";
 
-  /** Config for enabling/disabling pluggable region normalizer */
-  public static final String HBASE_NORMALIZER_ENABLED =
-    "hbase.normalizer.enabled";
-
   /** Cluster is standalone or pseudo-distributed */
   public static final boolean CLUSTER_IS_LOCAL = false;
 
