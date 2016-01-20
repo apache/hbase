@@ -41,9 +41,7 @@
     http://checkstyle.sourceforge.net/config_blocks.html -->
     <module name="EmptyBlock"/>
     <module name="LeftCurly"/>
-    <module name="NeedBraces">
-      <property name="allowSingleLineStatement" value="true"/>
-    </module>
+    <module name="NeedBraces"/>
 
     <!-- Class Design Checks
     http://checkstyle.sourceforge.net/config_design.html -->
