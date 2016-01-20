@@ -61,7 +61,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_NORMALIZER_ENABLED, true);
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
 
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(1);
