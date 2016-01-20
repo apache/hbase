@@ -270,7 +270,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       newBlock();
     }
 
-    synchronized (this.getClass()) {
+    synchronized (HFileWriterV2.class) {
       if (WARN_CELL_WITH_TAGS && getFileContext().isIncludesTags()) {
         LOG.warn("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
           + " is required to support cell attributes/tags. Consider setting "

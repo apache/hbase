@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -32,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -237,7 +235,8 @@ public abstract class TestTableInputFormatScanBase {
       ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1); // one to get final "first" and "last" key
-    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
+    FileOutputFormat.setOutputPath(job,
+        new Path(TEST_UTIL.getDataTestDir(), job.getJobName()));
     LOG.info("Started " + job.getJobName());
     assertTrue(job.waitForCompletion(true));
     LOG.info("After map/reduce completion - job " + jobName);

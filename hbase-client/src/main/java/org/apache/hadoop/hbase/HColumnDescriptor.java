@@ -881,7 +881,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public int getTimeToLive() {
     String value = getValue(TTL);
-    return (value != null)? Integer.valueOf(value).intValue(): DEFAULT_TTL;
+    return (value != null)? Integer.parseInt(value): DEFAULT_TTL;
   }
 
   /**
@@ -897,7 +897,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public int getMinVersions() {
     String value = getValue(MIN_VERSIONS);
-    return (value != null)? Integer.valueOf(value).intValue(): 0;
+    return (value != null)? Integer.parseInt(value): 0;
   }
 
   /**
@@ -916,7 +916,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
     if (value != null)
-      return Boolean.valueOf(value).booleanValue();
+      return Boolean.parseBoolean(value);
     return DEFAULT_BLOCKCACHE;
   }
 
@@ -954,7 +954,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public int getScope() {
     byte[] value = getValue(REPLICATION_SCOPE_BYTES);
     if (value != null) {
-      return Integer.valueOf(Bytes.toString(value));
+      return Integer.parseInt(Bytes.toString(value));
     }
     return DEFAULT_REPLICATION_SCOPE;
   }
@@ -1024,7 +1024,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   private boolean setAndGetBoolean(final String key, final boolean defaultSetting) {
     String value = getValue(key);
-    if (value != null) return Boolean.valueOf(value).booleanValue();
+    if (value != null) return Boolean.parseBoolean(value);
     return defaultSetting;
   }
 
@@ -1343,7 +1343,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       }
       String value = getValue(HConstants.VERSIONS);
       this.cachedMaxVersions = (value != null)?
-          Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
+          Integer.parseInt(value): DEFAULT_VERSIONS;
       if (version > 10) {
         configuration.clear();
         int numConfigs = in.readInt();
@@ -1542,7 +1542,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public short getDFSReplication() {
     String rf = getValue(DFS_REPLICATION);
-    return rf == null ? DEFAULT_DFS_REPLICATION : Short.valueOf(rf);
+    return rf == null ? DEFAULT_DFS_REPLICATION : Short.parseShort(rf);
   }
 
   /**

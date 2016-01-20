@@ -55,6 +55,8 @@ import org.apache.zookeeper.KeeperException;
  * </p>
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="Complaint is about lastKeyUpdate... afraid to change it.")
 public class AuthenticationTokenSecretManager
     extends SecretManager<AuthenticationTokenIdentifier> {
 
@@ -63,7 +65,7 @@ public class AuthenticationTokenSecretManager
   private static final Log LOG = LogFactory.getLog(
       AuthenticationTokenSecretManager.class);
 
-  private long lastKeyUpdate;
+  private long lastKeyUpdate; // FindBugs: IS2_INCONSISTENT_SYNC FIX!!
   private long keyUpdateInterval;
   private long tokenMaxLifetime;
   private ZKSecretWatcher zkWatcher;

@@ -658,7 +658,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case SEEK_NEXT_COL:
     {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
@@ -668,7 +668,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case SEEK_NEXT_ROW:
     {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
