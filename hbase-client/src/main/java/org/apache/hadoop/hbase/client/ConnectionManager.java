@@ -693,7 +693,7 @@ class ConnectionManager {
         this.registry = setupRegistry();
         retrieveClusterId();
 
-        this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
+        this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
 
         // Do we publish the status?
         if (shouldListen) {
