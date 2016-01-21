@@ -795,7 +795,7 @@ public class HBaseFsck extends Configured implements Closeable {
         }
         currentRegionBoundariesInformation.metaFirstKey = regionInfo.getStartKey();
         currentRegionBoundariesInformation.metaLastKey = regionInfo.getEndKey();
-        currentRegionBoundariesInformation.storesFirstKey = storeFirstKey;
+        currentRegionBoundariesInformation.storesFirstKey = keyOnly(storeFirstKey);
         currentRegionBoundariesInformation.storesLastKey = keyOnly(storeLastKey);
         if (currentRegionBoundariesInformation.metaFirstKey.length == 0)
           currentRegionBoundariesInformation.metaFirstKey = null;

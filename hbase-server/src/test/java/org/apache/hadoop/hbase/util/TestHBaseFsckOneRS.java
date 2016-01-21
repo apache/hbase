@@ -580,6 +580,30 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     }
   }
 
+  /**
+   * test region boundaries and make sure store file had been created.
+   * @throws Exception
+   */
+  @Test(timeout = 180000)
+  public void testRegionBoundariesCheckWithFlushTable() throws Exception {
+    HBaseFsck hbck = doFsck(conf, false);
+    assertNoErrors(hbck); // no errors
+    TableName table = TableName.valueOf("testRegionBoundariesCheckWithFlushTable");
+    try {
+      setupTable(table);
+      admin.flush(table);
+      hbck.connect(); // need connection to have access to META
+      hbck.checkRegionBoundaries();
+      assertNoErrors(hbck); // no errors
+    } catch (IllegalArgumentException e) {
+      if (e.getMessage().endsWith("not a valid DFS filename.")) {
+        fail("Table directory path is not valid." + e.getMessage());
+      }
+    } finally {
+      hbck.close();
+    }
+  }
+  
   @Test (timeout=180000)
   public void testHbckAfterRegionMerge() throws Exception {
     TableName table = TableName.valueOf("testMergeRegionFilesInHdfs");
