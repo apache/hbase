@@ -86,7 +86,7 @@ public abstract class RpcExecutor {
   public abstract int getQueueLength();
 
   /** Add the request to the executor queue */
-  public abstract void dispatch(final CallRunner callTask) throws InterruptedException;
+  public abstract boolean dispatch(final CallRunner callTask) throws InterruptedException;
 
   /** Returns the list of request queues */
   protected abstract List<BlockingQueue<CallRunner>> getQueues();

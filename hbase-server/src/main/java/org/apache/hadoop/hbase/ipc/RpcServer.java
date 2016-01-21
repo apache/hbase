@@ -67,6 +67,7 @@ import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -1159,13 +1160,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
   }
 
-  @SuppressWarnings("serial")
-  public static class CallQueueTooBigException extends IOException {
-    CallQueueTooBigException() {
-      super();
-    }
-  }
-
   /** Reads calls from a connection and queues them for handling. */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="VO_VOLATILE_INCREMENT",
@@ -1864,7 +1858,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           : null;
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
               totalRequestSize, traceInfo, this.addr);
-      scheduler.dispatch(new CallRunner(RpcServer.this, call));
+
+      if (!scheduler.dispatch(new CallRunner(RpcServer.this, call))) {
+        callQueueSize.add(-1 * call.getSize());
+
+        ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
+        metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
+        InetSocketAddress address = getListenerAddress();
+        setupResponse(responseBuffer, call, CALL_QUEUE_TOO_BIG_EXCEPTION,
+            "Call queue is full on " + (address != null ? address : "(channel closed)") +
+                ", too many items queued ?");
+        responder.doRespond(call);
+      }
     }
 
     private boolean authorizeConnection() throws IOException {

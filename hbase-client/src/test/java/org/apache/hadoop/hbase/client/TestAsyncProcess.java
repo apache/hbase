@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
@@ -215,28 +216,35 @@ public class TestAsyncProcess {
 
   static class CallerWithFailure extends RpcRetryingCaller<MultiResponse>{
 
-    public CallerWithFailure() {
+    private final IOException e;
+
+    public CallerWithFailure(IOException e) {
       super(100, 100, 9);
+      this.e = e;
     }
 
     @Override
     public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable, int callTimeout)
         throws IOException, RuntimeException {
-      throw new IOException("test");
+      throw e;
     }
   }
 
+
   static class AsyncProcessWithFailure extends MyAsyncProcess {
 
-    public AsyncProcessWithFailure(ClusterConnection hc, Configuration conf) {
+    private final IOException ioe;
+
+    public AsyncProcessWithFailure(ClusterConnection hc, Configuration conf, IOException ioe) {
       super(hc, conf, true);
+      this.ioe = ioe;
       serverTrackerTimeout = 1;
     }
 
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
       callsCt.incrementAndGet();
-      return new CallerWithFailure();
+      return new CallerWithFailure(ioe);
     }
   }
 
@@ -802,7 +810,7 @@ public class TestAsyncProcess {
   public void testGlobalErrors() throws IOException {
     ClusterConnection conn = new MyConnectionImpl(conf);
     BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(DUMMY_TABLE);
-    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf, new IOException("test"));
     mutator.ap = ap;
 
     Assert.assertNotNull(mutator.ap.createServerErrorTracker());
@@ -819,6 +827,27 @@ public class TestAsyncProcess {
     Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
   }
 
+
+  @Test
+  public void testCallQueueTooLarge() throws IOException {
+    ClusterConnection conn = new MyConnectionImpl(conf);
+    BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(DUMMY_TABLE);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf, new CallQueueTooBigException());
+    mutator.ap = ap;
+
+    Assert.assertNotNull(mutator.ap.createServerErrorTracker());
+
+    Put p = createPut(1, true);
+    mutator.mutate(p);
+
+    try {
+      mutator.flush();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+    }
+    // Checking that the ErrorsServers came into play and didn't make us stop immediately
+    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+  }
   /**
    * This test simulates multiple regions on 2 servers. We should have 2 multi requests and
    *  2 threads: 1 per server, this whatever the number of regions.

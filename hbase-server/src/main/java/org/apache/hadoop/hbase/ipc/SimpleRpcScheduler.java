@@ -190,15 +190,15 @@ public class SimpleRpcScheduler extends RpcScheduler {
   }
 
   @Override
-  public void dispatch(CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
     int level = priority.getPriority(call.getHeader(), call.param, call.getRequestUser());
     if (priorityExecutor != null && level > highPriorityLevel) {
-      priorityExecutor.dispatch(callTask);
+      return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
-      replicationExecutor.dispatch(callTask);
+      return replicationExecutor.dispatch(callTask);
     } else {
-      callExecutor.dispatch(callTask);
+      return callExecutor.dispatch(callTask);
     }
   }
 
