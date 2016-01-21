@@ -763,7 +763,7 @@ public class TableMapReduceUtil {
    * Add HBase and its dependencies (only) to the job configuration.
    * <p>
    * This is intended as a low-level API, facilitating code reuse between this
-   * class and its mapred counterpart. It also of use to extenral tools that
+   * class and its mapred counterpart. It also of use to external tools that
    * need to build a MapReduce job that interacts with HBase but want
    * fine-grained control over the jars shipped to the cluster.
    * </p>
@@ -772,6 +772,21 @@ public class TableMapReduceUtil {
    * @see <a href="https://issues.apache.org/jira/browse/PIG-3285">PIG-3285</a>
    */
   public static void addHBaseDependencyJars(Configuration conf) throws IOException {
+
+    // PrefixTreeCodec is part of the hbase-prefix-tree module. If not included in MR jobs jar
+    // dependencies, MR jobs that write encoded hfiles will fail.
+    // We used reflection here so to prevent a circular module dependency.
+    // TODO - if we extract the MR into a module, make it depend on hbase-prefix-tree.
+    Class prefixTreeCodecClass = null;
+    try {
+      prefixTreeCodecClass =
+          Class.forName("org.apache.hadoop.hbase.code.prefixtree.PrefixTreeCodec");
+    } catch (ClassNotFoundException e) {
+      // this will show up in unit tests but should not show in real deployments
+      LOG.warn("The hbase-prefix-tree module jar containing PrefixTreeCodec is not present." +
+          "  Continuing without it.");
+    }
+
     addDependencyJars(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
@@ -779,6 +794,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
       org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
+      prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
       // pull necessary dependencies
       org.apache.zookeeper.ZooKeeper.class,
       io.netty.channel.Channel.class,
