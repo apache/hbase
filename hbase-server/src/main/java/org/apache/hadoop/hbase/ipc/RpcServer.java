@@ -1404,7 +1404,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
               }
               saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
                   .getMechanismName(), null, SaslUtil.SASL_DEFAULT_REALM,
-                  HBaseSaslRpcServer.getSaslProps(), new SaslDigestCallbackHandler(
+                  SaslUtil.SASL_PROPS, new SaslDigestCallbackHandler(
                       secretManager, this));
               break;
             default:
@@ -1424,7 +1424,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
                 public Object run() throws SaslException {
                   saslServer = Sasl.createSaslServer(AuthMethod.KERBEROS
                       .getMechanismName(), names[0], names[1],
-                      HBaseSaslRpcServer.getSaslProps(), new SaslGssCallbackHandler());
+                      SaslUtil.SASL_PROPS, new SaslGssCallbackHandler());
                   return null;
                 }
               });

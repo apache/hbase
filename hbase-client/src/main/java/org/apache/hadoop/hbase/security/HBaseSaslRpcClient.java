@@ -46,7 +46,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -60,7 +59,6 @@ public class HBaseSaslRpcClient {
 
   private final SaslClient saslClient;
   private final boolean fallbackAllowed;
-  protected final Map<String, String> saslProps;
   /**
    * Create a HBaseSaslRpcClient for an authentication method
    *
@@ -98,7 +96,7 @@ public class HBaseSaslRpcClient {
       Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
       String rpcProtection) throws IOException {
     this.fallbackAllowed = fallbackAllowed;
-    saslProps = SaslUtil.initSaslProperties(rpcProtection);
+    SaslUtil.initSaslProperties(rpcProtection);
     switch (method) {
     case DIGEST:
       if (LOG.isDebugEnabled())
@@ -140,13 +138,13 @@ public class HBaseSaslRpcClient {
       String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
       throws IOException {
     return Sasl.createSaslClient(mechanismNames, null, null, saslDefaultRealm,
-        saslProps, saslClientCallbackHandler);
+        SaslUtil.SASL_PROPS, saslClientCallbackHandler);
   }
 
   protected SaslClient createKerberosSaslClient(String[] mechanismNames,
       String userFirstPart, String userSecondPart) throws IOException {
     return Sasl.createSaslClient(mechanismNames, null, userFirstPart,
-        userSecondPart, saslProps, null);
+        userSecondPart, SaslUtil.SASL_PROPS, null);
   }
 
   private static void readStatus(DataInputStream inStream) throws IOException {

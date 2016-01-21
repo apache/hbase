@@ -41,7 +41,6 @@ import javax.security.sasl.SaslException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
-import java.util.Map;
 import java.util.Random;
 
 /**
@@ -59,7 +58,6 @@ public class SaslClientHandler extends ChannelDuplexHandler {
    * Used for client or server's token to send or receive from each other.
    */
   private final SaslClient saslClient;
-  private final Map<String, String> saslProps;
   private final SaslExceptionHandler exceptionHandler;
   private final SaslSuccessfulConnectHandler successfulConnectHandler;
   private byte[] saslToken;
@@ -69,6 +67,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
   private Random random;
 
   /**
+   * Constructor
+   *
    * @param ticket                   the ugi
    * @param method                   auth method
    * @param token                    for Sasl
@@ -76,6 +76,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
    * @param fallbackAllowed          True if server may also fall back to less secure connection
    * @param rpcProtection            Quality of protection. Can be 'authentication', 'integrity' or
    *                                 'privacy'.
+   * @param exceptionHandler         handler for exceptions
+   * @param successfulConnectHandler handler for succesful connects
    * @throws java.io.IOException if handler could not be created
    */
   public SaslClientHandler(UserGroupInformation ticket, AuthMethod method,
@@ -88,7 +90,7 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     this.exceptionHandler = exceptionHandler;
     this.successfulConnectHandler = successfulConnectHandler;
 
-    saslProps = SaslUtil.initSaslProperties(rpcProtection);
+    SaslUtil.initSaslProperties(rpcProtection);
     switch (method) {
     case DIGEST:
       if (LOG.isDebugEnabled())
@@ -123,23 +125,32 @@ public class SaslClientHandler extends ChannelDuplexHandler {
 
   /**
    * Create a Digest Sasl client
+   *
+   * @param mechanismNames            names of mechanisms
+   * @param saslDefaultRealm          default realm for sasl
+   * @param saslClientCallbackHandler handler for the client
+   * @return new SaslClient
+   * @throws java.io.IOException if creation went wrong
    */
   protected SaslClient createDigestSaslClient(String[] mechanismNames, String saslDefaultRealm,
       CallbackHandler saslClientCallbackHandler) throws IOException {
-    return Sasl.createSaslClient(mechanismNames, null, null, saslDefaultRealm, saslProps,
+    return Sasl.createSaslClient(mechanismNames, null, null, saslDefaultRealm, SaslUtil.SASL_PROPS,
         saslClientCallbackHandler);
   }
 
   /**
    * Create Kerberos client
    *
+   * @param mechanismNames names of mechanisms
    * @param userFirstPart  first part of username
    * @param userSecondPart second part of username
+   * @return new SaslClient
+   * @throws java.io.IOException if fails
    */
   protected SaslClient createKerberosSaslClient(String[] mechanismNames, String userFirstPart,
       String userSecondPart) throws IOException {
     return Sasl
-        .createSaslClient(mechanismNames, null, userFirstPart, userSecondPart, saslProps,
+        .createSaslClient(mechanismNames, null, userFirstPart, userSecondPart, SaslUtil.SASL_PROPS,
             null);
   }
 
@@ -258,6 +269,11 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     }
   }
 
+  /**
+   * Write SASL token
+   * @param ctx to write to
+   * @param saslToken to write
+   */
   private void writeSaslToken(final ChannelHandlerContext ctx, byte[] saslToken) {
     ByteBuf b = ctx.alloc().buffer(4 + saslToken.length);
     b.writeInt(saslToken.length);
@@ -274,6 +290,9 @@ public class SaslClientHandler extends ChannelDuplexHandler {
 
   /**
    * Get the read status
+   *
+   * @param inStream to read
+   * @throws org.apache.hadoop.ipc.RemoteException if status was not success
    */
   private static void readStatus(ByteBuf inStream) throws RemoteException {
     int status = inStream.readInt(); // read status
@@ -341,6 +360,7 @@ public class SaslClientHandler extends ChannelDuplexHandler {
      *
      * @param retryCount current retry count
      * @param random     to create new backoff with
+     * @param cause      of fail
      */
     public void handle(int retryCount, Random random, Throwable cause);
   }

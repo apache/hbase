@@ -35,30 +35,23 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class SaslUtil {
   private static final Log log = LogFactory.getLog(SaslUtil.class);
   public static final String SASL_DEFAULT_REALM = "default";
+  public static final Map<String, String> SASL_PROPS =
+      new TreeMap<String, String>();
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
-  public enum QualityOfProtection {
+  public static enum QualityOfProtection {
     AUTHENTICATION("auth"),
     INTEGRITY("auth-int"),
     PRIVACY("auth-conf");
 
-    private final String saslQop;
+    public final String saslQop;
 
-    QualityOfProtection(String saslQop) {
+    private QualityOfProtection(String saslQop) {
       this.saslQop = saslQop;
     }
 
     public String getSaslQop() {
       return saslQop;
-    }
-
-    public boolean matches(String stringQop) {
-      if (saslQop.equals(stringQop)) {
-        log.warn("Use authentication/integrity/privacy as value for rpc protection "
-            + "configurations instead of auth/auth-int/auth-conf.");
-        return true;
-      }
-      return name().equalsIgnoreCase(stringQop);
     }
   }
 
@@ -81,39 +74,40 @@ public class SaslUtil {
 
   /**
    * Returns {@link org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection}
-   * corresponding to the given {@code stringQop} value.
-   * @throws IllegalArgumentException If stringQop doesn't match any QOP.
+   * corresponding to the given {@code stringQop} value. Returns null if value is
+   * invalid.
    */
   public static QualityOfProtection getQop(String stringQop) {
-    for (QualityOfProtection qop : QualityOfProtection.values()) {
-      if (qop.matches(stringQop)) {
-        return qop;
-      }
+    QualityOfProtection qop = null;
+    if (QualityOfProtection.AUTHENTICATION.name().toLowerCase().equals(stringQop)
+        || QualityOfProtection.AUTHENTICATION.saslQop.equals(stringQop)) {
+      qop = QualityOfProtection.AUTHENTICATION;
+    } else if (QualityOfProtection.INTEGRITY.name().toLowerCase().equals(stringQop)
+        || QualityOfProtection.INTEGRITY.saslQop.equals(stringQop)) {
+      qop = QualityOfProtection.INTEGRITY;
+    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(stringQop)
+        || QualityOfProtection.PRIVACY.saslQop.equals(stringQop)) {
+      qop = QualityOfProtection.PRIVACY;
     }
-    throw new IllegalArgumentException("Invalid qop: " +  stringQop
-        + ". It must be one of 'authentication', 'integrity', 'privacy'.");
+    if (qop == null) {
+      throw new IllegalArgumentException("Invalid qop: " +  stringQop
+          + ". It must be one of 'authentication', 'integrity', 'privacy'.");
+    }
+    if (QualityOfProtection.AUTHENTICATION.saslQop.equals(stringQop)
+        || QualityOfProtection.INTEGRITY.saslQop.equals(stringQop)
+        || QualityOfProtection.PRIVACY.saslQop.equals(stringQop)) {
+      log.warn("Use authentication/integrity/privacy as value for rpc protection "
+          + "configurations instead of auth/auth-int/auth-conf.");
+    }
+    return qop;
   }
 
-  /**
-   * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
-   * @return Map with values for SASL properties.
-   */
-  static Map<String, String> initSaslProperties(String rpcProtection) {
-    String saslQop;
-    if (rpcProtection.isEmpty()) {
-      saslQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
-    } else {
-      String[] qops = rpcProtection.split(",");
-      StringBuilder saslQopBuilder = new StringBuilder();
-      for (int i = 0; i < qops.length; ++i) {
-        QualityOfProtection qop = getQop(qops[i]);
-        saslQopBuilder.append(",").append(qop.getSaslQop());
-      }
-      saslQop = saslQopBuilder.substring(1);  // remove first ','
+  static void initSaslProperties(String rpcProtection) {
+    QualityOfProtection saslQOP = getQop(rpcProtection);
+    if (saslQOP == null) {
+      saslQOP = QualityOfProtection.AUTHENTICATION;
     }
-    Map<String, String> saslProps = new TreeMap<>();
-    saslProps.put(Sasl.QOP, saslQop);
-    saslProps.put(Sasl.SERVER_AUTH, "true");
-    return saslProps;
+    SaslUtil.SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
+    SaslUtil.SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
   }
 }
