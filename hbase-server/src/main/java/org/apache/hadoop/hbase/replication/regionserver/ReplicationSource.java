@@ -59,8 +59,11 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.collect.Lists;
@@ -418,9 +421,9 @@ public class ReplicationSource extends Thread
      * @param p path to split
      * @return start time
      */
-    private long getTS(Path p) {
-      String[] parts = p.getName().split("\\.");
-      return Long.parseLong(parts[parts.length-1]);
+    private static long getTS(Path p) {
+      int tsIndex = p.getName().lastIndexOf('.') + 1;
+      return Long.parseLong(p.getName().substring(tsIndex));
     }
   }
 
@@ -734,7 +737,6 @@ public class ReplicationSource extends Thread
      * @return true if we should continue with that file, false if we are over with it
      */
     protected boolean openReader(int sleepMultiplier) {
-
       try {
         try {
           if (LOG.isTraceEnabled()) {
@@ -815,6 +817,11 @@ public class ReplicationSource extends Thread
             // TODO What happens the log is missing in both places?
           }
         }
+      } catch (LeaseNotRecoveredException lnre) {
+        // HBASE-15019 the WAL was not closed due to some hiccup.
+        LOG.warn(peerClusterZnode + " Try to recover the WAL lease " + currentPath, lnre);
+        recoverLease(conf, currentPath);
+        this.reader = null;
       } catch (IOException ioe) {
         if (ioe instanceof EOFException && isCurrentLogEmpty()) return true;
         LOG.warn(peerClusterZnode + " Got: ", ioe);
@@ -824,7 +831,7 @@ public class ReplicationSource extends Thread
           // which throws a NPE if we open a file before any data node has the most recent block
           // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
           LOG.warn("Got NPE opening reader, will retry.");
-        } else if (sleepMultiplier == maxRetriesMultiplier) {
+        } else if (sleepMultiplier >= maxRetriesMultiplier) {
           // TODO Need a better way to determine if a file is really gone but
           // TODO without scanning all logs dir
           LOG.warn("Waited too long for this file, considering dumping");
@@ -832,6 +839,22 @@ public class ReplicationSource extends Thread
         }
       }
       return true;
+    }
+
+    private void recoverLease(final Configuration conf, final Path path) {
+      try {
+        final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
+        FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
+        fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+          @Override
+          public boolean progress() {
+            LOG.debug("recover WAL lease: " + path);
+            return isWorkerActive();
+          }
+        });
+      } catch (IOException e) {
+        LOG.warn("unable to recover lease for WAL: " + path, e);
+      }
     }
 
     /*
