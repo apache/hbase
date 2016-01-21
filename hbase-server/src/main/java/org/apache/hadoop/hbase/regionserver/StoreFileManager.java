@@ -53,12 +53,19 @@ public interface StoreFileManager {
   void insertNewFiles(Collection<StoreFile> sfs) throws IOException;
 
   /**
-   * Adds compaction results into the structure.
+   * Adds only the new compaction results into the structure.
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
    */
   void addCompactionResults(
       Collection<StoreFile> compactedFiles, Collection<StoreFile> results) throws IOException;
+
+  /**
+   * Remove the compacted files
+   * @param compactedFiles the list of compacted files
+   * @throws IOException
+   */
+  void removeCompactedFiles(Collection<StoreFile> compactedFiles) throws IOException;
 
   /**
    * Clears all the files currently in use and returns them.
@@ -67,11 +74,27 @@ public interface StoreFileManager {
   ImmutableCollection<StoreFile> clearFiles();
 
   /**
+   * Clears all the compacted files and returns them. This method is expected to be
+   * accessed single threaded.
+   * @return The files compacted previously.
+   */
+  Collection<StoreFile> clearCompactedFiles();
+
+  /**
    * Gets the snapshot of the store files currently in use. Can be used for things like metrics
    * and checks; should not assume anything about relations between store files in the list.
    * @return The list of StoreFiles.
    */
   Collection<StoreFile> getStorefiles();
+
+  /**
+   * List of compacted files inside this store that needs to be excluded in reads
+   * because further new reads will be using only the newly created files out of compaction.
+   * These compacted files will be deleted/cleared once all the existing readers on these
+   * compacted files are done.
+   * @return the list of compacted files
+   */
+  Collection<StoreFile> getCompactedfiles();
 
   /**
    * Returns the number of files currently in use.

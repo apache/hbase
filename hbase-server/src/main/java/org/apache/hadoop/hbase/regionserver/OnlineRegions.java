@@ -67,4 +67,10 @@ public interface OnlineRegions extends Server {
     * @throws java.io.IOException
     */
    List<Region> getOnlineRegions(TableName tableName) throws IOException;
+
+   /**
+    * Get all online regions in this RS.
+    * @return List of online Region
+    */
+   List<Region> getOnlineRegions();
 }

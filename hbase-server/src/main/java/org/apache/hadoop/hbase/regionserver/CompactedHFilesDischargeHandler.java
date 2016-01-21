@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.List;
 
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
+import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
- * If set of MapFile.Readers in Store change, implementors are notified.
+ * Event handler that handles the removal and archival of the compacted hfiles
  */
 @InterfaceAudience.Private
-public interface ChangedReadersObserver {
-  /**
-   * Notify observers.
-   * @throws IOException e
-   */
-  void updateReaders(List<StoreFile> sfs) throws IOException;
+public class CompactedHFilesDischargeHandler extends EventHandler {
+
+  private HStore store;
+
+  public CompactedHFilesDischargeHandler(Server server, EventType eventType, HStore store) {
+    super(server, eventType);
+    this.store = store;
+  }
+
+  @Override
+  public void process() throws IOException {
+    this.store.closeAndArchiveCompactedFiles();
+  }
 }

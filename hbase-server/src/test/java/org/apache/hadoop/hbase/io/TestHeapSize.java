@@ -74,7 +74,7 @@ public class TestHeapSize  {
     LOG.info("name=" + b.getName()); 
     LOG.info("specname=" + b.getSpecName()); 
     LOG.info("specvendor=" + b.getSpecVendor()); 
-    LOG.info("vmname=" + b.getVmName()); 
+    LOG.info("vmname=" + b.getVmName());
     LOG.info("vmversion=" + b.getVmVersion()); 
     LOG.info("vmvendor=" + b.getVmVendor()); 
     Map<String, String> p = b.getSystemProperties();

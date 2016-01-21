@@ -133,6 +133,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -479,6 +480,8 @@ public class HRegionServer extends HasThread implements
    */
   protected final ConfigurationManager configurationManager;
 
+  private CompactedHFilesDischarger compactedFileDischarger;
+
   /**
    * Starts a HRegionServer at the default location.
    * @param conf
@@ -611,6 +614,16 @@ public class HRegionServer extends HasThread implements
         }
       });
     }
+    // Create the CompactedFileDischarger chore service. This chore helps to
+    // remove the compacted files
+    // that will no longer be used in reads.
+    // Default is 2 mins. The default value for TTLCleaner is 5 mins so we set this to
+    // 2 mins so that compacted files can be archived before the TTLCleaner runs
+    int cleanerInterval = conf
+        .getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_INTERVAL, 2 * 60 * 1000);
+    this.compactedFileDischarger =
+        new CompactedHFilesDischarger(cleanerInterval, (Stoppable)this, (RegionServerServices)this);
+    choreService.scheduleChore(compactedFileDischarger);
   }
 
   /*
@@ -1708,7 +1721,9 @@ public class HRegionServer extends HasThread implements
     }
     this.service.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS, conf.getInt(
        "hbase.regionserver.wal.max.splitters", SplitLogWorkerCoordination.DEFAULT_MAX_SPLITTERS));
-
+    // Start the threads for compacted files discharger
+    this.service.startExecutorService(ExecutorType.RS_COMPACTED_FILES_DISCHARGER,
+      conf.getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT, 10));
     if (ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(conf)) {
       this.service.startExecutorService(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS,
         conf.getInt("hbase.regionserver.region.replica.flusher.threads",
@@ -2732,6 +2747,15 @@ public class HRegionServer extends HasThread implements
     return coprocessors.toArray(new String[coprocessors.size()]);
   }
 
+  @Override
+  public List<Region> getOnlineRegions() {
+    List<Region> allRegions = new ArrayList<Region>();
+    synchronized (this.onlineRegions) {
+      // Return a clone copy of the onlineRegions
+      allRegions.addAll(onlineRegions.values());
+    }
+    return allRegions;
+  }
   /**
    * Try to close the region, logs a warning on failure but continues.
    * @param region Region to close
