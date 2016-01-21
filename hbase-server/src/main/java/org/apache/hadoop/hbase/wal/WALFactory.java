@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
@@ -334,8 +335,10 @@ public class WALFactory {
                 throw iioe;
               }
             }
+            throw new LeaseNotRecoveredException(e);
+          } else {
+            throw e;
           }
-          throw e;
         }
       }
     } catch (IOException ie) {

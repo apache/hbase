@@ -53,8 +53,11 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.collect.Lists;
@@ -587,6 +590,11 @@ public class ReplicationSource extends Thread
           // TODO What happens the log is missing in both places?
         }
       }
+    } catch (LeaseNotRecoveredException lnre) {
+      // HBASE-15019 the WAL was not closed due to some hiccup.
+      LOG.warn(peerClusterZnode + " Try to recover the WAL lease " + currentPath, lnre);
+      recoverLease(conf, currentPath);
+      this.reader = null;
     } catch (IOException ioe) {
       if (ioe instanceof EOFException && isCurrentLogEmpty()) return true;
       LOG.warn(this.peerClusterZnode + " Got: ", ioe);
@@ -604,6 +612,22 @@ public class ReplicationSource extends Thread
       }
     }
     return true;
+  }
+
+  private void recoverLease(final Configuration conf, final Path path) {
+    try {
+      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
+      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
+      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+        @Override
+        public boolean progress() {
+          LOG.debug("recover WAL lease: " + path);
+          return isActive();
+        }
+      });
+    } catch (IOException e) {
+      LOG.warn("unable to recover lease for WAL: " + path, e);
+    }
   }
 
   /*
@@ -861,9 +885,9 @@ public class ReplicationSource extends Thread
      * @param p path to split
      * @return start time
      */
-    private long getTS(Path p) {
-      String[] parts = p.getName().split("\\.");
-      return Long.parseLong(parts[parts.length-1]);
+    private static long getTS(Path p) {
+      int tsIndex = p.getName().lastIndexOf('.') + 1;
+      return Long.parseLong(p.getName().substring(tsIndex));
     }
   }
 
