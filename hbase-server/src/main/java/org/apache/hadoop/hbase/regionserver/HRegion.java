@@ -7377,6 +7377,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkReadOnly();
     checkResources();
     checkRow(mutation.getRow(), op.toString());
+    checkFamilies(mutation.getFamilyCellMap().keySet());
     startRegionOperation(op);
     this.writeRequestsCount.increment();
     try {
