@@ -202,6 +202,9 @@ public class TestDurability {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] col1 = Bytes.toBytes("col1");
 
+    // Enable INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY
+    String oldFlag = CONF.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
+    CONF.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, true);
     // Setting up region
     final WALFactory wals = new WALFactory(CONF, null, "testIncrementWithReturnResultsSetToFalse");
     byte[] tableName = Bytes.toBytes("testIncrementWithReturnResultsSetToFalse");
@@ -213,6 +216,10 @@ public class TestDurability {
     inc1.addColumn(FAMILY, col1, 1);
     Result res = region.increment(inc1);
     assertNull(res);
+    // cleanup
+    if (oldFlag != null) {
+      CONF.set(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, oldFlag);
+    }
   }
 
   private Put newPut(Durability durability) {
