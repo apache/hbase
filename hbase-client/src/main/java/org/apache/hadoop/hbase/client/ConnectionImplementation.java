@@ -35,10 +35,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -48,8 +45,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
-import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -68,7 +65,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilit
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
-import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -282,47 +278,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return ng;
   }
 
-  /**
-   * Look for an exception we know in the remote exception:
-   * - hadoop.ipc wrapped exceptions
-   * - nested exceptions
-   *
-   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
-   *            ThrottlingException
-   * @return null if we didn't find the exception, the exception otherwise.
-   */
-  public static Throwable findException(Object exception) {
-    if (exception == null || !(exception instanceof Throwable)) {
-      return null;
-    }
-    Throwable cur = (Throwable) exception;
-    while (cur != null) {
-      if (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-          || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
-          || cur instanceof RetryImmediatelyException) {
-        return cur;
-      }
-      if (cur instanceof RemoteException) {
-        RemoteException re = (RemoteException) cur;
-        cur = re.unwrapRemoteException(
-            RegionOpeningException.class, RegionMovedException.class,
-            RegionTooBusyException.class);
-        if (cur == null) {
-          cur = re.unwrapRemoteException();
-        }
-        // unwrapRemoteException can return the exception given as a parameter when it cannot
-        //  unwrap it. In this case, there is no need to look further
-        // noinspection ObjectEquality
-        if (cur == re) {
-          return null;
-        }
-      } else {
-        cur = cur.getCause();
-      }
-    }
-
-    return null;
-  }
 
   @Override
   public HTableInterface getTable(String tableName) throws IOException {
@@ -1908,10 +1863,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
 
     HRegionInfo regionInfo = oldLocation.getRegionInfo();
-    Throwable cause = findException(exception);
+    Throwable cause = ClientExceptionsUtil.findException(exception);
     if (cause != null) {
-      if (cause instanceof RegionTooBusyException || cause instanceof RegionOpeningException
-          || cause instanceof ThrottlingException || cause instanceof MultiActionResultTooLarge) {
+      if (!ClientExceptionsUtil.isMetaClearingException(cause)) {
         // We know that the region is still on this region server
         return;
       }

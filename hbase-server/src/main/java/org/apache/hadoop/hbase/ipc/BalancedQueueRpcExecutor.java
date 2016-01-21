@@ -72,9 +72,9 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
   }
 
   @Override
-  public void dispatch(final CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(final CallRunner callTask) throws InterruptedException {
     int queueIndex = balancer.getNextQueue();
-    queues.get(queueIndex).put(callTask);
+    return queues.get(queueIndex).offer(callTask);
   }
 
   @Override

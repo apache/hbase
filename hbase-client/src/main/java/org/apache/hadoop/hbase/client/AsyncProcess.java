@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1174,9 +1175,9 @@ class AsyncProcess {
         byte[] row = e.getValue().iterator().next().getAction().getRow();
         // Do not use the exception for updating cache because it might be coming from
         // any of the regions in the MultiAction.
-        // TODO: depending on type of exception we might not want to update cache at all?
         if (tableName != null) {
-          connection.updateCachedLocations(tableName, regionName, row, null, server);
+          connection.updateCachedLocations(tableName, regionName, row,
+              ClientExceptionsUtil.isMetaClearingException(t) ? null : t, server);
         }
         for (Action<Row> action : e.getValue()) {
           Retry retry = manageError(
@@ -1293,7 +1294,7 @@ class AsyncProcess {
           // Failure: retry if it's make sense else update the errors lists
           if (result == null || result instanceof Throwable) {
             Row row = sentAction.getAction();
-            throwable = ConnectionImplementation.findException(result);
+            throwable = ClientExceptionsUtil.findException(result);
             // Register corresponding failures once per server/once per region.
             if (!regionFailureRegistered) {
               regionFailureRegistered = true;
@@ -1316,7 +1317,7 @@ class AsyncProcess {
               ++failed;
             }
           } else {
-            
+
             if (AsyncProcess.this.connection.getConnectionMetrics() != null) {
               AsyncProcess.this.connection.getConnectionMetrics().
                       updateServerStats(server, regionName, result);
