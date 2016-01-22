@@ -286,6 +286,10 @@ public class AuthenticationTokenSecretManager
     }
   }
 
+  synchronized long getLastKeyUpdate() {
+    return lastKeyUpdate;
+  }
+
   public static SecretKey createSecretKey(byte[] raw) {
     return SecretManager.createSecretKey(raw);
   }
@@ -339,8 +343,8 @@ public class AuthenticationTokenSecretManager
 
         // clear any expired
         removeExpiredKeys();
-
-        if (lastKeyUpdate + keyUpdateInterval < now) {
+        long localLastKeyUpdate = getLastKeyUpdate();
+        if (localLastKeyUpdate + keyUpdateInterval < now) {
           // roll a new master key
           rollCurrentKey();
         }
