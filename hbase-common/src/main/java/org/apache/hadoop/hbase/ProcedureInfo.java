@@ -41,12 +41,12 @@ public class ProcedureInfo implements Cloneable {
   private final String procOwner;
   private final ProcedureState procState;
   private final long parentId;
+  private final NonceKey nonceKey;
   private final ForeignExceptionMessage exception;
   private final long lastUpdate;
   private final long startTime;
   private final byte[] result;
 
-  private NonceKey nonceKey = null;
   private long clientAckTime = -1;
 
   public ProcedureInfo(
@@ -55,6 +55,7 @@ public class ProcedureInfo implements Cloneable {
       final String procOwner,
       final ProcedureState procState,
       final long parentId,
+      final NonceKey nonceKey,
       final ForeignExceptionMessage exception,
       final long lastUpdate,
       final long startTime,
@@ -64,6 +65,7 @@ public class ProcedureInfo implements Cloneable {
     this.procOwner = procOwner;
     this.procState = procState;
     this.parentId = parentId;
+    this.nonceKey = nonceKey;
     this.lastUpdate = lastUpdate;
     this.startTime = startTime;
 
@@ -75,8 +77,8 @@ public class ProcedureInfo implements Cloneable {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
       justification="Intentional; calling super class clone doesn't make sense here.")
   public ProcedureInfo clone() {
-    return new ProcedureInfo(
-      procId, procName, procOwner, procState, parentId, exception, lastUpdate, startTime, result);
+    return new ProcedureInfo(procId, procName, procOwner, procState, parentId, nonceKey,
+      exception, lastUpdate, startTime, result);
   }
 
   public long getProcId() {
@@ -105,10 +107,6 @@ public class ProcedureInfo implements Cloneable {
 
   public NonceKey getNonceKey() {
     return nonceKey;
-  }
-
-  public void setNonceKey(NonceKey nonceKey) {
-    this.nonceKey = nonceKey;
   }
 
   public boolean isFailed() {
@@ -218,12 +216,18 @@ public class ProcedureInfo implements Cloneable {
    */
   @InterfaceAudience.Private
   public static ProcedureInfo convert(final ProcedureProtos.Procedure procProto) {
+    NonceKey nonceKey = null;
+    if (procProto.getNonce() != HConstants.NO_NONCE) {
+      nonceKey = new NonceKey(procProto.getNonceGroup(), procProto.getNonce());
+    }
+
     return new ProcedureInfo(
       procProto.getProcId(),
       procProto.getClassName(),
       procProto.getOwner(),
       procProto.getState(),
       procProto.hasParentId() ? procProto.getParentId() : -1,
+      nonceKey,
       procProto.hasException() ? procProto.getException() : null,
       procProto.getLastUpdate(),
       procProto.getStartTime(),

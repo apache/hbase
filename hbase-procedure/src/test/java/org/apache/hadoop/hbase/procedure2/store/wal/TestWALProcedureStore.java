@@ -159,6 +159,56 @@ public class TestWALProcedureStore {
   }
 
   @Test
+  public void testNoTrailerDoubleRestart() throws Exception {
+    // log-0001: proc 0, 1 and 2 are inserted
+    Procedure proc0 = new TestSequentialProcedure();
+    procStore.insert(proc0, null);
+    Procedure proc1 = new TestSequentialProcedure();
+    procStore.insert(proc1, null);
+    Procedure proc2 = new TestSequentialProcedure();
+    procStore.insert(proc2, null);
+    procStore.rollWriterForTesting();
+
+    // log-0002: proc 1 deleted
+    procStore.delete(proc1.getProcId());
+    procStore.rollWriterForTesting();
+
+    // log-0003: proc 2 is update
+    procStore.update(proc2);
+    procStore.rollWriterForTesting();
+
+    // log-0004: proc 2 deleted
+    procStore.delete(proc2.getProcId());
+
+    // stop the store and remove the trailer
+    procStore.stop(false);
+    FileStatus[] logs = fs.listStatus(logDir);
+    assertEquals(4, logs.length);
+    for (int i = 0; i < logs.length; ++i) {
+      corruptLog(logs[i], 4);
+    }
+
+    // Test Load 1
+    LoadCounter loader = new LoadCounter();
+    storeRestart(loader);
+    assertEquals(1, loader.getLoadedCount());
+    assertEquals(0, loader.getCorruptedCount());
+
+    // Test Load 2
+    assertEquals(5, fs.listStatus(logDir).length);
+    loader = new LoadCounter();
+    storeRestart(loader);
+    assertEquals(1, loader.getLoadedCount());
+    assertEquals(0, loader.getCorruptedCount());
+
+    // remove proc-0
+    procStore.delete(proc0.getProcId());
+    procStore.periodicRollForTesting();
+    assertEquals(1, fs.listStatus(logDir).length);
+    storeRestart(loader);
+  }
+
+  @Test
   public void testCorruptedTrailer() throws Exception {
     // Insert something
     for (int i = 0; i < 100; ++i) {
@@ -289,9 +339,9 @@ public class TestWALProcedureStore {
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
         assertTrue(procIter.hasNext());
-        assertEquals(1, procIter.next().getProcId());
+        assertEquals(1, procIter.nextAsProcedureInfo().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(2, procIter.next().getProcId());
+        assertEquals(2, procIter.nextAsProcedureInfo().getProcId());
         assertFalse(procIter.hasNext());
       }
 
@@ -345,16 +395,16 @@ public class TestWALProcedureStore {
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
         assertTrue(procIter.hasNext());
-        assertEquals(4, procIter.next().getProcId());
+        assertEquals(4, procIter.nextAsProcedureInfo().getProcId());
         // TODO: This will be multiple call once we do fast-start
         //assertFalse(procIter.hasNext());
 
         assertTrue(procIter.hasNext());
-        assertEquals(1, procIter.next().getProcId());
+        assertEquals(1, procIter.nextAsProcedureInfo().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(2, procIter.next().getProcId());
+        assertEquals(2, procIter.nextAsProcedureInfo().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(3, procIter.next().getProcId());
+        assertEquals(3, procIter.nextAsProcedureInfo().getProcId());
         assertFalse(procIter.hasNext());
       }
 
@@ -579,7 +629,7 @@ public class TestWALProcedureStore {
     @Override
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.next();
+        Procedure proc = procIter.nextAsProcedure();
         LOG.debug("loading procId=" + proc.getProcId() + ": " + proc);
         if (procIds != null) {
           assertTrue("procId=" + proc.getProcId() + " unexpected",
@@ -592,7 +642,7 @@ public class TestWALProcedureStore {
     @Override
     public void handleCorrupted(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.next();
+        Procedure proc = procIter.nextAsProcedure();
         LOG.debug("corrupted procId=" + proc.getProcId() + ": " + proc);
         corrupted.add(proc);
       }
