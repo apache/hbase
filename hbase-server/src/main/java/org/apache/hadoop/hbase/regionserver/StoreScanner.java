@@ -64,7 +64,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected KeyValueHeap heap;
   protected boolean cacheBlocks;
 
-  protected int countPerRow = 0;
+  protected long countPerRow = 0;
   protected int storeLimit = -1;
   protected int storeOffset = 0;
 
