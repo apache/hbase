@@ -414,7 +414,9 @@ public class ProcedureStoreTracker {
     node.updateState(procId, isDeleted);
   }
 
-  public void clear() {
+  public void reset() {
+    this.keepDeletes = false;
+    this.partial = false;
     this.map.clear();
     resetUpdates();
   }
@@ -579,11 +581,11 @@ public class ProcedureStoreTracker {
   }
 
   public void readFrom(final InputStream stream) throws IOException {
-    ProcedureProtos.ProcedureStoreTracker data =
+    reset();
+    final ProcedureProtos.ProcedureStoreTracker data =
         ProcedureProtos.ProcedureStoreTracker.parseDelimitedFrom(stream);
-    map.clear();
     for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode: data.getNodeList()) {
-      BitSetNode node = BitSetNode.convert(protoNode);
+      final BitSetNode node = BitSetNode.convert(protoNode);
       map.put(node.getStart(), node);
     }
   }

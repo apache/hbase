@@ -22,9 +22,10 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -79,7 +80,7 @@ public class ProcedureWALFormatReader {
   //
   //  Fast Start: INIT/INSERT record and StackIDs
   // ---------------------------------------------
-  // We have to special record, INIT and INSERT that tracks the first time
+  // We have two special record, INIT and INSERT that tracks the first time
   // the procedure was added to the WAL. We can use that information to be able
   // to start procedures before reaching the end of the WAL, or before reading all the WALs.
   // but in some cases the WAL with that record can be already gone.
@@ -146,10 +147,7 @@ public class ProcedureWALFormatReader {
       loader.markCorruptedWAL(log, e);
     }
 
-    if (localProcedureMap.isEmpty()) {
-      LOG.info("No active entry found in state log " + log + ". removing it");
-      loader.removeLog(log);
-    } else {
+    if (!localProcedureMap.isEmpty()) {
       log.setProcIds(localProcedureMap.getMinProcId(), localProcedureMap.getMaxProcId());
       procedureMap.mergeTail(localProcedureMap);
       //if (hasFastStartSupport) {
@@ -215,6 +213,7 @@ public class ProcedureWALFormatReader {
     }
     maxProcId = Math.max(maxProcId, entry.getProcId());
     localProcedureMap.remove(entry.getProcId());
+    assert !procedureMap.contains(entry.getProcId());
     tracker.setDeleted(entry.getProcId(), true);
   }
 
@@ -265,11 +264,29 @@ public class ProcedureWALFormatReader {
     public boolean hasParent() { return proto.hasParentId(); }
     public boolean isReady() { return ready; }
 
+    public boolean isCompleted() {
+      if (!hasParent()) {
+        switch (proto.getState()) {
+          case ROLLEDBACK:
+            return true;
+          case FINISHED:
+            return !proto.hasException();
+          default:
+            break;
+        }
+      }
+      return false;
+    }
+
     public Procedure convert() throws IOException {
       if (procedure == null) {
         procedure = Procedure.convert(proto);
       }
       return procedure;
+    }
+
+    public ProcedureInfo convertToInfo() {
+      return ProcedureInfo.convert(proto);
     }
 
     @Override
@@ -298,9 +315,28 @@ public class ProcedureWALFormatReader {
     }
 
     @Override
-    public Procedure next() throws IOException {
+    public boolean isNextCompleted() {
+      return current != null && current.isCompleted();
+    }
+
+    @Override
+    public void skipNext() {
+      current = current.replayNext;
+    }
+
+    @Override
+    public Procedure nextAsProcedure() throws IOException {
       try {
         return current.convert();
+      } finally {
+        current = current.replayNext;
+      }
+    }
+
+    @Override
+    public ProcedureInfo nextAsProcedureInfo() {
+      try {
+        return current.convertToInfo();
       } finally {
         current = current.replayNext;
       }

@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 
 /**
@@ -67,11 +68,26 @@ public interface ProcedureStore {
     boolean hasNext();
 
     /**
+     * @return true if the iterator next element is a completed procedure.
+     */
+    boolean isNextCompleted();
+
+    /**
+     * Skip the next procedure
+     */
+    void skipNext();
+
+    /**
      * Returns the next procedure in the iteration.
      * @throws IOException if there was an error fetching/deserializing the procedure
      * @return the next procedure in the iteration.
      */
-    Procedure next() throws IOException;
+    Procedure nextAsProcedure() throws IOException;
+
+    /**
+     * @return the next procedure in the iteration as ProcedureInfo.
+     */
+    ProcedureInfo nextAsProcedureInfo();
   }
 
   /**
