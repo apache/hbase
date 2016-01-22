@@ -65,7 +65,6 @@ public final class ProcedureWALFormat {
   }
 
   interface Loader extends ProcedureLoader {
-    void removeLog(ProcedureWALFile log);
     void markCorruptedWAL(ProcedureWALFile log, IOException e);
   }
 

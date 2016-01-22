@@ -308,7 +308,7 @@ public class ProcedureExecutor<TEnvironment> {
       public void handleCorrupted(ProcedureIterator procIter) throws IOException {
         int corruptedCount = 0;
         while (procIter.hasNext()) {
-          Procedure proc = procIter.next();
+          ProcedureInfo proc = procIter.nextAsProcedureInfo();
           LOG.error("corrupted procedure: " + proc);
           corruptedCount++;
         }
@@ -321,24 +321,44 @@ public class ProcedureExecutor<TEnvironment> {
 
   private void loadProcedures(final ProcedureIterator procIter,
       final boolean abortOnCorruption) throws IOException {
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
+
     // 1. Build the rollback stack
     int runnablesCount = 0;
     while (procIter.hasNext()) {
-      Procedure proc = procIter.next();
-      if (!proc.hasParent() && !proc.isFinished()) {
-        rollbackStack.put(proc.getProcId(), new RootProcedureState());
+      final NonceKey nonceKey;
+      final long procId;
+
+      if (procIter.isNextCompleted()) {
+        ProcedureInfo proc = procIter.nextAsProcedureInfo();
+        nonceKey = proc.getNonceKey();
+        procId = proc.getProcId();
+        completed.put(proc.getProcId(), proc);
+        if (isDebugEnabled) {
+          LOG.debug("The procedure is completed: " + proc);
+        }
+      } else {
+        Procedure proc = procIter.nextAsProcedure();
+        nonceKey = proc.getNonceKey();
+        procId = proc.getProcId();
+
+        if (!proc.hasParent()) {
+          assert !proc.isFinished() : "unexpected finished procedure";
+          rollbackStack.put(proc.getProcId(), new RootProcedureState());
+        }
+
+        // add the procedure to the map
+        proc.beforeReplay(getEnvironment());
+        procedures.put(proc.getProcId(), proc);
+
+        if (proc.getState() == ProcedureState.RUNNABLE) {
+          runnablesCount++;
+        }
       }
-      // add the procedure to the map
-      proc.beforeReplay(getEnvironment());
-      procedures.put(proc.getProcId(), proc);
 
       // add the nonce to the map
-      if (proc.getNonceKey() != null) {
-        nonceKeysToProcIdsMap.put(proc.getNonceKey(), proc.getProcId());
-      }
-
-      if (proc.getState() == ProcedureState.RUNNABLE) {
-        runnablesCount++;
+      if (nonceKey != null) {
+        nonceKeysToProcIdsMap.put(nonceKey, procId);
       }
     }
 
@@ -347,8 +367,15 @@ public class ProcedureExecutor<TEnvironment> {
     HashSet<Procedure> waitingSet = null;
     procIter.reset();
     while (procIter.hasNext()) {
-      Procedure proc = procIter.next();
-      if (LOG.isDebugEnabled()) {
+      if (procIter.isNextCompleted()) {
+        procIter.skipNext();
+        continue;
+      }
+
+      Procedure proc = procIter.nextAsProcedure();
+      assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
+
+      if (isDebugEnabled) {
         LOG.debug(String.format("Loading procedure state=%s isFailed=%s: %s",
                     proc.getState(), proc.hasException(), proc));
       }
@@ -357,18 +384,6 @@ public class ProcedureExecutor<TEnvironment> {
       if (rootProcId == null) {
         // The 'proc' was ready to run but the root procedure was rolledback?
         runnables.addBack(proc);
-        continue;
-      }
-
-      if (!proc.hasParent() && proc.isFinished()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(String.format("The procedure is completed state=%s isFailed=%s",
-                    proc.getState(), proc.hasException()));
-        }
-        assert !rollbackStack.containsKey(proc.getProcId());
-        procedures.remove(proc.getProcId());
-        completed.put(proc.getProcId(), Procedure.createProcedureInfo(proc, proc.getNonceKey()));
-
         continue;
       }
 
@@ -850,13 +865,15 @@ public class ProcedureExecutor<TEnvironment> {
         break;
       }
 
-      if (proc.getProcId() == rootProcId && proc.isSuccess()) {
-        // Finalize the procedure state
+      if (proc.isSuccess()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Procedure completed in " +
               StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
         }
-        procedureFinished(proc);
+        // Finalize the procedure state
+        if (proc.getProcId() == rootProcId) {
+          procedureFinished(proc);
+        }
         break;
       }
 

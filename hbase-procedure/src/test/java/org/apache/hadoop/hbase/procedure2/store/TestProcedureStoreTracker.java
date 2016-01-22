@@ -192,7 +192,7 @@ public class TestProcedureStoreTracker {
         count++;
       }
 
-      tracker.clear();
+      tracker.reset();
     }
   }
 
@@ -212,7 +212,7 @@ public class TestProcedureStoreTracker {
           tracker.setDeleted(i, false);
         }
 
-        tracker.clear();
+        tracker.reset();
       }
     }
   }
