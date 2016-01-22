@@ -7106,6 +7106,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkReadOnly();
     checkResources();
     checkRow(increment.getRow(), "increment");
+    checkFamilies(increment.getFamilyCellMap().keySet());
     startRegionOperation(Operation.INCREMENT);
     this.writeRequestsCount.increment();
     try {
@@ -7120,7 +7121,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // wait on mvcc to complete before returning to the client. We also reorder the write so that
       // the update of memstore happens AFTER sync returns; i.e. the write pipeline does less
       // zigzagging now.
-      // 
+      //
       // See the comment on INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY
       // for the constraints that apply when you take this code path; it is correct but only if
       // Increments are used mutating an Increment Cell; mixing concurrent Put+Delete and Increment
