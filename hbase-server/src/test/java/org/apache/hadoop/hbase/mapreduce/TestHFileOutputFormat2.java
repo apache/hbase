@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -75,7 +74,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -95,8 +93,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
 
 /**
  * Simple test for {@link CellSortReducer} and {@link HFileOutputFormat2}.
@@ -1000,12 +996,6 @@ public class TestHFileOutputFormat2  {
         quickPoll(new Callable<Boolean>() {
           @Override
           public Boolean call() throws Exception {
-            List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAME);
-            for (HRegion region : regions) {
-              for (Store store : region.getStores()) {
-                store.closeAndArchiveCompactedFiles();
-              }
-            }
             return fs.listStatus(storePath).length == 1;
           }
         }, 5000);
@@ -1019,12 +1009,6 @@ public class TestHFileOutputFormat2  {
       quickPoll(new Callable<Boolean>() {
         @Override
         public Boolean call() throws Exception {
-          List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAME);
-          for (HRegion region : regions) {
-            for (Store store : region.getStores()) {
-              store.closeAndArchiveCompactedFiles();
-            }
-          }
           return fs.listStatus(storePath).length == 1;
         }
       }, 5000);

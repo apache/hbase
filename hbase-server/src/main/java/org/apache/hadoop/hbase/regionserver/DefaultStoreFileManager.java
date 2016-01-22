@@ -54,13 +54,6 @@ class DefaultStoreFileManager implements StoreFileManager {
    * is atomically replaced when its contents change.
    */
   private volatile ImmutableList<StoreFile> storefiles = null;
-  /**
-   * List of compacted files inside this store that needs to be excluded in reads
-   * because further new reads will be using only the newly created files out of compaction.
-   * These compacted files will be deleted/cleared once all the existing readers on these
-   * compacted files are done.
-   */
-  private volatile List<StoreFile> compactedfiles = null;
 
   public DefaultStoreFileManager(KVComparator kvComparator, Configuration conf,
       CompactionConfiguration comConf) {
@@ -82,11 +75,6 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public Collection<StoreFile> getCompactedfiles() {
-    return compactedfiles;
-  }
-
-  @Override
   public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
     ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
     newFiles.addAll(sfs);
@@ -101,55 +89,19 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public Collection<StoreFile> clearCompactedFiles() {
-    List<StoreFile> result = compactedfiles;
-    compactedfiles = new ArrayList<StoreFile>();
-    return result;
-  }
-
-  @Override
   public final int getStorefileCount() {
     return storefiles.size();
   }
 
   @Override
   public void addCompactionResults(
-    Collection<StoreFile> newCompactedfiles, Collection<StoreFile> results) {
+    Collection<StoreFile> compactedFiles, Collection<StoreFile> results) {
     ArrayList<StoreFile> newStoreFiles = Lists.newArrayList(storefiles);
-    newStoreFiles.removeAll(newCompactedfiles);
+    newStoreFiles.removeAll(compactedFiles);
     if (!results.isEmpty()) {
       newStoreFiles.addAll(results);
     }
     sortAndSetStoreFiles(newStoreFiles);
-    ArrayList<StoreFile> updatedCompactedfiles = null;
-    if (this.compactedfiles != null) {
-      updatedCompactedfiles = new ArrayList<StoreFile>(this.compactedfiles);
-      updatedCompactedfiles.addAll(newCompactedfiles);
-    } else {
-      updatedCompactedfiles = new ArrayList<StoreFile>(newCompactedfiles);
-    }
-    markCompactedAway(newCompactedfiles);
-    this.compactedfiles = sortCompactedfiles(updatedCompactedfiles);
-  }
-
-  // Mark the files as compactedAway once the storefiles and compactedfiles list is finalised
-  // Let a background thread close the actual reader on these compacted files and also
-  // ensure to evict the blocks from block cache so that they are no longer in
-  // cache
-  private void markCompactedAway(Collection<StoreFile> compactedFiles) {
-    for (StoreFile file : compactedFiles) {
-      file.markCompactedAway();
-    }
-  }
-
-  @Override
-  public void removeCompactedFiles(Collection<StoreFile> removedCompactedfiles) throws IOException {
-    ArrayList<StoreFile> updatedCompactedfiles = null;
-    if (this.compactedfiles != null) {
-      updatedCompactedfiles = new ArrayList<StoreFile>(this.compactedfiles);
-      updatedCompactedfiles.removeAll(removedCompactedfiles);
-      this.compactedfiles = sortCompactedfiles(updatedCompactedfiles);
-    }
   }
 
   @Override
@@ -212,12 +164,6 @@ class DefaultStoreFileManager implements StoreFileManager {
   private void sortAndSetStoreFiles(List<StoreFile> storeFiles) {
     Collections.sort(storeFiles, StoreFile.Comparators.SEQ_ID);
     storefiles = ImmutableList.copyOf(storeFiles);
-  }
-
-  private List<StoreFile> sortCompactedfiles(List<StoreFile> storefiles) {
-    // Sorting may not be really needed here for the compacted files?
-    Collections.sort(storefiles, StoreFile.Comparators.SEQ_ID);
-    return new ArrayList<StoreFile>(storefiles);
   }
 
   @Override

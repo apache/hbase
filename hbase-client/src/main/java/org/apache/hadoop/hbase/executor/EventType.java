@@ -265,14 +265,7 @@ public enum EventType {
    *
    * RS_REGION_REPLICA_FLUSH
    */
-  RS_REGION_REPLICA_FLUSH   (82, ExecutorType.RS_REGION_REPLICA_FLUSH_OPS),
-
-  /**
-   * RS compacted files discharger <br>
-   *
-   * RS_COMPACTED_FILES_DISCHARGER
-   */
-  RS_COMPACTED_FILES_DISCHARGER (83, ExecutorType.RS_COMPACTED_FILES_DISCHARGER);
+  RS_REGION_REPLICA_FLUSH   (82, ExecutorType.RS_REGION_REPLICA_FLUSH_OPS);
 
   private final int code;
   private final ExecutorType executor;

@@ -125,7 +125,7 @@ public class TestWideScanner extends HBaseTestCase {
           ((HRegion.RegionScannerImpl)s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
           StoreScanner ss = (StoreScanner)scanners.next();
-          ss.updateReaders(new ArrayList<StoreFile>());
+          ss.updateReaders();
         }
       } while (more);
 

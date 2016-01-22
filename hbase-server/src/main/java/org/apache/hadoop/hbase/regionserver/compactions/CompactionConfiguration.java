@@ -55,8 +55,6 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY =
     "hbase.hstore.compaction.min.size";
   public static final String HBASE_HSTORE_COMPACTION_MAX_KEY = "hbase.hstore.compaction.max";
-  public static final String HBASE_HSTORE_COMPACTION_DISCHARGER_THREAD_COUNT =
-      "hbase.hstore.compaction.discharger.thread.count";
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY =
     "hbase.hstore.compaction.max.size";
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY =
@@ -65,11 +63,6 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_OFFPEAK_START_HOUR = "hbase.offpeak.start.hour";
   public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
       "hbase.hstore.min.locality.to.skip.major.compact";
-
-  public static final String HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT =
-      "hbase.hfile.compaction.discharger.thread.count";
-  public static final String HBASE_HFILE_COMPACTION_DISCHARGER_INTERVAL =
-      "hbase.hfile.compaction.discharger.interval";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;

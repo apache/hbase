@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -34,5 +33,5 @@ public interface ChangedReadersObserver {
    * Notify observers.
    * @throws IOException e
    */
-  void updateReaders(List<StoreFile> sfs) throws IOException;
+  void updateReaders() throws IOException;
 }

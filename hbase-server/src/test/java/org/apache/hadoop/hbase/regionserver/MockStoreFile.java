@@ -79,11 +79,6 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
-  public boolean isCompactedAway() {
-    return false;
-  }
-
-  @Override
   public byte[] getMetadataValue(byte[] key) {
     return this.metadata.get(key);
   }
