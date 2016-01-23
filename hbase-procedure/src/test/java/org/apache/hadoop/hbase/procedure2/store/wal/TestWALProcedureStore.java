@@ -151,6 +151,50 @@ public class TestWALProcedureStore {
   }
 
   @Test
+  public void testNoTrailerDoubleRestart() throws Exception {
+    // log-0001: proc 0, 1 and 2 are inserted
+    Procedure proc0 = new TestSequentialProcedure();
+    procStore.insert(proc0, null);
+    Procedure proc1 = new TestSequentialProcedure();
+    procStore.insert(proc1, null);
+    Procedure proc2 = new TestSequentialProcedure();
+    procStore.insert(proc2, null);
+    procStore.rollWriterForTesting();
+
+    // log-0002: proc 1 deleted
+    procStore.delete(proc1.getProcId());
+    procStore.rollWriterForTesting();
+
+    // log-0003: proc 2 is update
+    procStore.update(proc2);
+    procStore.rollWriterForTesting();
+
+    // log-0004: proc 2 deleted
+    procStore.delete(proc2.getProcId());
+
+    // stop the store and remove the trailer
+    procStore.stop(false);
+    FileStatus[] logs = fs.listStatus(logDir);
+    assertEquals(4, logs.length);
+    for (int i = 0; i < logs.length; ++i) {
+      corruptLog(logs[i], 4);
+    }
+
+    // Test Load 1
+    assertEquals(1, countProcedures(storeRestart()));
+
+    // Test Load 2
+    assertEquals(5, fs.listStatus(logDir).length);
+    assertEquals(1, countProcedures(storeRestart()));
+
+    // remove proc-0
+    procStore.delete(proc0.getProcId());
+    procStore.periodicRollForTesting();
+    assertEquals(1, fs.listStatus(logDir).length);
+    assertEquals(0, countProcedures(storeRestart()));
+  }
+
+  @Test
   public void testCorruptedTrailer() throws Exception {
     // Insert something
     for (int i = 0; i < 100; ++i) {

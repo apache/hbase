@@ -600,30 +600,19 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   @InterfaceAudience.Private
   public static ProcedureInfo createProcedureInfo(final Procedure proc, final NonceKey nonceKey) {
-    RemoteProcedureException exception;
-
-    if (proc.hasException()) {
-      exception = proc.getException();
-    } else {
-      exception = null;
-    }
-    ProcedureInfo procInfo = new ProcedureInfo(
+    RemoteProcedureException exception = proc.hasException() ? proc.getException() : null;
+    return new ProcedureInfo(
       proc.getProcId(),
       proc.toStringClass(),
       proc.getOwner(),
       proc.getState(),
       proc.hasParent() ? proc.getParentProcId() : -1,
+      nonceKey,
       exception != null ?
           RemoteProcedureException.toProto(exception.getSource(), exception.getCause()) : null,
       proc.getLastUpdate(),
       proc.getStartTime(),
       proc.getResult());
-
-    if (nonceKey != null) {
-      procInfo.setNonceKey(nonceKey);
-    }
-
-    return procInfo;
   }
 
   /**

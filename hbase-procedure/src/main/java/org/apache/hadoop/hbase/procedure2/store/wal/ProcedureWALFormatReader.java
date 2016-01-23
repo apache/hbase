@@ -25,9 +25,10 @@ import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
@@ -91,10 +92,7 @@ public class ProcedureWALFormatReader {
       loader.markCorruptedWAL(log, e);
     }
 
-    if (localProcedures.isEmpty()) {
-      LOG.info("No active entry found in state log " + log + ". removing it");
-      loader.removeLog(log);
-    } else {
+    if (!localProcedures.isEmpty()) {
       Iterator<Map.Entry<Long, ProcedureProtos.Procedure>> itd =
         localProcedures.entrySet().iterator();
       long minProcId = Long.MAX_VALUE;
@@ -160,6 +158,7 @@ public class ProcedureWALFormatReader {
     }
     maxProcId = Math.max(maxProcId, entry.getProcId());
     localProcedures.remove(entry.getProcId());
+    assert !procedures.containsKey(entry.getProcId());
     tracker.setDeleted(entry.getProcId(), true);
   }
 

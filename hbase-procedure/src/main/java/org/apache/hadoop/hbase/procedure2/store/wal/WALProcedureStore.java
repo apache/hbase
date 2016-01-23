@@ -247,8 +247,13 @@ public class WALProcedureStore implements ProcedureStore {
     return storeTracker;
   }
 
-  public LinkedList<ProcedureWALFile> getActiveLogs() {
-    return logs;
+  public ArrayList<ProcedureWALFile> getActiveLogs() {
+    lock.lock();
+    try {
+      return new ArrayList<ProcedureWALFile>(logs);
+    } finally {
+      lock.unlock();
+    }
   }
 
   public Set<ProcedureWALFile> getCorruptedLogs() {
@@ -316,16 +321,10 @@ public class WALProcedureStore implements ProcedureStore {
     }
 
     // Load the old logs
-    final ArrayList<ProcedureWALFile> toRemove = new ArrayList<ProcedureWALFile>();
     Iterator<ProcedureWALFile> it = logs.descendingIterator();
     it.next(); // Skip the current log
     try {
       return ProcedureWALFormat.load(it, storeTracker, new ProcedureWALFormat.Loader() {
-        @Override
-        public void removeLog(ProcedureWALFile log) {
-          toRemove.add(log);
-        }
-
         @Override
         public void markCorruptedWAL(ProcedureWALFile log, IOException e) {
           if (corruptedLogs == null) {
@@ -336,11 +335,6 @@ public class WALProcedureStore implements ProcedureStore {
         }
       });
     } finally {
-      if (!toRemove.isEmpty()) {
-        for (ProcedureWALFile log: toRemove) {
-          removeLogFile(log);
-        }
-      }
       loading.set(false);
     }
   }
@@ -589,6 +583,7 @@ public class WALProcedureStore implements ProcedureStore {
         totalSynced = syncSlots(stream, slots, 0, slotIndex);
         break;
       } catch (Throwable e) {
+        LOG.warn("unable to sync slots, retry=" + retry);
         if (++retry >= maxRetriesBeforeRoll) {
           if (logRolled >= maxSyncFailureRoll) {
             LOG.error("Sync slots after log roll failed, abort.", e);
@@ -648,14 +643,15 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   private boolean rollWriterOrDie() {
-    for (int i = 1; i <= rollRetries; ++i) {
+    for (int i = 0; i < rollRetries; ++i) {
+      if (i > 0) Threads.sleepWithoutInterrupt(waitBeforeRoll * i);
+
       try {
         if (rollWriter()) {
           return true;
         }
       } catch (IOException e) {
-        LOG.warn("Unable to roll the log, attempt=" + i, e);
-        Threads.sleepWithoutInterrupt(waitBeforeRoll);
+        LOG.warn("Unable to roll the log, attempt=" + (i + 1), e);
       }
     }
     LOG.fatal("Unable to roll the log");
@@ -902,7 +898,7 @@ public class WALProcedureStore implements ProcedureStore {
     }
   }
 
-  private long getMaxLogId(final FileStatus[] logFiles) {
+  private static long getMaxLogId(final FileStatus[] logFiles) {
     long maxLogId = 0;
     if (logFiles != null && logFiles.length > 0) {
       for (int i = 0; i < logFiles.length; ++i) {
@@ -945,7 +941,7 @@ public class WALProcedureStore implements ProcedureStore {
       } catch (IOException e) {
         LOG.warn("Unable to read tracker for " + log + " - " + e.getMessage());
         // try the next one...
-        storeTracker.clear();
+        storeTracker.reset();
         storeTracker.setPartialFlag(true);
       }
     }
