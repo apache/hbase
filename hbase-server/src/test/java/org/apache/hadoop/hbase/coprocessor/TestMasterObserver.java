@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -45,7 +47,10 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -166,6 +171,8 @@ public class TestMasterObserver {
     private boolean postGetTableDescriptorsCalled;
     private boolean postGetTableNamesCalled;
     private boolean preGetTableNamesCalled;
+    private boolean preDispatchMergeCalled;
+    private boolean postDispatchMergeCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -248,6 +255,24 @@ public class TestMasterObserver {
       postGetTableDescriptorsCalled = false;
       postGetTableNamesCalled = false;
       preGetTableNamesCalled = false;
+      preDispatchMergeCalled = false;
+      postDispatchMergeCalled = false;
+    }
+
+    @Override
+    public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+      preDispatchMergeCalled = true;
+    }
+
+    @Override
+    public void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+      postDispatchMergeCalled = true;
+    }
+
+    public boolean wasDispatchMergeCalled() {
+      return preDispatchMergeCalled && postDispatchMergeCalled;
     }
 
     @Override
@@ -1273,155 +1298,166 @@ public class TestMasterObserver {
     // create a table
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    Admin admin = UTIL.getHBaseAdmin();
+    try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+        Admin admin = connection.getAdmin()) {
+      tableCreationLatch = new CountDownLatch(1);
+      admin.createTable(htd, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
+        1, HBaseTestingUtility.KEYS.length));
 
-    tableCreationLatch = new CountDownLatch(1);
-    admin.createTable(htd);
-    // preCreateTable can't bypass default action.
-    assertTrue("Test table should be created", cp.wasCreateTableCalled());
-    tableCreationLatch.await();
-    assertTrue("Table pre create handler called.", cp
+      // preCreateTable can't bypass default action.
+      assertTrue("Test table should be created", cp.wasCreateTableCalled());
+      tableCreationLatch.await();
+      assertTrue("Table pre create handler called.", cp
         .wasPreCreateTableHandlerCalled());
-    assertTrue("Table create handler should be called.",
+      assertTrue("Table create handler should be called.",
         cp.wasCreateTableHandlerCalled());
 
-    tableCreationLatch = new CountDownLatch(1);
-    admin.disableTable(tableName);
-    assertTrue(admin.isTableDisabled(tableName));
-    // preDisableTable can't bypass default action.
-    assertTrue("Coprocessor should have been called on table disable",
-      cp.wasDisableTableCalled());
-    assertTrue("Disable table handler should be called.",
+      RegionLocator regionLocator = connection.getRegionLocator(htd.getTableName());
+      List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
+
+      admin.mergeRegions(regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
+        regions.get(1).getRegionInfo().getEncodedNameAsBytes(), true);
+      assertTrue("Coprocessor should have been called on region merge",
+        cp.wasDispatchMergeCalled());
+
+      tableCreationLatch = new CountDownLatch(1);
+      admin.disableTable(tableName);
+      assertTrue(admin.isTableDisabled(tableName));
+      // preDisableTable can't bypass default action.
+      assertTrue("Coprocessor should have been called on table disable",
+        cp.wasDisableTableCalled());
+      assertTrue("Disable table handler should be called.",
         cp.wasDisableTableHandlerCalled());
 
-    // enable
-    assertFalse(cp.wasEnableTableCalled());
-    admin.enableTable(tableName);
-    assertTrue(admin.isTableEnabled(tableName));
-    // preEnableTable can't bypass default action.
-    assertTrue("Coprocessor should have been called on table enable",
-      cp.wasEnableTableCalled());
-    assertTrue("Enable table handler should be called.",
+      // enable
+      assertFalse(cp.wasEnableTableCalled());
+      admin.enableTable(tableName);
+      assertTrue(admin.isTableEnabled(tableName));
+      // preEnableTable can't bypass default action.
+      assertTrue("Coprocessor should have been called on table enable",
+        cp.wasEnableTableCalled());
+      assertTrue("Enable table handler should be called.",
         cp.wasEnableTableHandlerCalled());
 
-    admin.disableTable(tableName);
-    assertTrue(admin.isTableDisabled(tableName));
+      admin.disableTable(tableName);
+      assertTrue(admin.isTableDisabled(tableName));
 
-    // modify table
-    htd.setMaxFileSize(512 * 1024 * 1024);
-    modifyTableSync(admin, tableName, htd);
-    // preModifyTable can't bypass default action.
-    assertTrue("Test table should have been modified",
-      cp.wasModifyTableCalled());
+      // modify table
+      htd.setMaxFileSize(512 * 1024 * 1024);
+      modifyTableSync(admin, tableName, htd);
+      // preModifyTable can't bypass default action.
+      assertTrue("Test table should have been modified",
+        cp.wasModifyTableCalled());
 
-    // add a column family
-    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
-    assertTrue("New column family shouldn't have been added to test table",
-      cp.preAddColumnCalledOnly());
+      // add a column family
+      admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
+      assertTrue("New column family shouldn't have been added to test table",
+        cp.preAddColumnCalledOnly());
 
-    // modify a column family
-    HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
-    hcd1.setMaxVersions(25);
-    admin.modifyColumn(tableName, hcd1);
-    assertTrue("Second column family should be modified",
-      cp.preModifyColumnCalledOnly());
+      // modify a column family
+      HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
+      hcd1.setMaxVersions(25);
+      admin.modifyColumn(tableName, hcd1);
+      assertTrue("Second column family should be modified",
+        cp.preModifyColumnCalledOnly());
 
-    // truncate table
-    admin.truncateTable(tableName, false);
+      // truncate table
+      admin.truncateTable(tableName, false);
 
-    // delete table
-    admin.disableTable(tableName);
-    assertTrue(admin.isTableDisabled(tableName));
-    deleteTable(admin, tableName);
-    assertFalse("Test table should have been deleted",
+      // delete table
+      admin.disableTable(tableName);
+      assertTrue(admin.isTableDisabled(tableName));
+      deleteTable(admin, tableName);
+      assertFalse("Test table should have been deleted",
         admin.tableExists(tableName));
-    // preDeleteTable can't bypass default action.
-    assertTrue("Coprocessor should have been called on table delete",
+      // preDeleteTable can't bypass default action.
+      assertTrue("Coprocessor should have been called on table delete",
         cp.wasDeleteTableCalled());
-    assertTrue("Delete table handler should be called.",
+      assertTrue("Delete table handler should be called.",
         cp.wasDeleteTableHandlerCalled());
 
-    // turn off bypass, run the tests again
-    cp.enableBypass(false);
-    cp.resetStates();
+      // turn off bypass, run the tests again
+      cp.enableBypass(false);
+      cp.resetStates();
 
-    admin.createTable(htd);
-    assertTrue("Test table should be created", cp.wasCreateTableCalled());
-    tableCreationLatch.await();
-    assertTrue("Table pre create handler called.", cp
+      admin.createTable(htd);
+      assertTrue("Test table should be created", cp.wasCreateTableCalled());
+      tableCreationLatch.await();
+      assertTrue("Table pre create handler called.", cp
         .wasPreCreateTableHandlerCalled());
-    assertTrue("Table create handler should be called.",
+      assertTrue("Table create handler should be called.",
         cp.wasCreateTableHandlerCalled());
 
-    // disable
-    assertFalse(cp.wasDisableTableCalled());
-    assertFalse(cp.wasDisableTableHandlerCalled());
-    admin.disableTable(tableName);
-    assertTrue(admin.isTableDisabled(tableName));
-    assertTrue("Coprocessor should have been called on table disable",
-      cp.wasDisableTableCalled());
-    assertTrue("Disable table handler should be called.",
+      // disable
+      assertFalse(cp.wasDisableTableCalled());
+      assertFalse(cp.wasDisableTableHandlerCalled());
+      admin.disableTable(tableName);
+      assertTrue(admin.isTableDisabled(tableName));
+      assertTrue("Coprocessor should have been called on table disable",
+        cp.wasDisableTableCalled());
+      assertTrue("Disable table handler should be called.",
         cp.wasDisableTableHandlerCalled());
 
-    // modify table
-    htd.setMaxFileSize(512 * 1024 * 1024);
-    modifyTableSync(admin, tableName, htd);
-    assertTrue("Test table should have been modified",
+      // modify table
+      htd.setMaxFileSize(512 * 1024 * 1024);
+      modifyTableSync(admin, tableName, htd);
+      assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
-    // add a column family
-    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
-    assertTrue("New column family should have been added to test table",
+      // add a column family
+      admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
+      assertTrue("New column family should have been added to test table",
         cp.wasAddColumnCalled());
-    assertTrue("Add column handler should be called.",
+      assertTrue("Add column handler should be called.",
         cp.wasAddColumnHandlerCalled());
 
-    // modify a column family
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMaxVersions(25);
-    admin.modifyColumn(tableName, hcd);
-    assertTrue("Second column family should be modified",
+      // modify a column family
+      HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
+      hcd.setMaxVersions(25);
+      admin.modifyColumn(tableName, hcd);
+      assertTrue("Second column family should be modified",
         cp.wasModifyColumnCalled());
-    assertTrue("Modify table handler should be called.",
+      assertTrue("Modify table handler should be called.",
         cp.wasModifyColumnHandlerCalled());
 
-    // enable
-    assertFalse(cp.wasEnableTableCalled());
-    assertFalse(cp.wasEnableTableHandlerCalled());
-    admin.enableTable(tableName);
-    assertTrue(admin.isTableEnabled(tableName));
-    assertTrue("Coprocessor should have been called on table enable",
+      // enable
+      assertFalse(cp.wasEnableTableCalled());
+      assertFalse(cp.wasEnableTableHandlerCalled());
+      admin.enableTable(tableName);
+      assertTrue(admin.isTableEnabled(tableName));
+      assertTrue("Coprocessor should have been called on table enable",
         cp.wasEnableTableCalled());
-    assertTrue("Enable table handler should be called.",
+      assertTrue("Enable table handler should be called.",
         cp.wasEnableTableHandlerCalled());
 
-    // disable again
-    admin.disableTable(tableName);
-    assertTrue(admin.isTableDisabled(tableName));
+      // disable again
+      admin.disableTable(tableName);
+      assertTrue(admin.isTableDisabled(tableName));
 
-    // delete column
-    assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
-    assertFalse("Delete table column handler should not be called.",
+      // delete column
+      assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
+      assertFalse("Delete table column handler should not be called.",
         cp.wasDeleteColumnHandlerCalled());
-    admin.deleteColumn(tableName, TEST_FAMILY2);
-    HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
-    assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
+      admin.deleteColumn(tableName, TEST_FAMILY2);
+      HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+      assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
         tableDesc.getFamily(TEST_FAMILY2));
-    assertTrue("Coprocessor should have been called on column delete",
+      assertTrue("Coprocessor should have been called on column delete",
         cp.wasDeleteColumnCalled());
-    assertTrue("Delete table column handler should be called.",
+      assertTrue("Delete table column handler should be called.",
         cp.wasDeleteColumnHandlerCalled());
 
-    // delete table
-    assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
-    assertFalse("Delete table handler should not be called.",
+      // delete table
+      assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
+      assertFalse("Delete table handler should not be called.",
         cp.wasDeleteTableHandlerCalled());
-    deleteTable(admin, tableName);
-    assertFalse("Test table should have been deleted",
+      deleteTable(admin, tableName);
+      assertFalse("Test table should have been deleted",
         admin.tableExists(tableName));
-    assertTrue("Coprocessor should have been called on table delete",
+      assertTrue("Coprocessor should have been called on table delete",
         cp.wasDeleteTableCalled());
-    assertTrue("Delete table handler should be called.",
+      assertTrue("Delete table handler should be called.",
         cp.wasDeleteTableHandlerCalled());
+    }
   }
 
   @Test (timeout=180000)

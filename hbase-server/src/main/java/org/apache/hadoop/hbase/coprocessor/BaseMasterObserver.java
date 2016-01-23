@@ -65,6 +65,16 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+  }
+
+  @Override
+  public void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+  }
+
+  @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName) throws IOException {
   }

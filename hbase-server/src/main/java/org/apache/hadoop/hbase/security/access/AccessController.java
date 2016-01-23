@@ -2559,6 +2559,13 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    requirePermission("mergeRegions", regionA.getTable(), null, null,
+      Action.ADMIN);
+  }
+
+  @Override
   public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
       Region regionB) throws IOException {
     requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,

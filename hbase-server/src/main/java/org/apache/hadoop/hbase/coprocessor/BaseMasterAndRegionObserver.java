@@ -54,6 +54,16 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+  }
+
+  @Override
+  public void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+  }
+
+  @Override
   public void preCreateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
