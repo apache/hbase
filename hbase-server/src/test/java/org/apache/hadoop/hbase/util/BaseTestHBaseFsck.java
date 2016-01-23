@@ -294,7 +294,7 @@ public class BaseTestHBaseFsck {
   }
 
   /**
-   * Counts the number of row to verify data loss or non-dataloss.
+   * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows() throws IOException {
      Scan s = new Scan();
@@ -306,6 +306,19 @@ public class BaseTestHBaseFsck {
      return i;
   }
 
+  /**
+   * Counts the number of rows to verify data loss or non-dataloss.
+   */
+  int countRows(byte[] start, byte[] end) throws IOException {
+    Scan s = new Scan(start, end);
+    ResultScanner rs = tbl.getScanner(s);
+    int i = 0;
+    while (rs.next() != null) {
+      i++;
+    }
+    return i;
+  }
+  
   /**
    * delete table in preparation for next test
    *

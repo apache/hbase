@@ -926,8 +926,9 @@ public class HBaseFsck extends Configured implements Closeable {
     LOG.info("Min max keys are : [" + Bytes.toString(orphanRegionRange.getFirst()) + ", " +
         Bytes.toString(orphanRegionRange.getSecond()) + ")");
 
-    // create new region on hdfs.  move data into place.
-    HRegionInfo hri = new HRegionInfo(template.getTableName(), orphanRegionRange.getFirst(), orphanRegionRange.getSecond());
+    // create new region on hdfs. move data into place.
+    HRegionInfo hri = new HRegionInfo(template.getTableName(), orphanRegionRange.getFirst(),
+        Bytes.add(orphanRegionRange.getSecond(), new byte[1]));
     LOG.info("Creating new region : " + hri);
     HRegion region = HBaseFsckRepair.createHDFSRegionDir(getConf(), hri, template);
     Path target = region.getRegionFileSystem().getRegionDir();

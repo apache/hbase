@@ -1564,7 +1564,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
   /**
    * This creates and fixes a bad table with a missing region -- hole in meta
-   * and data present but .regioinfino missing (an orphan hdfs region)in the fs.
+   * and data present but .regioninfo missing (an orphan hdfs region)in the fs.
    */
   @Test(timeout=180000)
   public void testHDFSRegioninfoMissing() throws Exception {
