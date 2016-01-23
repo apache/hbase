@@ -514,8 +514,8 @@ public class MasterRpcServices extends RSRpcServices
         "Unable to merge regions not online " + regionStateA + ", " + regionStateB));
     }
 
-    HRegionInfo regionInfoA = regionStateA.getRegion();
-    HRegionInfo regionInfoB = regionStateB.getRegion();
+    final HRegionInfo regionInfoA = regionStateA.getRegion();
+    final HRegionInfo regionInfoB = regionStateB.getRegion();
     if (regionInfoA.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
         regionInfoB.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
       throw new ServiceException(new MergeRegionException("Can't merge non-default replicas"));
@@ -523,6 +523,11 @@ public class MasterRpcServices extends RSRpcServices
     if (regionInfoA.compareTo(regionInfoB) == 0) {
       throw new ServiceException(new MergeRegionException(
         "Unable to merge a region to itself " + regionInfoA + ", " + regionInfoB));
+    }
+    try {
+      master.cpHost.preDispatchMerge(regionInfoA, regionInfoB);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
 
     if (!forcible && !HRegionInfo.areAdjacent(regionInfoA, regionInfoB)) {
@@ -535,6 +540,7 @@ public class MasterRpcServices extends RSRpcServices
 
     try {
       master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible);
+      master.cpHost.postDispatchMerge(regionInfoA, regionInfoB);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
