@@ -932,7 +932,8 @@ public class HBaseFsck extends Configured implements Closeable {
         Bytes.toString(orphanRegionRange.getSecond()) + ")");
 
     // create new region on hdfs.  move data into place.
-    HRegionInfo hri = new HRegionInfo(template.getTableName(), orphanRegionRange.getFirst(), orphanRegionRange.getSecond());
+    HRegionInfo hri = new HRegionInfo(template.getTableName(), orphanRegionRange.getFirst(), 
+      Bytes.add(orphanRegionRange.getSecond(), new byte[1]));
     LOG.info("Creating new region : " + hri);
     HRegion region = HBaseFsckRepair.createHDFSRegionDir(getConf(), hri, template);
     Path target = region.getRegionFileSystem().getRegionDir();

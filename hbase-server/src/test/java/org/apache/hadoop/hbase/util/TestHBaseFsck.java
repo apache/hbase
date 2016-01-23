@@ -450,7 +450,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * Counts the number of row to verify data loss or non-dataloss.
+   * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows() throws IOException {
      Scan s = new Scan();
@@ -462,6 +462,18 @@ public class TestHBaseFsck {
      return i;
   }
 
+  /**
+   * Counts the number of rows to verify data loss or non-dataloss.
+   */
+  int countRows(byte[] start, byte[] end) throws IOException {
+    Scan s = new Scan(start, end);
+    ResultScanner rs = tbl.getScanner(s);
+    int i = 0;
+    while (rs.next() != null) {
+      i++;
+    }
+    return i;
+  }  
   /**
    * delete table in preparation for next test
    *
@@ -1229,6 +1241,53 @@ public class TestHBaseFsck {
     }
   }
 
+  /**
+   * This creates and fixes a bad table with a missing region -- hole in meta and data present but
+   * .regioninfo missing (an orphan hdfs region)in the fs. At last we check every row was present
+   * at the correct region.
+   */
+  @Test(timeout = 180000)
+  public void testHDFSRegioninfoMissingAndCheckRegionBoundary() throws Exception {
+    TableName table = TableName.valueOf("testHDFSRegioninfoMissingAndCheckRegionBoundary");
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+  
+      // Mess it up by leaving a hole in the meta data
+      admin.disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
+        true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+      admin.enableTable(table);
+  
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck,
+        new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+            HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_HDFS_REGION,
+            HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+            HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+      // holes are separate from overlap groups
+      assertEquals(0, hbck.getOverlapGroups(table).size());
+  
+      // fix hole
+      doFsck(conf, true);
+  
+      // check that hole fixed
+      assertNoErrors(doFsck(conf, false));
+  
+      // check data belong to the correct region,every scan should get one row.
+      for (int i = 0; i < ROWKEYS.length; i++) {
+        if (i != ROWKEYS.length - 1) {
+          assertEquals(1, countRows(ROWKEYS[i], ROWKEYS[i + 1]));
+        } else {
+          assertEquals(1, countRows(ROWKEYS[i], null));
+        }
+      }
+  
+    } finally {
+      cleanupTable(table);
+    }
+  }
+    
   /**
    * This creates and fixes a bad table with a region that is missing meta and
    * not assigned to a region server.
