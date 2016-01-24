@@ -57,6 +57,7 @@ public class TestRowCounter {
   private static final Log LOG = LogFactory.getLog(TestRowCounter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String TABLE_NAME = "testRowCounter";
+  private final static String TABLE_NAME_TS_RANGE = "testRowCounter_ts_range";
   private final static String COL_FAM = "col_fam";
   private final static String COL1 = "c1";
   private final static String COL2 = "c2";
@@ -138,6 +139,21 @@ public class TestRowCounter {
     runRowCount(args, 10);
   }
 
+
+  /**
+   * Test a case when the column specified in command line arguments is
+   * exclusive for few rows and also a row range filter is specified
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterColumnAndRowRange() throws Exception {
+    String[] args = new String[] {
+            TABLE_NAME, "--range=rov,rox", COL_FAM + ":" + COL1
+    };
+    runRowCount(args, 8);
+  }
+
    /**
    * Test a case when the timerange is specified with --starttime and --endtime options
    *
@@ -154,7 +170,8 @@ public class TestRowCounter {
     long ts;
 
     // clean up content of TABLE_NAME
-    Table table = TEST_UTIL.deleteTableData(TableName.valueOf(TABLE_NAME));
+    Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME_TS_RANGE), Bytes.toBytes(COL_FAM));
+
     ts = System.currentTimeMillis();
     put1.addColumn(family, col1, ts, Bytes.toBytes("val1"));
     table.put(put1);
@@ -168,28 +185,28 @@ public class TestRowCounter {
     table.close();
 
     String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1,
+        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
         "--starttime=" + 0,
         "--endtime=" + ts
     };
     runRowCount(args, 1);
 
     args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1,
+        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
         "--starttime=" + 0,
         "--endtime=" + (ts - 10)
     };
     runRowCount(args, 1);
 
     args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1,
+        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
         "--starttime=" + ts,
         "--endtime=" + (ts + 1000)
     };
     runRowCount(args, 2);
 
     args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1,
+        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
         "--starttime=" + (ts - 30 * 1000),
         "--endtime=" + (ts + 30 * 1000),
     };
