@@ -75,8 +75,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param numRegionServers initial number of region servers to start.
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int numMasters,
-                             int numRegionServers)
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
       throws IOException, InterruptedException {
     this(conf, numMasters, numRegionServers, null, null);
   }
@@ -108,7 +107,6 @@ public class MiniHBaseCluster extends HBaseCluster {
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
     private Thread shutdownThread = null;
     private User user = null;
-    public static boolean TEST_SKIP_CLOSE = false;
 
     public MiniHBaseClusterRegionServer(Configuration conf, CoordinatedStateManager cp)
         throws IOException, InterruptedException {
@@ -161,6 +159,7 @@ public class MiniHBaseCluster extends HBaseCluster {
       super.kill();
     }
 
+    @Override
     public void abort(final String reason, final Throwable cause) {
       this.user.runAs(new PrivilegedAction<Object>() {
         public Object run() {
