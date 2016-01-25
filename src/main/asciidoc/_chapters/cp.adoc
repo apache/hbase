@@ -160,7 +160,7 @@ RegionServerObserver::
   See
   link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionServerObserver.html[RegionServerObserver].
   Consider overriding the convenience class
-  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterRegionServerObserver.html[BaseMasterRegionServerObserver]
+  https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterAndRegionObserver.html[BaseMasterAndRegionObserver]
   which implements both `MasterObserver` and `RegionServerObserver` interfaces and
   will not break if new methods are added.
 
@@ -169,7 +169,7 @@ MasterOvserver::
   as table creation, deletion, or schema modification. See
   link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/MasterObserver.html[MasterObserver].
   Consider overriding the convenience class
-  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterRegionServerObserver.html[BaseMasterRegionServerObserver],
+  https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterAndRegionObserver.html[BaseMasterAndRegionObserver],
   which implements both `MasterObserver` and `RegionServerObserver` interfaces and
   will not break if new methods are added.
 

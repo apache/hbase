@@ -857,7 +857,8 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.bucketcache.ioengine</name>
     <value></value>
     <description>Where to store the contents of the bucketcache. One of: heap,
-      offheap, or file. If a file, set it to file:PATH_TO_FILE. See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html for more information.
+      offheap, or file. If a file, set it to file:PATH_TO_FILE. See
+      http://hbase.apache.org/book.html#offheap.blockcache for more information.
     </description>
   </property>
   <property>
