@@ -197,17 +197,6 @@ public class TestIOFencing {
     }
 
     @Override
-    protected void completeCompaction(final Collection<StoreFile> compactedFiles,
-        boolean removeFiles) throws IOException {
-      try {
-        r.compactionsWaiting.countDown();
-        r.compactionsBlocked.await();
-      } catch (InterruptedException ex) {
-        throw new IOException(ex);
-      }
-      super.completeCompaction(compactedFiles, removeFiles);
-    }
-    @Override
     protected void completeCompaction(Collection<StoreFile> compactedFiles) throws IOException {
       try {
         r.compactionsWaiting.countDown();

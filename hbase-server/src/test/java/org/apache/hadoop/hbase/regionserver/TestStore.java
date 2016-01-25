@@ -1027,6 +1027,18 @@ public class TestStore {
     store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
   }
 
+  private void closeCompactedFile(int index) throws IOException {
+    Collection<StoreFile> files =
+        this.store.getStoreEngine().getStoreFileManager().getCompactedfiles();
+    StoreFile sf = null;
+    Iterator<StoreFile> it = files.iterator();
+    for (int i = 0; i <= index; i++) {
+      sf = it.next();
+    }
+    sf.closeReader(true);
+    store.getStoreEngine().getStoreFileManager().removeCompactedFiles(Lists.newArrayList(sf));
+  }
+
   @Test
   public void testRefreshStoreFiles() throws Exception {
     init(name.getMethodName());
@@ -1054,6 +1066,7 @@ public class TestStore {
     store.refreshStoreFiles();
     assertEquals(5, this.store.getStorefilesCount());
 
+    closeCompactedFile(0);
     archiveStoreFile(0);
 
     assertEquals(5, this.store.getStorefilesCount());

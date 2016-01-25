@@ -109,6 +109,11 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public List<Region> getOnlineRegions() {
+    return null;
+  }
+
+  @Override
   public void addToOnlineRegions(Region r) {
     this.regions.put(r.getRegionInfo().getEncodedName(), r);
   }

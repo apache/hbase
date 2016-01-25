@@ -1533,6 +1533,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (this.metricsRegionWrapper != null) {
         Closeables.closeQuietly(this.metricsRegionWrapper);
       }
+
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
@@ -6786,6 +6787,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       dstRegion.getRegionFileSystem().logFileSystemState(LOG);
     }
 
+    // clear the compacted files if any
+    for (Store s : dstRegion.getStores()) {
+      s.closeAndArchiveCompactedFiles();
+    }
     if (dstRegion.getRegionFileSystem().hasReferences(dstRegion.getTableDesc())) {
       throw new IOException("Merged region " + dstRegion
           + " still has references after the compaction, is compaction canceled?");

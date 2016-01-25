@@ -46,7 +46,8 @@ public enum ExecutorType {
   RS_CLOSE_META              (25),
   RS_PARALLEL_SEEK           (26),
   RS_LOG_REPLAY_OPS          (27),
-  RS_REGION_REPLICA_FLUSH_OPS  (28);
+  RS_REGION_REPLICA_FLUSH_OPS  (28),
+  RS_COMPACTED_FILES_DISCHARGER (29);
 
   ExecutorType(int value) {}
 

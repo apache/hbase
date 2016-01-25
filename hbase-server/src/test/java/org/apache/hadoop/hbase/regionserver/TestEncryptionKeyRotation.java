@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -122,13 +124,14 @@ public class TestEncryptionKeyRotation {
 
     // And major compact
     TEST_UTIL.getHBaseAdmin().majorCompact(htd.getTableName());
+    final List<Path> updatePaths = findCompactedStorefilePaths(htd.getTableName());
     TEST_UTIL.waitFor(30000, 1000, true, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         // When compaction has finished, all of the original files will be
         // gone
         boolean found = false;
-        for (Path path: initialPaths) {
+        for (Path path: updatePaths) {
           found = TEST_UTIL.getTestFileSystem().exists(path);
           if (found) {
             LOG.info("Found " + path);
@@ -140,13 +143,19 @@ public class TestEncryptionKeyRotation {
     });
 
     // Verify we have store file(s) with only the new key
+    Thread.sleep(1000);
+    waitForCompaction(htd.getTableName());
     List<Path> pathsAfterCompaction = findStorefilePaths(htd.getTableName());
     assertTrue(pathsAfterCompaction.size() > 0);
     for (Path path: pathsAfterCompaction) {
-      assertFalse("Store file " + path + " retains initial key",
-        Bytes.equals(initialCFKey.getEncoded(), extractHFileKey(path)));
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(secondCFKey.getEncoded(), extractHFileKey(path)));
+    }
+    List<Path> compactedPaths = findCompactedStorefilePaths(htd.getTableName());
+    assertTrue(compactedPaths.size() > 0);
+    for (Path path: compactedPaths) {
+      assertTrue("Store file " + path + " retains initial key",
+        Bytes.equals(initialCFKey.getEncoded(), extractHFileKey(path)));
     }
   }
 
@@ -193,6 +202,33 @@ public class TestEncryptionKeyRotation {
     }
   }
 
+  private static void waitForCompaction(TableName tableName)
+      throws IOException, InterruptedException {
+    boolean compacted = false;
+    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
+        .getOnlineRegions(tableName)) {
+      for (Store store : region.getStores()) {
+        compacted = false;
+        while (!compacted) {
+          if (store.getStorefiles() != null) {
+            while (store.getStorefilesCount() != 1) {
+              Thread.sleep(100);
+            }
+            for (StoreFile storefile : store.getStorefiles()) {
+              if (!storefile.isCompactedAway()) {
+                compacted = true;
+                break;
+              }
+              Thread.sleep(100);
+            }
+          } else {
+            break;
+          }
+        }
+      }
+    }
+  }
+  
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
     for (Region region:
@@ -200,6 +236,23 @@ public class TestEncryptionKeyRotation {
       for (Store store: region.getStores()) {
         for (StoreFile storefile: store.getStorefiles()) {
           paths.add(storefile.getPath());
+        }
+      }
+    }
+    return paths;
+  }
+
+  private static List<Path> findCompactedStorefilePaths(TableName tableName) throws Exception {
+    List<Path> paths = new ArrayList<Path>();
+    for (Region region:
+        TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(tableName)) {
+      for (Store store : region.getStores()) {
+        Collection<StoreFile> compactedfiles =
+            ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
+        if (compactedfiles != null) {
+          for (StoreFile storefile : compactedfiles) {
+            paths.add(storefile.getPath());
+          }
         }
       }
     }

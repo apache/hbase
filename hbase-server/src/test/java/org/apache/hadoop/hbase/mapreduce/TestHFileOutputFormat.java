@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -71,7 +72,9 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1032,6 +1035,12 @@ public class TestHFileOutputFormat  {
       try {
         quickPoll(new Callable<Boolean>() {
           public Boolean call() throws Exception {
+            List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAME);
+            for (HRegion region : regions) {
+              for (Store store : region.getStores()) {
+                store.closeAndArchiveCompactedFiles();
+              }
+            }
             return fs.listStatus(storePath).length == 1;
           }
         }, 5000);
@@ -1044,6 +1053,12 @@ public class TestHFileOutputFormat  {
       admin.majorCompact(TABLE_NAME.getName());
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
+          List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAME);
+          for (HRegion region : regions) {
+            for (Store store : region.getStores()) {
+              store.closeAndArchiveCompactedFiles();
+            }
+          }
           return fs.listStatus(storePath).length == 1;
         }
       }, 5000);

@@ -51,6 +51,7 @@ public class StoreFileScanner implements KeyValueScanner {
   private final StoreFile.Reader reader;
   private final HFileScanner hfs;
   private Cell cur = null;
+  private boolean closed = false;
 
   private boolean realSeekDone;
   private boolean delayedReseek;
@@ -171,7 +172,7 @@ public class StoreFileScanner implements KeyValueScanner {
     try {
       try {
         if(!seekAtOrAfter(hfs, key)) {
-          close();
+          this.cur = null;
           return false;
         }
 
@@ -198,7 +199,7 @@ public class StoreFileScanner implements KeyValueScanner {
     try {
       try {
         if (!reseekAtOrAfter(hfs, key)) {
-          close();
+          this.cur = null;
           return false;
         }
         setCurrentCell(hfs.getKeyValue());
@@ -244,7 +245,6 @@ public class StoreFileScanner implements KeyValueScanner {
     }
 
     if (cur == null) {
-      close();
       return false;
     }
 
@@ -252,8 +252,12 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   public void close() {
-    // Nothing to close on HFileScanner?
     cur = null;
+    if (closed) return;    
+    if (this.reader != null) {
+      this.reader.decrementRefCount();
+    }
+    closed = true;
   }
 
   /**
@@ -454,7 +458,7 @@ public class StoreFileScanner implements KeyValueScanner {
           if (seekCount != null) seekCount.incrementAndGet();
           if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
               seekKey.getKeyLength())) {
-            close();
+            this.cur = null;
             return false;
           }
           KeyValue firstKeyOfPreviousRow = KeyValueUtil.createFirstOnRow(hfs.getKeyValue()

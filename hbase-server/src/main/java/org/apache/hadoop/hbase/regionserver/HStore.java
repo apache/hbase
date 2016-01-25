@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -273,7 +272,6 @@ public class HStore implements Store {
           "hbase.hstore.flush.retries.number must be > 0, not "
               + flushRetriesNumber);
     }
-
     // Crypto context for new store files
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
@@ -531,14 +529,15 @@ public class HStore implements Store {
         try {
           Future<StoreFile> future = completionService.take();
           StoreFile storeFile = future.get();
-          long length = storeFile.getReader().length();
-          this.storeSize += length;
-          this.totalUncompressedBytes +=
-              storeFile.getReader().getTotalUncompressedBytes();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("loaded " + storeFile.toStringDetailed());
+          if (storeFile != null) {
+            long length = storeFile.getReader().length();
+            this.storeSize += length;
+            this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("loaded " + storeFile.toStringDetailed());
+            }
+            results.add(storeFile);
           }
-          results.add(storeFile);
         } catch (InterruptedException e) {
           if (ioe == null) ioe = new InterruptedIOException(e.getMessage());
         } catch (ExecutionException e) {
@@ -636,8 +635,7 @@ public class HStore implements Store {
       region.getMVCC().advanceTo(this.getMaxSequenceId());
     }
 
-    // notify scanners, close file readers, and recompute store size
-    completeCompaction(toBeRemovedStoreFiles, false);
+    completeCompaction(toBeRemovedStoreFiles);
   }
 
   private StoreFile createStoreFileAndReader(final Path p) throws IOException {
@@ -814,7 +812,6 @@ public class HStore implements Store {
       // the lock.
       this.lock.writeLock().unlock();
     }
-    notifyChangedReadersObservers();
     LOG.info("Loaded HFile " + sf.getFileInfo() + " into store '" + getColumnFamilyName());
     if (LOG.isTraceEnabled()) {
       String traceMessage = "BULK LOAD time,size,store size,store files ["
@@ -830,7 +827,12 @@ public class HStore implements Store {
     try {
       // Clear so metrics doesn't find them.
       ImmutableCollection<StoreFile> result = storeEngine.getStoreFileManager().clearFiles();
-
+      Collection<StoreFile> compactedfiles =
+          storeEngine.getStoreFileManager().clearCompactedFiles();
+      // clear the compacted files
+      if (compactedfiles != null && !compactedfiles.isEmpty()) {
+        removeCompactedfiles(compactedfiles);
+      }
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
         ThreadPoolExecutor storeFileCloserThreadPool = this.region
@@ -845,7 +847,7 @@ public class HStore implements Store {
             @Override
             public Void call() throws IOException {
               boolean evictOnClose = 
-                  cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+                  cacheConf != null? cacheConf.shouldEvictOnClose(): true;
               f.closeReader(evictOnClose);
               return null;
             }
@@ -1067,10 +1069,8 @@ public class HStore implements Store {
       // the lock.
       this.lock.writeLock().unlock();
     }
-
-    // Tell listeners of the change in readers.
-    notifyChangedReadersObservers();
-
+    // notify to be called here - only in case of flushes
+    notifyChangedReadersObservers(sfs);
     if (LOG.isTraceEnabled()) {
       long totalSize = 0;
       for (StoreFile sf : sfs) {
@@ -1088,9 +1088,9 @@ public class HStore implements Store {
    * Notify all observers that set of Readers has changed.
    * @throws IOException
    */
-  private void notifyChangedReadersObservers() throws IOException {
-    for (ChangedReadersObserver o: this.changedReaderObservers) {
-      o.updateReaders();
+  private void notifyChangedReadersObservers(List<StoreFile> sfs) throws IOException {
+    for (ChangedReadersObserver o : this.changedReaderObservers) {
+      o.updateReaders(sfs);
     }
   }
 
@@ -1126,6 +1126,30 @@ public class HStore implements Store {
     scanners.addAll(sfScanners);
     // Then the memstore scanners
     scanners.addAll(memStoreScanners);
+    return scanners;
+  }
+
+  @Override
+  public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
+      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException {
+    List<KeyValueScanner> memStoreScanners = null;
+    if (includeMemstoreScanner) {
+      this.lock.readLock().lock();
+      try {
+        memStoreScanners = this.memstore.getScanners(readPt);
+      } finally {
+        this.lock.readLock().unlock();
+      }
+    }
+    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
+      cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(sfScanners.size() + 1);
+    scanners.addAll(sfScanners);
+    // Then the memstore scanners
+    if (memStoreScanners != null) {
+      scanners.addAll(memStoreScanners);
+    }
     return scanners;
   }
 
@@ -1248,7 +1272,7 @@ public class HStore implements Store {
         compactedCellsSize += getCompactionProgress().totalCompactedSize;
       }
       // At this point the store will use new files for all new scanners.
-      completeCompaction(filesToCompact, true); // Archive old files & update store size.
+      completeCompaction(filesToCompact); // update store size.
 
       logCompactionEndMessage(cr, sfs, compactionStartTime);
       return sfs;
@@ -1436,7 +1460,7 @@ public class HStore implements Store {
       LOG.info("Replaying compaction marker, replacing input files: " +
           inputStoreFiles + " with output files : " + outputStoreFiles);
       this.replaceStoreFiles(inputStoreFiles, outputStoreFiles);
-      this.completeCompaction(inputStoreFiles, removeFiles);
+      this.completeCompaction(inputStoreFiles);
     }
   }
 
@@ -1488,7 +1512,7 @@ public class HStore implements Store {
           this.getCoprocessorHost().postCompact(this, sf, null);
         }
         replaceStoreFiles(filesToCompact, Lists.newArrayList(sf));
-        completeCompaction(filesToCompact, true);
+        completeCompaction(filesToCompact);
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1771,32 +1795,7 @@ public class HStore implements Store {
   @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles, boolean removeFiles)
       throws IOException {
-    try {
-      // Do not delete old store files until we have sent out notification of
-      // change in case old files are still being accessed by outstanding scanners.
-      // Don't do this under writeLock; see HBASE-4485 for a possible deadlock
-      // scenario that could have happened if continue to hold the lock.
-      notifyChangedReadersObservers();
-      // At this point the store will use new files for all scanners.
-
-      // let the archive util decide if we should archive or delete the files
-      LOG.debug("Removing store files after compaction...");
-      boolean evictOnClose = 
-          cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
-      for (StoreFile compactedFile : compactedFiles) {
-        compactedFile.closeReader(evictOnClose);
-      }
-      if (removeFiles) {
-        this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
-      }
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      LOG.error("Failed removing compacted files in " + this +
-        ". Files we were trying to remove are " + compactedFiles.toString() +
-        "; some of them may have been already removed", e);
-    }
-
-    // 4. Compute new store size
+    LOG.debug("Completing compaction...");
     this.storeSize = 0L;
     this.totalUncompressedBytes = 0L;
     for (StoreFile hsf : this.storeEngine.getStoreFileManager().getStorefiles()) {
@@ -2489,5 +2488,93 @@ public class HStore implements Store {
   @Override
   public boolean isPrimaryReplicaStore() {
 	   return getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
+  }
+
+  @Override
+  public void closeAndArchiveCompactedFiles() throws IOException {
+    lock.readLock().lock();
+    Collection<StoreFile> copyCompactedfiles = null;
+    try {
+      Collection<StoreFile> compactedfiles =
+          this.getStoreEngine().getStoreFileManager().getCompactedfiles();
+      if (compactedfiles != null && compactedfiles.size() != 0) {
+        // Do a copy under read lock
+        copyCompactedfiles = new ArrayList<StoreFile>(compactedfiles);
+      } else {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("No compacted files to archive");
+          return;
+        }
+      }
+    } finally {
+      lock.readLock().unlock();
+    }
+    if (copyCompactedfiles != null && !copyCompactedfiles.isEmpty()) {
+      removeCompactedfiles(copyCompactedfiles);
+    }
+  }
+
+  /**
+   * Archives and removes the compacted files
+   * @param compactedfiles The compacted files in this store that are not active in reads
+   * @throws IOException
+   */
+  private void removeCompactedfiles(Collection<StoreFile> compactedfiles)
+      throws IOException {
+    final List<StoreFile> filesToRemove = new ArrayList<StoreFile>(compactedfiles.size());
+    for (final StoreFile file : compactedfiles) {
+      synchronized (file) {
+        try {
+          StoreFile.Reader r = file.getReader();
+          if (r == null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("The file " + file + " was closed but still not archived.");
+            }
+            filesToRemove.add(file);
+          }
+          if (r != null && r.isCompactedAway() && !r.isReferencedInReads()) {
+            // Even if deleting fails we need not bother as any new scanners won't be
+            // able to use the compacted file as the status is already compactedAway
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Closing and archiving the file " + file.getPath());
+            }
+            r.close(true);
+            // Just close and return
+            filesToRemove.add(file);
+          }
+        } catch (Exception e) {
+          LOG.error(
+            "Exception while trying to close the compacted store file " + file.getPath().getName());
+        }
+      }
+    }
+    if (this.isPrimaryReplicaStore()) {
+      // Only the primary region is allowed to move the file to archive.
+      // The secondary region does not move the files to archive. Any active reads from
+      // the secondary region will still work because the file as such has active readers on it.
+      if (!filesToRemove.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Moving the files " + filesToRemove + " to archive");
+        }
+        // Only if this is successful it has to be removed
+        this.fs.removeStoreFiles(this.getFamily().getNameAsString(), filesToRemove);
+      }
+    }
+    if (!filesToRemove.isEmpty()) {
+      // Clear the compactedfiles from the store file manager
+      clearCompactedfiles(filesToRemove);
+    }
+  }
+
+  private void clearCompactedfiles(final List<StoreFile> filesToRemove) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Clearing the compacted file " + filesToRemove + " from this store");
+    }
+    try {
+      lock.writeLock().lock();
+      this.getStoreEngine().getStoreFileManager().removeCompactedFiles(filesToRemove);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 }

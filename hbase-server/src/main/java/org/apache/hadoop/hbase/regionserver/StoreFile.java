@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,6 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -368,6 +371,19 @@ public class StoreFile {
     return bulkLoadedHFile || metadataMap.containsKey(BULKLOAD_TIME_KEY);
   }
 
+  @VisibleForTesting
+  public boolean isCompactedAway() {
+    if (this.reader != null) {
+      return this.reader.isCompactedAway();
+    }
+    return true;
+  }
+
+  @VisibleForTesting
+  public int getRefCount() {
+    return this.reader.refCount.get();
+  }
+
   /**
    * Return the timestamp at which this bulk load file was generated.
    */
@@ -533,6 +549,15 @@ public class StoreFile {
     if (this.reader != null) {
       this.reader.close(evictOnClose);
       this.reader = null;
+    }
+  }
+
+  /**
+   * Marks the status of the file as compactedAway.
+   */
+  public void markCompactedAway() {
+    if (this.reader != null) {
+      this.reader.markCompactedAway();
     }
   }
 
@@ -1072,11 +1097,21 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
     private boolean bulkLoadResult = false;
+    // Counter that is incremented every time a scanner is created on the
+    // store file. It is decremented when the scan on the store file is
+    // done.
+    private AtomicInteger refCount = new AtomicInteger(0);
+    // Indicates if the file got compacted
+    private volatile boolean compactedAway = false;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
         throws IOException {
       reader = HFile.createReader(fs, path, cacheConf, conf);
       bloomFilterType = BloomType.NONE;
+    }
+
+    void markCompactedAway() {
+      this.compactedAway = true;
     }
 
     public Reader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
@@ -1130,9 +1165,33 @@ public class StoreFile {
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
                                                boolean pread,
                                                boolean isCompaction, long readPt) {
+      // Increment the ref count
+      refCount.incrementAndGet();
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread, isCompaction),
                                  !isCompaction, reader.hasMVCCInfo(), readPt);
+    }
+
+    /**
+     * Decrement the ref count associated with the reader when ever a scanner associated
+     * with the reader is closed
+     */
+    void decrementRefCount() {
+      refCount.decrementAndGet();
+    }
+
+    /**
+     * @return true if the file is still used in reads
+     */
+    public boolean isReferencedInReads() {
+      return refCount.get() != 0;
+    }
+ 
+    /**
+     * @return true if the file is compacted
+     */
+    public boolean isCompactedAway() {
+      return this.compactedAway;
     }
 
     /**
@@ -1620,7 +1679,13 @@ public class StoreFile {
     private static class GetFileSize implements Function<StoreFile, Long> {
       @Override
       public Long apply(StoreFile sf) {
-        return sf.getReader().length();
+        if (sf.getReader() != null) {
+          return sf.getReader().length();
+        } else {
+          // the reader may be null for the compacted files and if the archiving
+          // had failed.
+          return -1L;
+        }
       }
     }
 
