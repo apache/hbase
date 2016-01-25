@@ -273,53 +273,32 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * Wait for the specified region server to stop
-   * Removes this thread from list of running threads.
-   * @param serverNumber
+   * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(int serverNumber) {
-    JVMClusterUtil.RegionServerThread regionServerThread =
-      this.regionThreads.remove(serverNumber);
-    while (regionServerThread.isAlive()) {
-      try {
-        LOG.info("Waiting on " +
-          regionServerThread.getRegionServer().toString());
-        regionServerThread.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-    return regionServerThread.getName();
+    JVMClusterUtil.RegionServerThread regionServerThread = this.regionThreads.get(serverNumber);
+    return waitOnRegionServer(regionServerThread);
   }
 
   /**
-   * Wait for the specified region server to stop
-   * Removes this thread from list of running threads.
-   * @param rst
+   * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
     while (rst.isAlive()) {
       try {
-        LOG.info("Waiting on " +
-          rst.getRegionServer().toString());
+        LOG.info("Waiting on " + rst.getRegionServer().toString());
         rst.join();
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
     }
-    for (int i=0;i<regionThreads.size();i++) {
-      if (regionThreads.get(i) == rst) {
-        regionThreads.remove(i);
-        break;
-      }
-    }
+    regionThreads.remove(rst);
     return rst.getName();
   }
 
   /**
-   * @param serverNumber
    * @return the HMaster thread
    */
   public HMaster getMaster(int serverNumber) {
@@ -357,8 +336,7 @@ public class LocalHBaseCluster {
    * this list).
    */
   public List<JVMClusterUtil.MasterThread> getLiveMasters() {
-    List<JVMClusterUtil.MasterThread> liveServers =
-      new ArrayList<JVMClusterUtil.MasterThread>();
+    List<JVMClusterUtil.MasterThread> liveServers = new ArrayList<>();
     List<JVMClusterUtil.MasterThread> list = getMasters();
     for (JVMClusterUtil.MasterThread mt: list) {
       if (mt.isAlive()) {
@@ -369,13 +347,19 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * Wait for the specified master to stop
-   * Removes this thread from list of running threads.
-   * @param serverNumber
+   * Wait for the specified master to stop. Removes this thread from list of running threads.
    * @return Name of master that just went down.
    */
   public String waitOnMaster(int serverNumber) {
-    JVMClusterUtil.MasterThread masterThread = this.masterThreads.remove(serverNumber);
+    JVMClusterUtil.MasterThread masterThread = this.masterThreads.get(serverNumber);
+    return waitOnMaster(masterThread);
+  }
+
+  /**
+   * Wait for the specified master to stop. Removes this thread from list of running threads.
+   * @return Name of master that just went down.
+   */
+  public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
     while (masterThread.isAlive()) {
       try {
         LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
@@ -384,31 +368,7 @@ public class LocalHBaseCluster {
         e.printStackTrace();
       }
     }
-    return masterThread.getName();
-  }
-
-  /**
-   * Wait for the specified master to stop
-   * Removes this thread from list of running threads.
-   * @param masterThread
-   * @return Name of master that just went down.
-   */
-  public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
-    while (masterThread.isAlive()) {
-      try {
-        LOG.info("Waiting on " +
-          masterThread.getMaster().getServerName().toString());
-        masterThread.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-    for (int i=0;i<masterThreads.size();i++) {
-      if (masterThreads.get(i) == masterThread) {
-        masterThreads.remove(i);
-        break;
-      }
-    }
+    masterThreads.remove(masterThread);
     return masterThread.getName();
   }
 
