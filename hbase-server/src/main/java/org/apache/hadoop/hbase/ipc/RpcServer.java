@@ -185,13 +185,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    */
   private static final int DEFAULT_MAX_CALLQUEUE_SIZE = 1024 * 1024 * 1024;
 
-  private static final String WARN_DELAYED_CALLS = "hbase.ipc.warn.delayedrpc.number";
-
-  private static final int DEFAULT_WARN_DELAYED_CALLS = 1000;
-
-  private final int warnDelayedCalls;
-
-  private AtomicInteger delayedCalls;
   private final IPCUtil ipcUtil;
 
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
@@ -305,10 +298,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * Chain of buffers to send as response.
      */
     protected BufferChain response;
-    protected boolean delayResponse;
     protected Responder responder;
-    protected boolean delayReturnValue;           // if the return value should be
-                                                  // set at call completion
+
     protected long size;                          // size of current call
     protected boolean isError;
     protected TraceInfo tinfo;
@@ -336,7 +327,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
-      this.delayResponse = false;
       this.responder = responder;
       this.isError = false;
       this.size = size;
@@ -487,51 +477,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     @Override
-    public synchronized void endDelay(Object result) throws IOException {
-      assert this.delayResponse;
-      assert this.delayReturnValue || result == null;
-      this.delayResponse = false;
-      delayedCalls.decrementAndGet();
-      if (this.delayReturnValue) {
-        this.setResponse(result, null, null, null);
-      }
-      this.responder.doRespond(this);
-    }
-
-    @Override
-    public synchronized void endDelay() throws IOException {
-      this.endDelay(null);
-    }
-
-    @Override
-    public synchronized void startDelay(boolean delayReturnValue) {
-      assert !this.delayResponse;
-      this.delayResponse = true;
-      this.delayReturnValue = delayReturnValue;
-      int numDelayed = delayedCalls.incrementAndGet();
-      if (numDelayed > warnDelayedCalls) {
-        LOG.warn("Too many delayed calls: limit " + warnDelayedCalls + " current " + numDelayed);
-      }
-    }
-
-    @Override
-    public synchronized void endDelayThrowing(Throwable t) throws IOException {
-      this.setResponse(null, null, t, StringUtils.stringifyException(t));
-      this.delayResponse = false;
-      this.sendResponseIfReady();
-    }
-
-    @Override
-    public synchronized boolean isDelayed() {
-      return this.delayResponse;
-    }
-
-    @Override
-    public synchronized boolean isReturnValueDelayed() {
-      return this.delayReturnValue;
-    }
-
-    @Override
     public boolean isClientCellBlockSupported() {
       return this.connection != null && this.connection.codec != null;
     }
@@ -567,15 +512,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       responseBlockSize += blockSize;
     }
 
-    /**
-     * If we have a response, and delay is not set, then respond
-     * immediately.  Otherwise, do not respond to client.  This is
-     * called by the RPC code in the context of the Handler thread.
-     */
     public synchronized void sendResponseIfReady() throws IOException {
-      if (!this.delayResponse) {
-        this.responder.doRespond(this);
-      }
+      this.responder.doRespond(this);
     }
 
     public UserGroupInformation getRemoteUser() {
@@ -2082,8 +2020,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay", true);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive", true);
 
-    this.warnDelayedCalls = conf.getInt(WARN_DELAYED_CALLS, DEFAULT_WARN_DELAYED_CALLS);
-    this.delayedCalls = new AtomicInteger(0);
     this.ipcUtil = new IPCUtil(conf);
 
 

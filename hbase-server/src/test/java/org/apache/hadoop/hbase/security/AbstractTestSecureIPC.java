@@ -32,20 +32,26 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.ipc.TestDelayedRpc.TestDelayedImplementation;
-import org.apache.hadoop.hbase.ipc.TestDelayedRpc.TestThread;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -69,6 +75,55 @@ public abstract class AbstractTestSecureIPC {
 
   private static final File KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri()
       .getPath());
+
+  static final BlockingService SERVICE =
+      TestRpcServiceProtos.TestProtobufRpcProto.newReflectiveBlockingService(
+          new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
+
+            @Override
+            public TestProtos.EmptyResponseProto ping(RpcController controller,
+                                                      TestProtos.EmptyRequestProto request)
+                throws ServiceException {
+              return null;
+            }
+
+            @Override
+            public TestProtos.EmptyResponseProto error(RpcController controller,
+                                                       TestProtos.EmptyRequestProto request)
+                throws ServiceException {
+              return null;
+            }
+
+            @Override
+            public TestProtos.EchoResponseProto echo(RpcController controller,
+                                                     TestProtos.EchoRequestProto request)
+                throws ServiceException {
+              if (controller instanceof PayloadCarryingRpcController) {
+                PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController) controller;
+                // If cells, scan them to check we are able to iterate what we were given and since
+                // this is
+                // an echo, just put them back on the controller creating a new block. Tests our
+                // block
+                // building.
+                CellScanner cellScanner = pcrc.cellScanner();
+                List<Cell> list = null;
+                if (cellScanner != null) {
+                  list = new ArrayList<Cell>();
+                  try {
+                    while (cellScanner.advance()) {
+                      list.add(cellScanner.current());
+                    }
+                  } catch (IOException e) {
+                    throw new ServiceException(e);
+                  }
+                }
+                cellScanner = CellUtil.createCellScanner(list);
+                ((PayloadCarryingRpcController) controller).setCellScanner(cellScanner);
+              }
+              return TestProtos.EchoResponseProto.newBuilder()
+                  .setMessage(request.getMessage()).build();
+            }
+          });
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
@@ -189,36 +244,31 @@ public abstract class AbstractTestSecureIPC {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
         .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
-    SecurityInfo.addInfo("TestDelayedService", securityInfoMock);
+    SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
-    boolean delayReturnValue = false;
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
-    TestDelayedImplementation instance = new TestDelayedImplementation(delayReturnValue);
-    BlockingService service =
-        TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
 
     RpcServerInterface rpcServer =
-        new RpcServer(null, "testSecuredDelayedRpc",
-            Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)), isa,
+        new RpcServer(null, "AbstractTestSecureIPC",
+            Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)), isa,
             serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
-    RpcClient rpcClient =
-        RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString());
-    try {
+    try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
+        HConstants.DEFAULT_CLUSTER_ID.toString())) {
       InetSocketAddress address = rpcServer.getListenerAddress();
       if (address == null) {
         throw new IOException("Listener channel is closed");
       }
       BlockingRpcChannel channel =
           rpcClient.createBlockingRpcChannel(
-            ServerName.valueOf(address.getHostName(), address.getPort(),
-            System.currentTimeMillis()), clientUser, 0);
-      TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
-          TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);
-      List<Integer> results = new ArrayList<>();
-      TestThread th1 = new TestThread(stub, true, results);
+              ServerName.valueOf(address.getHostName(), address.getPort(),
+                  System.currentTimeMillis()), clientUser, 0);
+      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
+          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(channel);
+      List<String> results = new ArrayList<>();
+      TestThread th1 = new TestThread(stub, results);
       final Throwable exception[] = new Throwable[1];
-          Collections.synchronizedList(new ArrayList<Throwable>());
+      Collections.synchronizedList(new ArrayList<Throwable>());
       Thread.UncaughtExceptionHandler exceptionHandler =
           new Thread.UncaughtExceptionHandler() {
             public void uncaughtException(Thread th, Throwable ex) {
@@ -235,11 +285,35 @@ public abstract class AbstractTestSecureIPC {
         }
         throw (Exception) exception[0];
       }
-
-      assertEquals(0xDEADBEEF, results.get(0).intValue());
     } finally {
-      rpcClient.close();
       rpcServer.stop();
     }
   }
+
+  public static class TestThread extends Thread {
+      private final TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
+
+      private final List<String> results;
+
+          public TestThread(TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub, List<String> results) {
+          this.stub = stub;
+          this.results = results;
+        }
+
+          @Override
+      public void run() {
+          String result;
+          try {
+              result = stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(String.valueOf(
+                  ThreadLocalRandom.current().nextInt())).build()).getMessage();
+            } catch (ServiceException e) {
+              throw new RuntimeException(e);
+            }
+          if (results != null) {
+              synchronized (results) {
+                  results.add(result);
+                }
+            }
+        }
+    }
 }
