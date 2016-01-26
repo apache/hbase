@@ -61,6 +61,11 @@ do
     hosts=$1
     shift
     HBASE_REGIONSERVERS=$hosts
+  elif [ "--auth-as-server" = "$1" ]
+  then
+    shift
+    # shellcheck disable=SC2034
+    AUTH_AS_SERVER="true"
   else
     # Presume we are at end of options and break
     break

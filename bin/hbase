@@ -76,6 +76,7 @@ if [ $# = 0 ]; then
   echo "Options:"
   echo "  --config DIR    Configuration direction to use. Default: ./conf"
   echo "  --hosts HOSTS   Override the list in 'regionservers' file"
+  echo "  --auth-as-server Authenticate to ZooKeeper using servers configuration"
   echo ""
   echo "Commands:"
   echo "Some commands take arguments. Pass no args or -h for usage."
@@ -274,6 +275,14 @@ if [[ $server ]]; then
 	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS"
 else
 	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
+fi
+
+if [ "$AUTH_AS_SERVER" == "true" ] || [ "$COMMAND" = "hbck" ]; then
+   if [ -n "$HBASE_SERVER_JAAS_OPTS" ]; then
+     HBASE_OPTS="$HBASE_OPTS $HBASE_SERVER_JAAS_OPTS"
+   else
+     HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
+   fi
 fi
 
 # figure out which class to run
