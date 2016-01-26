@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.security.User;
 
 @InterfaceAudience.Private
-public interface RpcCallContext extends Delayable {
+public interface RpcCallContext {
   /**
    * Check if the caller who made this IPC call has disconnected.
    * If called from outside the context of IPC, this does nothing.

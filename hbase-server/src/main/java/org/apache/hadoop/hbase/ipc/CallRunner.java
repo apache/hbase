@@ -125,13 +125,10 @@ public class CallRunner {
           sucessful = true;
         }
       }
-      // Set the response for undelayed calls and delayed calls with
-      // undelayed responses.
-      if (!call.isDelayed() || !call.isReturnValueDelayed()) {
-        Message param = resultPair != null ? resultPair.getFirst() : null;
-        CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
-        call.setResponse(param, cells, errorThrowable, error);
-      }
+      // Set the response
+      Message param = resultPair != null ? resultPair.getFirst() : null;
+      CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
+      call.setResponse(param, cells, errorThrowable, error);
       call.sendResponseIfReady();
       this.status.markComplete("Sent response");
       this.status.pause("Waiting for a call");
