@@ -67,8 +67,10 @@ public class PutSortReducer extends
           for (Cell cell: cells) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             map.add(kv);
-            curSize += kv.heapSize();
           }
+        }
+        for(KeyValue kv: map){
+          curSize +=kv.heapSize();
         }
       }
       context.setStatus("Read " + map.size() + " entries of " + map.getClass()
