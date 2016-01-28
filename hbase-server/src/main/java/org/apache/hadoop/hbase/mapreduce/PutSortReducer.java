@@ -66,11 +66,10 @@ public class PutSortReducer extends
         for (List<Cell> cells: p.getFamilyCellMap().values()) {
           for (Cell cell: cells) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            map.add(kv);
+            if (map.add(kv)) {// don't count duplicated kv into size
+              curSize += kv.heapSize();
+            }
           }
-        }
-        for(KeyValue kv: map){
-          curSize +=kv.heapSize();
         }
       }
       context.setStatus("Read " + map.size() + " entries of " + map.getClass()
