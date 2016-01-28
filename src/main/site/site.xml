@@ -43,9 +43,13 @@
     </fluidoSkin>
   </custom>
   <bannerLeft>
-    <name></name>
+    <name>hbasecon2016</name>
+    <!--
     <height>0</height>
     <width>0</width>
+    -->
+    <src>images/hbasecon2016-stack-logo.jpg</src>
+    <href>http://hbasecon.com/</href>
   </bannerLeft>
   <bannerRight>
     <name>Apache HBase</name>
