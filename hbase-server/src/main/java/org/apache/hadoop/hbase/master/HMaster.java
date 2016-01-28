@@ -134,6 +134,7 @@ import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1375,10 +1376,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public void dispatchMergingRegions(final HRegionInfo region_a,
-      final HRegionInfo region_b, final boolean forcible) throws IOException {
+      final HRegionInfo region_b, final boolean forcible, final User user) throws IOException {
     checkInitialized();
     this.service.submit(new DispatchMergingRegionHandler(this,
-      this.catalogJanitorChore, region_a, region_b, forcible));
+      this.catalogJanitorChore, region_a, region_b, forcible, user));
   }
 
   void move(final byte[] encodedRegionName,

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -55,16 +56,18 @@ public class DispatchMergingRegionHandler extends EventHandler {
   private HRegionInfo region_b;
   private final boolean forcible;
   private final int timeout;
+  private final User user;
 
   public DispatchMergingRegionHandler(final MasterServices services,
       final CatalogJanitor catalogJanitor, final HRegionInfo region_a,
-      final HRegionInfo region_b, final boolean forcible) {
+      final HRegionInfo region_b, final boolean forcible, final User user) {
     super(services, EventType.C_M_MERGE_REGION);
     this.masterServices = services;
     this.catalogJanitor = catalogJanitor;
     this.region_a = region_a;
     this.region_b = region_b;
     this.forcible = forcible;
+    this.user = user;
     this.timeout = server.getConfiguration().getInt(
         "hbase.master.regionmerge.timeout", 120 * 1000);
   }
@@ -148,7 +151,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
       while (!masterServices.isStopped()) {
         try {
           masterServices.getServerManager().sendRegionsMerge(region_a_location,
-              region_a, region_b, forcible);
+              region_a, region_b, forcible, user);
           LOG.info("Sent merge to server " + region_a_location + " for region " +
             region_a.getEncodedName() + "," + region_b.getEncodedName() + ", focible=" + forcible);
           break;

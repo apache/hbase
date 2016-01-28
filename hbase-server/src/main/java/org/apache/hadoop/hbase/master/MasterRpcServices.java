@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -539,7 +540,7 @@ public class MasterRpcServices extends RSRpcServices
     }
 
     try {
-      master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible);
+      master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible, RpcServer.getRequestUser());
       master.cpHost.postDispatchMerge(regionInfoA, regionInfoB);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

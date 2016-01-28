@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSeque
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -876,7 +877,7 @@ public class ServerManager {
    * @throws IOException
    */
   public void sendRegionsMerge(ServerName server, HRegionInfo region_a,
-      HRegionInfo region_b, boolean forcible) throws IOException {
+      HRegionInfo region_b, boolean forcible, User user) throws IOException {
     if (server == null)
       throw new NullPointerException("Passed server is null");
     if (region_a == null || region_b == null)
@@ -889,7 +890,7 @@ public class ServerManager {
           + region_b.getRegionNameAsString()
           + " failed because no RPC connection found to this server");
     }
-    ProtobufUtil.mergeRegions(admin, region_a, region_b, forcible);
+    ProtobufUtil.mergeRegions(admin, region_a, region_b, forcible, user);
   }
 
   /**
