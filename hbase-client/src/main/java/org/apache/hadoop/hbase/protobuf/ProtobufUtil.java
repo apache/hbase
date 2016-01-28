@@ -23,12 +23,14 @@ import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpeci
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -138,6 +140,7 @@ import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -1896,17 +1899,34 @@ public final class ProtobufUtil {
    * @param region_b
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          two adjacent regions
+   * @param user effective user
    * @throws IOException
    */
   public static void mergeRegions(final AdminService.BlockingInterface admin,
       final HRegionInfo region_a, final HRegionInfo region_b,
-      final boolean forcible) throws IOException {
-    MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
+      final boolean forcible, final User user) throws IOException {
+    final MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
         region_a.getRegionName(), region_b.getRegionName(),forcible);
-    try {
-      admin.mergeRegions(null, request);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
+    if (user != null) {
+      try {
+        user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            admin.mergeRegions(null, request);
+            return null;
+          }
+        });
+      } catch (InterruptedException ie) {
+        InterruptedIOException iioe = new InterruptedIOException();
+        iioe.initCause(ie);
+        throw iioe;
+      }
+    } else {
+      try {
+        admin.mergeRegions(null, request);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
     }
   }
 

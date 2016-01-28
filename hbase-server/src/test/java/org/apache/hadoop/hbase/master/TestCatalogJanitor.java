@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -512,7 +513,7 @@ public class TestCatalogJanitor {
 
     @Override
     public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
-        boolean forcible) throws IOException {
+        boolean forcible, User user) throws IOException {
     }
 
     @Override

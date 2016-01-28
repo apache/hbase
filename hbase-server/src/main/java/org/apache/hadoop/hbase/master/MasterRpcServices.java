@@ -624,7 +624,7 @@ public class MasterRpcServices extends RSRpcServices
     }
 
     try {
-      master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible);
+      master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible, RpcServer.getRequestUser());
       master.cpHost.postDispatchMerge(regionInfoA, regionInfoB);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
