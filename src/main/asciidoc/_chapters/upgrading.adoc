@@ -31,7 +31,7 @@ You cannot skip major versions when upgrading. If you are upgrading from version
 
 NOTE: It may be possible to skip across versions -- for example go from 0.92.2 straight to 0.98.0 just following the 0.96.x upgrade instructions -- but these scenarios are untested.
 
-Review <<configuration>>, in particular <<hadoop>>.
+Review <<configuration>>, in particular <<hadoop>>. Familiarize yourself with <<hbase_supported_tested_definitions>>.
 
 [[hbase.versioning]]
 == HBase version number and compatibility
