@@ -28,7 +28,9 @@
 :experimental:
 
 This chapter expands upon the <<getting_started>> chapter to further explain configuration of Apache HBase.
-Please read this chapter carefully, especially the <<basic.prerequisites,Basic Prerequisites>> to ensure that your HBase testing and deployment goes smoothly, and prevent data loss.
+Please read this chapter carefully, especially the <<basic.prerequisites,Basic Prerequisites>>
+to ensure that your HBase testing and deployment goes smoothly, and prevent data loss.
+Familiarize yourself with <<hbase_supported_tested_definitions>> as well.
 
 == Configuration Files
 Apache HBase uses the same configuration system as Apache Hadoop.

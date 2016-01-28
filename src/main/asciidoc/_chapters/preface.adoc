@@ -70,4 +70,39 @@ Please use link:https://issues.apache.org/jira/browse/hbase[JIRA] to report non-
 
 To protect existing HBase installations from new vulnerabilities, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
 
+[hbase_supported_tested_definitions]
+.Support and Testing Expectations
+
+The phrases /supported/, /not supported/, /tested/, and /not tested/ occur several
+places throughout this guide. In the interest of clarity, here is a brief explanation
+of what is generally meant by these phrases, in the context of HBase.
+
+NOTE: Commercial technical support for Apache HBase is provided by many Hadoop vendors.
+This is not the sense in which the term /support/ is used in the context of the
+Apache HBase project. The Apache HBase team assumes no responsibility for your
+HBase clusters, your configuration, or your data.
+
+Supported::
+  In the context of Apache HBase, /supported/ means that HBase is designed to work
+  in the way described, and deviation from the defined behavior or functionality should
+  be reported as a bug.
+
+Not Supported::
+  In the context of Apache HBase, /not supported/ means that a use case or use pattern
+  is not expected to work and should be considered an antipattern. If you think this
+  designation should be reconsidered for a given feature or use pattern, file a JIRA
+  or start a discussion on one of the mailing lists.
+
+Tested::
+  In the context of Apache HBase, /tested/ means that a feature is covered by unit
+  or integration tests, and has been proven to work as expected.
+
+Not Tested::
+  In the context of Apache HBase, /not tested/ means that a feature or use pattern
+  may or may notwork in a given way, and may or may not corrupt your data or cause
+  operational issues. It is an unknown, and there are no guarantees. If you can provide
+  proof that a feature designated as /not tested/ does work in a given way, please
+  submit the tests and/or the metrics so that other users can gain certainty about
+  such features or use patterns.
+
 :numbered:

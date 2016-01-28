@@ -19,6 +19,7 @@
  */
 ////
 
+[[getting_started]]
 = Getting Started
 :doctype: book
 :numbered:
