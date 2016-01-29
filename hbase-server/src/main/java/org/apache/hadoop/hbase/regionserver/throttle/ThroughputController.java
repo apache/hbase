@@ -15,52 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.compactions;
+package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
- * A dummy CompactionThroughputController that does nothing.
+ * A utility that constrains the total throughput of one or more simultaneous flows by
+ * sleeping when necessary.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class NoLimitCompactionThroughputController implements CompactionThroughputController {
+public interface ThroughputController extends Stoppable {
 
-  public static final NoLimitCompactionThroughputController INSTANCE =
-      new NoLimitCompactionThroughputController();
+  /**
+   * Setup controller for the given region server.
+   */
+  void setup(RegionServerServices server);
 
-  @Override
-  public void setup(RegionServerServices server) {
-  }
+  /**
+   * Start the throughput controller.
+   */
+  void start(String name);
 
-  @Override
-  public void start(String compactionName) {
-  }
+  /**
+   * Control the throughput. Will sleep if too fast.
+   * @return the actual sleep time.
+   */
+  long control(String name, long size) throws InterruptedException;
 
-  @Override
-  public long control(String compactionName, long size) throws InterruptedException {
-    return 0;
-  }
-
-  @Override
-  public void finish(String compactionName) {
-  }
-
-  private volatile boolean stopped;
-
-  @Override
-  public void stop(String why) {
-    stopped = true;
-  }
-
-  @Override
-  public boolean isStopped() {
-    return stopped;
-  }
-
-  @Override
-  public String toString() {
-    return "NoLimitCompactionThroughputController";
-  }
+  /**
+   * Finish the controller. Should call this method in a finally block.
+   */
+  void finish(String name);
 }

@@ -70,7 +70,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
-import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -314,7 +314,7 @@ public class TestHRegionReplayEvents {
     // compaction from primary
     LOG.info("-- Compacting primary, only 1 store");
     primaryRegion.compactStore(Bytes.toBytes("cf1"),
-      NoLimitCompactionThroughputController.INSTANCE);
+      NoLimitThroughputController.INSTANCE);
 
     // now replay the edits and the flush marker
     reader = createWALReaderForPrimary();

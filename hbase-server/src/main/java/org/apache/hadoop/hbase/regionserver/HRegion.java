@@ -151,9 +151,9 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
-import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1727,12 +1727,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Store s : getStores()) {
       CompactionContext compaction = s.requestCompaction();
       if (compaction != null) {
-        CompactionThroughputController controller = null;
+        ThroughputController controller = null;
         if (rsServices != null) {
           controller = CompactionThroughputControllerFactory.create(rsServices, conf);
         }
         if (controller == null) {
-          controller = NoLimitCompactionThroughputController.INSTANCE;
+          controller = NoLimitThroughputController.INSTANCE;
         }
         compact(compaction, s, controller, null);
       }
@@ -1749,7 +1749,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Store s : getStores()) {
       CompactionContext compaction = s.requestCompaction();
       if (compaction != null) {
-        compact(compaction, s, NoLimitCompactionThroughputController.INSTANCE, null);
+        compact(compaction, s, NoLimitThroughputController.INSTANCE, null);
       }
     }
   }
@@ -1761,7 +1761,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException e
    */
   @VisibleForTesting
-  void compactStore(byte[] family, CompactionThroughputController throughputController)
+  void compactStore(byte[] family, ThroughputController throughputController)
       throws IOException {
     Store s = getStore(family);
     CompactionContext compaction = s.requestCompaction();
@@ -1786,12 +1786,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return whether the compaction completed
    */
   public boolean compact(CompactionContext compaction, Store store,
-      CompactionThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
     return compact(compaction, store, throughputController, null);
   }
 
   public boolean compact(CompactionContext compaction, Store store,
-      CompactionThroughputController throughputController, User user) throws IOException {
+      ThroughputController throughputController, User user) throws IOException {
     assert compaction != null && compaction.hasSelection();
     assert !compaction.getRequest().getFiles().isEmpty();
     if (this.closing.get() || this.closed.get()) {

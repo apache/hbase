@@ -37,10 +37,10 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -77,7 +77,7 @@ public class TestStripeStoreEngine {
     when(
       mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(), any(byte[].class),
         any(byte[].class), any(byte[].class), any(byte[].class),
-        any(CompactionThroughputController.class), any(User.class)))
+        any(ThroughputController.class), any(User.class)))
         .thenReturn(new ArrayList<Path>());
 
     // Produce 3 L0 files.
@@ -96,10 +96,10 @@ public class TestStripeStoreEngine {
     assertEquals(2, compaction.getRequest().getFiles().size());
     assertFalse(compaction.getRequest().getFiles().contains(sf));
     // Make sure the correct method it called on compactor.
-    compaction.compact(NoLimitCompactionThroughputController.INSTANCE);
+    compaction.compact(NoLimitThroughputController.INSTANCE);
     verify(mockCompactor, times(1)).compact(compaction.getRequest(), targetCount, 0L,
       StripeStoreFileManager.OPEN_KEY, StripeStoreFileManager.OPEN_KEY, null, null,
-      NoLimitCompactionThroughputController.INSTANCE, null);
+      NoLimitThroughputController.INSTANCE, null);
   }
 
   private static StoreFile createFile() throws Exception {

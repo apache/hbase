@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -316,5 +317,14 @@ public class MockRegionServerServices implements RegionServerServices {
   public ClusterConnection getClusterConnection() {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  public ThroughputController getFlushThroughputController() {
+    return null;
+  }
+
+  @Override
+  public double getFlushPressure() {
+    return 0;
   }
 }

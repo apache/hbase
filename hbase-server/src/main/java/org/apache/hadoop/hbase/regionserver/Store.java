@@ -22,8 +22,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -32,6 +30,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
 /**
@@ -225,14 +225,14 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void cancelRequestedCompaction(CompactionContext compaction);
 
   /**
-   * @deprecated see compact(CompactionContext, CompactionThroughputController, User)
+   * @deprecated see compact(CompactionContext, ThroughputController, User)
    */
   @Deprecated
   List<StoreFile> compact(CompactionContext compaction,
-      CompactionThroughputController throughputController) throws IOException;
+      ThroughputController throughputController) throws IOException;
 
   List<StoreFile> compact(CompactionContext compaction,
-    CompactionThroughputController throughputController, User user) throws IOException;
+    ThroughputController throughputController, User user) throws IOException;
 
   /**
    * @return true if we should run a major compaction.

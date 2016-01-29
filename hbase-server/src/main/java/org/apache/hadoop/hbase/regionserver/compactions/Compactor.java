@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,10 +47,12 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 /**
@@ -282,25 +283,6 @@ public abstract class Compactor {
   }
 
   /**
-   * Used to prevent compaction name conflict when multiple compactions running parallel on the
-   * same store.
-   */
-  private static final AtomicInteger NAME_COUNTER = new AtomicInteger(0);
-
-  private String generateCompactionName() {
-    int counter;
-    for (;;) {
-      counter = NAME_COUNTER.get();
-      int next = counter == Integer.MAX_VALUE ? 0 : counter + 1;
-      if (NAME_COUNTER.compareAndSet(counter, next)) {
-        break;
-      }
-    }
-    return store.getRegionInfo().getRegionNameAsString() + "#"
-        + store.getFamily().getNameAsString() + "#" + counter;
-  }
-
-  /**
    * Performs the compaction.
    * @param fd FileDetails of cell sink writer
    * @param scanner Where to read from.
@@ -312,7 +294,7 @@ public abstract class Compactor {
    */
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
       long smallestReadPoint, boolean cleanSeqId,
-      CompactionThroughputController throughputController, boolean major) throws IOException {
+      ThroughputController throughputController, boolean major) throws IOException {
     long bytesWrittenProgressForCloseCheck = 0;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
@@ -324,7 +306,7 @@ public abstract class Compactor {
     if (LOG.isDebugEnabled()) {
       lastMillis = EnvironmentEdgeManager.currentTime();
     }
-    String compactionName = generateCompactionName();
+    String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
     ScannerContext scannerContext =

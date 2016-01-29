@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -89,7 +89,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   private final ThreadPoolExecutor splits;
   private final ThreadPoolExecutor mergePool;
 
-  private volatile CompactionThroughputController compactionThroughputController;
+  private volatile ThroughputController compactionThroughputController;
 
   /**
    * Splitting should not take place if the total number of regions exceed this.
@@ -672,7 +672,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
       }
     }
 
-    CompactionThroughputController old = this.compactionThroughputController;
+    ThroughputController old = this.compactionThroughputController;
     if (old != null) {
       old.stop("configuration change");
     }
@@ -717,7 +717,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   }
 
   @VisibleForTesting
-  public CompactionThroughputController getCompactionThroughputController() {
+  public ThroughputController getCompactionThroughputController() {
     return compactionThroughputController;
   }
 

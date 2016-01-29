@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
 /**
  * Compact passed set of files. Create an instance and then call
- * {@link #compact(CompactionRequest, CompactionThroughputController, User)}
+ * {@link #compact(CompactionRequest, ThroughputController, User)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
@@ -52,7 +54,7 @@ public class DefaultCompactor extends Compactor {
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
   public List<Path> compact(final CompactionRequest request,
-      CompactionThroughputController throughputController, User user) throws IOException {
+      ThroughputController throughputController, User user) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
@@ -173,7 +175,7 @@ public class DefaultCompactor extends Compactor {
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest, CompactionThroughputController, User)};
+   * {@link #compact(CompactionRequest, ThroughputController, User)};
    * @param filesToCompact the files to compact. These are used as the compactionSelection for
    *          the generated {@link CompactionRequest}.
    * @param isMajor true to major compact (prune all deletes, max versions, etc)
@@ -185,6 +187,6 @@ public class DefaultCompactor extends Compactor {
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);
-    return this.compact(cr, NoLimitCompactionThroughputController.INSTANCE, null);
+    return this.compact(cr, NoLimitThroughputController.INSTANCE, null);
   }
 }

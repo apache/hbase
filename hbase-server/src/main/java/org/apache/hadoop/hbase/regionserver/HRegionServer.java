@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -139,6 +140,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
+import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -189,6 +192,7 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
@@ -198,7 +202,8 @@ import sun.misc.SignalHandler;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
-public class HRegionServer extends HasThread implements RegionServerServices, LastSequenceId {
+public class HRegionServer extends HasThread implements
+    RegionServerServices, LastSequenceId, ConfigurationObserver {
 
   private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
@@ -487,6 +492,8 @@ public class HRegionServer extends HasThread implements RegionServerServices, La
 
   private CompactedHFilesDischarger compactedFileDischarger;
 
+  private volatile ThroughputController flushThroughputController;
+
   /**
    * Starts a HRegionServer at the default location.
    * @param conf
@@ -609,6 +616,7 @@ public class HRegionServer extends HasThread implements RegionServerServices, La
     putUpWebUI();
     this.walRoller = new LogRoller(this, this);
     this.choreService = new ChoreService(getServerName().toString(), true);
+    this.flushThroughputController = FlushThroughputControllerFactory.create(this, conf);
 
     if (!SystemUtils.IS_OS_WINDOWS) {
       Signal.handle(new Signal("HUP"), new SignalHandler() {
@@ -899,6 +907,7 @@ public class HRegionServer extends HasThread implements RegionServerServices, La
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
     configurationManager.registerObserver(this.rpcServices);
+    configurationManager.registerObserver(this);
   }
 
   /**
@@ -3379,5 +3388,29 @@ public class HRegionServer extends HasThread implements RegionServerServices, La
   @VisibleForTesting
   public boolean walRollRequestFinished() {
     return this.walRoller.walRollFinished();
+  }
+
+  @Override
+  public ThroughputController getFlushThroughputController() {
+    return flushThroughputController;
+  }
+
+  @Override
+  public double getFlushPressure() {
+    if (getRegionServerAccounting() == null || cacheFlusher == null) {
+      // return 0 during RS initialization
+      return 0.0;
+    }
+    return getRegionServerAccounting().getGlobalMemstoreSize() * 1.0
+        / cacheFlusher.globalMemStoreLimitLowMark;
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    ThroughputController old = this.flushThroughputController;
+    if (old != null) {
+      old.stop("configuration change");
+    }
+    this.flushThroughputController = FlushThroughputControllerFactory.create(this, newConf);
   }
 }
