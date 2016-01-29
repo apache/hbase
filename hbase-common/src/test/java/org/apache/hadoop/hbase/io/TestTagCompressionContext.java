@@ -21,18 +21,22 @@ package org.apache.hadoop.hbase.io;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -51,17 +55,42 @@ public class TestTagCompressionContext {
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(2);
     int tagsLength1 = kv1.getTagsLength();
-    ByteBuffer ib = ByteBuffer.wrap(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
-    context.compressTags(baos, ib, tagsLength1);
+    ByteBuffer ib = ByteBuffer.wrap(kv1.getTagsArray());
+    context.compressTags(baos, ib, kv1.getTagsOffset(), tagsLength1);
     KeyValue kv2 = createKVWithTags(3);
     int tagsLength2 = kv2.getTagsLength();
-    ib = ByteBuffer.wrap(kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2);
-    context.compressTags(baos, ib, tagsLength2);
+    ib = ByteBuffer.wrap(kv2.getTagsArray());
+    context.compressTags(baos, ib, kv2.getTagsOffset(), tagsLength2);
 
     context.clear();
 
     byte[] dest = new byte[tagsLength1];
     ByteBuffer ob = ByteBuffer.wrap(baos.toByteArray());
+    context.uncompressTags(new SingleByteBuff(ob), dest, 0, tagsLength1);
+    assertTrue(Bytes.equals(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1, dest, 0,
+        tagsLength1));
+    dest = new byte[tagsLength2];
+    context.uncompressTags(new SingleByteBuff(ob), dest, 0, tagsLength2);
+    assertTrue(Bytes.equals(kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2, dest, 0,
+        tagsLength2));
+  }
+
+  @Test
+  public void testCompressUncompressTagsWithOffheapKeyValue1() throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream daos = new ByteBufferSupportDataOutputStream(baos);
+    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    ByteBufferedCell kv1 = (ByteBufferedCell)createOffheapKVWithTags(2);
+    int tagsLength1 = kv1.getTagsLength();
+    context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
+    ByteBufferedCell kv2 = (ByteBufferedCell)createOffheapKVWithTags(3);
+    int tagsLength2 = kv2.getTagsLength();
+    context.compressTags(daos, kv2.getTagsByteBuffer(), kv2.getTagsPosition(), tagsLength2);
+
+    context.clear();
+
+    byte[] dest = new byte[tagsLength1];
+    ByteBuffer ob = ByteBuffer.wrap(baos.getBuffer());
     context.uncompressTags(new SingleByteBuff(ob), dest, 0, tagsLength1);
     assertTrue(Bytes.equals(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1, dest, 0,
         tagsLength1));
@@ -84,7 +113,32 @@ public class TestTagCompressionContext {
 
     context.clear();
 
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.getBuffer());
+    byte[] dest = new byte[tagsLength1];
+    context.uncompressTags(bais, dest, 0, tagsLength1);
+    assertTrue(Bytes.equals(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1, dest, 0,
+        tagsLength1));
+    dest = new byte[tagsLength2];
+    context.uncompressTags(bais, dest, 0, tagsLength2);
+    assertTrue(Bytes.equals(kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2, dest, 0,
+        tagsLength2));
+  }
+
+  @Test
+  public void testCompressUncompressTagsWithOffheapKeyValue2() throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream daos = new ByteBufferSupportDataOutputStream(baos);
+    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    ByteBufferedCell kv1 = (ByteBufferedCell)createOffheapKVWithTags(1);
+    int tagsLength1 = kv1.getTagsLength();
+    context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
+    ByteBufferedCell kv2 = (ByteBufferedCell)createOffheapKVWithTags(3);
+    int tagsLength2 = kv2.getTagsLength();
+    context.compressTags(daos, kv2.getTagsByteBuffer(), kv2.getTagsPosition(), tagsLength2);
+
+    context.clear();
+
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.getBuffer());
     byte[] dest = new byte[tagsLength1];
     context.uncompressTags(bais, dest, 0, tagsLength1);
     assertTrue(Bytes.equals(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1, dest, 0,
@@ -102,5 +156,17 @@ public class TestTagCompressionContext {
     }
     KeyValue kv = new KeyValue(ROW, CF, Q, 1234L, V, tags);
     return kv;
+  }
+
+  private Cell createOffheapKVWithTags(int noOfTags) {
+    List<Tag> tags = new ArrayList<Tag>();
+    for (int i = 0; i < noOfTags; i++) {
+      tags.add(new ArrayBackedTag((byte) i, "tagValue" + i));
+    }
+    KeyValue kv = new KeyValue(ROW, CF, Q, 1234L, V, tags);
+    ByteBuffer dbb = ByteBuffer.allocateDirect(kv.getBuffer().length);
+    ByteBufferUtils.copyFromArrayToBuffer(dbb, kv.getBuffer(), 0, kv.getBuffer().length);
+    OffheapKeyValue offheapKV = new OffheapKeyValue(dbb, 0, kv.getBuffer().length, true, 0);
+    return offheapKV;
   }
 }

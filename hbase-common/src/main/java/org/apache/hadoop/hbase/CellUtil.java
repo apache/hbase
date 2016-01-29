@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1627,6 +1628,24 @@ public final class CellUtil {
    */
   public static Cell createFirstDeleteFamilyCellOnRow(final byte[] row, final byte[] fam) {
     return new FirstOnRowDeleteFamilyCell(row, fam);
+  }
+
+  /**
+   * Compresses the tags to the given outputstream using the TagcompressionContext
+   * @param out the outputstream to which the compression should happen
+   * @param cell the cell which has tags
+   * @param tagCompressionContext the TagCompressionContext
+   * @throws IOException can throw IOException if the compression encounters issue
+   */
+  public static void compressTags(DataOutputStream out, Cell cell,
+      TagCompressionContext tagCompressionContext) throws IOException {
+    if (cell instanceof ByteBufferedCell) {
+      tagCompressionContext.compressTags(out, ((ByteBufferedCell) cell).getTagsByteBuffer(),
+          ((ByteBufferedCell) cell).getTagsPosition(), cell.getTagsLength());
+    } else {
+      tagCompressionContext.compressTags(out, cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+    }
   }
 
   @InterfaceAudience.Private

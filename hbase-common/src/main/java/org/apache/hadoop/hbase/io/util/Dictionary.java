@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.io.util;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -51,6 +53,16 @@ public interface Dictionary {
   short findEntry(byte[] data, int offset, int length);
 
   /**
+   * Finds the index of an entry.
+   * If no entry found, we add it.
+   * @param data the ByteBuffer that we're looking up
+   * @param offset Offset into <code>data</code> to add to Dictionary.
+   * @param length Length beyond <code>offset</code> that comprises entry; must be &gt; 0.
+   * @return the index of the entry, or {@link #NOT_IN_DICTIONARY} if not found
+   */
+  short findEntry(ByteBuffer data, int offset, int length);
+
+  /**
    * Adds an entry to the dictionary.
    * Be careful using this method.  It will add an entry to the
    * dictionary even if it already has an entry for the same data.
@@ -62,7 +74,6 @@ public interface Dictionary {
    * @param length Length beyond <code>offset</code> that comprises entry; must be &gt; 0.
    * @return the index of the entry
    */
-
   short addEntry(byte[] data, int offset, int length);
 
   /**

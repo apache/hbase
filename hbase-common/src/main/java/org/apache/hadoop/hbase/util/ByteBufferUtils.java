@@ -579,6 +579,22 @@ public final class ByteBufferUtils {
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
+  /**
+   * @param buf
+   *          ByteBuffer to hash
+   * @param offset
+   *          offset to start from
+   * @param length
+   *          length to hash
+   */
+  public static int hashCode(ByteBuffer buf, int offset, int length) {
+    int hash = 1;
+    for (int i = offset; i < offset + length; i++) {
+      hash = (31 * hash) + (int) toByte(buf, i);
+    }
+    return hash;
+  }
+
   public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
     if (UNSAFE_UNALIGNED) {
       long offset1Adj, offset2Adj;
