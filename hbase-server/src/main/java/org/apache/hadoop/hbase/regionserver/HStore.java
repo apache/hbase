@@ -81,7 +81,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -883,7 +883,7 @@ public class HStore implements Store {
 
   /**
    * Snapshot this stores memstore. Call before running
-   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask)}
+   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask, ThroughputController)}
    *  so it has some work to do.
    */
   void snapshot() {
@@ -896,15 +896,16 @@ public class HStore implements Store {
   }
 
   /**
-   * Write out current snapshot.  Presumes {@link #snapshot()} has been called previously.
+   * Write out current snapshot. Presumes {@link #snapshot()} has been called previously.
    * @param logCacheFlushId flush sequence number
    * @param snapshot
    * @param status
+   * @param throughputController
    * @return The path name of the tmp file to which the store was flushed
-   * @throws IOException
+   * @throws IOException if exception occurs during process
    */
   protected List<Path> flushCache(final long logCacheFlushId, MemStoreSnapshot snapshot,
-      MonitoredTask status) throws IOException {
+      MonitoredTask status, ThroughputController throughputController) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
@@ -914,7 +915,8 @@ public class HStore implements Store {
     IOException lastException = null;
     for (int i = 0; i < flushRetriesNumber; i++) {
       try {
-        List<Path> pathNames = flusher.flushSnapshot(snapshot, logCacheFlushId, status);
+        List<Path> pathNames =
+            flusher.flushSnapshot(snapshot, logCacheFlushId, status, throughputController);
         Path lastPathName = null;
         try {
           for (Path pathName : pathNames) {
@@ -1213,13 +1215,13 @@ public class HStore implements Store {
    */
   @Override
   public List<StoreFile> compact(CompactionContext compaction,
-      CompactionThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
     return compact(compaction, throughputController, null);
   }
 
   @Override
   public List<StoreFile> compact(CompactionContext compaction,
-    CompactionThroughputController throughputController, User user) throws IOException {
+    ThroughputController throughputController, User user) throws IOException {
     assert compaction != null;
     List<StoreFile> sfs = null;
     CompactionRequest cr = compaction.getRequest();
@@ -2267,7 +2269,10 @@ public class HStore implements Store {
 
     @Override
     public void flushCache(MonitoredTask status) throws IOException {
-      tempFiles = HStore.this.flushCache(cacheFlushSeqNum, snapshot, status);
+      RegionServerServices rsService = region.getRegionServerServices();
+      ThroughputController throughputController =
+          rsService == null ? null : rsService.getFlushThroughputController();
+      tempFiles = HStore.this.flushCache(cacheFlushSeqNum, snapshot, status, throughputController);
     }
 
     @Override

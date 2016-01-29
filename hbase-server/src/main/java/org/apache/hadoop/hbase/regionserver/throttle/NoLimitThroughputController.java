@@ -15,38 +15,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.compactions;
+package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
-/**
- * A utility that constrains the total throughput of one or more simultaneous flows (compactions) by
- * sleeping when necessary.
- */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public interface CompactionThroughputController extends Stoppable {
+public class NoLimitThroughputController implements ThroughputController {
 
-  /**
-   * Setup controller for the given region server.
-   */
-  void setup(RegionServerServices server);
+  public static final NoLimitThroughputController INSTANCE = new NoLimitThroughputController();
 
-  /**
-   * Start a compaction.
-   */
-  void start(String compactionName);
+  @Override
+  public void setup(RegionServerServices server) {
+  }
 
-  /**
-   * Control the compaction throughput. Will sleep if too fast.
-   * @return the actual sleep time.
-   */
-  long control(String compactionName, long size) throws InterruptedException;
+  @Override
+  public void start(String compactionName) {
+  }
 
-  /**
-   * Finish a compaction. Should call this method in a finally block.
-   */
-  void finish(String compactionName);
+  @Override
+  public long control(String compactionName, long size) throws InterruptedException {
+    return 0;
+  }
+
+  @Override
+  public void finish(String compactionName) {
+  }
+
+  private boolean stopped;
+
+  @Override
+  public void stop(String why) {
+    stopped = true;
+  }
+
+  @Override
+  public boolean isStopped() {
+    return stopped;
+  }
+
+  @Override
+  public String toString() {
+    return "NoLimitThroughputController";
+  }
 }

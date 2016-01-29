@@ -60,9 +60,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
-import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -106,7 +106,7 @@ public class TestCompaction {
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
-      NoLimitCompactionThroughputController.class.getName());
+      NoLimitThroughputController.class.getName());
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     secondRowBytes = START_KEY_BYTES.clone();
@@ -365,13 +365,13 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact(CompactionThroughputController throughputController)
+      public List<Path> compact(ThroughputController throughputController)
           throws IOException {
         return compact(throughputController, null);
       }
 
       @Override
-      public List<Path> compact(CompactionThroughputController throughputController, User user)
+      public List<Path> compact(ThroughputController throughputController, User user)
           throws IOException {
         finishCompaction(this.selectedFiles);
         return new ArrayList<Path>();
@@ -423,13 +423,13 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact(CompactionThroughputController throughputController)
+      public List<Path> compact(ThroughputController throughputController)
           throws IOException {
         return compact(throughputController, null);
       }
 
       @Override
-      public List<Path> compact(CompactionThroughputController throughputController, User user)
+      public List<Path> compact(ThroughputController throughputController, User user)
           throws IOException {
         try {
           isInCompact = true;
@@ -512,10 +512,10 @@ public class TestCompaction {
     HRegion r = mock(HRegion.class);
     when(
       r.compact(any(CompactionContext.class), any(Store.class),
-        any(CompactionThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
+        any(ThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         invocation.getArgumentAt(0, CompactionContext.class).compact(
-          invocation.getArgumentAt(2, CompactionThroughputController.class));
+          invocation.getArgumentAt(2, ThroughputController.class));
         return true;
       }
     });

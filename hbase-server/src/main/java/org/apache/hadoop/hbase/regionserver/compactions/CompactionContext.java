@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
 
@@ -69,10 +70,10 @@ public abstract class CompactionContext {
    * Runs the compaction based on current selection. select/forceSelect must have been called.
    * @return The new file paths resulting from compaction.
    */
-  public abstract List<Path> compact(CompactionThroughputController throughputController)
+  public abstract List<Path> compact(ThroughputController throughputController)
       throws IOException;
 
-  public abstract List<Path> compact(CompactionThroughputController throughputController, User user)
+  public abstract List<Path> compact(ThroughputController throughputController, User user)
       throws IOException;
 
   public CompactionRequest getRequest() {

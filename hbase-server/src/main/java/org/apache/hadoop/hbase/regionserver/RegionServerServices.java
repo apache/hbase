@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.Service;
@@ -230,4 +231,16 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @return all the online tables in this RS
    */
   Set<TableName> getOnlineTables();
+
+  /**
+   * @return the controller to avoid flush too fast
+   */
+  ThroughputController getFlushThroughputController();
+
+  /**
+   * @return the flush pressure of all stores on this regionserver. The value should be greater than
+   *         or equal to 0.0, and any value greater than 1.0 means we enter the emergency state that
+   *         global memstore size already exceeds lower limit.
+   */
+  double getFlushPressure();
 }

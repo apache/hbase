@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
@@ -392,7 +393,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     protected byte[] majorRangeFromRow = null, majorRangeToRow = null;
 
     public List<Path> execute(StripeCompactor compactor,
-      CompactionThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
       return execute(compactor, throughputController, null);
     }
     /**
@@ -402,7 +403,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * @return result of compact(...)
      */
     public abstract List<Path> execute(StripeCompactor compactor,
-        CompactionThroughputController throughputController, User user) throws IOException;
+        ThroughputController throughputController, User user) throws IOException;
 
     public StripeCompactionRequest(CompactionRequest request) {
       this.request = request;
@@ -454,7 +455,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     @Override
     public List<Path> execute(StripeCompactor compactor,
-        CompactionThroughputController throughputController, User user) throws IOException {
+        ThroughputController throughputController, User user) throws IOException {
       return compactor.compact(this.request, this.targetBoundaries, this.majorRangeFromRow,
         this.majorRangeToRow, throughputController, user);
     }
@@ -505,7 +506,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     @Override
     public List<Path> execute(StripeCompactor compactor,
-        CompactionThroughputController throughputController, User user) throws IOException {
+        ThroughputController throughputController, User user) throws IOException {
       return compactor.compact(this.request, this.targetCount, this.targetKvs, this.startRow,
         this.endRow, this.majorRangeFromRow, this.majorRangeToRow, throughputController, user);
     }
