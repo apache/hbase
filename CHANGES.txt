@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.0 01/11/2016
+Release Notes - HBase - Version 1.2.0 02/05/2016
 
 ** Sub-task
     * [HBASE-12748] - RegionCoprocessorHost.execOperation creates too many iterator objects
@@ -40,8 +40,11 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14087] - ensure correct ASF policy compliant headers on source/docs
     * [HBASE-14104] - Add vectorportal.com to NOTICES.txt as src of our logo
     * [HBASE-14105] - Add shell tests for Snapshot
+    * [HBASE-14107] - Procedure V2 - Administrative Task: Provide an API to List all procedures
+    * [HBASE-14108] - Procedure V2 - Administrative Task: provide an API to abort a procedure
     * [HBASE-14147] - REST Support for Namespaces
     * [HBASE-14176] - Add missing headers to META-INF files
+    * [HBASE-14221] - Reduce the number of time row comparison is done in a Scan
     * [HBASE-14239] - Branch-1.2 AM can get stuck when meta moves
     * [HBASE-14274] - Deadlock in region metrics on shutdown: MetricsRegionSourceImpl vs MetricsRegionAggregateSourceImpl
     * [HBASE-14278] - Fix NPE that is showing up since HBASE-14274 went in
@@ -51,12 +54,15 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14421] - TestFastFail* are flakey
     * [HBASE-14428] - Upgrade our surefire-plugin from 2.18 to 2.18.1
     * [HBASE-14430] - TestHttpServerLifecycle#testStartedServerIsAlive times out
+    * [HBASE-14432] - Procedure V2 - enforce ACL on procedure admin tasks
     * [HBASE-14433] - Set down the client executor core thread count from 256 in tests
     * [HBASE-14435] - thrift tests don't have test-specific hbase-site.xml so 'BindException: Address already in use' because info port is not turned off
     * [HBASE-14447] - Spark tests failing: bind exception when putting up info server
     * [HBASE-14465] - Backport 'Allow rowlock to be reader/write' to branch-1
     * [HBASE-14472] - TestHCM and TestRegionServerNoMaster fixes
     * [HBASE-14484] - Follow-on from HBASE-14421, just disable TestFastFail* until someone digs in and fixes it
+    * [HBASE-14487] - Procedure V2 - shell command to list all procedures
+    * [HBASE-14488] - Procedure V2 - shell command to abort a procedure
     * [HBASE-14513] - TestBucketCache runs obnoxious 1k threads in a unit test
     * [HBASE-14519] - Purge TestFavoredNodeAssignmentHelper, a test for an abandoned feature that can hang
     * [HBASE-14535] - Integration test for rpc connection concurrency / deadlock testing 
@@ -92,8 +98,15 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14908] - TestRowCounter flakey especially on branch-1
     * [HBASE-14909] - NPE testing for RIT
     * [HBASE-14915] - Hanging test : org.apache.hadoop.hbase.mapreduce.TestImportExport
-    * [HBASE-14947] - WALProcedureStore improvements
+    * [HBASE-14947] - Procedure V2 - WALProcedureStore improvements
+    * [HBASE-14962] - TestSplitWalDataLoss fails on all branches
     * [HBASE-15023] - Reenable TestShell and TestStochasticLoadBalancer
+    * [HBASE-15087] - Fix hbase-common findbugs complaints
+    * [HBASE-15091] - Forward-port to 1.2+ HBASE-15031 "Fix merge of MVCC and SequenceID performance regression in branch-1.0 for Increments"
+    * [HBASE-15106] - Procedure V2 - Procedure Queue pass Procedure for better debuggability
+    * [HBASE-15114] - NPE when IPC server ByteBuffer reservoir is turned off
+    * [HBASE-15115] - Fix findbugs complaints in hbase-client
+    * [HBASE-15118] - Fix findbugs complaint in hbase-server
 
 ** Bug
     * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
@@ -398,6 +411,7 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14840] - Sink cluster reports data replication request as success though the data is not replicated
     * [HBASE-14843] - TestWALProcedureStore.testLoad is flakey
     * [HBASE-14867] - SimpleRegionNormalizer needs to have better heuristics to trigger merge operation
+    * [HBASE-14872] - Scan different timeRange per column family doesn't percolate down to the memstore
     * [HBASE-14875] - Forward port HBASE-14207 'Region was hijacked and remained in transition when RS failed to open a region and later regionplan changed to new RS on retry'
     * [HBASE-14885] - NullPointerException in HMaster#normalizeRegions() due to missing TableDescriptor
     * [HBASE-14893] - Race between mutation on region and region closing operation leads to NotServingRegionException
@@ -430,11 +444,26 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-15014] - Fix filterCellByStore in WALsplitter is awful for performance
     * [HBASE-15015] - Checktyle plugin shouldn't check Jamon-generated Java classes
     * [HBASE-15018] - Inconsistent way of handling TimeoutException in the rpc client implementations
+    * [HBASE-15019] - Replication stuck when HDFS is restarted
     * [HBASE-15021] - hadoopqa doing false positives
     * [HBASE-15022] - undefined method `getZooKeeperClusterKey' for Java::OrgApacheHadoopHbaseZookeeper::ZKUtil:Class
     * [HBASE-15032] - hbase shell scan filter string assumes UTF-8 encoding
     * [HBASE-15035] - bulkloading hfiles with tags that require splits do not preserve tags
     * [HBASE-15039] - HMaster and RegionServers should try to refresh token keys from zk when facing InvalidToken
+    * [HBASE-15057] - local-master-backup.sh doesn't start HMaster correctly
+    * [HBASE-15065] - SimpleRegionNormalizer should return multiple normalization plans in one run
+    * [HBASE-15079] - TestMultiParallel.validateLoadedData AssertionError: null
+    * [HBASE-15085] - IllegalStateException was thrown when scanning on bulkloaded HFiles
+    * [HBASE-15098] - Normalizer switch in configuration is not used
+    * [HBASE-15100] - Master WALProcs still never clean up
+    * [HBASE-15102] - HeapMemoryTuner can "overtune" memstore size and suddenly drop it into blocking zone
+    * [HBASE-15104] - Occasional failures due to NotServingRegionException in IT tests
+    * [HBASE-15133] - Data loss after compaction when a row has more than Integer.MAX_VALUE columns
+    * [HBASE-15139] - Connection manager doesn't pass client metrics to RpcClient
+    * [HBASE-15145] - HBCK and Replication should authenticate to zookepeer using server principal
+    * [HBASE-15146] - Don't block on Reader threads queueing to a scheduler queue
+    * [HBASE-15147] - Shell should use Admin.listTableNames() instead of Admin.listTables()
+    * [HBASE-15148] - Resolve IS2_INCONSISTENT_SYNC findbugs warning in AuthenticationTokenSecretManager
 
 ** Improvement
     * [HBASE-6617] - ReplicationSourceManager should be able to track multiple WAL paths
@@ -534,6 +563,9 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14978] - Don't allow Multi to retain too many blocks
     * [HBASE-14984] - Allow memcached block cache to set optimze to false
     * [HBASE-15005] - Use value array in computing block length for 1.2 and 1.3
+    * [HBASE-15038] - ExportSnapshot should support separate configurations for source and destination clusters
+    * [HBASE-15076] - Add getScanner(Scan scan, List<KeyValueScanner> additionalScanners) API into Region interface
+    * [HBASE-15111] - "hbase version" should write to stdout
 
 ** New Feature
     * [HBASE-5980] - Scanner responses from RS should include metrics on rows/KVs filtered
@@ -570,8 +602,10 @@ Release Notes - HBase - Version 1.2.0 01/11/2016
     * [HBASE-14493] - Upgrade the jamon-runtime dependency
     * [HBASE-14502] - Purge use of jmock and remove as dependency
     * [HBASE-14516] - categorize hadoop-compat tests
+    * [HBASE-14526] - Remove delayed rpc
     * [HBASE-14851] - Add test showing how to use TTL from thrift
     * [HBASE-15003] - Remove BoundedConcurrentLinkedQueue and associated test
+    * [HBASE-15099] - Move RegionStateListener class out of quotas package
 
 ** Test
     * [HBASE-13591] - TestHBaseFsck is flakey
