@@ -174,7 +174,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
 
     protected String findPidCommand(ServiceType service) {
-      return String.format("ps aux | grep proc_%s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
+      return String.format("ps ux | grep proc_%s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
           service);
     }
 
@@ -269,7 +269,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
     @Override
     protected String findPidCommand(ServiceType service) {
-      return String.format("ps aux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
+      return String.format("ps ux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
         service);
     }
   }
