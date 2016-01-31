@@ -78,8 +78,11 @@ function personality_modules
 
   if [[ ${testtype} = findbugs ]]; then
     for module in ${CHANGED_MODULES}; do
-      # skip findbugs on hbase-shell
+      # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
+      # in src/main/java where findbugs goes to look
       if [[ ${module} == hbase-shell ]]; then
+        continue
+      elif [[ ${module} == hbase-it ]]; then
         continue
       else
         # shellcheck disable=SC2086
