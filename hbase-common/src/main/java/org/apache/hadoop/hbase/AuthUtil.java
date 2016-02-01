@@ -38,6 +38,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AuthUtil {
+  /** Prefix character to denote group names */
+  public static final String GROUP_PREFIX = "@";
+  /** Configuration key for superusers */
+  public static final String SUPERUSER_CONF_KEY = "hbase.superuser";
+
   private static final Log LOG = LogFactory.getLog(AuthUtil.class);
 
   private AuthUtil() {
