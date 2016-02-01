@@ -109,7 +109,7 @@ public class TestRegionObserverScannerOpenHook {
         throws IOException {
       scan.setFilter(new NoDataFilter());
       return new StoreScanner(store, store.getScanInfo(), scan, targetCols,
-        ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+        ((HStore)store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
     }
   }
 

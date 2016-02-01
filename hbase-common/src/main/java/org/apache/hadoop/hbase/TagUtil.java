@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -104,7 +105,7 @@ public final class TagUtil {
    * @return the serialized tag data as bytes
    */
   public static byte[] fromList(List<Tag> tags) {
-    if (tags.isEmpty()) {
+    if (tags == null || tags.isEmpty()) {
       return HConstants.EMPTY_BYTE_ARRAY;
     }
     int length = 0;
@@ -216,4 +217,70 @@ public final class TagUtil {
     }
     return StreamUtils.readRawVarint32(tag.getValueByteBuffer(), offset);
   }
+
+  /**
+   * @return A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null.
+   */
+  public static List<Tag> carryForwardTags(final Cell cell) {
+    return carryForwardTags(null, cell);
+  }
+
+  /**
+   * Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if none.
+   */
+  public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final Cell cell) {
+    Iterator<Tag> itr = CellUtil.tagsIterator(cell);
+    if (itr == EMPTY_TAGS_ITR) {
+      // If no Tags, return early.
+      return tagsOrNull;
+    }
+    List<Tag> tags = tagsOrNull;
+    if (tags == null) {
+      tags = new ArrayList<Tag>();
+    }
+    while (itr.hasNext()) {
+      tags.add(itr.next());
+    }
+    return tags;
+  }
+
+  /**
+   * @return Carry forward the TTL tag.
+   */
+  public static List<Tag> carryForwardTTLTag(final List<Tag> tagsOrNull, final long ttl) {
+    if (ttl == Long.MAX_VALUE) {
+      return tagsOrNull;
+    }
+    List<Tag> tags = tagsOrNull;
+    // If we are making the array in here, given we are the last thing checked, we'll be only thing
+    // in the array so set its size to '1' (I saw this being done in earlier version of
+    // tag-handling).
+    if (tags == null) {
+      tags = new ArrayList<Tag>(1);
+    }
+    tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
+    return tags;
+  }
+
+  /**
+   * Iterator returned when no Tags. Used by CellUtil too.
+   */
+  static final Iterator<Tag> EMPTY_TAGS_ITR = new Iterator<Tag>() {
+    @Override
+    public boolean hasNext() {
+      return false;
+    }
+
+    @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
+      justification="Intentional")
+    public Tag next() {
+      return null;
+    }
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+  };
 }

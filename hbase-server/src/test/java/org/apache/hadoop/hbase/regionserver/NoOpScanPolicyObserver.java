@@ -76,9 +76,9 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
       throws IOException {
     Region r = c.getEnvironment().getRegion();
     return scan.isReversed() ? new ReversedStoreScanner(store,
-        store.getScanInfo(), scan, targetCols, r.getReadpoint(scan
+        store.getScanInfo(), scan, targetCols, r.getReadPoint(scan
             .getIsolationLevel())) : new StoreScanner(store,
-        store.getScanInfo(), scan, targetCols, r.getReadpoint(scan
+        store.getScanInfo(), scan, targetCols, r.getReadPoint(scan
             .getIsolationLevel()));
   }
 }

@@ -227,6 +227,7 @@ public class Scan extends Query {
     filter = scan.getFilter(); // clone?
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     consistency = scan.getConsistency();
+    this.setIsolationLevel(scan.getIsolationLevel());
     reversed = scan.isReversed();
     asyncPrefetch = scan.isAsyncPrefetch();
     small = scan.isSmall();
@@ -271,6 +272,7 @@ public class Scan extends Query {
     this.getScan = true;
     this.asyncPrefetch = false;
     this.consistency = get.getConsistency();
+    this.setIsolationLevel(get.getIsolationLevel());
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }

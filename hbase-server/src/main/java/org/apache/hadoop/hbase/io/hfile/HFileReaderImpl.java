@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -788,7 +789,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         } else {
           // The comparison with no_next_index_key has to be checked
           if (this.nextIndexedKey != null &&
-              (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || reader
+              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || reader
               .getComparator().compareKeyIgnoresMvcc(key, nextIndexedKey) < 0)) {
             // The reader shall continue to scan the current data block instead
             // of querying the

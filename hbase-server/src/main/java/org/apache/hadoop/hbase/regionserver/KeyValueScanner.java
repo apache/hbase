@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -29,6 +30,12 @@ import org.apache.hadoop.hbase.client.Scan;
  */
 @InterfaceAudience.Private
 public interface KeyValueScanner extends Shipper {
+  /**
+   * The byte array represents for NO_NEXT_INDEXED_KEY;
+   * The actual value is irrelevant because this is always compared by reference.
+   */
+  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
+
   /**
    * Look at the next Cell in this scanner, but do not iterate scanner.
    * @return the next Cell

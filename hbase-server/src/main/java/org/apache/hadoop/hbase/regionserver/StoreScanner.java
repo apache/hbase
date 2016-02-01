@@ -260,7 +260,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
       long earliestPutTs, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     this(store, scan, scanInfo, null,
-      ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED), false);
+      ((HStore)store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED), false);
     if (dropDeletesFromRow == null) {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType, smallestReadPoint,
           earliestPutTs, oldestUnexpiredTS, now, store.getCoprocessorHost());
@@ -659,7 +659,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case SEEK_NEXT_COL:
     {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
@@ -669,7 +669,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case SEEK_NEXT_ROW:
     {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
       }

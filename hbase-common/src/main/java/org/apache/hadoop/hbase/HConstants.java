@@ -1012,11 +1012,6 @@ public final class HConstants {
 
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
-  /**
-   * The byte array represents for NO_NEXT_INDEXED_KEY;
-   * The actual value is irrelevant because this is always compared by reference.
-   */
-  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
 

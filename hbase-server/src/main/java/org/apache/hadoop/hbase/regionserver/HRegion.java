@@ -1263,28 +1263,34 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-   public MultiVersionConcurrencyControl getMVCC() {
-     return mvcc;
-   }
+  @VisibleForTesting
+  public MultiVersionConcurrencyControl getMVCC() {
+    return mvcc;
+  }
 
-   @Override
-   public long getMaxFlushedSeqId() {
-     return maxFlushedSeqId;
-   }
+  @Override
+  public long getMaxFlushedSeqId() {
+    return maxFlushedSeqId;
+  }
 
-   @Override
-   public long getReadpoint(IsolationLevel isolationLevel) {
-     if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
-       // This scan can read even uncommitted transactions
-       return Long.MAX_VALUE;
-     }
-     return mvcc.getReadPoint();
-   }
+  @Override
+  public long getReadPoint(IsolationLevel isolationLevel) {
+    if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
+      // This scan can read even uncommitted transactions
+      return Long.MAX_VALUE;
+    }
+    return mvcc.getReadPoint();
+  }
 
-   @Override
-   public boolean isLoadingCfsOnDemandDefault() {
-     return this.isLoadingCfsOnDemandDefault;
-   }
+  @Override
+  public long getReadpoint(IsolationLevel isolationLevel) {
+    return getReadPoint(isolationLevel);
+  }
+
+  @Override
+  public boolean isLoadingCfsOnDemandDefault() {
+    return this.isLoadingCfsOnDemandDefault;
+  }
 
   /**
    * Close down this HRegion.  Flush the cache, shut down each HStore, don't

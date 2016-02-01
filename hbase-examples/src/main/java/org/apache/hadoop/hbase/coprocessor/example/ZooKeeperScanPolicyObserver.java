@@ -33,10 +33,9 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
@@ -232,6 +231,6 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
       return null;
     }
     return new StoreScanner(store, scanInfo, scan, targetCols,
-      ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+      ((HStore)store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
   }
 }

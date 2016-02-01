@@ -1798,7 +1798,8 @@ public class AssignmentManager {
         invokeUnAssign(regionInfo);
         break;
       default:
-        // No process for other states
+          // No process for other states
+          break;
       }
     }
   }

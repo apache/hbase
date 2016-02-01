@@ -298,7 +298,7 @@ public class TestCoprocessorScanPolicy {
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
             oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
         return new StoreScanner(store, scanInfo, scan, targetCols,
-            ((HStore) store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+            ((HStore) store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
       } else {
         return s;
       }

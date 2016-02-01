@@ -1,4 +1,5 @@
 /**
+
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -280,8 +281,6 @@ public class FSHLog implements WAL {
   private final int minTolerableReplication;
 
   private final int slowSyncNs;
-
-  private final static Object [] NO_ARGS = new Object []{};
 
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
@@ -1069,6 +1068,19 @@ public class FSHLog implements WAL {
     }
   }
 
+  /**
+   * NOTE: This append, at a time that is usually after this call returns, starts an
+   * mvcc transaction by calling 'begin' wherein which we assign this update a sequenceid. At
+   * assignment time, we stamp all the passed in Cells inside WALEdit with their sequenceId.
+   * You must 'complete' the transaction this mvcc transaction by calling
+   * MultiVersionConcurrencyControl#complete(...) or a variant otherwise mvcc will get stuck. Do it
+   * in the finally of a try/finally
+   * block within which this append lives and any subsequent operations like sync or
+   * update of memstore, etc. Get the WriteEntry to pass mvcc out of the passed in WALKey
+   * <code>walKey</code> parameter. Be warned that the WriteEntry is not immediately available
+   * on return from this method. It WILL be available subsequent to a sync of this append;
+   * otherwise, you will just have to wait on the WriteEntry to get filled in.
+   */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification="Will never be null")
   @Override

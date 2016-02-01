@@ -1060,7 +1060,8 @@ public class RegionSplitter {
           "Could not split region with given user input: " + this);
 
       // remove endpoints, which are included in the splits list
-      return Arrays.copyOfRange(splits, 1, splits.length - 1);
+
+      return splits == null? null: Arrays.copyOfRange(splits, 1, splits.length - 1);
     }
 
     @Override

@@ -454,10 +454,6 @@ public class DefaultMemStore implements MemStore {
    * value for that row/family/qualifier.  If a KeyValue did already exist,
    * it will then be removed.
    * <p>
-   * Currently the memstoreTS is kept at 0 so as each insert happens, it will
-   * be immediately visible.  May want to change this so it is atomic across
-   * all KeyValues.
-   * <p>
    * This is called under row lock, so Get operations will still see updates
    * atomically.  Scans will only see each KeyValue update as atomic.
    *
@@ -484,8 +480,7 @@ public class DefaultMemStore implements MemStore {
    * family, and qualifier, they are removed.
    * <p>
    * Callers must hold the read lock.
-   *
-   * @param cell
+   * @param readpoint Smallest outstanding readpoint; below which we can remove duplicate Cells.
    * @return change in size of MemStore
    */
   private long upsert(Cell cell, long readpoint) {
@@ -505,7 +500,7 @@ public class DefaultMemStore implements MemStore {
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
     SortedSet<Cell> ss = cellSet.tailSet(firstCell);
     Iterator<Cell> it = ss.iterator();
-    // versions visible to oldest scanner
+    // Versions visible to oldest scanner.
     int versionsVisible = 0;
     while ( it.hasNext() ) {
       Cell cur = it.next();

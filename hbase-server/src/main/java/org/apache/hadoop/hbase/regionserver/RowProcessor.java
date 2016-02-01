@@ -35,7 +35,7 @@ import com.google.protobuf.Message;
  * Defines the procedure to atomically perform multiple scans and mutations
  * on a HRegion.
  *
- * This is invoked by HRegion#processRowsWithLocks().
+ * This is invoked by {@link Region#processRowsWithLocks(RowProcessor)}.
  * This class performs scans and generates mutations and WAL edits.
  * The locks and MVCC will be handled by HRegion.
  *
@@ -98,10 +98,8 @@ public interface RowProcessor<S extends Message, T extends Message> {
 
   /**
    * The hook to be executed after the process() but before applying the Mutations to region. Also
-   * by the time this hook is been called, mvcc transaction is started.
-   * @param region
+   * by the time this hook is called, mvcc transaction have started.
    * @param walEdit the output WAL edits to apply to write ahead log
-   * @throws IOException
    */
   void preBatchMutate(HRegion region, WALEdit walEdit) throws IOException;
 
@@ -109,8 +107,6 @@ public interface RowProcessor<S extends Message, T extends Message> {
    * The hook to be executed after the process() and applying the Mutations to region. The
    * difference of this one with {@link #postProcess(HRegion, WALEdit, boolean)} is this hook will
    * be executed before the mvcc transaction completion.
-   * @param region
-   * @throws IOException
    */
   void postBatchMutate(HRegion region) throws IOException;
 

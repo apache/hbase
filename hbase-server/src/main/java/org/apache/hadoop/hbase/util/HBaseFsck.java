@@ -1454,7 +1454,7 @@ public class HBaseFsck extends Configured implements Closeable {
         "You may need to restore the previously sidelined hbase:meta");
       return false;
     }
-    meta.batchMutate(puts.toArray(new Put[puts.size()]));
+    meta.batchMutate(puts.toArray(new Put[puts.size()]), HConstants.NO_NONCE, HConstants.NO_NONCE);
     meta.close();
     if (meta.getWAL() != null) {
       meta.getWAL().close();

@@ -120,39 +120,40 @@ public class CellCounter extends Configured implements Tool {
       try {
         context.getCounter(Counters.ROWS).increment(1);
         context.write(new Text("Total ROWS"), new IntWritable(1));
-
-        for (Cell value : values.listCells()) {
-          currentRowKey = Bytes.toStringBinary(CellUtil.cloneRow(value));
-          String thisRowFamilyName = Bytes.toStringBinary(CellUtil.cloneFamily(value));
-          if (!thisRowFamilyName.equals(currentFamilyName)) {
-            currentFamilyName = thisRowFamilyName;
-            context.getCounter("CF", thisRowFamilyName).increment(1);
-            if (1 == context.getCounter("CF", thisRowFamilyName).getValue()) {
-              context.write(new Text("Total Families Across all Rows"), new IntWritable(1));
-              context.write(new Text(thisRowFamilyName), new IntWritable(1));
+        if (values != null && !values.isEmpty()) {
+          for (Cell value : values.listCells()) {
+            currentRowKey = Bytes.toStringBinary(CellUtil.cloneRow(value));
+            String thisRowFamilyName = Bytes.toStringBinary(CellUtil.cloneFamily(value));
+            if (!thisRowFamilyName.equals(currentFamilyName)) {
+              currentFamilyName = thisRowFamilyName;
+              context.getCounter("CF", thisRowFamilyName).increment(1);
+              if (1 == context.getCounter("CF", thisRowFamilyName).getValue()) {
+                context.write(new Text("Total Families Across all Rows"), new IntWritable(1));
+                context.write(new Text(thisRowFamilyName), new IntWritable(1));
+              }
             }
-          }
-          String thisRowQualifierName = thisRowFamilyName + separator
-              + Bytes.toStringBinary(CellUtil.cloneQualifier(value));
-          if (!thisRowQualifierName.equals(currentQualifierName)) {
-            currentQualifierName = thisRowQualifierName;
-            context.getCounter("CFQL", thisRowQualifierName).increment(1);
-            context.write(new Text("Total Qualifiers across all Rows"),
-              new IntWritable(1));
-            context.write(new Text(thisRowQualifierName), new IntWritable(1));
-            // Intialize versions
-            context.getCounter("QL_VERSIONS", currentRowKey + separator +
-              thisRowQualifierName).increment(1);
-            context.write(new Text(currentRowKey + separator
-                + thisRowQualifierName + "_Versions"), new IntWritable(1));
+            String thisRowQualifierName = thisRowFamilyName + separator
+                + Bytes.toStringBinary(CellUtil.cloneQualifier(value));
+            if (!thisRowQualifierName.equals(currentQualifierName)) {
+              currentQualifierName = thisRowQualifierName;
+              context.getCounter("CFQL", thisRowQualifierName).increment(1);
+              context.write(new Text("Total Qualifiers across all Rows"),
+                  new IntWritable(1));
+              context.write(new Text(thisRowQualifierName), new IntWritable(1));
+              // Intialize versions
+              context.getCounter("QL_VERSIONS", currentRowKey + separator +
+                  thisRowQualifierName).increment(1);
+              context.write(new Text(currentRowKey + separator
+                  + thisRowQualifierName + "_Versions"), new IntWritable(1));
 
-          } else {
-            // Increment versions
-            currentQualifierName = thisRowQualifierName;
-            context.getCounter("QL_VERSIONS", currentRowKey + separator +
-              thisRowQualifierName).increment(1);
-            context.write(new Text(currentRowKey + separator
-                + thisRowQualifierName + "_Versions"), new IntWritable(1));
+            } else {
+              // Increment versions
+              currentQualifierName = thisRowQualifierName;
+              context.getCounter("QL_VERSIONS", currentRowKey + separator +
+                  thisRowQualifierName).increment(1);
+              context.write(new Text(currentRowKey + separator
+                  + thisRowQualifierName + "_Versions"), new IntWritable(1));
+            }
           }
         }
       } catch (InterruptedException e) {

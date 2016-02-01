@@ -1304,8 +1304,11 @@ public class HStore implements Store {
     HRegionInfo info = this.region.getRegionInfo();
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
         family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
-    WALUtil.writeCompactionMarker(region.getWAL(), this.region.getTableDesc(),
-        this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
+    // Fix reaching into Region to get the maxWaitForSeqId.
+    // Does this method belong in Region altogether given it is making so many references up there?
+    // Could be Region#writeCompactionMarker(compactionDescriptor);
+    WALUtil.writeCompactionMarker(this.region.getWAL(), this.region.getTableDesc(),
+        this.region.getRegionInfo(), compactionDescriptor, this.region.getMVCC());
   }
 
   @VisibleForTesting

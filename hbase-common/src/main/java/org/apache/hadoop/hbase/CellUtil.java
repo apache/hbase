@@ -842,7 +842,7 @@ public final class CellUtil {
     final int tagsLength = cell.getTagsLength();
     // Save an object allocation where we can
     if (tagsLength == 0) {
-      return EMPTY_TAGS_ITR;
+      return TagUtil.EMPTY_TAGS_ITR;
     }
     if (cell instanceof ByteBufferedCell) {
       return tagsIterator(((ByteBufferedCell) cell).getTagsByteBuffer(),
@@ -1388,7 +1388,7 @@ public final class CellUtil {
 
   /**
    * Compares the row of two keyvalues for equality
-   * 
+   *
    * @param left
    * @param right
    * @return True if rows match.

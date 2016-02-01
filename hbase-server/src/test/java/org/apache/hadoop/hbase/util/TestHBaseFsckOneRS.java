@@ -1436,7 +1436,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     }
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=180000)
   public void testCheckTableLocks() throws Exception {
     IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(0);
     EnvironmentEdgeManager.injectEdge(edge);
