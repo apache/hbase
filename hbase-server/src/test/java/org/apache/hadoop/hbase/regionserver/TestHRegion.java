@@ -5010,6 +5010,7 @@ public class TestHRegion {
         put.addColumn(family, qf, null);
       }
       region.put(put);
+      LOG.info(put.toString());
     }
   }
 
@@ -6058,7 +6059,6 @@ public class TestHRegion {
         final HTableDescriptor htd, final RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
-    @Override
     protected long getNextSequenceId(WAL wal) throws IOException {
       return 42;
     }
@@ -6606,11 +6606,13 @@ public class TestHRegion {
     p.addColumn(fam1, qual1, qual2);
     RowMutations rm = new RowMutations(row);
     rm.add(p);
-    region.checkAndRowMutate(row, fam1, qual1, CompareOp.EQUAL, new BinaryComparator(qual1),
-      rm, false);
+    assertTrue(region.checkAndRowMutate(row, fam1, qual1, CompareOp.EQUAL,
+        new BinaryComparator(qual1), rm, false));
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
     assertEquals(c.getTimestamp(), 10L);
+    LOG.info("c value " +
+      Bytes.toStringBinary(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
 
     assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
       qual2, 0, qual2.length));

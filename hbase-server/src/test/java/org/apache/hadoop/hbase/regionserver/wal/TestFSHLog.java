@@ -408,13 +408,13 @@ public class TestFSHLog {
       }
       region.flush(true);
       // FlushResult.flushSequenceId is not visible here so go get the current sequence id.
-      long currentSequenceId = region.getSequenceId();
+      long currentSequenceId = region.getReadPoint(null);
       // Now release the appends
       goslow.setValue(false);
       synchronized (goslow) {
         goslow.notifyAll();
       }
-      assertTrue(currentSequenceId >= region.getSequenceId());
+      assertTrue(currentSequenceId >= region.getReadPoint(null));
     } finally {
       region.close(true);
       wal.close();

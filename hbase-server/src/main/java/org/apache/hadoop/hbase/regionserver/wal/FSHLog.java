@@ -1,5 +1,4 @@
 /**
-
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -508,16 +507,16 @@ public class FSHLog implements WAL {
         FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
     this.logrollsize =
       (long)(blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
-    
+
     float memstoreRatio = conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY,
-      conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY, 
+      conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY,
         HeapMemorySizeUtil.DEFAULT_MEMSTORE_SIZE));
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if(maxLogsDefined){
       LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
     }
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 
-        Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));    
+    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
+        Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));
     this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
         FSUtils.getDefaultReplication(fs, this.fullPathLogDir));
     this.lowReplicationRollLimit =
@@ -572,7 +571,7 @@ public class FSHLog implements WAL {
     int maxLogs = Math.round(mu.getMax() * memstoreSizeRatio * 2 / logRollSize);
     return maxLogs;
   }
-  
+
   /**
    * Get the backing files associated with this WAL.
    * @return may be null if there are no files.

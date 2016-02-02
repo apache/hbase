@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.regionserver.TestHRegion.assertGet;
+import static org.apache.hadoop.hbase.regionserver.TestHRegion.putData;
+import static org.apache.hadoop.hbase.regionserver.TestHRegion.verifyData;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -26,7 +34,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.apache.hadoop.hbase.regionserver.TestHRegion.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,7 +47,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -63,9 +69,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Mut
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
@@ -108,7 +114,6 @@ public class TestHRegionReplayEvents {
 
   public static Configuration CONF ;
   private String dir;
-  private static FileSystem FILESYSTEM;
 
   private byte[][] families = new byte[][] {
       Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")};
@@ -134,7 +139,6 @@ public class TestHRegionReplayEvents {
   @Before
   public void setup() throws IOException {
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
-    FILESYSTEM = TEST_UTIL.getTestFileSystem();
     CONF = TEST_UTIL.getConfiguration();
     dir = TEST_UTIL.getDataTestDir("TestHRegionReplayEvents").toString();
     method = name.getMethodName();
@@ -268,7 +272,7 @@ public class TestHRegionReplayEvents {
       if (flushDesc != null) {
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           LOG.info("-- Replaying flush start in secondary");
-          PrepareFlushResult result = secondaryRegion.replayWALFlushStartMarker(flushDesc);
+          secondaryRegion.replayWALFlushStartMarker(flushDesc);
         } else if (flushDesc.getAction() == FlushAction.COMMIT_FLUSH) {
           LOG.info("-- NOT Replaying flush commit in secondary");
         }
@@ -299,7 +303,7 @@ public class TestHRegionReplayEvents {
   }
 
   WAL.Reader createWALReaderForPrimary() throws FileNotFoundException, IOException {
-    return wals.createReader(TEST_UTIL.getTestFileSystem(),
+    return WALFactory.createReader(TEST_UTIL.getTestFileSystem(),
       DefaultWALProvider.getCurrentFileName(walPrimary),
       TEST_UTIL.getConfiguration());
   }
@@ -769,7 +773,7 @@ public class TestHRegionReplayEvents {
 
     // ensure all files are visible in secondary
     for (Store store : secondaryRegion.getStores()) {
-      assertTrue(store.getMaxSequenceId() <= secondaryRegion.getSequenceId());
+      assertTrue(store.getMaxSequenceId() <= secondaryRegion.getReadPoint(null));
     }
 
     LOG.info("-- Replaying flush commit in secondary" + commitFlushDesc);
@@ -1095,7 +1099,7 @@ public class TestHRegionReplayEvents {
       assertGet(region, family, row);
 
       // region seqId should have advanced at least to this seqId
-      assertEquals(origSeqId, region.getSequenceId());
+      assertEquals(origSeqId, region.getReadPoint(null));
 
       // replay an entry that is smaller than current read point
       // caution: adding an entry below current read point might cause partial dirty reads. Normal
@@ -1115,7 +1119,6 @@ public class TestHRegionReplayEvents {
    * events to its WAL.
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   @Test
   public void testSecondaryRegionDoesNotWriteRegionEventsToWAL() throws IOException {
     secondaryRegion.close();
@@ -1252,10 +1255,18 @@ public class TestHRegionReplayEvents {
     // put some data in primary
     putData(primaryRegion, Durability.SYNC_WAL, 0, 100, cq, families);
     primaryRegion.flush(true);
+    // I seem to need to push more edits through so the WAL flushes on local fs. This was not
+    // needed before HBASE-15028. Not sure whats up. I can see that we have not flushed if I
+    // look at the WAL if I pause the test here and then use WALPrettyPrinter to look at content..
+    // Doing same check before HBASE-15028 I can see all edits flushed to the WAL. Somethings up
+    // but can't figure it... and this is only test that seems to suffer this flush issue.
+    // St.Ack 20160201
+    putData(primaryRegion, Durability.SYNC_WAL, 0, 100, cq, families);
 
     reader = createWALReaderForPrimary();
     while (true) {
       WAL.Entry entry = reader.next();
+      LOG.info(entry);
       if (entry == null) {
         break;
       }

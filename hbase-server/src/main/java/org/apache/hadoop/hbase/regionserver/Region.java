@@ -156,7 +156,7 @@ public interface Region extends ConfigurationObserver {
   /** @return true if loading column families on demand by default */
   boolean isLoadingCfsOnDemandDefault();
 
-  /** @return readpoint considering given IsolationLevel */
+  /** @return readpoint considering given IsolationLevel; pass null for default*/
   long getReadPoint(IsolationLevel isolationLevel);
 
   /**

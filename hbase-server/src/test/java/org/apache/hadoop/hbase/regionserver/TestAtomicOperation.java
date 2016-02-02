@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -65,7 +66,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
@@ -183,12 +183,14 @@ public class TestAtomicOperation {
    */
   @Test
   public void testIncrementMultiThreads() throws IOException {
+    boolean fast = true;
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
-    // create 25 threads, each will increment by its own quantity
-    int numThreads = 25;
+    // Create 100 threads, each will increment by its own quantity. All 100 threads update the
+    // same row over two column families.
+    int numThreads = 100;
     int incrementsPerThread = 1000;
     Incrementer[] all = new Incrementer[numThreads];
     int expectedTotal = 0;
@@ -211,9 +213,9 @@ public class TestAtomicOperation {
         LOG.info("Ignored", e);
       }
     }
-    assertICV(row, fam1, qual1, expectedTotal);
-    assertICV(row, fam1, qual2, expectedTotal*2);
-    assertICV(row, fam2, qual3, expectedTotal*3);
+    assertICV(row, fam1, qual1, expectedTotal, fast);
+    assertICV(row, fam1, qual2, expectedTotal*2, fast);
+    assertICV(row, fam2, qual3, expectedTotal*3, fast);
     LOG.info("testIncrementMultiThreads successfully verified that total is " + expectedTotal);
   }
 
@@ -221,9 +223,11 @@ public class TestAtomicOperation {
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount) throws IOException {
+                         long amount,
+                         boolean fast) throws IOException {
     // run a get and see?
     Get get = new Get(row);
+    if (fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.addColumn(familiy, qualifier);
     Result result = region.get(get);
     assertEquals(1, result.size());
@@ -254,7 +258,8 @@ public class TestAtomicOperation {
   }
 
   /**
-   * A thread that makes a few increment calls
+   * A thread that makes increment calls always on the same row, this.row against two column
+   * families on this row.
    */
   public static class Incrementer extends Thread {
 
@@ -263,9 +268,8 @@ public class TestAtomicOperation {
     private final int amount;
 
 
-    public Incrementer(Region region,
-        int threadNumber, int amount, int numIncrements) {
-      super("incrementer." + threadNumber);
+    public Incrementer(Region region, int threadNumber, int amount, int numIncrements) {
+      super("Incrementer." + threadNumber);
       this.region = region;
       this.numIncrements = numIncrements;
       this.amount = amount;
@@ -281,19 +285,19 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
           inc.setDurability(Durability.ASYNC_WAL);
-          region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
-
-          // verify: Make sure we only see completed increments
-          Get g = new Get(row);
-          Result result = region.get(g);
+          Result result = region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
           if (result != null) {
-            assertTrue(result.getValue(fam1, qual1) != null);
-            assertTrue(result.getValue(fam1, qual2) != null);
             assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
               Bytes.toLong(result.getValue(fam1, qual2))); 
             assertTrue(result.getValue(fam2, qual3) != null);
             assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3,
               Bytes.toLong(result.getValue(fam2, qual3)));
+            assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
+               Bytes.toLong(result.getValue(fam1, qual2)));
+            long fam1Increment = Bytes.toLong(result.getValue(fam1, qual1))*3;
+            long fam2Increment = Bytes.toLong(result.getValue(fam2, qual3));
+            assertEquals("fam1=" + fam1Increment + ", fam2=" + fam2Increment,
+              fam1Increment, fam2Increment);
           }
         } catch (IOException e) {
           e.printStackTrace();

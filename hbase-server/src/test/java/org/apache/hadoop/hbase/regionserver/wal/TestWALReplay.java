@@ -894,7 +894,7 @@ public class TestWALReplay {
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), 5, this.ee, region, "x");
     }
-    long lastestSeqNumber = region.getSequenceId();
+    long lastestSeqNumber = region.getReadPoint(null);
     // get the current seq no
     wal.doCompleteCacheFlush = true;
     // allow complete cache flush with the previous seq number got after first

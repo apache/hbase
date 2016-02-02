@@ -1275,7 +1275,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public long getReadPoint(IsolationLevel isolationLevel) {
-    if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
+    if (isolationLevel != null && isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
       // This scan can read even uncommitted transactions
       return Long.MAX_VALUE;
     }

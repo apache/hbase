@@ -318,5 +318,4 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     closeRegion(HTU, rs0, hriSecondary);
     connection.close();
   }
-
 }

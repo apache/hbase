@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,7 +48,7 @@ public class ReplayHLogKey extends HLogKey {
    * @return long the new assigned sequence number
    */
   @Override
-  public long getSequenceId() throws IOException {
+  public long getSequenceId() {
     return this.getOrigLogSeqNum();
   }
 }
