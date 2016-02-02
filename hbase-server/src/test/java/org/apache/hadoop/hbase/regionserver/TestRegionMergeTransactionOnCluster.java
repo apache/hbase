@@ -268,8 +268,8 @@ public class TestRegionMergeTransactionOnCluster {
         cleaner.chore();
         Thread.sleep(1000);
       }
-      int newcount1 = 0;
       while (System.currentTimeMillis() < timeout) {
+        int newcount1 = 0;
         for(HColumnDescriptor colFamily : columnFamilies) {
           newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
         }
@@ -280,10 +280,15 @@ public class TestRegionMergeTransactionOnCluster {
       }
       // run CatalogJanitor to clean merge references in hbase:meta and archive the
       // files of merging regions
-      int cleaned = admin.runCatalogScan();
+      int cleaned = 0;
+      while (cleaned == 0) {
+        cleaned = admin.runCatalogScan();
+        LOG.debug("catalog janitor returned " + cleaned);
+        Thread.sleep(50);
+      }
+      assertFalse(regionAdir.toString(), fs.exists(regionAdir));
+      assertFalse(regionBdir.toString(), fs.exists(regionBdir));
       assertTrue(cleaned > 0);
-      assertFalse(fs.exists(regionAdir));
-      assertFalse(fs.exists(regionBdir));
 
       mergedRegionResult = MetaTableAccessor.getRegionResult(
         master.getConnection(), mergedRegionInfo.getRegionName());
