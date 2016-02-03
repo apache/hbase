@@ -1791,6 +1791,10 @@ public class TestHBaseFsck {
 
       HRegionInfo hri = location.getRegionInfo();
 
+      // Disable CatalogJanitor to prevent it from cleaning up the parent region
+      // after split.
+      admin.enableCatalogJanitor(false);
+
       // do a regular split
       byte[] regionName = location.getRegionInfo().getRegionName();
       admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
@@ -1839,6 +1843,7 @@ public class TestHBaseFsck {
       assertEquals(tbl.getStartKeys().length, SPLITS.length + 1 + 1); //SPLITS + 1 is # regions pre-split.
       assertNoErrors(doFsck(conf, false)); //should be fixed by now
     } finally {
+      admin.enableCatalogJanitor(true);
       meta.close();
       cleanupTable(table);
     }
