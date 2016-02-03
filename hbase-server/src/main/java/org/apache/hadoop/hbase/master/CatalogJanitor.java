@@ -97,7 +97,11 @@ public class CatalogJanitor extends Chore {
   @Override
   protected void chore() {
     try {
-      if (this.enabled.get()) {
+      AssignmentManager am = this.services.getAssignmentManager();
+      if (this.enabled.get()
+          && am != null
+          && am.isFailoverCleanupDone()
+          && am.getRegionStates().getRegionsInTransition().size() == 0) {
         scan();
       } else {
         LOG.warn("CatalogJanitor disabled! Not running scan.");
