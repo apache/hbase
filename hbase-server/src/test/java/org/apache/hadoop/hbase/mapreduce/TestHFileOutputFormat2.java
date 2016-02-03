@@ -348,7 +348,8 @@ public class TestHFileOutputFormat2  {
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testJobConfiguration() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
-    conf.set("hbase.fs.tmp.dir", util.getDataTestDir("testJobConfiguration").toString());
+    conf.set(HConstants.TEMPORARY_FS_DIRECTORY_KEY, util.getDataTestDir("testJobConfiguration")
+        .toString());
     Job job = new Job(conf);
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
