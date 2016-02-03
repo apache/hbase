@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -37,6 +38,9 @@ public class SecureBulkLoadUtil {
   }
 
   public static Path getBaseStagingDir(Configuration conf) {
-    return new Path(conf.get(BULKLOAD_STAGING_DIR));
+    String hbaseTmpFsDir =
+        conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
+          HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
+    return new Path(conf.get(BULKLOAD_STAGING_DIR, hbaseTmpFsDir));
   }
 }
