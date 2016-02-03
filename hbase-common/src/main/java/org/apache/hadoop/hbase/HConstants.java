@@ -1149,6 +1149,11 @@ public final class HConstants {
   public static final String ALLOW_LEGACY_OBJECT_SERIALIZATION_KEY =
       "hbase.allow.legacy.object.serialization";
 
+  /** Config key for hbase temporary directory in hdfs */
+  public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
+  public static final String DEFAULT_TEMPORARY_HDFS_DIRECTORY = "/user/"
+      + System.getProperty("user.name") + "/hbase-staging";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
