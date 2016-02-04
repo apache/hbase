@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -87,7 +86,7 @@ public class ChecksumUtil {
    * The header is extracted from the specified HFileBlock while the
    * data-to-be-verified is extracted from 'data'.
    */
-  static boolean validateBlockChecksum(Path path, HFileBlock block,
+  static boolean validateBlockChecksum(String pathName, HFileBlock block,
     byte[] data, int hdrSize) throws IOException {
 
     // If this is an older version of the block that does not have
@@ -120,14 +119,13 @@ public class ChecksumUtil {
       LOG.info("length of data = " + data.length
           + " OnDiskDataSizeWithHeader = " + sizeWithHeader
           + " checksum type = " + cktype.getName()
-          + " file =" + path.toString()
+          + " file =" + pathName
           + " header size = " + hdrSize
           + " bytesPerChecksum = " + bytesPerChecksum);
     }
     try {
       dataChecksum.verifyChunkedSums(ByteBuffer.wrap(data, 0, sizeWithHeader),
-          ByteBuffer.wrap(data, sizeWithHeader, data.length - sizeWithHeader),
-                          path.toString(), 0);
+          ByteBuffer.wrap(data, sizeWithHeader, data.length - sizeWithHeader), pathName, 0);
     } catch (ChecksumException e) {
       return false;
     }
