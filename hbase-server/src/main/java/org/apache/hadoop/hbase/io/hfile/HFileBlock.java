@@ -1353,21 +1353,22 @@ public class HFileBlock implements Cacheable {
     /** The filesystem used to access data */
     protected HFileSystem hfs;
 
-    /** The path (if any) where this data is coming from */
-    protected Path path;
-
     private final Lock streamLock = new ReentrantLock();
 
     /** The default buffer size for our buffered streams */
     public static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 
     protected HFileContext fileContext;
+    // Cache the fileName
+    protected String pathName;
 
     public FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
         HFileContext fileContext) throws IOException {
       this.fileSize = fileSize;
       this.hfs = hfs;
-      this.path = path;
+      if (path != null) {
+        this.pathName = path.toString();
+      }
       this.fileContext = fileContext;
       this.hdrSize = headerSize(fileContext.isUseHBaseChecksum());
 
@@ -1508,13 +1509,13 @@ public class HFileBlock implements Cacheable {
                          doVerificationThruHBaseChecksum);
       if (blk == null) {
         HFile.LOG.warn("HBase checksum verification failed for file " +
-                       path + " at offset " +
+                       pathName + " at offset " +
                        offset + " filesize " + fileSize +
                        ". Retrying read with HDFS checksums turned on...");
 
         if (!doVerificationThruHBaseChecksum) {
           String msg = "HBase checksum verification failed for file " +
-                       path + " at offset " +
+                       pathName + " at offset " +
                        offset + " filesize " + fileSize +
                        " but this cannot happen because doVerify is " +
                        doVerificationThruHBaseChecksum;
@@ -1536,13 +1537,13 @@ public class HFileBlock implements Cacheable {
                                     doVerificationThruHBaseChecksum);
         if (blk != null) {
           HFile.LOG.warn("HDFS checksum verification suceeded for file " +
-                         path + " at offset " +
+                         pathName + " at offset " +
                          offset + " filesize " + fileSize);
         }
       }
       if (blk == null && !doVerificationThruHBaseChecksum) {
         String msg = "readBlockData failed, possibly due to " +
-                     "checksum verification failed for file " + path +
+                     "checksum verification failed for file " + pathName +
                      " at offset " + offset + " filesize " + fileSize;
         HFile.LOG.warn(msg);
         throw new IOException(msg);
@@ -1744,7 +1745,7 @@ public class HFileBlock implements Cacheable {
      */
     protected boolean validateBlockChecksum(HFileBlock block,  byte[] data, int hdrSize)
         throws IOException {
-      return ChecksumUtil.validateBlockChecksum(path, block, data, hdrSize);
+      return ChecksumUtil.validateBlockChecksum(pathName, block, data, hdrSize);
     }
 
     @Override
@@ -1754,7 +1755,7 @@ public class HFileBlock implements Cacheable {
 
     @Override
     public String toString() {
-      return "hfs=" + hfs + ", path=" + path + ", fileContext=" + fileContext;
+      return "hfs=" + hfs + ", path=" + pathName + ", fileContext=" + fileContext;
     }
   }
 
