@@ -317,7 +317,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
           if (perms != Perms.ALL) {
             if (LOG.isDebugEnabled()) {
               LOG.debug(String.format("permissions for '%s' are not correct: have %0x, want %0x",
-                id, perms, Perms.ALL));
+                id.toString(), perms, Perms.ALL));
             }
             return false;
           }
@@ -336,7 +336,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     }
     return true;
   }
-  
+
   /*
    * Validate whether ACL set for all superusers.
    */
@@ -366,7 +366,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     }
     return true;
   }
-  
+
   /*
    * Validate whether ACL ID is superuser.
    */
