@@ -43,7 +43,7 @@ public class Threads {
   private static final Log LOG = LogFactory.getLog(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
-  private static UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
+  public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
     new UncaughtExceptionHandler() {
     @Override
     public void uncaughtException(Thread t, Throwable e) {

@@ -57,7 +57,7 @@ public class TestIPCUtil {
   public void before() {
     this.util = new IPCUtil(new Configuration());
   }
-  
+
   @Test
   public void testBuildCellBlock() throws IOException {
     doBuildCellBlockUndoCellBlock(this.util, new KeyValueCodec(), null);
@@ -78,7 +78,7 @@ public class TestIPCUtil {
     CellScanner cellScanner = sized? getSizedCellScanner(cells):
       CellUtil.createCellScanner(Arrays.asList(cells).iterator());
     ByteBuffer bb = util.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = util.createCellScanner(codec, compressor, bb.array(), 0, bb.limit());
+    cellScanner = util.createCellScanner(codec, compressor, bb);
     int i = 0;
     while (cellScanner.advance()) {
       i++;

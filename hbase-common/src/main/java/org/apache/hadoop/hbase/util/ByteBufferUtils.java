@@ -41,6 +41,8 @@ public final class ByteBufferUtils {
   private final static int VALUE_MASK = 0x7f;
   private final static int NEXT_BIT_SHIFT = 7;
   private final static int NEXT_BIT_MASK = 1 << 7;
+  private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -508,5 +510,28 @@ public final class ByteBufferUtils {
       }
     }
     return len1 - len2;
+  }
+
+  /**
+   * Copies specified number of bytes from given offset of 'in' ByteBuffer to
+   * the array.
+   * @param out
+   * @param in
+   * @param sourceOffset
+   * @param destinationOffset
+   * @param length
+   */
+  public static void copyFromBufferToArray(byte[] out, ByteBuffer in, int sourceOffset,
+      int destinationOffset, int length) {
+    if (in.hasArray()) {
+      System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out, destinationOffset, length);
+    } else if (UNSAFE_AVAIL) {
+      UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
+    } else {
+      int oldPos = in.position();
+      in.position(sourceOffset);
+      in.get(out, destinationOffset, length);
+      in.position(oldPos);
+    }
   }
 }
