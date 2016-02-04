@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -180,19 +180,18 @@ public class IPCUtil {
   public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
       final byte [] cellBlock)
   throws IOException {
-    return createCellScanner(codec, compressor, cellBlock, 0, cellBlock.length);
+    return createCellScanner(codec, compressor, ByteBuffer.wrap(cellBlock));
   }
 
   /**
    * @param codec
-   * @param cellBlock
-   * @param offset
-   * @param length
+   * @param cellBlock ByteBuffer containing the cells written by the Codec. The buffer should be
+   * position()'ed at the start of the cell block and limit()'ed at the end.
    * @return CellScanner to work against the content of <code>cellBlock</code>
    * @throws IOException
    */
   public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
-      final byte [] cellBlock, final int offset, final int length)
+      final ByteBuffer cellBlock)
   throws IOException {
     // If compressed, decompress it first before passing it on else we will leak compression
     // resources if the stream is not closed properly after we let it out.
@@ -202,18 +201,17 @@ public class IPCUtil {
       if (compressor instanceof Configurable) ((Configurable)compressor).setConf(this.conf);
       Decompressor poolDecompressor = CodecPool.getDecompressor(compressor);
       CompressionInputStream cis =
-        compressor.createInputStream(new ByteArrayInputStream(cellBlock, offset, length),
-        poolDecompressor);
+        compressor.createInputStream(new ByteBufferInputStream(cellBlock), poolDecompressor);
       ByteBufferOutputStream bbos = null;
       try {
         // TODO: This is ugly.  The buffer will be resized on us if we guess wrong.
         // TODO: Reuse buffers.
-        bbos = new ByteBufferOutputStream((length - offset) *
+        bbos = new ByteBufferOutputStream(cellBlock.remaining() *
           this.cellBlockDecompressionMultiplier);
         IOUtils.copy(cis, bbos);
         bbos.close();
         ByteBuffer bb = bbos.getByteBuffer();
-        is = new ByteArrayInputStream(bb.array(), 0, bb.limit());
+        is = new ByteBufferInputStream(bb);
       } finally {
         if (is != null) is.close();
         if (bbos != null) bbos.close();
@@ -221,7 +219,7 @@ public class IPCUtil {
         CodecPool.returnDecompressor(poolDecompressor);
       }
     } else {
-      is = new ByteArrayInputStream(cellBlock, offset, length);
+      is = new ByteBufferInputStream(cellBlock);
     }
     return codec.getDecoder(is);
   }

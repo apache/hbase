@@ -35,14 +35,14 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class PayloadCarryingRpcController
     extends TimeLimitedRpcController implements CellScannable {
+
+  public static final int PRIORITY_UNSET = -1;
   /**
    * Priority to set on this request.  Set it here in controller so available composing the
    * request.  This is the ordained way of setting priorities going forward.  We will be
    * undoing the old annotation-based mechanism.
    */
-  // Currently only multi call makes use of this.  Eventually this should be only way to set
-  // priority.
-  private int priority = HConstants.NORMAL_QOS;
+  private int priority = PRIORITY_UNSET;
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
@@ -67,6 +67,7 @@ public class PayloadCarryingRpcController
   /**
    * @return One-shot cell scanner (you cannot back it up and restart)
    */
+  @Override
   public CellScanner cellScanner() {
     return cellScanner;
   }

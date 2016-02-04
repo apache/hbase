@@ -522,7 +522,7 @@ public class TestClientScanner {
       anyBoolean(), anyInt())).thenReturn(new RegionLocations(null, null, null));
 
     try (MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf("table"),
-      clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+      clusterConn, rpcFactory, new RpcControllerFactory(conf), pool, Integer.MAX_VALUE)) {
       Iterator<Result> iter = scanner.iterator();
       while (iter.hasNext()) {
         iter.next();

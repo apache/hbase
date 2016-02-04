@@ -899,8 +899,10 @@ public class RpcClientImpl extends AbstractRpcClient {
         cellBlockBuilder.setLength(cellBlock.limit());
         builder.setCellBlockMeta(cellBlockBuilder.build());
       }
-      // Only pass priority if there one.  Let zero be same as no priority.
-      if (priority != 0) builder.setPriority(priority);
+      // Only pass priority if there is one set.
+      if (priority != PayloadCarryingRpcController.PRIORITY_UNSET) {
+        builder.setPriority(priority);
+      }
       RequestHeader header = builder.build();
 
       setupIOstreams();
