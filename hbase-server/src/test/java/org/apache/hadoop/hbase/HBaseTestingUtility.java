@@ -2077,6 +2077,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable truncateTable(final TableName tableName, final boolean preserveRegions)
       throws IOException {
     Admin admin = getHBaseAdmin();
+    if (!admin.isTableDisabled(tableName)) {
+      admin.disableTable(tableName);
+    }
     admin.truncateTable(tableName, preserveRegions);
     return new HTable(getConfiguration(), tableName);
   }
