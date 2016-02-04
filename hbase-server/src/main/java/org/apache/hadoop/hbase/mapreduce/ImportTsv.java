@@ -91,6 +91,7 @@ public class ImportTsv extends Configured implements Tool {
   // If true, bad lines are logged to stderr. Default: false.
   public final static String LOG_BAD_LINES_CONF_KEY = "importtsv.log.bad.lines";
   public final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
+  public final static String SKIP_EMPTY_COLUMNS = "importtsv.skip.empty.columns";
   public final static String COLUMNS_CONF_KEY = "importtsv.columns";
   public final static String SEPARATOR_CONF_KEY = "importtsv.separator";
   public final static String ATTRIBUTE_SEPERATOR_CONF_KEY = "attributes.seperator";
@@ -685,6 +686,7 @@ public class ImportTsv extends Configured implements Tool {
       " table. If table does not exist, it is created but deleted in the end.\n" +
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
       "  -D" + LOG_BAD_LINES_CONF_KEY + "=true - logs invalid lines to stderr\n" +
+      "  -D" + SKIP_EMPTY_COLUMNS + "=false - If true then skip empty columns in bulk import\n" +
       "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs\n" +
       "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n" +
       "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " +
