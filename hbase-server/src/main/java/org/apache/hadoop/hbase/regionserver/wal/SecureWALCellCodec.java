@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
@@ -59,7 +60,7 @@ public class SecureWALCellCodec extends WALCellCodec {
     this.decryptor = decryptor;
   }
 
-  static class EncryptedKvDecoder extends KeyValueCodec.KeyValueDecoder {
+  static class EncryptedKvDecoder extends KeyValueCodecWithTags.KeyValueDecoder {
 
     private Decryptor decryptor;
     private byte[] iv;
@@ -141,7 +142,7 @@ public class SecureWALCellCodec extends WALCellCodec {
 
   }
 
-  static class EncryptedKvEncoder extends KeyValueCodec.KeyValueEncoder {
+  static class EncryptedKvEncoder extends KeyValueCodecWithTags.KeyValueEncoder {
 
     private Encryptor encryptor;
     private final ThreadLocal<byte[]> iv = new ThreadLocal<byte[]>() {
