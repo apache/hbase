@@ -185,6 +185,9 @@ public interface Region extends ConfigurationObserver {
    */
   void updateReadRequestsCount(long i);
 
+  /** @return filtered read requests count for this region */
+  long getFilteredReadRequestsCount();
+
   /** @return write request count for this region */
   long getWriteRequestsCount();
 

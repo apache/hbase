@@ -113,6 +113,11 @@ public interface MetricsRegionServerWrapper {
   long getReadRequestsCount();
 
   /**
+   * Get the number of filtered read requests to regions hosted on this region server.
+   */
+  long getFilteredReadRequestsCount();
+
+  /**
    * Get the number of write requests to regions hosted on this region server.
    */
   long getWriteRequestsCount();

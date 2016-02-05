@@ -112,6 +112,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getFilteredReadRequestCount() {
+    return this.region.getFilteredReadRequestsCount();
+  }
+
+  @Override
   public long getWriteRequestCount() {
     return this.region.getWriteRequestsCount();
   }

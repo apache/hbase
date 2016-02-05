@@ -68,6 +68,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long storeFileSize = 0;
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
+  private volatile long filteredReadRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
   private volatile long checkAndMutateChecksFailed = 0;
   private volatile long checkAndMutateChecksPassed = 0;
@@ -408,6 +409,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getFilteredReadRequestsCount() {
+    return filteredReadRequestsCount;
+  }
+
+  @Override
   public long getWriteRequestsCount() {
     return writeRequestsCount;
   }
@@ -588,7 +594,8 @@ class MetricsRegionServerWrapperImpl
             new HDFSBlocksDistribution();
 
         long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
-        long tempReadRequestsCount = 0, tempWriteRequestsCount = 0;
+        long tempReadRequestsCount = 0, tempFilteredReadRequestsCount = 0,
+          tempWriteRequestsCount = 0;
         long tempCheckAndMutateChecksFailed = 0;
         long tempCheckAndMutateChecksPassed = 0;
         long tempStorefileIndexSize = 0;
@@ -619,6 +626,7 @@ class MetricsRegionServerWrapperImpl
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
           tempReadRequestsCount += r.getReadRequestsCount();
+          tempFilteredReadRequestsCount += r.getFilteredReadRequestsCount();
           tempWriteRequestsCount += r.getWriteRequestsCount();
           tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
           tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
@@ -696,6 +704,7 @@ class MetricsRegionServerWrapperImpl
         memstoreSize = tempMemstoreSize;
         storeFileSize = tempStoreFileSize;
         readRequestsCount = tempReadRequestsCount;
+        filteredReadRequestsCount = tempFilteredReadRequestsCount;
         writeRequestsCount = tempWriteRequestsCount;
         checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;
         checkAndMutateChecksPassed = tempCheckAndMutateChecksPassed;

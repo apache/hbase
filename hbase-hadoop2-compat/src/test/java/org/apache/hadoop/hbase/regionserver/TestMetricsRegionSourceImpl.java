@@ -107,6 +107,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getFilteredReadRequestCount() {
+      return 0;
+    }
+
+    @Override
     public long getWriteRequestCount() {
       return 0;
     }

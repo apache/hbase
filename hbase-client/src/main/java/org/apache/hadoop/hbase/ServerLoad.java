@@ -49,6 +49,7 @@ public class ServerLoad {
   private int memstoreSizeMB = 0;
   private int storefileIndexSizeMB = 0;
   private long readRequestsCount = 0;
+  private long filteredReadRequestsCount = 0;
   private long writeRequestsCount = 0;
   private int rootIndexSizeKB = 0;
   private int totalStaticIndexSizeKB = 0;
@@ -66,6 +67,7 @@ public class ServerLoad {
       memstoreSizeMB += rl.getMemstoreSizeMB();
       storefileIndexSizeMB += rl.getStorefileIndexSizeMB();
       readRequestsCount += rl.getReadRequestsCount();
+      filteredReadRequestsCount += rl.getFilteredReadRequestsCount();
       writeRequestsCount += rl.getWriteRequestsCount();
       rootIndexSizeKB += rl.getRootIndexSizeKB();
       totalStaticIndexSizeKB += rl.getTotalStaticIndexSizeKB();
@@ -143,6 +145,10 @@ public class ServerLoad {
 
   public long getReadRequestsCount() {
     return readRequestsCount;
+  }
+
+  public long getFilteredReadRequestsCount() {
+    return filteredReadRequestsCount;
   }
 
   public long getWriteRequestsCount() {
@@ -297,6 +303,8 @@ public class ServerLoad {
         Strings.appendKeyValue(sb, "storefileIndexSizeMB",
           Integer.valueOf(this.storefileIndexSizeMB));
     sb = Strings.appendKeyValue(sb, "readRequestsCount", Long.valueOf(this.readRequestsCount));
+    sb = Strings.appendKeyValue(sb, "filteredReadRequestsCount",
+      Long.valueOf(this.filteredReadRequestsCount));
     sb = Strings.appendKeyValue(sb, "writeRequestsCount", Long.valueOf(this.writeRequestsCount));
     sb = Strings.appendKeyValue(sb, "rootIndexSizeKB", Integer.valueOf(this.rootIndexSizeKB));
     sb =

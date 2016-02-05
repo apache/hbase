@@ -1518,6 +1518,7 @@ public class HRegionServer extends HasThread implements
       .setTotalStaticIndexSizeKB(totalStaticIndexSizeKB)
       .setTotalStaticBloomSizeKB(totalStaticBloomSizeKB)
       .setReadRequestsCount(r.getReadRequestsCount())
+      .setFilteredReadRequestsCount(r.getFilteredReadRequestsCount())
       .setWriteRequestsCount(r.getWriteRequestsCount())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)

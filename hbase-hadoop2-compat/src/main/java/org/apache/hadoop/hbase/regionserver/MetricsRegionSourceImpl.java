@@ -237,6 +237,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
           this.regionWrapper.getReadRequestCount());
       mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
+              MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
+          this.regionWrapper.getFilteredReadRequestCount());
+      mrb.addCounter(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
               MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
           this.regionWrapper.getWriteRequestCount());

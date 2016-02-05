@@ -162,6 +162,9 @@ public interface MetricsRegionServerSource extends BaseSource {
   String READ_REQUEST_COUNT = "readRequestCount";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests this region server has answered.";
+  String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
+  String FILTERED_READ_REQUEST_COUNT_DESC =
+    "Number of filtered read requests this region server has answered.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
       "Number of mutation requests this region server has answered.";

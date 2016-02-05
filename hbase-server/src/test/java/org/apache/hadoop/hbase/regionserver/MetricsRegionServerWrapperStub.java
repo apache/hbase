@@ -86,6 +86,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getFilteredReadRequestsCount() {
+    return 1997;
+  }
+
+  @Override
   public long getWriteRequestsCount() {
     return 707;
   }

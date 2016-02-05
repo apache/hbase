@@ -70,6 +70,11 @@ public interface MetricsRegionWrapper {
   long getReadRequestCount();
 
   /**
+   * Get the total number of filtered read requests that have been issued against this region
+   */
+  long getFilteredReadRequestCount();
+
+  /**
    * Get the total number of mutations that have been issued against this region.
    */
   long getWriteRequestCount();

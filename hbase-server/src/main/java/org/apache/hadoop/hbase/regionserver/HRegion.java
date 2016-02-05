@@ -284,6 +284,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   //Number of requests
   final Counter readRequestsCount = new Counter();
+  final Counter filteredReadRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
 
   // Number of requests blocked by memstore size.
@@ -1110,6 +1111,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void updateReadRequestsCount(long i) {
     readRequestsCount.add(i);
+  }
+
+  @Override
+  public long getFilteredReadRequestsCount() {
+    return filteredReadRequestsCount.get();
   }
 
   @Override
@@ -6025,6 +6031,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     protected void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext) {
+      filteredReadRequestsCount.increment();
+
       if (scannerContext == null || !scannerContext.isTrackingMetrics()) return;
 
       scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
@@ -6524,6 +6532,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
         this.getBaseConf(), hri, this.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
+    r.filteredReadRequestsCount.set(this.getFilteredReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
     return r;
   }
@@ -6541,6 +6550,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.getTableDesc(), this.rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount()
         + region_b.getReadRequestsCount());
+    r.filteredReadRequestsCount.set(this.getFilteredReadRequestsCount()
+      + region_b.getFilteredReadRequestsCount());
     r.writeRequestsCount.set(this.getWriteRequestsCount()
 
         + region_b.getWriteRequestsCount());
@@ -7590,7 +7601,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      44 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      45 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 

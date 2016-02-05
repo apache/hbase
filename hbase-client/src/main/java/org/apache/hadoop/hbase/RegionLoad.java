@@ -106,6 +106,13 @@ public class RegionLoad {
   }
 
   /**
+   * @return the number of filtered read requests made to region
+   */
+  public long getFilteredReadRequestsCount() {
+    return regionLoadPB.getFilteredReadRequestsCount();
+  }
+
+  /**
    * @return the number of write requests made to region
    */
   public long getWriteRequestsCount() {

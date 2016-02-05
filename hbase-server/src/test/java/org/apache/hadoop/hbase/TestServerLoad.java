@@ -44,6 +44,7 @@ public class TestServerLoad {
     assertEquals(820, sl.getStorefileSizeInMB());
     assertEquals(82, sl.getStorefileIndexSizeInMB());
     assertEquals(((long)Integer.MAX_VALUE)*2, sl.getReadRequestsCount());
+    assertEquals(300, sl.getFilteredReadRequestsCount());
     
   }
  
@@ -57,6 +58,7 @@ public class TestServerLoad {
     assertTrue(slToString.contains("storefileSizeMB=820")); 
     assertTrue(slToString.contains("rootIndexSizeKB=504"));
     assertTrue(slToString.contains("coprocessors=[]"));
+    assertTrue(slToString.contains("filteredReadRequestsCount=300"));
   }
 
   @Test
@@ -80,10 +82,12 @@ public class TestServerLoad {
     ClusterStatusProtos.RegionLoad rlOne =
         ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
             .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
+            .setFilteredReadRequestsCount(100)
             .setStorefileIndexSizeMB(42).setRootIndexSizeKB(201).setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
     ClusterStatusProtos.RegionLoad rlTwo =
         ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
             .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
+            .setFilteredReadRequestsCount(200)
             .setStorefileIndexSizeMB(40).setRootIndexSizeKB(303).setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
 
     ClusterStatusProtos.ServerLoad sl =

@@ -173,11 +173,13 @@ MetricsRegionServerWrapper mWrap;
 <tr>
     <th>Request Per Second</th>
     <th>Read Request Count</th>
+    <th>Filtered Read Request Count</th>
     <th>Write Request Count</th>
 </tr>
 <tr>
     <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
     <td><% mWrap.getReadRequestsCount() %></td>
+    <td><% mWrap.getFilteredReadRequestsCount() %></td>
     <td><% mWrap.getWriteRequestsCount() %></td>
 </tr>
 </table>

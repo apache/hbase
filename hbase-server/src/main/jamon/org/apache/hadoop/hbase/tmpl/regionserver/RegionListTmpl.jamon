@@ -118,6 +118,7 @@
         <tr>
             <th>Region Name</th>
             <th>Read Request Count</th>
+            <th>Filtered Read Request Count</th>
             <th>Write Request Count</th>
         </tr>
 
@@ -132,6 +133,7 @@
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getReadRequestsCount() %></td>
+            <td><% load.getFilteredReadRequestsCount() %></td>
             <td><% load.getWriteRequestsCount() %></td>
             </%if>
         </tr>

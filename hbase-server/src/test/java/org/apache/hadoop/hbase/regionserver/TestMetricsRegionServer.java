@@ -67,6 +67,7 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("storeFileSize", 1900, serverSource);
     HELPER.assertCounter("totalRequestCount", 899, serverSource);
     HELPER.assertCounter("readRequestCount", 997, serverSource);
+    HELPER.assertCounter("filteredReadRequestCount", 1997, serverSource);
     HELPER.assertCounter("writeRequestCount", 707, serverSource);
     HELPER.assertCounter("checkMutateFailedCount", 401, serverSource);
     HELPER.assertCounter("checkMutatePassedCount", 405, serverSource);
