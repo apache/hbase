@@ -58,6 +58,8 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
   /** Should skip bad lines */
   private boolean skipBadLines;
+  /** Should skip empty columns*/
+  private boolean skipEmptyColumns;
   private Counter badLineCount;
   private boolean logBadLines;
 
@@ -133,6 +135,8 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     // configuration.
     ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, 0);
 
+    skipEmptyColumns = context.getConfiguration().getBoolean(
+        ImportTsv.SKIP_EMPTY_COLUMNS, false);
     skipBadLines = context.getConfiguration().getBoolean(
         ImportTsv.SKIP_LINES_CONF_KEY, true);
     badLineCount = context.getCounter("ImportTsv", "Bad Lines");
@@ -178,7 +182,8 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       for (int i = 0; i < parsed.getColumnCount(); i++) {
         if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
             || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()
-            || i == parser.getCellTTLColumnIndex()) {
+            || i == parser.getCellTTLColumnIndex() || (skipEmptyColumns 
+            && parsed.getColumnLength(i) == 0)) {
           continue;
         }
         populatePut(lineBytes, parsed, put, i);
