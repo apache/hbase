@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -39,8 +39,8 @@ public class MultiVersionConsistencyControl {
   private final Object readWaiters = new Object();
 
   // This is the pending queue of writes.
-  private final LinkedList<WriteEntry> writeQueue =
-      new LinkedList<WriteEntry>();
+  private final LinkedHashSet<WriteEntry> writeQueue =
+      new LinkedHashSet<WriteEntry>();
 
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
@@ -101,7 +101,14 @@ public class MultiVersionConsistencyControl {
    * @return WriteEntry a WriteEntry instance with the passed in curSeqNum
    */
   public WriteEntry beginMemstoreInsertWithSeqNum(long curSeqNum) {
+    return beginMemstoreInsertWithSeqNum(curSeqNum, false);
+  }
+
+  private WriteEntry beginMemstoreInsertWithSeqNum(long curSeqNum, boolean complete) {
     WriteEntry e = new WriteEntry(curSeqNum);
+    if (complete) {
+      e.markCompleted();
+    }
     synchronized (writeQueue) {
       writeQueue.add(e);
       return e;
@@ -171,11 +178,11 @@ public class MultiVersionConsistencyControl {
       e.markCompleted();
 
       while (!writeQueue.isEmpty()) {
-        WriteEntry queueFirst = writeQueue.getFirst();
+        WriteEntry queueFirst = writeQueue.iterator().next();
         if (queueFirst.isCompleted()) {
           // Using Max because Edit complete in WAL sync order not arriving order
           nextReadValue = Math.max(nextReadValue, queueFirst.getWriteNumber());
-          writeQueue.removeFirst();
+          writeQueue.remove(queueFirst);
         } else {
           break;
         }
@@ -217,25 +224,29 @@ public class MultiVersionConsistencyControl {
    * Wait for all previous MVCC transactions complete
    */
   public void waitForPreviousTransactionsComplete() {
-    WriteEntry w = beginMemstoreInsert();
+    WriteEntry w = beginMemstoreInsertWithSeqNum(NO_WRITE_NUMBER, true);
     waitForPreviousTransactionsComplete(w);
   }
 
   public void waitForPreviousTransactionsComplete(WriteEntry waitedEntry) {
     boolean interrupted = false;
     WriteEntry w = waitedEntry;
+    w.markCompleted();
 
     try {
       WriteEntry firstEntry = null;
       do {
         synchronized (writeQueue) {
-          // writeQueue won't be empty at this point, the following is just a safety check
           if (writeQueue.isEmpty()) {
             break;
           }
-          firstEntry = writeQueue.getFirst();
+          firstEntry = writeQueue.iterator().next();
           if (firstEntry == w) {
             // all previous in-flight transactions are done
+            break;
+          }
+          // WriteEntry already was removed from the queue by another handler
+          if (!writeQueue.contains(w)) {
             break;
           }
           try {
@@ -249,9 +260,7 @@ public class MultiVersionConsistencyControl {
         }
       } while (firstEntry != null);
     } finally {
-      if (w != null) {
-        advanceMemstore(w);
-      }
+      advanceMemstore(w);
     }
     if (interrupted) {
       Thread.currentThread().interrupt();
