@@ -2929,25 +2929,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  OperationStatus[] batchMutate(BatchOperationInProgress<?> batchOp) throws IOException {
+  OperationStatus[] batchMutate(BatchOperationInProgress<?> batchOp)
+      throws IOException {
     boolean initialized = false;
     Operation op = batchOp.isInReplay() ? Operation.REPLAY_BATCH_MUTATE : Operation.BATCH_MUTATE;
     startRegionOperation(op);
+    int cellCountFromCP = 0;
     try {
       while (!batchOp.isDone()) {
         if (!batchOp.isInReplay()) {
           checkReadOnly();
         }
         checkResources();
-
         if (!initialized) {
           this.writeRequestsCount.add(batchOp.operations.length);
           if (!batchOp.isInReplay()) {
-            doPreMutationHook(batchOp);
+            cellCountFromCP = doPreMutationHook(batchOp);
           }
           initialized = true;
         }
-        long addedSize = doMiniBatchMutation(batchOp);
+        long addedSize = doMiniBatchMutation(batchOp, cellCountFromCP);
         long newSize = this.addAndGetGlobalMemstoreSize(addedSize);
         if (isFlushSize(newSize)) {
           requestFlush();
@@ -2960,10 +2961,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
 
-  private void doPreMutationHook(BatchOperationInProgress<?> batchOp)
+  private int doPreMutationHook(BatchOperationInProgress<?> batchOp)
       throws IOException {
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     WALEdit walEdit = new WALEdit();
+    int cellCount = 0;
     if (coprocessorHost != null) {
       for (int i = 0 ; i < batchOp.operations.length; i++) {
         Mutation m = batchOp.getMutation(i);
@@ -2993,14 +2995,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         if (!walEdit.isEmpty()) {
           batchOp.walEditsFromCoprocessors[i] = walEdit;
+          cellCount += walEdit.size();
           walEdit = new WALEdit();
         }
       }
     }
+    return cellCount;
   }
 
   @SuppressWarnings("unchecked")
-  private long doMiniBatchMutation(BatchOperationInProgress<?> batchOp) throws IOException {
+  private long doMiniBatchMutation(BatchOperationInProgress<?> batchOp, int cellCount)
+      throws IOException {
     boolean isInReplay = batchOp.isInReplay();
     // variable to note if all Put items are for the same CF -- metrics related
     boolean putsCfSetConsistent = true;
@@ -3012,7 +3017,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Set<byte[]> deletesCfSet = null;
 
     long currentNonceGroup = HConstants.NO_NONCE, currentNonce = HConstants.NO_NONCE;
-    WALEdit walEdit = new WALEdit(isInReplay);
+    WALEdit walEdit = null;
     MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
     long txid = 0;
     boolean doRollBackMemstore = false;
@@ -3043,7 +3048,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         Map<byte[], List<Cell>> familyMap = mutation.getFamilyCellMap();
         // store the family map reference to allow for mutations
         familyMaps[lastIndexExclusive] = familyMap;
-
         // skip anything that "ran" already
         if (batchOp.retCodeDetails[lastIndexExclusive].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) {
@@ -3150,8 +3154,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           noOfDeletes++;
         }
         rewriteCellTags(familyMaps[i], mutation);
+        for (List<Cell> cells : familyMaps[i].values()) {
+          cellCount += cells.size();
+        }
       }
-
+      walEdit = new WALEdit(cellCount);
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
 
