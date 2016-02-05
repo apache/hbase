@@ -844,7 +844,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           }
         }
         if (LOG.isTraceEnabled()) {
-          LOG.debug(" Lowest locality region index is " + lowestLocalityRegionIndex
+          LOG.trace(" Lowest locality region index is " + lowestLocalityRegionIndex
             + " and its region server contains " + regionsPerServer[serverIndex].length
             + " regions");
         }
