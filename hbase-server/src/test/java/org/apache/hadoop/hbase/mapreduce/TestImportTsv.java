@@ -368,15 +368,15 @@ public class TestImportTsv implements Configurable {
   
   @Test
   public void testSkipEmptyColumns() throws Exception {
-    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(tn.getNameAsString()), "hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,HBASE_TS_KEY,FAM:A,FAM:B");
     args.put(ImportTsv.SEPARATOR_CONF_KEY, ",");
     args.put(ImportTsv.SKIP_EMPTY_COLUMNS, "true");
     // 2 Rows of data as input. Both rows are valid and only 3 columns are no-empty among 4
     String data = "KEY,1234,VALUE1,VALUE2\nKEY,1235,,VALUE2\n";
-    doMROnTableTest(util, tn, FAMILY, data, args, 1, 3);
-    util.deleteTable(tn);
+    doMROnTableTest(util, table, FAMILY, data, args, 1, 3);
+    util.deleteTable(table);
   }
 
   private Tool doMROnTableTest(String data, int valueMultiplier,int expectedKVCount)
