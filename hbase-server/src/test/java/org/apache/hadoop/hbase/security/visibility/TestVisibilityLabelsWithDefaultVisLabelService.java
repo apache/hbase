@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -216,5 +217,26 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
       }
     };
     SUPERUSER.runAs(action);
+  }
+
+  @Test(timeout = 60 * 1000)
+  public void testVisibilityLabelsOnWALReplay() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    try (Table table = createTableAndWriteDataWithLabels(tableName,
+        "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE);) {
+      List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
+          .getRegionServerThreads();
+      for (RegionServerThread rsThread : regionServerThreads) {
+        rsThread.getRegionServer().abort("Aborting ");
+      }
+      // Start one new RS
+      RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
+      waitForLabelsRegionAvailability(rs.getRegionServer());
+      Scan s = new Scan();
+      s.setAuthorizations(new Authorizations(SECRET));
+      ResultScanner scanner = table.getScanner(s);
+      Result[] next = scanner.next(3);
+      assertTrue(next.length == 1);
+    }
   }
 }
