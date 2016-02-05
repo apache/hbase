@@ -297,7 +297,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       if (Ids.ANYONE_ID_UNSAFE.equals(id)) {
         if (perms != Perms.READ) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("permissions for '%s' are not correct: have %0x, want %0x",
+            LOG.debug(String.format("permissions for '%s' are not correct: have 0x%x, want 0x%x",
               id, perms, Perms.READ));
           }
           return false;
@@ -312,7 +312,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         if (name.equals(hbaseUser)) {
           if (perms != Perms.ALL) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug(String.format("permissions for '%s' are not correct: have %0x, want %0x",
+              LOG.debug(String.format("permissions for '%s' are not correct: have 0x%x, want 0x%x",
                 id, perms, Perms.ALL));
             }
             return false;
@@ -348,7 +348,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
             } else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format(
-                  "superuser '%s' does not have correct permissions: have %0x, want %0x",
+                  "superuser '%s' does not have correct permissions: have 0x%x, want 0x%x",
                   acl.getId().getId(), acl.getPerms(), Perms.ALL));
               }
             }
