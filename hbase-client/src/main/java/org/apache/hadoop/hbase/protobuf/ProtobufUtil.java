@@ -543,7 +543,7 @@ public final class ProtobufUtil {
     MutationType type = proto.getMutateType();
     assert type == MutationType.PUT: type.name();
     long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
-    Put put = null;
+    Put put = proto.hasRow() ? new Put(proto.getRow().toByteArray(), timestamp) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -563,9 +563,7 @@ public final class ProtobufUtil {
         put.add(cell);
       }
     } else {
-      if (proto.hasRow()) {
-        put = new Put(proto.getRow().asReadOnlyByteBuffer(), timestamp);
-      } else {
+      if (put == null) {
         throw new IllegalArgumentException("row cannot be null");
       }
       // The proto has the metadata and the data itself
@@ -639,12 +637,8 @@ public final class ProtobufUtil {
   throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.DELETE : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    long timestamp = HConstants.LATEST_TIMESTAMP;
-    if (proto.hasTimestamp()) {
-      timestamp = proto.getTimestamp();
-    }
-    Delete delete = null;
+    long timestamp = proto.hasTimestamp() ? proto.getTimestamp() : HConstants.LATEST_TIMESTAMP;
+    Delete delete = proto.hasRow() ? new Delete(proto.getRow().toByteArray(), timestamp) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -667,7 +661,9 @@ public final class ProtobufUtil {
         delete.addDeleteMarker(cell);
       }
     } else {
-      delete = new Delete(row, timestamp);
+      if (delete == null) {
+        throw new IllegalArgumentException("row cannot be null");
+      }
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
