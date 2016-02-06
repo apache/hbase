@@ -144,7 +144,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       // if the region is > 2 times larger than average, we split it, split
       // is more high priority normalization action than merge.
       if (regionSize > 2 * avgRegionSize) {
-        LOG.debug("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
+        LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
             + regionSize + ", more than twice avg size, splitting");
         plans.add(new SplitNormalizationPlan(hri, null));
       } else {
@@ -154,7 +154,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
         HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
         long regionSize2 = getRegionSize(hri2);
         if (regionSize + regionSize2 < avgRegionSize) {
-          LOG.debug("Table " + table + ", small region size: " + regionSize
+          LOG.info("Table " + table + ", small region size: " + regionSize
             + " plus its neighbor size: " + regionSize2
             + ", less than the avg size " + avgRegionSize + ", merging them");
           plans.add(new MergeNormalizationPlan(hri, hri2));
