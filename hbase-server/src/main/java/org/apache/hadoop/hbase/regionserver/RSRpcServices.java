@@ -124,6 +124,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -2009,6 +2010,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         rpcServer.getMetrics().exception(e);
         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+        if (cellScanner != null) {
+          skipCellsForMutations(regionAction.getActionList(), cellScanner);
+        }
         continue;  // For this region it's a failure.
       }
 
@@ -2055,6 +2059,30 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (processed != null) responseBuilder.setProcessed(processed);
     return responseBuilder.build();
+  }
+
+  private void skipCellsForMutations(List<Action> actions, CellScanner cellScanner) {
+    for (Action action : actions) {
+      skipCellsForMutation(action, cellScanner);
+    }
+  }
+
+  private void skipCellsForMutation(Action action, CellScanner cellScanner) {
+    try {
+      if (action.hasMutation()) {
+        MutationProto m = action.getMutation();
+        if (m.hasAssociatedCellCount()) {
+          for (int i = 0; i < m.getAssociatedCellCount(); i++) {
+            cellScanner.advance();
+          }
+        }
+      }
+    } catch (IOException e) {
+      // No need to handle these Individual Muatation level issue. Any way this entire RegionAction
+      // marked as failed as we could not see the Region here. At client side the top level
+      // RegionAction exception will be considered first.
+      LOG.error("Error while skipping Cells in CellScanner for invalid Region Mutations", e);
+    }
   }
 
   /**
