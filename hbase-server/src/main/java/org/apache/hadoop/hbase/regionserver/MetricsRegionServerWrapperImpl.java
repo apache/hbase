@@ -364,6 +364,26 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getRpcGetRequestsCount() {
+    return regionServer.rpcServices.rpcGetRequestCount.get();
+  }
+
+  @Override
+  public long getRpcScanRequestsCount() {
+    return regionServer.rpcServices.rpcScanRequestCount.get();
+  }
+
+  @Override
+  public long getRpcMultiRequestsCount() {
+    return regionServer.rpcServices.rpcMultiRequestCount.get();
+  }
+
+  @Override
+  public long getRpcMutateRequestsCount() {
+    return regionServer.rpcServices.rpcMutateRequestCount.get();
+  }
+
+  @Override
   public long getCheckAndMutateChecksFailed() {
     return checkAndMutateChecksFailed;
   }

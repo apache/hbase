@@ -203,6 +203,14 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getReadRequestsCount())
           .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),
               rsWrap.getWriteRequestsCount())
+          .addCounter(Interns.info(RPC_GET_REQUEST_COUNT, RPC_GET_REQUEST_COUNT_DESC),
+            rsWrap.getRpcGetRequestsCount())
+          .addCounter(Interns.info(RPC_SCAN_REQUEST_COUNT, RPC_SCAN_REQUEST_COUNT_DESC),
+            rsWrap.getRpcScanRequestsCount())
+          .addCounter(Interns.info(RPC_MULTI_REQUEST_COUNT, RPC_MULTI_REQUEST_COUNT_DESC),
+            rsWrap.getRpcMultiRequestsCount())
+          .addCounter(Interns.info(RPC_MUTATE_REQUEST_COUNT, RPC_MUTATE_REQUEST_COUNT_DESC),
+            rsWrap.getRpcMutateRequestsCount())
           .addCounter(Interns.info(CHECK_MUTATE_FAILED_COUNT, CHECK_MUTATE_FAILED_COUNT_DESC),
               rsWrap.getCheckAndMutateChecksFailed())
           .addCounter(Interns.info(CHECK_MUTATE_PASSED_COUNT, CHECK_MUTATE_PASSED_COUNT_DESC),

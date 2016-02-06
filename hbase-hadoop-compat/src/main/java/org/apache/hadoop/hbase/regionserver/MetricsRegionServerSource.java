@@ -289,4 +289,16 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SPLIT_SUCCESS_KEY = "splitSuccessCount";
   String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
   String FLUSH_KEY = "flushTime";
+
+  String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
+  String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";
+  String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
+  String RPC_SCAN_REQUEST_COUNT_DESC =
+      "Number of rpc scan requests this region server has answered.";
+  String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
+  String RPC_MULTI_REQUEST_COUNT_DESC =
+      "Number of rpc multi requests this region server has answered.";
+  String RPC_MUTATE_REQUEST_COUNT = "rpcMutateRequestCount";
+  String RPC_MUTATE_REQUEST_COUNT_DESC =
+      "Number of rpc mutation requests this region server has answered.";
 }
