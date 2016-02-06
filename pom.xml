@@ -828,7 +828,6 @@
               <exclude>**/patchprocess/**</exclude>
               <exclude>src/main/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
-              <exclude>**/ESAPI.properties</exclude>
               <exclude>**/rat.txt</exclude>
             </excludes>
           </configuration>
