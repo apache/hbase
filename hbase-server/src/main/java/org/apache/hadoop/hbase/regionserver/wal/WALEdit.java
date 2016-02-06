@@ -99,7 +99,7 @@ public class WALEdit implements Writable, HeapSize {
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
-  private ArrayList<Cell> cells = null;
+  private ArrayList<Cell> cells = new ArrayList<Cell>(1);
 
   public static final WALEdit EMPTY_WALEDIT = new WALEdit();
 
@@ -118,12 +118,6 @@ public class WALEdit implements Writable, HeapSize {
 
   public WALEdit(boolean isReplay) {
     this.isReplay = isReplay;
-    cells = new ArrayList<Cell>(1);
-  }
-
-  public WALEdit(int cellCount) {
-    this.isReplay = false;
-    cells = new ArrayList<Cell>(cellCount);
   }
 
   /**
