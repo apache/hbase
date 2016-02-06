@@ -2331,6 +2331,10 @@ public class HRegionServer extends HasThread implements
     RegionServerStartupResponse result = null;
     try {
       rpcServices.requestCount.set(0);
+      rpcServices.rpcGetRequestCount.set(0);
+      rpcServices.rpcScanRequestCount.set(0);
+      rpcServices.rpcMultiRequestCount.set(0);
+      rpcServices.rpcMutateRequestCount.set(0);
       LOG.info("reportForDuty to master=" + masterServerName + " with port="
         + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();

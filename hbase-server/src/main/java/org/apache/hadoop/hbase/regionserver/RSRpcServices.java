@@ -220,6 +220,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // Request counter. (Includes requests that are not serviced by regions.)
   final Counter requestCount = new Counter();
+
+  // Request counter for rpc get
+  final Counter rpcGetRequestCount = new Counter();
+
+  // Request counter for rpc scan
+  final Counter rpcScanRequestCount = new Counter();
+
+  // Request counter for rpc multi
+  final Counter rpcMultiRequestCount = new Counter();
+
+  // Request counter for rpc mutate
+  final Counter rpcMutateRequestCount = new Counter();
+
   // Server to handle client requests.
   final RpcServerInterface rpcServer;
   final InetSocketAddress isa;
@@ -2091,6 +2104,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
+      rpcGetRequestCount.increment();
       Region region = getRegion(request.getRegion());
 
       GetResponse.Builder builder = GetResponse.newBuilder();
@@ -2231,6 +2245,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     Boolean processed = null;
     RegionScannersCloseCallBack closeCallBack = null;
     RpcCallContext context = RpcServer.getCurrentCall();
+    this.rpcMultiRequestCount.increment();
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
       OperationQuota quota;
@@ -2352,6 +2367,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
+      rpcMutateRequestCount.increment();
       Region region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
@@ -2496,6 +2512,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         throw e;
       }
       requestCount.increment();
+      rpcScanRequestCount.increment();
 
       int ttl = 0;
       Region region = null;

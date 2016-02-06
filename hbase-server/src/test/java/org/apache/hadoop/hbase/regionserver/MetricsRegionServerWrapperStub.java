@@ -96,6 +96,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getRpcGetRequestsCount() {
+    return 521;
+  }
+
+  @Override
+  public long getRpcScanRequestsCount() {
+    return 101;
+  }
+
+  @Override
+  public long getRpcMultiRequestsCount() {
+    return 486;
+  }
+
+  @Override
+  public long getRpcMutateRequestsCount() {
+    return 606;
+  }
+
+  @Override
   public long getCheckAndMutateChecksFailed() {
     return 401;
   }

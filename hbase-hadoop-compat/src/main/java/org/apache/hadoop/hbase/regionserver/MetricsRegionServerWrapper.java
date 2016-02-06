@@ -372,4 +372,24 @@ public interface MetricsRegionServerWrapper {
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
+
+  /**
+   * Get the number of rpc get requests to this region server.
+   */
+  long getRpcGetRequestsCount();
+
+  /**
+   * Get the number of rpc scan requests to this region server.
+   */
+  long getRpcScanRequestsCount();
+
+  /**
+   * Get the number of rpc multi requests to this region server.
+   */
+  long getRpcMultiRequestsCount();
+
+  /**
+   * Get the number of rpc mutate requests to this region server.
+   */
+  long getRpcMutateRequestsCount();
 }
