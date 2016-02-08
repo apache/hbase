@@ -43,15 +43,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 
 /**
@@ -64,36 +60,18 @@ import org.junit.runners.Parameterized.Parameters;
  * prove atomicity on row.
  */
 @Category(MediumTests.class)
-@RunWith(Parameterized.class)
 public class TestRegionIncrement {
   private static final Log LOG = LogFactory.getLog(TestRegionIncrement.class);
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout =
       CategoryBasedTimeout.builder().withTimeout(this.getClass()).
         withLookingForStuckThread(true).build();
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] INCREMENT_BYTES = Bytes.toBytes("increment");
   private static final int THREAD_COUNT = 10;
   private static final int INCREMENT_COUNT = 10000;
-
-  @Parameters(name = "fast={0}")
   public static Collection<Object []> data() {
     return Arrays.asList(new Object[] {Boolean.FALSE}, new Object [] {Boolean.TRUE});
-  }
-
-  private final boolean fast;
-
-  public TestRegionIncrement(final boolean fast) {
-    this.fast = fast;
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
-    if (this.fast) {
-      TEST_UTIL.getConfiguration().
-        setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, this.fast);
-    }
   }
 
   @After
