@@ -457,7 +457,6 @@ public class DefaultMemStore implements MemStore {
    * This is called under row lock, so Get operations will still see updates
    * atomically.  Scans will only see each KeyValue update as atomic.
    *
-   * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @return change in memstore size
    */
@@ -578,7 +577,7 @@ public class DefaultMemStore implements MemStore {
     // last iterated Cells for cellSet and snapshot (to restore iterator state after reseek)
     private Cell cellSetItRow = null;
     private Cell snapshotItRow = null;
-    
+
     // iterator based scanning.
     private Iterator<Cell> cellSetIt;
     private Iterator<Cell> snapshotIt;
@@ -593,7 +592,7 @@ public class DefaultMemStore implements MemStore {
     // The allocator and snapshot allocator at the time of creating this scanner
     volatile MemStoreLAB allocatorAtCreation;
     volatile MemStoreLAB snapshotAllocatorAtCreation;
-    
+
     // A flag represents whether could stop skipping Cells for MVCC
     // if have encountered the next row. Only used for reversed scan
     private boolean stopSkippingCellsIfNextRow = false;
@@ -806,7 +805,7 @@ public class DefaultMemStore implements MemStore {
 
       this.cellSetIt = null;
       this.snapshotIt = null;
-      
+
       if (allocatorAtCreation != null) {
         this.allocatorAtCreation.decScannerCount();
         this.allocatorAtCreation = null;

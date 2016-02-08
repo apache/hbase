@@ -166,7 +166,7 @@ public class HLogKey extends WALKey implements Writable {
           this.tablename.getName().length, out,
           compressionContext.tableDict);
     }
-    out.writeLong(this.logSeqNum);
+    out.writeLong(getSequenceId());
     out.writeLong(this.writeTime);
     // Don't need to write the clusters information as we are using protobufs from 0.95
     // Writing only the first clusterId for testing the legacy read
@@ -213,7 +213,7 @@ public class HLogKey extends WALKey implements Writable {
       tablenameBytes = Compressor.readCompressed(in, compressionContext.tableDict);
     }
 
-    this.logSeqNum = in.readLong();
+    setSequenceId(in.readLong());
     this.writeTime = in.readLong();
 
     this.clusterIds.clear();

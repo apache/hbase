@@ -127,10 +127,7 @@ class FSWALEntry extends Entry {
       }
     }
 
-    // This has to stay in this order
-    WALKey key = getKey();
-    key.setLogSeqNum(regionSequenceId);
-    key.setWriteEntry(we);
+    getKey().setWriteEntry(we);
     return regionSequenceId;
   }
 
