@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 @InterfaceAudience.Private
 public class TableState {
 
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static enum State {
     ENABLED,
