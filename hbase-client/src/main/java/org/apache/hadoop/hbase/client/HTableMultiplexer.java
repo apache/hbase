@@ -194,19 +194,6 @@ public class HTableMultiplexer {
    * @return true if the request can be accepted by its corresponding buffer queue.
    */
   public boolean put(final TableName tableName, final Put put, int maxAttempts) {
-    return _put(tableName, put, maxAttempts, false);
-  }
-
-  /**
-   * Internal "put" which exposes a boolean flag to control whether or not the region location
-   * cache should be reloaded when trying to queue the {@link Put}.
-   * @param tableName Destination table for the Put
-   * @param put The Put to send
-   * @param maxAttempts Number of attempts to retry the {@code put}
-   * @param reloadCache Should the region location cache be reloaded
-   * @return true if the request was accepted in the queue, otherwise false
-   */
-  boolean _put(final TableName tableName, final Put put, int maxAttempts, boolean reloadCache) {
     if (maxAttempts <= 0) {
       return false;
     }
@@ -215,7 +202,9 @@ public class HTableMultiplexer {
       HTable.validatePut(put, maxKeyValueSize);
       // Allow mocking to get at the connection, but don't expose the connection to users.
       ClusterConnection conn = (ClusterConnection) getConnection();
-      HRegionLocation loc = conn.getRegionLocation(tableName, put.getRow(), reloadCache);
+      // AsyncProcess in the FlushWorker should take care of refreshing the location cache
+      // as necessary. We shouldn't have to do that here.
+      HRegionLocation loc = conn.getRegionLocation(tableName, put.getRow(), false);
       if (loc != null) {
         // Add the put pair into its corresponding queue.
         LinkedBlockingQueue<PutStatus> queue = getQueue(loc);
@@ -512,12 +501,16 @@ public class HTableMultiplexer {
         LOG.debug("resubmitting after " + delayMs + "ms: " + retryCount);
       }
 
+      // HBASE-12198, HBASE-15221, HBASE-15232: AsyncProcess should be responsible for updating
+      // the region location cache when the Put original failed with some exception. If we keep
+      // re-trying the same Put to the same location, AsyncProcess isn't doing the right stuff
+      // that we expect it to.
       getExecutor().schedule(new Runnable() {
         @Override
         public void run() {
           boolean succ = false;
           try {
-            succ = FlushWorker.this.getMultiplexer()._put(tableName, failedPut, retryCount, true);
+            succ = FlushWorker.this.getMultiplexer().put(tableName, failedPut, retryCount);
           } finally {
             FlushWorker.this.getRetryInQueue().decrementAndGet();
             if (!succ) {
