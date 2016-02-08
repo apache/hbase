@@ -18,11 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Iterator;
-import java.util.SortedSet;
-
 import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -32,10 +28,13 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
+import java.util.Iterator;
+import java.util.SortedSet;
+
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCellSkipListSet extends TestCase {
-  private final CellSkipListSet csls =
-    new CellSkipListSet(CellComparator.COMPARATOR);
+  private final CellSet csls =
+    new CellSet(CellComparator.COMPARATOR);
 
   protected void setUp() throws Exception {
     super.setUp();

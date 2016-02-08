@@ -31,28 +31,26 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * A {@link java.util.Set} of {@link Cell}s implemented on top of a
- * {@link java.util.concurrent.ConcurrentSkipListMap}.  Works like a
- * {@link java.util.concurrent.ConcurrentSkipListSet} in all but one regard:
- * An add will overwrite if already an entry for the added key.  In other words,
- * where CSLS does "Adds the specified element to this set if it is not already
- * present.", this implementation "Adds the specified element to this set EVEN
- * if it is already present overwriting what was there previous".  The call to
- * add returns true if no value in the backing map or false if there was an
- * entry with same key (though value may be different).
- * <p>Otherwise,
- * has same attributes as ConcurrentSkipListSet: e.g. tolerant of concurrent
- * get and set and won't throw ConcurrentModificationException when iterating.
+ * A {@link java.util.Set} of {@link Cell}s, where an add will overwrite the entry if already
+ * exists in the set.  The call to add returns true if no value in the backing map or false if
+ * there was an entry with same key (though value may be different).
+ * implementation is tolerant of concurrent get and set and won't throw
+ * ConcurrentModificationException when iterating.
  */
 @InterfaceAudience.Private
-public class CellSkipListSet implements NavigableSet<Cell> {
+public class CellSet implements NavigableSet<Cell>  {
+  // Implemented on top of a {@link java.util.concurrent.ConcurrentSkipListMap}
+  // Differ from CSLS in one respect, where CSLS does "Adds the specified element to this set if it
+  // is not already present.", this implementation "Adds the specified element to this set EVEN
+  // if it is already present overwriting what was there previous".
+  // Otherwise, has same attributes as ConcurrentSkipListSet
   private final ConcurrentNavigableMap<Cell, Cell> delegatee;
 
-  CellSkipListSet(final CellComparator c) {
+  CellSet(final CellComparator c) {
     this.delegatee = new ConcurrentSkipListMap<Cell, Cell>(c);
   }
 
-  CellSkipListSet(final ConcurrentNavigableMap<Cell, Cell> m) {
+  CellSet(final ConcurrentNavigableMap<Cell, Cell> m) {
     this.delegatee = m;
   }
 
@@ -78,7 +76,7 @@ public class CellSkipListSet implements NavigableSet<Cell> {
 
   public NavigableSet<Cell> headSet(final Cell toElement,
       boolean inclusive) {
-    return new CellSkipListSet(this.delegatee.headMap(toElement, inclusive));
+    return new CellSet(this.delegatee.headMap(toElement, inclusive));
   }
 
   public Cell higher(Cell e) {
@@ -115,7 +113,7 @@ public class CellSkipListSet implements NavigableSet<Cell> {
   }
 
   public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
-    return new CellSkipListSet(this.delegatee.tailMap(fromElement, inclusive));
+    return new CellSet(this.delegatee.tailMap(fromElement, inclusive));
   }
 
   public Comparator<? super Cell> comparator() {

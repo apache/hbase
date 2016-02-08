@@ -18,54 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-
-import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.FIRST_CHAR;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.LAST_CHAR;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -176,10 +132,52 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.FIRST_CHAR;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.LAST_CHAR;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic stand-alone testing of HRegion.  No clusters!
@@ -302,8 +300,6 @@ public class TestHRegion {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-
-
   /*
    * This test is for verifying memstore snapshot size is correctly updated in case of rollback
    * See HBASE-10845
@@ -332,7 +328,7 @@ public class TestHRegion {
     Path rootDir = new Path(dir + "testMemstoreSnapshotSize");
     MyFaultyFSLog faultyLog = new MyFaultyFSLog(fs, rootDir, "testMemstoreSnapshotSize", CONF);
     HRegion region = initHRegion(tableName, null, null, name.getMethodName(),
-        CONF, false, Durability.SYNC_WAL, faultyLog, COLUMN_FAMILY_BYTES);
+      CONF, false, Durability.SYNC_WAL, faultyLog, COLUMN_FAMILY_BYTES);
 
     Store store = region.getStore(COLUMN_FAMILY_BYTES);
     // Get some random bytes.
@@ -1289,7 +1285,8 @@ public class TestHRegion {
     private final AtomicInteger count;
     private Exception e;
 
-    GetTillDoneOrException(final int i, final byte[] r, final AtomicBoolean d, final AtomicInteger c) {
+    GetTillDoneOrException(final int i, final byte[] r, final AtomicBoolean d,
+        final AtomicInteger c) {
       super("getter." + i);
       this.g = new Get(r);
       this.done = d;
@@ -2452,10 +2449,10 @@ public class TestHRegion {
       // This is kinda hacky, but better than nothing...
       long now = System.currentTimeMillis();
       DefaultMemStore memstore = (DefaultMemStore) ((HStore) region.getStore(fam1)).memstore;
-      Cell firstCell = memstore.cellSet.first();
+      Cell firstCell = memstore.getActive().first();
       assertTrue(firstCell.getTimestamp() <= now);
       now = firstCell.getTimestamp();
-      for (Cell cell : memstore.cellSet) {
+      for (Cell cell : memstore.getActive().getCellSet()) {
         assertTrue(cell.getTimestamp() <= now);
         now = cell.getTimestamp();
       }
@@ -2782,7 +2779,8 @@ public class TestHRegion {
       } catch (NotServingRegionException e) {
         // this is the correct exception that is expected
       } catch (IOException e) {
-        fail("Got wrong type of exception - should be a NotServingRegionException, but was an IOException: "
+        fail("Got wrong type of exception - should be a NotServingRegionException, " +
+            "but was an IOException: "
             + e.getMessage());
       }
     } finally {
@@ -2980,7 +2978,8 @@ public class TestHRegion {
   }
 
   @Test
-  public void testScanner_ExplicitColumns_FromMemStoreAndFiles_EnforceVersions() throws IOException {
+  public void testScanner_ExplicitColumns_FromMemStoreAndFiles_EnforceVersions() throws
+      IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
     byte[][] families = { fam1 };
@@ -4978,7 +4977,8 @@ public class TestHRegion {
       // move the file of the primary region to the archive, simulating a compaction
       Collection<StoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
       primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
-      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionFileSystem().getStoreFiles(families[0]);
+      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionFileSystem()
+          .getStoreFiles(families[0]);
       Assert.assertTrue(storeFileInfos == null || storeFileInfos.size() == 0);
 
       verifyData(secondaryRegion, 0, 1000, cq, families);
@@ -4992,7 +4992,8 @@ public class TestHRegion {
     }
   }
 
-  private void putData(int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
+  private void putData(int startRow, int numRows, byte[] qf, byte[]... families) throws
+      IOException {
     putData(this.region, startRow, numRows, qf, families);
   }
 
@@ -5085,7 +5086,6 @@ public class TestHRegion {
 
   /**
    * Test that we get the expected flush results back
-   * @throws IOException
    */
   @Test
   public void testFlushResult() throws IOException {
@@ -5138,11 +5138,6 @@ public class TestHRegion {
   }
 
   /**
-   * @param tableName
-   * @param callingMethod
-   * @param conf
-   * @param families
-   * @throws IOException
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
@@ -5152,12 +5147,6 @@ public class TestHRegion {
   }
 
   /**
-   * @param tableName
-   * @param callingMethod
-   * @param conf
-   * @param isReadOnly
-   * @param families
-   * @throws IOException
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
@@ -5177,14 +5166,6 @@ public class TestHRegion {
   }
 
   /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param callingMethod
-   * @param conf
-   * @param isReadOnly
-   * @param families
-   * @throws IOException
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
@@ -5676,7 +5657,8 @@ public class TestHRegion {
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow.get(0).getRowLength(), row4, 0,
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
+          currRow.get(0).getRowLength(), row4, 0,
         row4.length));
       assertTrue(hasNext);
       // 2. scan out "row3" (2 kv)
@@ -6088,7 +6070,7 @@ public class TestHRegion {
   public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
     // similar to the above test but with distributed log replay
     final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWALForLogReplay",
-      100, 42);
+        100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
     HTableDescriptor htd

@@ -34,14 +34,13 @@ public class MemStoreSnapshot {
   private final KeyValueScanner scanner;
   private final boolean tagsPresent;
 
-  public MemStoreSnapshot(long id, int cellsCount, long size, TimeRangeTracker timeRangeTracker,
-      KeyValueScanner scanner, boolean tagsPresent) {
+  public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
-    this.cellsCount = cellsCount;
-    this.size = size;
-    this.timeRangeTracker = timeRangeTracker;
-    this.scanner = scanner;
-    this.tagsPresent = tagsPresent;
+    this.cellsCount = snapshot.getCellsCount();
+    this.size = snapshot.getSize();
+    this.timeRangeTracker = snapshot.getTimeRangeTracker();
+    this.scanner = snapshot.getKeyValueScanner();
+    this.tagsPresent = snapshot.isTagsPresent();
   }
 
   /**
