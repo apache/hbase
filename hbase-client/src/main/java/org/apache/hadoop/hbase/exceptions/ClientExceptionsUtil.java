@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -40,14 +41,15 @@ public final class ClientExceptionsUtil {
     if (cur == null) {
       return true;
     }
-    return !isSpecialException(cur) || (cur instanceof RegionMovedException);
+    return !isSpecialException(cur) || (cur instanceof RegionMovedException)
+        || cur instanceof NotServingRegionException;
   }
 
   public static boolean isSpecialException(Throwable cur) {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
         || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
-        || cur instanceof CallQueueTooBigException);
+        || cur instanceof CallQueueTooBigException || cur instanceof NotServingRegionException);
   }
 
 
