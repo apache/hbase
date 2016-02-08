@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.0 02/05/2016
+Release Notes - HBase - Version 1.2.0 02/15/2016
 
 ** Sub-task
     * [HBASE-12748] - RegionCoprocessorHost.execOperation creates too many iterator objects
@@ -9,7 +9,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-13470] - High level Integration test for master DDL operations
     * [HBASE-13476] - Procedure V2 - Add Replay Order logic for child procedures
     * [HBASE-13497] - Remove MVCC stamps from HFile when that is safe
-    * [HBASE-13536] - Cleanup the handlers that are no longer being used. 
+    * [HBASE-13536] - Cleanup the handlers that are no longer being used.
     * [HBASE-13563] - Add missing table owner to AC tests.
     * [HBASE-13569] - correct errors reported with mvn site
     * [HBASE-13579] - Avoid isCellTTLExpired() for NO-TAG cases
@@ -24,14 +24,14 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-13899] - Jacoco instrumentation fails under jdk8
     * [HBASE-13912] - add branch-1.2 post-commit builds
     * [HBASE-13920] - Exclude Java files generated from protobuf from javadoc
-    * [HBASE-13937] - Partially revert HBASE-13172 
+    * [HBASE-13937] - Partially revert HBASE-13172
     * [HBASE-13950] - Add a NoopProcedureStore for testing
     * [HBASE-13963] - avoid leaking jdk.tools
     * [HBASE-13967] - add jdk profiles for jdk.tools dependency
     * [HBASE-13973] - Update documentation for 10070 Phase 2 changes
     * [HBASE-13983] - Doc how the oddball HTable methods getStartKey, getEndKey, etc. will be removed in 2.0.0
     * [HBASE-13990] - clean up remaining errors for maven site goal
-    * [HBASE-13993] - WALProcedureStore fencing is not effective if new WAL rolls 
+    * [HBASE-13993] - WALProcedureStore fencing is not effective if new WAL rolls
     * [HBASE-14003] - work around jdk8 spec bug in WALPerfEval
     * [HBASE-14013] - Retry when RegionServerNotYetRunningException rather than go ahead with assign so for sure we don't skip WAL replay
     * [HBASE-14017] - Procedure v2 - MasterProcedureQueue fix concurrency issue on table queue deletion
@@ -65,7 +65,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14488] - Procedure V2 - shell command to abort a procedure
     * [HBASE-14513] - TestBucketCache runs obnoxious 1k threads in a unit test
     * [HBASE-14519] - Purge TestFavoredNodeAssignmentHelper, a test for an abandoned feature that can hang
-    * [HBASE-14535] - Integration test for rpc connection concurrency / deadlock testing 
+    * [HBASE-14535] - Integration test for rpc connection concurrency / deadlock testing
     * [HBASE-14539] - Slight improvement of StoreScanner.optimize
     * [HBASE-14559] - branch-1 test tweeks; disable assert explicit region lands post-restart and up a few handlers
     * [HBASE-14561] - Disable zombie TestReplicationShell
@@ -93,6 +93,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14794] - Cleanup TestAtomicOperation, TestImportExport, and TestMetaWithReplicas
     * [HBASE-14798] - NPE reporting server load causes regionserver abort; causes TestAcidGuarantee to fail
     * [HBASE-14819] - hbase-it tests failing with OOME; permgen
+    * [HBASE-14837] - Procedure V2 - Procedure Queue Improvement
     * [HBASE-14863] - Add missing test/resources/log4j files in hbase modules
     * [HBASE-14883] - TestSplitTransactionOnCluster#testFailedSplit flakey
     * [HBASE-14908] - TestRowCounter flakey especially on branch-1
@@ -107,6 +108,8 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-15114] - NPE when IPC server ByteBuffer reservoir is turned off
     * [HBASE-15115] - Fix findbugs complaints in hbase-client
     * [HBASE-15118] - Fix findbugs complaint in hbase-server
+    * [HBASE-15157] - Add *PerformanceTest for Append, CheckAnd*
+    * [HBASE-15210] - Undo aggressive load balancer logging at tens of lines per millisecond
 
 ** Bug
     * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
@@ -183,7 +186,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-13767] - Allow ZKAclReset to set and not just clear ZK ACLs
     * [HBASE-13768] - ZooKeeper znodes are bootstrapped with insecure ACLs in a secure configuration
     * [HBASE-13770] - Programmatic JAAS configuration option for secure zookeeper may be broken
-    * [HBASE-13776] - Setting illegal versions for HColumnDescriptor does not throw IllegalArgumentException 
+    * [HBASE-13776] - Setting illegal versions for HColumnDescriptor does not throw IllegalArgumentException
     * [HBASE-13777] - Table fragmentation display triggers NPE on master status page
     * [HBASE-13778] - BoundedByteBufferPool incorrectly increasing runningAverage buffer length
     * [HBASE-13779] - Calling table.exists() before table.get() end up with an empty Result
@@ -243,7 +246,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-13970] - NPE during compaction in trunk
     * [HBASE-13971] - Flushes stuck since 6 hours on a regionserver.
     * [HBASE-13974] - TestRateLimiter#testFixedIntervalResourceAvailability may fail
-    * [HBASE-13978] - Variable never assigned in SimpleTotalOrderPartitioner.getPartition() 
+    * [HBASE-13978] - Variable never assigned in SimpleTotalOrderPartitioner.getPartition()
     * [HBASE-13982] - Add info for visibility labels/cell TTLs to ImportTsv
     * [HBASE-13988] - Add exception handler for lease thread
     * [HBASE-13989] - Threshold for combined MemStore and BlockCache percentages is not checked
@@ -281,7 +284,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14206] - MultiRowRangeFilter returns records whose rowKeys are out of allowed ranges
     * [HBASE-14209] - TestShell visibility tests failing
     * [HBASE-14211] - Add more rigorous integration tests of splits
-    * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
+    * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined
     * [HBASE-14219] - src tgz no longer builds after HBASE-14085
     * [HBASE-14224] - Fix coprocessor handling of duplicate classes
     * [HBASE-14228] - Close BufferedMutator and connection in MultiTableOutputFormat
@@ -334,7 +337,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14469] - Fix some comment, validation and logging around memstore lower limit configuration
     * [HBASE-14471] - Thrift -  HTTP Error 413 full HEAD if using kerberos authentication
     * [HBASE-14473] - Compute region locality in parallel
-    * [HBASE-14474] - DeadLock in RpcClientImpl.Connection.close() 
+    * [HBASE-14474] - DeadLock in RpcClientImpl.Connection.close()
     * [HBASE-14475] - Region split requests are always audited with "hbase" user rather than request user
     * [HBASE-14486] - Disable TestRegionPlacement, a flakey test for an unfinished feature
     * [HBASE-14489] - postScannerFilterRow consumes a lot of CPU
@@ -399,13 +402,14 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14784] - Port conflict is not resolved in HBaseTestingUtility.randomFreePort()
     * [HBASE-14788] - Splitting a region does not support the hbase.rs.evictblocksonclose config when closing source region
     * [HBASE-14793] - Allow limiting size of block into L1 block cache.
-    * [HBASE-14799] - Commons-collections object deserialization remote command execution vulnerability 
+    * [HBASE-14799] - Commons-collections object deserialization remote command execution vulnerability
     * [HBASE-14802] - Replaying server crash recovery procedure after a failover causes incorrect handling of deadservers
     * [HBASE-14804] - HBase shell's create table command ignores 'NORMALIZATION_ENABLED' attribute
     * [HBASE-14806] - Missing sources.jar for several modules when building HBase
     * [HBASE-14807] - TestWALLockup is flakey
-    * [HBASE-14809] - Grant / revoke Namespace admin permission to group 
+    * [HBASE-14809] - Grant / revoke Namespace admin permission to group
     * [HBASE-14812] - Fix ResultBoundedCompletionService deadlock
+    * [HBASE-14822] - Renewing leases of scanners doesn't work
     * [HBASE-14824] - HBaseAdmin.mergeRegions should recognize both full region names and encoded region names
     * [HBASE-14838] - Clarify that SimpleRegionNormalizer does not merge empty (<1MB) regions
     * [HBASE-14840] - Sink cluster reports data replication request as success though the data is not replicated
@@ -419,7 +423,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14904] - Mark Base[En|De]coder LimitedPrivate and fix binary compat issue
     * [HBASE-14905] - VerifyReplication does not honour versions option
     * [HBASE-14922] - Delayed flush doesn't work causing flush storms.
-    * [HBASE-14923] - VerifyReplication should not mask the exception during result comparison 
+    * [HBASE-14923] - VerifyReplication should not mask the exception during result comparison
     * [HBASE-14926] - Hung ThriftServer; no timeout on read from client; if client crashes, worker thread gets stuck reading
     * [HBASE-14928] - Start row should be set for query through HBase REST gateway involving globbing option
     * [HBASE-14929] - There is a space missing from Table "foo" is not currently available.
@@ -436,6 +440,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14968] - ConcurrentModificationException in region close resulting in the region staying in closing state
     * [HBASE-14974] - Total number of Regions in Transition number on UI incorrect
     * [HBASE-14977] - ChoreService.shutdown may result in ConcurrentModificationException
+    * [HBASE-14987] - Compaction marker whose region name doesn't match current region's needs to be handled
     * [HBASE-14989] - Implementation of Mutation.getWriteToWAL() is backwards
     * [HBASE-14999] - Remove ref to org.mortbay.log.Log
     * [HBASE-15001] - Thread Safety issues in ReplicationSinkManager and HBaseInterClusterReplicationEndpoint
@@ -450,9 +455,12 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-15032] - hbase shell scan filter string assumes UTF-8 encoding
     * [HBASE-15035] - bulkloading hfiles with tags that require splits do not preserve tags
     * [HBASE-15039] - HMaster and RegionServers should try to refresh token keys from zk when facing InvalidToken
+    * [HBASE-15052] - Use EnvironmentEdgeManager in ReplicationSource
     * [HBASE-15057] - local-master-backup.sh doesn't start HMaster correctly
+    * [HBASE-15058] - AssignmentManager should account for unsuccessful split correctly which initially passes quota check
     * [HBASE-15065] - SimpleRegionNormalizer should return multiple normalization plans in one run
     * [HBASE-15079] - TestMultiParallel.validateLoadedData AssertionError: null
+    * [HBASE-15083] - Gets from Multiactions are not counted in metrics for gets.
     * [HBASE-15085] - IllegalStateException was thrown when scanning on bulkloaded HFiles
     * [HBASE-15098] - Normalizer switch in configuration is not used
     * [HBASE-15100] - Master WALProcs still never clean up
@@ -464,6 +472,14 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-15146] - Don't block on Reader threads queueing to a scheduler queue
     * [HBASE-15147] - Shell should use Admin.listTableNames() instead of Admin.listTables()
     * [HBASE-15148] - Resolve IS2_INCONSISTENT_SYNC findbugs warning in AuthenticationTokenSecretManager
+    * [HBASE-15152] - Automatically include prefix-tree module in MR jobs if present
+    * [HBASE-15190] - Monkey dies when running on shared cluster (gives up when can't kill the other fellows processes)
+    * [HBASE-15200] - ZooKeeper znode ACL checks should only compare the shortname
+    * [HBASE-15206] - Flakey testSplitDaughtersNotInMeta test
+    * [HBASE-15209] - disable table in HBaseTestingUtility.truncateTable
+    * [HBASE-15214] - Valid mutate Ops fail with RPC Codec in use and region moves across
+    * [HBASE-15218] - On RS crash and replay of WAL, loosing all Tags in Cells
+    * [HBASE-15221] - HTableMultiplexer improvements (stale region locations and resource leaks)
 
 ** Improvement
     * [HBASE-6617] - ReplicationSourceManager should be able to track multiple WAL paths
@@ -479,6 +495,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-13358] - Upgrade VisibilityClient API to accept Connection object.
     * [HBASE-13366] - Throw DoNotRetryIOException instead of read only IOException
     * [HBASE-13375] - Provide HBase superuser higher priority over other users in the RPC handling
+    * [HBASE-13376] - Improvements to Stochastic load balancer
     * [HBASE-13420] - RegionEnvironment.offerExecutionLatency Blocks Threads under Heavy Load
     * [HBASE-13534] - Change HBase master WebUI to explicitly mention if it is a backup master
     * [HBASE-13598] - Make hbase assembly 'attach' to the project
@@ -606,6 +623,7 @@ Release Notes - HBase - Version 1.2.0 02/05/2016
     * [HBASE-14851] - Add test showing how to use TTL from thrift
     * [HBASE-15003] - Remove BoundedConcurrentLinkedQueue and associated test
     * [HBASE-15099] - Move RegionStateListener class out of quotas package
+    * [HBASE-15220] - Change two logs in SimpleRegionNormalizer to INFO level
 
 ** Test
     * [HBASE-13591] - TestHBaseFsck is flakey
