@@ -201,5 +201,10 @@
        <version>${project.version}</version>
        <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-spark</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 </project>
