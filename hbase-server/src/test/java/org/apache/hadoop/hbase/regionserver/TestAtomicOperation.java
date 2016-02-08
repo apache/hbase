@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -93,11 +92,11 @@ public class TestAtomicOperation {
   static final byte [] row = Bytes.toBytes("rowA");
   static final byte [] row2 = Bytes.toBytes("rowB");
 
-  @Before 
+  @Before
   public void setup() {
     tableName = Bytes.toBytes(name.getMethodName());
   }
-  
+
   @After
   public void teardown() throws IOException {
     if (region != null) {
@@ -107,7 +106,7 @@ public class TestAtomicOperation {
   }
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
-  // individual code pieces in the HRegion. 
+  // individual code pieces in the HRegion.
   //////////////////////////////////////////////////////////////////////////////
 
   /**
@@ -135,29 +134,10 @@ public class TestAtomicOperation {
   }
 
   /**
-   * Test multi-threaded increments. Take the fast but narrow consistency path through HRegion.
+   * Test multi-threaded increments.
    */
   @Test
-  public void testIncrementMultiThreadsFastPath() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    String oldValue = conf.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
-    conf.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, true);
-    try {
-      testIncrementMultiThreads(true);
-    } finally {
-      if (oldValue != null) conf.set(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, oldValue);
-    }
-  }
-
-  /**
-   * Test multi-threaded increments. Take the slow but consistent path through HRegion.
-   */
-  @Test
-  public void testIncrementMultiThreadsSlowPath() throws IOException {
-    testIncrementMultiThreads(false);
-  }
-
-  private void testIncrementMultiThreads(final boolean fast) throws IOException {
+  public void testIncrementMultiThreads() throws IOException {
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
@@ -187,23 +167,19 @@ public class TestAtomicOperation {
       } catch (InterruptedException e) {
       }
     }
-
-    assertICV(row, fam1, qual1, expectedTotal, fast);
-    assertICV(row, fam1, qual2, expectedTotal*2, fast);
-    assertICV(row, fam2, qual3, expectedTotal*3, fast);
-    LOG.info("testIncrementMultiThreads successfully verified that total is " +
-             expectedTotal);
+    assertICV(row, fam1, qual1, expectedTotal);
+    assertICV(row, fam1, qual2, expectedTotal*2);
+    assertICV(row, fam2, qual3, expectedTotal*3);
+    LOG.info("testIncrementMultiThreads successfully verified that total is " + expectedTotal);
   }
 
 
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount,
-                         boolean fast) throws IOException {
+                         long amount) throws IOException {
     // run a get and see?
     Get get = new Get(row);
-    if (fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.addColumn(familiy, qualifier);
     Result result = region.get(get);
     assertEquals(1, result.size());
@@ -242,7 +218,6 @@ public class TestAtomicOperation {
     private final HRegion region;
     private final int numIncrements;
     private final int amount;
-    private final boolean fast;
 
 
     public Incrementer(HRegion region, int threadNumber, int amount, int numIncrements) {
@@ -250,8 +225,6 @@ public class TestAtomicOperation {
       this.region = region;
       this.numIncrements = numIncrements;
       this.amount = amount;
-      this.fast = region.getBaseConf().
-          getBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, false);
       setDaemon(true);
     }
 
@@ -306,8 +279,8 @@ public class TestAtomicOperation {
 
               Get g = new Get(row);
               Result result = region.get(g);
-              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam1, qual2).length); 
-              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam2, qual3).length); 
+              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam1, qual2).length);
+              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam2, qual3).length);
             } catch (IOException e) {
               e.printStackTrace();
               failures.incrementAndGet();
@@ -539,7 +512,7 @@ public class TestAtomicOperation {
       this.failures = failures;
     }
   }
-  
+
   private static CountDownLatch latch = new CountDownLatch(1);
   private enum TestStep {
     INIT,                  // initial put of 10 to set value of the cell
@@ -551,11 +524,11 @@ public class TestAtomicOperation {
   }
   private static volatile TestStep testStep = TestStep.INIT;
   private final String family = "f1";
-     
+
   /**
    * Test written as a verifier for HBASE-7051, CheckAndPut should properly read
-   * MVCC. 
-   * 
+   * MVCC.
+   *
    * Moved into TestAtomicOperation from its original location, TestHBase7051
    */
   @Test
@@ -571,7 +544,6 @@ public class TestAtomicOperation {
     Put put = new Put(Bytes.toBytes("r1"));
     put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
-    
     region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
@@ -645,9 +617,7 @@ public class TestAtomicOperation {
       }
       return new WrappedRowLock(super.getRowLockInternal(row, waitForLock));
     }
-    
     public class WrappedRowLock extends RowLock {
-
       private WrappedRowLock(RowLock rowLock) {
         super(rowLock.context);
       }

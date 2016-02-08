@@ -18,47 +18,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Run Increment tests that use the HBase clients; {@link HTable}.
- * 
+ *
  * Test is parameterized to run the slow and fast increment code paths. If fast, in the @before, we
  * do a rolling restart of the single regionserver so that it can pick up the go fast configuration.
  * Doing it this way should be faster than starting/stopping a cluster per test.
- * 
+ *
  * Test takes a long time because spin up a cluster between each run -- ugh.
  */
-@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 @SuppressWarnings ("deprecation")
 public class TestIncrementsFromClientSide {
@@ -69,47 +59,18 @@ public class TestIncrementsFromClientSide {
   // This test depends on there being only one slave running at at a time. See the @Before
   // method where we do rolling restart.
   protected static int SLAVES = 1;
-  private String oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY;
   @Rule public TestName name = new TestName();
-  @Parameters(name = "fast={0}")
   public static Collection<Object []> data() {
     return Arrays.asList(new Object[] {Boolean.FALSE}, new Object [] {Boolean.TRUE});
-  }
-  private final boolean fast;
-
-  public TestIncrementsFromClientSide(final boolean fast) {
-    this.fast = fast;
   }
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
+    TEST_UTIL.startMiniCluster();
   }
 
-  @Before
-  public void before() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    if (this.fast) {
-      this.oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY =
-          conf.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
-      conf.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, this.fast);
-    }
-    // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(SLAVES);
-  }
-
-  @After
-  public void after() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    if (this.fast) {
-      if (this.oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY != null) {
-        conf.set(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY,
-            this.oldINCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
-      }
-    }
+  @AfterClass
+  public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -130,7 +91,6 @@ public class TestIncrementsFromClientSide {
     ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
 
     Get get = new Get(ROW);
-    if (this.fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     Result r = ht.get(get);
     assertEquals(1, r.size());
     assertEquals(5, Bytes.toLong(r.getValue(FAMILY, COLUMN)));
@@ -162,35 +122,6 @@ public class TestIncrementsFromClientSide {
       // success
     }
   }
-
-  @Test
-  public void testIncrementReturnValue() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final byte[] COLUMN = Bytes.toBytes("column");
-    Put p = new Put(ROW);
-    p.add(FAMILY, COLUMN, Bytes.toBytes(5L));
-    ht.put(p);
-
-    Increment inc = new Increment(ROW);
-    inc.addColumn(FAMILY, COLUMN, 5L);
-
-    Result r = ht.increment(inc);
-    long result = Bytes.toLong(r.getValue(FAMILY, COLUMN));
-    assertEquals(10, result);
-
-    if (this.fast) {
-      inc = new Increment(ROW);
-      inc.addColumn(FAMILY, COLUMN, 5L);
-      inc.setReturnResults(false);
-      r = ht.increment(inc);
-      assertTrue(r.getExists() == null);
-    }
-
-  }
-
 
   @Test
   public void testIncrementInvalidArguments() throws Exception {
@@ -267,7 +198,6 @@ public class TestIncrementsFromClientSide {
 
     // Verify expected results
     Get get = new Get(ROW);
-    if (this.fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     Result r = ht.get(get);
     Cell [] kvs = r.rawCells();
     assertEquals(3, kvs.length);
@@ -309,7 +239,6 @@ public class TestIncrementsFromClientSide {
 
     // Verify expected results
     Get get = new Get(ROW);
-    if (this.fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     Result r = ht.get(get);
     Cell[] kvs = r.rawCells();
     assertEquals(3, kvs.length);
@@ -332,7 +261,7 @@ public class TestIncrementsFromClientSide {
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 2);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 2);
     assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
-    
+
     ht.close();
   }
 
@@ -371,7 +300,6 @@ public class TestIncrementsFromClientSide {
 
     // Verify expected results
     Get get = new Get(ROW);
-    if (this.fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     Result r = ht.get(get);
     Cell [] kvs = r.rawCells();
     assertEquals(5, kvs.length);
@@ -389,7 +317,6 @@ public class TestIncrementsFromClientSide {
     ht.increment(inc);
     // Verify
     get = new Get(ROWS[0]);
-    if (this.fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     r = ht.get(get);
     kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);

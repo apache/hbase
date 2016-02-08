@@ -221,16 +221,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
 
   /**
-   * Set region to take the fast increment path. Constraint is that caller can only access the
-   * Cell via Increment; intermixing Increment with other Mutations will give indeterminate
-   * results. A Get with {@link IsolationLevel#READ_UNCOMMITTED} will get the latest increment
-   * or an Increment of zero will do the same.
-   */
-  public static final String INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY =
-      "hbase.increment.fast.but.narrow.consistency";
-  private final boolean incrementFastButNarrowConsistency;
-
-  /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
    */
@@ -712,10 +702,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           false :
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-
-    // See #INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY for what this flag is about.
-    this.incrementFastButNarrowConsistency =
-      this.conf.getBoolean(INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, false);
   }
 
   void setHTableSpecificConf() {
@@ -5840,139 +5826,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     startRegionOperation(Operation.INCREMENT);
     this.writeRequestsCount.increment();
     try {
-      // Which Increment is it? Narrow increment-only consistency or slow (default) and general
-      // row-wide consistency.
-
-      // So, difference between fastAndNarrowConsistencyIncrement and slowButConsistentIncrement is
-      // that the former holds the row lock until the sync completes; this allows us to reason that
-      // there are no other writers afoot when we read the current increment value. The row lock
-      // means that we do not need to wait on mvcc reads to catch up to writes before we proceed
-      // with the read, the root of the slowdown seen in HBASE-14460. The fast-path also does not
-      // wait on mvcc to complete before returning to the client. We also reorder the write so that
-      // the update of memstore happens AFTER sync returns; i.e. the write pipeline does less
-      // zigzagging now.
-      //
-      // See the comment on INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY
-      // for the constraints that apply when you take this code path; it is correct but only if
-      // Increments are used mutating an Increment Cell; mixing concurrent Put+Delete and Increment
-      // will yield indeterminate results.
-      return this.incrementFastButNarrowConsistency?
-        fastAndNarrowConsistencyIncrement(increment, nonceGroup, nonce):
-        slowButConsistentIncrement(increment, nonceGroup, nonce);
+      return doIncrement(increment, nonceGroup, nonce);
     } finally {
       if (this.metricsRegion != null) this.metricsRegion.updateIncrement();
       closeRegionOperation(Operation.INCREMENT);
     }
   }
 
-  /**
-   * The bulk of this method is a bulk-and-paste of the slowButConsistentIncrement but with some
-   * reordering to enable the fast increment (reordering allows us to also drop some state
-   * carrying Lists and variables so the flow here is more straight-forward). We copy-and-paste
-   * because cannot break down the method further into smaller pieces. Too much state. Will redo
-   * in trunk and tip of branch-1 to undo duplication here and in append, checkAnd*, etc. For why
-   * this route is 'faster' than the alternative slowButConsistentIncrement path, see the comment
-   * in calling method.
-   * @return Resulting increment
-   * @throws IOException
-   */
-  private Result fastAndNarrowConsistencyIncrement(Increment increment, long nonceGroup,
-      long nonce)
-  throws IOException {
-    long accumulatedResultSize = 0;
-    RowLock rowLock = null;
-    WALKey walKey = null;
-    // This is all kvs accumulated during this increment processing. Includes increments where the
-    // increment is zero: i.e. client just wants to get current state of the increment w/o
-    // changing it. These latter increments by zero are NOT added to the WAL.
-    List<Cell> allKVs = new ArrayList<Cell>(increment.size());
-    Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
-    long txid = 0;
-    rowLock = getRowLock(increment.getRow());
-    try {
-      lock(this.updatesLock.readLock());
-      try {
-        if (this.coprocessorHost != null) {
-          Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
-          if (r != null) return increment.isReturnResults() ? r : null;
-        }
-        // Process increments a Store/family at a time.
-        long now = EnvironmentEdgeManager.currentTime();
-        final boolean writeToWAL = effectiveDurability != Durability.SKIP_WAL;
-        WALEdit walEdits = null;
-        // Accumulate edits for memstore to add later after we've added to WAL.
-        Map<Store, List<Cell>> forMemStore = new HashMap<Store, List<Cell>>();
-        for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
-          byte [] columnFamilyName = entry.getKey();
-          List<Cell> increments = entry.getValue();
-          Store store = this.stores.get(columnFamilyName);
-          // Do increment for this store; be sure to 'sort' the increments first so increments
-          // match order in which we get back current Cells when we get.
-          List<Cell> results = applyIncrementsToColumnFamily(increment, columnFamilyName,
-              sort(increments, store.getComparator()), now,
-              MultiVersionConsistencyControl.NO_WRITE_NUMBER, allKVs,
-              IsolationLevel.READ_UNCOMMITTED);
-          if (!results.isEmpty()) {
-            forMemStore.put(store, results);
-            // Prepare WAL updates
-            if (writeToWAL) {
-              if (walEdits == null) walEdits = new WALEdit();
-              walEdits.getCells().addAll(results);
-            }
-          }
-        }
-
-        // Actually write to WAL now. If walEdits is non-empty, we write the WAL.
-        if (walEdits != null && !walEdits.isEmpty()) {
-          // Using default cluster id, as this can only happen in the originating cluster.
-          // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey
-          // here instead of WALKey directly to support legacy coprocessors.
-          walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-            this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, nonceGroup, nonce);
-          txid = this.wal.append(this.htableDescriptor, this.getRegionInfo(),
-             walKey, walEdits, getSequenceId(), true, null/*walEdits has the List to apply*/);
-        } else {
-          // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
-          walKey = this.appendEmptyEdit(this.wal, null/*walEdits has the List to apply*/);
-        }
-
-        if (txid != 0) syncOrDefer(txid, effectiveDurability);
-
-        // Tell MVCC about the new sequenceid.
-        WriteEntry we = mvcc.beginMemstoreInsertWithSeqNum(walKey.getSequenceId());
-
-        // Now write to memstore.
-        for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
-          Store store = entry.getKey();
-          List<Cell> results = entry.getValue();
-          if (store.getFamily().getMaxVersions() == 1) {
-            // Upsert if VERSIONS for this CF == 1. Use write sequence id rather than read point
-            // when doing fast increment.
-            accumulatedResultSize += store.upsert(results, walKey.getSequenceId());
-          } else {
-            // Otherwise keep older versions around
-            for (Cell cell: results) {
-              Pair<Long, Cell> ret = store.add(cell);
-              accumulatedResultSize += ret.getFirst();
-            }
-          }
-        }
-
-        // Tell mvcc this write is complete.
-        this.mvcc.advanceMemstore(we);
-      } finally {
-        this.updatesLock.readLock().unlock();
-      }
-    } finally {
-      rowLock.release();
-    }
-    // Request a cache flush.  Do it outside update lock.
-    if (isFlushSize(this.addAndGetGlobalMemstoreSize(accumulatedResultSize))) requestFlush();
-    return increment.isReturnResults() ? Result.create(allKVs) : null;
-  }
-
-  private Result slowButConsistentIncrement(Increment increment, long nonceGroup, long nonce)
-  throws IOException {
+  private Result doIncrement(Increment increment, long nonceGroup, long nonce) throws IOException {
     RowLock rowLock = null;
     WriteEntry writeEntry = null;
     WALKey walKey = null;
