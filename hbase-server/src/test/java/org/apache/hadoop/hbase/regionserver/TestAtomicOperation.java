@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -140,30 +139,11 @@ public class TestAtomicOperation {
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
   }
 
-  @Test
-  public void testIncrementMultiThreadsFastPath() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    String oldValue = conf.get(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY);
-    conf.setBoolean(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, true);
-    try {
-      testIncrementMultiThreads(true);
-    } finally {
-      if (oldValue != null) conf.set(HRegion.INCREMENT_FAST_BUT_NARROW_CONSISTENCY_KEY, oldValue);
-     }
-  }
-
-   /**
-    * Test multi-threaded increments. Take the slow but consistent path through HRegion.
-    */
-  @Test
-  public void testIncrementMultiThreadsSlowPath() throws IOException {
-    testIncrementMultiThreads(false);
-  }
-
   /**
    * Test multi-threaded increments.
    */
-  private void testIncrementMultiThreads(final boolean fast) throws IOException {
+  @Test
+  public void testIncrementMultiThreads() throws IOException {
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
     initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
@@ -192,9 +172,9 @@ public class TestAtomicOperation {
         LOG.info("Ignored", e);
       }
     }
-    assertICV(row, fam1, qual1, expectedTotal, fast);
-    assertICV(row, fam1, qual2, expectedTotal*2, fast);
-    assertICV(row, fam2, qual3, expectedTotal*3, fast);
+    assertICV(row, fam1, qual1, expectedTotal);
+    assertICV(row, fam1, qual2, expectedTotal*2);
+    assertICV(row, fam2, qual3, expectedTotal*3);
     LOG.info("testIncrementMultiThreads successfully verified that total is " + expectedTotal);
   }
 
@@ -202,11 +182,9 @@ public class TestAtomicOperation {
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
-                         long amount,
-                         boolean fast) throws IOException {
+                         long amount) throws IOException {
     // run a get and see?
     Get get = new Get(row);
-    if (fast) get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.addColumn(familiy, qualifier);
     Result result = region.get(get);
     assertEquals(1, result.size());
