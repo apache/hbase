@@ -248,10 +248,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     if (cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         public void run() {
+          long offset = 0;
+          long end = 0;
           try {
-            long offset = 0;
-            long end = fileSize - getTrailer().getTrailerSize();
+            end = getTrailer().getLoadOnOpenDataOffset();
             HFileBlock prevBlock = null;
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end);
+            }
             while (offset < end) {
               if (Thread.interrupted()) {
                 break;
@@ -273,11 +277,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Exception encountered while prefetching " + path + ":", e);
+              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
             }
           } catch (Exception e) {
             // Other exceptions are interesting
-            LOG.warn("Exception encountered while prefetching " + path + ":", e);
+            LOG.warn("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
           } finally {
             PrefetchExecutor.complete(path);
           }
@@ -1457,9 +1461,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
     }
-    if (dataBlockOffset < 0 || dataBlockOffset >= trailer.getLoadOnOpenDataOffset()) {
+    long trailerOffset = trailer.getLoadOnOpenDataOffset();
+    if (dataBlockOffset < 0 || dataBlockOffset >= trailerOffset) {
       throw new IOException("Requested block is out of range: " + dataBlockOffset +
-        ", lastDataBlockOffset: " + trailer.getLastDataBlockOffset());
+        ", lastDataBlockOffset: " + trailer.getLastDataBlockOffset() +
+        ", trailer.getLoadOnOpenDataOffset: " + trailerOffset);
     }
     // For any given block from any given file, synchronize reads for said
     // block.

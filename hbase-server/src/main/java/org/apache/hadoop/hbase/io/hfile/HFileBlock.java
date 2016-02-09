@@ -1694,7 +1694,7 @@ public class HFileBlock implements Cacheable {
         b.assumeUncompressed();
       }
 
-      if (verifyChecksum && !validateBlockChecksum(b, onDiskBlock, hdrSize)) {
+      if (verifyChecksum && !validateBlockChecksum(b, offset, onDiskBlock, hdrSize)) {
         return null;             // checksum mismatch
       }
 
@@ -1743,9 +1743,10 @@ public class HFileBlock implements Cacheable {
      * If there is a checksum mismatch, then return false. Otherwise
      * return true.
      */
-    protected boolean validateBlockChecksum(HFileBlock block,  byte[] data, int hdrSize)
-        throws IOException {
-      return ChecksumUtil.validateBlockChecksum(pathName, block, data, hdrSize);
+    protected boolean validateBlockChecksum(HFileBlock block, long offset, byte[] data,
+        int hdrSize)
+    throws IOException {
+      return ChecksumUtil.validateBlockChecksum(pathName, offset, block, data, hdrSize);
     }
 
     @Override
