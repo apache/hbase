@@ -607,9 +607,9 @@ public final class Canary implements Tool {
             if (this.failOnError && monitor.hasError()) {
               monitorThread.interrupt();
               if (monitor.initialized) {
-                System.exit(monitor.errorCode);
+                return monitor.errorCode;
               } else {
-                System.exit(INIT_ERROR_EXIT_CODE);
+                return INIT_ERROR_EXIT_CODE;
               }
             }
             currentTimeLength = System.currentTimeMillis() - startTime;
@@ -618,17 +618,16 @@ public final class Canary implements Tool {
                   + ") after timeout limit:" + this.timeout
                   + " will be killed itself !!");
               if (monitor.initialized) {
-                System.exit(TIMEOUT_ERROR_EXIT_CODE);
+                return TIMEOUT_ERROR_EXIT_CODE;
               } else {
-                System.exit(INIT_ERROR_EXIT_CODE);
+                return INIT_ERROR_EXIT_CODE;
               }
-              break;
             }
           }
 
           if (this.failOnError && monitor.finalCheckForErrors()) {
             monitorThread.interrupt();
-            System.exit(monitor.errorCode);
+            return monitor.errorCode;
           }
         } finally {
           if (monitor != null) monitor.close();
@@ -641,7 +640,7 @@ public final class Canary implements Tool {
     if (choreService != null) {
       choreService.shutdown();
     }
-    return(monitor.errorCode);
+    return monitor.errorCode;
   }
 
   private void printUsageAndExit() {
