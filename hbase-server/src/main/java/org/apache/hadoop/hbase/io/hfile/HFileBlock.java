@@ -347,9 +347,9 @@ public class HFileBlock implements Cacheable {
   /**
    * Returns the buffer this block stores internally. The clients must not
    * modify the buffer object. This method has to be public because it is
-   * used in {@link org.apache.hadoop.hbase.util.CompoundBloomFilter} 
-   * to avoid object creation on every Bloom filter lookup, but has to 
-   * be used with caution. Checksum data is not included in the returned 
+   * used in {@link org.apache.hadoop.hbase.util.CompoundBloomFilter}
+   * to avoid object creation on every Bloom filter lookup, but has to
+   * be used with caution. Checksum data is not included in the returned
    * buffer but header data is.
    *
    * @return the buffer of this block for read-only operations
@@ -1694,7 +1694,7 @@ public class HFileBlock implements Cacheable {
         b.assumeUncompressed();
       }
 
-      if (verifyChecksum && !validateBlockChecksum(b, onDiskBlock, hdrSize)) {
+      if (verifyChecksum && !validateBlockChecksum(b, offset, onDiskBlock, hdrSize)) {
         return null;             // checksum mismatch
       }
 
@@ -1743,9 +1743,9 @@ public class HFileBlock implements Cacheable {
      * If there is a checksum mismatch, then return false. Otherwise
      * return true.
      */
-    protected boolean validateBlockChecksum(HFileBlock block,  byte[] data, int hdrSize)
-        throws IOException {
-      return ChecksumUtil.validateBlockChecksum(path, block, data, hdrSize);
+    protected boolean validateBlockChecksum(HFileBlock block, long offset, byte[] data,
+        int hdrSize)
+      return ChecksumUtil.validateBlockChecksum(path, offset, block, data, hdrSize);
     }
 
     @Override

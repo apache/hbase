@@ -39,11 +39,11 @@ public class ChecksumUtil {
   /** This is used to reserve space in a byte buffer */
   private static byte[] DUMMY_VALUE = new byte[128 * HFileBlock.CHECKSUM_SIZE];
 
-  /** 
-   * This is used by unit tests to make checksum failures throw an 
-   * exception instead of returning null. Returning a null value from 
-   * checksum validation will cause the higher layer to retry that 
-   * read with hdfs-level checksums. Instead, we would like checksum 
+  /**
+   * This is used by unit tests to make checksum failures throw an
+   * exception instead of returning null. Returning a null value from
+   * checksum validation will cause the higher layer to retry that
+   * read with hdfs-level checksums. Instead, we would like checksum
    * failures to cause the entire unit test to fail.
    */
   private static boolean generateExceptions = false;
@@ -101,7 +101,7 @@ public class ChecksumUtil {
     }
 
     // Get a checksum object based on the type of checksum that is
-    // set in the HFileBlock header. A ChecksumType.NULL indicates that 
+    // set in the HFileBlock header. A ChecksumType.NULL indicates that
     // the caller is not interested in validating checksums, so we
     // always return true.
     ChecksumType cktype = ChecksumType.codeToType(block.getChecksumType());
@@ -117,12 +117,13 @@ public class ChecksumUtil {
     assert dataChecksum != null;
     int sizeWithHeader =  block.getOnDiskDataSizeWithHeader();
     if (LOG.isTraceEnabled()) {
-      LOG.info("length of data = " + data.length
-          + " OnDiskDataSizeWithHeader = " + sizeWithHeader
-          + " checksum type = " + cktype.getName()
-          + " file =" + path.toString()
-          + " header size = " + hdrSize
-          + " bytesPerChecksum = " + bytesPerChecksum);
+      LOG.info("dataLength=" + data.length
+          + ", sizeWithHeader=" + sizeWithHeader
+          + ", checksumType=" + cktype.getName()
+          + ", file=" + path.toString()
+          + ", offset=" + offset
+          + ", headerSize=" + hdrSize
+          + ", bytesPerChecksum=" + bytesPerChecksum);
     }
     try {
       dataChecksum.verifyChunkedSums(ByteBuffer.wrap(data, 0, sizeWithHeader),
@@ -142,7 +143,7 @@ public class ChecksumUtil {
    * @return The number of bytes needed to store the checksum values
    */
   static long numBytes(long datasize, int bytesPerChecksum) {
-    return numChunks(datasize, bytesPerChecksum) * 
+    return numChunks(datasize, bytesPerChecksum) *
                      HFileBlock.CHECKSUM_SIZE;
   }
 
