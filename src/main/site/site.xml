@@ -111,7 +111,7 @@
       <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
       <item name="Metrics" href="metrics.html" target="_blank" />
       <item name="HBase on Windows" href="cygwin.html" target="_blank" />
-      <item name="Cluster replication" href="replication.html" target="_blank" />
+      <item name="Cluster replication" href="book.html#replication" target="_blank" />
       <item name="0.94 Documentation">
         <item name="API" href="0.94/apidocs/index.html" target="_blank" />
         <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />

@@ -69,7 +69,7 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
 </p>
 </section>
      <section name="More Info">
-   <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Reference Guide FAQ</a>,
+   <p>See the <a href="http://hbase.apache.org/book.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book.html#faq">Apache HBase Reference Guide FAQ</a>,
     and the other documentation links.
    </p>
    <dl>
