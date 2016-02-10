@@ -264,7 +264,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
       List<InputSplit> splits = new ArrayList<InputSplit>(1);
       long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
-      TableSplit split = new TableSplit(table.getName(),
+      TableSplit split = new TableSplit(table.getName(), scan,
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
               .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
       splits.add(split);
@@ -307,7 +307,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
         byte[] regionName = location.getRegionInfo().getRegionName();
         long regionSize = sizeCalculator.getRegionSize(regionName);
-        TableSplit split = new TableSplit(table.getName(),
+        TableSplit split = new TableSplit(table.getName(), scan,
           splitStart, splitStop, regionLocation, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
@@ -398,10 +398,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         byte[] splitKey = getSplitKey(ts.getStartRow(), ts.getEndRow(), isTextKey);
          //Set the size of child TableSplit as 1/2 of the region size. The exact size of the
          // MapReduce input splits is not far off.
-        TableSplit t1 = new TableSplit(table.getName(), ts.getStartRow(), splitKey, regionLocation,
-                regionSize / 2);
-        TableSplit t2 = new TableSplit(table.getName(), splitKey, ts.getEndRow(), regionLocation,
-                regionSize - regionSize / 2);
+        TableSplit t1 = new TableSplit(table.getName(), scan, ts.getStartRow(), splitKey,
+                regionLocation,  regionSize / 2);
+        TableSplit t2 = new TableSplit(table.getName(), scan, splitKey, ts.getEndRow(),
+                regionLocation, regionSize - regionSize / 2);
         resultList.add(t1);
         resultList.add(t2);
         count++;
@@ -427,7 +427,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
             break;
           }
         }
-        TableSplit t = new TableSplit(table.getName(), splitStartKey, splitEndKey,
+        TableSplit t = new TableSplit(table.getName(), scan, splitStartKey, splitEndKey,
                 regionLocation, totalSize);
         resultList.add(t);
       }

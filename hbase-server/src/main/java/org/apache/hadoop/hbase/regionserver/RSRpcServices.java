@@ -2133,7 +2133,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
     Boolean processed = null;
 
-    RpcCallContext context = RpcServer.getCurrentCall();
     this.rpcMultiRequestCount.increment();
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());

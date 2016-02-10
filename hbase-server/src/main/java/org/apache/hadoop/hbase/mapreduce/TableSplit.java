@@ -325,7 +325,18 @@ implements Writable, Comparable<TableSplit> {
     StringBuilder sb = new StringBuilder();
     sb.append("HBase table split(");
     sb.append("table name: ").append(tableName);
-    sb.append(", scan: ").append(scan);
+    // null scan input is represented by ""
+    String printScan = "";
+    if (!scan.equals("")) {
+      try {
+        // get the real scan here in toString, not the Base64 string
+        printScan = TableMapReduceUtil.convertStringToScan(scan).toString();
+      }
+      catch (IOException e) {
+        printScan = "";
+      }
+    }
+    sb.append(", scan: ").append(printScan);
     sb.append(", start row: ").append(Bytes.toStringBinary(startRow));
     sb.append(", end row: ").append(Bytes.toStringBinary(endRow));
     sb.append(", region location: ").append(regionLocation);
