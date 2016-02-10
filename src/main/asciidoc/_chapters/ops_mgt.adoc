@@ -94,6 +94,7 @@ Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...]
    -t <N>         timeout for a check, default is 600000 (milliseconds)
    -writeSniffing enable the write sniffing in canary
    -writeTable    The table used for write sniffing. Default is hbase:canary
+   -D<configProperty>=<value> assigning or override the configuration params
 ----
 
 This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.

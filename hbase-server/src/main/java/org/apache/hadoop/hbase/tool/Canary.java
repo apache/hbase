@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -598,6 +599,8 @@ public final class Canary implements Tool {
     System.err.println("   -writeSniffing enable the write sniffing in canary");
     System.err.println("   -writeTable    The table used for write sniffing."
         + " Default is hbase:canary");
+    System.err
+        .println("   -D<configProperty>=<value> assigning or override the configuration params");
     System.exit(USAGE_EXIT_CODE);
   }
 
@@ -1144,7 +1147,13 @@ public final class Canary implements Tool {
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
     AuthUtil.launchAuthChore(conf);
+
+    // loading the generic options to conf
+    new GenericOptionsParser(conf, args);
+
     int numThreads = conf.getInt("hbase.canary.threads.num", MAX_THREADS_NUM);
+    LOG.info("Number of exection threads " + numThreads);
+
     ExecutorService executor = new ScheduledThreadPoolExecutor(numThreads);
 
     Class<? extends Sink> sinkClass =
