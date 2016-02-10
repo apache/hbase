@@ -118,38 +118,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Tests immediate assignment.
-   *
-   * Invariant is that all regions have an assignment.
-   *
-   * @throws Exception
-   */
-  @Test (timeout=30000)
-  public void testImmediateAssignment() throws Exception {
-    List<ServerName> tmp = getListOfServerNames(randomServers(1, 0));
-    tmp.add(master);
-    ServerName sn = loadBalancer.randomAssignment(HRegionInfo.FIRST_META_REGIONINFO, tmp);
-    assertEquals(master, sn);
-    HRegionInfo hri = randomRegions(1, -1).get(0);
-    sn = loadBalancer.randomAssignment(hri, tmp);
-    assertNotEquals(master, sn);
-    tmp = new ArrayList<ServerName>();
-    tmp.add(master);
-    sn = loadBalancer.randomAssignment(hri, tmp);
-    assertNull("Should not assign user regions on master", sn);
-    for (int[] mock : regionsAndServersMocks) {
-      LOG.debug("testImmediateAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
-      List<HRegionInfo> regions = randomRegions(mock[0]);
-      List<ServerAndLoad> servers = randomServers(mock[1], 0);
-      List<ServerName> list = getListOfServerNames(servers);
-      Map<HRegionInfo, ServerName> assignments = loadBalancer.immediateAssignment(regions, list);
-      assertImmediateAssignment(regions, list, assignments);
-      returnRegions(regions);
-      returnServers(list);
-    }
-  }
-
-  /**
    * All regions have an assignment.
    * @param regions
    * @param servers

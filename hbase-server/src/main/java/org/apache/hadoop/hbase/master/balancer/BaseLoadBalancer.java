@@ -81,16 +81,16 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return UNKNOWN_RACK;
     }
   }
-  
+
   /**
    * The constructor that uses the basic MetricsBalancer
    */
   protected BaseLoadBalancer() {
     metricsBalancer = new MetricsBalancer();
   }
-  
+
   /**
-   * This Constructor accepts an instance of MetricsBalancer, 
+   * This Constructor accepts an instance of MetricsBalancer,
    * which will be used instead of creating a new one
    */
   protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
@@ -1276,39 +1276,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
     return new Cluster(regions, clusterState, null, this.regionFinder,
       rackManager);
-  }
-
-  /**
-   * Generates an immediate assignment plan to be used by a new master for
-   * regions in transition that do not have an already known destination.
-   *
-   * Takes a list of regions that need immediate assignment and a list of all
-   * available servers. Returns a map of regions to the server they should be
-   * assigned to.
-   *
-   * This method will return quickly and does not do any intelligent balancing.
-   * The goal is to make a fast decision not the best decision possible.
-   *
-   * Currently this is random.
-   *
-   * @param regions
-   * @param servers
-   * @return map of regions to the server it should be assigned to
-   */
-  @Override
-  public Map<HRegionInfo, ServerName> immediateAssignment(List<HRegionInfo> regions,
-      List<ServerName> servers) {
-    metricsBalancer.incrMiscInvocations();
-    if (servers == null || servers.isEmpty()) {
-      LOG.warn("Wanted to do random assignment but no servers to assign to");
-      return null;
-    }
-
-    Map<HRegionInfo, ServerName> assignments = new TreeMap<HRegionInfo, ServerName>();
-    for (HRegionInfo region : regions) {
-      assignments.put(region, randomAssignment(region, servers));
-    }
-    return assignments;
   }
 
   /**
