@@ -47,7 +47,7 @@ public class Cluster {
    * @param nodes a list of service locations, in 'host:port' format
    */
   public Cluster(List<String> nodes) {
-    nodes.addAll(nodes);
+    this.nodes.addAll(nodes);
   }
 
   /**
