@@ -348,7 +348,7 @@ public class TestChecksum {
     }
 
     @Override
-    protected boolean validateBlockChecksum(HFileBlock block, 
+    protected boolean validateBlockChecksum(HFileBlock block, long offset,
       byte[] data, int hdrSize) throws IOException {
       return false;  // checksum validation failure
     }
