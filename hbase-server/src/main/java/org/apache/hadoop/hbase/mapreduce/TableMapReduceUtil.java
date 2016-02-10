@@ -561,7 +561,7 @@ public class TableMapReduceUtil {
    * @return The scan saved in a Base64 encoded string.
    * @throws IOException When writing the scan fails.
    */
-  static String convertScanToString(Scan scan) throws IOException {
+  public static String convertScanToString(Scan scan) throws IOException {
     ClientProtos.Scan proto = ProtobufUtil.toScan(scan);
     return Base64.encodeBytes(proto.toByteArray());
   }
@@ -573,7 +573,7 @@ public class TableMapReduceUtil {
    * @return The newly created Scan instance.
    * @throws IOException When reading the scan instance fails.
    */
-  static Scan convertStringToScan(String base64) throws IOException {
+  public static Scan convertStringToScan(String base64) throws IOException {
     byte [] decoded = Base64.decode(base64);
     ClientProtos.Scan scan;
     try {
