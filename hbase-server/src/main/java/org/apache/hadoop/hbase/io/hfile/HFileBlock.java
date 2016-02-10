@@ -1745,6 +1745,7 @@ public class HFileBlock implements Cacheable {
      */
     protected boolean validateBlockChecksum(HFileBlock block, long offset, byte[] data,
         int hdrSize)
+    throws IOException {
       return ChecksumUtil.validateBlockChecksum(path, offset, block, data, hdrSize);
     }
 
