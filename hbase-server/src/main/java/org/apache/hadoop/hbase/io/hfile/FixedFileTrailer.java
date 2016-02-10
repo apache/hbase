@@ -41,8 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * trailer size is fixed within a given {@link HFile} format version only, but
  * we always store the version number as the last four-byte integer of the file.
  * The version number itself is split into two portions, a major 
- * version and a minor version. 
- * The last three bytes of a file is the major
+ * version and a minor version. The last three bytes of a file are the major
  * version and a single preceding byte is the minor number. The major version
  * determines which readers/writers to use to read/write a hfile while a minor
  * version determines smaller changes in hfile format that do not need a new
@@ -50,7 +49,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class FixedFileTrailer {
-
   /**
    * We store the comparator class name as a fixed-length field in the trailer.
    */
@@ -65,8 +63,9 @@ public class FixedFileTrailer {
   /**
    * In version 1, the offset to the data block index. Starting from version 2,
    * the meaning of this field is the offset to the section of the file that
-   * should be loaded at the time the file is being opened, and as of the time
-   * of writing, this happens to be the offset of the file info section.
+   * should be loaded at the time the file is being opened: i.e. on open we load
+   * the root index, file info, etc. See http://hbase.apache.org/book.html#_hfile_format_2
+   * in the reference guide.
    */
   private long loadOnOpenDataOffset;
 

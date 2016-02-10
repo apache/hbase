@@ -34,11 +34,11 @@ public class ChecksumUtil {
   /** This is used to reserve space in a byte buffer */
   private static byte[] DUMMY_VALUE = new byte[128 * HFileBlock.CHECKSUM_SIZE];
 
-  /** 
-   * This is used by unit tests to make checksum failures throw an 
-   * exception instead of returning null. Returning a null value from 
-   * checksum validation will cause the higher layer to retry that 
-   * read with hdfs-level checksums. Instead, we would like checksum 
+  /**
+   * This is used by unit tests to make checksum failures throw an
+   * exception instead of returning null. Returning a null value from
+   * checksum validation will cause the higher layer to retry that
+   * read with hdfs-level checksums. Instead, we would like checksum
    * failures to cause the entire unit test to fail.
    */
   private static boolean generateExceptions = false;
@@ -95,7 +95,7 @@ public class ChecksumUtil {
    * The header is extracted from the specified HFileBlock while the
    * data-to-be-verified is extracted from 'data'.
    */
-  static boolean validateBlockChecksum(Path path, HFileBlock block, 
+  static boolean validateBlockChecksum(Path path, long offset, HFileBlock block,
     byte[] data, int hdrSize) throws IOException {
 
     // If this is an older version of the block that does not have
@@ -109,7 +109,7 @@ public class ChecksumUtil {
     }
 
     // Get a checksum object based on the type of checksum that is
-    // set in the HFileBlock header. A ChecksumType.NULL indicates that 
+    // set in the HFileBlock header. A ChecksumType.NULL indicates that
     // the caller is not interested in validating checksums, so we
     // always return true.
     ChecksumType cktype = ChecksumType.codeToType(block.getChecksumType());
@@ -179,7 +179,7 @@ public class ChecksumUtil {
    * @return The number of bytes needed to store the checksum values
    */
   static long numBytes(long datasize, int bytesPerChecksum) {
-    return numChunks(datasize, bytesPerChecksum) * 
+    return numChunks(datasize, bytesPerChecksum) *
                      HFileBlock.CHECKSUM_SIZE;
   }
 
