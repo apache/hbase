@@ -2506,30 +2506,6 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test (timeout=180000)
-  public void testReservedCellTags() throws Exception {
-    AccessTestAction putWithReservedTag = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
-          KeyValue kv = new KeyValue(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-            HConstants.LATEST_TIMESTAMP, HConstants.EMPTY_BYTE_ARRAY,
-            new Tag[] { new Tag(AccessControlLists.ACL_TAG_TYPE,
-              ProtobufUtil.toUsersAndPermissions(USER_OWNER.getShortName(),
-                new Permission(Permission.Action.READ)).toByteArray()) });
-          t.put(new Put(TEST_ROW).add(kv));
-        }
-        return null;
-      }
-    };
-
-    // Current user is superuser
-    verifyAllowed(putWithReservedTag, User.getCurrent());
-    // No other user should be allowed
-    verifyDenied(putWithReservedTag, USER_OWNER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO);
-  }
-
-  @Test (timeout=180000)
   public void testSetQuota() throws Exception {
     AccessTestAction setUserQuotaAction = new AccessTestAction() {
       @Override

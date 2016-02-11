@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -1206,10 +1205,6 @@ public final class ProtobufUtil {
         valueBuilder.setValue(ByteStringer.wrap(
             cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         valueBuilder.setTimestamp(cell.getTimestamp());
-        if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength()));
-        }
         if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(cell))) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(cell.getTypeByte());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
