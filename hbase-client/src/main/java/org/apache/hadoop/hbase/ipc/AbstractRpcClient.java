@@ -139,6 +139,11 @@ public abstract class AbstractRpcClient implements RpcClient {
     }
   }
 
+  @Override
+  public boolean hasCellBlockSupport() {
+    return this.codec != null;
+  }
+
   /**
    * Encapsulate the ugly casting and RuntimeException conversion in private method.
    * @param conf configuration

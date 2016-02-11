@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -142,11 +141,8 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     // This is not exact -- the configuration could have changed on us after connection was set up
     // but it will do for now.
     HConnection connection = getConnection();
-    if (connection == null) return true; // Default is to do cellblocks.
-    Configuration configuration = connection.getConfiguration();
-    if (configuration == null) return true;
-    String codec = configuration.get(HConstants.RPC_CODEC_CONF_KEY, "");
-    return codec != null && codec.length() > 0;
+    if (!(connection instanceof ClusterConnection)) return true; // Default is to do cellblocks.
+    return ((ClusterConnection) connection).hasCellBlockSupport();
   }
 
   @Override

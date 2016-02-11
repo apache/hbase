@@ -2522,6 +2522,11 @@ class ConnectionManager {
     public boolean isManaged() {
       return managed;
     }
+
+    @Override
+    public boolean hasCellBlockSupport() {
+      return this.rpcClient.hasCellBlockSupport();
+    }
   }
 
   /**

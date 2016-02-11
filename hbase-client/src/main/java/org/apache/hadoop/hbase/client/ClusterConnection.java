@@ -300,4 +300,10 @@ public interface ClusterConnection extends HConnection {
    * @return the configured client backoff policy
    */
   ClientBackoffPolicy getBackoffPolicy();
+
+  /**
+   * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   *         supports cell blocks.
+   */
+  boolean hasCellBlockSupport();
 }
