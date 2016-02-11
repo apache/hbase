@@ -1048,7 +1048,9 @@ public class RpcClient {
           builder.setCellBlockMeta(cellBlockBuilder.build());
         }
         // Only pass priority if there one.  Let zero be same as no priority.
-        if (priority != 0) builder.setPriority(priority);
+        if (priority != PayloadCarryingRpcController.PRIORITY_UNSET) {
+          builder.setPriority(priority);
+        }
         //noinspection SynchronizeOnNonFinalField
         RequestHeader header = builder.build();
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC

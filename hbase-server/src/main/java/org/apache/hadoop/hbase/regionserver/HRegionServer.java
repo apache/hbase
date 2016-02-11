@@ -4492,8 +4492,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   protected HRegion getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
-    return getRegionByEncodedName(regionSpecifier.getValue().toByteArray(),
-        ProtobufUtil.getRegionEncodedName(regionSpecifier));
+    ByteString value = regionSpecifier.getValue();
+    RegionSpecifierType type = regionSpecifier.getType();
+    switch (type) {
+    case REGION_NAME:
+      byte[] regionName = value.toByteArray();
+      String encodedRegionName = HRegionInfo.encodeRegionName(regionName);
+      return getRegionByEncodedName(regionName, encodedRegionName);
+    case ENCODED_REGION_NAME:
+      return getRegionByEncodedName(value.toStringUtf8());
+    default:
+      throw new DoNotRetryIOException(
+        "Unsupported region specifier type: " + type);
+    }
   }
 
   /**

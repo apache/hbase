@@ -4065,8 +4065,9 @@ public class HRegion implements HeapSize { // , Writable{
 
       // Here we separate all scanners into two lists - scanner that provide data required
       // by the filter to operate (scanners list) and all others (joinedScanners list).
-      List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      List<KeyValueScanner> joinedScanners = new ArrayList<KeyValueScanner>();
+      List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
+      List<KeyValueScanner> joinedScanners =
+          new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
       if (additionalScanners != null) {
         scanners.addAll(additionalScanners);
       }

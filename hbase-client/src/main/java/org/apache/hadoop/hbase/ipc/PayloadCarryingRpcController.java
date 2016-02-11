@@ -37,6 +37,8 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 public class PayloadCarryingRpcController implements RpcController, CellScannable {
+  public static final int PRIORITY_UNSET = -1;
+
   /**
    * Priority to set on this request.  Set it here in controller so available composing the
    * request.  This is the ordained way of setting priorities going forward.  We will be
@@ -44,7 +46,7 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
    */
   // Currently only multi call makes use of this.  Eventually this should be only way to set
   // priority.
-  private int priority = 0;
+  private int priority = PRIORITY_UNSET;
 
   // TODO: Fill out the rest of this class methods rather than return UnsupportedOperationException
 
@@ -71,6 +73,7 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
   /**
    * @return One-shot cell scanner (you cannot back it up and restart)
    */
+  @Override
   public CellScanner cellScanner() {
     return cellScanner;
   }

@@ -83,7 +83,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   // indicate if it is a remote server call
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
-  protected final PayloadCarryingRpcController controller;
+  protected PayloadCarryingRpcController controller;
   
   /**
    * @param connection which connection
@@ -155,6 +155,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   @SuppressWarnings("deprecation")
   public Result [] call() throws IOException {
+    if (controller == null) {
+      controller = RpcControllerFactory.instantiate(connection.getConfiguration())
+          .newController();
+    }
     if (closed) {
       if (scannerId != -1) {
         close();
@@ -300,7 +304,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
       ScanRequest request =
         RequestConverter.buildScanRequest(this.scannerId, 0, true);
       try {
-        getStub().scan(null, request);
+        getStub().scan(controller, request);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
@@ -317,7 +321,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
         getLocation().getRegionInfo().getRegionName(),
         this.scan, 0, false);
     try {
-      ScanResponse response = getStub().scan(null, request);
+      ScanResponse response = getStub().scan(controller, request);
       long id = response.getScannerId();
       if (logScannerActivity) {
         LOG.info("Open scanner=" + id + " for scan=" + scan.toString()

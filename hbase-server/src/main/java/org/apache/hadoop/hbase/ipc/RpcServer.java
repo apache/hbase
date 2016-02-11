@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -1366,17 +1367,18 @@ public class RpcServer implements RpcServerInterface {
       return authorizedUgi;
     }
 
-    private void saslReadAndProcess(byte[] saslToken) throws IOException,
+    private void saslReadAndProcess(ByteBuffer saslToken) throws IOException,
         InterruptedException {
       if (saslContextEstablished) {
         if (LOG.isDebugEnabled())
-          LOG.debug("Have read input token of size " + saslToken.length
+          LOG.debug("Have read input token of size " + saslToken.limit()
               + " for processing by saslServer.unwrap()");
 
         if (!useWrap) {
           processOneRpc(saslToken);
         } else {
-          byte [] plaintextData = saslServer.unwrap(saslToken, 0, saslToken.length);
+          byte[] b = saslToken.array();
+          byte [] plaintextData = saslServer.unwrap(b, saslToken.position(), saslToken.limit());
           processUnwrappedData(plaintextData);
         }
       } else {
@@ -1426,10 +1428,10 @@ public class RpcServer implements RpcServerInterface {
             }
           }
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Have read input token of size " + saslToken.length
+            LOG.debug("Have read input token of size " + saslToken.limit()
                 + " for processing by saslServer.evaluateResponse()");
           }
-          replyToken = saslServer.evaluateResponse(saslToken);
+          replyToken = saslServer.evaluateResponse(saslToken.array());
         } catch (IOException e) {
           IOException sendToClient = e;
           Throwable cause = e;
@@ -1605,6 +1607,7 @@ public class RpcServer implements RpcServerInterface {
             throw new IllegalArgumentException("Unexpected data length "
                 + dataLength + "!! from " + getHostAddress());
           }
+          // TODO: check dataLength against some limit so that the client cannot OOM the server
           data = ByteBuffer.allocate(dataLength);
           incRpcCount();  // Increment the rpc count
         }
@@ -1621,9 +1624,9 @@ public class RpcServer implements RpcServerInterface {
           }
           boolean headerRead = connectionHeaderRead;
           if (useSasl) {
-            saslReadAndProcess(data.array());
+            saslReadAndProcess(data);
           } else {
-            processOneRpc(data.array());
+            processOneRpc(data);
           }
           this.data = null;
           if (!headerRead) {
@@ -1658,8 +1661,8 @@ public class RpcServer implements RpcServerInterface {
     }
 
     // Reads the connection header following version
-    private void processConnectionHeader(byte[] buf) throws IOException {
-      this.connectionHeader = ConnectionHeader.parseFrom(buf);
+    private void processConnectionHeader(ByteBuffer buf) throws IOException {
+      this.connectionHeader = ConnectionHeader.parseFrom(new ByteBufferInputStream(buf));
       String serviceName = connectionHeader.getServiceName();
       if (serviceName == null) throw new EmptyServiceNameException();
       this.service = getService(services, serviceName);
@@ -1769,13 +1772,13 @@ public class RpcServer implements RpcServerInterface {
         if (unwrappedData.remaining() == 0) {
           unwrappedDataLengthBuffer.clear();
           unwrappedData.flip();
-          processOneRpc(unwrappedData.array());
+          processOneRpc(unwrappedData);
           unwrappedData = null;
         }
       }
     }
 
-    private void processOneRpc(byte[] buf) throws IOException, InterruptedException {
+    private void processOneRpc(ByteBuffer buf) throws IOException, InterruptedException {
       if (connectionHeaderRead) {
         processRequest(buf);
       } else {
@@ -1797,16 +1800,16 @@ public class RpcServer implements RpcServerInterface {
      * @throws IOException
      * @throws InterruptedException
      */
-    protected void processRequest(byte[] buf) throws IOException, InterruptedException {
-      long totalRequestSize = buf.length;
+    protected void processRequest(ByteBuffer buf) throws IOException, InterruptedException {
+      long totalRequestSize = buf.limit();
       int offset = 0;
       // Here we read in the header.  We avoid having pb
       // do its default 4k allocation for CodedInputStream.  We force it to use backing array.
-      CodedInputStream cis = CodedInputStream.newInstance(buf, offset, buf.length);
+      CodedInputStream cis = CodedInputStream.newInstance(buf.array(), offset, buf.limit());
       int headerSize = cis.readRawVarint32();
       offset = cis.getTotalBytesRead();
       Message.Builder builder = RequestHeader.newBuilder();
-      ProtobufUtil.mergeFrom(builder, buf, offset, headerSize);
+      ProtobufUtil.mergeFrom(builder, cis, headerSize);
       RequestHeader header = (RequestHeader) builder.build();
       offset += headerSize;
       int id = header.getCallId();
@@ -1838,18 +1841,18 @@ public class RpcServer implements RpcServerInterface {
           if (md == null) throw new UnsupportedOperationException(header.getMethodName());
           builder = this.service.getRequestPrototype(md).newBuilderForType();
           // To read the varint, I need an inputstream; might as well be a CIS.
-          cis = CodedInputStream.newInstance(buf, offset, buf.length);
+          cis.resetSizeCounter();
           int paramSize = cis.readRawVarint32();
           offset += cis.getTotalBytesRead();
           if (builder != null) {
-            ProtobufUtil.mergeFrom(builder, buf, offset, paramSize);
+            ProtobufUtil.mergeFrom(builder, cis, paramSize);
             param = builder.build();
           }
           offset += paramSize;
         }
         if (header.hasCellBlockMeta()) {
-          cellScanner = ipcUtil.createCellScanner(this.codec, this.compressionCodec,
-            buf, offset, buf.length);
+          buf.position(offset);
+          cellScanner = ipcUtil.createCellScanner(this.codec, this.compressionCodec, buf);
         }
       } catch (Throwable t) {
         InetSocketAddress address = getListenerAddress();
