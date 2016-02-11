@@ -83,4 +83,10 @@ import java.io.IOException;
    * using this client.
    */
   @Override public void close();
+
+  /**
+   * @return true when this client uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   *         supports cell blocks.
+   */
+  boolean hasCellBlockSupport();
 }
