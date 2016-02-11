@@ -303,4 +303,9 @@ public interface ClusterConnection extends HConnection {
    */
   public MetricsConnection getConnectionMetrics();
 
+  /**
+   * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   *         supports cell blocks.
+   */
+  boolean hasCellBlockSupport();
 }

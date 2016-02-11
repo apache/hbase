@@ -475,4 +475,10 @@ public class TestFromClientSide3 {
     assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
     table.close();
   }
+
+  @Test
+  public void testConnectionDefaultUsesCodec() throws Exception {
+    ClusterConnection con = (ClusterConnection) TEST_UTIL.getConnection();
+    assertTrue(con.hasCellBlockSupport());
+  }
 }

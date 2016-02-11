@@ -2255,4 +2255,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return RpcRetryingCallerFactory
         .instantiate(conf, this.interceptor, this.getStatisticsTracker());
   }
+
+  @Override
+  public boolean hasCellBlockSupport() {
+    return this.rpcClient.hasCellBlockSupport();
+  }
 }
