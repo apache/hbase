@@ -663,8 +663,15 @@ public final class RequestConverter {
         cells.add(i);
         builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
           MutationType.INCREMENT, i, mutationBuilder, action.getNonce())));
+      } else if (row instanceof RegionCoprocessorServiceExec) {
+        RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
+        builder.addAction(actionBuilder.setServiceCall(ClientProtos.CoprocessorServiceCall
+            .newBuilder().setRow(ByteStringer.wrap(exec.getRow()))
+            .setServiceName(exec.getMethod().getService().getFullName())
+            .setMethodName(exec.getMethod().getName())
+            .setRequest(exec.getRequest().toByteString())));
       } else if (row instanceof RowMutations) {
-        continue; // ignore RowMutations
+        throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
