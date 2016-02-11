@@ -2820,14 +2820,6 @@ public class HConnectionManager {
     throws IOException {
       return getHTableDescriptor(TableName.valueOf(tableName));
     }
-
-    /**
-     * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
-     *         supports cell blocks.
-     */
-    public boolean hasCellBlockSupport() {
-      return this.rpcClient.hasCellBlockSupport();
-    }
   }
 
   /**

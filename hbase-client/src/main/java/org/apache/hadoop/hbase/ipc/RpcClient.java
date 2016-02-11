@@ -1724,14 +1724,6 @@ public class RpcClient {
   }
 
   /**
-   * @return true when this client uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
-   *         supports cell blocks.
-   */
-  public boolean hasCellBlockSupport() {
-    return this.codec != null;
-  }
-
-  /**
    * Blocking rpc channel that goes via hbase rpc.
    */
   // Public so can be subclassed for tests.
