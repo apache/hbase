@@ -460,7 +460,7 @@ public final class CellUtil {
 
   public static boolean matchingRow(final Cell left, final byte[] buf) {
     if (buf == null) {
-      return left.getQualifierLength() == 0;
+      return left.getRowLength() == 0;
     }
     return matchingRow(left, buf, 0, buf.length);
   }
