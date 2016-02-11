@@ -3012,12 +3012,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Set<byte[]> deletesCfSet = null;
 
     long currentNonceGroup = HConstants.NO_NONCE, currentNonce = HConstants.NO_NONCE;
-    WALEdit walEdit = new WALEdit(isInReplay);
+    WALEdit walEdit = null;
     MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
     long txid = 0;
     boolean doRollBackMemstore = false;
     boolean locked = false;
-
+    int cellCount = 0;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     // reference family maps directly so coprocessors can mutate them if desired
@@ -3102,7 +3102,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         lastIndexExclusive++;
         numReadyToWrite++;
-
+        if (isInReplay) {
+          for (List<Cell> cells : mutation.getFamilyCellMap().values()) {
+            cellCount += cells.size();
+          }
+        }
         if (isPutMutation) {
           // If Column Families stay consistent through out all of the
           // individual puts then metrics can be reported as a mutliput across
@@ -3150,8 +3154,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           noOfDeletes++;
         }
         rewriteCellTags(familyMaps[i], mutation);
+        WALEdit fromCP = batchOp.walEditsFromCoprocessors[i];
+        if (fromCP != null) {
+          cellCount += fromCP.size();
+        }
+        for (List<Cell> cells : familyMaps[i].values()) {
+          cellCount += cells.size();
+        }
       }
-
+      walEdit = new WALEdit(cellCount, isInReplay);
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
 
@@ -3200,7 +3211,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               currentNonceGroup, currentNonce, mvcc);
             txid = this.wal.append(this.htableDescriptor,  this.getRegionInfo(),  walKey,
               walEdit, true);
-            walEdit = new WALEdit(isInReplay);
+            walEdit = new WALEdit(cellCount, isInReplay);
             walKey = null;
           }
           currentNonceGroup = nonceGroup;
