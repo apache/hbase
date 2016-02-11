@@ -27,17 +27,23 @@ import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 /**
  * Run Increment tests that use the HBase clients; {@link HTable}.
@@ -59,8 +65,20 @@ public class TestIncrementsFromClientSide {
   // method where we do rolling restart.
   protected static int SLAVES = 1;
   @Rule public TestName name = new TestName();
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
   public static Collection<Object []> data() {
     return Arrays.asList(new Object[] {Boolean.FALSE}, new Object [] {Boolean.TRUE});
+  }
+
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        MultiRowMutationEndpoint.class.getName());
+    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
+    // We need more than one region server in this test
+    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   /**
