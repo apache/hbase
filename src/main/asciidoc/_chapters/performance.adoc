@@ -48,6 +48,11 @@ Use a 64-bit platform (and 64-bit JVM).
 Watch out for swapping.
 Set `swappiness` to 0.
 
+[[perf.os.cpu]]
+=== CPU
+Make sure you have set up your Hadoop to use native, hardware checksumming.
+See link:[hadoop.native.lib].
+
 [[perf.network]]
 == Network
 
@@ -136,6 +141,9 @@ If you have a write-heavy workload, check out link:https://issues.apache.org/jir
 It describes configurations to lower the amount of young GC during write-heavy loadings.
 If you do not have HBASE-8163 installed, and you are trying to improve your young GC times, one trick to consider -- courtesy of our Liang Xie -- is to set the GC config `-XX:PretenureSizeThreshold` in _hbase-env.sh_ to be just smaller than the size of `hbase.hregion.memstore.mslab.chunksize` so MSLAB allocations happen in the tenured space directly rather than first in the young gen.
 You'd do this because these MSLAB allocations are going to likely make it to the old gen anyways and rather than pay the price of a copies between s0 and s1 in eden space followed by the copy up from young to old gen after the MSLABs have achieved sufficient tenure, save a bit of YGC churn and allocate in the old gen directly.
+
+Other sources of long GCs can be the JVM itself logging.
+See link:https://engineering.linkedin.com/blog/2016/02/eliminating-large-jvm-gc-pauses-caused-by-background-io-traffic[Eliminating Large JVM GC Pauses Caused by Background IO Traffic]
 
 For more information about GC logs, see <<trouble.log.gc>>.
 
