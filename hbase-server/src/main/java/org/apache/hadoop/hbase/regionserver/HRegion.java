@@ -2951,7 +2951,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Set<byte[]> deletesCfSet = null;
     long currentNonceGroup = HConstants.NO_NONCE;
     long currentNonce = HConstants.NO_NONCE;
-    WALEdit walEdit = new WALEdit(replay);
+    WALEdit walEdit = null;
     boolean locked = false;
     // reference family maps directly so coprocessors can mutate them if desired
     Map<byte[], List<Cell>>[] familyMaps = new Map[batchOp.operations.length];
@@ -2962,6 +2962,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int noOfPuts = 0;
     int noOfDeletes = 0;
     WriteEntry writeEntry = null;
+    int cellCount = 0;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     try {
@@ -2990,7 +2991,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         lastIndexExclusive++;
         numReadyToWrite++;
-
+        if (replay) {
+          for (List<Cell> cells : mutation.getFamilyCellMap().values()) {
+            cellCount += cells.size();
+          }
+        }
         if (mutation instanceof Put) {
           // If Column Families stay consistent through out all of the
           // individual puts then metrics can be reported as a multiput across
@@ -3041,8 +3046,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           noOfDeletes++;
         }
         rewriteCellTags(familyMaps[i], mutation);
+        WALEdit fromCP = batchOp.walEditsFromCoprocessors[i];
+        if (fromCP != null) {
+          cellCount += fromCP.size();
+        }
+        for (List<Cell> cells : familyMaps[i].values()) {
+          cellCount += cells.size();
+        }
       }
-
+      walEdit = new WALEdit(cellCount, replay);
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
 
@@ -3082,7 +3094,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (nonceGroup != currentNonceGroup || nonce != currentNonce) {
           // Write what we have so far for nonces out to WAL
           appendCurrentNonces(m, replay, walEdit, now, currentNonceGroup, currentNonce);
-          walEdit = new WALEdit(replay);
+          walEdit = new WALEdit(cellCount, replay);
           currentNonceGroup = nonceGroup;
           currentNonce = nonce;
         }
