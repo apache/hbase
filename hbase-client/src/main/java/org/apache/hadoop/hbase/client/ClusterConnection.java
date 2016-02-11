@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -300,4 +299,10 @@ public interface ClusterConnection extends HConnection {
    * @return the configured client backoff policy
    */
   ClientBackoffPolicy getBackoffPolicy();
+
+  /**
+   * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   *         supports cell blocks.
+   */
+  boolean hasCellBlockSupport();
 }

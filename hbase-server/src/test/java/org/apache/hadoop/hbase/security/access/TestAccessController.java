@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
@@ -99,7 +98,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -2479,32 +2477,6 @@ public class TestAccessController extends SecureTestUtil {
       revokeFromTable(TEST_UTIL, userA.getShortName(), TEST_TABLE, null, null,
         Permission.Action.EXEC);
     }
-  }
-
-  @Test
-  public void testReservedCellTags() throws Exception {
-    AccessTestAction putWithReservedTag = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        Table t = new HTable(conf, TEST_TABLE);
-        try {
-          KeyValue kv = new KeyValue(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-            HConstants.LATEST_TIMESTAMP, HConstants.EMPTY_BYTE_ARRAY,
-            new Tag[] { new Tag(AccessControlLists.ACL_TAG_TYPE,
-              ProtobufUtil.toUsersAndPermissions(USER_OWNER.getShortName(),
-                new Permission(Permission.Action.READ)).toByteArray()) });
-          t.put(new Put(TEST_ROW).add(kv));
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    };
-
-    // Current user is superuser
-    verifyAllowed(putWithReservedTag, User.getCurrent());
-    // No other user should be allowed
-    verifyDenied(putWithReservedTag, USER_OWNER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO);
   }
 
   @Test

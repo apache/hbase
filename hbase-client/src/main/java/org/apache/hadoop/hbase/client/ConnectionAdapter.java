@@ -464,4 +464,9 @@ abstract class ConnectionAdapter implements ClusterConnection {
   public ClientBackoffPolicy getBackoffPolicy() {
     return wrappedConnection.getBackoffPolicy();
   }
+
+  @Override
+  public boolean hasCellBlockSupport() {
+    return wrappedConnection.hasCellBlockSupport();
+  }
 }
