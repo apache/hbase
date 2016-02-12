@@ -25,6 +25,8 @@ import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,7 +47,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Tests for the master status page and its template.
@@ -157,7 +158,7 @@ public class TestMasterStatusServlet {
     RegionStates rs = Mockito.mock(RegionStates.class);
 
     // Add 100 regions as in-transition
-    HashSet<RegionState> regionsInTransition = new HashSet<RegionState>();
+    SortedSet<RegionState> regionsInTransition = new TreeSet<>(RegionStates.REGION_STATE_COMPARATOR);
     for (byte i = 0; i < 100; i++) {
       HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});
@@ -170,6 +171,7 @@ public class TestMasterStatusServlet {
                         RegionState.State.CLOSING, 123L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
+    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransitionOrderedByTimestamp();
 
     // Render to a string
     StringWriter sw = new StringWriter();

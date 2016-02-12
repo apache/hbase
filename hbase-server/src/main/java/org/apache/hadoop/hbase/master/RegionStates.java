@@ -20,13 +20,14 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Comparator;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -66,6 +67,21 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class RegionStates {
   private static final Log LOG = LogFactory.getLog(RegionStates.class);
+
+  public final static RegionStateStampComparator REGION_STATE_COMPARATOR =
+      new RegionStateStampComparator();
+
+  // This comparator sorts the RegionStates by time stamp then Region name.
+  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
+  // to share a timestamp.
+  private static class RegionStateStampComparator implements Comparator<RegionState> {
+    @Override
+    public int compare(RegionState l, RegionState r) {
+      return Long.compare(l.getStamp(), r.getStamp()) == 0 ?
+          Bytes.compareTo(l.getRegion().getRegionName(), r.getRegion().getRegionName()) :
+          Long.compare(l.getStamp(), r.getStamp());
+    }
+  }
 
   /**
    * Regions currently in transition.
@@ -211,6 +227,17 @@ public class RegionStates {
    */
   public synchronized Set<RegionState> getRegionsInTransition() {
     return new HashSet<RegionState>(regionsInTransition.values());
+  }
+
+  /**
+   * @return a set of the regions in transition that are sorted by timestamp
+   */
+  public synchronized SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
+    final TreeSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_COMPARATOR);
+    for (RegionState rs: regionsInTransition.values()) {
+      rit.add(rs);
+    }
+    return rit;
   }
 
   /**
