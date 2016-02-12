@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A Protobuf based WAL has the following structure:
@@ -332,7 +333,7 @@ public class ProtobufLogReader extends ReaderBase {
           }
           ProtobufUtil.mergeFrom(builder, new LimitInputStream(this.inputStream, size),
             (int)size);
-        } catch (IOException ipbe) {
+        } catch (InvalidProtocolBufferException ipbe) {
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
             originalPosition + ", currentPosition=" + this.inputStream.getPos() +
             ", messageSize=" + size + ", currentAvailable=" + available).initCause(ipbe);
