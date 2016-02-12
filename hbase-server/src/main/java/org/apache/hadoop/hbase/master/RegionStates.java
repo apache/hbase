@@ -23,9 +23,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.TreeMap;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -204,6 +208,28 @@ public class RegionStates {
   @SuppressWarnings("unchecked")
   public synchronized Map<String, RegionState> getRegionsInTransition() {
     return (Map<String, RegionState>)regionsInTransition.clone();
+  }
+
+  @SuppressWarnings("unchecked")
+  public synchronized Map<String, RegionState> getRegionsInTransitionOrderedByTimestamp() {
+    Map<String, RegionState> rit = (Map<String, RegionState>)regionsInTransition.clone();
+    List<Map.Entry<String, RegionState>> list = new LinkedList<>(rit.entrySet());
+
+    // Compare the RITs' timestamps for ordering.
+    Comparator<Map.Entry<String, RegionState>> c =
+        new Comparator<Map.Entry<String, RegionState>>() {
+      @Override
+      public int compare(Map.Entry<String, RegionState> o1, Map.Entry<String, RegionState> o2) {
+        return ((Long)o1.getValue().getStamp()).compareTo((Long)o2.getValue().getStamp());
+      }
+    };
+
+    Collections.sort(list, c);
+    Map<String, RegionState> result = new LinkedHashMap<>();
+    for (Map.Entry<String, RegionState> entry : list) {
+      result.put(entry.getKey(), entry.getValue());
+    }
+    return result;
   }
 
   /**

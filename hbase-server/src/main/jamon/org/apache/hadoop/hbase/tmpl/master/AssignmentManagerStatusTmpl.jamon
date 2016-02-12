@@ -25,84 +25,111 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
 java.util.Iterator;
 java.util.Map;
+java.util.List;
+java.util.ArrayList;
+java.util.Map.Entry;
+java.util.Arrays;
 </%import>
 <%args>
 AssignmentManager assignmentManager;
 int limit = 100;
 </%args>
+
+<%java Map<String, RegionState> rit = assignmentManager
+  .getRegionStates().getRegionsInTransitionOrderedByTimestamp(); %>
+
+<%if !rit.isEmpty() %>
 <%java>
-Map<String, RegionState> rit = assignmentManager
-  .getRegionStates().getRegionsInTransition();
+List<String> ritsOverThreshold = new ArrayList<>();
+List<String> ritsTwiceThreshold = new ArrayList<>();
 // process the map to find region in transition details
 Configuration conf = HBaseConfiguration.create();
 int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
 int numOfRITOverThreshold = 0;
-long maxRITTime = Long.MIN_VALUE;
 long currentTime = System.currentTimeMillis();
-String regionIDForOldestRIT = ""; // avoiding null
 for (Map.Entry<String, RegionState> e : rit.entrySet()) {
   long ritTime = currentTime - e.getValue().getStamp();
-  if(ritTime > ritThreshold) {
+  if(ritTime > (ritThreshold * 2)) {
      numOfRITOverThreshold++;
-   }
-   if(maxRITTime < ritTime) {
-     maxRITTime = ritTime;
-     regionIDForOldestRIT = e.getKey();
-   }
-}
-
-int totalRITs = rit.size();
-int toRemove = rit.size() - limit;
-int removed = 0;
-if (toRemove > 0) {
-  // getRegionsInTransition returned a copy, so we can mutate it
-  for (Iterator<Map.Entry<String, RegionState>> it = rit.entrySet().iterator();
-       it.hasNext() && toRemove > 0;
-       ) {
-    Map.Entry<String, RegionState> e = it.next();
-    if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(
-          e.getKey()) ||
-         regionIDForOldestRIT.equals(e.getKey())) {
-      // don't remove the meta & the oldest rit regions, they're too interesting!
-      continue;
-    } 
-    it.remove();
-    toRemove--;
-    removed++;
+     ritsTwiceThreshold.add(e.getKey());
+  } else if (ritTime > ritThreshold) {
+     numOfRITOverThreshold++;
+     ritsOverThreshold.add(e.getKey());
   }
 }
 
+int numOfRITs = rit.size();
+int ritsPerPage = Math.min(5, numOfRITs);
+int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
 </%java>
-
-
-<%if !rit.isEmpty() %>
     <section>
     <h2>Regions in Transition</h2>
-    <table class="table table-striped">
-            <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
-            <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
-            <%if regionIDForOldestRIT.equals(entry.getKey()) %>
-                    <tr BGCOLOR="#FE2E2E" >
+     <p><% numOfRITs %> region(s) in transition.  
+     <%if !ritsTwiceThreshold.isEmpty()  %>
+         <span class="label label-danger" style="font-size:100%;font-weight:normal">
+     <%elseif !ritsOverThreshold.isEmpty() %>
+         <span class="label label-warning" style="font-size:100%;font-weight:normal">
+     <%else>
+         <span>
+     </%if>
+         <% numOfRITOverThreshold %> region(s) in transition for 
+             more than <% ritThreshold %> milliseconds.
+         </span>
+     </p>
+     <div class="tabbable">
+         <div class="tab-content">
+         <%java int recordItr = 0; %>
+         <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
+             <%if (recordItr % ritsPerPage) == 0 %>
+                 <%if recordItr == 0 %>
+             <div class="tab-pane active" id="tab_rits<% (recordItr / ritsPerPage) + 1 %>">
+                 <%else>
+             <div class="tab-pane" id="tab_rits<% (recordItr / ritsPerPage) + 1 %>">
+                 </%if>
+                 <table class="table table-striped" style="margin-bottom:0px;"><tr><th>Region</th>
+                     <th>State</th><th>RIT time (ms)</th></tr>
+             </%if>
+ 
+             <%if ritsOverThreshold.contains(entry.getKey()) %>
+                     <tr class="alert alert-warning" role="alert">
+             <%elseif ritsTwiceThreshold.contains(entry.getKey()) %>
+                     <tr class="alert alert-danger" role="alert">
             <%else>
                     <tr>
             </%if>
-            <td><% entry.getKey() %></td><td>
-            <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(
-            entry.getValue(), conf) %></td>
-    <td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
-            </%for>
-            <%if numOfRITOverThreshold > 0 %>
-                    <tr BGCOLOR="#D7DF01" >
-            <%else>
-                    <tr>
-            </%if>
-            <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
-            </tr>
-    <tr> <td> Total number of Regions in Transition</td><td><% totalRITs %> </td><td></td>
-    </table>
-    <%if removed > 0 %>
-    (<% removed %> more regions in transition not shown)
-    </%if>
-    </section>
-</%if>
+                         <td><% entry.getKey() %></td><td>
+                         <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(
+                         entry.getValue(), conf) %></td>
+                         <td><% (currentTime - entry.getValue().getStamp()) %> </td>
+                     </tr>
+                     <%java recordItr++; %>
+             <%if (recordItr % ritsPerPage) == 0 %>
+                 </table>
+             </div>
+         </%if>
+         </%for>
+  
+         <%if (recordItr % ritsPerPage) != 0 %>
+             <%for ; (recordItr % ritsPerPage) != 0 ; recordItr++ %>
+             <tr><td colspan="3" style="height:61px"></td></tr>
+             </%for>
+                   </table>
+             </div>
+         </%if>
+         </div>
+         <nav>
+             <ul class="nav nav-pills pagination">
+             <%for int i = 1 ; i <= numOfPages; i++ %>
+                 <%if i == 1 %>
+                 <li class="active">
+                 <%else>
+                 <li>
+                 </%if>
+                 <a href="#tab_rits<% i %>"><% i %></a></li>
+             </%for>
+             </ul>
+         </nav>
+     </div>
+   </section>
+ </%if>
 
