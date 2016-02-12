@@ -28,6 +28,7 @@ import static org.mockito.Mockito.spy;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -84,7 +85,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -960,8 +960,8 @@ public class TestWALReplay {
         FSDataInputStream stream = (FSDataInputStream) invocation.callRealMethod();
         Field field = FilterInputStream.class.getDeclaredField("in");
         field.setAccessible(true);
-        final DFSInputStream in = (DFSInputStream) field.get(stream);
-        DFSInputStream spyIn = spy(in);
+        final InputStream in = (InputStream) field.get(stream);
+        InputStream spyIn = spy(in);
         doAnswer(new Answer<Integer>() {
 
           private long pos;
