@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.0 02/15/2016
+Release Notes - HBase - Version 1.2.0 02/17/2016
 
 ** Sub-task
     * [HBASE-12748] - RegionCoprocessorHost.execOperation creates too many iterator objects
@@ -110,6 +110,8 @@ Release Notes - HBase - Version 1.2.0 02/15/2016
     * [HBASE-15118] - Fix findbugs complaint in hbase-server
     * [HBASE-15157] - Add *PerformanceTest for Append, CheckAnd*
     * [HBASE-15210] - Undo aggressive load balancer logging at tens of lines per millisecond
+    * [HBASE-15224] - Undo  "hbase.increment.fast.but.narrow.consistency" option; it is not necessary since HBASE-15213
+    * [HBASE-15238] - HFileReaderV2 prefetch overreaches; runs off the end of the data
 
 ** Bug
     * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
@@ -278,6 +280,7 @@ Release Notes - HBase - Version 1.2.0 02/15/2016
     * [HBASE-14168] - Avoid useless retry for DoNotRetryIOException in TableRecordReaderImpl
     * [HBASE-14178] - regionserver blocks because of waiting for offsetLock
     * [HBASE-14185] - Incorrect region names logged by MemStoreFlusher
+    * [HBASE-14192] - Fix REST Cluster constructor with String List
     * [HBASE-14196] - Thrift server idle connection timeout issue
     * [HBASE-14201] - hbck should not take a lock unless fixing errors
     * [HBASE-14205] - RegionCoprocessorHost System.nanoTime() performance bottleneck
@@ -474,12 +477,15 @@ Release Notes - HBase - Version 1.2.0 02/15/2016
     * [HBASE-15148] - Resolve IS2_INCONSISTENT_SYNC findbugs warning in AuthenticationTokenSecretManager
     * [HBASE-15152] - Automatically include prefix-tree module in MR jobs if present
     * [HBASE-15190] - Monkey dies when running on shared cluster (gives up when can't kill the other fellows processes)
+    * [HBASE-15198] - RPC client not using Codec and CellBlock for puts by default
     * [HBASE-15200] - ZooKeeper znode ACL checks should only compare the shortname
     * [HBASE-15206] - Flakey testSplitDaughtersNotInMeta test
     * [HBASE-15209] - disable table in HBaseTestingUtility.truncateTable
     * [HBASE-15214] - Valid mutate Ops fail with RPC Codec in use and region moves across
+    * [HBASE-15216] - Canary does not accept config params from command line
     * [HBASE-15218] - On RS crash and replay of WAL, loosing all Tags in Cells
     * [HBASE-15221] - HTableMultiplexer improvements (stale region locations and resource leaks)
+    * [HBASE-15252] - Data loss when replaying wal if HDFS timeout
 
 ** Improvement
     * [HBASE-6617] - ReplicationSourceManager should be able to track multiple WAL paths
@@ -583,6 +589,8 @@ Release Notes - HBase - Version 1.2.0 02/15/2016
     * [HBASE-15038] - ExportSnapshot should support separate configurations for source and destination clusters
     * [HBASE-15076] - Add getScanner(Scan scan, List<KeyValueScanner> additionalScanners) API into Region interface
     * [HBASE-15111] - "hbase version" should write to stdout
+    * [HBASE-15129] - Set default value for hbase.fs.tmp.dir rather than fully depend on hbase-default.xml
+    * [HBASE-15229] - Canary Tools should not call System.Exit on error
 
 ** New Feature
     * [HBASE-5980] - Scanner responses from RS should include metrics on rows/KVs filtered
