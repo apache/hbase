@@ -41,7 +41,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -475,11 +474,6 @@ public class HFile {
 
     @VisibleForTesting
     boolean prefetchComplete();
-
-    /**
-     * To close only the stream's socket. HBASE-9393
-     */
-    void unbufferStream();
   }
 
   /**
@@ -496,8 +490,8 @@ public class HFile {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
       justification="Intentional")
-  private static Reader openReader(Path path, FSDataInputStreamWrapper fsdis, long size,
-      CacheConfig cacheConf, HFileSystem hfs, Configuration conf) throws IOException {
+  private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
+      long size, CacheConfig cacheConf, HFileSystem hfs, Configuration conf) throws IOException {
     FixedFileTrailer trailer = null;
     try {
       boolean isHBaseChecksum = fsdis.shouldUseHBaseChecksum();
@@ -519,22 +513,6 @@ public class HFile {
         LOG.warn("Error closing fsdis FSDataInputStreamWrapper", t2);
       }
       throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, t);
-    } finally {
-      unbufferStream(fsdis);
-    }
-  }
-
-  static void unbufferStream(FSDataInputStreamWrapper fsdis) {
-    boolean useHBaseChecksum = fsdis.shouldUseHBaseChecksum();
-    final FSDataInputStream stream = fsdis.getStream(useHBaseChecksum);
-    if (stream != null && stream.getWrappedStream() instanceof CanUnbuffer) {
-      // Enclosing unbuffer() in try-catch just to be on defensive side.
-      try {
-        stream.unbuffer();
-      } catch (Throwable e) {
-        LOG.error("Failed to unbuffer the stream so possibly there may be a TCP socket connection "
-            + "left open in CLOSE_WAIT state.", e);
-      }
     }
   }
 
@@ -563,7 +541,7 @@ public class HFile {
     } else {
       hfs = (HFileSystem)fs;
     }
-    return openReader(path, fsdis, size, cacheConf, hfs, conf);
+    return pickReaderVersion(path, fsdis, size, cacheConf, hfs, conf);
   }
 
   /**
@@ -578,8 +556,8 @@ public class HFile {
       FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
-    return openReader(path, stream, fs.getFileStatus(path).getLen(), cacheConf, stream.getHfs(),
-      conf);
+    return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
+      cacheConf, stream.getHfs(), conf);
   }
 
   /**
@@ -589,7 +567,7 @@ public class HFile {
       FSDataInputStream fsdis, long size, CacheConfig cacheConf, Configuration conf)
       throws IOException {
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
-    return openReader(path, wrapper, size, cacheConf, null, conf);
+    return pickReaderVersion(path, wrapper, size, cacheConf, null, conf);
   }
 
   /**

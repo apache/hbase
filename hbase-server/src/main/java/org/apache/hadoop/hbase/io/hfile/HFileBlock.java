@@ -33,10 +33,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferSupportDataOutputStream;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -1311,11 +1311,6 @@ public class HFileBlock implements Cacheable {
 
     void setIncludesMemstoreTS(boolean includesMemstoreTS);
     void setDataBlockEncoder(HFileDataBlockEncoder encoder);
-
-    /**
-     * To close only the stream's socket. HBASE-9393
-     */
-    void unbufferStream();
   }
 
   /**
@@ -1762,19 +1757,6 @@ public class HFileBlock implements Cacheable {
     @Override
     public String toString() {
       return "hfs=" + hfs + ", path=" + pathName + ", fileContext=" + fileContext;
-    }
-
-    @Override
-    public void unbufferStream() {
-      // To handle concurrent reads, ensure that no other client is accessing the streams while we
-      // unbuffer it.
-      if (streamLock.tryLock()) {
-        try {
-          HFile.unbufferStream(this.streamWrapper);
-        } finally {
-          streamLock.unlock();
-        }
-      }
     }
   }
 
