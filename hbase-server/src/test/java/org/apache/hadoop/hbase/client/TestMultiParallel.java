@@ -671,45 +671,13 @@ public class TestMultiParallel {
 
   private void validateLoadedData(HTable table) throws IOException {
     // get the data back and validate that it is correct
-    LOG.info("Validating data on " + table);
-    List<Get> gets = new ArrayList<Get>();
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      gets.add(get);
-    }
-    int retryNum = 10;
-    Result[] results = null;
-    do  {
-      results = table.get(gets);
-      boolean finished = true;
-      for (Result result : results) {
-        if (result.isEmpty()) {
-          finished = false;
-          break;
-        }
-      }
-      if (finished) {
-        break;
-      }
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-      retryNum--;
-    } while (retryNum > 0);
-
-    if (retryNum == 0) {
-      fail("Timeout for validate data");
-    } else {
-      if (results != null) {
-        for (Result r : results) {
-          Assert.assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
-          Assert.assertEquals(0, Bytes.compareTo(VALUE, r
-            .getValue(BYTES_FAMILY, QUALIFIER)));
-        }
-        LOG.info("Validating data on " + table + " successfully!");
-      }
+      Result r = table.get(get);
+      Assert.assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
+      Assert.assertEquals(0, Bytes.compareTo(VALUE, r
+          .getValue(BYTES_FAMILY, QUALIFIER)));
     }
   }
 
