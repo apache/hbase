@@ -135,10 +135,15 @@ public class CoprocessorHConnection extends HConnectionImplementation {
       public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
           Message request, Message responsePrototype) throws ServiceException {
         try {
-          Pair<Message, CellScanner> ret = rpc.call(blocking, method, request, null, timestamp,
-            status);
-          if (ret.getSecond() != null) {
-            PayloadCarryingRpcController rpcc = (PayloadCarryingRpcController) controller;
+          PayloadCarryingRpcController rpcc = null;
+          CellScanner cellScanner = null;
+          if (controller instanceof PayloadCarryingRpcController) {
+            rpcc = (PayloadCarryingRpcController) controller;
+            cellScanner = rpcc.cellScanner();
+          }
+          Pair<Message, CellScanner> ret = rpc.call(blocking, method, request, cellScanner,
+              timestamp, status);
+          if (rpcc != null && ret.getSecond() != null) {
             rpcc.setCellScanner(ret.getSecond());
           }
           return ret.getFirst();

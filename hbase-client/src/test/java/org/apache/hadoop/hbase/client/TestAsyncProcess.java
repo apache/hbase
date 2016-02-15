@@ -204,6 +204,11 @@ public class TestAsyncProcess {
                                         final byte[] row) {
       return loc1;
     }
+
+    @Override
+    public boolean hasCellBlockSupport() {
+      return false;
+    }
   }
 
   /**
