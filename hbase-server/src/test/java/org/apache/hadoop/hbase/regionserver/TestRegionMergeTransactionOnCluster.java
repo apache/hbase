@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -74,8 +75,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 import com.google.common.base.Joiner;
 import com.google.protobuf.RpcController;
@@ -91,6 +94,8 @@ import com.google.protobuf.ServiceException;
 public class TestRegionMergeTransactionOnCluster {
   private static final Log LOG = LogFactory
       .getLog(TestRegionMergeTransactionOnCluster.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
   private static final int NB_SERVERS = 3;
 
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
@@ -105,22 +110,23 @@ public class TestRegionMergeTransactionOnCluster {
 
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static HMaster master;
-  private static Admin admin;
+  private static HMaster MASTER;
+  private static Admin ADMIN;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     // Start a cluster
     TEST_UTIL.startMiniCluster(1, NB_SERVERS, null, MyMaster.class, null);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    master = cluster.getMaster();
-    master.balanceSwitch(false);
-    admin = TEST_UTIL.getHBaseAdmin();
+    MASTER = cluster.getMaster();
+    MASTER.balanceSwitch(false);
+    ADMIN = TEST_UTIL.getConnection().getAdmin();
   }
 
   @AfterClass
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+    if (ADMIN != null) ADMIN.close();
   }
 
   @Test
@@ -130,14 +136,14 @@ public class TestRegionMergeTransactionOnCluster {
         TableName.valueOf("testWholesomeMerge");
 
     // Create table and load data.
-    Table table = createTableAndLoadData(master, tableName);
+    Table table = createTableAndLoadData(MASTER, tableName);
     // Merge 1st and 2nd region
-    mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
+    mergeRegionsAndVerifyRegionNum(MASTER, tableName, 0, 1,
         INITIAL_REGION_NUM - 1);
 
     // Merge 2nd and 3th region
     PairOfSameType<HRegionInfo> mergedRegions =
-      mergeRegionsAndVerifyRegionNum(master, tableName, 1, 2,
+      mergeRegionsAndVerifyRegionNum(MASTER, tableName, 1, 2,
         INITIAL_REGION_NUM - 2);
 
     verifyRowCount(table, ROWSIZE);
@@ -180,14 +186,13 @@ public class TestRegionMergeTransactionOnCluster {
     final TableName tableName = TableName.valueOf("testMergeAndRestartingMaster");
 
     // Create table and load data.
-    Table table = createTableAndLoadData(master, tableName);
+    Table table = createTableAndLoadData(MASTER, tableName);
 
     try {
       MyMasterRpcServices.enabled.set(true);
 
       // Merge 1st and 2nd region
-      mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
-        INITIAL_REGION_NUM - 1);
+      mergeRegionsAndVerifyRegionNum(MASTER, tableName, 0, 1, INITIAL_REGION_NUM - 1);
     } finally {
       MyMasterRpcServices.enabled.set(false);
     }
@@ -195,29 +200,28 @@ public class TestRegionMergeTransactionOnCluster {
     table.close();
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testCleanMergeReference() throws Exception {
     LOG.info("Starting testCleanMergeReference");
-    admin.enableCatalogJanitor(false);
+    ADMIN.enableCatalogJanitor(false);
     try {
       final TableName tableName =
           TableName.valueOf("testCleanMergeReference");
       // Create table and load data.
-      Table table = createTableAndLoadData(master, tableName);
+      Table table = createTableAndLoadData(MASTER, tableName);
       // Merge 1st and 2nd region
-      mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
+      mergeRegionsAndVerifyRegionNum(MASTER, tableName, 0, 1,
           INITIAL_REGION_NUM - 1);
       verifyRowCount(table, ROWSIZE);
       table.close();
 
       List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
-          .getTableRegionsAndLocations(master.getConnection(), tableName);
+          .getTableRegionsAndLocations(MASTER.getConnection(), tableName);
       HRegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
-      HTableDescriptor tableDescriptor = master.getTableDescriptors().get(
+      HTableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(
           tableName);
       Result mergedRegionResult = MetaTableAccessor.getRegionResult(
-        master.getConnection(), mergedRegionInfo.getRegionName());
+        MASTER.getConnection(), mergedRegionInfo.getRegionName());
 
       // contains merge reference in META
       assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
@@ -229,8 +233,8 @@ public class TestRegionMergeTransactionOnCluster {
       PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(mergedRegionResult);
       HRegionInfo regionA = p.getFirst();
       HRegionInfo regionB = p.getSecond();
-      FileSystem fs = master.getMasterFileSystem().getFileSystem();
-      Path rootDir = master.getMasterFileSystem().getRootDir();
+      FileSystem fs = MASTER.getMasterFileSystem().getFileSystem();
+      Path rootDir = MASTER.getMasterFileSystem().getRootDir();
 
       Path tabledir = FSUtils.getTableDir(rootDir, mergedRegionInfo.getTable());
       Path regionAdir = new Path(tabledir, regionA.getEncodedName());
@@ -245,7 +249,7 @@ public class TestRegionMergeTransactionOnCluster {
       for(HColumnDescriptor colFamily : columnFamilies) {
         count += hrfs.getStoreFiles(colFamily.getName()).size();
       }
-      admin.compactRegion(mergedRegionInfo.getRegionName());
+      ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
       // wait until merged region have reference file
       long timeout = System.currentTimeMillis() + waitTime;
@@ -282,7 +286,7 @@ public class TestRegionMergeTransactionOnCluster {
       // files of merging regions
       int cleaned = 0;
       while (cleaned == 0) {
-        cleaned = admin.runCatalogScan();
+        cleaned = ADMIN.runCatalogScan();
         LOG.debug("catalog janitor returned " + cleaned);
         Thread.sleep(50);
       }
@@ -291,14 +295,14 @@ public class TestRegionMergeTransactionOnCluster {
       assertTrue(cleaned > 0);
 
       mergedRegionResult = MetaTableAccessor.getRegionResult(
-        master.getConnection(), mergedRegionInfo.getRegionName());
+        TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
       assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.MERGEA_QUALIFIER) != null);
       assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.MERGEB_QUALIFIER) != null);
 
     } finally {
-      admin.enableCatalogJanitor(true);
+      ADMIN.enableCatalogJanitor(true);
     }
   }
 
@@ -315,8 +319,8 @@ public class TestRegionMergeTransactionOnCluster {
 
     try {
       // Create table and load data.
-      Table table = createTableAndLoadData(master, tableName);
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      Table table = createTableAndLoadData(MASTER, tableName);
+      RegionStates regionStates = MASTER.getAssignmentManager().getRegionStates();
       List<HRegionInfo> regions = regionStates.getRegionsOfTable(tableName);
       // Fake offline one region
       HRegionInfo a = regions.get(0);
@@ -324,7 +328,7 @@ public class TestRegionMergeTransactionOnCluster {
       regionStates.regionOffline(a);
       try {
         // Merge offline region. Region a is offline here
-        admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+        ADMIN.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
         fail("Offline regions should not be able to merge");
       } catch (IOException ie) {
         System.out.println(ie);
@@ -334,7 +338,7 @@ public class TestRegionMergeTransactionOnCluster {
       }
       try {
         // Merge the same region: b and b.
-        admin.mergeRegions(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true);
+        ADMIN.mergeRegions(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true);
         fail("A region should not be able to merge with itself, even forcifully");
       } catch (IOException ie) {
         assertTrue("Exception should mention regions not online",
@@ -343,7 +347,7 @@ public class TestRegionMergeTransactionOnCluster {
       }
       try {
         // Merge unknown regions
-        admin.mergeRegions(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true);
+        ADMIN.mergeRegions(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true);
         fail("Unknown region could not be merged");
       } catch (IOException ie) {
         assertTrue("UnknownRegionException should be thrown",
@@ -359,16 +363,16 @@ public class TestRegionMergeTransactionOnCluster {
   public void testMergeWithReplicas() throws Exception {
     final TableName tableName = TableName.valueOf("testMergeWithReplicas");
     // Create table and load data.
-    createTableAndLoadData(master, tableName, 5, 2);
+    createTableAndLoadData(MASTER, tableName, 5, 2);
     List<Pair<HRegionInfo, ServerName>> initialRegionToServers =
         MetaTableAccessor.getTableRegionsAndLocations(
-            master.getConnection(), tableName);
+            TEST_UTIL.getConnection(), tableName);
     // Merge 1st and 2nd region
-    PairOfSameType<HRegionInfo> mergedRegions = mergeRegionsAndVerifyRegionNum(master, tableName,
+    PairOfSameType<HRegionInfo> mergedRegions = mergeRegionsAndVerifyRegionNum(MASTER, tableName,
         0, 2, 5 * 2 - 2);
     List<Pair<HRegionInfo, ServerName>> currentRegionToServers =
         MetaTableAccessor.getTableRegionsAndLocations(
-            master.getConnection(), tableName);
+            TEST_UTIL.getConnection(), tableName);
     List<HRegionInfo> initialRegions = new ArrayList<HRegionInfo>();
     for (Pair<HRegionInfo, ServerName> p : initialRegionToServers) {
       initialRegions.add(p.getFirst());
@@ -408,10 +412,10 @@ public class TestRegionMergeTransactionOnCluster {
       int regionAnum, int regionBnum) throws Exception {
     List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
         .getTableRegionsAndLocations(
-          master.getConnection(), tablename);
+            TEST_UTIL.getConnection(), tablename);
     HRegionInfo regionA = tableRegions.get(regionAnum).getFirst();
     HRegionInfo regionB = tableRegions.get(regionBnum).getFirst();
-    TEST_UTIL.getHBaseAdmin().mergeRegions(
+    ADMIN.mergeRegions(
       regionA.getEncodedNameAsBytes(),
       regionB.getEncodedNameAsBytes(), false);
     return new PairOfSameType<HRegionInfo>(regionA, regionB);
@@ -424,7 +428,7 @@ public class TestRegionMergeTransactionOnCluster {
     long timeout = System.currentTimeMillis() + waitTime;
     while (System.currentTimeMillis() < timeout) {
       tableRegionsInMeta = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getConnection(), tablename);
+        TEST_UTIL.getConnection(), tablename);
       tableRegionsInMaster = master.getAssignmentManager().getRegionStates()
           .getRegionsOfTable(tablename);
       if (tableRegionsInMeta.size() == expectedRegionNum
@@ -435,7 +439,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     tableRegionsInMeta = MetaTableAccessor.getTableRegionsAndLocations(
-      master.getConnection(), tablename);
+        TEST_UTIL.getConnection(), tablename);
     LOG.info("Regions after merge:" + Joiner.on(',').join(tableRegionsInMeta));
     assertEquals(expectedRegionNum, tableRegionsInMeta.size());
   }
@@ -455,7 +459,7 @@ public class TestRegionMergeTransactionOnCluster {
 
     Table table = TEST_UTIL.createTable(tablename, FAMILYNAME, splitRows);
     if (replication > 1) {
-      HBaseTestingUtility.setReplicas(admin, tablename, replication);
+      HBaseTestingUtility.setReplicas(ADMIN, tablename, replication);
     }
     loadData(table);
     verifyRowCount(table, ROWSIZE);
@@ -465,14 +469,14 @@ public class TestRegionMergeTransactionOnCluster {
     List<Pair<HRegionInfo, ServerName>> tableRegions;
     while (System.currentTimeMillis() < timeout) {
       tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getConnection(), tablename);
+          TEST_UTIL.getConnection(), tablename);
       if (tableRegions.size() == numRegions * replication)
         break;
       Thread.sleep(250);
     }
 
     tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-      master.getConnection(), tablename);
+        TEST_UTIL.getConnection(), tablename);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(numRegions * replication, tableRegions.size());
     return table;
