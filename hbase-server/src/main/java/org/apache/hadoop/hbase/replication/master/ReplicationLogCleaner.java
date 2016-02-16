@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -47,12 +48,11 @@ import org.apache.zookeeper.KeeperException;
  * replication before deleting it when its TTL is over.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abortable {
+public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
   private ZooKeeperWatcher zkw;
   private ReplicationQueuesClient replicationQueues;
   private boolean stopped = false;
-  private boolean aborted;
 
 
   @Override
@@ -136,14 +136,22 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     // Make my own Configuration.  Then I'll have my own connection to zk that
     // I can close myself when comes time.
     Configuration conf = new Configuration(config);
+    try {
+      setConf(conf, new ZooKeeperWatcher(conf, "replicationLogCleaner", null));
+    } catch (IOException e) {
+      LOG.error("Error while configuring " + this.getClass().getName(), e);
+    }
+  }
+
+  @VisibleForTesting
+  public void setConf(Configuration conf, ZooKeeperWatcher zk) {
     super.setConf(conf);
     try {
-      this.zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
-      this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(zkw, conf, this);
+      this.zkw = zk;
+      this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(zkw, conf,
+          new WarnOnlyAbortable());
       this.replicationQueues.init();
     } catch (ReplicationException e) {
-      LOG.error("Error while configuring " + this.getClass().getName(), e);
-    } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
@@ -163,15 +171,19 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     return this.stopped;
   }
 
-  @Override
-  public void abort(String why, Throwable e) {
-    LOG.warn("Aborting ReplicationLogCleaner because " + why, e);
-    this.aborted = true;
-    stop(why);
-  }
+  private static class WarnOnlyAbortable implements Abortable {
 
-  @Override
-  public boolean isAborted() {
-    return this.aborted;
+    @Override
+    public void abort(String why, Throwable e) {
+      LOG.warn("ReplicationLogCleaner received abort, ignoring.  Reason: " + why);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(e);
+      }
+    }
+
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
   }
 }
