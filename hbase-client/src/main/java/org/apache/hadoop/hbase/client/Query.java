@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
@@ -192,8 +193,12 @@ public abstract class Query extends OperationWithAttributes {
    */
 
   public Query setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    colFamTimeRangeMap.put(cf, new TimeRange(minStamp, maxStamp));
-    return this;
+    try {
+      colFamTimeRangeMap.put(cf, new TimeRange(minStamp, maxStamp));
+      return this;
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException(ioe);
+    }
   }
 
   /**
