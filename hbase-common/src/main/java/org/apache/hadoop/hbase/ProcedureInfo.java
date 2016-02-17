@@ -49,6 +49,7 @@ public class ProcedureInfo implements Cloneable {
 
   private long clientAckTime = -1;
 
+  @InterfaceAudience.Private
   public ProcedureInfo(
       final long procId,
       final String procName,
