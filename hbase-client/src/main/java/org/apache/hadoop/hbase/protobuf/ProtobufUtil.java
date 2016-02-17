@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.protobuf;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -438,17 +439,16 @@ public final class ProtobufUtil {
     if (proto.hasStoreOffset()) {
       get.setRowOffsetPerColumnFamily(proto.getStoreOffset());
     }
+    if (proto.getCfTimeRangeCount() > 0) {
+      for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
+        TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
+        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
+      }
+    }
     if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      get.setTimeRange(minStamp, maxStamp);
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -833,6 +833,12 @@ public final class ProtobufUtil {
       scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
     }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
+    for (Entry<byte[], TimeRange> cftr : scan.getColumnFamilyTimeRange().entrySet()) {
+      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
+      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setTimeRange(timeRangeToProto(cftr.getValue()));
+      scanBuilder.addCfTimeRange(b);
+    }
     TimeRange timeRange = scan.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -924,17 +930,16 @@ public final class ProtobufUtil {
     if (proto.hasLoadColumnFamiliesOnDemand()) {
       scan.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
+    if (proto.getCfTimeRangeCount() > 0) {
+      for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
+        TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
+        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
+      }
+    }
     if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      scan.setTimeRange(minStamp, maxStamp);
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      scan.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -989,6 +994,12 @@ public final class ProtobufUtil {
     builder.setMaxVersions(get.getMaxVersions());
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
+    }
+    for (Entry<byte[], TimeRange> cftr : get.getColumnFamilyTimeRange().entrySet()) {
+      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
+      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setTimeRange(timeRangeToProto(cftr.getValue()));
+      builder.addCfTimeRange(b);
     }
     TimeRange timeRange = get.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -1863,7 +1874,7 @@ public final class ProtobufUtil {
       final HRegionInfo region_a, final HRegionInfo region_b,
       final boolean forcible) throws IOException {
     MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
-        region_a.getRegionName(), region_b.getRegionName(),forcible);
+        region_a.getRegionName(), region_b.getRegionName(), forcible);
     try {
       admin.mergeRegions(null, request);
     } catch (ServiceException se) {
@@ -2221,8 +2232,8 @@ public final class ProtobufUtil {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+      buildRevokeRequest(userShortName,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(null, request);
   }
 
@@ -2249,8 +2260,8 @@ public final class ProtobufUtil {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, tableName, f, q, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+      buildRevokeRequest(userShortName, tableName, f, q,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(null, request);
   }
 
@@ -2274,8 +2285,8 @@ public final class ProtobufUtil {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
     AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, namespace, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+      buildRevokeRequest(userShortName, namespace,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.revoke(null, request);
   }
 
@@ -2503,12 +2514,9 @@ public final class ProtobufUtil {
   public static Cell toCell(final CellProtos.Cell cell) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    return CellUtil.createCell(cell.getRow().toByteArray(),
-      cell.getFamily().toByteArray(),
-      cell.getQualifier().toByteArray(),
-      cell.getTimestamp(),
-      (byte)cell.getCellType().getNumber(),
-      cell.getValue().toByteArray());
+    return CellUtil.createCell(cell.getRow().toByteArray(), cell.getFamily().toByteArray(),
+        cell.getQualifier().toByteArray(), cell.getTimestamp(),
+        (byte) cell.getCellType().getNumber(), cell.getValue().toByteArray());
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
@@ -2968,4 +2976,34 @@ public final class ProtobufUtil {
     }
     return scList;
   }
+  private static HBaseProtos.TimeRange.Builder timeRangeToProto(TimeRange timeRange) {
+    HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+    timeRangeBuilder.setFrom(timeRange.getMin());
+    timeRangeBuilder.setTo(timeRange.getMax());
+    return timeRangeBuilder;
+  }
+
+  private static TimeRange protoToTimeRange(HBaseProtos.TimeRange timeRange) throws IOException {
+    long minStamp = 0;
+    long maxStamp = Long.MAX_VALUE;
+    if (timeRange.hasFrom()) {
+      minStamp = timeRange.getFrom();
+    }
+    if (timeRange.hasTo()) {
+      maxStamp = timeRange.getTo();
+    }
+    return new TimeRange(minStamp, maxStamp);
+  }
+
+  private static Map<byte[], TimeRange> convert(List<HBaseProtos.ColumnFamilyTimeRange> cftrs)
+      throws IOException {
+    Map<byte[], TimeRange> result = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    for (HBaseProtos.ColumnFamilyTimeRange cftr : cftrs) {
+      HBaseProtos.TimeRange tr = cftr.getTimeRange();
+      result.put(cftr.getColumnFamily().toByteArray(), new TimeRange(tr.getFrom(), tr.getTo()));
+    }
+    return result;
+  }
+
 }

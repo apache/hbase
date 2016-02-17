@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -56,7 +55,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+  public boolean shouldUseScanner(Scan scan, Store store,
       long oldestUnexpiredTS) {
     // No optimizations implemented by default.
     return true;

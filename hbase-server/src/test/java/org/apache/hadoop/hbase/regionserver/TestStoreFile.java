@@ -33,12 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -55,12 +50,16 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test HStoreFile
@@ -472,8 +471,13 @@ public class TestStoreFile extends HBaseTestCase {
       columns.add("family:col".getBytes());
 
       Scan scan = new Scan(row.getBytes(),row.getBytes());
-      scan.addColumn("family".getBytes(), "family:col".getBytes());
-      boolean exists = scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
+      byte[] family = "family".getBytes();
+      scan.addColumn(family, "family:col".getBytes());
+      Store store = mock(Store.class);
+      HColumnDescriptor hcd = mock(HColumnDescriptor.class);
+      when(hcd.getName()).thenReturn(family);
+      when(store.getFamily()).thenReturn(hcd);
+      boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
       } else {
@@ -662,9 +666,14 @@ public class TestStoreFile extends HBaseTestCase {
           columns.add(("col" + col).getBytes());
 
           Scan scan = new Scan(row.getBytes(),row.getBytes());
-          scan.addColumn("family".getBytes(), ("col"+col).getBytes());
+          byte[] family = "family".getBytes();
+          scan.addColumn(family, ("col" + col).getBytes());
+          Store store = mock(Store.class);
+          HColumnDescriptor hcd = mock(HColumnDescriptor.class);
+          when(hcd.getName()).thenReturn(family);
+          when(store.getFamily()).thenReturn(hcd);
           boolean exists =
-              scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
+              scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
           boolean shouldRowExist = i % 2 == 0;
           boolean shouldColExist = j % 2 == 0;
           shouldColExist = shouldColExist || bt[x] == BloomType.ROW;
@@ -771,7 +780,7 @@ public class TestStoreFile extends HBaseTestCase {
     Scan scan = new Scan();
 
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
-    Path storedir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path storedir = new Path(new Path(this.testDir, "7e0102"), Bytes.toString(family));
     Path dir = new Path(storedir, "1234567890");
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -781,7 +790,7 @@ public class TestStoreFile extends HBaseTestCase {
             .build();
 
     List<KeyValue> kvList = getKeyValueSet(timestamps,numRows,
-        family, qualifier);
+        qualifier, family);
 
     for (KeyValue kv : kvList) {
       writer.append(kv);
@@ -796,21 +805,34 @@ public class TestStoreFile extends HBaseTestCase {
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
 
+    Store store = mock(Store.class);
+    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
+    when(hcd.getName()).thenReturn(family);
+    when(store.getFamily()).thenReturn(hcd);
+
     scan.setTimeRange(20, 100);
-    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+    assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
 
     scan.setTimeRange(1, 2);
-    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+    assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
 
     scan.setTimeRange(8, 10);
-    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+    assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
 
-    scan.setTimeRange(7, 50);
-    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+    // lets make sure it still works with column family time ranges
+    scan.setColumnFamilyTimeRange(family, 7, 50);
+    assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
 
     // This test relies on the timestamp range optimization
+    scan = new Scan();
     scan.setTimeRange(27, 50);
-    assertTrue(!scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+    assertTrue(!scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+    // should still use the scanner because we override the family time range
+    scan = new Scan();
+    scan.setTimeRange(27, 50);
+    scan.setColumnFamilyTimeRange(family, 7, 50);
+    assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
   }
 
   public void testCacheOnWriteEvictOnClose() throws Exception {

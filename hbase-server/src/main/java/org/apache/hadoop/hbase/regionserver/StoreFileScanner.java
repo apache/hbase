@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.SortedSet;
+import java.util.NavigableSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 
@@ -429,9 +430,16 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
-    return reader.passesTimerangeFilter(scan, oldestUnexpiredTS)
-        && reader.passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, columns);
+  public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
+    byte[] columnFamily = store.getFamily().getName();
+    TimeRange timeRange = scan.getColumnFamilyTimeRange().get(columnFamily);
+    if (timeRange == null) {
+      timeRange = scan.getTimeRange();
+    }
+
+    NavigableSet<byte[]> columns = scan.getFamilyMap().get(columnFamily);
+    return reader.passesTimerangeFilter(timeRange, oldestUnexpiredTS) && reader
+        .passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, columns);
   }
 
   @Override

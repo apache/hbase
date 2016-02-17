@@ -159,7 +159,12 @@ public class ScanQueryMatcher {
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       ScanType scanType, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
       long now, RegionCoprocessorHost regionCoprocessorHost) throws IOException {
-    this.tr = scan.getTimeRange();
+    TimeRange timeRange = scan.getColumnFamilyTimeRange().get(scanInfo.getFamily());
+    if (timeRange == null) {
+      this.tr = scan.getTimeRange();
+    } else {
+      this.tr = timeRange;
+    }
     this.rowComparator = scanInfo.getComparator();
     this.regionCoprocessorHost = regionCoprocessorHost;
     this.deletes =  instantiateDeleteTracker();
