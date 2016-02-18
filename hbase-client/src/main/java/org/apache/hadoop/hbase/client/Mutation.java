@@ -82,6 +82,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   private static final String OP_ATTRIBUTE_TTL = "_ttl";
 
+  private static final String RETURN_RESULTS = "_rr_";
+
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
@@ -448,6 +450,23 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   public Mutation setTTL(long ttl) {
     setAttribute(OP_ATTRIBUTE_TTL, Bytes.toBytes(ttl));
+    return this;
+  }
+
+  /**
+   * @return current value for returnResults
+   */
+  // Used by Increment and Append only.
+  @InterfaceAudience.Private
+  protected boolean isReturnResults() {
+    byte[] v = getAttribute(RETURN_RESULTS);
+    return v == null ? true : Bytes.toBoolean(v);
+  }
+
+  @InterfaceAudience.Private
+  // Used by Increment and Append only.
+  protected Mutation setReturnResults(boolean returnResults) {
+    setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
     return this;
   }
 

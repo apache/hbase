@@ -6972,7 +6972,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       lock(this.updatesLock.readLock());
       try {
         Result cpResult = doCoprocessorPreCall(op, mutation);
-        if (cpResult != null) return cpResult;
+        if (cpResult != null) {
+          return returnResults? cpResult: null;
+        }
         Durability effectiveDurability = getEffectiveDurability(mutation.getDurability());
         Map<Store, List<Cell>> forMemStore =
             new HashMap<Store, List<Cell>>(mutation.getFamilyCellMap().size());
@@ -7000,7 +7002,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.updatesLock.readLock().unlock();
       }
       // If results is null, then client asked that we not return the calculated results.
-      return results !=  null? Result.create(results): null;
+      return results != null && returnResults? Result.create(results): null;
     } finally {
       // Call complete always, even on success. doDelta is doing a Get READ_UNCOMMITTED when it goes
       // to get current value under an exclusive lock so no need so no need to wait to return to
