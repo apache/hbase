@@ -177,6 +177,10 @@ public class WALSplitter {
   // Min batch size when replay WAL edits
   private final int minBatchSize;
 
+  // the file being split currently
+  private FileStatus fileBeingSplit;
+
+  @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path rootDir,
       FileSystem fs, LastSequenceId idChecker,
       CoordinatedStateManager csm, RecoveryMode mode) {
@@ -267,6 +271,7 @@ public class WALSplitter {
    * log splitting implementation, splits one log file.
    * @param logfile should be an actual log file.
    */
+  @VisibleForTesting
   boolean splitLogFile(FileStatus logfile, CancelableProgressable reporter) throws IOException {
     Preconditions.checkState(status == null);
     Preconditions.checkArgument(logfile.isFile(),
@@ -285,6 +290,7 @@ public class WALSplitter {
         TaskMonitor.get().createStatus(
           "Splitting log file " + logfile.getPath() + "into a temporary staging area.");
     Reader in = null;
+    this.fileBeingSplit = logfile;
     try {
       long logLength = logfile.getLen();
       LOG.info("Splitting wal: " + logPath + ", length=" + logLength);
@@ -358,7 +364,7 @@ public class WALSplitter {
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
-        if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
+        if (lastFlushedSequenceId >= entry.getKey().getSequenceId()) {
           editsSkipped++;
           continue;
         }
@@ -444,7 +450,7 @@ public class WALSplitter {
     finishSplitLogFile(rootdir, oldLogDir, logPath, conf);
   }
 
-  static void finishSplitLogFile(Path rootdir, Path oldLogDir,
+  private static void finishSplitLogFile(Path rootdir, Path oldLogDir,
       Path logPath, Configuration conf) throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
@@ -518,12 +524,13 @@ public class WALSplitter {
    * @param fs
    * @param logEntry
    * @param rootDir HBase root dir.
+   * @param fileBeingSplit the file being split currently. Used to generate tmp file name.
    * @return Path to file into which to dump split log edits.
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  static Path getRegionSplitEditsPath(final FileSystem fs,
-      final Entry logEntry, final Path rootDir, boolean isCreate)
+  private static Path getRegionSplitEditsPath(final FileSystem fs,
+      final Entry logEntry, final Path rootDir, FileStatus fileBeingSplit)
   throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
@@ -551,17 +558,18 @@ public class WALSplitter {
       }
     }
 
-    if (isCreate && !fs.exists(dir)) {
-      if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
+    if (!fs.exists(dir) && !fs.mkdirs(dir)) {
+      LOG.warn("mkdir failed on " + dir);
     }
+    // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
-    String fileName = formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum());
-    fileName = getTmpRecoveredEditsFileName(fileName);
+    String fileName = formatRecoveredEditsFileName(logEntry.getKey().getSequenceId());
+    fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileBeingSplit.getPath().getName());
     return new Path(dir, fileName);
   }
 
-  static String getTmpRecoveredEditsFileName(String fileName) {
+  private static String getTmpRecoveredEditsFileName(String fileName) {
     return fileName + RECOVERED_LOG_TMPFILE_SUFFIX;
   }
 
@@ -573,12 +581,13 @@ public class WALSplitter {
    * @param maximumEditLogSeqNum
    * @return dstPath take file's last edit log seq num as the name
    */
-  static Path getCompletedRecoveredEditsFilePath(Path srcPath,
-      Long maximumEditLogSeqNum) {
+  private static Path getCompletedRecoveredEditsFilePath(Path srcPath,
+      long maximumEditLogSeqNum) {
     String fileName = formatRecoveredEditsFileName(maximumEditLogSeqNum);
     return new Path(srcPath.getParent(), fileName);
   }
 
+  @VisibleForTesting
   static String formatRecoveredEditsFileName(final long seqid) {
     return String.format("%019d", seqid);
   }
@@ -1183,9 +1192,9 @@ public class WALSplitter {
       synchronized (regionMaximumEditLogSeqNum) {
         Long currentMaxSeqNum = regionMaximumEditLogSeqNum.get(entry.getKey()
             .getEncodedRegionName());
-        if (currentMaxSeqNum == null || entry.getKey().getLogSeqNum() > currentMaxSeqNum) {
+        if (currentMaxSeqNum == null || entry.getKey().getSequenceId() > currentMaxSeqNum) {
           regionMaximumEditLogSeqNum.put(entry.getKey().getEncodedRegionName(), entry.getKey()
-              .getLogSeqNum());
+              .getSequenceId());
         }
       }
     }
@@ -1304,6 +1313,39 @@ public class WALSplitter {
       return splits;
     }
 
+    // delete the one with fewer wal entries
+    private void deleteOneWithFewerEntries(WriterAndPath wap, Path dst) throws IOException {
+      long dstMinLogSeqNum = -1L;
+      try (WAL.Reader reader = walFactory.createReader(fs, dst)) {
+        WAL.Entry entry = reader.next();
+        if (entry != null) {
+          dstMinLogSeqNum = entry.getKey().getSequenceId();
+        }
+      } catch (EOFException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+            "Got EOF when reading first WAL entry from " + dst + ", an empty or broken WAL file?",
+            e);
+        }
+      }
+      if (wap.minLogSeqNum < dstMinLogSeqNum) {
+        LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+            + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+            + fs.getFileStatus(dst).getLen());
+        if (!fs.delete(dst, false)) {
+          LOG.warn("Failed deleting of old " + dst);
+          throw new IOException("Failed deleting of old " + dst);
+        }
+      } else {
+        LOG.warn("Found existing old edits file and we have less entries. Deleting " + wap.p
+            + ", length=" + fs.getFileStatus(wap.p).getLen());
+        if (!fs.delete(wap.p, false)) {
+          LOG.warn("Failed deleting of " + wap.p);
+          throw new IOException("Failed deleting of " + wap.p);
+        }
+      }
+    }
+
     /**
      * Close all of the output streams.
      * @return the list of paths written.
@@ -1359,13 +1401,7 @@ public class WALSplitter {
               regionMaximumEditLogSeqNum.get(writersEntry.getKey()));
             try {
               if (!dst.equals(wap.p) && fs.exists(dst)) {
-                LOG.warn("Found existing old edits file. It could be the "
-                    + "result of a previous failed split attempt. Deleting " + dst + ", length="
-                    + fs.getFileStatus(dst).getLen());
-                if (!fs.delete(dst, false)) {
-                  LOG.warn("Failed deleting of old " + dst);
-                  throw new IOException("Failed deleting of old " + dst);
-                }
+                deleteOneWithFewerEntries(wap, dst);
               }
               // Skip the unit tests which create a splitter that reads and
               // writes the data without touching disk.
@@ -1490,7 +1526,7 @@ public class WALSplitter {
      * @return a path with a write for that path. caller should close.
      */
     private WriterAndPath createWAP(byte[] region, Entry entry, Path rootdir) throws IOException {
-      Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir, true);
+      Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir, fileBeingSplit);
       if (regionedits == null) {
         return null;
       }
@@ -1504,7 +1540,7 @@ public class WALSplitter {
       }
       Writer w = createWriter(regionedits);
       LOG.debug("Creating writer path=" + regionedits);
-      return new WriterAndPath(regionedits, w);
+      return new WriterAndPath(regionedits, w, entry.getKey().getSequenceId());
     }
 
     private void filterCellByStore(Entry logEntry) {
@@ -1524,7 +1560,7 @@ public class WALSplitter {
           Long maxSeqId = maxSeqIdInStores.get(family);
           // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
           // or the master was crashed before and we can not get the information.
-          if (maxSeqId == null || maxSeqId.longValue() < logEntry.getKey().getLogSeqNum()) {
+          if (maxSeqId == null || maxSeqId.longValue() < logEntry.getKey().getSequenceId()) {
             keptCells.add(cell);
           }
         }
@@ -1630,10 +1666,12 @@ public class WALSplitter {
   private final static class WriterAndPath extends SinkWriter {
     final Path p;
     final Writer w;
+    final long minLogSeqNum;
 
-    WriterAndPath(final Path p, final Writer w) {
+    WriterAndPath(final Path p, final Writer w, final long minLogSeqNum) {
       this.p = p;
       this.w = w;
+      this.minLogSeqNum = minLogSeqNum;
     }
   }
 
@@ -1824,7 +1862,7 @@ public class WALSplitter {
             }
             if (maxStoreSequenceIds != null) {
               Long maxStoreSeqId = maxStoreSequenceIds.get(family);
-              if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
+              if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getSequenceId()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
                 skippedCells.add(cell);
                 continue;

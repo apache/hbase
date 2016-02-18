@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -1039,6 +1040,56 @@ public class TestWALReplay {
     assertEquals(result.size(), region2.get(g).size());
   }
 
+  /**
+   * testcase for https://issues.apache.org/jira/browse/HBASE-14949.
+   */
+  private void testNameConflictWhenSplit(boolean largeFirst) throws IOException {
+    final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    deleteDir(basedir);
+
+    final HTableDescriptor htd = createBasic1FamilyHTD(tableName);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region);
+    final byte[] family = htd.getColumnFamilies()[0].getName();
+    final byte[] rowName = tableName.getName();
+    FSWALEntry entry1 = createFSWALEntry(htd, hri, 1L, rowName, family, ee, mvcc, 1);
+    FSWALEntry entry2 = createFSWALEntry(htd, hri, 2L, rowName, family, ee, mvcc, 2);
+
+    Path largeFile = new Path(logDir, "wal-1");
+    Path smallFile = new Path(logDir, "wal-2");
+    writerWALFile(largeFile, Arrays.asList(entry1, entry2));
+    writerWALFile(smallFile, Arrays.asList(entry2));
+    FileStatus first, second;
+    if (largeFirst) {
+      first = fs.getFileStatus(largeFile);
+      second = fs.getFileStatus(smallFile);
+    } else {
+      first = fs.getFileStatus(smallFile);
+      second = fs.getFileStatus(largeFile);
+    }
+    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null,
+      RecoveryMode.LOG_SPLITTING, wals);
+    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null,
+      RecoveryMode.LOG_SPLITTING, wals);
+    WAL wal = createWAL(this.conf);
+    region = HRegion.openHRegion(conf, this.fs, hbaseRootDir, hri, htd, wal);
+    assertTrue(region.getOpenSeqNum() > mvcc.getWritePoint());
+    assertEquals(2, region.get(new Get(rowName)).size());
+  }
+
+  @Test
+  public void testNameConflictWhenSplit0() throws IOException {
+    testNameConflictWhenSplit(true);
+  }
+
+  @Test
+  public void testNameConflictWhenSplit1() throws IOException {
+    testNameConflictWhenSplit(false);
+  }
+
   static class MockWAL extends FSHLog {
     boolean doCompleteCacheFlush = false;
 
@@ -1107,27 +1158,42 @@ public class TestWALReplay {
     }
   }
 
+  private WALKey createWALKey(final TableName tableName, final HRegionInfo hri,
+      final MultiVersionConcurrencyControl mvcc) {
+    return new WALKey(hri.getEncodedNameAsBytes(), tableName, 999, mvcc);
+  }
+
+  private WALEdit createWALEdit(final byte[] rowName, final byte[] family, EnvironmentEdge ee,
+      int index) {
+    byte[] qualifierBytes = Bytes.toBytes(Integer.toString(index));
+    byte[] columnBytes = Bytes.toBytes(Bytes.toString(family) + ":" + Integer.toString(index));
+    WALEdit edit = new WALEdit();
+    edit.add(new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
+    return edit;
+  }
+
+  private FSWALEntry createFSWALEntry(HTableDescriptor htd, HRegionInfo hri, long sequence,
+      byte[] rowName, byte[] family, EnvironmentEdge ee, MultiVersionConcurrencyControl mvcc,
+      int index) throws IOException {
+    FSWALEntry entry =
+        new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc), createWALEdit(
+          rowName, family, ee, index), htd, hri, true);
+    entry.stampRegionSequenceId();
+    return entry;
+  }
+
   private void addWALEdits(final TableName tableName, final HRegionInfo hri, final byte[] rowName,
       final byte[] family, final int count, EnvironmentEdge ee, final WAL wal,
-      final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc)
-  throws IOException {
-    String familyStr = Bytes.toString(family);
+      final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc) throws IOException {
     for (int j = 0; j < count; j++) {
-      byte[] qualifierBytes = Bytes.toBytes(Integer.toString(j));
-      byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
-      WALEdit edit = new WALEdit();
-      edit.add(new KeyValue(rowName, family, qualifierBytes,
-        ee.currentTime(), columnBytes));
-      wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,999, mvcc),
-          edit, true);
+      wal.append(htd, hri, createWALKey(tableName, hri, mvcc),
+        createWALEdit(rowName, family, ee, j), true);
     }
     wal.sync();
   }
 
-  static List<Put> addRegionEdits (final byte [] rowName, final byte [] family,
-      final int count, EnvironmentEdge ee, final Region r,
-      final String qualifierPrefix)
-  throws IOException {
+  static List<Put> addRegionEdits(final byte[] rowName, final byte[] family, final int count,
+      EnvironmentEdge ee, final Region r, final String qualifierPrefix) throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (int j = 0; j < count; j++) {
       byte[] qualifier = Bytes.toBytes(qualifierPrefix + Integer.toString(j));
@@ -1187,5 +1253,16 @@ public class TestWALReplay {
     HColumnDescriptor c = new HColumnDescriptor(Bytes.toBytes("c"));
     htd.addFamily(c);
     return htd;
+  }
+
+  private void writerWALFile(Path file, List<FSWALEntry> entries) throws IOException {
+    fs.mkdirs(file.getParent());
+    ProtobufLogWriter writer = new ProtobufLogWriter();
+    writer.init(fs, file, conf, true);
+    for (FSWALEntry entry : entries) {
+      writer.append(entry);
+    }
+    writer.sync();
+    writer.close();
   }
 }
