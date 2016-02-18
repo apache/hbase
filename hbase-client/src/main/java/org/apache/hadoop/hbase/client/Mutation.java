@@ -83,7 +83,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   private static final String OP_ATTRIBUTE_TTL = "_ttl";
 
-  private static final String RETURN_RESULTS = "_rr_";
+  /**
+   * @deprecated this field is private as of HBase 2.0.
+   */
+  @Deprecated
+  protected static final String RETURN_RESULTS = "_rr_";
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
