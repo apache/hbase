@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.util.FastLongHistogram;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.Snapshot;
 
 /**
  * Snapshot of block cache age in cache.
@@ -28,47 +26,45 @@ import com.yammer.metrics.stats.Snapshot;
  */
 @JsonIgnoreProperties({"ageHistogram", "snapshot"})
 public class AgeSnapshot {
-  private final Histogram ageHistogram;
-  private final Snapshot snapshot;
 
-  AgeSnapshot(final Histogram ageHistogram) {
+  private final FastLongHistogram ageHistogram;
+  private final long[] quantiles;
+
+  AgeSnapshot(final FastLongHistogram ageHistogram) {
     this.ageHistogram = ageHistogram;
-    this.snapshot = ageHistogram.getSnapshot();
+    this.quantiles = ageHistogram.getQuantiles(new double[]{0.75, 0.95, 0.98, 0.99, 0.999});
   }
 
   public double get75thPercentile() {
-    return snapshot.get75thPercentile();
+    return quantiles[0];
   }
 
   public double get95thPercentile() {
-    return snapshot.get95thPercentile();
+    return quantiles[1];
   }
 
   public double get98thPercentile() {
-    return snapshot.get98thPercentile();
-  }
-
-  public double get999thPercentile() {
-    return snapshot.get999thPercentile();
+    return quantiles[2];
   }
 
   public double get99thPercentile() {
-    return snapshot.get99thPercentile();
+    return quantiles[3];
   }
 
+  public double get999thPercentile() {
+    return quantiles[4];
+  }
+
+
   public double getMean() {
-    return this.ageHistogram.mean();
+    return this.ageHistogram.getMean();
   }
 
   public double getMax() {
-    return ageHistogram.max();
+    return this.ageHistogram.getMax();
   }
 
   public double getMin() {
-    return ageHistogram.min();
-  }
-
-  public double getStdDev() {
-    return ageHistogram.stdDev();
+    return this.ageHistogram.getMin();
   }
 }

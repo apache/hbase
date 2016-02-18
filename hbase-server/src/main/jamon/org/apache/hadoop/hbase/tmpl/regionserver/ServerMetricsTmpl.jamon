@@ -34,7 +34,6 @@ org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;
 org.apache.hadoop.util.StringUtils;
-com.yammer.metrics.stats.Snapshot;
 java.lang.management.ManagementFactory;
 </%import>
 <div class="tabbable">

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
 /**
  * Hadoop Two implementation of a metrics2 source that will export metrics from the Rest server to
@@ -31,15 +31,15 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 @InterfaceAudience.Private
 public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsRESTSource {
 
-  private MutableCounterLong request;
-  private MutableCounterLong sucGet;
-  private MutableCounterLong sucPut;
-  private MutableCounterLong sucDel;
-  private MutableCounterLong sucScan;
-  private MutableCounterLong fGet;
-  private MutableCounterLong fPut;
-  private MutableCounterLong fDel;
-  private MutableCounterLong fScan;
+  private MutableFastCounter request;
+  private MutableFastCounter sucGet;
+  private MutableFastCounter sucPut;
+  private MutableFastCounter sucDel;
+  private MutableFastCounter sucScan;
+  private MutableFastCounter fGet;
+  private MutableFastCounter fPut;
+  private MutableFastCounter fDel;
+  private MutableFastCounter fScan;
 
   public MetricsRESTSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, CONTEXT, JMX_CONTEXT);
@@ -55,17 +55,17 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
   @Override
   public void init() {
     super.init();
-    request = getMetricsRegistry().getLongCounter(REQUEST_KEY, 0l);
+    request = getMetricsRegistry().getCounter(REQUEST_KEY, 0l);
 
-    sucGet = getMetricsRegistry().getLongCounter(SUCCESSFUL_GET_KEY, 0l);
-    sucPut = getMetricsRegistry().getLongCounter(SUCCESSFUL_PUT_KEY, 0l);
-    sucDel = getMetricsRegistry().getLongCounter(SUCCESSFUL_DELETE_KEY, 0l);
-    sucScan = getMetricsRegistry().getLongCounter(SUCCESSFUL_SCAN_KEY, 0L);
+    sucGet = getMetricsRegistry().getCounter(SUCCESSFUL_GET_KEY, 0l);
+    sucPut = getMetricsRegistry().getCounter(SUCCESSFUL_PUT_KEY, 0l);
+    sucDel = getMetricsRegistry().getCounter(SUCCESSFUL_DELETE_KEY, 0l);
+    sucScan = getMetricsRegistry().getCounter(SUCCESSFUL_SCAN_KEY, 0L);
 
-    fGet = getMetricsRegistry().getLongCounter(FAILED_GET_KEY, 0l);
-    fPut = getMetricsRegistry().getLongCounter(FAILED_PUT_KEY, 0l);
-    fDel = getMetricsRegistry().getLongCounter(FAILED_DELETE_KEY, 0l);
-    fScan = getMetricsRegistry().getLongCounter(FAILED_SCAN_KEY, 0l);
+    fGet = getMetricsRegistry().getCounter(FAILED_GET_KEY, 0l);
+    fPut = getMetricsRegistry().getCounter(FAILED_PUT_KEY, 0l);
+    fDel = getMetricsRegistry().getCounter(FAILED_DELETE_KEY, 0l);
+    fScan = getMetricsRegistry().getCounter(FAILED_SCAN_KEY, 0l);
   }
 
   @Override

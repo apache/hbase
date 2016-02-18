@@ -22,18 +22,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.MetricsRegistry;
+import org.apache.hadoop.hbase.util.Counter;
+import org.apache.hadoop.hbase.util.FastLongHistogram;
 
 /**
  * Class that implements cache metrics.
  */
 @InterfaceAudience.Private
 public class CacheStats {
-  /**
-   * Needed making histograms.
-   */
-  private static final MetricsRegistry METRICS = new MetricsRegistry();
 
   /** Sliding window statistics. The number of metric periods to include in
    * sliding window hit ratio calculations.
@@ -41,10 +37,10 @@ public class CacheStats {
   static final int DEFAULT_WINDOW_PERIODS = 5;
 
   /** The number of getBlock requests that were cache hits */
-  private final AtomicLong hitCount = new AtomicLong(0);
+  private final Counter hitCount = new Counter();
 
   /** The number of getBlock requests that were cache hits from primary replica */
-  private final AtomicLong primaryHitCount = new AtomicLong(0);
+  private final Counter primaryHitCount = new Counter();
   
   /**
    * The number of getBlock requests that were cache hits, but only from
@@ -52,27 +48,27 @@ public class CacheStats {
    * attempt to read from the block cache even if they will not put new blocks
    * into the block cache.  See HBASE-2253 for more information.
    */
-  private final AtomicLong hitCachingCount = new AtomicLong(0);
+  private final Counter hitCachingCount = new Counter();
 
   /** The number of getBlock requests that were cache misses */
-  private final AtomicLong missCount = new AtomicLong(0);
+  private final Counter missCount = new Counter();
 
   /** The number of getBlock requests for primary replica that were cache misses */
-  private final AtomicLong primaryMissCount = new AtomicLong(0);
+  private final Counter primaryMissCount = new Counter();
   /**
    * The number of getBlock requests that were cache misses, but only from
    * requests that were set to use the block cache.
    */
-  private final AtomicLong missCachingCount = new AtomicLong(0);
+  private final Counter missCachingCount = new Counter();
 
   /** The number of times an eviction has occurred */
-  private final AtomicLong evictionCount = new AtomicLong(0);
+  private final Counter evictionCount = new Counter();
 
   /** The total number of blocks that have been evicted */
-  private final AtomicLong evictedBlockCount = new AtomicLong(0);
+  private final Counter evictedBlockCount = new Counter();
 
   /** The total number of blocks for primary replica that have been evicted */
-  private final AtomicLong primaryEvictedBlockCount = new AtomicLong(0);
+  private final Counter primaryEvictedBlockCount = new Counter();
 
   /** The total number of blocks that were not inserted. */
   private final AtomicLong failedInserts = new AtomicLong(0);
@@ -100,7 +96,7 @@ public class CacheStats {
   /**
    * Keep running age at eviction time
    */
-  private Histogram ageAtEviction;
+  private FastLongHistogram ageAtEviction;
   private long startTime = System.nanoTime();
 
   public CacheStats(final String name) {
@@ -113,7 +109,7 @@ public class CacheStats {
     this.hitCachingCounts = initializeZeros(numPeriodsInWindow);
     this.requestCounts = initializeZeros(numPeriodsInWindow);
     this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
-    this.ageAtEviction = METRICS.newHistogram(CacheStats.class, name + ".ageAtEviction");
+    this.ageAtEviction = new FastLongHistogram();
   }
 
   @Override
@@ -125,14 +121,13 @@ public class CacheStats {
       ", evictedBlockCount=" + getEvictedCount() +
       ", primaryMissCount=" + getPrimaryMissCount() +
       ", primaryHitCount=" + getPrimaryHitCount() +
-      ", evictedAgeMean=" + snapshot.getMean() +
-      ", evictedAgeStdDev=" + snapshot.getStdDev();
+      ", evictedAgeMean=" + snapshot.getMean();
   }
 
   public void miss(boolean caching, boolean primary) {
-    missCount.incrementAndGet();
-    if (primary) primaryMissCount.incrementAndGet();
-    if (caching) missCachingCount.incrementAndGet();
+    missCount.increment();
+    if (primary) primaryMissCount.increment();
+    if (caching) missCachingCount.increment();
   }
 
   public void hit(boolean caching) {
@@ -140,20 +135,20 @@ public class CacheStats {
   }
 
   public void hit(boolean caching, boolean primary) {
-    hitCount.incrementAndGet();
-    if (primary) primaryHitCount.incrementAndGet();
-    if (caching) hitCachingCount.incrementAndGet();
+    hitCount.increment();
+    if (primary) primaryHitCount.increment();
+    if (caching) hitCachingCount.increment();
   }
 
   public void evict() {
-    evictionCount.incrementAndGet();
+    evictionCount.increment();
   }
 
   public void evicted(final long t, boolean primary) {
-    if (t > this.startTime) this.ageAtEviction.update(t - this.startTime);
-    this.evictedBlockCount.incrementAndGet();
+    if (t > this.startTime) this.ageAtEviction.add(t - this.startTime,1);
+    this.evictedBlockCount.increment();
     if (primary) {
-      primaryEvictedBlockCount.incrementAndGet();
+      primaryEvictedBlockCount.increment();
     }
   }
 

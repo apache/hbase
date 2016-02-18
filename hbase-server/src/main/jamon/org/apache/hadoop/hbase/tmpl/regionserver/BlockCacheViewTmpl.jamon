@@ -37,7 +37,6 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
 org.apache.hadoop.util.StringUtils;
-com.yammer.metrics.stats.Snapshot;
 </%import>
 <%java>
   BlockCache bc = cacheConfig == null ? null : cacheConfig.getBlockCache();

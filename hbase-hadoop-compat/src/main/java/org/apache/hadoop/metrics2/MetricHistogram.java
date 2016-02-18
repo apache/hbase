@@ -30,10 +30,13 @@ public interface MetricHistogram {
   String MAX_METRIC_NAME = "_max";
   String MEAN_METRIC_NAME = "_mean";
   String MEDIAN_METRIC_NAME = "_median";
+  String TWENTY_FIFTH_PERCENTILE_METRIC_NAME = "_25th_percentile";
   String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
   String NINETIETH_PERCENTILE_METRIC_NAME = "_90th_percentile";
   String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
+  String NINETY_EIGHTH_PERCENTILE_METRIC_NAME = "_98th_percentile";
   String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
+  String NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME = "_99.9th_percentile";
 
   /**
    * Add a single value to a histogram's stream of values.

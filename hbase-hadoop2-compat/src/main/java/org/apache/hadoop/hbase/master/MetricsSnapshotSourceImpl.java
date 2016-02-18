@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
-import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.hadoop.metrics2.MetricHistogram;
 
 @InterfaceAudience.Private
 public class MetricsSnapshotSourceImpl extends BaseSourceImpl implements MetricsSnapshotSource {
 
-  private MutableHistogram snapshotTimeHisto;
-  private MutableHistogram snapshotCloneTimeHisto;
-  private MutableHistogram snapshotRestoreTimeHisto;
+  private MetricHistogram snapshotTimeHisto;
+  private MetricHistogram snapshotCloneTimeHisto;
+  private MetricHistogram snapshotRestoreTimeHisto;
 
   public MetricsSnapshotSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);

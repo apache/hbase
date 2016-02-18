@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
@@ -179,17 +179,19 @@ public class HFile {
    */
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
   // For measuring number of checksum failures
-  static final AtomicLong checksumFailures = new AtomicLong();
+  static final Counter checksumFailures = new Counter();
 
   // for test purpose
-  public static final AtomicLong dataBlockReadCnt = new AtomicLong(0);
+  public static final Counter dataBlockReadCnt = new Counter();
 
   /**
    * Number of checksum verification failures. It also
    * clears the counter.
    */
   public static final long getChecksumFailuresCount() {
-    return checksumFailures.getAndSet(0);
+    long count = checksumFailures.get();
+    checksumFailures.set(0);
+    return count;
   }
 
   /** API required to write an {@link HFile} */

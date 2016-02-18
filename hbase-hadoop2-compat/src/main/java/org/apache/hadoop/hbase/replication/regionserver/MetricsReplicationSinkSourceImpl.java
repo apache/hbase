@@ -18,21 +18,21 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkSource {
 
   private final MutableGaugeLong ageGauge;
-  private final MutableCounterLong batchesCounter;
-  private final MutableCounterLong opsCounter;
-  private final MutableCounterLong hfilesCounter;
+  private final MutableFastCounter batchesCounter;
+  private final MutableFastCounter opsCounter;
+  private final MutableFastCounter hfilesCounter;
 
   public MetricsReplicationSinkSourceImpl(MetricsReplicationSourceImpl rms) {
-    ageGauge = rms.getMetricsRegistry().getLongGauge(SINK_AGE_OF_LAST_APPLIED_OP, 0L);
-    batchesCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_BATCHES, 0L);
-    opsCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_OPS, 0L);
-    hfilesCounter = rms.getMetricsRegistry().getLongCounter(SINK_APPLIED_HFILES, 0L);
+    ageGauge = rms.getMetricsRegistry().getGauge(SINK_AGE_OF_LAST_APPLIED_OP, 0L);
+    batchesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_BATCHES, 0L);
+    opsCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_OPS, 0L);
+    hfilesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_HFILES, 0L);
   }
 
   @Override public void setLastAppliedOpAge(long age) {

@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
 /**
  * Hadoop2 implementation of MetricsMasterSource.
@@ -35,7 +35,7 @@ public class MetricsMasterSourceImpl
     extends BaseSourceImpl implements MetricsMasterSource {
 
   private final MetricsMasterWrapper masterWrapper;
-  private MutableCounterLong clusterRequestsCounter;
+  private MutableFastCounter clusterRequestsCounter;
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME,

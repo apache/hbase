@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
 
 /**
@@ -36,10 +36,10 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MetricHistogram appendSizeHisto;
   private final MetricHistogram appendTimeHisto;
   private final MetricHistogram syncTimeHisto;
-  private final MutableCounterLong appendCount;
-  private final MutableCounterLong slowAppendCount;
-  private final MutableCounterLong logRollRequested;
-  private final MutableCounterLong lowReplicationLogRollRequested;
+  private final MutableFastCounter appendCount;
+  private final MutableFastCounter slowAppendCount;
+  private final MutableFastCounter logRollRequested;
+  private final MutableFastCounter lowReplicationLogRollRequested;
 
   public MetricsWALSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
