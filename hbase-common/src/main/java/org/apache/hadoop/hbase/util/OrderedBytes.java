@@ -1502,7 +1502,8 @@ public class OrderedBytes {
    * false otherwise.
    */
   public static boolean isEncodedValue(PositionedByteRange src) {
-    return isNull(src) || isNumeric(src) || isFixedInt32(src) || isFixedInt64(src)
+    return isNull(src) || isNumeric(src) || isFixedInt8(src) || isFixedInt16(src)
+        || isFixedInt32(src) || isFixedInt64(src)
         || isFixedFloat32(src) || isFixedFloat64(src) || isText(src) || isBlobCopy(src)
         || isBlobVar(src);
   }
@@ -1549,6 +1550,24 @@ public class OrderedBytes {
    */
   public static boolean isNumericZero(PositionedByteRange src) {
     return ZERO ==
+        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width
+   * Int8 encoding, false otherwise.
+   */
+  public static boolean isFixedInt8(PositionedByteRange src) {
+    return FIXED_INT8 ==
+        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width
+   * Int16 encoding, false otherwise.
+   */
+  public static boolean isFixedInt16(PositionedByteRange src) {
+    return FIXED_INT16 ==
         (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
@@ -1733,7 +1752,7 @@ public class OrderedBytes {
         new SimplePositionedMutableByteRange(buff.getBytes(), buff.getOffset(), buff.getLength());
     b.setPosition(buff.getPosition());
     int cnt = 0;
-    for (; isEncodedValue(b); skip(buff), cnt++)
+    for (; isEncodedValue(b); skip(b), cnt++)
       ;
     return cnt;
   }
