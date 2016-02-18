@@ -364,7 +364,7 @@ public class WALSplitter {
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
-        if (lastFlushedSequenceId >= entry.getKey().getSequenceId()) {
+        if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
           editsSkipped++;
           continue;
         }
@@ -564,7 +564,7 @@ public class WALSplitter {
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
-    String fileName = formatRecoveredEditsFileName(logEntry.getKey().getSequenceId());
+    String fileName = formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum());
     fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileBeingSplit.getPath().getName());
     return new Path(dir, fileName);
   }
@@ -1192,9 +1192,9 @@ public class WALSplitter {
       synchronized (regionMaximumEditLogSeqNum) {
         Long currentMaxSeqNum = regionMaximumEditLogSeqNum.get(entry.getKey()
             .getEncodedRegionName());
-        if (currentMaxSeqNum == null || entry.getKey().getSequenceId() > currentMaxSeqNum) {
+        if (currentMaxSeqNum == null || entry.getKey().getLogSeqNum() > currentMaxSeqNum) {
           regionMaximumEditLogSeqNum.put(entry.getKey().getEncodedRegionName(), entry.getKey()
-              .getSequenceId());
+              .getLogSeqNum());
         }
       }
     }
@@ -1319,7 +1319,7 @@ public class WALSplitter {
       try (WAL.Reader reader = walFactory.createReader(fs, dst)) {
         WAL.Entry entry = reader.next();
         if (entry != null) {
-          dstMinLogSeqNum = entry.getKey().getSequenceId();
+          dstMinLogSeqNum = entry.getKey().getLogSeqNum();
         }
       } catch (EOFException e) {
         if (LOG.isDebugEnabled()) {
@@ -1540,7 +1540,7 @@ public class WALSplitter {
       }
       Writer w = createWriter(regionedits);
       LOG.debug("Creating writer path=" + regionedits);
-      return new WriterAndPath(regionedits, w, entry.getKey().getSequenceId());
+      return new WriterAndPath(regionedits, w, entry.getKey().getLogSeqNum());
     }
 
     private void filterCellByStore(Entry logEntry) {
@@ -1560,7 +1560,7 @@ public class WALSplitter {
           Long maxSeqId = maxSeqIdInStores.get(family);
           // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
           // or the master was crashed before and we can not get the information.
-          if (maxSeqId == null || maxSeqId.longValue() < logEntry.getKey().getSequenceId()) {
+          if (maxSeqId == null || maxSeqId.longValue() < logEntry.getKey().getLogSeqNum()) {
             keptCells.add(cell);
           }
         }
@@ -1862,7 +1862,7 @@ public class WALSplitter {
             }
             if (maxStoreSequenceIds != null) {
               Long maxStoreSeqId = maxStoreSequenceIds.get(family);
-              if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getSequenceId()) {
+              if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
                 skippedCells.add(cell);
                 continue;
