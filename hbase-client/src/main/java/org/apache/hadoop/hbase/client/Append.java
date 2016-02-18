@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Append extends Mutation {
-  private static final String RETURN_RESULTS = "_rr_";
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
@@ -55,16 +54,16 @@ public class Append extends Mutation {
    *          bandwidth setting this to false.
    */
   public Append setReturnResults(boolean returnResults) {
-    setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
+    super.setReturnResults(returnResults);
     return this;
   }
 
   /**
    * @return current setting for returnResults
    */
+  // This method makes public the superclasses's protected method.
   public boolean isReturnResults() {
-    byte[] v = getAttribute(RETURN_RESULTS);
-    return v == null ? true : Bytes.toBoolean(v);
+    return super.isReturnResults();
   }
 
   /**
