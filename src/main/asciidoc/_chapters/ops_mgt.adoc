@@ -434,6 +434,9 @@ Invoke via:
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
 
+NOTE: To see usage instructions, run the command with no options. Available options include
+specifying column families and applying filters during the export.
+
 By default, the `Export` tool only exports the newest version of a given cell, regardless of the number of versions stored. To export more than one version, replace *_<versions>_* with the desired number of versions.
 
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
@@ -446,6 +449,8 @@ Invoke via:
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Import <tablename> <inputdir>
 ----
+
+NOTE: To see usage instructions, run the command with no options.
 
 To import 0.94 exported files in a 0.96 cluster or onwards, you need to set system property "hbase.import.version" when running the import command as below:
 
