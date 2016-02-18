@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics2.MetricsExecutor;
 
 /**
  *  Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by
- *  MetricMutableQuantiles{@link MetricMutableQuantiles}, MetricsRegionAggregateSourceImpl, and
+ *  MetricsRegionAggregateSourceImpl, and
  *  JmxCacheBuster
  */
 @InterfaceAudience.Private

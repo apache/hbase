@@ -20,17 +20,19 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
-import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 @InterfaceAudience.Private
-public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implements MetricsAssignmentManagerSource {
+public class MetricsAssignmentManagerSourceImpl
+    extends BaseSourceImpl
+    implements MetricsAssignmentManagerSource {
 
   private MutableGaugeLong ritGauge;
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;
-  private MutableHistogram assignTimeHisto;
-  private MutableHistogram bulkAssignTimeHisto;
+  private MetricHistogram assignTimeHisto;
+  private MetricHistogram bulkAssignTimeHisto;
 
   public MetricsAssignmentManagerSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);

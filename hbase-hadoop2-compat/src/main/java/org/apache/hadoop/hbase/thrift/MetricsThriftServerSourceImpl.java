@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
@@ -32,12 +33,12 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     MetricsThriftServerSource {
 
-  private MutableHistogram batchGetStat;
-  private MutableHistogram batchMutateStat;
-  private MutableHistogram queueTimeStat;
+  private MetricHistogram batchGetStat;
+  private MetricHistogram batchMutateStat;
+  private MetricHistogram queueTimeStat;
 
-  private MutableHistogram thriftCallStat;
-  private MutableHistogram thriftSlowCallStat;
+  private MetricHistogram thriftCallStat;
+  private MetricHistogram thriftSlowCallStat;
 
   private MutableGaugeLong callQueueLenGauge;
 
@@ -56,7 +57,7 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     queueTimeStat = getMetricsRegistry().newTimeHistogram(TIME_IN_QUEUE_KEY);
     thriftCallStat = getMetricsRegistry().newTimeHistogram(THRIFT_CALL_KEY);
     thriftSlowCallStat = getMetricsRegistry().newTimeHistogram(SLOW_THRIFT_CALL_KEY);
-    callQueueLenGauge = getMetricsRegistry().getLongGauge(CALL_QUEUE_LEN_KEY, 0);
+    callQueueLenGauge = getMetricsRegistry().getGauge(CALL_QUEUE_LEN_KEY, 0);
 
   }
 

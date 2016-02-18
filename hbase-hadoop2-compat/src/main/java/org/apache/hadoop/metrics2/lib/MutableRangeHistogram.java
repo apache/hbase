@@ -18,26 +18,29 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import java.util.concurrent.atomic.AtomicLongArray;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.FastLongHistogram;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-
 /**
  * Extended histogram implementation with metric range counters.
  */
 @InterfaceAudience.Private
-public abstract class MutableRangeHistogram extends MutableHistogram {
+public abstract class MutableRangeHistogram extends MutableHistogram implements MetricHistogram {
 
   public MutableRangeHistogram(MetricsInfo info) {
     this(info.name(), info.description());
   }
 
   public MutableRangeHistogram(String name, String description) {
-    super(name, description);    
+    this(name, description, Integer.MAX_VALUE << 2);
   }
-  
+
+  public MutableRangeHistogram(String name, String description, long expectedMax) {
+    super(name, description, expectedMax);
+  }
+
   /**
    * Returns the type of range histogram size or time 
    */
@@ -46,49 +49,39 @@ public abstract class MutableRangeHistogram extends MutableHistogram {
   /**
    * Returns the ranges to be counted 
    */
-  public abstract long[] getRange();
-  
-  /**
-   * Returns the range counts 
-   */
-  public abstract AtomicLongArray getRangeVals();
+  public abstract long[] getRanges();
 
-  @Override
-  public void add(final long val) {
-    super.add(val);
-    updateBand(val);
-  }
-
-  private void updateBand(final long val) {
-    int i;
-    for (i=0; i<getRange().length && val > getRange()[i]; i++);
-    getRangeVals().incrementAndGet(i);
-  }
   
   @Override
-  public void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
-    if (all || changed()) {
-      clearChanged();
-      updateSnapshotMetrics(metricsRecordBuilder);
-      updateSnapshotRangeMetrics(metricsRecordBuilder);
-    }
+  public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
+    // Get a reference to the old histogram.
+    FastLongHistogram histo = histogram.reset();
+    updateSnapshotMetrics(metricsRecordBuilder, histo);
+    updateSnapshotRangeMetrics(metricsRecordBuilder, histo);
   }
-  
-  public void updateSnapshotRangeMetrics(MetricsRecordBuilder metricsRecordBuilder) {
-    long prior = 0;
-    for (int i = 0; i < getRange().length; i++) {
-      long val = getRangeVals().get(i);
-      if (val > 0) {
+
+  public void updateSnapshotRangeMetrics(MetricsRecordBuilder metricsRecordBuilder,
+                                         FastLongHistogram histogram) {
+    long priorRange = 0;
+    long cumNum = 0;
+
+    final long[] ranges = getRanges();
+    final String rangeType = getRangeType();
+    for (int i = 0; i < ranges.length - 1; i++) {
+      long val = histogram.getNumAtOrBelow(ranges[i]);
+      if (val - cumNum > 0) {
         metricsRecordBuilder.addCounter(
-          Interns.info(name + "_" + getRangeType() + "_" + prior + "-" + getRange()[i], desc), val);
+            Interns.info(name + "_" + rangeType + "_" + priorRange + "-" + ranges[i], desc),
+            val - cumNum);
       }
-      prior = getRange()[i];
+      priorRange = ranges[i];
+      cumNum = val;
     }
-    long val = getRangeVals().get(getRange().length);
-    if (val > 0) {
+    long val = histogram.getCount();
+    if (val - cumNum > 0) {
       metricsRecordBuilder.addCounter(
-        Interns.info(name + "_" + getRangeType() + "_" + getRange()[getRange().length - 1] + "-inf", desc),
-        getRangeVals().get(getRange().length));
+          Interns.info(name + "_" + rangeType + "_" + ranges[ranges.length - 1] + "-inf", desc),
+          val - cumNum);
     }
   }  
 }

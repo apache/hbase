@@ -80,14 +80,6 @@ public interface BaseSource {
 
 
   /**
-   * Add some value to a Quantile (An accurate histogram).
-   *
-   * @param name the name of the quantile
-   * @param value the value to add to the quantile
-   */
-  void updateQuantile(String name, long value);
-
-  /**
    * Get the metrics context.  For hadoop metrics2 system this is usually an all lowercased string.
    * eg. regionserver, master, thriftserver
    *

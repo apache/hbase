@@ -18,10 +18,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -29,8 +28,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class BucketCacheStats extends CacheStats {
-  private final AtomicLong ioHitCount = new AtomicLong(0);
-  private final AtomicLong ioHitTime = new AtomicLong(0);
+  private final Counter ioHitCount = new Counter(0);
+  private final Counter ioHitTime = new Counter(0);
   private final static int nanoTime = 1000000;
   private long lastLogTime = EnvironmentEdgeManager.currentTime();
 
@@ -45,8 +44,8 @@ public class BucketCacheStats extends CacheStats {
   }
 
   public void ioHit(long time) {
-    ioHitCount.incrementAndGet();
-    ioHitTime.addAndGet(time);
+    ioHitCount.increment();
+    ioHitTime.add(time);
   }
 
   public long getIOHitsPerSecond() {

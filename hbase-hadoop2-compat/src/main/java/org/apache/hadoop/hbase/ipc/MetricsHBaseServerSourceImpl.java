@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
@@ -33,29 +33,29 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
 
 
   private final MetricsHBaseServerWrapper wrapper;
-  private final MutableCounterLong authorizationSuccesses;
-  private final MutableCounterLong authorizationFailures;
-  private final MutableCounterLong authenticationSuccesses;
-  private final MutableCounterLong authenticationFailures;
-  private final MutableCounterLong authenticationFallbacks;
-  private final MutableCounterLong sentBytes;
-  private final MutableCounterLong receivedBytes;
+  private final MutableFastCounter authorizationSuccesses;
+  private final MutableFastCounter authorizationFailures;
+  private final MutableFastCounter authenticationSuccesses;
+  private final MutableFastCounter authenticationFailures;
+  private final MutableFastCounter authenticationFallbacks;
+  private final MutableFastCounter sentBytes;
+  private final MutableFastCounter receivedBytes;
 
-  private final MutableCounterLong exceptions;
-  private final MutableCounterLong exceptionsOOO;
-  private final MutableCounterLong exceptionsBusy;
-  private final MutableCounterLong exceptionsUnknown;
-  private final MutableCounterLong exceptionsSanity;
-  private final MutableCounterLong exceptionsNSRE;
-  private final MutableCounterLong exceptionsMoved;
-  private final MutableCounterLong exceptionsMultiTooLarge;
+  private final MutableFastCounter exceptions;
+  private final MutableFastCounter exceptionsOOO;
+  private final MutableFastCounter exceptionsBusy;
+  private final MutableFastCounter exceptionsUnknown;
+  private final MutableFastCounter exceptionsSanity;
+  private final MutableFastCounter exceptionsNSRE;
+  private final MutableFastCounter exceptionsMoved;
+  private final MutableFastCounter exceptionsMultiTooLarge;
 
 
-  private MutableHistogram queueCallTime;
-  private MutableHistogram processCallTime;
-  private MutableHistogram totalCallTime;
-  private MutableHistogram requestSize;
-  private MutableHistogram responseSize;
+  private MetricHistogram queueCallTime;
+  private MetricHistogram processCallTime;
+  private MetricHistogram totalCallTime;
+  private MetricHistogram requestSize;
+  private MetricHistogram responseSize;
 
   public MetricsHBaseServerSourceImpl(String metricsName,
                                       String metricsDescription,

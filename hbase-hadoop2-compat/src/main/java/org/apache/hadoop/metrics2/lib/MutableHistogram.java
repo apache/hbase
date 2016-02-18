@@ -18,124 +18,79 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Counter;
+import org.apache.hadoop.hbase.util.FastLongHistogram;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-
-import com.codahale.metrics.ExponentiallyDecayingReservoir;
-import com.codahale.metrics.Reservoir;
-import com.codahale.metrics.Snapshot;
 
 /**
  * A histogram implementation that runs in constant space, and exports to hadoop2's metrics2 system.
  */
 @InterfaceAudience.Private
 public class MutableHistogram extends MutableMetric implements MetricHistogram {
-
-  private static final int DEFAULT_SAMPLE_SIZE = 2046;
-  // the bias towards sampling from more recent data.
-  // Per Cormode et al. an alpha of 0.015 strongly biases to the last 5 minutes
-  private static final double DEFAULT_ALPHA = 0.015;
+  // Double buffer the two FastLongHistograms.
+  // As they are reset they learn how the buckets should be spaced
+  // So keep two around and use them
+  protected final FastLongHistogram histogram;
 
   protected final String name;
   protected final String desc;
-  private final Reservoir reservoir;
-  private final AtomicLong min;
-  private final AtomicLong max;
-  private final AtomicLong sum;
-  private final AtomicLong count;
+  protected final Counter counter = new Counter(0);
 
   public MutableHistogram(MetricsInfo info) {
     this(info.name(), info.description());
   }
 
   public MutableHistogram(String name, String description) {
+    this(name, description, Integer.MAX_VALUE << 2);
+  }
+
+  protected MutableHistogram(String name, String description, long maxExpected) {
     this.name = StringUtils.capitalize(name);
     this.desc = StringUtils.uncapitalize(description);
-    reservoir = new ExponentiallyDecayingReservoir(DEFAULT_SAMPLE_SIZE, DEFAULT_ALPHA);
-    count = new AtomicLong();
-    min = new AtomicLong(Long.MAX_VALUE);
-    max = new AtomicLong(Long.MIN_VALUE);
-    sum = new AtomicLong();
+    this.histogram = new FastLongHistogram(FastLongHistogram.DEFAULT_NBINS, 1, maxExpected);
   }
 
   public void add(final long val) {
-    setChanged();
-    count.incrementAndGet();
-    reservoir.update(val);
-    setMax(val);
-    setMin(val);
-    sum.getAndAdd(val);
-  }
-
-  private void setMax(final long potentialMax) {
-    boolean done = false;
-    while (!done) {
-      final long currentMax = max.get();
-      done = currentMax >= potentialMax
-          || max.compareAndSet(currentMax, potentialMax);
-    }
-  }
-
-  private void setMin(long potentialMin) {
-    boolean done = false;
-    while (!done) {
-      final long currentMin = min.get();
-      done = currentMin <= potentialMin
-          || min.compareAndSet(currentMin, potentialMin);
-    }
-  }
-
-  public long getMax() {
-    if (count.get() > 0) {
-      return max.get();
-    }
-    return 0L;
-  }
-
-  public long getMin() {
-    if (count.get() > 0) {
-      return min.get();
-    }
-    return 0L;
-  }
-
-  public double getMean() {
-    long cCount = count.get();
-    if (cCount > 0) {
-      return sum.get() / (double) cCount;
-    }
-    return 0.0;
+    counter.increment();
+    histogram.add(val, 1);
   }
 
   @Override
-  public void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
-    if (all || changed()) {
-      clearChanged();
-      updateSnapshotMetrics(metricsRecordBuilder);
-    }
+  public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
+    // Get a reference to the old histogram.
+    FastLongHistogram histo = histogram.reset();
+    updateSnapshotMetrics(metricsRecordBuilder, histo);
   }
 
-  public void updateSnapshotMetrics(MetricsRecordBuilder metricsRecordBuilder) {
-      final Snapshot s = reservoir.getSnapshot();
-      metricsRecordBuilder.addCounter(Interns.info(name + NUM_OPS_METRIC_NAME, desc), count.get());
+  protected void updateSnapshotMetrics(MetricsRecordBuilder metricsRecordBuilder,
+                                       FastLongHistogram histo) {
+    metricsRecordBuilder.addCounter(Interns.info(name + NUM_OPS_METRIC_NAME, desc), counter.get());
+    metricsRecordBuilder.addGauge(Interns.info(name + MIN_METRIC_NAME, desc), histo.getMin());
+    metricsRecordBuilder.addGauge(Interns.info(name + MAX_METRIC_NAME, desc), histo.getMax());
+    metricsRecordBuilder.addGauge(Interns.info(name + MEAN_METRIC_NAME, desc), histo.getMean());
 
-      metricsRecordBuilder.addGauge(Interns.info(name + MIN_METRIC_NAME, desc), getMin());
-      metricsRecordBuilder.addGauge(Interns.info(name + MAX_METRIC_NAME, desc), getMax());
-      metricsRecordBuilder.addGauge(Interns.info(name + MEAN_METRIC_NAME, desc), getMean());
+    long[] percentiles = histo.getQuantiles();
 
-      metricsRecordBuilder.addGauge(Interns.info(name + MEDIAN_METRIC_NAME, desc), s.getMedian());
-      metricsRecordBuilder.addGauge(Interns.info(name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
-          s.get75thPercentile());
-      metricsRecordBuilder.addGauge(Interns.info(name + NINETIETH_PERCENTILE_METRIC_NAME, desc),
-          s.getValue(0.90));
-      metricsRecordBuilder.addGauge(Interns.info(name + NINETY_FIFTH_PERCENTILE_METRIC_NAME, desc),
-          s.get95thPercentile());
-      metricsRecordBuilder.addGauge(Interns.info(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, desc),
-          s.get99thPercentile());
+    metricsRecordBuilder.addGauge(Interns.info(name + TWENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[0]);
+    metricsRecordBuilder.addGauge(Interns.info(name + MEDIAN_METRIC_NAME, desc),
+        percentiles[1]);
+    metricsRecordBuilder.addGauge(Interns.info(name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[2]);
+    metricsRecordBuilder.addGauge(Interns.info(name + NINETIETH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[3]);
+    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[4]);
+    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_EIGHTH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[5]);
+    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[6]);
+    metricsRecordBuilder.addGauge(
+        Interns.info(name + NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME, desc),
+        percentiles[7]);
   }
 }

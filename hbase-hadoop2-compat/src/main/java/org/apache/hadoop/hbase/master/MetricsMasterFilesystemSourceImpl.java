@@ -20,15 +20,17 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
-import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.hadoop.metrics2.MetricHistogram;
 
 @InterfaceAudience.Private
-public class MetricsMasterFilesystemSourceImpl extends BaseSourceImpl implements MetricsMasterFileSystemSource {
+public class MetricsMasterFilesystemSourceImpl
+    extends BaseSourceImpl
+    implements MetricsMasterFileSystemSource {
 
-  private MutableHistogram splitSizeHisto;
-  private MutableHistogram splitTimeHisto;
-  private MutableHistogram metaSplitTimeHisto;
-  private MutableHistogram metaSplitSizeHisto;
+  private MetricHistogram splitSizeHisto;
+  private MetricHistogram splitTimeHisto;
+  private MetricHistogram metaSplitTimeHisto;
+  private MetricHistogram metaSplitSizeHisto;
 
   public MetricsMasterFilesystemSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);

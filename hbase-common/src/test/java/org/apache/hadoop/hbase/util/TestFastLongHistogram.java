@@ -26,6 +26,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Testcases for FastLongHistogram.
  */
@@ -87,6 +89,36 @@ public class TestFastLongHistogram {
       hist.reset();
     }
   }
+
+
+  @Test
+  public void testGetNumAtOrBelow() {
+    long[] VALUES = { 1, 10, 20, 30, 40, 50 };
+
+    FastLongHistogram h = new FastLongHistogram();
+    for (long v : VALUES) {
+      for (int i = 0; i < 100; i++) {
+        h.add(v, 1);
+      }
+    }
+
+    h.add(Integer.MAX_VALUE, 1);
+
+    h.reset();
+
+    for (long v : VALUES) {
+      for (int i = 0; i < 100; i++) {
+        h.add(v, 1);
+      }
+    }
+    // Add something way out there to make sure it doesn't throw off the counts.
+    h.add(Integer.MAX_VALUE, 1);
+
+    assertEquals(100, h.getNumAtOrBelow(1));
+    assertEquals(200, h.getNumAtOrBelow(11));
+    assertEquals(601, h.getNumAtOrBelow(Long.MAX_VALUE));
+  }
+
 
   @Test
   public void testSameValues() {

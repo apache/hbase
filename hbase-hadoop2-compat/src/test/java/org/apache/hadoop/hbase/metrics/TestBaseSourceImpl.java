@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.metrics;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -72,9 +73,9 @@ public class TestBaseSourceImpl {
   @Test
   public void testIncCounters() throws Exception {
     bmsi.incCounters("testinccounter", 100);
-    assertEquals(100, ((MutableCounterLong) bmsi.metricsRegistry.get("testinccounter")).value());
+    assertEquals(100, ((MutableFastCounter) bmsi.metricsRegistry.get("testinccounter")).value());
     bmsi.incCounters("testinccounter", 100);
-    assertEquals(200, ((MutableCounterLong) bmsi.metricsRegistry.get("testinccounter")).value());
+    assertEquals(200, ((MutableFastCounter) bmsi.metricsRegistry.get("testinccounter")).value());
 
   }
 

@@ -18,37 +18,43 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
-/**
- * Extended histogram implementation with counters for metric size ranges.
- */
-@InterfaceAudience.Private
-public class MutableSizeHistogram extends MutableRangeHistogram {
-  private final static String RANGE_TYPE = "SizeRangeCount";
-  private final static long[] RANGES = {10,100,1000,10000,100000,1000000,10000000,100000000};
+public class MutableFastCounter extends MutableCounter {
 
-  public MutableSizeHistogram(MetricsInfo info) {
-    this(info.name(), info.description());
-  }
+  private final Counter counter;
 
-  public MutableSizeHistogram(String name, String description) {
-    this(name, description, RANGES[RANGES.length-2]);
-  }
-
-  public MutableSizeHistogram(String name, String description, long expectedMax) {
-    super(name, description, expectedMax);
+  protected MutableFastCounter(MetricsInfo info, long iVal) {
+    super(info);
+    counter = new Counter(iVal);
   }
 
   @Override
-  public String getRangeType() {
-    return RANGE_TYPE;
+  public void incr() {
+    counter.increment();
+    setChanged();
+  }
+
+  /**
+   * Increment the value by a delta
+   * @param delta of the increment
+   */
+  public void incr(long delta) {
+    counter.add(delta);
+    setChanged();
   }
 
   @Override
-  public long[] getRanges() {
-    return RANGES;
+  public void snapshot(MetricsRecordBuilder builder, boolean all) {
+    if (all || changed()) {
+      builder.addCounter(info(), value());
+      clearChanged();
+    }
   }
 
+  public long value() {
+    return counter.get();
+  }
 }
