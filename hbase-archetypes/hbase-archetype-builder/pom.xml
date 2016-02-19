@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
+  /**
+   * Licensed to the Apache Software Foundation (ASF) under one
+   * or more contributor license agreements.  See the NOTICE file
+   * distributed with this work for additional information
+   * regarding copyright ownership.  The ASF licenses this file
+   * to you under the Apache License, Version 2.0 (the
+   * "License"); you may not use this file except in compliance
+   * with the License.  You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  -->
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <artifactId>hbase-archetypes</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
+
+  <artifactId>hbase-archetype-builder</artifactId>
+  <packaging>pom</packaging>
+
+  <name>Apache HBase - Archetype builder</name>
+  <description>Manager of plugins for building Maven archetypes from exemplars</description>
+
+  <properties>
+    <build.archetype.subdir>target/build-archetype</build.archetype.subdir>
+    <archetype.source.subdir>target/generated-sources/archetype</archetype.source.subdir>
+    <temp.exemplar.subdir>target/temp</temp.exemplar.subdir>
+    <temp.archetype.subdir>target/temp-arch</temp.archetype.subdir>
+    <hbase-client.dir>hbase-client-project</hbase-client.dir>
+    <!-- For new archetype, add corresponding *.dir property above this comment.
+         (See hbase-archetypes/README.txt for details on adding new archetype.) -->
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.7</version>
+        <executions>
+          <!-- maven-resources-plugin copies each exemplar project's src directory to
+            ${build.archetype.subdir} subdirectory, and copy each project's pom.xml file
+            to ${temp.exemplar.subdir} subdirectory. (Filtering during copy replaces
+            ${project-version} with literal value). The pom.xml files are processed
+            further using xml-maven-plugin for xslt transformation, below. -->
+          <execution>
+            <id>hbase-client__copy-src-to-build-archetype-subdir</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-client.dir}</directory>
+                  <includes>
+                    <include>src/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>hbase-client__copy-pom-to-temp-for-xslt-processing</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${temp.exemplar.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-client.dir}</directory>
+                  <filtering>true</filtering> <!-- filtering replaces ${project.version} with literal -->
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                 </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- For new archetype, add pair of <execution> elements (modeled on existing elements) above this comment. -->
+
+          <!-- maven-resources-plugin copies each archetype project's pom.xml file
+            to target/temp-arch directory. The pom.xml files are processed further
+            using xml-maven-plugin for xslt transformation, below.  -->
+          <execution>
+            <id>hbase-client-ARCHETYPE__copy-pom-to-temp-for-xslt-processing</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${temp.archetype.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</directory>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                 </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- For new archetype, add <execution> element (modeled on existing elements) above this comment. -->
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <version>1.0.1</version>
+        <executions>
+          <!-- xml-maven-plugin modifies each exemplar project's pom.xml file to convert to standalone project. -->
+          <execution>
+            <id>modify-exemplar-pom-files-via-xslt</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <configuration>
+              <transformationSets>
+                <transformationSet>
+                  <dir>/${project.basedir}/../${hbase-client.dir}/${temp.exemplar.subdir}</dir>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                  <outputDir>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}</outputDir>
+                  <stylesheet>modify_exemplar_pom.xsl</stylesheet>
+                </transformationSet>
+                <!-- For new archetype, add <transformationSet> element (modeled on existing elements) above this comment. -->
+              </transformationSets>
+            </configuration>
+          </execution>
+          <!-- xml-maven-plugin modifies each archetype project's pom.xml file, inserting sourceEncoding element to
+               prevent warnings when project is generated from archetype.  -->
+          <execution>
+            <id>modify-archetype-pom-files-via-xslt</id>
+            <phase>package</phase>
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <configuration>
+              <transformationSets>
+                <transformationSet>
+                  <dir>/${project.basedir}/../${hbase-client.dir}/${temp.archetype.subdir}</dir>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                  <outputDir>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</outputDir>
+                  <stylesheet>modify_archetype_pom.xsl</stylesheet>
+                </transformationSet>
+                <!-- For new archetype, add <transformationSet> element (modeled on existing elements) above this comment. -->
+              </transformationSets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <!-- exec-maven-plugin executes chmod to make scripts executable -->
+          <execution>
+            <id>make-scripts-executable</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>chmod</executable>
+              <arguments>
+                <argument>+x</argument>
+                <argument>/${project.basedir}/createArchetypes.sh</argument>
+                <argument>/${project.basedir}/installArchetypes.sh</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <!-- exec-maven-plugin executes script which invokes 'archetype:create-from-project'
+               to derive archetypes from exemplar projects. -->
+          <execution>
+            <id>run-createArchetypes-script</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>/${project.basedir}/createArchetypes.sh</executable>
+            </configuration>
+          </execution>
+          <!-- exec-maven-plugin executes script which invokes 'install' to install each
+               archetype into the local Maven repository (ready for deployment to central
+               Maven repository).
+               Note that 'install' of archetype automatically includes integration-test,
+               which does test generation of a project based on the archetype. -->
+          <execution>
+            <id>run-installArchetypes-script</id>
+            <phase>install</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>/${project.basedir}/installArchetypes.sh</executable>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

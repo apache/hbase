@@ -70,6 +70,7 @@
     <module>hbase-external-blockcache</module>
     <module>hbase-shaded</module>
     <module>hbase-spark</module>
+    <module>hbase-archetypes</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
