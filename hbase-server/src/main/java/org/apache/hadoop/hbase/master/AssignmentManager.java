@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,6 +46,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateException;
@@ -91,8 +94,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Manages and performs region assignment.
@@ -443,31 +444,43 @@ public class AssignmentManager {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Found dead servers out on cluster " + serverManager.getDeadServers());
       }
-    } else {
+      // Check if there are any regions on these servers
+      failover = false;
+      for (ServerName serverName : serverManager.getDeadServers().copyServerNames()) {
+        if (regionStates.getRegionAssignments().values().contains(serverName)) {
+          LOG.debug("Found regions on dead server: " + serverName);
+          failover = true;
+          break;
+        }
+      }
+    }
+    Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
+    if (!failover) {
       // If any one region except meta is assigned, it's a failover.
-      Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
       for (Map.Entry<HRegionInfo, ServerName> en:
           regionStates.getRegionAssignments().entrySet()) {
         HRegionInfo hri = en.getKey();
         if (!hri.isMetaTable()
             && onlineServers.contains(en.getValue())) {
-          LOG.debug("Found " + hri + " out on cluster");
+          LOG.debug("Found region " + hri + " out on cluster");
           failover = true;
           break;
         }
       }
-      if (!failover) {
-        // If any region except meta is in transition on a live server, it's a failover.
-        Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
-        if (!regionsInTransition.isEmpty()) {
-          for (RegionState regionState: regionsInTransition.values()) {
-            ServerName serverName = regionState.getServerName();
-            if (!regionState.getRegion().isMetaRegion()
-                && serverName != null && onlineServers.contains(serverName)) {
-              LOG.debug("Found " + regionState + " in RITs");
-              failover = true;
-              break;
-            }
+    }
+    if (!failover) {
+      // If any region except meta is in transition on a live server, it's a failover.
+      Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
+      if (!regionsInTransition.isEmpty()) {
+        for (RegionState regionState: regionsInTransition.values()) {
+          ServerName serverName = regionState.getServerName();
+          if (!regionState.getRegion().isMetaRegion()
+              && serverName != null && onlineServers.contains(serverName)) {
+            LOG.debug("Found " + regionState + " for region " +
+              regionState.getRegion().getRegionNameAsString() + " for server " +
+                serverName + "in RITs");
+            failover = true;
+            break;
           }
         }
       }
@@ -488,7 +501,7 @@ public class AssignmentManager {
           Path logDir = new Path(rootdir,
               DefaultWALProvider.getWALDirectoryName(serverName.toString()));
           Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
-          if (fs.exists(logDir) || fs.exists(splitDir)) {
+          if (checkWals(fs, logDir) || checkWals(fs, splitDir)) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;
             break;
@@ -538,8 +551,10 @@ public class AssignmentManager {
     failoverCleanupDone();
     if (!failover) {
       // Fresh cluster startup.
-      LOG.info("Clean cluster startup. Assigning user regions");
+      LOG.info("Clean cluster startup. Don't reassign user regions");
       assignAllUserRegions(allRegions);
+    } else {
+      LOG.info("Failover! Reassign user regions");
     }
     // unassign replicas of the split parents and the merged regions
     // the daughter replicas are opened in assignAllUserRegions if it was
@@ -549,6 +564,33 @@ public class AssignmentManager {
     }
     replicasToClose.clear();
     return failover;
+  }
+
+  private boolean checkWals(FileSystem fs, Path dir) throws IOException {
+    if (!fs.exists(dir)) {
+      LOG.debug(dir + " doesn't exist");
+      return false;
+    }
+    if (!fs.getFileStatus(dir).isDirectory()) {
+      LOG.warn(dir + " is not a directory");
+      return false;
+    }
+    FileStatus[] files = FSUtils.listStatus(fs, dir);
+    if (files == null || files.length == 0) {
+      LOG.debug(dir + " has no files");
+      return false;
+    }
+    for (int i = 0; i < files.length; i++) {
+      if (files[i].isFile() && files[i].getLen() > 0) {
+        LOG.debug(dir + " has a non-empty file: " + files[i].getPath());
+        return true;
+      } else if (files[i].isDirectory() && checkWals(fs, dir)) {
+        LOG.debug(dir + " is a directory and has a non-empty file: " + files[i].getPath());
+        return true;
+      }
+    }
+    LOG.debug("Found 0 non-empty wal files for :" + dir);
+    return false;
   }
 
   /**
