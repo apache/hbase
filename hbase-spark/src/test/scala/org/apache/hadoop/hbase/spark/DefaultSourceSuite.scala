@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark
 import org.apache.hadoop.hbase.client.{Put, ConnectionFactory}
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.{TableNotFoundException, TableName, HBaseTestingUtility}
+import org.apache.hadoop.hbase.{TableName, HBaseTestingUtility}
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext, Logging}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
@@ -514,7 +514,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
 
   test("Test table that doesn't exist") {
-    intercept[TableNotFoundException] {
+    intercept[Exception] {
       df = sqlContext.load("org.apache.hadoop.hbase.spark",
         Map("hbase.columns.mapping" ->
           "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
