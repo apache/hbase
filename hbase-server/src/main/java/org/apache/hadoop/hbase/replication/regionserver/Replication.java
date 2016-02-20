@@ -297,7 +297,7 @@ public class Replication extends WALActionsListener.Base implements
         }
       }
     }
-    if (!scopes.isEmpty()) {
+    if (!scopes.isEmpty() && !logEdit.isReplay()) {
       logKey.setScopes(scopes);
     }
   }

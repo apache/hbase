@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -56,6 +59,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
@@ -753,4 +757,45 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       }
     }
   }
+
+  /**
+   *  Test for HBase-15259 WALEdits under replay will also be replicated
+   * */
+  @Test
+  public void testReplicationInReplay() throws Exception {
+    final TableName tableName = htable1.getName();
+
+    HRegion region = utility1.getMiniHBaseCluster().getRegions(tableName).get(0);
+    HRegionInfo hri = region.getRegionInfo();
+
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    int index = utility1.getMiniHBaseCluster().getServerWith(hri.getRegionName());
+    WAL wal = utility1.getMiniHBaseCluster().getRegionServer(index).getWAL(region.getRegionInfo());
+    final byte[] rowName = Bytes.toBytes("testReplicationInReplay");
+    final byte[] qualifier = Bytes.toBytes("q");
+    final byte[] value = Bytes.toBytes("v");
+    WALEdit edit = new WALEdit(true);
+    long now = EnvironmentEdgeManager.currentTime();
+    edit.add(new KeyValue(rowName, famName, qualifier,
+      now, value));
+    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc);
+    wal.append(htable1.getTableDescriptor(), hri, walKey, edit, true);
+    wal.sync();
+
+    Get get = new Get(rowName);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i == NB_RETRIES-1) {
+        break;
+      }
+      Result res = htable2.get(get);
+      if (res.size() >= 1) {
+        fail("Not supposed to be replicated for " + Bytes.toString(res.getRow()));
+      } else {
+        LOG.info("Row not replicated, let's wait a bit more...");
+        Thread.sleep(SLEEP_TIME);
+      }
+    }
+  }
+
+
 }
