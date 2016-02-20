@@ -90,27 +90,41 @@ public class TestMasterMetrics {
     request.setServer(ProtobufUtil.toServerName(serverName));
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
-    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-                                           .setTotalNumberOfRequests(10000)
-                                           .build();
     masterSource.init();
+
+    // At begining, there maybe some requests to meta table, we should wait until
+    // our requests count to be stable.
+    long requests = waitForStableClusterRequests(masterSource);
+
+    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
+      .setTotalNumberOfRequests(10000)
+      .build();
     request.setLoad(sl);
     master.getMasterRpcServices().regionServerReport(null, request.build());
-
-    metricsHelper.assertCounter("cluster_requests", 10000, masterSource);
+    metricsHelper.assertCounter("cluster_requests", requests + 10000, masterSource);
 
     sl = ClusterStatusProtos.ServerLoad.newBuilder()
         .setTotalNumberOfRequests(15000)
         .build();
     request.setLoad(sl);
     master.getMasterRpcServices().regionServerReport(null, request.build());
-
-    metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
+    metricsHelper.assertCounter("cluster_requests", requests + 15000, masterSource);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
-
-    metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
+    metricsHelper.assertCounter("cluster_requests", requests + 15000, masterSource);
     master.stopMaster();
+  }
+
+  private long waitForStableClusterRequests( MetricsMasterSource masterSource)
+    throws InterruptedException {
+    long oldRequests = 0;
+    long requests = metricsHelper.getCounter("cluster_requests", masterSource);
+    while (requests != oldRequests) {
+      Thread.sleep(1000);
+      oldRequests = requests;
+      requests = metricsHelper.getCounter("cluster_requests", masterSource);
+    }
+    return requests;
   }
 
   @Test
