@@ -122,6 +122,7 @@ For more details about Prefix Tree encoding, see link:https://issues.apache.org/
 +
 It is difficult to graphically illustrate a prefix tree, so no image is included. See the Wikipedia article for link:http://en.wikipedia.org/wiki/Trie[Trie] for more general information about this data structure.
 
+[[data.block.encoding.types]]
 === Which Compressor or Data Block Encoder To Use
 
 The compression or codec type to use depends on the characteristics of your data. Choosing the wrong type could cause your data to take more space rather than less, and can have performance implications.
@@ -277,7 +278,7 @@ See <<hbase.regionserver.codecs,hbase.regionserver.codecs>>.
 
 LZ4 support is bundled with Hadoop.
 Make sure the hadoop shared library (libhadoop.so) is accessible when you start HBase.
-After configuring your platform (see <<hbase.native.platform,hbase.native.platform>>), you can make a symbolic link from HBase to the native Hadoop libraries.
+After configuring your platform (see <<hadoop.native.lib,hadoop.native.lib>>), you can make a symbolic link from HBase to the native Hadoop libraries.
 This assumes the two software installs are colocated.
 For example, if my 'platform' is Linux-amd64-64:
 [source,bourne]

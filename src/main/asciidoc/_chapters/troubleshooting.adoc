@@ -557,7 +557,7 @@ You can also tail all the logs at the same time, edit files, etc.
 [[trouble.client]]
 == Client
 
-For more information on the HBase client, see <<client,client>>.
+For more information on the HBase client, see <<architecture.client,client>>.
 
 === Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
 If either the client or server version is lower than 0.98.11/1.0.0 and the server
@@ -1115,7 +1115,7 @@ to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal
 [[trouble.master]]
 == Master
 
-For more information on the Master, see <<master,master>>.
+For more information on the Master, see <<architecture.master,master>>.
 
 [[trouble.master.startup]]
 === Startup Errors

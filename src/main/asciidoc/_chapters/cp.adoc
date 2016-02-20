@@ -294,6 +294,7 @@ dependencies.
 `hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar`.
 ====
 
+[[load_coprocessor_in_shell]]
 ==== Using HBase Shell
 
 . Disable the table using HBase Shell:

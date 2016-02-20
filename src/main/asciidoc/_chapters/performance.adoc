@@ -222,7 +222,7 @@ This memory setting is often adjusted for the RegionServer process depending on 
 [[perf.hstore.blockingstorefiles]]
 === `hbase.hstore.blockingStoreFiles`
 
-See <<hbase.hstore.blockingstorefiles>>.
+See <<hbase.hstore.blockingStoreFiles>>.
 If there is blocking in the RegionServer logs, increasing this can help.
 
 [[perf.hregion.memstore.block.multiplier]]

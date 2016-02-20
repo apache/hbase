@@ -375,6 +375,7 @@ In those versions, you can print the contents of a WAL using the same configurat
 
 See <<compression.test,compression.test>>.
 
+[[copy.table]]
 === CopyTable
 
 CopyTable is a utility that can copy part or of all of a table, either to the same cluster or another cluster.
@@ -436,6 +437,7 @@ By default, CopyTable utility only copies the latest version of row cells unless
 See Jonathan Hsieh's link:http://www.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
           HBase Backups with CopyTable] blog post for more on `CopyTable`.
 
+[[export]]
 === Export
 
 Export is a utility that will dump the contents of table to HDFS in a sequence file.
@@ -452,6 +454,7 @@ By default, the `Export` tool only exports the newest version of a given cell, r
 
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
+[[import]]
 === Import
 
 Import is a utility that will load data that has been exported back into HBase.
@@ -469,6 +472,7 @@ To import 0.94 exported files in a 0.96 cluster or onwards, you need to set syst
 $ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import <tablename> <inputdir>
 ----
 
+[[importtsv]]
 === ImportTsv
 
 ImportTsv is a utility that will load data in TSV format into HBase.
@@ -560,6 +564,7 @@ If you have preparing a lot of data for bulk loading, make sure the target HBase
 
 For more information about bulk-loading HFiles into HBase, see <<arch.bulk.load,arch.bulk.load>>
 
+[[completebulkload]]
 === CompleteBulkLoad
 
 The `completebulkload` utility will move generated StoreFiles into an HBase table.
@@ -808,6 +813,7 @@ It will verify the region deployed in the new location before it will moves the 
 At this point, the _graceful_stop.sh_ tells the RegionServer `stop`.
 The master will at this point notice the RegionServer gone but all regions will have already been redeployed and because the RegionServer went down cleanly, there will be no WAL logs to split.
 
+[[lb]]
 .Load Balancer
 [NOTE]
 ====
@@ -991,6 +997,7 @@ Apart from resulting in higher latency, it may also be able to use all of your n
 For practical purposes, consider that a standard 1GigE NIC won't be able to read much more than _100MB/s_.
 In this case, or if you are in a OLAP environment and require having locality, then it is recommended to major compact the moved regions.
 
+[[hbase_metrics]]
 == HBase Metrics
 
 HBase emits metrics which adhere to the link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[Hadoop metrics] API.
@@ -1414,6 +1421,7 @@ The following configuration settings are recommended for maintaining an even dis
 * Set `replication.source.sleepforretries` to `1` (1 second). This value, combined with the value of `replication.source.maxretriesmultiplier`, causes the retry cycle to last about 5 minutes.
 * Set `replication.sleep.before.failover` to `30000` (30 seconds) in the source cluster site configuration.
 
+[[cluster.replication.preserving.tags]]
 .Preserving Tags During Replication
 By default, the codec used for replication between clusters strips tags, such as cell-level ACLs, from cells.
 To prevent the tags from being stripped, you can use a different codec which does not strip them.
@@ -1657,7 +1665,7 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 HBase provides the following mechanisms for managing the performance of a cluster
 handling multiple workloads:
 . <<quota>>
-. <<request-queues>>
+. <<request_queues>>
 . <<multiple-typed-queues>>
 
 [[quota]]
@@ -1666,7 +1674,7 @@ HBASE-11598 introduces quotas, which allow you to throttle requests based on
 the following limits:
 
 . <<request-quotas,The number or size of requests(read, write, or read+write) in a given timeframe>>
-. <<namespace-quotas,The number of tables allowed in a namespace>>
+. <<namespace_quotas,The number of tables allowed in a namespace>>
 
 These limits can be enforced for a specified user, table, or namespace.
 
@@ -1888,7 +1896,7 @@ See the HBase page on link:http://hbase.apache.org/book.html#replication[replica
 [[ops.backup.live.copytable]]
 === Live Cluster Backup - CopyTable
 
-The <<copytable,copytable>> utility could either be used to copy data from one table to another on the same cluster, or to copy data to another table on another cluster.
+The <<copy.table,copytable>> utility could either be used to copy data from one table to another on the same cluster, or to copy data to another table on another cluster.
 
 Since the cluster is up, there is a risk that edits could be missed in the copy process.
 
@@ -2191,7 +2199,7 @@ See <<compaction,compaction>> for some details.
 
 When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput.
 Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions.
-Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; <<hbase.hstore.blockingstorefiles,hbase.hstore.blockingStoreFiles>> should also be increased, as more files might accumulate in such case.
+Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; <<hbase.hstore.blockingStoreFiles,hbase.hstore.blockingStoreFiles>> should also be increased, as more files might accumulate in such case.
 You may also consider manually managing compactions: <<managed.compactions,managed.compactions>>
 
 [[ops.capacity.config.presplit]]

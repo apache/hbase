@@ -66,6 +66,7 @@ the issue there. When you have developed a potential fix, submit it for review.
 If it addresses the issue and is seen as an improvement, one of the HBase committers
 will commit it to one or more branches, as appropriate.
 
+[[submit_doc_patch_procedure]]
 .Procedure: Suggested Work flow for Submitting Patches
 This procedure goes into more detail than Git pros will need, but is included
 in this appendix so that people unfamiliar with Git can feel confident contributing

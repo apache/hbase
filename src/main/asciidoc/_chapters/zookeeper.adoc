@@ -102,7 +102,7 @@ In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
 ====
 The newer version, the better.
 For example, some folks have been bitten by link:https://issues.apache.org/jira/browse/ZOOKEEPER-1277[ZOOKEEPER-1277].
-If running zookeeper 3.5+, you can ask hbase to make use of the new multi operation by enabling <<hbase.zookeeper.usemulti,hbase.zookeeper.useMulti>>" in your _hbase-site.xml_.
+If running zookeeper 3.5+, you can ask hbase to make use of the new multi operation by enabling <<hbase.zookeeper.useMulti,hbase.zookeeper.useMulti>>" in your _hbase-site.xml_.
 ====
 
 .ZooKeeper Maintenance

@@ -94,6 +94,7 @@ See link:http://hbase.apache.org/source-repository.html[Source Code
 
 == IDEs
 
+[[eclipse]]
 === Eclipse
 
 [[eclipse.code.formatting]]
@@ -1759,6 +1760,7 @@ Please understand that not every patch may get committed, and that feedback will
   However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
 * If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
 
+[[patching.methods]]
 .Methods to Create Patches
 Eclipse::
   Select the  menu item.
@@ -1790,6 +1792,7 @@ See <<hbase.tests,hbase.tests>> for more on how the annotations work.
 
 Significant new features should provide an integration test in addition to unit tests, suitable for exercising the new feature at different points in its configuration space.
 
+[[reviewboard]]
 ==== ReviewBoard
 
 Patches larger than one screen, or patches that will be tricky to review, should go through link:http://reviews.apache.org[ReviewBoard].

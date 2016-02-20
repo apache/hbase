@@ -501,6 +501,7 @@ It is generally a better idea to use the startRow/stopRow methods on Scan for ro
 This is primarily used for rowcount jobs.
 See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter].
 
+[[architecture.master]]
 == Master
 
 `HMaster` is the implementation of the Master Server.
@@ -1490,6 +1491,7 @@ It's an asynchronous operation and call returns immediately without waiting merg
 Passing `true` as the optional third parameter will force a merge. Normally only adjacent regions can be merged.
 The `force` parameter overrides this behaviour and is for expert use only.
 
+[[store]]
 === Store
 
 A Store hosts a MemStore and 0 or more StoreFiles (HFiles). A Store corresponds to a column family for a table for a given region.
@@ -1552,6 +1554,7 @@ Matteo Bertozzi has also put up a helpful description, link:http://th30z.blogspo
 For more information, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html[HFile source code].
 Also see <<hfilev2>> for information about the HFile v2 format that was included in 0.92.
 
+[[hfile_tool]]
 ===== HFile Tool
 
 To view a textualized version of HFile content, you can use the `org.apache.hadoop.hbase.io.hfile.HFile` tool.
@@ -1585,6 +1588,7 @@ For more information on compression, see <<compression>>.
 
 For more information on blocks, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html[HFileBlock source code].
 
+[[keyvalue]]
 ==== KeyValue
 
 The KeyValue class is the heart of data storage in HBase.
@@ -1670,6 +1674,7 @@ The end result of a _major compaction_ is a single StoreFile per Store.
 Major compactions also process delete markers and max versions.
 See <<compaction.and.deletes>> and <<compaction.and.versions>> for information on how deletes and versions are handled in relation to compactions.
 
+[[compaction.and.deletes]]
 .Compaction and Deletions
 When an explicit deletion occurs in HBase, the data is not actually deleted.
 Instead, a _tombstone_ marker is written.
@@ -1678,6 +1683,7 @@ During a major compaction, the data is actually deleted, and the tombstone marke
 If the deletion happens because of an expired TTL, no tombstone is created.
 Instead, the expired data is filtered out and is not written back to the compacted StoreFile.
 
+[[compaction.and.versions]]
 .Compaction and Versions
 When you create a Column Family, you can specify the maximum number of versions to keep, by specifying `HColumnDescriptor.setMaxVersions(int versions)`.
 The default value is `3`.
@@ -1885,7 +1891,7 @@ For a full list of all configuration parameters available, see <<config.files,co
   you are balancing write costs with read costs. Raising the value (to something like
   1.4) will have more write costs, because you will compact larger StoreFiles.
   However, during reads, HBase will need to seek through fewer StoreFiles to
-  accomplish the read. Consider this approach if you cannot take advantage of <<bloom>>.
+  accomplish the read. Consider this approach if you cannot take advantage of <<blooms>>.
 * Alternatively, you can lower this value to something like 1.0 to reduce the
   background cost of writes, and use  to limit the number of StoreFiles touched
   during reads. For most cases, the default value is appropriate.
@@ -2052,7 +2058,7 @@ Why?
 [[compaction.config.impact]]
 .Impact of Key Configuration Options
 
-NOTE: This information is now included in the configuration parameter table in <<compaction.configuration.parameters>>.
+NOTE: This information is now included in the configuration parameter table in <<compaction.parameters>>.
 
 [[ops.stripe]]
 ===== Experimental: Stripe Compactions
@@ -2190,7 +2196,7 @@ When at least `hbase.store.stripe.compaction.minFilesL0` such files (by default,
 [[ops.stripe.config.compact]]
 .Normal Compaction Configuration and Stripe Compaction
 
-All the settings that apply to normal compactions (see <<compaction.configuration.parameters>>) apply to stripe compactions.
+All the settings that apply to normal compactions (see <<compaction.parameters>>) apply to stripe compactions.
 The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller.
 To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
 

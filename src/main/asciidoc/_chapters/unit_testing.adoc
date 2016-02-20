@@ -98,6 +98,7 @@ These tests ensure that your `createPut` method creates, populates, and returns 
 Of course, JUnit can do much more than this.
 For an introduction to JUnit, see https://github.com/junit-team/junit/wiki/Getting-started.
 
+[[mockito]]
 == Mockito
 
 Mockito is a mocking framework.
