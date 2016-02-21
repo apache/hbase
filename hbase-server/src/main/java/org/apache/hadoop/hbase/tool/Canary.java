@@ -94,9 +94,12 @@ import org.apache.hadoop.util.ToolRunner;
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
+    public long getReadFailureCount();
+    public long incReadFailureCount();
     public void publishReadFailure(HRegionInfo region, Exception e);
     public void publishReadFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
     public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
+    public long getWriteFailureCount();
     public void publishWriteFailure(HRegionInfo region, Exception e);
     public void publishWriteFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
     public void publishWriteTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
@@ -111,13 +114,28 @@ public final class Canary implements Tool {
   // Simple implementation of canary sink that allows to plot on
   // file or standard output timings or failures.
   public static class StdOutSink implements Sink {
+    private AtomicLong readFailureCount = new AtomicLong(0),
+        writeFailureCount = new AtomicLong(0);
+
+    @Override
+    public long getReadFailureCount() {
+      return readFailureCount.get();
+    }
+
+    @Override
+    public long incReadFailureCount() {
+      return readFailureCount.incrementAndGet();
+    }
+
     @Override
     public void publishReadFailure(HRegionInfo region, Exception e) {
+      readFailureCount.incrementAndGet();
       LOG.error(String.format("read from region %s failed", region.getRegionNameAsString()), e);
     }
 
     @Override
     public void publishReadFailure(HRegionInfo region, HColumnDescriptor column, Exception e) {
+      readFailureCount.incrementAndGet();
       LOG.error(String.format("read from region %s column family %s failed",
                 region.getRegionNameAsString(), column.getNameAsString()), e);
     }
@@ -129,12 +147,19 @@ public final class Canary implements Tool {
     }
 
     @Override
+    public long getWriteFailureCount() {
+      return writeFailureCount.get();
+    }
+
+    @Override
     public void publishWriteFailure(HRegionInfo region, Exception e) {
+      writeFailureCount.incrementAndGet();
       LOG.error(String.format("write to region %s failed", region.getRegionNameAsString()), e);
     }
 
     @Override
     public void publishWriteFailure(HRegionInfo region, HColumnDescriptor column, Exception e) {
+      writeFailureCount.incrementAndGet();
       LOG.error(String.format("write to region %s column family %s failed",
         region.getRegionNameAsString(), column.getNameAsString()), e);
     }
@@ -150,6 +175,7 @@ public final class Canary implements Tool {
 
     @Override
     public void publishReadFailure(String table, String server) {
+      incReadFailureCount();
       LOG.error(String.format("Read from table:%s on region server:%s", table, server));
     }
 
@@ -412,6 +438,7 @@ public final class Canary implements Tool {
   private static final int INIT_ERROR_EXIT_CODE = 2;
   private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
   private static final int ERROR_EXIT_CODE = 4;
+  private static final int FAILURE_EXIT_CODE = 5;
 
   private static final long DEFAULT_INTERVAL = 6000;
 
@@ -435,6 +462,7 @@ public final class Canary implements Tool {
   private boolean regionServerMode = false;
   private boolean regionServerAllRegions = false;
   private boolean writeSniffing = false;
+  private boolean treatFailureAsError = false;
   private TableName writeTableName = DEFAULT_WRITE_TABLE_NAME;
 
   private ExecutorService executor; // threads to retrieve data from regionservers
@@ -498,6 +526,8 @@ public final class Canary implements Tool {
           this.regionServerAllRegions = true;
         } else if(cmd.equals("-writeSniffing")) {
           this.writeSniffing = true;
+        } else if(cmd.equals("-treatFailureAsError")) {
+          this.treatFailureAsError = true;
         } else if (cmd.equals("-e")) {
           this.useRegExp = true;
         } else if (cmd.equals("-t")) {
@@ -602,7 +632,7 @@ public final class Canary implements Tool {
             }
           }
 
-          if (this.failOnError && monitor.hasError()) {
+          if (this.failOnError && monitor.finalCheckForErrors()) {
             monitorThread.interrupt();
             return monitor.errorCode;
           }
@@ -638,6 +668,7 @@ public final class Canary implements Tool {
         " default is true");
     System.err.println("   -t <N>         timeout for a check, default is 600000 (milisecs)");
     System.err.println("   -writeSniffing enable the write sniffing in canary");
+    System.err.println("   -treatFailureAsError treats read / write failure as error");
     System.err.println("   -writeTable    The table used for write sniffing."
         + " Default is hbase:canary");
     System.err
@@ -665,11 +696,12 @@ public final class Canary implements Tool {
     if (this.regionServerMode) {
       monitor =
           new RegionServerMonitor(connection, monitorTargets, this.useRegExp,
-              (ExtendedSink) this.sink, this.executor, this.regionServerAllRegions);
+              (ExtendedSink) this.sink, this.executor, this.regionServerAllRegions,
+              this.treatFailureAsError);
     } else {
       monitor =
           new RegionMonitor(connection, monitorTargets, this.useRegExp, this.sink, this.executor,
-              this.writeSniffing, this.writeTableName);
+              this.writeSniffing, this.writeTableName, this.treatFailureAsError);
     }
     return monitor;
   }
@@ -681,6 +713,7 @@ public final class Canary implements Tool {
     protected Admin admin;
     protected String[] targets;
     protected boolean useRegExp;
+    protected boolean treatFailureAsError;
     protected boolean initialized = false;
 
     protected boolean done = false;
@@ -696,18 +729,31 @@ public final class Canary implements Tool {
       return errorCode != 0;
     }
 
+    public boolean finalCheckForErrors() {
+      if (errorCode != 0) {
+        return true;
+      }
+      if (treatFailureAsError &&
+          (sink.getReadFailureCount() > 0 || sink.getWriteFailureCount() > 0)) {
+        errorCode = FAILURE_EXIT_CODE;
+        return true;
+      }
+      return false;
+    }
+
     @Override
     public void close() throws IOException {
       if (this.admin != null) this.admin.close();
     }
 
     protected Monitor(Connection connection, String[] monitorTargets, boolean useRegExp, Sink sink,
-        ExecutorService executor) {
+        ExecutorService executor, boolean treatFailureAsError) {
       if (null == connection) throw new IllegalArgumentException("connection shall not be null");
 
       this.connection = connection;
       this.targets = monitorTargets;
       this.useRegExp = useRegExp;
+      this.treatFailureAsError = treatFailureAsError;
       this.sink = sink;
       this.executor = executor;
     }
@@ -747,8 +793,9 @@ public final class Canary implements Tool {
     private int checkPeriod;
 
     public RegionMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
-        Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName) {
-      super(connection, monitorTargets, useRegExp, sink, executor);
+        Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName,
+        boolean treatFailureAsError) {
+      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError);
       Configuration conf = connection.getConfiguration();
       this.writeSniffing = writeSniffing;
       this.writeTableName = writeTableName;
@@ -992,8 +1039,9 @@ public final class Canary implements Tool {
     private boolean allRegions;
 
     public RegionServerMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
-        ExtendedSink sink, ExecutorService executor, boolean allRegions) {
-      super(connection, monitorTargets, useRegExp, sink, executor);
+        ExtendedSink sink, ExecutorService executor, boolean allRegions,
+        boolean treatFailureAsError) {
+      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError);
       this.allRegions = allRegions;
     }
 
@@ -1088,7 +1136,7 @@ public final class Canary implements Tool {
         }
       } catch (InterruptedException e) {
         this.errorCode = ERROR_EXIT_CODE;
-        LOG.error("Sniff regionserver failed!", e);
+        LOG.error("Sniff regionserver interrupted!", e);
       }
     }
 
