@@ -93,6 +93,7 @@ Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...]
    -f <B>         stop whole program if first error occurs, default is true
    -t <N>         timeout for a check, default is 600000 (milliseconds)
    -writeSniffing enable the write sniffing in canary
+   -treatFailureAsError treats read / write failure as error
    -writeTable    The table used for write sniffing. Default is hbase:canary
    -D<configProperty>=<value> assigning or override the configuration params
 ----
@@ -214,6 +215,16 @@ $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -writeSniffing -wr
 
 The default value size of each put is 10 bytes and you can set it by the config key:
 `hbase.canary.write.value.size`.
+
+==== Treat read / write failure as error
+
+By default, the canary tool only logs read failure, due to e.g. RetriesExhaustedException,
+while returning normal exit code. To treat read / write failure as error, you can run canary
+with the `-treatFailureAsError` option. When enabled, read / write failure would result in error
+exit code.
+----
+$ ${HBASE_HOME}/bin/hbase canary --treatFailureAsError
+----
 
 ==== Running Canary in a Kerberos-enabled Cluster
 
