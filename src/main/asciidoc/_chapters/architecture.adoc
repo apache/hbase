@@ -1032,6 +1032,7 @@ For background, see link:https://issues.apache.org/jira/browse/HBASE-2643[HBASE-
 
 WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. <<distributed.log.splitting>> was developed to improve performance during log splitting.
 
+[[distributed.log.splitting]]
 .Enabling or Disabling Distributed Log Splitting
 
 Distributed log processing is enabled by default since HBase 0.92.
