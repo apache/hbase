@@ -1888,6 +1888,89 @@ public class HStore implements Store {
   }
 
   @Override
+  public long getMaxStoreFileAge() {
+    long earliestTS = Long.MAX_VALUE;
+    for (StoreFile s: this.storeEngine.getStoreFileManager().getStorefiles()) {
+      StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + s + " has a null Reader");
+        continue;
+      }
+      if (!s.isHFile()) {
+        continue;
+      }
+      long createdTS = s.getFileInfo().getCreatedTimestamp();
+      earliestTS = (createdTS < earliestTS) ? createdTS : earliestTS;
+    }
+    long now = EnvironmentEdgeManager.currentTime();
+    return now - earliestTS;
+  }
+
+  @Override
+  public long getMinStoreFileAge() {
+    long latestTS = 0;
+    for (StoreFile s: this.storeEngine.getStoreFileManager().getStorefiles()) {
+      StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + s + " has a null Reader");
+        continue;
+      }
+      if (!s.isHFile()) {
+        continue;
+      }
+      long createdTS = s.getFileInfo().getCreatedTimestamp();
+      latestTS = (createdTS > latestTS) ? createdTS : latestTS;
+    }
+    long now = EnvironmentEdgeManager.currentTime();
+    return now - latestTS;
+  }
+
+  @Override
+  public long getAvgStoreFileAge() {
+    long sum = 0, count = 0;
+    for (StoreFile s: this.storeEngine.getStoreFileManager().getStorefiles()) {
+      StoreFile.Reader r = s.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + s + " has a null Reader");
+        continue;
+      }
+      if (!s.isHFile()) {
+        continue;
+      }
+      sum += s.getFileInfo().getCreatedTimestamp();
+      count++;
+    }
+    if (count == 0) {
+      return 0;
+    }
+    long avgTS = sum / count;
+    long now = EnvironmentEdgeManager.currentTime();
+    return now - avgTS;
+  }
+
+  @Override
+  public long getNumReferenceFiles() {
+    long numRefFiles = 0;
+    for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
+      if (s.isReference()) {
+        numRefFiles++;
+      }
+    }
+    return numRefFiles;
+  }
+
+  @Override
+  public long getNumHFiles() {
+    long numHFiles = 0;
+    for (StoreFile s : this.storeEngine.getStoreFileManager().getStorefiles()) {
+      if (s.isHFile()) {
+        numHFiles++;
+      }
+    }
+    return numHFiles;
+  }
+
+  @Override
   public long getStoreSizeUncompressed() {
     return this.totalUncompressedBytes;
   }

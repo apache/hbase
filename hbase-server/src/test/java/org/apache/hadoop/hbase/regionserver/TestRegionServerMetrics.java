@@ -239,6 +239,29 @@ public class TestRegionServerMetrics {
   }
 
   @Test
+  public void testStoreFileAge() throws Exception {
+    TableName tableName = TableName.valueOf("testStoreFileAge");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
+    //Force a hfile.
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    Put p = new Put(row);
+    p.addColumn(cf, qualifier, val);
+    t.put(p);
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    assertTrue(metricsHelper.getGaugeLong("maxStoreFileAge", serverSource) > 0);
+    assertTrue(metricsHelper.getGaugeLong("minStoreFileAge", serverSource) > 0);
+    assertTrue(metricsHelper.getGaugeLong("avgStoreFileAge", serverSource) > 0);
+
+    t.close();
+  }
+
+  @Test
   public void testCheckAndPutCount() throws Exception {
     String tableNameString = "testCheckAndPutCount";
     TableName tableName = TableName.valueOf(tableNameString);

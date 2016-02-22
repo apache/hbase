@@ -155,6 +155,14 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
+  String MAX_STORE_FILE_AGE = "maxStoreFileAge";
+  String MIN_STORE_FILE_AGE = "minStoreFileAge";
+  String AVG_STORE_FILE_AGE = "avgStoreFileAge";
+  String NUM_REFERENCE_FILES = "numReferenceFiles";
+  String MAX_STORE_FILE_AGE_DESC = "Max age of store files hosted on this region server";
+  String MIN_STORE_FILE_AGE_DESC = "Min age of store files hosted on this region server";
+  String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this region server";
+  String NUM_REFERENCE_FILES_DESC = "Number of reference file on this region server";
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =

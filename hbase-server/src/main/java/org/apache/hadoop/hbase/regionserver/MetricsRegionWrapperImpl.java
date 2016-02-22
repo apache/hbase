@@ -43,6 +43,10 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numStoreFiles;
   private long memstoreSize;
   private long storeFileSize;
+  private long maxStoreFileAge;
+  private long minStoreFileAge;
+  private long avgStoreFileAge;
+  private long numReferenceFiles;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -137,6 +141,26 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getMaxStoreFileAge() {
+    return maxStoreFileAge;
+  }
+
+  @Override
+  public long getMinStoreFileAge() {
+    return minStoreFileAge;
+  }
+
+  @Override
+  public long getAvgStoreFileAge() {
+    return avgStoreFileAge;
+  }
+
+  @Override
+  public long getNumReferenceFiles() {
+    return numReferenceFiles;
+  }
+
+  @Override
   public int getRegionHashCode() {
     return this.region.hashCode();
   }
@@ -148,18 +172,46 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempNumStoreFiles = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
+      long tempMaxStoreFileAge = 0;
+      long tempMinStoreFileAge = Long.MAX_VALUE;
+      long tempNumReferenceFiles = 0;
 
+      long avgAgeNumerator = 0;
+      long numHFiles = 0;
       if (region.stores != null) {
         for (Store store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
           tempMemstoreSize += store.getMemStoreSize();
           tempStoreFileSize += store.getStorefilesSize();
+
+          long storeMaxStoreFileAge = store.getMaxStoreFileAge();
+          tempMaxStoreFileAge = (storeMaxStoreFileAge > tempMaxStoreFileAge) ?
+            storeMaxStoreFileAge : tempMaxStoreFileAge;
+
+          long storeMinStoreFileAge = store.getMinStoreFileAge();
+          tempMinStoreFileAge = (storeMinStoreFileAge < tempMinStoreFileAge) ?
+            storeMinStoreFileAge : tempMinStoreFileAge;
+
+          long storeHFiles = store.getNumHFiles();
+          avgAgeNumerator += store.getAvgStoreFileAge() * storeHFiles;
+          numHFiles += storeHFiles;
+          tempNumReferenceFiles += store.getNumReferenceFiles();
         }
       }
 
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
+      maxStoreFileAge = tempMaxStoreFileAge;
+      if (tempMinStoreFileAge != Long.MAX_VALUE) {
+        minStoreFileAge = tempMinStoreFileAge;
+      }
+
+      if (numHFiles != 0) {
+        avgStoreFileAge = avgAgeNumerator / numHFiles;
+      }
+
+      numReferenceFiles = tempNumReferenceFiles;
     }
   }
 

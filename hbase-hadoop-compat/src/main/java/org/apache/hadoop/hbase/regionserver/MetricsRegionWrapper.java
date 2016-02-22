@@ -75,6 +75,26 @@ public interface MetricsRegionWrapper {
   long getFilteredReadRequestCount();
 
   /**
+   * @return Max age of store files under this region
+   */
+  long getMaxStoreFileAge();
+
+  /**
+   * @return Min age of store files under this region
+   */
+  long getMinStoreFileAge();
+
+  /**
+   *  @return Average age of store files under this region
+   */
+  long getAvgStoreFileAge();
+
+  /**
+   *  @return Number of reference files under this region
+   */
+  long getNumReferenceFiles();
+
+  /**
    * Get the total number of mutations that have been issued against this region.
    */
   long getWriteRequestCount();
