@@ -360,6 +360,31 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   int getStorefilesCount();
 
   /**
+   * @return Max age of store files in this store
+   */
+  long getMaxStoreFileAge();
+
+  /**
+   * @return Min age of store files in this store
+   */
+  long getMinStoreFileAge();
+
+  /**
+   *  @return Average age of store files in this store, 0 if no store files
+   */
+  long getAvgStoreFileAge();
+
+  /**
+   *  @return Number of reference files in this store
+   */
+  long getNumReferenceFiles();
+
+  /**
+   *  @return Number of HFiles in this store
+   */
+  long getNumHFiles();
+
+  /**
    * @return The size of the store files, in bytes, uncompressed.
    */
   long getStoreSizeUncompressed();

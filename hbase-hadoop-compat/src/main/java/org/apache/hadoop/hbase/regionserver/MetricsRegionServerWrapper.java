@@ -93,6 +93,26 @@ public interface MetricsRegionServerWrapper {
   long getStoreFileSize();
 
   /**
+   * @return Max age of store files hosted on this region server
+   */
+  long getMaxStoreFileAge();
+
+  /**
+   * @return Min age of store files hosted on this region server
+   */
+  long getMinStoreFileAge();
+
+  /**
+   *  @return Average age of store files hosted on this region server
+   */
+  long getAvgStoreFileAge();
+
+  /**
+   *  @return Number of reference files on this region server
+   */
+  long getNumReferenceFiles();
+
+  /**
    * Get the number of requests per second.
    */
   double getRequestsPerSecond();

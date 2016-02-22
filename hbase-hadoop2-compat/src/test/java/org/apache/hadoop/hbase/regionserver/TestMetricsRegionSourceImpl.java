@@ -109,6 +109,26 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getMaxStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getMinStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getAvgStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getNumReferenceFiles() {
+      return 0;
+    }
+
+    @Override
     public long getWriteRequestCount() {
       return 0;
     }
