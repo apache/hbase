@@ -66,6 +66,26 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getMaxStoreFileAge() {
+    return 2;
+  }
+
+  @Override
+  public long getMinStoreFileAge() {
+    return 2;
+  }
+
+  @Override
+  public long getAvgStoreFileAge() {
+    return 2;
+  }
+
+  @Override
+  public long getNumReferenceFiles() {
+    return 2;
+  }
+
+  @Override
   public long getWriteRequestCount() {
     return 106;
   }

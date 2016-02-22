@@ -83,6 +83,9 @@ public class StoreFileInfo {
 
   private RegionCoprocessorHost coprocessorHost;
 
+  // timestamp on when the file was created, is 0 and ignored for reference or link files
+  private long createdTimestamp;
+
   /**
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
@@ -124,6 +127,7 @@ public class StoreFileInfo {
         " reference to " + referencePath);
     } else if (isHFile(p)) {
       // HFile
+      this.createdTimestamp = fileStatus.getModificationTime();
       this.reference = null;
       this.link = null;
     } else {
@@ -309,6 +313,13 @@ public class StoreFileInfo {
   public static boolean isReference(final String name) {
     Matcher m = REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
+  }
+
+  /**
+   * @return timestamp when this file was created (as returned by filesystem)
+   */
+  public long getCreatedTimestamp() {
+    return createdTimestamp;
   }
 
   /*

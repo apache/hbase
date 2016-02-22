@@ -183,6 +183,18 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC),
         this.regionWrapper.getStoreFileSize());
+    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
+        MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
+        this.regionWrapper.getMaxStoreFileAge());
+    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
+        MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC),
+        this.regionWrapper.getMinStoreFileAge());
+    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
+        MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
+        this.regionWrapper.getAvgStoreFileAge());
+    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
+        MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
+        this.regionWrapper.getNumReferenceFiles());
     mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
         MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
         this.regionWrapper.getNumCompactionsCompleted());
@@ -218,6 +230,5 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "99th percentile: "), ds
           .getPercentile(99d) / 1000);
     }
-
   }
 }

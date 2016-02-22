@@ -55,6 +55,10 @@ class MetricsRegionServerWrapperImpl
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
   private volatile long storeFileSize = 0;
+  private volatile long maxStoreFileAge = 0;
+  private volatile long minStoreFileAge = 0;
+  private volatile long avgStoreFileAge = 0;
+  private volatile long numReferenceFiles = 0;
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
@@ -302,6 +306,26 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getMaxStoreFileAge() {
+    return maxStoreFileAge;
+  }
+
+  @Override
+  public long getMinStoreFileAge() {
+    return minStoreFileAge;
+  }
+
+  @Override
+  public long getAvgStoreFileAge() {
+    return avgStoreFileAge;
+  }
+
+  @Override
+  public long getNumReferenceFiles() {
+    return numReferenceFiles;
+  }
+
+  @Override
   public long getMemstoreSize() {
     return memstoreSize;
   }
@@ -425,6 +449,11 @@ class MetricsRegionServerWrapperImpl
       long tempNumStoreFiles = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
+      long tempMaxStoreFileAge = 0;
+      long tempNumReferenceFiles = 0;
+      long avgAgeNumerator = 0;
+      long numHFiles = 0;
+      long tempMinStoreFileAge = Long.MAX_VALUE;
       long tempReadRequestsCount = 0;
       long tempWriteRequestsCount = 0;
       long tempCheckAndMutateChecksFailed = 0;
@@ -456,6 +485,20 @@ class MetricsRegionServerWrapperImpl
           tempNumStoreFiles += store.getStorefilesCount();
           tempMemstoreSize += store.getMemStoreSize();
           tempStoreFileSize += store.getStorefilesSize();
+
+          long storeMaxStoreFileAge = store.getMaxStoreFileAge();
+          tempMaxStoreFileAge = (storeMaxStoreFileAge > tempMaxStoreFileAge) ?
+            storeMaxStoreFileAge : tempMaxStoreFileAge;
+
+          long storeMinStoreFileAge = store.getMinStoreFileAge();
+          tempMinStoreFileAge = (storeMinStoreFileAge < tempMinStoreFileAge) ?
+            storeMinStoreFileAge : tempMinStoreFileAge;
+
+          long storeHFiles = store.getNumHFiles();
+          avgAgeNumerator += store.getAvgStoreFileAge() * storeHFiles;
+          numHFiles += storeHFiles;
+          tempNumReferenceFiles += store.getNumReferenceFiles();
+
           tempStorefileIndexSize += store.getStorefilesIndexSize();
           tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
           tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
@@ -511,6 +554,16 @@ class MetricsRegionServerWrapperImpl
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
+      maxStoreFileAge = tempMaxStoreFileAge;
+      if (tempMinStoreFileAge != Long.MAX_VALUE) {
+        minStoreFileAge = tempMinStoreFileAge;
+      }
+
+      if (numHFiles != 0) {
+        avgStoreFileAge = avgAgeNumerator / numHFiles;
+      }
+
+      numReferenceFiles= tempNumReferenceFiles;
       readRequestsCount = tempReadRequestsCount;
       writeRequestsCount = tempWriteRequestsCount;
       checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;

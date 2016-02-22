@@ -178,6 +178,18 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     mrb.addGauge(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC,
         this.regionWrapper.getStoreFileSize());
+    mrb.addGauge(regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
+        MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC,
+        this.regionWrapper.getMaxStoreFileAge());
+    mrb.addGauge(regionNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
+        MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC,
+        this.regionWrapper.getMinStoreFileAge());
+    mrb.addGauge(regionNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
+        MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC,
+        this.regionWrapper.getAvgStoreFileAge());
+    mrb.addGauge(regionNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
+        MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC,
+        this.regionWrapper.getNumReferenceFiles());
     mrb.addCounter(regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
         MetricsRegionServerSource.READ_REQUEST_COUNT_DESC,
         this.regionWrapper.getReadRequestCount());

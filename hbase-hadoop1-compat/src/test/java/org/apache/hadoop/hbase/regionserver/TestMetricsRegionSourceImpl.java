@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -100,6 +97,26 @@ public class TestMetricsRegionSourceImpl {
 
     @Override
     public long getStoreFileSize() {
+      return 0;
+    }
+
+    @Override
+    public long getMaxStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getMinStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getAvgStoreFileAge() {
+      return 0;
+    }
+
+    @Override
+    public long getNumReferenceFiles() {
       return 0;
     }
 
