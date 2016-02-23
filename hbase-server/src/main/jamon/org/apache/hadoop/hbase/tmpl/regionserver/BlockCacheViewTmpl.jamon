@@ -44,7 +44,7 @@ org.apache.hadoop.util.StringUtils;
   if (bcn.equals("L1")) {
     bc = bcs == null || bcs.length == 0? bc: bcs[0];
   } else {
-    if (bcs.length < 2) {
+    if (bcs == null || bcs.length < 2) {
       System.out.println("There is no L2 block cache");
       return;
     }
