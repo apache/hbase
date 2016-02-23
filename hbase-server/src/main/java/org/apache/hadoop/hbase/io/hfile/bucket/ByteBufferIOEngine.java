@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.util.ByteBufferAllocator;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
 
 /**
@@ -42,13 +43,24 @@ public class ByteBufferIOEngine implements IOEngine {
    * Construct the ByteBufferIOEngine with the given capacity
    * @param capacity
    * @param direct true if allocate direct buffer
-   * @throws IOException
+   * @throws IOException ideally here no exception to be thrown from the allocator
    */
   public ByteBufferIOEngine(long capacity, boolean direct)
       throws IOException {
     this.capacity = capacity;
     this.direct = direct;
-    bufferArray = new ByteBufferArray(capacity, direct);
+    ByteBufferAllocator allocator = new ByteBufferAllocator() {
+      @Override
+      public ByteBuffer allocate(long size, boolean directByteBuffer)
+          throws IOException {
+        if (directByteBuffer) {
+          return ByteBuffer.allocateDirect((int) size);
+        } else {
+          return ByteBuffer.allocate((int) size);
+        }
+      }
+    };
+    bufferArray = new ByteBufferArray(capacity, direct, allocator);
   }
 
   @Override
@@ -85,7 +97,7 @@ public class ByteBufferIOEngine implements IOEngine {
    * @param srcBuffer the given byte buffer from which bytes are to be read
    * @param offset The offset in the ByteBufferArray of the first byte to be
    *          written
-   * @throws IOException
+   * @throws IOException throws IOException if writing to the array throws exception
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {

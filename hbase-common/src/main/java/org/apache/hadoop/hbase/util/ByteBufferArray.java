@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -39,20 +40,23 @@ import org.apache.hadoop.util.StringUtils;
 public final class ByteBufferArray {
   private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 
-  static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
+  public static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
   private ByteBuffer buffers[];
   private Lock locks[];
   private int bufferSize;
   private int bufferCount;
-
+  private ByteBufferAllocator allocator;
   /**
    * We allocate a number of byte buffers as the capacity. In order not to out
    * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}),
    * we will allocate one additional buffer with capacity 0;
    * @param capacity total size of the byte buffer array
    * @param directByteBuffer true if we allocate direct buffer
+   * @param allocator the ByteBufferAllocator that will create the buffers
+   * @throws IOException throws IOException if there is an exception thrown by the allocator
    */
-  public ByteBufferArray(long capacity, boolean directByteBuffer) {
+  public ByteBufferArray(long capacity, boolean directByteBuffer, ByteBufferAllocator allocator)
+      throws IOException {
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     if (this.bufferSize > (capacity / 16))
       this.bufferSize = (int) roundUp(capacity / 16, 32768);
@@ -62,15 +66,15 @@ public final class ByteBufferArray {
         + bufferCount + ", direct=" + directByteBuffer);
     buffers = new ByteBuffer[bufferCount + 1];
     locks = new Lock[bufferCount + 1];
+    this.allocator = allocator;
     for (int i = 0; i <= bufferCount; i++) {
       locks[i] = new ReentrantLock();
       if (i < bufferCount) {
-        buffers[i] = directByteBuffer ? ByteBuffer.allocateDirect(bufferSize)
-            : ByteBuffer.allocate(bufferSize);
+        buffers[i] = allocator.allocate(bufferSize, directByteBuffer);
       } else {
+        // always create on heap
         buffers[i] = ByteBuffer.allocate(0);
       }
-
     }
   }
 

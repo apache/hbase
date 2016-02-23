@@ -303,15 +303,18 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity)
       throws IOException {
-    if (ioEngineName.startsWith("file:"))
+    if (ioEngineName.startsWith("file:")) {
       return new FileIOEngine(ioEngineName.substring(5), capacity);
-    else if (ioEngineName.startsWith("offheap"))
+    } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity, true);
-    else if (ioEngineName.startsWith("heap"))
+    } else if (ioEngineName.startsWith("heap")) {
       return new ByteBufferIOEngine(capacity, false);
-    else
+    } else if (ioEngineName.startsWith("mmap:")) {
+      return new FileMmapEngine(ioEngineName.substring(5), capacity);
+    } else {
       throw new IllegalArgumentException(
           "Don't understand io engine name for cache - prefix with file:, heap or offheap");
+    }
   }
 
   /**
