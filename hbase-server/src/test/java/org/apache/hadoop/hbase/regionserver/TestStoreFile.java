@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -233,6 +234,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
+  @Test
   public void testEmptyStoreFileRestrictKeyRanges() throws Exception {
     StoreFile.Reader reader = mock(StoreFile.Reader.class);
     Store store = mock(Store.class);
@@ -241,7 +243,7 @@ public class TestStoreFile extends HBaseTestCase {
     when(hcd.getName()).thenReturn(cf);
     when(store.getFamily()).thenReturn(hcd);
     StoreFileScanner scanner =
-        new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0);
+        new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0);
     Scan scan = new Scan();
     scan.setColumnFamilyTimeRange(cf, 0, 1);
     assertFalse(scanner.shouldUseScanner(scan, store, 0));

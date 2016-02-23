@@ -906,8 +906,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return false;
   }
 
+  /**
+   * @see KeyValueScanner#getScannerOrder()
+   */
   @Override
-  public long getSequenceID() {
+  public long getScannerOrder() {
     return 0;
   }
 

@@ -182,17 +182,10 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       if (comparison != 0) {
         return comparison;
       } else {
-        // Since both the keys are exactly the same, we break the tie in favor
-        // of the key which came latest.
-        long leftSequenceID = left.getSequenceID();
-        long rightSequenceID = right.getSequenceID();
-        if (leftSequenceID > rightSequenceID) {
-          return -1;
-        } else if (leftSequenceID < rightSequenceID) {
-          return 1;
-        } else {
-          return 0;
-        }
+        // Since both the keys are exactly the same, we break the tie in favor of higher ordered
+        // scanner since it'll have newer data. Since higher value should come first, we reverse
+        // sort here.
+        return Long.compare(right.getScannerOrder(), left.getScannerOrder());
       }
     }
     /**
@@ -392,8 +385,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.heap;
   }
 
+  /**
+   * @see KeyValueScanner#getScannerOrder()
+   */
   @Override
-  public long getSequenceID() {
+  public long getScannerOrder() {
     return 0;
   }
 

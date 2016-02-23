@@ -939,11 +939,12 @@ public class DefaultMemStore implements MemStore {
     }
 
     /**
-     * MemStoreScanner returns max value as sequence id because it will
-     * always have the latest data among all files.
+     * MemStoreScanner returns Long.MAX_VALUE because it will always have the latest data among all
+     * scanners.
+     * @see KeyValueScanner#getScannerOrder()
      */
     @Override
-    public long getSequenceID() {
+    public long getScannerOrder() {
       return Long.MAX_VALUE;
     }
 

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
@@ -30,175 +30,107 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestKeyValueHeap extends HBaseTestCase {
-  private static final boolean PRINT = false;
+  private byte[] row1 = Bytes.toBytes("row1");
+  private byte[] fam1 = Bytes.toBytes("fam1");
+  private byte[] col1 = Bytes.toBytes("col1");
+  private byte[] data = Bytes.toBytes("data");
 
-  List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+  private byte[] row2 = Bytes.toBytes("row2");
+  private byte[] fam2 = Bytes.toBytes("fam2");
+  private byte[] col2 = Bytes.toBytes("col2");
 
-  private byte[] row1;
-  private byte[] fam1;
-  private byte[] col1;
-  private byte[] data;
+  private byte[] col3 = Bytes.toBytes("col3");
+  private byte[] col4 = Bytes.toBytes("col4");
+  private byte[] col5 = Bytes.toBytes("col5");
 
-  private byte[] row2;
-  private byte[] fam2;
-  private byte[] col2;
+  // Variable name encoding. kv<row#><fam#><col#>
+  Cell kv111 = new KeyValue(row1, fam1, col1, data);
+  Cell kv112 = new KeyValue(row1, fam1, col2, data);
+  Cell kv113 = new KeyValue(row1, fam1, col3, data);
+  Cell kv114 = new KeyValue(row1, fam1, col4, data);
+  Cell kv115 = new KeyValue(row1, fam1, col5, data);
+  Cell kv121 = new KeyValue(row1, fam2, col1, data);
+  Cell kv122 = new KeyValue(row1, fam2, col2, data);
+  Cell kv211 = new KeyValue(row2, fam1, col1, data);
+  Cell kv212 = new KeyValue(row2, fam1, col2, data);
+  Cell kv213 = new KeyValue(row2, fam1, col3, data);
 
-  private byte[] col3;
-  private byte[] col4;
-  private byte[] col5;
+  TestScanner s1 = new TestScanner(Arrays.asList(kv115, kv211, kv212));
+  TestScanner s2 = new TestScanner(Arrays.asList(kv111, kv112));
+  TestScanner s3 = new TestScanner(Arrays.asList(kv113, kv114, kv121, kv122, kv213));
 
-  public void setUp() throws Exception {
-    super.setUp();
-    data = Bytes.toBytes("data");
-    row1 = Bytes.toBytes("row1");
-    fam1 = Bytes.toBytes("fam1");
-    col1 = Bytes.toBytes("col1");
-    row2 = Bytes.toBytes("row2");
-    fam2 = Bytes.toBytes("fam2");
-    col2 = Bytes.toBytes("col2");
-    col3 = Bytes.toBytes("col3");
-    col4 = Bytes.toBytes("col4");
-    col5 = Bytes.toBytes("col5");
-  }
+  List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(Arrays.asList(s1, s2, s3));
 
-  public void testSorted() throws IOException{
-    //Cases that need to be checked are:
-    //1. The "smallest" KeyValue is in the same scanners as current
-    //2. Current scanner gets empty
-
-    List<Cell> l1 = new ArrayList<Cell>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
-    l1.add(new KeyValue(row2, fam1, col1, data));
-    l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
-
-    List<Cell> l2 = new ArrayList<Cell>();
-    l2.add(new KeyValue(row1, fam1, col1, data));
-    l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
-
-    List<Cell> l3 = new ArrayList<Cell>();
-    l3.add(new KeyValue(row1, fam1, col3, data));
-    l3.add(new KeyValue(row1, fam1, col4, data));
-    l3.add(new KeyValue(row1, fam2, col1, data));
-    l3.add(new KeyValue(row1, fam2, col2, data));
-    l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
-
-    List<KeyValue> expected = new ArrayList<KeyValue>();
-    expected.add(new KeyValue(row1, fam1, col1, data));
-    expected.add(new KeyValue(row1, fam1, col2, data));
-    expected.add(new KeyValue(row1, fam1, col3, data));
-    expected.add(new KeyValue(row1, fam1, col4, data));
-    expected.add(new KeyValue(row1, fam1, col5, data));
-    expected.add(new KeyValue(row1, fam2, col1, data));
-    expected.add(new KeyValue(row1, fam2, col2, data));
-    expected.add(new KeyValue(row2, fam1, col1, data));
-    expected.add(new KeyValue(row2, fam1, col2, data));
-    expected.add(new KeyValue(row2, fam1, col3, data));
-
+  /*
+   * Uses {@code scanners} to build a KeyValueHeap, iterates over it and asserts that returned
+   * Cells are same as {@code expected}.
+   * @return List of Cells returned from scanners.
+   */
+  public List<Cell> assertCells(List<Cell> expected, List<KeyValueScanner> scanners)
+      throws IOException {
     //Creating KeyValueHeap
-    KeyValueHeap kvh =
-      new KeyValueHeap(scanners, KeyValue.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, KeyValue.COMPARATOR);
 
-    List<Cell> actual = new ArrayList<Cell>();
+    List<Cell> actual = new ArrayList<>();
     while(kvh.peek() != null){
       actual.add(kvh.next());
     }
 
-    assertEquals(expected.size(), actual.size());
-    for(int i=0; i<expected.size(); i++){
-      assertEquals(expected.get(i), actual.get(i));
-      if(PRINT){
-        System.out.println("expected " +expected.get(i)+
-            "\nactual   " +actual.get(i) +"\n");
-      }
-    }
+    assertEquals(expected, actual);
+    return actual;
+  }
+
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  public void testSorted() throws IOException{
+    //Cases that need to be checked are:
+    //1. The "smallest" Cell is in the same scanners as current
+    //2. Current scanner gets empty
+
+    List<Cell> expected = Arrays.asList(
+        kv111, kv112, kv113, kv114, kv115, kv121, kv122, kv211, kv212, kv213);
+
+    List<Cell> actual = assertCells(expected, scanners);
 
     //Check if result is sorted according to Comparator
     for(int i=0; i<actual.size()-1; i++){
       int ret = KeyValue.COMPARATOR.compare(actual.get(i), actual.get(i+1));
       assertTrue(ret < 0);
     }
-
   }
 
   public void testSeek() throws IOException {
     //Cases:
-    //1. Seek KeyValue that is not in scanner
+    //1. Seek Cell that is not in scanner
     //2. Check that smallest that is returned from a seek is correct
 
-    List<Cell> l1 = new ArrayList<Cell>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
-    l1.add(new KeyValue(row2, fam1, col1, data));
-    l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
-
-    List<Cell> l2 = new ArrayList<Cell>();
-    l2.add(new KeyValue(row1, fam1, col1, data));
-    l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
-
-    List<Cell> l3 = new ArrayList<Cell>();
-    l3.add(new KeyValue(row1, fam1, col3, data));
-    l3.add(new KeyValue(row1, fam1, col4, data));
-    l3.add(new KeyValue(row1, fam2, col1, data));
-    l3.add(new KeyValue(row1, fam2, col2, data));
-    l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
-
-    List<KeyValue> expected = new ArrayList<KeyValue>();
-    expected.add(new KeyValue(row2, fam1, col1, data));
+    List<Cell> expected = Arrays.asList(kv211);
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
       new KeyValueHeap(scanners, KeyValue.COMPARATOR);
 
-    KeyValue seekKv = new KeyValue(row2, fam1, null, null);
+    Cell seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
 
-    List<Cell> actual = new ArrayList<Cell>();
-    actual.add(kvh.peek());
+    List<Cell> actual = Arrays.asList(kvh.peek());
 
-    assertEquals(expected.size(), actual.size());
-    for(int i=0; i<expected.size(); i++){
-      assertEquals(expected.get(i), actual.get(i));
-      if(PRINT){
-        System.out.println("expected " +expected.get(i)+
-            "\nactual   " +actual.get(i) +"\n");
-      }
-    }
-
+    assertEquals("Expected = " + Arrays.toString(expected.toArray())
+        + "\n Actual = " + Arrays.toString(actual.toArray()), expected, actual);
   }
 
   public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
 
-    List<Cell> l1 = new ArrayList<Cell>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
-    l1.add(new KeyValue(row2, fam1, col1, data));
-    l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
-
-    List<Cell> l2 = new ArrayList<Cell>();
-    l2.add(new KeyValue(row1, fam1, col1, data));
-    l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
-
-    List<Cell> l3 = new ArrayList<Cell>();
-    l3.add(new KeyValue(row1, fam1, col3, data));
-    l3.add(new KeyValue(row1, fam1, col4, data));
-    l3.add(new KeyValue(row1, fam2, col1, data));
-    l3.add(new KeyValue(row1, fam2, col2, data));
-    l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
-
-    List<Cell> l4 = new ArrayList<Cell>();
-    scanners.add(new Scanner(l4));
+    TestScanner s4 = new TestScanner(new ArrayList<Cell>());
+    scanners.add(s4);
 
     //Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, KeyValue.COMPARATOR);
@@ -206,45 +138,26 @@ public class TestKeyValueHeap extends HBaseTestCase {
     while(kvh.next() != null);
 
     for(KeyValueScanner scanner : scanners) {
-      assertTrue(((Scanner)scanner).isClosed());
+      assertTrue(((TestScanner)scanner).isClosed());
     }
   }
 
   public void testScannerException() throws IOException {
     // Test for NPE issue when exception happens in scanners (HBASE-13835)
 
-    List<Cell> l1 = new ArrayList<Cell>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
-    l1.add(new KeyValue(row2, fam1, col1, data));
-    l1.add(new KeyValue(row2, fam1, col2, data));
-    SeekScanner s1 = new SeekScanner(l1);
-    scanners.add(s1);
+    TestScanner s1 = new SeekTestScanner(Arrays.asList(kv115, kv211, kv212));
+    TestScanner s2 = new SeekTestScanner(Arrays.asList(kv111, kv112));
+    TestScanner s3 = new SeekTestScanner(Arrays.asList(kv113, kv114, kv121, kv122, kv213));
+    TestScanner s4 = new SeekTestScanner(new ArrayList<Cell>());
 
-    List<Cell> l2 = new ArrayList<Cell>();
-    l2.add(new KeyValue(row1, fam1, col1, data));
-    l2.add(new KeyValue(row1, fam1, col2, data));
-    SeekScanner s2 = new SeekScanner(l2);
-    scanners.add(s2);
-
-    List<Cell> l3 = new ArrayList<Cell>();
-    l3.add(new KeyValue(row1, fam1, col3, data));
-    l3.add(new KeyValue(row1, fam1, col4, data));
-    l3.add(new KeyValue(row1, fam2, col1, data));
-    l3.add(new KeyValue(row1, fam2, col2, data));
-    l3.add(new KeyValue(row2, fam1, col3, data));
-    SeekScanner s3 = new SeekScanner(l3);
-    scanners.add(s3);
-
-    List<Cell> l4 = new ArrayList<Cell>();
-    SeekScanner s4 = new SeekScanner(l4);
-    scanners.add(s4);
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(Arrays.asList(s1, s2, s3, s4));
 
     // Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, KeyValue.COMPARATOR);
 
     try {
       for (KeyValueScanner scanner : scanners) {
-        ((SeekScanner) scanner).setRealSeekDone(false);
+        ((SeekTestScanner) scanner).setRealSeekDone(false);
       }
       while (kvh.next() != null);
       // The pollRealKV should throw IOE.
@@ -256,18 +169,45 @@ public class TestKeyValueHeap extends HBaseTestCase {
     // It implies there is no NPE thrown from kvh.close() if getting here
     for (KeyValueScanner scanner : scanners) {
       // Verify that close is called and only called once for each scanner
-      assertTrue(((SeekScanner) scanner).isClosed());
-      assertEquals(((SeekScanner) scanner).getClosedNum(), 1);
+      assertTrue(((SeekTestScanner) scanner).isClosed());
+      assertEquals(((SeekTestScanner) scanner).getClosedNum(), 1);
     }
   }
 
-  private static class Scanner extends CollectionBackedScanner {
-    private Iterator<Cell> iter;
-    private Cell current;
-    private boolean closed = false;
+  @Test
+  public void testPriorityId() throws IOException {
+    Cell kv113A = new KeyValue(row1, fam1, col3, Bytes.toBytes("aaa"));
+    Cell kv113B = new KeyValue(row1, fam1, col3, Bytes.toBytes("bbb"));
+    {
+      TestScanner scan1 = new TestScanner(Arrays.asList(kv111, kv112, kv113A), 1);
+      TestScanner scan2 = new TestScanner(Arrays.asList(kv113B), 2);
+      List<Cell> expected = Arrays.asList(kv111, kv112, kv113B, kv113A);
+      assertCells(expected, new ArrayList<KeyValueScanner>(Arrays.asList(scan1, scan2)));
+    }
+    {
+      TestScanner scan1 = new TestScanner(Arrays.asList(kv111, kv112, kv113A), 2);
+      TestScanner scan2 = new TestScanner(Arrays.asList(kv113B), 1);
+      List<Cell> expected = Arrays.asList(kv111, kv112, kv113A, kv113B);
+      assertCells(expected, new ArrayList<KeyValueScanner>(Arrays.asList(scan1, scan2)));
+    }
+  }
 
-    public Scanner(List<Cell> list) {
+  private static class TestScanner extends CollectionBackedScanner {
+    private boolean closed = false;
+    private long scannerOrder = 0;
+
+    public TestScanner(List<Cell> list) {
       super(list);
+    }
+
+    public TestScanner(List<Cell> list, long scannerOrder) {
+      this(list);
+      this.scannerOrder = scannerOrder;
+    }
+
+    @Override
+    public long getScannerOrder() {
+      return scannerOrder;
     }
 
     @Override
@@ -280,11 +220,11 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
   }
 
-  private static class SeekScanner extends Scanner {
+  private static class SeekTestScanner extends TestScanner {
     private int closedNum = 0;
     private boolean realSeekDone = true;
 
-    public SeekScanner(List<Cell> list) {
+    public SeekTestScanner(List<Cell> list) {
       super(list);
     }
 
