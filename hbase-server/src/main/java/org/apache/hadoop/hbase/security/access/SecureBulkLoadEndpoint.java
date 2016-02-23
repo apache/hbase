@@ -291,6 +291,16 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                 new SecureBulkLoadListener(fs, bulkToken, conf));
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
+          } finally {
+            if (fs != null) {
+              try {
+                if(!UserGroupInformation.getCurrentUser().equals(ugi)) {
+                  FileSystem.closeAllForUGI(ugi);
+                }
+              } catch (IOException e) {
+                LOG.error("Failed to close FileSystem for " + ugi.getUserName(), e);
+              }
+            }
           }
           return false;
         }
