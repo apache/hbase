@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -65,17 +66,37 @@ public class StoreFileScanner implements KeyValueScanner {
 
   private long readPt;
 
+  // Order of this scanner relative to other scanners when duplicate key-value is found.
+  // Higher values means scanner has newer data.
+  private long scannerOrder;
+
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
-   * @param hfs HFile scanner
+   * @param useMVCC If true, scanner will filter out updates with MVCC larger than {@code readPt}.
+   * @param readPt MVCC value to use to filter out the updates newer than this scanner.
+   * @param hasMVCC Set to true if underlying store file reader has MVCC info.
    */
   public StoreFileScanner(StoreFileReader reader, HFileScanner hfs, boolean useMVCC,
       boolean hasMVCC, long readPt) {
+    this (reader, hfs, useMVCC, hasMVCC, readPt, 0);
+  }
+
+  /**
+   * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
+   * @param useMVCC If true, scanner will filter out updates with MVCC larger than {@code readPt}.
+   * @param readPt MVCC value to use to filter out the updates newer than this scanner.
+   * @param hasMVCC Set to true if underlying store file reader has MVCC info.
+   * @param scannerOrder Order of the scanner relative to other scanners.
+   *   See {@link KeyValueScanner#getScannerOrder()}.
+   */
+  public StoreFileScanner(StoreFileReader reader, HFileScanner hfs, boolean useMVCC,
+      boolean hasMVCC, long readPt, long scannerOrder) {
     this.readPt = readPt;
     this.reader = reader;
     this.hfs = hfs;
     this.enforceMVCC = useMVCC;
     this.hasMVCCInfo = hasMVCC;
+    this.scannerOrder = scannerOrder;
   }
 
   boolean isPrimaryReplica() {
@@ -115,11 +136,13 @@ public class StoreFileScanner implements KeyValueScanner {
       ScanQueryMatcher matcher, long readPt, boolean isPrimaryReplica) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
-    for (StoreFile file : files) {
-      StoreFileReader r = file.createReader(canUseDrop);
+    List<StoreFile> sorted_files = new ArrayList<>(files);
+    Collections.sort(sorted_files, StoreFile.Comparators.SEQ_ID);
+    for (int i = 0; i < sorted_files.size(); i++) {
+      StoreFileReader r = sorted_files.get(i).createReader();
       r.setReplicaStoreFile(isPrimaryReplica);
       StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
-          isCompaction, readPt);
+          isCompaction, readPt, i);
       scanner.setScanQueryMatcher(matcher);
       scanners.add(scanner);
     }
@@ -303,9 +326,12 @@ public class StoreFileScanner implements KeyValueScanner {
     return s.next();
   }
 
+  /**
+   * @see KeyValueScanner#getScannerOrder()
+   */
   @Override
-  public long getSequenceID() {
-    return reader.getSequenceID();
+  public long getScannerOrder() {
+    return scannerOrder;
   }
 
   /**

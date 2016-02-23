@@ -211,7 +211,7 @@ public class TestStoreFile extends HBaseTestCase {
     when(hcd.getName()).thenReturn(cf);
     when(store.getFamily()).thenReturn(hcd);
     StoreFileScanner scanner =
-        new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0);
+        new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0);
     Scan scan = new Scan();
     scan.setColumnFamilyTimeRange(cf, 0, 1);
     assertFalse(scanner.shouldUseScanner(scan, store, 0));

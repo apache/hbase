@@ -114,19 +114,27 @@ public class StoreFileReader {
   }
 
   /**
-   * Get a scanner to scan over this StoreFile. Do not use
-   * this overload if using this scanner for compactions.
+   * Uses {@link #getStoreFileScanner(boolean, boolean, boolean, long, long)} by setting
+   * {@code isCompaction} to false, {@code readPt} to 0 and {@code scannerOrder} to 0.
+   * Do not use this overload if using this scanner for compactions.
    *
-   * @param cacheBlocks should this scanner cache blocks?
-   * @param pread use pread (for highly concurrent small readers)
-   * @return a scanner
+   * @see #getStoreFileScanner(boolean, boolean, boolean, long, long)
    */
-  public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                             boolean pread) {
-    return getStoreFileScanner(cacheBlocks, pread, false,
-      // 0 is passed as readpoint because this method is only used by test
-      // where StoreFile is directly operated upon
-      0);
+  public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread) {
+    // 0 is passed as readpoint because this method is only used by test
+    // where StoreFile is directly operated upon
+    return getStoreFileScanner(cacheBlocks, pread, false, 0, 0);
+  }
+
+  /**
+   * Uses {@link #getStoreFileScanner(boolean, boolean, boolean, long, long)} by setting
+   * {@code scannerOrder} to 0.
+   *
+   * @see #getStoreFileScanner(boolean, boolean, boolean, long, long)
+   */
+  public StoreFileScanner getStoreFileScanner(
+      boolean cacheBlocks, boolean pread, boolean isCompaction, long readPt) {
+    return getStoreFileScanner(cacheBlocks, pread, isCompaction, readPt, 0);
   }
 
   /**
@@ -135,16 +143,17 @@ public class StoreFileReader {
    * @param cacheBlocks should this scanner cache blocks?
    * @param pread use pread (for highly concurrent small readers)
    * @param isCompaction is scanner being used for compaction?
+   * @param scannerOrder Order of this scanner relative to other scanners. See
+   *  {@link KeyValueScanner#getScannerOrder()}.
    * @return a scanner
    */
-  public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                             boolean pread,
-                                             boolean isCompaction, long readPt) {
+  public StoreFileScanner getStoreFileScanner(
+      boolean cacheBlocks, boolean pread, boolean isCompaction, long readPt, long scannerOrder) {
     // Increment the ref count
     refCount.incrementAndGet();
-    return new StoreFileScanner(this,
-                               getScanner(cacheBlocks, pread, isCompaction),
-                               !isCompaction, reader.hasMVCCInfo(), readPt);
+    return new StoreFileScanner(
+        this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction, reader.hasMVCCInfo(),
+        readPt, scannerOrder);
   }
 
   /**

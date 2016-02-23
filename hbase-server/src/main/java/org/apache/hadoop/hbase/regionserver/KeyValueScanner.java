@@ -70,13 +70,13 @@ public interface KeyValueScanner extends Shipper, Closeable {
   boolean reseek(Cell key) throws IOException;
 
   /**
-   * Get the sequence id associated with this KeyValueScanner. This is required
-   * for comparing multiple files to find out which one has the latest data.
-   * The default implementation for this would be to return 0. A file having
-   * lower sequence id will be considered to be the older one.
+   * Get the order of this KeyValueScanner. This is only relevant for StoreFileScanners and
+   * MemStoreScanners (other scanners simply return 0). This is required for comparing multiple
+   * files to find out which one has the latest data. StoreFileScanners are ordered from 0
+   * (oldest) to newest in increasing order. MemStoreScanner gets LONG.max since it always
+   * contains freshest data.
    */
-  // TODO: Implement SequenceId Interface instead.
-  long getSequenceID();
+  long getScannerOrder();
 
   /**
    * Close the KeyValue scanner.

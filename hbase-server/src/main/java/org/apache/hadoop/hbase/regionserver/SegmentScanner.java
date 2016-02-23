@@ -33,7 +33,12 @@ import org.apache.hadoop.hbase.client.Scan;
 @InterfaceAudience.Private
 public class SegmentScanner implements KeyValueScanner {
 
-  private long sequenceID = Long.MAX_VALUE;
+  /**
+   * Order of this scanner relative to other scanners. See
+   * {@link KeyValueScanner#getScannerOrder()}.
+   */
+  private long scannerOrder;
+  private static final long DEFAULT_SCANNER_ORDER = Long.MAX_VALUE;
 
   // the observed structure
   private final Segment segment;
@@ -52,6 +57,13 @@ public class SegmentScanner implements KeyValueScanner {
   private Cell last = null;
 
   protected SegmentScanner(Segment segment, long readPoint) {
+    this(segment, readPoint, DEFAULT_SCANNER_ORDER);
+  }
+
+  /**
+   * @param scannerOrder see {@link KeyValueScanner#getScannerOrder()}.
+   */
+  protected SegmentScanner(Segment segment, long readPoint, long scannerOrder) {
     this.segment = segment;
     this.readPoint = readPoint;
     iter = segment.iterator();
@@ -59,6 +71,7 @@ public class SegmentScanner implements KeyValueScanner {
     current = getNext();
     //increase the reference count so the underlying structure will not be de-allocated
     this.segment.incScannerCount();
+    this.scannerOrder = scannerOrder;
   }
 
   /**
@@ -208,14 +221,11 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   /**
-   * Get the sequence id associated with this KeyValueScanner. This is required
-   * for comparing multiple files (or memstore segments) scanners to find out
-   * which one has the latest data.
-   *
+   * @see KeyValueScanner#getScannerOrder()
    */
   @Override
-  public long getSequenceID() {
-    return sequenceID;
+  public long getScannerOrder() {
+    return scannerOrder;
   }
 
   /**
@@ -297,15 +307,6 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   /**
-   * Set the sequence id of the scanner.
-   * This is used to determine an order between memory segment scanners.
-   * @param x a unique sequence id
-   */
-  public void setSequenceID(long x) {
-    sequenceID = x;
-  }
-
-  /**
    * Returns whether the given scan should seek in this segment
    * @return whether the given scan should seek in this segment
    */
@@ -321,7 +322,7 @@ public class SegmentScanner implements KeyValueScanner {
   @Override
   public String toString() {
     String res = "Store segment scanner of type "+this.getClass().getName()+"; ";
-    res += "sequence id "+getSequenceID()+"; ";
+    res += "Scanner order " + getScannerOrder() + "; ";
     res += getSegment().toString();
     return res;
   }
