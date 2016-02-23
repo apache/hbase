@@ -2090,6 +2090,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   @Override
   public void onConfigurationChange(Configuration newConf) {
     initReconfigurable(newConf);
+    if (scheduler instanceof ConfigurationObserver) {
+      ((ConfigurationObserver)scheduler).onConfigurationChange(newConf);
+    }
   }
 
   private void initReconfigurable(Configuration confToLoad) {

@@ -42,6 +42,9 @@ import com.google.common.base.Strings;
 public abstract class RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RpcExecutor.class);
 
+  protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
+  protected volatile int currentQueueLimit;
+
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
   private final List<Thread> handlers;
   private final int handlerCount;
@@ -209,5 +212,13 @@ public abstract class RpcExecutor {
     public int getNextQueue() {
       return ThreadLocalRandom.current().nextInt(queueSize);
     }
+  }
+
+  /**
+   * Update current soft limit for executor's call queues
+   * @param conf updated configuration
+   */
+  public void resizeQueues(Configuration conf) {
+    currentQueueLimit = conf.getInt("hbase.ipc.server.max.callqueue.length", currentQueueLimit);
   }
 }
