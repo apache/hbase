@@ -62,9 +62,7 @@ public class InclusiveStopFilter extends FilterBase {
   public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
     int cmp = CellComparator.COMPARATOR.compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
-    if (cmp > 0) {
-      done = true;
-    }
+    done = reversed ? cmp < 0 : cmp > 0;
     return done;
   }
 

@@ -717,6 +717,43 @@ public class TestFilter {
   }
 
   @Test
+  public void testInclusiveStopFilterWithReverseScan() throws IOException {
+
+    // Grab rows from group one
+
+    // If we just use start/stop row, we get total/2 - 1 rows
+    long expectedRows = (this.numRows / 2) - 1;
+    long expectedKeys = this.colsPerRow;
+    Scan s = new Scan(Bytes.toBytes("testRowOne-3"), Bytes.toBytes("testRowOne-0"));
+    s.setReversed(true);
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Now use start row with inclusive stop filter
+    expectedRows = this.numRows / 2;
+    s = new Scan(Bytes.toBytes("testRowOne-3"));
+    s.setReversed(true);
+    s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowOne-0")));
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Grab rows from group two
+
+    // If we just use start/stop row, we get total/2 - 1 rows
+    expectedRows = (this.numRows / 2) - 1;
+    expectedKeys = this.colsPerRow;
+    s = new Scan(Bytes.toBytes("testRowTwo-3"), Bytes.toBytes("testRowTwo-0"));
+    s.setReversed(true);
+    verifyScan(s, expectedRows, expectedKeys);
+
+    // Now use start row with inclusive stop filter
+    expectedRows = this.numRows / 2;
+    s = new Scan(Bytes.toBytes("testRowTwo-3"));
+    s.setReversed(true);
+    s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowTwo-0")));
+    verifyScan(s, expectedRows, expectedKeys);
+
+  }
+
+  @Test
   public void testQualifierFilter() throws IOException {
 
     // Match two keys (one from each family) in half the rows
