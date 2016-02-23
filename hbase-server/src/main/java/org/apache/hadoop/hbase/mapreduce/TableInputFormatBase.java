@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.naming.NamingException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -285,12 +283,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         }
         InetAddress regionAddress = isa.getAddress();
         String regionLocation;
-        try {
-          regionLocation = reverseDNS(regionAddress);
-        } catch (NamingException e) {
-          LOG.warn("Cannot resolve the host name for " + regionAddress + " because of " + e);
-          regionLocation = location.getHostname();
-        }
+        regionLocation = reverseDNS(regionAddress);
   
         byte[] startRow = scan.getStartRow();
         byte[] stopRow = scan.getStopRow();
@@ -344,7 +337,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
   }
 
-  String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
+  String reverseDNS(InetAddress ipAddress) throws UnknownHostException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
       String ipAddressString = null;

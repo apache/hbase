@@ -24,8 +24,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import javax.naming.NamingException;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -34,7 +32,7 @@ import org.junit.experimental.categories.Category;
 public class TestTableInputFormatBase {
   @Test
   public void testTableInputFormatBaseReverseDNSForIPv6()
-      throws UnknownHostException, NamingException {
+      throws UnknownHostException {
     String address = "ipv6.google.com";
     String localhost = null;
     InetAddress addr = null;
