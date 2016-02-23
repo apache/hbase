@@ -77,9 +77,7 @@ public class InclusiveStopFilter extends FilterBase {
     int cmp = Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
       buffer, offset, length);
 
-    if(cmp < 0) {
-      done = true;
-    }
+    done = reversed ? cmp > 0 : cmp < 0;
     return done;
   }
 
