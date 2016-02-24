@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark.datasources
 import java.util.ArrayList
 
 import org.apache.hadoop.hbase.client._
-import org.apache.hadoop.hbase.spark.{ScanRange, SchemaQualifierDefinition, HBaseRelation, SparkSQLPushDownFilter}
+import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.spark.datasources.HBaseResources._
 import org.apache.spark.{SparkEnv, TaskContext, Logging, Partition}
@@ -28,10 +28,10 @@ import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
 
-
 class HBaseTableScanRDD(relation: HBaseRelation,
-     @transient val filter: Option[SparkSQLPushDownFilter] = None,
-     val columns: Seq[SchemaQualifierDefinition] = Seq.empty
+                       val hbaseContext: HBaseContext,
+                       @transient val filter: Option[SparkSQLPushDownFilter] = None,
+                       val columns: Seq[SchemaQualifierDefinition] = Seq.empty
      )extends RDD[Result](relation.sqlContext.sparkContext, Nil) with Logging  {
   private def sparkConf = SparkEnv.get.conf
   @transient var ranges = Seq.empty[Range]
@@ -98,7 +98,8 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       tbr: TableResource,
       g: Seq[Array[Byte]],
       filter: Option[SparkSQLPushDownFilter],
-      columns: Seq[SchemaQualifierDefinition]): Iterator[Result] = {
+      columns: Seq[SchemaQualifierDefinition],
+      hbaseContext: HBaseContext): Iterator[Result] = {
     g.grouped(relation.bulkGetSize).flatMap{ x =>
       val gets = new ArrayList[Get]()
       x.foreach{ y =>
@@ -111,6 +112,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
         filter.foreach(g.setFilter(_))
         gets.add(g)
       }
+      hbaseContext.applyCreds()
       val tmp = tbr.get(gets)
       rddResources.addResource(tmp)
       toResultIterator(tmp)
@@ -208,11 +210,12 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       if (points.isEmpty) {
         Iterator.empty: Iterator[Result]
       } else {
-        buildGets(tableResource, points, filter, columns)
+        buildGets(tableResource, points, filter, columns, hbaseContext)
       }
     }
     val rIts = scans.par
       .map { scan =>
+      hbaseContext.applyCreds()
       val scanner = tableResource.getScanner(scan)
       rddResources.addResource(scanner)
       scanner
