@@ -268,37 +268,55 @@ Check the versions to be sure they are appropriate.
 
 [source,xml]
 ----
+<properties>
+  <hbase.version>2.0.0-SNAPSHOT</hbase.version>
+  <hadoop.version>2.7.1</hadoop.version>
+</properties>
 
-<dependency>
+<dependencies>
+  <dependency>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-server</artifactId>
+    <version>${hbase.version}</version>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-server</artifactId>
+    <version>${hbase.version}</version>
+    <type>test-jar</type>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-hadoop-compat</artifactId>
+    <version>${hbase.version}</version>
+    <type>test-jar</type>
+    <scope>test</scope>
+  </dependency>
+
+  <dependency>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-common</artifactId>
-    <version>2.0.0</version>
+    <version>${hadoop.version}</version>
     <type>test-jar</type>
     <scope>test</scope>
-</dependency>
-
-<dependency>
+  </dependency>
+  <dependency>
     <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase</artifactId>
-    <version>0.98.3</version>
+    <artifactId>hbase-hadoop2-compat</artifactId>
+    <version>${hbase.version}</version>
     <type>test-jar</type>
     <scope>test</scope>
-</dependency>
-
-<dependency>
+  </dependency>
+  <dependency>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdfs</artifactId>
-    <version>2.0.0</version>
+    <version>${hadoop.version}</version>
     <type>test-jar</type>
     <scope>test</scope>
-</dependency>
-
-<dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-hdfs</artifactId>
-    <version>2.0.0</version>
-    <scope>test</scope>
-</dependency>
+  </dependency>
+</dependencies>
 ----
 
 This code represents an integration test for the MyDAO insert shown in <<unit.tests,unit.tests>>.
@@ -309,7 +327,8 @@ This code represents an integration test for the MyDAO insert shown in <<unit.te
 public class MyHBaseIntegrationTest {
     private static HBaseTestingUtility utility;
     byte[] CF = "CF".getBytes();
-    byte[] QUALIFIER = "CQ-1".getBytes();
+    byte[] CQ1 = "CQ-1".getBytes();
+    byte[] CQ2 = "CQ-2".getBytes();
 
     @Before
     public void setup() throws Exception {
@@ -319,8 +338,7 @@ public class MyHBaseIntegrationTest {
 
     @Test
         public void testInsert() throws Exception {
-       	 HTableInterface table = utility.createTable(Bytes.toBytes("MyTest"),
-       			 Bytes.toBytes("CF"));
+       	 HTableInterface table = utility.createTable(Bytes.toBytes("MyTest"), CF);
        	 HBaseTestObj obj = new HBaseTestObj();
        	 obj.setRowKey("ROWKEY-1");
        	 obj.setData1("DATA-1");
