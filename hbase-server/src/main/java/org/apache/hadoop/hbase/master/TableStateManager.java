@@ -131,7 +131,7 @@ public class TableStateManager {
       TableState.State tableState = getTableState(tableName);
       return TableState.isInStates(tableState, states);
     } catch (IOException e) {
-      LOG.error("Unable to get table " + tableName + " state, probably table not exists");
+      LOG.error("Unable to get table " + tableName + " state", e);
       return false;
     }
   }

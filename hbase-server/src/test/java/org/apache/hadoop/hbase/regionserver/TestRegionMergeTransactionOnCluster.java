@@ -78,6 +78,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import com.google.common.base.Joiner;
@@ -94,6 +95,7 @@ import com.google.protobuf.ServiceException;
 public class TestRegionMergeTransactionOnCluster {
   private static final Log LOG = LogFactory
       .getLog(TestRegionMergeTransactionOnCluster.class);
+  @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
       withLookingForStuckThread(true).build();
   private static final int NB_SERVERS = 3;
@@ -182,7 +184,6 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMergeAndRestartingMaster() throws Exception {
-    LOG.info("Starting testMergeAndRestartingMaster");
     final TableName tableName = TableName.valueOf("testMergeAndRestartingMaster");
 
     // Create table and load data.
@@ -458,11 +459,15 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     Table table = TEST_UTIL.createTable(tablename, FAMILYNAME, splitRows);
+    LOG.info("Created " + table.getName());
     if (replication > 1) {
       HBaseTestingUtility.setReplicas(ADMIN, tablename, replication);
+      LOG.info("Set replication of " + replication + " on " + table.getName());
     }
     loadData(table);
+    LOG.info("Loaded " + table.getName());
     verifyRowCount(table, ROWSIZE);
+    LOG.info("Verified " + table.getName());
 
     // sleep here is an ugly hack to allow region transitions to finish
     long timeout = System.currentTimeMillis() + waitTime;
@@ -474,7 +479,7 @@ public class TestRegionMergeTransactionOnCluster {
         break;
       Thread.sleep(250);
     }
-
+    LOG.info("Getting regions of " + table.getName());
     tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
         TEST_UTIL.getConnection(), tablename);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
