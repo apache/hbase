@@ -336,7 +336,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // handle table states
   private TableStateManager tableStateManager;
-  
+
   private long splitPlanCount;
   private long mergePlanCount;
 
@@ -2159,6 +2159,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     return procedureStore != null ? procedureStore.getActiveLogs().size() : 0;
   }
 
+  public WALProcedureStore getWalProcedureStore() {
+    return procedureStore;
+  }
+
   public int getRegionServerInfoPort(final ServerName sn) {
     RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
     if (info == null || info.getInfoPort() == 0) {
@@ -2358,7 +2362,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     return regionStates.getAverageLoad();
   }
-  
+
   /*
    * @return the count of region split plans executed
    */
