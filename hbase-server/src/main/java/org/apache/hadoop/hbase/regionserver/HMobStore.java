@@ -511,6 +511,9 @@ public class HMobStore extends HStore {
     }
   }
 
+  @Override public void finalizeFlush() {
+  }
+
   public void updateCellsCountCompactedToMob(long count) {
     cellsCountCompactedToMob += count;
   }

@@ -162,6 +162,10 @@ public class DefaultMemStore extends AbstractMemStore {
     return;
   }
 
+  @Override
+  public void finalizeFlush() {
+  }
+
   /**
    * Code to help figure if our approximation of object heap sizes is close
    * enough.  See hbase-900.  Fills memstores then waits so user can heap

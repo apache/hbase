@@ -144,4 +144,11 @@ public interface MemStore extends HeapSize {
    * @return Total memory occupied by this MemStore.
    */
   long size();
+
+  /**
+   * This method is called when it is clear that the flush to disk is completed.
+   * The store may do any post-flush actions at this point.
+   * One example is to update the wal with sequence number that is known only at the store level.
+   */
+  void finalizeFlush();
 }

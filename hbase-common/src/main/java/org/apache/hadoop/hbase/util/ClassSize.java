@@ -110,6 +110,8 @@ public class ClassSize {
   /** Overhead for CellSkipListSet */
   public static final int CELL_SKIPLIST_SET;
 
+  public static final int STORE_SERVICES;
+
   /* Are we running on jdk7? */
   private static final boolean JDK7;
   static {
@@ -193,6 +195,8 @@ public class ClassSize {
     TIMERANGE_TRACKER = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2);
 
     CELL_SKIPLIST_SET = align(OBJECT + REFERENCE);
+
+    STORE_SERVICES = align(OBJECT + REFERENCE + ATOMIC_LONG);
   }
 
   /**
