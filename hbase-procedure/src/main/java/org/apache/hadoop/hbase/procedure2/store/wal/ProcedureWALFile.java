@@ -22,12 +22,12 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
@@ -42,24 +42,29 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
 
   private ProcedureWALHeader header;
   private FSDataInputStream stream;
-  private FileStatus logStatus;
   private FileSystem fs;
   private Path logFile;
   private long startPos;
   private long minProcId;
   private long maxProcId;
+  private long logSize;
+  private long timestamp;
 
   public ProcedureWALFile(final FileSystem fs, final FileStatus logStatus) {
     this.fs = fs;
-    this.logStatus = logStatus;
     this.logFile = logStatus.getPath();
+    this.logSize = logStatus.getLen();
+    this.timestamp = logStatus.getModificationTime();
   }
 
-  public ProcedureWALFile(FileSystem fs, Path logFile, ProcedureWALHeader header, long startPos) {
+  public ProcedureWALFile(FileSystem fs, Path logFile, ProcedureWALHeader header,
+      long startPos, long timestamp) {
     this.fs = fs;
-    this.logFile = logFile;
     this.header = header;
+    this.logFile = logFile;
     this.startPos = startPos;
+    this.logSize = startPos;
+    this.timestamp = timestamp;
   }
 
   public void open() throws IOException {
@@ -77,7 +82,7 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
 
   public ProcedureWALTrailer readTrailer() throws IOException {
     try {
-      return ProcedureWALFormat.readTrailer(stream, startPos, logStatus.getLen());
+      return ProcedureWALFormat.readTrailer(stream, startPos, logSize);
     } finally {
       stream.seek(startPos);
     }
@@ -112,6 +117,10 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     return header;
   }
 
+  public long getTimestamp() {
+    return timestamp;
+  }
+
   public boolean isCompacted() {
     return header.getType() == ProcedureWALFormat.LOG_TYPE_COMPACTED;
   }
@@ -121,7 +130,14 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
   }
 
   public long getSize() {
-    return logStatus != null ? logStatus.getLen() : 0;
+    return logSize;
+  }
+
+  /**
+   * Used to update in-progress log sizes. the FileStatus will report 0 otherwise.
+   */
+  void addToSize(long size) {
+    this.logSize += size;
   }
 
   public void removeFile() throws IOException {
