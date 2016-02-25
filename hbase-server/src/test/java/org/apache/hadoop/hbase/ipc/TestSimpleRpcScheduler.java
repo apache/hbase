@@ -356,4 +356,67 @@ public class TestSimpleRpcScheduler {
       scheduler.stop();
     }
   }
+
+  @Test
+  public void testCoDelScheduling() throws Exception {
+    Configuration schedConf = HBaseConfiguration.create();
+
+    schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY,
+      SimpleRpcScheduler.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(RPCProtos.RequestHeader.class), any(Message.class),
+      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 1, 1, 1, priority,
+      HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      // calls faster than min delay
+      for (int i = 0; i < 100; i++) {
+        CallRunner cr = getMockedCallRunner();
+        Thread.sleep(5);
+        scheduler.dispatch(cr);
+      }
+      Thread.sleep(100); // make sure fast calls are handled
+      assertEquals("None of these calls should have been discarded", 0,
+        scheduler.getNumGeneralCallsDropped());
+
+      // calls slower than min delay, but not individually slow enough to be dropped
+      for (int i = 0; i < 20; i++) {
+        CallRunner cr = getMockedCallRunner();
+        Thread.sleep(6);
+        scheduler.dispatch(cr);
+      }
+
+      Thread.sleep(100); // make sure somewhat slow calls are handled
+      assertEquals("None of these calls should have been discarded", 0,
+        scheduler.getNumGeneralCallsDropped());
+
+      // now slow calls and the ones to be dropped
+      for (int i = 0; i < 20; i++) {
+        CallRunner cr = getMockedCallRunner();
+        Thread.sleep(12);
+        scheduler.dispatch(cr);
+      }
+
+      Thread.sleep(100); // make sure somewhat slow calls are handled
+      assertTrue("There should have been at least 12 calls dropped",
+        scheduler.getNumGeneralCallsDropped() > 12);
+    } finally {
+      scheduler.stop();
+    }
+  }
+
+  private CallRunner getMockedCallRunner() throws IOException {
+    CallRunner putCallTask = mock(CallRunner.class);
+    RpcServer.Call putCall = mock(RpcServer.Call.class);
+    putCall.param = RequestConverter.buildMutateRequest(
+      Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
+    RPCProtos.RequestHeader putHead = RPCProtos.RequestHeader.newBuilder().setMethodName("mutate").build();
+    when(putCallTask.getCall()).thenReturn(putCall);
+    when(putCall.getHeader()).thenReturn(putHead);
+    putCall.timestamp = System.currentTimeMillis();
+    return putCallTask;
+  }
 }

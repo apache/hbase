@@ -26,4 +26,6 @@ public interface MetricsHBaseServerWrapper {
   int getPriorityQueueLength();
   int getNumOpenConnections();
   int getActiveRpcHandlerCount();
+  long getNumGeneralCallsDropped();
+  long getNumLifoModeSwitches();
 }

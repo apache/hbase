@@ -64,6 +64,12 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
   String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
   String NUM_ACTIVE_HANDLER_DESC = "Number of active rpc handlers.";
+  String NUM_GENERAL_CALLS_DROPPED_NAME = "numGeneralCallsDropped";
+  String NUM_GENERAL_CALLS_DROPPED_DESC = "Total number of calls in general queue which " +
+    "were dropped by CoDel RPC executor";
+  String NUM_LIFO_MODE_SWITCHES_NAME = "numLifoModeSwitches";
+  String NUM_LIFO_MODE_SWITCHES_DESC = "Total number of calls in general queue which " +
+    "were served from the tail of the queue";
 
   String EXCEPTIONS_NAME="exceptions";
   String EXCEPTIONS_DESC="Exceptions caused by requests";

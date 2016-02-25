@@ -85,6 +85,7 @@ public class ReflectionUtils {
         match = (!ctorParamTypes[i].isPrimitive()) ? ctorParamTypes[i].isAssignableFrom(paramType) :
                   ((int.class.equals(ctorParamTypes[i]) && Integer.class.equals(paramType)) ||
                    (long.class.equals(ctorParamTypes[i]) && Long.class.equals(paramType)) ||
+                   (double.class.equals(ctorParamTypes[i]) && Double.class.equals(paramType)) ||
                    (char.class.equals(ctorParamTypes[i]) && Character.class.equals(paramType)) ||
                    (short.class.equals(ctorParamTypes[i]) && Short.class.equals(paramType)) ||
                    (boolean.class.equals(ctorParamTypes[i]) && Boolean.class.equals(paramType)) ||
