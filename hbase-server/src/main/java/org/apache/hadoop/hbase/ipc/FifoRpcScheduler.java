@@ -104,4 +104,14 @@ public class FifoRpcScheduler extends RpcScheduler {
   public int getActiveRpcHandlerCount() {
     return executor.getActiveCount();
   }
+
+  @Override
+  public long getNumGeneralCallsDropped() {
+    return 0;
+  }
+
+  @Override
+  public long getNumLifoModeSwitches() {
+    return 0;
+  }
 }
