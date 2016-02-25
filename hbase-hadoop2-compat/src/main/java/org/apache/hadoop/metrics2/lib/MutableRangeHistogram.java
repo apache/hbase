@@ -56,8 +56,10 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
     FastLongHistogram histo = histogram.reset();
-    updateSnapshotMetrics(metricsRecordBuilder, histo);
-    updateSnapshotRangeMetrics(metricsRecordBuilder, histo);
+    if (histo != null) {
+      updateSnapshotMetrics(metricsRecordBuilder, histo);
+      updateSnapshotRangeMetrics(metricsRecordBuilder, histo);
+    }
   }
 
   public void updateSnapshotRangeMetrics(MetricsRecordBuilder metricsRecordBuilder,

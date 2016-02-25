@@ -310,12 +310,8 @@ public class FastLongHistogram {
    * Resets the histogram for new counting.
    */
   public FastLongHistogram reset() {
-    if (this.bins.hasData.get()) {
-      Bins oldBins = this.bins;
-      this.bins = new Bins(this.bins, this.bins.counts.length - 3, 0.01, 0.99);
-      return new FastLongHistogram(oldBins);
-    }
-
-    return null;
+    Bins oldBins = this.bins;
+    this.bins = new Bins(this.bins, this.bins.counts.length - 3, 0.01, 0.99);
+    return new FastLongHistogram(oldBins);
   }
 }

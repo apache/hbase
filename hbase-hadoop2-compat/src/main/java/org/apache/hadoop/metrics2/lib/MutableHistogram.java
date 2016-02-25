@@ -63,7 +63,9 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
     FastLongHistogram histo = histogram.reset();
-    updateSnapshotMetrics(metricsRecordBuilder, histo);
+    if (histo != null) {
+      updateSnapshotMetrics(metricsRecordBuilder, histo);
+    }
   }
 
   protected void updateSnapshotMetrics(MetricsRecordBuilder metricsRecordBuilder,
