@@ -1347,6 +1347,28 @@ Settings for HDFS retries and timeouts are important to HBase.::
   Defaults are current as of Hadoop 2.3.
   Check the Hadoop documentation for the most current values and recommendations.
 
+The HBase Balancer and HDFS Balancer are incompatible::
+  The HDFS balancer attempts to spread HDFS blocks evenly among DataNodes. HBase relies
+  on compactions to restore locality after a region split or failure. These two types
+  of balancing do not work well together.
++
+In the past, the generally accepted advice was to turn off the HDFS load balancer and rely
+on the HBase balancer, since the HDFS balancer would degrade locality. This advice
+is still valid if your HDFS version is lower than 2.7.1.
++
+link:https://issues.apache.org/jira/browse/HDFS-6133[HDFS-6133] provides the ability
+to exclude a given directory from the HDFS load balancer, by setting the
+`dfs.datanode.block-pinning.enabled` property to `true` in your HDFS
+configuration and running the following hdfs command:
++
+----
+$ sudo -u hdfs hdfs balancer -exclude /hbase
+----
++
+NOTE: HDFS-6133 is available in HDFS 2.7.0 and higher, but HBase does not support
+running on HDFS 2.7.0, so you must be using HDFS 2.7.1 or higher to use this feature
+with HBase.
+
 .Connection Timeouts
 Connection timeouts occur between the client (HBASE) and the HDFS DataNode.
 They may occur when establishing a connection, attempting to read, or attempting to write.
