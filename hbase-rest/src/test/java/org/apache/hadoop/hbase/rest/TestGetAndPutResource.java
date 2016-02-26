@@ -25,7 +25,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URLEncoder;
+import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.JAXBException;
 
@@ -123,6 +126,72 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3, VALUE_4);
     assertEquals(response.getCode(), 200);
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_4);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testMultipleCellCheckPutPB() throws IOException, JAXBException {
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    // Add 2 Columns to setup the test
+    response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+
+    response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    HashMap<String,String> otherCells = new HashMap<String, String>();
+    otherCells.put(COLUMN_2,VALUE_3);
+
+    // On Success update both the cells
+    response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_3);
+
+    // On Failure, we dont update any cells
+    response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_4, otherCells);
+    assertEquals(response.getCode(), 304);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_3);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testMultipleCellCheckPutXML() throws IOException, JAXBException {
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    // Add 2 Columns to setup the test
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+
+    response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    HashMap<String,String> otherCells = new HashMap<String, String>();
+    otherCells.put(COLUMN_2,VALUE_3);
+
+    // On Success update both the cells
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_3);
+
+    // On Failure, we dont update any cells
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_4, otherCells);
+    assertEquals(response.getCode(), 304);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_3);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);
