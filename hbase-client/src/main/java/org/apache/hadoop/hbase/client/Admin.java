@@ -1678,11 +1678,28 @@ public interface Admin extends Abortable, Closeable {
   List<SecurityCapability> getSecurityCapabilities() throws IOException;
 
   /**
+   * Turn the Split or Merge switches on or off.
+   *
+   * @param enabled enabled or not
+   * @param synchronous If true, it waits until current split() call, if outstanding, to return.
+   * @param switchTypes switchType list {@link MasterSwitchType}
+   * @return Previous switch value array
+   */
+  boolean[] setSplitOrMergeEnabled(final boolean enabled, final boolean synchronous,
+                                   final MasterSwitchType... switchTypes) throws IOException;
+
+  /**
+   * Query the current state of the switch
+   *
+   * @return true if the switch is enabled, false otherwise.
+   */
+  boolean isSplitOrMergeEnabled(final MasterSwitchType switchType) throws IOException;
+
+  /**
    * Currently, there are only two compact types:
    * {@code NORMAL} means do store files compaction;
    * {@code MOB} means do mob files compaction.
    * */
-
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public enum CompactType {
@@ -1692,4 +1709,12 @@ public interface Admin extends Abortable, Closeable {
 
     CompactType(int value) {}
   }
+  
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public enum MasterSwitchType {
+    SPLIT,
+    MERGE
+  }
+
 }

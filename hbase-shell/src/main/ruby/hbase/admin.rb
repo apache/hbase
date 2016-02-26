@@ -132,6 +132,38 @@ module Hbase
       end
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable one split or merge switch
+    # Returns previous switch setting.
+    def splitormerge_switch(type, enabled)
+      switch_type = nil
+      if type == 'SPLIT'
+        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::SPLIT
+      elsif type == 'MERGE'
+        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::MERGE
+      else
+        raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
+      end
+      @admin.setSplitOrMergeEnabled(
+        java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false),
+        switch_type)[0]
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query the current state of the split or merge switch.
+    # Returns the switch's state (true is enabled).
+    def splitormerge_enabled(type)
+      switch_type = nil
+      if type == 'SPLIT'
+        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::SPLIT
+      elsif type == 'MERGE'
+        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::MERGE
+      else
+        raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
+      end
+      @admin.isSplitOrMergeEnabled(switch_type)
+    end
+
     def locate_region(table_name, row_key)
       locator = @connection.getRegionLocator(TableName.valueOf(table_name))
       begin

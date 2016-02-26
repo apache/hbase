@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -1506,6 +1507,35 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public SetSplitOrMergeEnabledResponse setSplitOrMergeEnabled(RpcController controller,
+    SetSplitOrMergeEnabledRequest request) throws ServiceException {
+    SetSplitOrMergeEnabledResponse.Builder response = SetSplitOrMergeEnabledResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      for (MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
+        Admin.MasterSwitchType switchType = convert(masterSwitchType);
+        boolean oldValue = master.isSplitOrMergeEnabled(switchType);
+        boolean newValue = request.getEnabled();
+        master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
+        response.addPrevValue(oldValue);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    } catch (KeeperException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
+
+  @Override
+  public IsSplitOrMergeEnabledResponse isSplitOrMergeEnabled(RpcController controller,
+    IsSplitOrMergeEnabledRequest request) throws ServiceException {
+    IsSplitOrMergeEnabledResponse.Builder response = IsSplitOrMergeEnabledResponse.newBuilder();
+    response.setEnabled(master.isSplitOrMergeEnabled(convert(request.getSwitchType())));
+    return response.build();
+  }
+
+  @Override
   public NormalizeResponse normalize(RpcController controller,
       NormalizeRequest request) throws ServiceException {
     try {
@@ -1573,5 +1603,17 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
     return response.build();
+  }
+
+  private Admin.MasterSwitchType convert(MasterSwitchType switchType) {
+    switch (switchType) {
+      case SPLIT:
+        return Admin.MasterSwitchType.SPLIT;
+      case MERGE:
+        return Admin.MasterSwitchType.MERGE;
+      default:
+        break;
+    }
+    return null;
   }
 }
