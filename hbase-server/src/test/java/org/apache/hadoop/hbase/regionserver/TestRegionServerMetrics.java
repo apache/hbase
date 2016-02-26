@@ -28,6 +28,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -462,6 +463,7 @@ public class TestRegionServerMetrics {
   }
  
   @Test
+  @Ignore
   public void testRangeCountMetrics() throws Exception {
     String tableNameString = "testRangeCountMetrics";
     final long[] timeranges =
@@ -507,7 +509,7 @@ public class TestRegionServerMetrics {
       dynamicMetricName =
           timeRangeMetricName + "_" + timeRangeType + "_" + prior + "-" + timeranges[i];
       if (metricsHelper.checkCounterExists(dynamicMetricName, serverSource)) {
-        long count = metricsHelper.getCounter(dynamicMetricName, serverSource);
+        long count = metricsHelper.getGaugeLong(dynamicMetricName, serverSource);
         if (count > 0) {
           timeRangeCountUpdated = true;
           break;
