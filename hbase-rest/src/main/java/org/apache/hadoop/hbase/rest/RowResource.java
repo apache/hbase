@@ -456,20 +456,40 @@ public class RowResource extends ResourceBase {
       byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
       if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
         CellModel valueToPutCell = null;
+
+        // Copy all the cells to the Put request
+        // and track if the check cell's latest value is also sent
         for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
-          if(Bytes.equals(cellModels.get(i).getColumn(),
-              valueToCheckCell.getColumn())) {
-            valueToPutCell = cellModels.get(i);
-            break;
+          CellModel cell = cellModels.get(i);
+          byte[] col = cell.getColumn();
+
+          if (col == null) {
+            servlet.getMetrics().incrementFailedPutRequests(1);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                    .build();
+          }
+
+          byte [][] parts = KeyValue.parseColumn(col);
+
+          if (parts.length != 2) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+                    .build();
+          }
+          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+
+          if(Bytes.equals(col,
+                  valueToCheckCell.getColumn())) {
+            valueToPutCell = cell;
           }
         }
+
         if (valueToPutCell == null) {
           servlet.getMetrics().incrementFailedPutRequests(1);
           return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
               .entity("Bad request: The column to put and check do not match." + CRLF).build();
         } else {
-          put.addImmutable(valueToPutParts[0], valueToPutParts[1], valueToPutCell.getTimestamp(),
-            valueToPutCell.getValue());
           retValue = table.checkAndPut(key, valueToPutParts[0], valueToPutParts[1],
             valueToCheckCell.getValue(), put);
         }
