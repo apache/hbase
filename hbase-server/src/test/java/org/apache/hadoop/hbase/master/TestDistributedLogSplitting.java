@@ -1301,9 +1301,8 @@ public class TestDistributedLogSplitting {
         WALEdit e = new WALEdit();
         value++;
         e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-        wal.append(htd, curRegionInfo,
-            new HLogKey(curRegionInfo.getEncodedNameAsBytes(), tableName, System.currentTimeMillis()),
-            e, true);
+        wal.append(curRegionInfo, new HLogKey(curRegionInfo.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis(), null), e, true);
       }
       wal.sync();
       wal.shutdown();
@@ -1397,7 +1396,7 @@ public class TestDistributedLogSplitting {
         WALEdit e = new WALEdit();
         value++;
         e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-        wal.append(htd, curRegionInfo, new HLogKey(curRegionInfo.getEncodedNameAsBytes(),
+        wal.append(curRegionInfo, new HLogKey(curRegionInfo.getEncodedNameAsBytes(),
             tableName, System.currentTimeMillis()), e, true);
       }
       wal.sync();
@@ -1609,7 +1608,7 @@ public class TestDistributedLogSplitting {
         // key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
-        log.append(htd, curRegionInfo,
+        log.append(curRegionInfo,
             new HLogKey(curRegionInfo.getEncodedNameAsBytes(), fullTName,
                 System.currentTimeMillis()), e, true);
         if (0 == i % syncEvery) {

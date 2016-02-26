@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -131,6 +132,7 @@ public class TestReplicationSourceManager {
   private static CountDownLatch latch;
 
   private static List<String> files = new ArrayList<String>();
+  private static NavigableMap<byte[], Integer> scopes;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -177,6 +179,11 @@ public class TestReplicationSourceManager {
     col.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     htd.addFamily(col);
 
+    scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     hri = new HRegionInfo(htd.getTableName(), r1, r2);
   }
 
@@ -214,15 +221,20 @@ public class TestReplicationSourceManager {
     manager.init();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
     htd.addFamily(new HColumnDescriptor(f1));
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     // Testing normal log rolling every 20
     for(long i = 1; i < 101; i++) {
       if(i > 1 && i % 20 == 0) {
         wal.rollWriter();
       }
       LOG.info(i);
-      final long txid = wal.append(htd,
+      final long txid = wal.append(
           hri,
-          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
           edit,
           true);
       wal.sync(txid);
@@ -236,8 +248,8 @@ public class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      wal.append(htd, hri,
-          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+      wal.append(hri,
+          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
           edit,
           true);
     }
@@ -254,8 +266,8 @@ public class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
         "1", 0, false, false);
 
-    wal.append(htd, hri,
-        new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+    wal.append(hri,
+        new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
         edit,
         true);
     wal.sync();
@@ -427,33 +439,35 @@ public class TestReplicationSourceManager {
 
   @Test
   public void testBulkLoadWALEditsWithoutBulkLoadReplicationEnabled() throws Exception {
-    // 1. Create wal key
-    WALKey logKey = new WALKey();
-    // 2. Get the bulk load wal edit event
-    WALEdit logEdit = getBulkLoadWALEdit();
+    NavigableMap<byte[], Integer> scope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    // 1. Get the bulk load wal edit event
+    WALEdit logEdit = getBulkLoadWALEdit(scope);
+    // 2. Create wal key
+    WALKey logKey = new WALKey(scope);
 
     // 3. Get the scopes for the key
-    Replication.scopeWALEdits(htd, logKey, logEdit, conf, manager);
+    Replication.scopeWALEdits(logKey, logEdit, conf, manager);
 
     // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
-    assertNull("No bulk load entries scope should be added if bulk load replication is diabled.",
-      logKey.getScopes());
+    assertNull("No bulk load entries scope should be added if bulk load replication is disabled.",
+      logKey.getReplicationScopes());
   }
 
   @Test
   public void testBulkLoadWALEdits() throws Exception {
-    // 1. Create wal key
-    WALKey logKey = new WALKey();
-    // 2. Get the bulk load wal edit event
-    WALEdit logEdit = getBulkLoadWALEdit();
+    // 1. Get the bulk load wal edit event
+    NavigableMap<byte[], Integer> scope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    WALEdit logEdit = getBulkLoadWALEdit(scope);
+    // 2. Create wal key
+    WALKey logKey = new WALKey(scope);
     // 3. Enable bulk load hfile replication
     Configuration bulkLoadConf = HBaseConfiguration.create(conf);
     bulkLoadConf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
 
     // 4. Get the scopes for the key
-    Replication.scopeWALEdits(htd, logKey, logEdit, bulkLoadConf, manager);
+    Replication.scopeWALEdits(logKey, logEdit, bulkLoadConf, manager);
 
-    NavigableMap<byte[], Integer> scopes = logKey.getScopes();
+    NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
     // Assert family with replication scope global is present in the key scopes
     assertTrue("This family scope is set to global, should be part of replication key scopes.",
       scopes.containsKey(f1));
@@ -462,17 +476,16 @@ public class TestReplicationSourceManager {
       scopes.containsKey(f2));
   }
 
-  private WALEdit getBulkLoadWALEdit() {
+  private WALEdit getBulkLoadWALEdit(NavigableMap<byte[], Integer> scope) {
     // 1. Create store files for the families
     Map<byte[], List<Path>> storeFiles = new HashMap<>(1);
     List<Path> p = new ArrayList<>(1);
     p.add(new Path(Bytes.toString(f1)));
     storeFiles.put(f1, p);
-
+    scope.put(f1, 1);
     p = new ArrayList<>(1);
     p.add(new Path(Bytes.toString(f2)));
     storeFiles.put(f2, p);
-
     // 2. Create bulk load descriptor
     BulkLoadDescriptor desc = ProtobufUtil.toBulkLoadDescriptor(hri.getTable(),
       ByteStringer.wrap(hri.getEncodedNameAsBytes()), storeFiles, 1);

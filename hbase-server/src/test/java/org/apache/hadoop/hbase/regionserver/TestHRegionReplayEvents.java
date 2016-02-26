@@ -1126,7 +1126,7 @@ public class TestHRegionReplayEvents {
 
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
-    verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
+    verify(walSecondary, times(0)).append((HRegionInfo)any(),
       (WALKey)any(), (WALEdit)any(),  anyBoolean());
 
     // test for replay prepare flush
@@ -1140,11 +1140,11 @@ public class TestHRegionReplayEvents {
       .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
-    verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
+    verify(walSecondary, times(0)).append((HRegionInfo)any(),
       (WALKey)any(), (WALEdit)any(), anyBoolean());
 
     secondaryRegion.close();
-    verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
+    verify(walSecondary, times(0)).append((HRegionInfo)any(),
       (WALKey)any(), (WALEdit)any(),  anyBoolean());
   }
 

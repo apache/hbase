@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -139,8 +141,13 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
           final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
-          final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
-              TableName.META_TABLE_NAME, now, mvcc), edit, true);
+          NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+              Bytes.BYTES_COMPARATOR);
+          for(byte[] fam : htd.getFamiliesKeys()) {
+            scopes.put(fam, 0);
+          }
+          final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
+              TableName.META_TABLE_NAME, now, mvcc, scopes), edit, true);
           wal.sync(txid);
         }
         String msg = getName() + " finished";

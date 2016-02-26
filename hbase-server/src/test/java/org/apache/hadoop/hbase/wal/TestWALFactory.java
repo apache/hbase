@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -181,6 +183,11 @@ public class TestWALFactory {
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("column"));
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
 
     // Add edits for three regions.
     for (int ii = 0; ii < howmany; ii++) {
@@ -196,8 +203,8 @@ public class TestWALFactory {
               System.currentTimeMillis(), column));
           LOG.info("Region " + i + ": " + edit);
           WALKey walKey =  new WALKey(infos[i].getEncodedNameAsBytes(), tableName,
-              System.currentTimeMillis(), mvcc);
-          log.append(htd, infos[i], walKey, edit, true);
+              System.currentTimeMillis(), mvcc, scopes);
+          log.append(infos[i], walKey, edit, true);
           walKey.getWriteEntry();
         }
         log.sync();
@@ -249,13 +256,18 @@ public class TestWALFactory {
                   null,null, false);
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(tableName.getName()));
+      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+          Bytes.BYTES_COMPARATOR);
+      for(byte[] fam : htd.getFamiliesKeys()) {
+        scopes.put(fam, 0);
+      }
       final WAL wal = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
 
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc), kvs, true);
+        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
       // gives you EOFE.
@@ -273,8 +285,8 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc), kvs, true);
+        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       wal.sync();
       reader = wals.createReader(fs, walPath);
@@ -295,8 +307,8 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc), kvs,  true);
+        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis(), mvcc, scopes), kvs,  true);
       }
       // Now I should have written out lots of blocks.  Sync then read.
       wal.sync();
@@ -370,12 +382,17 @@ public class TestWALFactory {
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
 
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-      wal.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis()), kvs,  true);
+      wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), scopes), kvs,  true);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
@@ -485,6 +502,11 @@ public class TestWALFactory {
     final HTableDescriptor htd =
         new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
             "column"));
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     final byte [] row = Bytes.toBytes("row");
     WAL.Reader reader = null;
     try {
@@ -503,9 +525,9 @@ public class TestWALFactory {
         row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
       final WAL log = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
 
-      final long txid = log.append(htd, info,
+      final long txid = log.append(info,
         new WALKey(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
-            mvcc),
+            mvcc, scopes),
         cols, true);
       log.sync(txid);
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getFamiliesKeys());
@@ -545,6 +567,11 @@ public class TestWALFactory {
     final HTableDescriptor htd =
         new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
             "column"));
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     final byte [] row = Bytes.toBytes("row");
     WAL.Reader reader = null;
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
@@ -561,9 +588,9 @@ public class TestWALFactory {
       HRegionInfo hri = new HRegionInfo(htd.getTableName(),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       final WAL log = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
-      final long txid = log.append(htd, hri,
+      final long txid = log.append(hri,
         new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
-            mvcc),
+            mvcc, scopes),
         cols, true);
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getFamiliesKeys());
@@ -607,7 +634,11 @@ public class TestWALFactory {
     long timestamp = System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("column"));
-
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     HRegionInfo hri = new HRegionInfo(tableName,
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     final WAL log = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
@@ -617,8 +648,8 @@ public class TestWALFactory {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[]{(byte) (i + '0')}));
-      log.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc), cols, true);
+      log.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), mvcc, scopes), cols, true);
     }
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
@@ -627,8 +658,8 @@ public class TestWALFactory {
     cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes(Integer.toString(11)),
         timestamp, new byte[]{(byte) (11 + '0')}));
-    log.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), mvcc), cols, true);
+    log.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis(), mvcc, scopes), cols, true);
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
   }
@@ -722,8 +753,9 @@ public class TestWALFactory {
     }
 
     @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {
-      //To change body of implemented methods use File | Settings | File Templates.
+    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
+      // To change body of implemented methods use File | Settings | File
+      // Templates.
       increments++;
     }
   }

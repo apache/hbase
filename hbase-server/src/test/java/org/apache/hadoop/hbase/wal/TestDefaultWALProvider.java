@@ -25,8 +25,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -151,23 +153,25 @@ public class TestDefaultWALProvider {
 
 
   protected void addEdits(WAL log, HRegionInfo hri, HTableDescriptor htd,
-                        int times) throws IOException {
+                        int times, NavigableMap<byte[], Integer> scopes) throws IOException {
     final byte[] row = Bytes.toBytes("row");
     for (int i = 0; i < times; i++) {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
-      log.append(htd, hri, getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp),
-        cols, true);
+      log.append(hri, getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp, scopes),
+          cols, true);
     }
     log.sync();
   }
 
   /**
    * used by TestDefaultWALProviderWithHLogKey
+   * @param scopes
    */
-  WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp) {
-    return new WALKey(info, tableName, timestamp, mvcc);
+  WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp,
+      NavigableMap<byte[], Integer> scopes) {
+    return new WALKey(info, tableName, timestamp, mvcc, scopes);
   }
 
   /**
@@ -191,6 +195,16 @@ public class TestDefaultWALProvider {
     final HTableDescriptor htd2 =
         new HTableDescriptor(TableName.valueOf("testLogCleaning2"))
             .addFamily(new HColumnDescriptor("row"));
+    NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes1.put(fam, 0);
+    }
+    NavigableMap<byte[], Integer> scopes2 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd2.getFamiliesKeys()) {
+      scopes2.put(fam, 0);
+    }
     final Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
@@ -205,26 +219,26 @@ public class TestDefaultWALProvider {
 
       // Add a single edit and make sure that rolling won't remove the file
       // Before HBASE-3198 it used to delete it
-      addEdits(log, hri, htd, 1);
+      addEdits(log, hri, htd, 1, scopes1);
       log.rollWriter();
       assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(log));
 
       // See if there's anything wrong with more than 1 edit
-      addEdits(log, hri, htd, 2);
+      addEdits(log, hri, htd, 2, scopes1);
       log.rollWriter();
       assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(log));
 
       // Now mix edits from 2 regions, still no flushing
-      addEdits(log, hri, htd, 1);
-      addEdits(log, hri2, htd2, 1);
-      addEdits(log, hri, htd, 1);
-      addEdits(log, hri2, htd2, 1);
+      addEdits(log, hri, htd, 1, scopes1);
+      addEdits(log, hri2, htd2, 1, scopes2);
+      addEdits(log, hri, htd, 1, scopes1);
+      addEdits(log, hri2, htd2, 1, scopes2);
       log.rollWriter();
       assertEquals(3, DefaultWALProvider.getNumRolledLogFiles(log));
 
       // Flush the first region, we expect to see the first two files getting
       // archived. We need to append something or writer won't be rolled.
-      addEdits(log, hri2, htd2, 1);
+      addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.rollWriter();
@@ -233,7 +247,7 @@ public class TestDefaultWALProvider {
       // Flush the second region, which removes all the remaining output files
       // since the oldest was completely flushed and the two others only contain
       // flush information
-      addEdits(log, hri2, htd2, 1);
+      addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri2.getEncodedNameAsBytes(), htd2.getFamiliesKeys());
       log.completeCacheFlush(hri2.getEncodedNameAsBytes());
       log.rollWriter();
@@ -264,6 +278,16 @@ public class TestDefaultWALProvider {
         new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
     HTableDescriptor table2 =
         new HTableDescriptor(TableName.valueOf("t2")).addFamily(new HColumnDescriptor("row"));
+    NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : table1.getFamiliesKeys()) {
+      scopes1.put(fam, 0);
+    }
+    NavigableMap<byte[], Integer> scopes2 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : table2.getFamiliesKeys()) {
+      scopes2.put(fam, 0);
+    }
     final Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
@@ -281,31 +305,31 @@ public class TestDefaultWALProvider {
       hri2.setSplit(false);
       // variables to mock region sequenceIds.
       // start with the testing logic: insert a waledit, and roll writer
-      addEdits(wal, hri1, table1, 1);
+      addEdits(wal, hri1, table1, 1, scopes1);
       wal.rollWriter();
       // assert that the wal is rolled
       assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(wal));
       // add edits in the second wal file, and roll writer.
-      addEdits(wal, hri1, table1, 1);
+      addEdits(wal, hri1, table1, 1, scopes1);
       wal.rollWriter();
       // assert that the wal is rolled
       assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
       // add a waledit to table1, and flush the region.
-      addEdits(wal, hri1, table1, 3);
+      addEdits(wal, hri1, table1, 3, scopes1);
       flushRegion(wal, hri1.getEncodedNameAsBytes(), table1.getFamiliesKeys());
       // roll log; all old logs should be archived.
       wal.rollWriter();
       assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));
       // add an edit to table2, and roll writer
-      addEdits(wal, hri2, table2, 1);
+      addEdits(wal, hri2, table2, 1, scopes2);
       wal.rollWriter();
       assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(wal));
       // add edits for table1, and roll writer
-      addEdits(wal, hri1, table1, 2);
+      addEdits(wal, hri1, table1, 2, scopes1);
       wal.rollWriter();
       assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
       // add edits for table2, and flush hri1.
-      addEdits(wal, hri2, table2, 2);
+      addEdits(wal, hri2, table2, 2, scopes2);
       flushRegion(wal, hri1.getEncodedNameAsBytes(), table2.getFamiliesKeys());
       // the log : region-sequenceId map is
       // log1: region2 (unflushed)
@@ -315,7 +339,7 @@ public class TestDefaultWALProvider {
       wal.rollWriter();
       assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
       // flush region2, and all logs should be archived.
-      addEdits(wal, hri2, table2, 2);
+      addEdits(wal, hri2, table2, 2, scopes2);
       flushRegion(wal, hri2.getEncodedNameAsBytes(), table2.getFamiliesKeys());
       wal.rollWriter();
       assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));

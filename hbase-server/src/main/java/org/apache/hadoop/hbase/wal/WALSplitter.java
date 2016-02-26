@@ -1778,7 +1778,7 @@ public class WALSplitter {
         WALEdit edit = entry.getEdit();
         TableName table = entry.getKey().getTablename();
         // clear scopes which isn't needed for recovery
-        entry.getKey().setScopes(null);
+        entry.getKey().serializeReplicationScope(false);
         String encodeRegionNameStr = Bytes.toString(entry.getKey().getEncodedRegionName());
         // skip edits of non-existent tables
         if (nonExistentTables != null && nonExistentTables.contains(table)) {

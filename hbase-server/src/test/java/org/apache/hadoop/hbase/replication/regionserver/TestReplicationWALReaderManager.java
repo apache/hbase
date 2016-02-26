@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +77,7 @@ public class TestReplicationWALReaderManager {
   private static final HRegionInfo info = new HRegionInfo(tableName,
       HConstants.EMPTY_START_ROW, HConstants.LAST_ROW, false);
   private static final HTableDescriptor htd = new HTableDescriptor(tableName);
+  private static NavigableMap<byte[], Integer> scopes;
 
   private WAL log;
   private ReplicationWALReaderManager logManager;
@@ -123,6 +126,11 @@ public class TestReplicationWALReaderManager {
 
     cluster = TEST_UTIL.getDFSCluster();
     fs = cluster.getFileSystem();
+    scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
   }
 
   @AfterClass
@@ -204,9 +212,8 @@ public class TestReplicationWALReaderManager {
   }
 
   private void appendToLogPlus(int count) throws IOException {
-    final long txid = log.append(htd, info,
-        new WALKey(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(), mvcc),
-        getWALEdits(count), true);
+    final long txid = log.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis(), mvcc, scopes), getWALEdits(count), true);
     log.sync(txid);
   }
 

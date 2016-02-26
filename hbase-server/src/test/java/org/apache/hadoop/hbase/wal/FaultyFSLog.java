@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 
 // imports for things that haven't moved yet
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
@@ -60,12 +59,12 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  public long append(HTableDescriptor htd, HRegionInfo info, WALKey key, WALEdit edits,
-      boolean inMemstore) throws IOException {
+  public long append(HRegionInfo info, WALKey key,
+      WALEdit edits, boolean inMemstore) throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");
     }
-    return super.append(htd, info, key, edits, inMemstore);
+    return super.append(info, key, edits, inMemstore);
   }
 }
 

@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 
 import org.apache.hadoop.hbase.wal.WALKey;
 
@@ -85,7 +84,6 @@ public interface WALActionsListener {
   );
 
   /**
-   * @param htd
    * @param logKey
    * @param logEdit TODO: Retire this in favor of
    *          {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)} It only exists to get
@@ -93,8 +91,7 @@ public interface WALActionsListener {
    *          <code>htd</code>.
    * @throws IOException If failed to parse the WALEdit
    */
-  void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit)
-      throws IOException;
+  void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * For notification post append to the writer.  Used by metrics system at least.
@@ -135,8 +132,7 @@ public interface WALActionsListener {
     public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
     @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit)
-        throws IOException {
+    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
     }
 
     @Override

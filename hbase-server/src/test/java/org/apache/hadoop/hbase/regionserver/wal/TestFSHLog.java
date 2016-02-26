@@ -28,7 +28,9 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
@@ -152,12 +154,9 @@ public class TestFSHLog {
     }
   }
 
-  protected void addEdits(WAL log,
-                          HRegionInfo hri,
-                          HTableDescriptor htd,
-                          int times,
-                          MultiVersionConcurrencyControl mvcc)
-      throws IOException {
+  protected void addEdits(WAL log, HRegionInfo hri, HTableDescriptor htd, int times,
+      MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes)
+          throws IOException {
     final byte[] row = Bytes.toBytes("row");
     for (int i = 0; i < times; i++) {
       long timestamp = System.currentTimeMillis();
@@ -165,8 +164,8 @@ public class TestFSHLog {
       cols.add(new KeyValue(row, row, row, timestamp, row));
       WALKey key = new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(),
           WALKey.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
-          HConstants.NO_NONCE, mvcc);
-      log.append(htd, hri, key, cols, true);
+          HConstants.NO_NONCE, mvcc, scopes);
+      log.append(hri, key, cols, true);
     }
     log.sync();
   }
@@ -261,11 +260,21 @@ public class TestFSHLog {
         new HRegionInfo(t2.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     // add edits and roll the wal
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : t1.getFamiliesKeys()) {
+      scopes1.put(fam, 0);
+    }
+    NavigableMap<byte[], Integer> scopes2 = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : t2.getFamiliesKeys()) {
+      scopes2.put(fam, 0);
+    }
     try {
-      addEdits(wal, hri1, t1, 2, mvcc);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
       wal.rollWriter();
       // add some more edits and roll the wal. This would reach the log number threshold
-      addEdits(wal, hri1, t1, 2, mvcc);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
       wal.rollWriter();
       // with above rollWriter call, the max logs limit is reached.
       assertTrue(wal.getNumRolledLogFiles() == 2);
@@ -276,7 +285,7 @@ public class TestFSHLog {
       assertEquals(1, regionsToFlush.length);
       assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
       // insert edits in second region
-      addEdits(wal, hri2, t2, 2, mvcc);
+      addEdits(wal, hri2, t2, 2, mvcc, scopes2);
       // get the regions to flush, it should still read region1.
       regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(regionsToFlush.length, 1);
@@ -293,12 +302,12 @@ public class TestFSHLog {
       // no wal should remain now.
       assertEquals(0, wal.getNumRolledLogFiles());
       // add edits both to region 1 and region 2, and roll.
-      addEdits(wal, hri1, t1, 2, mvcc);
-      addEdits(wal, hri2, t2, 2, mvcc);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
+      addEdits(wal, hri2, t2, 2, mvcc, scopes2);
       wal.rollWriter();
       // add edits and roll the writer, to reach the max logs limit.
       assertEquals(1, wal.getNumRolledLogFiles());
-      addEdits(wal, hri1, t1, 2, mvcc);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
       wal.rollWriter();
       // it should return two regions to flush, as the oldest wal file has entries
       // for both regions.
@@ -310,7 +319,7 @@ public class TestFSHLog {
       wal.rollWriter(true);
       assertEquals(0, wal.getNumRolledLogFiles());
       // Add an edit to region1, and roll the wal.
-      addEdits(wal, hri1, t1, 2, mvcc);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
       // tests partial flush: roll on a partial flush, and ensure that wal is not archived.
       wal.startCacheFlush(hri1.getEncodedNameAsBytes(), t1.getFamiliesKeys());
       wal.rollWriter();
@@ -360,6 +369,11 @@ public class TestFSHLog {
     HBaseTestingUtility.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final MutableBoolean goslow = new MutableBoolean(false);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    for(byte[] fam : htd.getFamiliesKeys()) {
+      scopes.put(fam, 0);
+    }
     // subclass and doctor a method.
     FSHLog wal = new FSHLog(FileSystem.get(conf), TEST_UTIL.getDefaultRootDirPath(),
         testName, conf) {
@@ -403,9 +417,9 @@ public class TestFSHLog {
       for (int i = 0; i < countPerFamily; i++) {
         final HRegionInfo info = region.getRegionInfo();
         final WALKey logkey = new WALKey(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC());
-        wal.append(htd, info, logkey, edits, true);
-      }
+            System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC(), scopes);
+        wal.append(info, logkey, edits, true);
+        }
       region.flush(true);
       // FlushResult.flushSequenceId is not visible here so go get the current sequence id.
       long currentSequenceId = region.getReadPoint(null);
@@ -439,11 +453,16 @@ public class TestFSHLog {
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
       HTableDescriptor htd =
           new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
+      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+          Bytes.BYTES_COMPARATOR);
+      for(byte[] fam : htd.getFamiliesKeys()) {
+        scopes.put(fam, 0);
+      }
       HRegionInfo hri =
           new HRegionInfo(htd.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       for (int i = 0; i < 10; i++) {
-        addEdits(log, hri, htd, 1, mvcc);
+        addEdits(log, hri, htd, 1, mvcc, scopes);
       }
     } finally {
       log.close();

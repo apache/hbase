@@ -58,19 +58,19 @@ public class TestReplicationWALEntryFilters {
 
     // meta
     WALKey key1 = new WALKey( HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-      TableName.META_TABLE_NAME);
+      TableName.META_TABLE_NAME, null);
     Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));
 
     // ns table
-    WALKey key2 = new WALKey(new byte[] {}, TableName.NAMESPACE_TABLE_NAME);
+    WALKey key2 = new WALKey(new byte[] {}, TableName.NAMESPACE_TABLE_NAME, null);
     Entry nsEntry = new Entry(key2, null);
     assertNull(filter.filter(nsEntry));
 
     // user table
 
-    WALKey key3 = new WALKey(new byte[] {}, TableName.valueOf("foo"));
+    WALKey key3 = new WALKey(new byte[] {}, TableName.valueOf("foo"), null);
     Entry userEntry = new Entry(key3, null);
 
     assertEquals(userEntry, filter.filter(userEntry));
@@ -80,33 +80,30 @@ public class TestReplicationWALEntryFilters {
   public void testScopeWALEntryFilter() {
     ScopeWALEntryFilter filter = new ScopeWALEntryFilter();
 
-    Entry userEntry = createEntry(a, b);
-    Entry userEntryA = createEntry(a);
-    Entry userEntryB = createEntry(b);
-    Entry userEntryEmpty = createEntry();
+    Entry userEntry = createEntry(null, a, b);
+    Entry userEntryA = createEntry(null, a);
+    Entry userEntryB = createEntry(null, b);
+    Entry userEntryEmpty = createEntry(null);
 
     // no scopes
     assertEquals(null, filter.filter(userEntry));
 
     // empty scopes
     TreeMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     assertEquals(null, filter.filter(userEntry));
 
     // different scope
     scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     scopes.put(c, HConstants.REPLICATION_SCOPE_GLOBAL);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     // all kvs should be filtered
     assertEquals(userEntryEmpty, filter.filter(userEntry));
 
     // local scope
     scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     scopes.put(a, HConstants.REPLICATION_SCOPE_LOCAL);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryEmpty, filter.filter(userEntry));
     scopes.put(b, HConstants.REPLICATION_SCOPE_LOCAL);
     assertEquals(userEntryEmpty, filter.filter(userEntry));
@@ -114,8 +111,7 @@ public class TestReplicationWALEntryFilters {
     // only scope a
     scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     scopes.put(a, HConstants.REPLICATION_SCOPE_GLOBAL);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryA, filter.filter(userEntry));
     scopes.put(b, HConstants.REPLICATION_SCOPE_LOCAL);
     assertEquals(userEntryA, filter.filter(userEntry));
@@ -123,8 +119,7 @@ public class TestReplicationWALEntryFilters {
     // only scope b
     scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryB, filter.filter(userEntry));
     scopes.put(a, HConstants.REPLICATION_SCOPE_LOCAL);
     assertEquals(userEntryB, filter.filter(userEntry));
@@ -132,8 +127,7 @@ public class TestReplicationWALEntryFilters {
     // scope a and b
     scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
-    userEntry = createEntry(a, b);
-    userEntry.getKey().setScopes(scopes);
+    userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryB, filter.filter(userEntry));
     scopes.put(a, HConstants.REPLICATION_SCOPE_LOCAL);
     assertEquals(userEntryB, filter.filter(userEntry));
@@ -155,16 +149,16 @@ public class TestReplicationWALEntryFilters {
 
   @Test
   public void testChainWALEntryFilter() {
-    Entry userEntry = createEntry(a, b, c);
+    Entry userEntry = createEntry(null, a, b, c);
 
     ChainWALEntryFilter filter = new ChainWALEntryFilter(passFilter);
-    assertEquals(createEntry(a,b,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     filter = new ChainWALEntryFilter(passFilter, passFilter);
-    assertEquals(createEntry(a,b,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     filter = new ChainWALEntryFilter(passFilter, passFilter, passFilter);
-    assertEquals(createEntry(a,b,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     filter = new ChainWALEntryFilter(nullFilter);
     assertEquals(null, filter.filter(userEntry));
@@ -189,7 +183,7 @@ public class TestReplicationWALEntryFilters {
           new ChainWALEntryFilter(passFilter),
           new ChainWALEntryFilter(passFilter)),
           new ChainWALEntryFilter(passFilter));
-    assertEquals(createEntry(a,b,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
 
     filter =
@@ -206,19 +200,19 @@ public class TestReplicationWALEntryFilters {
     ReplicationPeer peer = mock(ReplicationPeer.class);
 
     when(peer.getTableCFs()).thenReturn(null);
-    Entry userEntry = createEntry(a, b, c);
+    Entry userEntry = createEntry(null, a, b, c);
     TableCfWALEntryFilter filter = new TableCfWALEntryFilter(peer);
-    assertEquals(createEntry(a,b,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     // empty map
-    userEntry = createEntry(a, b, c);
+    userEntry = createEntry(null, a, b, c);
     Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
     assertEquals(null, filter.filter(userEntry));
 
     // table bar
-    userEntry = createEntry(a, b, c);
+    userEntry = createEntry(null, a, b, c);
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("bar"), null);
     when(peer.getTableCFs()).thenReturn(tableCfs);
@@ -226,24 +220,24 @@ public class TestReplicationWALEntryFilters {
     assertEquals(null, filter.filter(userEntry));
 
     // table foo:a
-    userEntry = createEntry(a, b, c);
+    userEntry = createEntry(null, a, b, c);
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
-    assertEquals(createEntry(a), filter.filter(userEntry));
+    assertEquals(createEntry(null, a), filter.filter(userEntry));
 
     // table foo:a,c
-    userEntry = createEntry(a, b, c, d);
+    userEntry = createEntry(null, a, b, c, d);
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
-    assertEquals(createEntry(a,c), filter.filter(userEntry));
+    assertEquals(createEntry(null, a,c), filter.filter(userEntry));
   }
 
-  private Entry createEntry(byte[]... kvs) {
-    WALKey key1 = new WALKey(new byte[] {}, TableName.valueOf("foo"));
+  private Entry createEntry(TreeMap<byte[], Integer> scopes, byte[]... kvs) {
+    WALKey key1 = new WALKey(new byte[] {}, TableName.valueOf("foo"), scopes);
     WALEdit edit1 = new WALEdit();
 
     for (byte[] kv : kvs) {

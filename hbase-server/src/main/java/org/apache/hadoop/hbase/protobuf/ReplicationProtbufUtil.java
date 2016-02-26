@@ -134,7 +134,7 @@ public class ReplicationProtbufUtil {
         keyBuilder.setOrigSequenceNumber(key.getOrigLogSeqNum());
       }
       WALEdit edit = entry.getEdit();
-      NavigableMap<byte[], Integer> scopes = key.getScopes();
+      NavigableMap<byte[], Integer> scopes = key.getReplicationScopes();
       if (scopes != null && !scopes.isEmpty()) {
         for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
           scopeBuilder.setFamily(ByteStringer.wrap(scope.getKey()));

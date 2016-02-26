@@ -26,6 +26,8 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -658,7 +660,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     HRegionInfo hri = new HRegionInfo(htable1.getName(),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
-    Replication.scopeWALEdits(htable1.getTableDescriptor(), new WALKey(), edit,
+    Replication.scopeWALEdits(new WALKey(), edit,
       htable1.getConfiguration(), null);
   }
 
@@ -767,7 +769,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     HRegion region = utility1.getMiniHBaseCluster().getRegions(tableName).get(0);
     HRegionInfo hri = region.getRegionInfo();
-
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    for (byte[] fam : htable1.getTableDescriptor().getFamiliesKeys()) {
+      scopes.put(fam, 1);
+    }
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     int index = utility1.getMiniHBaseCluster().getServerWith(hri.getRegionName());
     WAL wal = utility1.getMiniHBaseCluster().getRegionServer(index).getWAL(region.getRegionInfo());
@@ -778,8 +783,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     long now = EnvironmentEdgeManager.currentTime();
     edit.add(new KeyValue(rowName, famName, qualifier,
       now, value));
-    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc);
-    wal.append(htable1.getTableDescriptor(), hri, walKey, edit, true);
+    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
+    wal.append(hri, walKey, edit, true);
     wal.sync();
 
     Get get = new Get(rowName);

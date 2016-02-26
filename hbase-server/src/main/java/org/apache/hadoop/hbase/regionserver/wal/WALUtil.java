@@ -20,11 +20,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -58,10 +58,11 @@ public class WALUtil {
    * <p>This write is for internal use only. Not for external client consumption.
    * @param mvcc Used by WAL to get sequence Id for the waledit.
    */
-  public static WALKey writeCompactionMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
-      final CompactionDescriptor c, MultiVersionConcurrencyControl mvcc)
+  public static WALKey writeCompactionMarker(WAL wal,
+      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri, final CompactionDescriptor c,
+      MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    WALKey walKey = writeMarker(wal, htd, hri, WALEdit.createCompaction(hri, c), mvcc);
+    WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -73,11 +74,11 @@ public class WALUtil {
    *
    * <p>This write is for internal use only. Not for external client consumption.
    */
-  public static WALKey writeFlushMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
-      final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
-  throws IOException {
-    WALKey walKey =
-      doFullAppendTransaction(wal, htd, hri, WALEdit.createFlushWALEdit(hri, f), mvcc, sync);
+  public static WALKey writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
+      HRegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
+          throws IOException {
+    WALKey walKey = doFullAppendTransaction(wal, replicationScope, hri,
+        WALEdit.createFlushWALEdit(hri, f), mvcc, sync);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
     }
@@ -88,10 +89,12 @@ public class WALUtil {
    * Write a region open marker indicating that the region is opened.
    * This write is for internal use only. Not for external client consumption.
    */
-  public static WALKey writeRegionEventMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
+  public static WALKey writeRegionEventMarker(WAL wal,
+      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri,
       final RegionEventDescriptor r, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    WALKey walKey = writeMarker(wal, htd, hri, WALEdit.createRegionEventWALEdit(hri, r), mvcc);
+    WALKey walKey = writeMarker(wal, replicationScope, hri,
+        WALEdit.createRegionEventWALEdit(hri, r), mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -102,28 +105,30 @@ public class WALUtil {
    * Write a log marker that a bulk load has succeeded and is about to be committed.
    * This write is for internal use only. Not for external client consumption.
    * @param wal The log to write into.
-   * @param htd A description of the table that we are bulk loading into.
+   * @param replicationScope The replication scope of the families in the HRegion
    * @param hri A description of the region in the table that we are bulk loading into.
    * @param desc A protocol buffers based description of the client's bulk loading request
    * @return walKey with sequenceid filled out for this bulk load marker
    * @throws IOException We will throw an IOException if we can not append to the HLog.
    */
-  public static WALKey writeBulkLoadMarkerAndSync(final WAL wal, final HTableDescriptor htd,
-      final HRegionInfo hri, final WALProtos.BulkLoadDescriptor desc,
-      final MultiVersionConcurrencyControl mvcc)
-  throws IOException {
-    WALKey walKey = writeMarker(wal, htd, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc);
+  public static WALKey writeBulkLoadMarkerAndSync(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
+          throws IOException {
+    WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc),
+        mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
     return walKey;
   }
 
-  private static WALKey writeMarker(final WAL wal, final HTableDescriptor htd,
-      final HRegionInfo hri, final WALEdit edit, final MultiVersionConcurrencyControl mvcc)
+  private static WALKey writeMarker(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final WALEdit edit, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
-    return doFullAppendTransaction(wal, htd, hri, edit, mvcc, true);
+    return doFullAppendTransaction(wal, replicationScope, hri, edit, mvcc, true);
   }
 
   /**
@@ -134,16 +139,16 @@ public class WALUtil {
    * <p>This write is for internal use only. Not for external client consumption.
    * @return WALKey that was added to the WAL.
    */
-  public static WALKey doFullAppendTransaction(final WAL wal, final HTableDescriptor htd,
-      final HRegionInfo hri, final WALEdit edit, final MultiVersionConcurrencyControl mvcc,
-      final boolean sync)
+  public static WALKey doFullAppendTransaction(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final WALEdit edit, final MultiVersionConcurrencyControl mvcc, final boolean sync)
   throws IOException {
     // TODO: Pass in current time to use?
-    WALKey walKey =
-      new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), System.currentTimeMillis(), mvcc);
+    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(),
+        System.currentTimeMillis(), mvcc, replicationScope);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
-      trx = wal.append(htd, hri, walKey, edit, false);
+      trx = wal.append(hri, walKey, edit, false);
       if (sync) {
         wal.sync(trx);
       }

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -98,9 +100,13 @@ public class TestWALActionsListener {
       edit.add(kv);
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(SOME_BYTES));
       htd.addFamily(new HColumnDescriptor(b));
-
-      final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
-          TableName.valueOf(b), 0), edit, true);
+      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+          Bytes.BYTES_COMPARATOR);
+      for(byte[] fam : htd.getFamiliesKeys()) {
+        scopes.put(fam, 0);
+      }
+      final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
+          TableName.valueOf(b), 0, scopes), edit, true);
       wal.sync(txid);
       if (i == 10) {
         wal.registerWALActionsListener(laterobserver);

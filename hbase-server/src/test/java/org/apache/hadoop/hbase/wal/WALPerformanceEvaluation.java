@@ -23,8 +23,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -128,6 +130,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     private final int syncInterval;
     private final HTableDescriptor htd;
     private final Sampler loopSampler;
+    private final NavigableMap<byte[], Integer> scopes;
 
     WALPutBenchmark(final HRegion region, final HTableDescriptor htd,
         final long numIterations, final boolean noSync, final int syncInterval,
@@ -138,6 +141,11 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       this.numFamilies = htd.getColumnFamilies().length;
       this.region = region;
       this.htd = htd;
+      scopes = new TreeMap<byte[], Integer>(
+          Bytes.BYTES_COMPARATOR);
+      for(byte[] fam : htd.getFamiliesKeys()) {
+        scopes.put(fam, 0);
+      }
       String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
       if (spanReceivers == null || spanReceivers.isEmpty()) {
         loopSampler = Sampler.NEVER;
@@ -180,8 +188,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
             HRegionInfo hri = region.getRegionInfo();
             final WALKey logkey =
-                new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc);
-            wal.append(htd, hri, logkey, walEdit, true);
+                new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
+            wal.append(hri, logkey, walEdit, true);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
                 wal.sync();
@@ -498,8 +506,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         private int appends = 0;
 
         @Override
-        public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey,
-            WALEdit logEdit) {
+        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
           this.appends++;
           if (this.appends % whenToRoll == 0) {
             LOG.info("Rolling after " + appends + " edits");
