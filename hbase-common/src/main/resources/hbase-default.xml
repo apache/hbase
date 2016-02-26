@@ -778,6 +778,40 @@ possible configurations would overwhelm and obscure the important.
           block is written out and a new block is started.</description>
   </property>
   <property>
+    <name>hbase.bucketcache.ioengine</name>
+    <value></value>
+    <description>Where to store the contents of the bucketcache. One of: heap,
+    offheap, or file. If a file, set it to file:PATH_TO_FILE. See
+    http://hbase.apache.org/book.html#offheap.blockcache for more information.
+    </description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.combinedcache.enabled</name>
+    <value>true</value>
+    <description>Whether or not the bucketcache is used in league with the LRU
+    on-heap block cache. In this mode, indices and blooms are kept in the LRU
+    blockcache and the data blocks are kept in the bucketcache.</description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.size</name>
+    <value></value>
+    <description>A float that EITHER represents a percentage of total heap memory
+    size to give to the cache (if &lt; 1.0) OR, it is the total capacity in
+    megabytes of BucketCache. Default: 0.0</description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.sizes</name>
+    <value></value>
+    <description>A comma-separated list of sizes for buckets for the bucketcache.
+    Can be multiple sizes. List block sizes in order from smallest to largest.
+    The sizes you use will depend on your data access patterns.
+    Must be a multiple of 1024 else you will run into
+    'java.io.IOException: Invalid HFile block magic' when you go to read from cache.
+    If you specify no values here, then you pick up the default bucketsizes set
+    in code (See BucketAllocator#DEFAULT_BUCKET_SIZES). 
+  </description>
+  </property>
+  <property>
       <name>hfile.format.version</name>
       <value>3</value>
       <description>The HFile format version to use for new files.
@@ -803,7 +837,7 @@ possible configurations would overwhelm and obscure the important.
       <name>hbase.rs.cacheblocksonwrite</name>
       <value>false</value>
       <description>Whether an HFile block should be added to the block cache when the
-          block is finished.</description>
+        block is finished.</description>
   </property>
   <property>
     <name>hbase.rpc.timeout</name>
