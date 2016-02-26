@@ -333,8 +333,6 @@ Shell.load_command_group(
     catalogjanitor_enabled
     compact_rs
     trace
-    splitormerge_switch
-    splitormerge_enabled
   ],
   # TODO remove older hlog_roll command
   :aliases => {

@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2354,11 +2353,6 @@ public class AssignmentManager {
       return hri.getShortNameToLog() + " is not opening on " + serverName;
     }
 
-    if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
-            Admin.MasterSwitchType.SPLIT)) {
-      return "split switch is off!";
-    }
-
     // Just return in case of retrying
     if (current.isSplitting()) {
       return null;
@@ -2517,10 +2511,6 @@ public class AssignmentManager {
       return "Merging daughter region already exists, p=" + current;
     }
 
-    if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
-            Admin.MasterSwitchType.MERGE)) {
-      return "merge switch is off!";
-    }
     // Just return in case of retrying
     if (current != null) {
       return null;

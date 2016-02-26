@@ -11,13 +11,13 @@ public final class SnapshotProtos {
   public interface SnapshotFileInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .hbase.pb.SnapshotFileInfo.Type type = 1;
+    // required .SnapshotFileInfo.Type type = 1;
     /**
-     * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+     * <code>required .SnapshotFileInfo.Type type = 1;</code>
      */
     boolean hasType();
     /**
-     * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+     * <code>required .SnapshotFileInfo.Type type = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type getType();
 
@@ -67,7 +67,7 @@ public final class SnapshotProtos {
         getWalNameBytes();
   }
   /**
-   * Protobuf type {@code hbase.pb.SnapshotFileInfo}
+   * Protobuf type {@code SnapshotFileInfo}
    */
   public static final class SnapshotFileInfo extends
       com.google.protobuf.GeneratedMessage
@@ -157,12 +157,12 @@ public final class SnapshotProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotFileInfo_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotFileInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotFileInfo_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotFileInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Builder.class);
     }
@@ -183,7 +183,7 @@ public final class SnapshotProtos {
     }
 
     /**
-     * Protobuf enum {@code hbase.pb.SnapshotFileInfo.Type}
+     * Protobuf enum {@code SnapshotFileInfo.Type}
      */
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -261,21 +261,21 @@ public final class SnapshotProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:hbase.pb.SnapshotFileInfo.Type)
+      // @@protoc_insertion_point(enum_scope:SnapshotFileInfo.Type)
     }
 
     private int bitField0_;
-    // required .hbase.pb.SnapshotFileInfo.Type type = 1;
+    // required .SnapshotFileInfo.Type type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type type_;
     /**
-     * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+     * <code>required .SnapshotFileInfo.Type type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+     * <code>required .SnapshotFileInfo.Type type = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type getType() {
       return type_;
@@ -613,19 +613,19 @@ public final class SnapshotProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code hbase.pb.SnapshotFileInfo}
+     * Protobuf type {@code SnapshotFileInfo}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotFileInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotFileInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotFileInfo_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotFileInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Builder.class);
       }
@@ -667,7 +667,7 @@ public final class SnapshotProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotFileInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotFileInfo_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo getDefaultInstanceForType() {
@@ -767,22 +767,22 @@ public final class SnapshotProtos {
       }
       private int bitField0_;
 
-      // required .hbase.pb.SnapshotFileInfo.Type type = 1;
+      // required .SnapshotFileInfo.Type type = 1;
       private org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type type_ = org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type.HFILE;
       /**
-       * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+       * <code>required .SnapshotFileInfo.Type type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+       * <code>required .SnapshotFileInfo.Type type = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type getType() {
         return type_;
       }
       /**
-       * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+       * <code>required .SnapshotFileInfo.Type type = 1;</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo.Type value) {
         if (value == null) {
@@ -794,7 +794,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.SnapshotFileInfo.Type type = 1;</code>
+       * <code>required .SnapshotFileInfo.Type type = 1;</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -1025,7 +1025,7 @@ public final class SnapshotProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotFileInfo)
+      // @@protoc_insertion_point(builder_scope:SnapshotFileInfo)
     }
 
     static {
@@ -1033,7 +1033,7 @@ public final class SnapshotProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotFileInfo)
+    // @@protoc_insertion_point(class_scope:SnapshotFileInfo)
   }
 
   public interface SnapshotRegionManifestOrBuilder
@@ -1049,47 +1049,47 @@ public final class SnapshotProtos {
      */
     int getVersion();
 
-    // required .hbase.pb.RegionInfo region_info = 2;
+    // required .RegionInfo region_info = 2;
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     boolean hasRegionInfo();
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo();
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
 
-    // repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;
+    // repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> 
         getFamilyFilesList();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles getFamilyFiles(int index);
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     int getFamilyFilesCount();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
         getFamilyFilesOrBuilderList();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder getFamilyFilesOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code hbase.pb.SnapshotRegionManifest}
+   * Protobuf type {@code SnapshotRegionManifest}
    */
   public static final class SnapshotRegionManifest extends
       com.google.protobuf.GeneratedMessage
@@ -1182,12 +1182,12 @@ public final class SnapshotProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder.class);
     }
@@ -1225,17 +1225,17 @@ public final class SnapshotProtos {
       com.google.protobuf.ByteString
           getNameBytes();
 
-      // optional .hbase.pb.Reference reference = 2;
+      // optional .Reference reference = 2;
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       boolean hasReference();
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference getReference();
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder getReferenceOrBuilder();
 
@@ -1258,7 +1258,7 @@ public final class SnapshotProtos {
       long getFileSize();
     }
     /**
-     * Protobuf type {@code hbase.pb.SnapshotRegionManifest.StoreFile}
+     * Protobuf type {@code SnapshotRegionManifest.StoreFile}
      */
     public static final class StoreFile extends
         com.google.protobuf.GeneratedMessage
@@ -1345,12 +1345,12 @@ public final class SnapshotProtos {
       }
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_StoreFile_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_StoreFile_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder.class);
       }
@@ -1414,23 +1414,23 @@ public final class SnapshotProtos {
         }
       }
 
-      // optional .hbase.pb.Reference reference = 2;
+      // optional .Reference reference = 2;
       public static final int REFERENCE_FIELD_NUMBER = 2;
       private org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference reference_;
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       public boolean hasReference() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference getReference() {
         return reference_;
       }
       /**
-       * <code>optional .hbase.pb.Reference reference = 2;</code>
+       * <code>optional .Reference reference = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder getReferenceOrBuilder() {
         return reference_;
@@ -1652,19 +1652,19 @@ public final class SnapshotProtos {
         return builder;
       }
       /**
-       * Protobuf type {@code hbase.pb.SnapshotRegionManifest.StoreFile}
+       * Protobuf type {@code SnapshotRegionManifest.StoreFile}
        */
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
          implements org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_StoreFile_descriptor;
         }
 
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_fieldAccessorTable
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_StoreFile_fieldAccessorTable
               .ensureFieldAccessorsInitialized(
                   org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder.class);
         }
@@ -1709,7 +1709,7 @@ public final class SnapshotProtos {
 
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_StoreFile_descriptor;
         }
 
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile getDefaultInstanceForType() {
@@ -1882,18 +1882,18 @@ public final class SnapshotProtos {
           return this;
         }
 
-        // optional .hbase.pb.Reference reference = 2;
+        // optional .Reference reference = 2;
         private org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference reference_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.getDefaultInstance();
         private com.google.protobuf.SingleFieldBuilder<
             org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder> referenceBuilder_;
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public boolean hasReference() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference getReference() {
           if (referenceBuilder_ == null) {
@@ -1903,7 +1903,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public Builder setReference(org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference value) {
           if (referenceBuilder_ == null) {
@@ -1919,7 +1919,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public Builder setReference(
             org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder builderForValue) {
@@ -1933,7 +1933,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public Builder mergeReference(org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference value) {
           if (referenceBuilder_ == null) {
@@ -1952,7 +1952,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public Builder clearReference() {
           if (referenceBuilder_ == null) {
@@ -1965,7 +1965,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder getReferenceBuilder() {
           bitField0_ |= 0x00000002;
@@ -1973,7 +1973,7 @@ public final class SnapshotProtos {
           return getReferenceFieldBuilder().getBuilder();
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder getReferenceOrBuilder() {
           if (referenceBuilder_ != null) {
@@ -1983,7 +1983,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>optional .hbase.pb.Reference reference = 2;</code>
+         * <code>optional .Reference reference = 2;</code>
          */
         private com.google.protobuf.SingleFieldBuilder<
             org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder> 
@@ -2048,7 +2048,7 @@ public final class SnapshotProtos {
           return this;
         }
 
-        // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotRegionManifest.StoreFile)
+        // @@protoc_insertion_point(builder_scope:SnapshotRegionManifest.StoreFile)
       }
 
       static {
@@ -2056,7 +2056,7 @@ public final class SnapshotProtos {
         defaultInstance.initFields();
       }
 
-      // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotRegionManifest.StoreFile)
+      // @@protoc_insertion_point(class_scope:SnapshotRegionManifest.StoreFile)
     }
 
     public interface FamilyFilesOrBuilder
@@ -2072,33 +2072,33 @@ public final class SnapshotProtos {
        */
       com.google.protobuf.ByteString getFamilyName();
 
-      // repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;
+      // repeated .SnapshotRegionManifest.StoreFile store_files = 2;
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> 
           getStoreFilesList();
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile getStoreFiles(int index);
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       int getStoreFilesCount();
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
           getStoreFilesOrBuilderList();
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder getStoreFilesOrBuilder(
           int index);
     }
     /**
-     * Protobuf type {@code hbase.pb.SnapshotRegionManifest.FamilyFiles}
+     * Protobuf type {@code SnapshotRegionManifest.FamilyFiles}
      */
     public static final class FamilyFiles extends
         com.google.protobuf.GeneratedMessage
@@ -2178,12 +2178,12 @@ public final class SnapshotProtos {
       }
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_FamilyFiles_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder.class);
       }
@@ -2220,36 +2220,36 @@ public final class SnapshotProtos {
         return familyName_;
       }
 
-      // repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;
+      // repeated .SnapshotRegionManifest.StoreFile store_files = 2;
       public static final int STORE_FILES_FIELD_NUMBER = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> storeFiles_;
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> getStoreFilesList() {
         return storeFiles_;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
           getStoreFilesOrBuilderList() {
         return storeFiles_;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       public int getStoreFilesCount() {
         return storeFiles_.size();
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile getStoreFiles(int index) {
         return storeFiles_.get(index);
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+       * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder getStoreFilesOrBuilder(
           int index) {
@@ -2428,19 +2428,19 @@ public final class SnapshotProtos {
         return builder;
       }
       /**
-       * Protobuf type {@code hbase.pb.SnapshotRegionManifest.FamilyFiles}
+       * Protobuf type {@code SnapshotRegionManifest.FamilyFiles}
        */
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
          implements org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_FamilyFiles_descriptor;
         }
 
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable
               .ensureFieldAccessorsInitialized(
                   org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder.class);
         }
@@ -2483,7 +2483,7 @@ public final class SnapshotProtos {
 
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_FamilyFiles_descriptor;
         }
 
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles getDefaultInstanceForType() {
@@ -2633,7 +2633,7 @@ public final class SnapshotProtos {
           return this;
         }
 
-        // repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;
+        // repeated .SnapshotRegionManifest.StoreFile store_files = 2;
         private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> storeFiles_ =
           java.util.Collections.emptyList();
         private void ensureStoreFilesIsMutable() {
@@ -2647,7 +2647,7 @@ public final class SnapshotProtos {
             org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> storeFilesBuilder_;
 
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> getStoreFilesList() {
           if (storeFilesBuilder_ == null) {
@@ -2657,7 +2657,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public int getStoreFilesCount() {
           if (storeFilesBuilder_ == null) {
@@ -2667,7 +2667,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile getStoreFiles(int index) {
           if (storeFilesBuilder_ == null) {
@@ -2677,7 +2677,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder setStoreFiles(
             int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile value) {
@@ -2694,7 +2694,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder setStoreFiles(
             int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder builderForValue) {
@@ -2708,7 +2708,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder addStoreFiles(org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile value) {
           if (storeFilesBuilder_ == null) {
@@ -2724,7 +2724,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder addStoreFiles(
             int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile value) {
@@ -2741,7 +2741,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder addStoreFiles(
             org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder builderForValue) {
@@ -2755,7 +2755,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder addStoreFiles(
             int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder builderForValue) {
@@ -2769,7 +2769,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder addAllStoreFiles(
             java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> values) {
@@ -2783,7 +2783,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder clearStoreFiles() {
           if (storeFilesBuilder_ == null) {
@@ -2796,7 +2796,7 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public Builder removeStoreFiles(int index) {
           if (storeFilesBuilder_ == null) {
@@ -2809,14 +2809,14 @@ public final class SnapshotProtos {
           return this;
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder getStoreFilesBuilder(
             int index) {
           return getStoreFilesFieldBuilder().getBuilder(index);
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder getStoreFilesOrBuilder(
             int index) {
@@ -2826,7 +2826,7 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
              getStoreFilesOrBuilderList() {
@@ -2837,14 +2837,14 @@ public final class SnapshotProtos {
           }
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder addStoreFilesBuilder() {
           return getStoreFilesFieldBuilder().addBuilder(
               org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.getDefaultInstance());
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder addStoreFilesBuilder(
             int index) {
@@ -2852,7 +2852,7 @@ public final class SnapshotProtos {
               index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.getDefaultInstance());
         }
         /**
-         * <code>repeated .hbase.pb.SnapshotRegionManifest.StoreFile store_files = 2;</code>
+         * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
         public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder> 
              getStoreFilesBuilderList() {
@@ -2873,7 +2873,7 @@ public final class SnapshotProtos {
           return storeFilesBuilder_;
         }
 
-        // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotRegionManifest.FamilyFiles)
+        // @@protoc_insertion_point(builder_scope:SnapshotRegionManifest.FamilyFiles)
       }
 
       static {
@@ -2881,7 +2881,7 @@ public final class SnapshotProtos {
         defaultInstance.initFields();
       }
 
-      // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotRegionManifest.FamilyFiles)
+      // @@protoc_insertion_point(class_scope:SnapshotRegionManifest.FamilyFiles)
     }
 
     private int bitField0_;
@@ -2901,58 +2901,58 @@ public final class SnapshotProtos {
       return version_;
     }
 
-    // required .hbase.pb.RegionInfo region_info = 2;
+    // required .RegionInfo region_info = 2;
     public static final int REGION_INFO_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_;
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     public boolean hasRegionInfo() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
       return regionInfo_;
     }
     /**
-     * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+     * <code>required .RegionInfo region_info = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
       return regionInfo_;
     }
 
-    // repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;
+    // repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;
     public static final int FAMILY_FILES_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> familyFiles_;
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> getFamilyFilesList() {
       return familyFiles_;
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
         getFamilyFilesOrBuilderList() {
       return familyFiles_;
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     public int getFamilyFilesCount() {
       return familyFiles_.size();
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles getFamilyFiles(int index) {
       return familyFiles_.get(index);
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+     * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder getFamilyFilesOrBuilder(
         int index) {
@@ -3152,19 +3152,19 @@ public final class SnapshotProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code hbase.pb.SnapshotRegionManifest}
+     * Protobuf type {@code SnapshotRegionManifest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder.class);
       }
@@ -3214,7 +3214,7 @@ public final class SnapshotProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotRegionManifest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotRegionManifest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest getDefaultInstanceForType() {
@@ -3376,18 +3376,18 @@ public final class SnapshotProtos {
         return this;
       }
 
-      // required .hbase.pb.RegionInfo region_info = 2;
+      // required .RegionInfo region_info = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionInfoBuilder_;
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public boolean hasRegionInfo() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
         if (regionInfoBuilder_ == null) {
@@ -3397,7 +3397,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public Builder setRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (regionInfoBuilder_ == null) {
@@ -3413,7 +3413,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public Builder setRegionInfo(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
@@ -3427,7 +3427,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public Builder mergeRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (regionInfoBuilder_ == null) {
@@ -3446,7 +3446,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public Builder clearRegionInfo() {
         if (regionInfoBuilder_ == null) {
@@ -3459,7 +3459,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionInfoBuilder() {
         bitField0_ |= 0x00000002;
@@ -3467,7 +3467,7 @@ public final class SnapshotProtos {
         return getRegionInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
         if (regionInfoBuilder_ != null) {
@@ -3477,7 +3477,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.RegionInfo region_info = 2;</code>
+       * <code>required .RegionInfo region_info = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
@@ -3493,7 +3493,7 @@ public final class SnapshotProtos {
         return regionInfoBuilder_;
       }
 
-      // repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;
+      // repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> familyFiles_ =
         java.util.Collections.emptyList();
       private void ensureFamilyFilesIsMutable() {
@@ -3507,7 +3507,7 @@ public final class SnapshotProtos {
           org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> familyFilesBuilder_;
 
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> getFamilyFilesList() {
         if (familyFilesBuilder_ == null) {
@@ -3517,7 +3517,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public int getFamilyFilesCount() {
         if (familyFilesBuilder_ == null) {
@@ -3527,7 +3527,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles getFamilyFiles(int index) {
         if (familyFilesBuilder_ == null) {
@@ -3537,7 +3537,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder setFamilyFiles(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles value) {
@@ -3554,7 +3554,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder setFamilyFiles(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder builderForValue) {
@@ -3568,7 +3568,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder addFamilyFiles(org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles value) {
         if (familyFilesBuilder_ == null) {
@@ -3584,7 +3584,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder addFamilyFiles(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles value) {
@@ -3601,7 +3601,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder addFamilyFiles(
           org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder builderForValue) {
@@ -3615,7 +3615,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder addFamilyFiles(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder builderForValue) {
@@ -3629,7 +3629,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder addAllFamilyFiles(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> values) {
@@ -3643,7 +3643,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder clearFamilyFiles() {
         if (familyFilesBuilder_ == null) {
@@ -3656,7 +3656,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public Builder removeFamilyFiles(int index) {
         if (familyFilesBuilder_ == null) {
@@ -3669,14 +3669,14 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder getFamilyFilesBuilder(
           int index) {
         return getFamilyFilesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder getFamilyFilesOrBuilder(
           int index) {
@@ -3686,7 +3686,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
            getFamilyFilesOrBuilderList() {
@@ -3697,14 +3697,14 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder addFamilyFilesBuilder() {
         return getFamilyFilesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder addFamilyFilesBuilder(
           int index) {
@@ -3712,7 +3712,7 @@ public final class SnapshotProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
+       * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder> 
            getFamilyFilesBuilderList() {
@@ -3733,7 +3733,7 @@ public final class SnapshotProtos {
         return familyFilesBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotRegionManifest)
+      // @@protoc_insertion_point(builder_scope:SnapshotRegionManifest)
     }
 
     static {
@@ -3741,53 +3741,53 @@ public final class SnapshotProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotRegionManifest)
+    // @@protoc_insertion_point(class_scope:SnapshotRegionManifest)
   }
 
   public interface SnapshotDataManifestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .hbase.pb.TableSchema table_schema = 1;
+    // required .TableSchema table_schema = 1;
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     boolean hasTableSchema();
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema();
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getTableSchemaOrBuilder();
 
-    // repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;
+    // repeated .SnapshotRegionManifest region_manifests = 2;
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> 
         getRegionManifestsList();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest getRegionManifests(int index);
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     int getRegionManifestsCount();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
         getRegionManifestsOrBuilderList();
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder getRegionManifestsOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code hbase.pb.SnapshotDataManifest}
+   * Protobuf type {@code SnapshotDataManifest}
    */
   public static final class SnapshotDataManifest extends
       com.google.protobuf.GeneratedMessage
@@ -3875,12 +3875,12 @@ public final class SnapshotProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDataManifest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotDataManifest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDataManifest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotDataManifest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest.Builder.class);
     }
@@ -3901,58 +3901,58 @@ public final class SnapshotProtos {
     }
 
     private int bitField0_;
-    // required .hbase.pb.TableSchema table_schema = 1;
+    // required .TableSchema table_schema = 1;
     public static final int TABLE_SCHEMA_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_;
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     public boolean hasTableSchema() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema() {
       return tableSchema_;
     }
     /**
-     * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+     * <code>required .TableSchema table_schema = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getTableSchemaOrBuilder() {
       return tableSchema_;
     }
 
-    // repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;
+    // repeated .SnapshotRegionManifest region_manifests = 2;
     public static final int REGION_MANIFESTS_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> regionManifests_;
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> getRegionManifestsList() {
       return regionManifests_;
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
         getRegionManifestsOrBuilderList() {
       return regionManifests_;
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     public int getRegionManifestsCount() {
       return regionManifests_.size();
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest getRegionManifests(int index) {
       return regionManifests_.get(index);
     }
     /**
-     * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+     * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder getRegionManifestsOrBuilder(
         int index) {
@@ -4135,19 +4135,19 @@ public final class SnapshotProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code hbase.pb.SnapshotDataManifest}
+     * Protobuf type {@code SnapshotDataManifest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDataManifest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotDataManifest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDataManifest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotDataManifest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest.class, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest.Builder.class);
       }
@@ -4195,7 +4195,7 @@ public final class SnapshotProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDataManifest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.internal_static_SnapshotDataManifest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest getDefaultInstanceForType() {
@@ -4317,18 +4317,18 @@ public final class SnapshotProtos {
       }
       private int bitField0_;
 
-      // required .hbase.pb.TableSchema table_schema = 1;
+      // required .TableSchema table_schema = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> tableSchemaBuilder_;
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public boolean hasTableSchema() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema() {
         if (tableSchemaBuilder_ == null) {
@@ -4338,7 +4338,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public Builder setTableSchema(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema value) {
         if (tableSchemaBuilder_ == null) {
@@ -4354,7 +4354,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public Builder setTableSchema(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder builderForValue) {
@@ -4368,7 +4368,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public Builder mergeTableSchema(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema value) {
         if (tableSchemaBuilder_ == null) {
@@ -4387,7 +4387,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public Builder clearTableSchema() {
         if (tableSchemaBuilder_ == null) {
@@ -4400,7 +4400,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder getTableSchemaBuilder() {
         bitField0_ |= 0x00000001;
@@ -4408,7 +4408,7 @@ public final class SnapshotProtos {
         return getTableSchemaFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getTableSchemaOrBuilder() {
         if (tableSchemaBuilder_ != null) {
@@ -4418,7 +4418,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
+       * <code>required .TableSchema table_schema = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
@@ -4434,7 +4434,7 @@ public final class SnapshotProtos {
         return tableSchemaBuilder_;
       }
 
-      // repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;
+      // repeated .SnapshotRegionManifest region_manifests = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> regionManifests_ =
         java.util.Collections.emptyList();
       private void ensureRegionManifestsIsMutable() {
@@ -4448,7 +4448,7 @@ public final class SnapshotProtos {
           org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> regionManifestsBuilder_;
 
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> getRegionManifestsList() {
         if (regionManifestsBuilder_ == null) {
@@ -4458,7 +4458,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public int getRegionManifestsCount() {
         if (regionManifestsBuilder_ == null) {
@@ -4468,7 +4468,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest getRegionManifests(int index) {
         if (regionManifestsBuilder_ == null) {
@@ -4478,7 +4478,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder setRegionManifests(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest value) {
@@ -4495,7 +4495,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder setRegionManifests(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder builderForValue) {
@@ -4509,7 +4509,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder addRegionManifests(org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest value) {
         if (regionManifestsBuilder_ == null) {
@@ -4525,7 +4525,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder addRegionManifests(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest value) {
@@ -4542,7 +4542,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder addRegionManifests(
           org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder builderForValue) {
@@ -4556,7 +4556,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder addRegionManifests(
           int index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder builderForValue) {
@@ -4570,7 +4570,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder addAllRegionManifests(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> values) {
@@ -4584,7 +4584,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder clearRegionManifests() {
         if (regionManifestsBuilder_ == null) {
@@ -4597,7 +4597,7 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public Builder removeRegionManifests(int index) {
         if (regionManifestsBuilder_ == null) {
@@ -4610,14 +4610,14 @@ public final class SnapshotProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder getRegionManifestsBuilder(
           int index) {
         return getRegionManifestsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder getRegionManifestsOrBuilder(
           int index) {
@@ -4627,7 +4627,7 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
            getRegionManifestsOrBuilderList() {
@@ -4638,14 +4638,14 @@ public final class SnapshotProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder addRegionManifestsBuilder() {
         return getRegionManifestsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder addRegionManifestsBuilder(
           int index) {
@@ -4653,7 +4653,7 @@ public final class SnapshotProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.SnapshotRegionManifest region_manifests = 2;</code>
+       * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder> 
            getRegionManifestsBuilderList() {
@@ -4674,7 +4674,7 @@ public final class SnapshotProtos {
         return regionManifestsBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotDataManifest)
+      // @@protoc_insertion_point(builder_scope:SnapshotDataManifest)
     }
 
     static {
@@ -4682,34 +4682,34 @@ public final class SnapshotProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotDataManifest)
+    // @@protoc_insertion_point(class_scope:SnapshotDataManifest)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_SnapshotFileInfo_descriptor;
+    internal_static_SnapshotFileInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_SnapshotFileInfo_fieldAccessorTable;
+      internal_static_SnapshotFileInfo_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_SnapshotRegionManifest_descriptor;
+    internal_static_SnapshotRegionManifest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_SnapshotRegionManifest_fieldAccessorTable;
+      internal_static_SnapshotRegionManifest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor;
+    internal_static_SnapshotRegionManifest_StoreFile_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_fieldAccessorTable;
+      internal_static_SnapshotRegionManifest_StoreFile_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor;
+    internal_static_SnapshotRegionManifest_FamilyFiles_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable;
+      internal_static_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_SnapshotDataManifest_descriptor;
+    internal_static_SnapshotDataManifest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_SnapshotDataManifest_fieldAccessorTable;
+      internal_static_SnapshotDataManifest_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -4719,60 +4719,58 @@ public final class SnapshotProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016Snapshot.proto\022\010hbase.pb\032\010FS.proto\032\013HB" +
-      "ase.proto\"\222\001\n\020SnapshotFileInfo\022-\n\004type\030\001" +
-      " \002(\0162\037.hbase.pb.SnapshotFileInfo.Type\022\r\n" +
-      "\005hfile\030\003 \001(\t\022\022\n\nwal_server\030\004 \001(\t\022\020\n\010wal_" +
-      "name\030\005 \001(\t\"\032\n\004Type\022\t\n\005HFILE\020\001\022\007\n\003WAL\020\002\"\323" +
-      "\002\n\026SnapshotRegionManifest\022\017\n\007version\030\001 \001" +
-      "(\005\022)\n\013region_info\030\002 \002(\0132\024.hbase.pb.Regio" +
-      "nInfo\022B\n\014family_files\030\003 \003(\0132,.hbase.pb.S" +
-      "napshotRegionManifest.FamilyFiles\032T\n\tSto" +
-      "reFile\022\014\n\004name\030\001 \002(\t\022&\n\treference\030\002 \001(\0132",
-      "\023.hbase.pb.Reference\022\021\n\tfile_size\030\003 \001(\004\032" +
-      "c\n\013FamilyFiles\022\023\n\013family_name\030\001 \002(\014\022?\n\013s" +
-      "tore_files\030\002 \003(\0132*.hbase.pb.SnapshotRegi" +
-      "onManifest.StoreFile\"\177\n\024SnapshotDataMani" +
-      "fest\022+\n\014table_schema\030\001 \002(\0132\025.hbase.pb.Ta" +
-      "bleSchema\022:\n\020region_manifests\030\002 \003(\0132 .hb" +
-      "ase.pb.SnapshotRegionManifestBD\n*org.apa" +
-      "che.hadoop.hbase.protobuf.generatedB\016Sna" +
-      "pshotProtosH\001\210\001\001\240\001\001"
+      "\n\016Snapshot.proto\032\010FS.proto\032\013HBase.proto\"" +
+      "\211\001\n\020SnapshotFileInfo\022$\n\004type\030\001 \002(\0162\026.Sna" +
+      "pshotFileInfo.Type\022\r\n\005hfile\030\003 \001(\t\022\022\n\nwal" +
+      "_server\030\004 \001(\t\022\020\n\010wal_name\030\005 \001(\t\"\032\n\004Type\022" +
+      "\t\n\005HFILE\020\001\022\007\n\003WAL\020\002\"\257\002\n\026SnapshotRegionMa" +
+      "nifest\022\017\n\007version\030\001 \001(\005\022 \n\013region_info\030\002" +
+      " \002(\0132\013.RegionInfo\0229\n\014family_files\030\003 \003(\0132" +
+      "#.SnapshotRegionManifest.FamilyFiles\032K\n\t" +
+      "StoreFile\022\014\n\004name\030\001 \002(\t\022\035\n\treference\030\002 \001" +
+      "(\0132\n.Reference\022\021\n\tfile_size\030\003 \001(\004\032Z\n\013Fam",
+      "ilyFiles\022\023\n\013family_name\030\001 \002(\014\0226\n\013store_f" +
+      "iles\030\002 \003(\0132!.SnapshotRegionManifest.Stor" +
+      "eFile\"m\n\024SnapshotDataManifest\022\"\n\014table_s" +
+      "chema\030\001 \002(\0132\014.TableSchema\0221\n\020region_mani" +
+      "fests\030\002 \003(\0132\027.SnapshotRegionManifestBD\n*" +
+      "org.apache.hadoop.hbase.protobuf.generat" +
+      "edB\016SnapshotProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_hbase_pb_SnapshotFileInfo_descriptor =
+          internal_static_SnapshotFileInfo_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_hbase_pb_SnapshotFileInfo_fieldAccessorTable = new
+          internal_static_SnapshotFileInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_SnapshotFileInfo_descriptor,
+              internal_static_SnapshotFileInfo_descriptor,
               new java.lang.String[] { "Type", "Hfile", "WalServer", "WalName", });
-          internal_static_hbase_pb_SnapshotRegionManifest_descriptor =
+          internal_static_SnapshotRegionManifest_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_hbase_pb_SnapshotRegionManifest_fieldAccessorTable = new
+          internal_static_SnapshotRegionManifest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_SnapshotRegionManifest_descriptor,
+              internal_static_SnapshotRegionManifest_descriptor,
               new java.lang.String[] { "Version", "RegionInfo", "FamilyFiles", });
-          internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor =
-            internal_static_hbase_pb_SnapshotRegionManifest_descriptor.getNestedTypes().get(0);
-          internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_fieldAccessorTable = new
+          internal_static_SnapshotRegionManifest_StoreFile_descriptor =
+            internal_static_SnapshotRegionManifest_descriptor.getNestedTypes().get(0);
+          internal_static_SnapshotRegionManifest_StoreFile_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_SnapshotRegionManifest_StoreFile_descriptor,
+              internal_static_SnapshotRegionManifest_StoreFile_descriptor,
               new java.lang.String[] { "Name", "Reference", "FileSize", });
-          internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor =
-            internal_static_hbase_pb_SnapshotRegionManifest_descriptor.getNestedTypes().get(1);
-          internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable = new
+          internal_static_SnapshotRegionManifest_FamilyFiles_descriptor =
+            internal_static_SnapshotRegionManifest_descriptor.getNestedTypes().get(1);
+          internal_static_SnapshotRegionManifest_FamilyFiles_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor,
+              internal_static_SnapshotRegionManifest_FamilyFiles_descriptor,
               new java.lang.String[] { "FamilyName", "StoreFiles", });
-          internal_static_hbase_pb_SnapshotDataManifest_descriptor =
+          internal_static_SnapshotDataManifest_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_hbase_pb_SnapshotDataManifest_fieldAccessorTable = new
+          internal_static_SnapshotDataManifest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_SnapshotDataManifest_descriptor,
+              internal_static_SnapshotDataManifest_descriptor,
               new java.lang.String[] { "TableSchema", "RegionManifests", });
           return null;
         }
