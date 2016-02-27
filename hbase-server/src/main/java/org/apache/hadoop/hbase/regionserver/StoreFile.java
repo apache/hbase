@@ -741,6 +741,13 @@ public class StoreFile {
         getReader().timeRangeTracker.getMinimumTimestamp();
   }
 
+  public Long getMaximumTimestamp() {
+    return (getReader().timeRangeTracker == null) ?
+        null :
+        getReader().timeRangeTracker.getMaximumTimestamp();
+  }
+
+
   /**
    * Gets the approximate mid-point of this file that is optimal for use in splitting it.
    * @param comparator Comparator used to compare KVs.
