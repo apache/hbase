@@ -115,6 +115,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String balancerZNode;
   // znode containing the state of region normalizer
   private String regionNormalizerZNode;
+  // znode containing the state of all switches, currently there are split and merge child node.
+  private String switchZNode;
   // znode containing the lock for the tables
   public String tableLockZNode;
   // znode containing the state of recovering regions
@@ -430,6 +432,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.balancer", "balancer"));
     regionNormalizerZNode = ZKUtil.joinZNode(baseZNode,
       conf.get("zookeeper.znode.regionNormalizer", "normalizer"));
+    switchZNode = ZKUtil.joinZNode(baseZNode, conf.get("zookeeper.znode.switch", "switch"));
     tableLockZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableLock", "table-lock"));
     recoveringRegionsZNode = ZKUtil.joinZNode(baseZNode,
@@ -788,5 +791,12 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    */
   public String getRegionNormalizerZNode() {
     return regionNormalizerZNode;
+  }
+
+  /**
+   *  @return ZK node for switch
+   * */
+  public String getSwitchZNode() {
+    return switchZNode;
   }
 }
