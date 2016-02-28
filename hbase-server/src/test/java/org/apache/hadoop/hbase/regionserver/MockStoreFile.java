@@ -95,6 +95,18 @@ public class MockStoreFile extends StoreFile {
     this.entryCount = entryCount;
   }
 
+  public Long getMinimumTimestamp() {
+    return (timeRangeTracker == null) ?
+      null :
+      timeRangeTracker.getMinimumTimestamp();
+  }
+
+  public Long getMaximumTimestamp() {
+    return (timeRangeTracker == null) ?
+      null :
+      timeRangeTracker.getMaximumTimestamp();
+  }
+
   @Override
   public StoreFile.Reader getReader() {
     final long len = this.length;

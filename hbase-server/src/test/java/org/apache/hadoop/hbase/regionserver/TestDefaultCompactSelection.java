@@ -19,182 +19,20 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.TestCase;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
-
 @Category(SmallTests.class)
-public class TestDefaultCompactSelection extends TestCase {
-  private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+public class TestDefaultCompactSelection extends TestCompactionPolicy {
 
-  protected Configuration conf;
-  protected HStore store;
-  private static final String DIR=
-    TEST_UTIL.getDataTestDir(TestDefaultCompactSelection.class.getSimpleName()).toString();
-  private static Path TEST_FILE;
-
-  protected static final int minFiles = 3;
-  protected static final int maxFiles = 5;
-
-  protected static final long minSize = 10;
-  protected static final long maxSize = 2100;
-
-  private HLog hlog;
-  private HRegion region;
-
-  @Override
-  public void setUp() throws Exception {
-    // setup config values necessary for store
-    this.conf = TEST_UTIL.getConfiguration();
-    this.conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
-    this.conf.setInt("hbase.hstore.compaction.min", minFiles);
-    this.conf.setInt("hbase.hstore.compaction.max", maxFiles);
-    this.conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, minSize);
-    this.conf.setLong("hbase.hstore.compaction.max.size", maxSize);
-    this.conf.setFloat("hbase.hstore.compaction.ratio", 1.0F);
-
-    //Setting up a Store
-    Path basedir = new Path(DIR);
-    String logName = "logs";
-    Path logdir = new Path(DIR, logName);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
-    FileSystem fs = FileSystem.get(conf);
-
-    fs.delete(logdir, true);
-
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("table")));
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-
-    hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
-    region = HRegion.createHRegion(info, basedir, conf, htd);
-    HRegion.closeHRegion(region);
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
-    region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
-
-    store = new HStore(region, hcd, conf);
-
-    TEST_FILE = region.getRegionFileSystem().createTempName();
-    fs.createNewFile(TEST_FILE);
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    IOException ex = null;
-    try {
-      region.close();
-    } catch (IOException e) {
-      LOG.warn("Caught Exception", e);
-      ex = e;
-    }
-    try {
-      hlog.closeAndDelete();
-    } catch (IOException e) {
-      LOG.warn("Caught Exception", e);
-      ex = e;
-    }
-    if (ex != null) {
-      throw ex;
-    }
-  }
-
-  ArrayList<Long> toArrayList(long... numbers) {
-    ArrayList<Long> result = new ArrayList<Long>();
-    for (long i : numbers) {
-      result.add(i);
-    }
-    return result;
-  }
-
-  List<StoreFile> sfCreate(long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
-    for (int i = 0; i < sizes.length; i++) {
-      ageInDisk.add(0L);
-    }
-    return sfCreate(toArrayList(sizes), ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
-    throws IOException {
-    return sfCreate(false, sizes, ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>(sizes.length);
-    for (int i = 0; i < sizes.length; i++) {
-      ageInDisk.add(0L);
-    }
-    return sfCreate(isReference, toArrayList(sizes), ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
-      throws IOException {
-    List<StoreFile> ret = Lists.newArrayList();
-    for (int i = 0; i < sizes.size(); i++) {
-      ret.add(new MockStoreFile(TEST_UTIL, TEST_FILE,
-          sizes.get(i), ageInDisk.get(i), isReference, i));
-    }
-    return ret;
-  }
-
-  long[] getSizes(List<StoreFile> sfList) {
-    long[] aNums = new long[sfList.size()];
-    for (int i = 0; i < sfList.size(); ++i) {
-      aNums[i] = sfList.get(i).getReader().length();
-    }
-    return aNums;
-  }
-
-  void compactEquals(List<StoreFile> candidates, long... expected)
-    throws IOException {
-    compactEquals(candidates, false, false, expected);
-  }
-
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor, long... expected)
-    throws IOException {
-    compactEquals(candidates, forcemajor, false, expected);
-  }
-
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor, boolean isOffPeak,
-      long ... expected)
-  throws IOException {
-    store.forceMajor = forcemajor;
-    //Test Default compactions
-    CompactionRequest result = ((RatioBasedCompactionPolicy)store.storeEngine.getCompactionPolicy())
-        .selectCompaction(candidates, new ArrayList<StoreFile>(), false, isOffPeak, forcemajor);
-    List<StoreFile> actual = new ArrayList<StoreFile>(result.getFiles());
-    if (isOffPeak && !forcemajor) {
-      assertTrue(result.isOffPeak());
-    }
-    assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
-    store.forceMajor = false;
-  }
-
+  @Test
   public void testCompactionRatio() throws IOException {
     /**
      * NOTE: these tests are specific to describe the implementation of the
@@ -272,9 +110,10 @@ public class TestDefaultCompactSelection extends TestCase {
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);
     // empty case (because all files are too big)
-   compactEquals(sfCreate(tooBig, tooBig) /* empty */);
+    compactEquals(sfCreate(tooBig, tooBig) /* empty */);
   }
 
+  @Test
   public void testOffPeakCompactionRatio() throws IOException {
     /*
      * NOTE: these tests are specific to describe the implementation of the
@@ -289,6 +128,7 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(999, 50, 12, 12, 1), 12, 12, 1);
   }
 
+  @Test
   public void testStuckStoreCompaction() throws IOException {
     // Select the smallest compaction if the store is stuck.
     compactEquals(sfCreate(99,99,99,99,99,99, 30,30,30,30), 30, 30, 30);
@@ -303,6 +143,7 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(99,99,99,99, 27,27,27,20,20,20), 20, 20, 20);
   }
 
+  @Test
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
@@ -324,7 +165,7 @@ public class TestDefaultCompactSelection extends TestCase {
     CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
         .getCompactionPolicy()).selectCompaction(candidates,
         new ArrayList<StoreFile>(), false, false, false);
-    assertTrue(result.getFiles().size() == 0);
+    Assert.assertTrue(result.getFiles().size() == 0);
     store.setScanInfo(oldScanInfo);
   }
 }

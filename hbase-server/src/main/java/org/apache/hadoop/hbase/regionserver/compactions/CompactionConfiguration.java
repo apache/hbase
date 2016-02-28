@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
@@ -53,6 +53,21 @@ public class CompactionConfiguration {
   public static final String MIN_KEY = CONFIG_PREFIX + "min";
   public static final String MAX_KEY = CONFIG_PREFIX + "max";
 
+  /*
+   * The epoch time length for the windows we no longer compact
+   */
+  public static final String MAX_AGE_KEY =CONFIG_PREFIX + "date.tiered.max.storefile.age.millis";
+  public static final String BASE_WINDOW_MILLIS_KEY =
+    CONFIG_PREFIX + "date.tiered.base.window.millis";
+  public static final String WINDOWS_PER_TIER_KEY = CONFIG_PREFIX + "date.tiered.windows.per.tier";
+  public static final String INCOMING_WINDOW_MIN_KEY =
+    CONFIG_PREFIX + "date.tiered.incoming.window.min";
+  public static final String COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY =
+      CONFIG_PREFIX + "date.tiered.window.policy.class";
+
+  private static final Class<? extends RatioBasedCompactionPolicy>
+    DEFAULT_TIER_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
+
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
 
@@ -66,7 +81,11 @@ public class CompactionConfiguration {
   long majorCompactionPeriod;
   float majorCompactionJitter;
   final float minLocalityToForceCompact;
-
+  private final long maxStoreFileAgeMillis;
+  private final long baseWindowMillis;
+  private final int windowsPerTier;
+  private final int incomingWindowMin;
+  private final String compactionPolicyForTieredWindow;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -88,6 +107,12 @@ public class CompactionConfiguration {
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
     minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
+    maxStoreFileAgeMillis = conf.getLong(MAX_AGE_KEY, Long.MAX_VALUE);
+    baseWindowMillis = conf.getLong(BASE_WINDOW_MILLIS_KEY, 3600000 * 6);
+    windowsPerTier = conf.getInt(WINDOWS_PER_TIER_KEY, 4);
+    incomingWindowMin = conf.getInt(INCOMING_WINDOW_MIN_KEY, 6);
+    compactionPolicyForTieredWindow = conf.get(COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY,
+        DEFAULT_TIER_COMPACTION_POLICY_CLASS.getName());
     LOG.info(this);
   }
 
@@ -95,7 +120,9 @@ public class CompactionConfiguration {
   public String toString() {
     return String.format(
       "size [%d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
-      + " major period %d, major jitter %f, min locality to compact %f\"",
+      + " major period %d, major jitter %f, min locality to compact %f;"
+      + " tiered compaction: max_age %d, base window in milliseconds %d, windows per tier %d, "
+      + "incoming window threshold %d",
       minCompactSize,
       maxCompactSize,
       minFilesToCompact,
@@ -105,8 +132,11 @@ public class CompactionConfiguration {
       throttlePoint,
       majorCompactionPeriod,
       majorCompactionJitter,
-      minLocalityToForceCompact
-    );
+      minLocalityToForceCompact,
+      maxStoreFileAgeMillis,
+      baseWindowMillis,
+      windowsPerTier,
+      incomingWindowMin);
   }
 
   /**
@@ -128,6 +158,14 @@ public class CompactionConfiguration {
    */
   public int getMinFilesToCompact() {
     return minFilesToCompact;
+  }
+
+  /**
+   * Set upper bound on number of files to be included in minor compactions
+   * @param threshold
+   */
+  public void setMinFilesToCompact(int threshold) {
+    minFilesToCompact = threshold;
   }
 
   /**
@@ -160,7 +198,7 @@ public class CompactionConfiguration {
 
   /**
    * @return Major compaction period from compaction.
-   * Major compactions are selected periodically according to this parameter plus jitter
+   *   Major compactions are selected periodically according to this parameter plus jitter
    */
   long getMajorCompactionPeriod() {
     return majorCompactionPeriod;
@@ -168,7 +206,7 @@ public class CompactionConfiguration {
 
   /**
    * @return Major the jitter fraction, the fraction within which the major compaction
-   *  period is randomly chosen from the majorCompactionPeriod in each store.
+   *    period is randomly chosen from the majorCompactionPeriod in each store.
    */
   float getMajorCompactionJitter() {
     return majorCompactionJitter;
@@ -176,10 +214,30 @@ public class CompactionConfiguration {
 
   /**
    * @return Block locality ratio, the ratio at which we will include old regions with a single
-   * store file for major compaction.  Used to improve block locality for regions that
-   * haven't had writes in a while but are still being read.
+   *   store file for major compaction.  Used to improve block locality for regions that
+   *   haven't had writes in a while but are still being read.
    */
   float getMinLocalityToForceCompact() {
     return minLocalityToForceCompact;
+  }
+
+  public long getMaxStoreFileAgeMillis() {
+    return maxStoreFileAgeMillis;
+  }
+
+  public long getBaseWindowMillis() {
+    return baseWindowMillis;
+  }
+
+  public int getWindowsPerTier() {
+    return windowsPerTier;
+  }
+
+  public int getIncomingWindowMin() {
+    return incomingWindowMin;
+  }
+
+  public String getCompactionPolicyForTieredWindow() {
+    return compactionPolicyForTieredWindow;
   }
 }
