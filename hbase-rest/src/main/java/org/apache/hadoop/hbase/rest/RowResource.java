@@ -553,9 +553,12 @@ public class RowResource extends ResourceBase {
           .build();
       }
 
+      List<CellModel> cellModels = rowModel.getCells();
+      int cellModelCount = cellModels.size();
+
       delete = new Delete(key);
       boolean retValue;
-      CellModel valueToDeleteCell = rowModel.getCells().get(0);
+      CellModel valueToDeleteCell = rowModel.getCells().get(cellModelCount -1);
       byte[] valueToDeleteColumn = valueToDeleteCell.getColumn();
       if (valueToDeleteColumn == null) {
         try {
@@ -567,25 +570,62 @@ public class RowResource extends ResourceBase {
             .build();
         }
       }
-      byte[][] parts = KeyValue.parseColumn(valueToDeleteColumn);
+
+      byte[][] parts ;
+      // Copy all the cells to the Delete request if extra cells are sent
+      if(cellModelCount > 1) {
+        for (int i = 0, n = cellModelCount - 1; i < n; i++) {
+          CellModel cell = cellModels.get(i);
+          byte[] col = cell.getColumn();
+
+          if (col == null) {
+            servlet.getMetrics().incrementFailedPutRequests(1);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                    .build();
+          }
+
+          parts = KeyValue.parseColumn(col);
+
+          if (parts.length == 1) {
+            // Only Column Family is specified
+            delete.addFamily(parts[0], cell.getTimestamp());
+          } else if (parts.length == 2) {
+            delete.addColumn(parts[0], parts[1], cell.getTimestamp());
+          } else {
+            servlet.getMetrics().incrementFailedDeleteRequests(1);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type(MIMETYPE_TEXT)
+                    .entity("Bad request: Column to delete incorrectly specified." + CRLF)
+                    .build();
+          }
+        }
+      }
+
+      parts = KeyValue.parseColumn(valueToDeleteColumn);
       if (parts.length == 2) {
         if (parts[1].length != 0) {
-          delete.deleteColumns(parts[0], parts[1]);
+          // To support backcompat of deleting a cell
+          // if that is the only cell passed to the rest api
+          if(cellModelCount == 1) {
+            delete.addColumns(parts[0], parts[1]);
+          }
           retValue = table.checkAndDelete(key, parts[0], parts[1],
             valueToDeleteCell.getValue(), delete);
         } else {
           // The case of empty qualifier.
-          delete.deleteColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
+          if(cellModelCount == 1) {
+            delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
+          }
           retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
             valueToDeleteCell.getValue(), delete);
         }
       } else {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Column to check incorrectly specified." + CRLF)
           .build();
       }
-      delete.deleteColumns(parts[0], parts[1]);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("CHECK-AND-DELETE " + delete.toString() + ", returns "
