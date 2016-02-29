@@ -226,6 +226,23 @@ public abstract class AbstractMemStore implements MemStore {
     return getSnapshot().getSize();
   }
 
+  /**
+   * Remove n key from the memstore. Only cells that have the same key and the
+   * same memstoreTS are removed.  It is ok to not update timeRangeTracker
+   * in this call. It is possible that we can optimize this method by using
+   * tailMap/iterator, but since this method is called rarely (only for
+   * error recovery), we can leave those optimization for the future.
+   * @param cell
+   */
+  @Override
+  public void rollback(Cell cell) {
+    // If the key is in the active, delete it. Update this.size.
+    long sz = active.rollback(cell);
+    if (sz != 0) {
+      setOldestEditTimeToNow();
+    }
+  }
+
   @Override
   public String toString() {
     StringBuffer buf = new StringBuffer();
@@ -239,23 +256,6 @@ public abstract class AbstractMemStore implements MemStore {
       return e.toString();
     }
     return buf.toString();
-  }
-
-  protected void rollbackInSnapshot(Cell cell) {
-    // If the key is in the snapshot, delete it. We should not update
-    // this.size, because that tracks the size of only the memstore and
-    // not the snapshot. The flush of this snapshot to disk has not
-    // yet started because Store.flush() waits for all rwcc transactions to
-    // commit before starting the flush to disk.
-    snapshot.rollback(cell);
-  }
-
-  protected void rollbackInActive(Cell cell) {
-    // If the key is in the memstore, delete it. Update this.size.
-    long sz = active.rollback(cell);
-    if (sz != 0) {
-      setOldestEditTimeToNow();
-    }
   }
 
   protected Configuration getConfiguration() {

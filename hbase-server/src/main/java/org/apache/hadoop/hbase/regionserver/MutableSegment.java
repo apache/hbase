@@ -18,34 +18,43 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.SortedSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * An abstraction of a mutable segment in memstore, specifically the active segment.
+ * A mutable segment in memstore, specifically the active segment.
  */
 @InterfaceAudience.Private
-public abstract class MutableSegment extends Segment {
+public class MutableSegment extends Segment {
 
-  protected MutableSegment(MemStoreLAB memStoreLAB, long size) {
-    super(memStoreLAB, size);
+  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
+      long size) {
+    super(cellSet, comparator, memStoreLAB, size);
   }
 
   /**
-   * Returns a subset of the segment cell set, which starts with the given cell
-   * @param firstCell a cell in the segment
-   * @return a subset of the segment cell set, which starts with the given cell
+   * Adds the given cell into the segment
+   * @return the change in the heap size
    */
-  public abstract SortedSet<Cell> tailSet(Cell firstCell);
+  public long add(Cell cell) {
+    return internalAdd(cell);
+  }
 
   /**
-   * Returns the Cell comparator used by this segment
-   * @return the Cell comparator used by this segment
+   * Removes the given cell from the segment
+   * @return the change in the heap size
    */
-  public abstract CellComparator getComparator();
+  public long rollback(Cell cell) {
+    Cell found = getCellSet().get(cell);
+    if (found != null && found.getSequenceId() == cell.getSequenceId()) {
+      long sz = AbstractMemStore.heapSizeChange(cell, true);
+      getCellSet().remove(cell);
+      incSize(-sz);
+      return sz;
+    }
+    return 0;
+  }
 
   //methods for test
 
@@ -53,5 +62,7 @@ public abstract class MutableSegment extends Segment {
    * Returns the first cell in the segment
    * @return the first cell in the segment
    */
-  abstract Cell first();
+  Cell first() {
+    return this.getCellSet().first();
+  }
 }

@@ -118,20 +118,6 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   /**
-   * Remove n key from the memstore. Only cells that have the same key and the
-   * same memstoreTS are removed.  It is ok to not update timeRangeTracker
-   * in this call. It is possible that we can optimize this method by using
-   * tailMap/iterator, but since this method is called rarely (only for
-   * error recovery), we can leave those optimization for the future.
-   * @param cell
-   */
-  @Override
-  public void rollback(Cell cell) {
-    rollbackInSnapshot(cell);
-    rollbackInActive(cell);
-  }
-
-  /**
    * @param cell Find the row that comes after this one.  If null, we return the
    * first.
    * @return Next row or null if none found.

@@ -54,7 +54,7 @@ public final class SegmentFactory {
   }
 
   public ImmutableSegment createImmutableSegment(final Configuration conf, MutableSegment segment) {
-    return generateImmutableSegment(conf, segment);
+    return new ImmutableSegment(segment);
   }
   public MutableSegment createMutableSegment(final Configuration conf,
       CellComparator comparator, long size) {
@@ -64,16 +64,11 @@ public final class SegmentFactory {
 
   //****** private methods to instantiate concrete store segments **********//
 
-  private ImmutableSegment generateImmutableSegment(final Configuration conf,
-      MutableSegment segment) {
-    // TBD use configuration to set type of segment
-    return new ImmutableSegmentAdapter(segment);
-  }
   private MutableSegment generateMutableSegment(
       final Configuration conf, CellComparator comparator, MemStoreLAB memStoreLAB, long size) {
     // TBD use configuration to set type of segment
     CellSet set = new CellSet(comparator);
-    return new MutableCellSetSegment(set, memStoreLAB, size, comparator);
+    return new MutableSegment(set, comparator, memStoreLAB, size);
   }
 
   private MemStoreLAB getMemStoreLAB(Configuration conf) {
