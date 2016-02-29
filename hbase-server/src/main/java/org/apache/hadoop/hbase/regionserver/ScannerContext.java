@@ -599,7 +599,7 @@ public class ScannerContext {
      * @return true when the limit can be enforced from the scope of the checker
      */
     boolean canEnforceTimeLimitFromScope(LimitScope checkerScope) {
-      return this.sizeScope.canEnforceLimitFromScope(checkerScope);
+      return this.timeScope.canEnforceLimitFromScope(checkerScope);
     }
 
     @Override
