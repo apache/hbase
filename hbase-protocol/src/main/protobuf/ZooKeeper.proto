@@ -167,3 +167,10 @@ message TableLock {
   optional string purpose = 5;
   optional int64 create_time = 6;
 }
+
+/**
+ * State of the switch.
+ */
+message SwitchState {
+  optional bool enabled = 1;
+}

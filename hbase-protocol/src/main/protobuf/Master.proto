@@ -271,6 +271,29 @@ message IsBalancerEnabledResponse {
   required bool enabled = 1;
 }
 
+enum MasterSwitchType {
+  SPLIT = 0;
+  MERGE = 1;
+}
+
+message SetSplitOrMergeEnabledRequest {
+  required bool enabled = 1;
+  optional bool synchronous = 2;
+  repeated MasterSwitchType switch_types = 3;
+}
+
+message SetSplitOrMergeEnabledResponse {
+  repeated bool prev_value = 1;
+}
+
+message IsSplitOrMergeEnabledRequest {
+  required MasterSwitchType switch_type = 1;
+}
+
+message IsSplitOrMergeEnabledResponse {
+  required bool enabled = 1;
+}
+
 message NormalizeRequest {
 }
 
@@ -615,6 +638,19 @@ service MasterService {
    */
   rpc IsBalancerEnabled(IsBalancerEnabledRequest)
     returns(IsBalancerEnabledResponse);
+
+  /**
+   * Turn the split or merge switch on or off.
+   * If synchronous is true, it waits until current operation call, if outstanding, to return.
+   */
+  rpc SetSplitOrMergeEnabled(SetSplitOrMergeEnabledRequest)
+    returns(SetSplitOrMergeEnabledResponse);
+
+  /**
+   * Query whether the split or merge switch is on/off.
+   */
+  rpc IsSplitOrMergeEnabled(IsSplitOrMergeEnabledRequest)
+    returns(IsSplitOrMergeEnabledResponse);
 
   /**
    * Run region normalizer. Can NOT run for various reasons. Check logs.

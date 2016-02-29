@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -3767,7 +3768,6 @@ public class AssignmentManager extends ZooKeeperListener {
     if (!org.apache.commons.lang.StringUtils.isEmpty(s)) {
       return s;
     }
-
     regionStates.updateRegionState(a, State.SPLITTING_NEW, sn);
     regionStates.updateRegionState(b, State.SPLITTING_NEW, sn);
     regionStates.updateRegionState(p, State.SPLITTING);
@@ -3815,7 +3815,6 @@ public class AssignmentManager extends ZooKeeperListener {
         && (rs_p == null || rs_p.isOpenOrMergingNewOnServer(sn)))) {
       return "Not in state good for merge";
     }
-
     regionStates.updateRegionState(a, State.MERGING);
     regionStates.updateRegionState(b, State.MERGING);
     regionStates.updateRegionState(p, State.MERGING_NEW, sn);
@@ -4363,6 +4362,10 @@ public class AssignmentManager extends ZooKeeperListener {
     case READY_TO_SPLIT:
       try {
         regionStateListener.onRegionSplit(hri);
+        if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
+                Admin.MasterSwitchType.SPLIT)) {
+          errorMsg = "split switch is off!";
+        }
       } catch (IOException exp) {
         errorMsg = StringUtils.stringifyException(exp);
       }
@@ -4388,6 +4391,11 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       break;
     case READY_TO_MERGE:
+      if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
+              Admin.MasterSwitchType.MERGE)) {
+        errorMsg = "merge switch is off!";
+      }
+      break;
     case MERGE_PONR:
     case MERGED:
     case MERGE_REVERTED:
