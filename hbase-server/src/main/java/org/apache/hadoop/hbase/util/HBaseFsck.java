@@ -237,6 +237,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
   private static boolean forceExclusive = false; // only this hbck can modify HBase
   private static boolean disableBalancer = false; // disable load balancer to keep regions stable
+  private static boolean disableSplitAndMerge = false; // disable split and merge
   private boolean fixAssignments = false; // fix assignment errors?
   private boolean fixMeta = false; // fix meta errors?
   private boolean checkHdfs = true; // load and check fs consistency?
@@ -691,6 +692,11 @@ public class HBaseFsck extends Configured implements Closeable {
     if (shouldDisableBalancer()) {
       oldBalancer = admin.setBalancerRunning(false, true);
     }
+    boolean[] oldSplitAndMerge = null;
+    if (shouldDisableSplitAndMerge()) {
+      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false,
+        Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
+    }
 
     try {
       onlineConsistencyRepair();
@@ -701,6 +707,19 @@ public class HBaseFsck extends Configured implements Closeable {
       // hbck that has just restored it.
       if (shouldDisableBalancer() && oldBalancer) {
         admin.setBalancerRunning(oldBalancer, false);
+      }
+
+      if (shouldDisableSplitAndMerge()) {
+        if (oldSplitAndMerge != null) {
+          if (oldSplitAndMerge[0] && oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false,
+              Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
+          } else if (oldSplitAndMerge[0]) {
+            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.SPLIT);
+          } else if (oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.MERGE);
+          }
+        }
       }
     }
 
@@ -4201,12 +4220,28 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
+   * Disable the split and merge
+   */
+  public static void setDisableSplitAndMerge() {
+    disableSplitAndMerge = true;
+  }
+
+  /**
    * The balancer should be disabled if we are modifying HBase.
    * It can be disabled if you want to prevent region movement from causing
    * false positives.
    */
   public boolean shouldDisableBalancer() {
     return fixAny || disableBalancer;
+  }
+
+  /**
+   * The split and merge should be disabled if we are modifying HBase.
+   * It can be disabled if you want to prevent region movement from causing
+   * false positives.
+   */
+  public boolean shouldDisableSplitAndMerge() {
+    return fixAny || disableSplitAndMerge;
   }
 
   /**
@@ -4582,6 +4617,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setForceExclusive();
       } else if (cmd.equals("-disableBalancer")) {
         setDisableBalancer();
+      }  else if (cmd.equals("-disableSplitAndMerge")) {
+        setDisableSplitAndMerge();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
           errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -timelag needs a value.");
