@@ -1362,6 +1362,9 @@ NOTE: End-of-life releases are not included in this list.
 | 1.2
 | Sean Busbey
 
+| 1.3
+| Mikhail Antonov
+
 |===
 
 [[code.standards]]
