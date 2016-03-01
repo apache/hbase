@@ -18,55 +18,29 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
  * and is not needed for a {@link MutableSegment}. Specifically, the method
  * {@link ImmutableSegment#getKeyValueScanner()} builds a special scanner for the
  * {@link MemStoreSnapshot} object.
- * In addition, this class overrides methods that are not likely to be supported by an immutable
- * segment, e.g. {@link Segment#rollback(Cell)} and {@link Segment#getCellSet()}, which
- * can be very inefficient.
  */
 @InterfaceAudience.Private
-public abstract class ImmutableSegment extends Segment {
+public class ImmutableSegment extends Segment {
 
-  public ImmutableSegment(Segment segment) {
+  protected ImmutableSegment(Segment segment) {
     super(segment);
   }
 
   /**
-   * Removes the given cell from this segment.
-   * By default immutable store segment can not rollback
-   * It may be invoked by tests in specific cases where it is known to be supported {@link
-   * ImmutableSegmentAdapter}
-   */
-  @Override
-  public long rollback(Cell cell) {
-    return 0;
-  }
-
-  /**
-   * Returns a set of all the cells in the segment.
-   * The implementation of this method might be very inefficient for some immutable segments
-   * that do not maintain a cell set. Therefore by default this method is not supported.
-   * It may be invoked by tests in specific cases where it is known to be supported {@link
-   * ImmutableSegmentAdapter}
-   */
-  @Override
-  public CellSet getCellSet() {
-    throw new NotImplementedException("Immutable Segment does not support this operation by " +
-        "default");
-  }
-
-  /**
-   * Builds a special scanner for the MemStoreSnapshot object that may be different than the
+   * Builds a special scanner for the MemStoreSnapshot object that is different than the
    * general segment scanner.
    * @return a special scanner for the MemStoreSnapshot object
    */
-  public abstract KeyValueScanner getKeyValueScanner();
+  public KeyValueScanner getKeyValueScanner() {
+    return new CollectionBackedScanner(getCellSet(), getComparator());
+  }
 
 }
