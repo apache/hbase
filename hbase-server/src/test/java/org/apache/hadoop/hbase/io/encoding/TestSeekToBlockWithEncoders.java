@@ -46,7 +46,7 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestSeekToBlockWithEncoders {
-
+  static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
   private final boolean useOffheapData;
 
   @Parameters
@@ -281,7 +281,7 @@ public class TestSeekToBlockWithEncoders {
           .withIncludesMvcc(false).withIncludesTags(false)
           .withCompression(Compression.Algorithm.NONE).build();
       HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+          HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
           encodingContext, this.useOffheapData);
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,

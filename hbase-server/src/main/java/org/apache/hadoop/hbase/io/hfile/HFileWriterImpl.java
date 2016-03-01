@@ -57,6 +57,8 @@ import org.apache.hadoop.io.Writable;
 public class HFileWriterImpl implements HFile.Writer {
   private static final Log LOG = LogFactory.getLog(HFileWriterImpl.class);
 
+  private static final long UNSET = -1;
+
   /** The Cell previously appended. Becomes the last cell in the file.*/
   protected Cell lastCell = null;
 
@@ -129,16 +131,16 @@ public class HFileWriterImpl implements HFile.Writer {
   private List<InlineBlockWriter> inlineBlockWriters = new ArrayList<InlineBlockWriter>();
 
   /** block writer */
-  protected HFileBlock.Writer fsBlockWriter;
+  protected HFileBlock.Writer blockWriter;
 
   private HFileBlockIndex.BlockIndexWriter dataBlockIndexWriter;
   private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
 
   /** The offset of the first data block or -1 if the file is empty. */
-  private long firstDataBlockOffset = -1;
+  private long firstDataBlockOffset = UNSET;
 
   /** The offset of the last data block or 0 if the file is empty. */
-  protected long lastDataBlockOffset;
+  protected long lastDataBlockOffset = UNSET;
 
   /**
    * The last(stop) Cell of the previous data block.
@@ -164,8 +166,7 @@ public class HFileWriterImpl implements HFile.Writer {
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }
-    this.comparator = comparator != null ? comparator
-        : CellComparator.COMPARATOR;
+    this.comparator = comparator != null? comparator: CellComparator.COMPARATOR;
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -273,15 +274,15 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /** Additional initialization steps */
   protected void finishInit(final Configuration conf) {
-    if (fsBlockWriter != null) {
+    if (blockWriter != null) {
       throw new IllegalStateException("finishInit called twice");
     }
 
-    fsBlockWriter = new HFileBlock.Writer(blockEncoder, hFileContext);
+    blockWriter = new HFileBlock.Writer(blockEncoder, hFileContext);
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
-    dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
+    dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
         cacheIndexesOnWrite ? cacheConf : null,
         cacheIndexesOnWrite ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
@@ -299,29 +300,29 @@ public class HFileWriterImpl implements HFile.Writer {
    * @throws IOException
    */
   protected void checkBlockBoundary() throws IOException {
-    if (fsBlockWriter.blockSizeWritten() < hFileContext.getBlocksize()) return;
+    if (blockWriter.blockSizeWritten() < hFileContext.getBlocksize()) return;
     finishBlock();
     writeInlineBlocks(false);
     newBlock();
   }
 
-  /** Clean up the current data block */
+  /** Clean up the data block that is currently being written.*/
   private void finishBlock() throws IOException {
-    if (!fsBlockWriter.isWriting() || fsBlockWriter.blockSizeWritten() == 0) return;
+    if (!blockWriter.isWriting() || blockWriter.blockSizeWritten() == 0) return;
 
-    // Update the first data block offset for scanning.
-    if (firstDataBlockOffset == -1) {
+    // Update the first data block offset if UNSET; used scanning.
+    if (firstDataBlockOffset == UNSET) {
       firstDataBlockOffset = outputStream.getPos();
     }
-    // Update the last data block offset
+    // Update the last data block offset each time through here.
     lastDataBlockOffset = outputStream.getPos();
-    fsBlockWriter.writeHeaderAndData(outputStream);
-    int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
+    blockWriter.writeHeaderAndData(outputStream);
+    int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
     Cell indexEntry =
       getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
     dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
-    totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+    totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
     }
@@ -461,12 +462,12 @@ public class HFileWriterImpl implements HFile.Writer {
       while (ibw.shouldWriteBlock(closing)) {
         long offset = outputStream.getPos();
         boolean cacheThisBlock = ibw.getCacheOnWrite();
-        ibw.writeInlineBlock(fsBlockWriter.startWriting(
+        ibw.writeInlineBlock(blockWriter.startWriting(
             ibw.getInlineBlockType()));
-        fsBlockWriter.writeHeaderAndData(outputStream);
-        ibw.blockWritten(offset, fsBlockWriter.getOnDiskSizeWithHeader(),
-            fsBlockWriter.getUncompressedSizeWithoutHeader());
-        totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+        blockWriter.writeHeaderAndData(outputStream);
+        ibw.blockWritten(offset, blockWriter.getOnDiskSizeWithHeader(),
+            blockWriter.getUncompressedSizeWithoutHeader());
+        totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
 
         if (cacheThisBlock) {
           doCacheOnWrite(offset);
@@ -481,7 +482,7 @@ public class HFileWriterImpl implements HFile.Writer {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching(cacheConf);
+    HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
     cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(name, offset), cacheFormatBlock);
   }
 
@@ -492,7 +493,7 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   protected void newBlock() throws IOException {
     // This is where the next block begins.
-    fsBlockWriter.startWriting(BlockType.DATA);
+    blockWriter.startWriting(BlockType.DATA);
     firstCellInBlock = null;
     if (lastCell != null) {
       lastCellOfPreviousBlock = lastCell;
@@ -547,15 +548,15 @@ public class HFileWriterImpl implements HFile.Writer {
         // store the beginning offset
         long offset = outputStream.getPos();
         // write the metadata content
-        DataOutputStream dos = fsBlockWriter.startWriting(BlockType.META);
+        DataOutputStream dos = blockWriter.startWriting(BlockType.META);
         metaData.get(i).write(dos);
 
-        fsBlockWriter.writeHeaderAndData(outputStream);
-        totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+        blockWriter.writeHeaderAndData(outputStream);
+        totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
 
         // Add the new meta block to the meta index.
         metaBlockIndexWriter.addEntry(metaNames.get(i), offset,
-            fsBlockWriter.getOnDiskSizeWithHeader());
+            blockWriter.getOnDiskSizeWithHeader());
       }
     }
 
@@ -572,10 +573,10 @@ public class HFileWriterImpl implements HFile.Writer {
     trailer.setLoadOnOpenOffset(rootIndexOffset);
 
     // Meta block index.
-    metaBlockIndexWriter.writeSingleLevelIndex(fsBlockWriter.startWriting(
+    metaBlockIndexWriter.writeSingleLevelIndex(blockWriter.startWriting(
         BlockType.ROOT_INDEX), "meta");
-    fsBlockWriter.writeHeaderAndData(outputStream);
-    totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+    blockWriter.writeHeaderAndData(outputStream);
+    totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
 
     if (this.hFileContext.isIncludesMvcc()) {
       appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
@@ -583,14 +584,14 @@ public class HFileWriterImpl implements HFile.Writer {
     }
 
     // File info
-    writeFileInfo(trailer, fsBlockWriter.startWriting(BlockType.FILE_INFO));
-    fsBlockWriter.writeHeaderAndData(outputStream);
-    totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+    writeFileInfo(trailer, blockWriter.startWriting(BlockType.FILE_INFO));
+    blockWriter.writeHeaderAndData(outputStream);
+    totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
 
     // Load-on-open data supplied by higher levels, e.g. Bloom filters.
     for (BlockWritable w : additionalLoadOnOpenData){
-      fsBlockWriter.writeBlock(w, outputStream);
-      totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+      blockWriter.writeBlock(w, outputStream);
+      totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
     }
 
     // Now finish off the trailer.
@@ -605,7 +606,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
     finishClose(trailer);
 
-    fsBlockWriter.release();
+    blockWriter.release();
   }
 
   @Override
@@ -670,11 +671,11 @@ public class HFileWriterImpl implements HFile.Writer {
       checkBlockBoundary();
     }
 
-    if (!fsBlockWriter.isWriting()) {
+    if (!blockWriter.isWriting()) {
       newBlock();
     }
 
-    fsBlockWriter.write(cell);
+    blockWriter.write(cell);
 
     totalKeyLength += CellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
@@ -686,7 +687,7 @@ public class HFileWriterImpl implements HFile.Writer {
       firstCellInBlock = cell;
     }
 
-    // TODO: What if cell is 10MB and we write infrequently? We hold on to cell here indefinetly?
+    // TODO: What if cell is 10MB and we write infrequently? We hold on to cell here indefinitely?
     lastCell = cell;
     entryCount++;
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());

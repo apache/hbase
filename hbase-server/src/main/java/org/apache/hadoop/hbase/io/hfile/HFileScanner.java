@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.Cell;
  * getValue.
  */
 @InterfaceAudience.Private
-public interface HFileScanner extends Shipper {
+public interface HFileScanner extends Shipper, Closeable {
   /**
    * SeekTo or just before the passed <code>cell</code>.  Examine the return
    * code to figure whether we found the cell or not.

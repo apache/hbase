@@ -269,9 +269,10 @@ public final class BucketAllocator {
     }
   }
 
-  // Default block size is 64K, so we choose more sizes near 64K, you'd better
+  // Default block size in hbase is 64K, so we choose more sizes near 64K, you'd better
   // reset it according to your cluster's block size distribution
   // TODO Support the view of block size distribution statistics
+  // TODO: Why we add the extra 1024 bytes? Slop?
   private static final int DEFAULT_BUCKET_SIZES[] = { 4 * 1024 + 1024, 8 * 1024 + 1024,
       16 * 1024 + 1024, 32 * 1024 + 1024, 40 * 1024 + 1024, 48 * 1024 + 1024,
       56 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024, 128 * 1024 + 1024,
@@ -289,6 +290,9 @@ public final class BucketAllocator {
     return null;
   }
 
+  /**
+   * So, what is the minimum amount of items we'll tolerate in a single bucket?
+   */
   static public final int FEWEST_ITEMS_IN_BUCKET = 4;
 
   private final int[] bucketSizes;
@@ -308,9 +312,8 @@ public final class BucketAllocator {
     this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * bigItemSize;
     buckets = new Bucket[(int) (availableSpace / bucketCapacity)];
     if (buckets.length < this.bucketSizes.length)
-      throw new BucketAllocatorException(
-          "Bucket allocator size too small - must have room for at least "
-              + this.bucketSizes.length + " buckets");
+      throw new BucketAllocatorException("Bucket allocator size too small (" + buckets.length +
+        "); must have room for at least " + this.bucketSizes.length + " buckets");
     bucketSizeInfos = new BucketSizeInfo[this.bucketSizes.length];
     for (int i = 0; i < this.bucketSizes.length; ++i) {
       bucketSizeInfos[i] = new BucketSizeInfo(i);
@@ -321,6 +324,12 @@ public final class BucketAllocator {
           .instantiateBucket(buckets[i]);
     }
     this.totalSize = ((long) buckets.length) * bucketCapacity;
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Cache totalSize=" + this.totalSize + ", buckets=" + this.buckets.length +
+        ", bucket capacity=" + this.bucketCapacity +
+        "=(" + FEWEST_ITEMS_IN_BUCKET + "*" + this.bigItemSize + ")=" +
+        "(FEWEST_ITEMS_IN_BUCKET*(largest configured bucketcache size))");
+    }
   }
 
   /**

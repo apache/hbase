@@ -32,6 +32,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeSeeker;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -80,6 +80,7 @@ public class TestDataBlockEncoders {
 
   private static int ENCODED_DATA_OFFSET = HConstants.HFILEBLOCK_HEADER_SIZE
       + DataBlockEncoding.ID_SIZE;
+  static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
 
   private RedundantKVGenerator generator = new RedundantKVGenerator();
   private Random randomizer = new Random(42l);
@@ -109,11 +110,9 @@ public class TestDataBlockEncoders {
                         .withIncludesTags(includesTags)
                         .withCompression(algo).build();
     if (encoder != null) {
-      return encoder.newDataBlockEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      return encoder.newDataBlockEncodingContext(encoding, HFILEBLOCK_DUMMY_HEADER, meta);
     } else {
-      return new HFileBlockDefaultEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      return new HFileBlockDefaultEncodingContext(encoding, HFILEBLOCK_DUMMY_HEADER, meta);
     }
   }
 
@@ -249,7 +248,7 @@ public class TestDataBlockEncoders {
       HFileBlockEncodingContext encodingContext, boolean useOffheapData) throws IOException {
     DataBlockEncoder encoder = encoding.getEncoder();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+    baos.write(HFILEBLOCK_DUMMY_HEADER);
     DataOutputStream dos = new DataOutputStream(baos);
     encoder.startBlockEncoding(encodingContext, dos);
     for (KeyValue kv : kvs) {
@@ -386,10 +385,10 @@ public class TestDataBlockEncoders {
         continue;
       }
       HFileBlockEncodingContext encodingContext = new HFileBlockDefaultEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
+          HFILEBLOCK_DUMMY_HEADER, fileContext);
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+      baos.write(HFILEBLOCK_DUMMY_HEADER);
       DataOutputStream dos = new DataOutputStream(baos);
       encoder.startBlockEncoding(encodingContext, dos);
       for (KeyValue kv : kvList) {

@@ -178,19 +178,20 @@ public class HFile {
    * The number of bytes per checksum.
    */
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
-  // For measuring number of checksum failures
-  static final Counter checksumFailures = new Counter();
 
-  // for test purpose
-  public static final Counter dataBlockReadCnt = new Counter();
+  // For measuring number of checksum failures
+  static final Counter CHECKSUM_FAILURES = new Counter();
+
+  // For tests. Gets incremented when we read a block whether from HDFS or from Cache.
+  public static final Counter DATABLOCK_READ_COUNT = new Counter();
 
   /**
    * Number of checksum verification failures. It also
    * clears the counter.
    */
   public static final long getChecksumFailuresCount() {
-    long count = checksumFailures.get();
-    checksumFailures.set(0);
+    long count = CHECKSUM_FAILURES.get();
+    CHECKSUM_FAILURES.set(0);
     return count;
   }
 

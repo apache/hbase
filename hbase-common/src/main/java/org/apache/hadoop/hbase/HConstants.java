@@ -65,7 +65,9 @@ public final class HConstants {
   public static final byte[] RPC_HEADER = new byte[] { 'H', 'B', 'a', 's' };
   public static final byte RPC_CURRENT_VERSION = 0;
 
-  // HFileBlock constants.
+  // HFileBlock constants. TODO!!!! THESE DEFINES BELONG IN HFILEBLOCK, NOT UP HERE.
+  // Needed down in hbase-common though by encoders but these encoders should not be dealing
+  // in the internals of hfileblocks. Fix encapsulation.
 
   /** The size data structures with minor version is 0 */
   public static final int HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT

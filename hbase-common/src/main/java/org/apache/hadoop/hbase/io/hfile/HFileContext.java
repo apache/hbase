@@ -218,22 +218,22 @@ public class HFileContext implements HeapSize, Cloneable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("HFileContext [");
-    sb.append(" usesHBaseChecksum="); sb.append(usesHBaseChecksum);
-    sb.append(" checksumType=");      sb.append(checksumType);
-    sb.append(" bytesPerChecksum=");  sb.append(bytesPerChecksum);
-    sb.append(" blocksize=");         sb.append(blocksize);
-    sb.append(" encoding=");          sb.append(encoding);
-    sb.append(" includesMvcc=");      sb.append(includesMvcc);
-    sb.append(" includesTags=");      sb.append(includesTags);
-    sb.append(" compressAlgo=");      sb.append(compressAlgo);
-    sb.append(" compressTags=");      sb.append(compressTags);
-    sb.append(" cryptoContext=[ ");   sb.append(cryptoContext);      sb.append(" ]");
+    sb.append("[");
+    sb.append("usesHBaseChecksum="); sb.append(usesHBaseChecksum);
+    sb.append(", checksumType=");      sb.append(checksumType);
+    sb.append(", bytesPerChecksum=");  sb.append(bytesPerChecksum);
+    sb.append(", blocksize=");         sb.append(blocksize);
+    sb.append(", encoding=");          sb.append(encoding);
+    sb.append(", includesMvcc=");      sb.append(includesMvcc);
+    sb.append(", includesTags=");      sb.append(includesTags);
+    sb.append(", compressAlgo=");      sb.append(compressAlgo);
+    sb.append(", compressTags=");      sb.append(compressTags);
+    sb.append(", cryptoContext=[");   sb.append(cryptoContext);      sb.append("]");
     if (hfileName != null) {
-      sb.append(" name=");
+      sb.append(", name=");
       sb.append(hfileName);
     }
-    sb.append(" ]");
+    sb.append("]");
     return sb.toString();
   }
 

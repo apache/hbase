@@ -78,7 +78,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * BucketCache uses {@link BucketAllocator} to allocate/free blocks, and uses
- * {@link BucketCache#ramCache} and {@link BucketCache#backingMap} in order to
+ * BucketCache#ramCache and BucketCache#backingMap in order to
  * determine if a given element is in the cache. The bucket cache can use on-heap or
  * off-heap memory {@link ByteBufferIOEngine} or in a file {@link FileIOEngine} to
  * store/read the block data.
@@ -87,7 +87,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache}
  *
  * <p>BucketCache can be used as mainly a block cache (see
- * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with 
+ * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with
  * LruBlockCache to decrease CMS GC and heap fragmentation.
  *
  * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
@@ -349,6 +349,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
       boolean wait) {
+    if (LOG.isTraceEnabled()) LOG.trace("Caching key=" + cacheKey + ", item=" + cachedItem);
     if (!cacheEnabled) {
       return;
     }
@@ -422,6 +423,9 @@ public class BucketCache implements BlockCache, HeapSize {
           // TODO : change this area - should be removed after server cells and
           // 12295 are available
           int len = bucketEntry.getLength();
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Read offset=" + bucketEntry.offset() + ", len=" + len);
+          }
           Cacheable cachedBlock = ioEngine.read(bucketEntry.offset(), len,
               bucketEntry.deserializerReference(this.deserialiserMap));
           long timeTaken = System.nanoTime() - start;
@@ -628,7 +632,9 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private void freeSpace(final String why) {
     // Ensure only one freeSpace progress at a time
-    if (!freeSpaceLock.tryLock()) return;
+    if (!freeSpaceLock.tryLock()) {
+      return;
+    }
     try {
       freeInProgress = true;
       long bytesToFreeWithoutExtra = 0;
@@ -657,7 +663,7 @@ public class BucketCache implements BlockCache, HeapSize {
         return;
       }
       long currentSize = bucketAllocator.getUsedSize();
-      long totalSize=bucketAllocator.getTotalSize();
+      long totalSize = bucketAllocator.getTotalSize();
       if (LOG.isDebugEnabled() && msgBuffer != null) {
         LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString() +
           " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize=" +
@@ -864,7 +870,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
 
-      // Make sure data pages are written are on media before we update maps.
+      // Make sure data pages are written on media before we update maps.
       try {
         ioEngine.sync();
       } catch (IOException ioex) {
@@ -938,9 +944,9 @@ public class BucketCache implements BlockCache, HeapSize {
     FileOutputStream fos = null;
     ObjectOutputStream oos = null;
     try {
-      if (!ioEngine.isPersistent())
-        throw new IOException(
-            "Attempt to persist non-persistent cache mappings!");
+      if (!ioEngine.isPersistent()) {
+        throw new IOException("Attempt to persist non-persistent cache mappings!");
+      }
       fos = new FileOutputStream(persistencePath, false);
       oos = new ObjectOutputStream(fos);
       oos.writeLong(cacheCapacity);
@@ -1020,19 +1026,17 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Used to shut down the cache -or- turn it off in the case of something
-   * broken.
+   * Used to shut down the cache -or- turn it off in the case of something broken.
    */
   private void disableCache() {
-    if (!cacheEnabled)
-      return;
+    if (!cacheEnabled) return;
     cacheEnabled = false;
     ioEngine.shutdown();
     this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].interrupt();
+    for (int i = 0; i < writerThreads.length; ++i) writerThreads[i].interrupt();
     this.ramCache.clear();
     if (!ioEngine.isPersistent() || persistencePath == null) {
+      // If persistent ioengine and a path, we will serialize out the backingMap.
       this.backingMap.clear();
     }
   }
@@ -1327,6 +1331,9 @@ public class BucketCache implements BlockCache, HeapSize {
             len == sliceBuf.limit() + block.headerSize() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
           ByteBuffer extraInfoBuffer = ByteBuffer.allocate(HFileBlock.EXTRA_SERIALIZATION_SPACE);
           block.serializeExtraInfo(extraInfoBuffer);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Write offset=" + offset + ", len=" + len);
+          }
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(extraInfoBuffer, offset + len - HFileBlock.EXTRA_SERIALIZATION_SPACE);
         } else {

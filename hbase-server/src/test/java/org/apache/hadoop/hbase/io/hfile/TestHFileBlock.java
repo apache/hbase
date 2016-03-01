@@ -553,7 +553,7 @@ public class TestHFileBlock {
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
               assertEquals(is.getPos(), curOffset + (i == 0 ? 0 :
-                  HConstants.HFILEBLOCK_HEADER_SIZE));
+                HConstants.HFILEBLOCK_HEADER_SIZE));
             }
 
             assertEquals(expectedOffsets.get(i).longValue(), curOffset);

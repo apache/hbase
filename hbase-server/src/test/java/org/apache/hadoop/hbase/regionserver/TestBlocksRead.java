@@ -196,7 +196,7 @@ public class TestBlocksRead  {
   }
 
   private static long getBlkAccessCount(byte[] cf) {
-      return HFile.dataBlockReadCnt.get();
+      return HFile.DATABLOCK_READ_COUNT.get();
   }
 
   private static long getBlkCount() {
