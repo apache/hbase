@@ -337,8 +337,13 @@ public class TestProcedureRecovery {
 
     public TestStateMachineProcedure() {}
 
+    public TestStateMachineProcedure(final boolean testSubmitChildProc) {
+      this.submitChildProc = testSubmitChildProc;
+    }
+
     private AtomicBoolean aborted = new AtomicBoolean(false);
     private int iResult = 0;
+    private boolean submitChildProc = false;
 
     @Override
     protected StateMachineProcedure.Flow executeFromState(TestProcEnv env, State state) {
@@ -350,7 +355,13 @@ public class TestProcedureRecovery {
           break;
         case STATE_2:
           LOG.info("execute step 2 " + this);
-          setNextState(State.STATE_3);
+          if (submitChildProc) {
+            addChildProcedure(new TestStateMachineProcedure());
+            addChildProcedure(new TestStateMachineProcedure());
+            setNextState(State.DONE);
+          } else {
+            setNextState(State.STATE_3);
+          }
           iResult += 5;
           break;
         case STATE_3:
@@ -363,6 +374,8 @@ public class TestProcedureRecovery {
           }
           setNextState(State.DONE);
           iResult += 7;
+          break;
+        case DONE:
           setResult(Bytes.toBytes(iResult));
           return Flow.NO_MORE_STATE;
         default:
@@ -425,6 +438,14 @@ public class TestProcedureRecovery {
   }
 
   @Test(timeout=30000)
+  public void testStateMachineMultipleLevel() throws Exception {
+    long procId = procExecutor.submitProcedure(new TestStateMachineProcedure(true));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+  }
+
+  @Test(timeout=30000)
   public void testStateMachineRecovery() throws Exception {
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
@@ -447,6 +468,11 @@ public class TestProcedureRecovery {
     assertFalse(procExecutor.isRunning());
 
     // Step 3 exec
+    restart();
+    waitProcedure(procId);
+    ProcedureTestingUtility.assertProcNotYetCompleted(procExecutor, procId);
+    assertFalse(procExecutor.isRunning());
+
     restart();
     waitProcedure(procId);
     assertTrue(procExecutor.isRunning());

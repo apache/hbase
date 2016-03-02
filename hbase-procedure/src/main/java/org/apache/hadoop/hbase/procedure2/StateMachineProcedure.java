@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -44,6 +45,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
   private int stateCount = 0;
   private int[] states = null;
+
+  private ArrayList<Procedure> subProcList = null;
 
   protected enum Flow {
     HAS_MORE_STATE,
@@ -107,6 +110,17 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     return false;
   }
 
+  /**
+   * Add a child procedure to execute
+   * @param subProcedure the child procedure
+   */
+  protected void addChildProcedure(Procedure subProcedure) {
+    if (subProcList == null) {
+      subProcList = new ArrayList<Procedure>();
+    }
+    subProcList.add(subProcedure);
+  }
+
   @Override
   protected Procedure[] execute(final TEnvironment env)
       throws ProcedureYieldException, InterruptedException {
@@ -120,6 +134,13 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
         // completed
         return null;
       }
+
+      if (subProcList != null && subProcList.size() != 0) {
+        Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
+        subProcList = null;
+        return subProcedures;
+      }
+
       return (isWaiting() || isFailed()) ? null : new Procedure[] {this};
     } finally {
       updateTimestamp();
