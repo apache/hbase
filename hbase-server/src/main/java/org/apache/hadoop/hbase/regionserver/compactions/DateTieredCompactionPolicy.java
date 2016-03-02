@@ -135,6 +135,13 @@ public class DateTieredCompactionPolicy extends RatioBasedCompactionPolicy {
         partitionFilesToBuckets(candidatesInWindow, comConf.getBaseWindowMillis(),
           comConf.getWindowsPerTier(), now);
     LOG.debug("Compaction buckets are: " + buckets);
+    if (buckets.size() >= storeConfigInfo.getBlockingFileCount()) {
+      LOG.warn("Number of compaction buckets:" +  buckets.size()
+        + ", exceeds blocking file count setting: "
+        + storeConfigInfo.getBlockingFileCount()
+        + ", either increase hbase.hstore.blockingStoreFiles or "
+        + "reduce the number of tiered compaction windows");
+    }
 
     return newestBucket(buckets, comConf.getIncomingWindowMin(), now,
       comConf.getBaseWindowMillis(), mayUseOffPeak);
@@ -234,7 +241,7 @@ public class DateTieredCompactionPolicy extends RatioBasedCompactionPolicy {
       public boolean apply(StoreFile storeFile) {
         // Known findbugs issue to guava. SuppressWarning or Nonnull annotation don't work.
         if (storeFile == null) {
-          throw new NullPointerException();
+          return false;
         }
         return storeFile.getMaximumTimestamp() >= cutoff;
       }
