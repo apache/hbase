@@ -52,13 +52,13 @@ import com.google.common.collect.Lists;
 @Category(SmallTests.class)
 public class TestCompactionPolicy
 {
-    private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
+    private final static Log LOG = LogFactory.getLog(TestCompactionPolicy.class);
     protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
     protected Configuration conf;
     protected HStore store;
     private static final String DIR=
-      TEST_UTIL.getDataTestDir(TestDefaultCompactSelection.class.getSimpleName()).toString();
+      TEST_UTIL.getDataTestDir(TestCompactionPolicy.class.getSimpleName()).toString();
     protected static Path TEST_FILE;
 
     protected static final int minFiles = 3;

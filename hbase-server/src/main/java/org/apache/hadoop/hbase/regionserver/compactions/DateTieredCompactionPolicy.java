@@ -117,9 +117,6 @@ public class DateTieredCompactionPolicy extends RatioBasedCompactionPolicy {
   @VisibleForTesting
   public ArrayList<StoreFile> applyCompactionPolicy(ArrayList<StoreFile> candidates,
       boolean mayUseOffPeak, boolean mayBeStuck, long now) throws IOException {
-    // This might throw late arriving data out and create a sequence id gap?
-    // How can we filter bulk load file without this problem?
-    // For bulk load seq id[, what if we use creation time?
     Iterable<StoreFile> candidatesInWindow =
       filterOldStoreFiles(Lists.newArrayList(candidates), comConf.getMaxStoreFileAgeMillis(), now);
 
@@ -127,7 +124,14 @@ public class DateTieredCompactionPolicy extends RatioBasedCompactionPolicy {
         partitionFilesToBuckets(candidatesInWindow, comConf.getBaseWindowMillis(),
           comConf.getWindowsPerTier(), now);
     LOG.debug("Compaction buckets are: " + buckets);
-
+    if (buckets.size() >= storeConfigInfo.getBlockingFileCount()) {
+      LOG.warn("Number of compaction buckets:" +  buckets.size()
+        + ", exceeds blocking file count setting: "
+        + storeConfigInfo.getBlockingFileCount()
+        + ", either increase hbase.hstore.blockingStoreFiles or "
+        + "reduce the number of tiered compaction windows");
+    }
+    
     return newestBucket(buckets, comConf.getIncomingWindowMin(), now, comConf.getBaseWindowMillis(),
       mayUseOffPeak);
   }
@@ -221,8 +225,9 @@ public class DateTieredCompactionPolicy extends RatioBasedCompactionPolicy {
     return Iterables.filter(storeFiles, new Predicate<StoreFile>() {
       @Override
       public boolean apply(StoreFile storeFile) {
+        // This is for findbugs' issue with Guava. We know this won't happen.
         if (storeFile == null) {
-          throw new NullPointerException();
+          return false;
         }
         return storeFile.getMaximumTimestamp() >= cutoff;
       }
