@@ -270,50 +270,13 @@ Check the versions to be sure they are appropriate.
 ----
 <properties>
   <hbase.version>2.0.0-SNAPSHOT</hbase.version>
-  <hadoop.version>2.7.1</hadoop.version>
 </properties>
 
 <dependencies>
   <dependency>
     <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase-server</artifactId>
+    <artifactId>hbase-testing-util</artifactId>
     <version>${hbase.version}</version>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase-server</artifactId>
-    <version>${hbase.version}</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase-hadoop-compat</artifactId>
-    <version>${hbase.version}</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-  </dependency>
-
-  <dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-common</artifactId>
-    <version>${hadoop.version}</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase-hadoop2-compat</artifactId>
-    <version>${hbase.version}</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-hdfs</artifactId>
-    <version>${hadoop.version}</version>
-    <type>test-jar</type>
     <scope>test</scope>
   </dependency>
 </dependencies>
