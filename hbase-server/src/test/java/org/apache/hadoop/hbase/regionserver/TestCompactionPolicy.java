@@ -50,13 +50,13 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestCompactionPolicy {
-  private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
+  private final static Log LOG = LogFactory.getLog(TestCompactionPolicy.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   protected Configuration conf;
   protected HStore store;
   private static final String DIR = TEST_UTIL.getDataTestDir(
-    TestDefaultCompactSelection.class.getSimpleName()).toString();
+    TestCompactionPolicy.class.getSimpleName()).toString();
   protected static Path TEST_FILE;
   protected static final int minFiles = 3;
   protected static final int maxFiles = 5;
