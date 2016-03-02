@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.File;
 import java.io.FileWriter;
 
 import org.apache.commons.logging.Log;
@@ -174,7 +175,8 @@ public class TestRegionMover {
   @Test
   public void testExclude() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    FileWriter fos = new FileWriter("/tmp/exclude_file");
+    File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
+    FileWriter fos = new FileWriter(excludeFile);
     HRegionServer excludeServer = cluster.getRegionServer(1);
     String excludeHostname = excludeServer.getServerName().getHostname();
     int excludeServerPort = excludeServer.getServerName().getPort();
@@ -187,7 +189,7 @@ public class TestRegionMover {
     int port = regionServer.getServerName().getPort();
     String rs = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder =
-        new RegionMoverBuilder(rs).ack(true).excludeFile("/tmp/exclude_file");
+        new RegionMoverBuilder(rs).ack(true).excludeFile(excludeFile.getCanonicalPath());
     RegionMover rm = rmBuilder.build();
     rm.setConf(TEST_UTIL.getConfiguration());
     rm.unload();
