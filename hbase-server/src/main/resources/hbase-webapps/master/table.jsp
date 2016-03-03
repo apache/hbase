@@ -24,6 +24,7 @@
   import="java.util.Map"
   import="java.util.Set"
   import="java.util.Collection"
+  import="org.owasp.esapi.ESAPI"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.Admin"
@@ -74,7 +75,7 @@
     <% if ( !readOnly && action != null ) { %>
         <title>HBase Master: <%= master.getServerName() %></title>
     <% } else { %>
-        <title>Table: <%= fqtn %></title>
+        <title>Table: <%= ESAPI.encoder().encodeForHTML(fqtn) %></title>
     <% } %>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
@@ -169,7 +170,7 @@ if ( fqtn != null ) {
 <div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
-            <h1>Table <small><%= fqtn %></small></h1>
+            <h1>Table <small><%= ESAPI.encoder().encodeForHTML(fqtn) %></small></h1>
         </div>
     </div>
     <div class="row">
