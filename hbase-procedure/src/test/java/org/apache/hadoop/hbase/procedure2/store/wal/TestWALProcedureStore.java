@@ -49,7 +49,6 @@ import org.apache.hadoop.io.IOUtils;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

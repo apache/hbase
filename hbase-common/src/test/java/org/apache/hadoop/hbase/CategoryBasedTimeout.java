@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
 /**

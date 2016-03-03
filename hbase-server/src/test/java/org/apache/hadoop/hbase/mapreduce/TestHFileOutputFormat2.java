@@ -97,8 +97,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Lists;
-
 /**
  * Simple test for {@link CellSortReducer} and {@link HFileOutputFormat2}.
  * Sets up and runs a mapreduce job that writes hfile output.
