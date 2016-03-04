@@ -549,8 +549,8 @@ public class HStore implements Store {
     }
     if (ioe != null) {
       // close StoreFile readers
-      boolean evictOnClose = 
-          cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+      boolean evictOnClose =
+          cacheConf != null? cacheConf.shouldEvictOnClose(): true;
       for (StoreFile file : results) {
         try {
           if (file != null) file.closeReader(evictOnClose);
@@ -846,7 +846,7 @@ public class HStore implements Store {
           completionService.submit(new Callable<Void>() {
             @Override
             public Void call() throws IOException {
-              boolean evictOnClose = 
+              boolean evictOnClose =
                   cacheConf != null? cacheConf.shouldEvictOnClose(): true;
               f.closeReader(evictOnClose);
               return null;
@@ -2032,6 +2032,9 @@ public class HStore implements Store {
       assert !this.getRegionInfo().isMetaRegion();
       // Not split-able if we find a reference store file present in the store.
       if (hasReferences()) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Not splittable; has references: " + this);
+        }
         return null;
       }
       return this.storeEngine.getStoreFileManager().getSplitPoint();

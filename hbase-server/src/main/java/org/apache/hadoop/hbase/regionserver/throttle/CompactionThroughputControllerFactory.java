@@ -41,11 +41,9 @@ public final class CompactionThroughputControllerFactory {
 
   // for backward compatibility and may not be supported in the future
   private static final String DEPRECATED_NAME_OF_PRESSURE_AWARE_THROUGHPUT_CONTROLLER_CLASS =
-      "org.apache.hadoop.hbase.regionserver.compactions."
-          + "PressureAwareCompactionThroughputController";
+    "org.apache.hadoop.hbase.regionserver.compactions.PressureAwareCompactionThroughputController";
   private static final String DEPRECATED_NAME_OF_NO_LIMIT_THROUGHPUT_CONTROLLER_CLASS =
-      "org.apache.hadoop.hbase.regionserver.compactions."
-          + "NoLimitThroughputController.java";
+    "org.apache.hadoop.hbase.regionserver.compactions.NoLimitThroughputController";
 
   public static ThroughputController create(RegionServerServices server,
       Configuration conf) {
@@ -77,7 +75,7 @@ public final class CompactionThroughputControllerFactory {
    * @return the new name if there is any
    */
   private static String resolveDeprecatedClassName(String oldName) {
-    String className = oldName;
+    String className = oldName.trim();
     if (className.equals(DEPRECATED_NAME_OF_PRESSURE_AWARE_THROUGHPUT_CONTROLLER_CLASS)) {
       className = PressureAwareCompactionThroughputController.class.getName();
     } else if (className.equals(DEPRECATED_NAME_OF_NO_LIMIT_THROUGHPUT_CONTROLLER_CLASS)) {
