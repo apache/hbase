@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -56,7 +55,6 @@ public abstract class ReplicationStateZKBase {
   protected final ZooKeeperWatcher zookeeper;
   protected final Configuration conf;
   protected final Abortable abortable;
-  protected final boolean replicationForBulkLoadEnabled;
 
   // Public for testing
   public static final byte[] ENABLED_ZNODE_BYTES =
@@ -72,8 +70,6 @@ public abstract class ReplicationStateZKBase {
     this.zookeeper = zookeeper;
     this.conf = conf;
     this.abortable = abortable;
-    this.replicationForBulkLoadEnabled = conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
-      HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
 
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName = conf.get("zookeeper.znode.replication.peers", "peers");

@@ -84,14 +84,12 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       throw new ReplicationException("Could not initialize replication queues.", e);
     }
-    // If only bulk load hfile replication is enabled then create the hfile-refs znode
-    if (replicationForBulkLoadEnabled) {
-      try {
-        ZKUtil.createWithParents(this.zookeeper, this.hfileRefsZNode);
-      } catch (KeeperException e) {
-        throw new ReplicationException("Could not initialize hfile references replication queue.",
-            e);
-      }
+    // Irrespective of bulk load hfile replication is enabled or not we add peerId node to
+    // hfile-refs node -- HBASE-15397
+    try {
+      ZKUtil.createWithParents(this.zookeeper, this.hfileRefsZNode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Could not initialize hfile references replication queue.", e);
     }
   }
 

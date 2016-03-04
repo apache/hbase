@@ -124,16 +124,15 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
-      // If only bulk load hfile replication is enabled then add peerId node to hfile-refs node
-      if (replicationForBulkLoadEnabled) {
-        try {
-          String peerId = ZKUtil.joinZNode(this.hfileRefsZNode, id);
-          LOG.info("Adding peer " + peerId + " to hfile reference queue.");
-          ZKUtil.createWithParents(this.zookeeper, peerId);
-        } catch (KeeperException e) {
-          throw new ReplicationException("Failed to add peer with id=" + id
-              + ", node under hfile references node.", e);
-        }
+      // Irrespective of bulk load hfile replication is enabled or not we add peerId node to
+      // hfile-refs node -- HBASE-15397
+      try {
+        String peerId = ZKUtil.joinZNode(this.hfileRefsZNode, id);
+        LOG.info("Adding peer " + peerId + " to hfile reference queue.");
+        ZKUtil.createWithParents(this.zookeeper, peerId);
+      } catch (KeeperException e) {
+        throw new ReplicationException("Failed to add peer with id=" + id
+            + ", node under hfile references node.", e);
       }
 
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
