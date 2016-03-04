@@ -223,11 +223,13 @@ public abstract class MultiTableInputFormatBase extends
                       keys.getFirst()[i], false);
               String regionHostname = hregionLocation.getHostname();
               HRegionInfo regionInfo = hregionLocation.getRegionInfo();
+              String encodedRegionName = regionInfo.getEncodedName();
               long regionSize = sizeCalculator.getRegionSize(
                       regionInfo.getRegionName());
 
               TableSplit split = new TableSplit(table.getName(),
-                      scan, splitStart, splitStop, regionHostname, regionSize);
+                      scan, splitStart, splitStop, regionHostname,
+                      encodedRegionName, regionSize);
 
               splits.add(split);
 
