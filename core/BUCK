@@ -15,52 +15,62 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+cxx_library(name="core",
+            headers=[
+                "admin.h",
+                "client.h",
+                "connection.h",
+                "connection_attr.h",
+                "delete.h",
+                "get.h",
+                "hbase_macros.h",
+                "mutation.h",
+                "put.h",
+                "scanner.h",
+                "location-cache.h",
+            ],
+            srcs=[
+                "admin.cc",
+                "client.cc",
+                "connection.cc",
+                "get.cc",
+                "mutation.cc",
+                "put.cc",
+                "delete.cc",
+                "scanner.cc",
+                "location-cache.cc",
+            ],
+            deps=[
+                "//if:if",
+                "//third-party:zookeeper_mt",
+                "//third-party:folly",
+                "//third-party:wangle",
+            ],
+            visibility=[
+                'PUBLIC',
+            ], )
 
-cxx_binary(
-	name = "core",
-  headers = [
-          "admin.h",
-          "client.h",
-          "connection.h",
-          "connection_attr.h",
-          "delete.h",
-          "get.h",
-          "hbase_macros.h",
-          "mutation.h",
-          "put.h",
-          "scanner.h",
-  ],
-	srcs = [
-          "admin.cc",
-          "client.cc",
-          "connection.cc",
-          "get.cc",
-          "mutation.cc",
-          "put.cc",
-          "delete.cc",
-          "scanner.cc",
-	],
-	deps = [
-		"//if:if",
-		"//third-party:folly",
-		"//third-party:wangle",
-	],
-  visibility = [
-    'PUBLIC',
-  ],
-)
-
-cxx_test(
-  name = "core_test",
-  headers = [
-    "test_env.h",
-  ],
-  srcs = [
-    "HBaseNativeClientTestEnv.cc",
-    "SampleNativeClientTest.cc",
-  ],
-  deps = [
-    ":core",
-  ],
-  run_test_separately = True,
-)
+cxx_test(name="simple-test",
+         headers=[
+             "test_env.h",
+         ],
+         srcs=[
+             "native-client-test-env.cc",
+             "simple-native-client-test.cc",
+         ],
+         deps=[
+             ":core",
+         ],
+         run_test_separately=True, )
+cxx_test(name="location-cache-test",
+         headers=[
+             "test_env.h",
+         ],
+         srcs=[
+             "native-client-test-env.cc",
+             "location-cache-test.cc",
+         ],
+         deps=[
+             ":core",
+         ],
+         run_test_separately=True, )

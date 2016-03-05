@@ -22,7 +22,7 @@
 
 namespace {
 
-class HBaseNativeClientTestEnv : public ::testing::Environment {
+class NativeClientTestEnv : public ::testing::Environment {
  public:
   void SetUp() override {
     init_test_env();
@@ -37,6 +37,6 @@ class HBaseNativeClientTestEnv : public ::testing::Environment {
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new HBaseNativeClientTestEnv());
+  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
   return RUN_ALL_TESTS();
 }

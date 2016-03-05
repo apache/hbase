@@ -17,6 +17,8 @@
  *
  */
 
+#pragma once
+
 #include <cstdlib>
 
 inline void init_test_env() {
