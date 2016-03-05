@@ -573,10 +573,11 @@ public class TestReplicasClient {
         Assert.assertTrue(((Result)r).isStale());
         Assert.assertTrue(((Result)r).getExists());
       }
-      Set<MultiServerCallable<Row>> set = ((AsyncRequestFutureImpl<?>)reqs).getCallsInProgress();
+      Set<PayloadCarryingServerCallable> set =
+          ((AsyncRequestFutureImpl<?>)reqs).getCallsInProgress();
       // verify we did cancel unneeded calls
       Assert.assertTrue(!set.isEmpty());
-      for (MultiServerCallable<Row> m : set) {
+      for (PayloadCarryingServerCallable m : set) {
         Assert.assertTrue(m.isCancelled());
       }
     } finally {

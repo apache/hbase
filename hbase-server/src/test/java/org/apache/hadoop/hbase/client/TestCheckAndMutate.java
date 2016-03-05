@@ -53,7 +53,7 @@ public class TestCheckAndMutate {
   }
 
   @Test
-  public void testCheckAndMutate() throws Exception {
+  public void testCheckAndMutate() throws Throwable {
     final TableName tableName = TableName.valueOf("TestPutWithDelete");
     final byte[] rowKey = Bytes.toBytes("12345");
     final byte[] family = Bytes.toBytes("cf");
@@ -109,7 +109,12 @@ public class TestCheckAndMutate {
         table.checkAndMutate(rowKey, family, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,
             Bytes.toBytes("a"), rm);
         fail("Expected NoSuchColumnFamilyException");
-      } catch(NoSuchColumnFamilyException e) {
+      } catch (RetriesExhaustedWithDetailsException e) {
+        try {
+          throw e.getCause(0);
+        } catch (NoSuchColumnFamilyException e1) {
+          // expected
+        }
       }
     } finally {
       table.close();

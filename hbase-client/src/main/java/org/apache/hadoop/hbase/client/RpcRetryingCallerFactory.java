@@ -67,12 +67,6 @@ public class RpcRetryingCallerFactory {
     //  is cheap as it does not require parsing a complex structure.
     RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<T>(pause, retries, interceptor,
         startLogErrorsCnt);
-
-    // wrap it with stats, if we are tracking them
-    if (enableBackPressure && this.stats != null) {
-      caller = new StatsTrackingRpcRetryingCaller<T>(caller, this.stats);
-    }
-
     return caller;
   }
 

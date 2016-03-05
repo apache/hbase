@@ -6768,9 +6768,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * @return the current load statistics for the the region
+   * @return statistics about the current load of the region
    */
-  public ClientProtos.RegionLoadStats getRegionStats() {
+  public ClientProtos.RegionLoadStats getLoadStatistics() {
     if (!regionStatsEnabled) {
       return null;
     }

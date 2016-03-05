@@ -51,10 +51,6 @@ import com.google.protobuf.ServiceException;
 public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   // LOG is being used in TestMultiRowRangeFilter, hence leaving it public
   public static final Log LOG = LogFactory.getLog(RpcRetryingCallerImpl.class);
-  /**
-   * When we started making calls.
-   */
-  private long globalStartTime;
 
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
@@ -64,6 +60,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
+  private final RetryingTimeTracker tracker;
 
   public RpcRetryingCallerImpl(long pause, int retries, int startLogErrorsCnt) {
     this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt);
@@ -76,23 +73,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
     this.startLogErrorsCnt = startLogErrorsCnt;
-  }
-
-  private int getRemainingTime(int callTimeout) {
-    if (callTimeout <= 0) {
-      return 0;
-    } else {
-      if (callTimeout == Integer.MAX_VALUE) return Integer.MAX_VALUE;
-      int remainingTime = (int) (callTimeout -
-          (EnvironmentEdgeManager.currentTime() - this.globalStartTime));
-      if (remainingTime < 1) {
-        // If there is no time left, we're trying anyway. It's too late.
-        // 0 means no timeout, and it's not the intent here. So we secure both cases by
-        // resetting to the minimum.
-        remainingTime = 1;
-      }
-      return remainingTime;
-    }
+    this.tracker = new RetryingTimeTracker();
   }
   
   @Override
@@ -108,21 +89,21 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   throws IOException, RuntimeException {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
-    this.globalStartTime = EnvironmentEdgeManager.currentTime();
+    tracker.start();
     context.clear();
     for (int tries = 0;; tries++) {
       long expectedSleep;
       try {
         callable.prepare(tries != 0); // if called with false, check table status on ZK
         interceptor.intercept(context.prepare(callable, tries));
-        return callable.call(getRemainingTime(callTimeout));
+        return callable.call(tracker.getRemainingTime(callTimeout));
       } catch (PreemptiveFastFailException e) {
         throw e;
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (tries > startLogErrorsCnt) {
           LOG.info("Call exception, tries=" + tries + ", maxAttempts=" + maxAttempts + ", started="
-              + (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
+              + (EnvironmentEdgeManager.currentTime() - tracker.getStartTime()) + " ms ago, "
               + "cancelled=" + cancelled.get() + ", msg="
               + callable.getExceptionMessageAdditionalDetail());
         }
@@ -172,14 +153,13 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
-    return (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + expectedSleep;
+    return (EnvironmentEdgeManager.currentTime() - tracker.getStartTime()) + expectedSleep;
   }
 
   @Override
   public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
     // The code of this method should be shared with withRetries.
-    this.globalStartTime = EnvironmentEdgeManager.currentTime();
     try {
       callable.prepare(false);
       return callable.call(callTimeout);
@@ -231,7 +211,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   @Override
   public String toString() {
-    return "RpcRetryingCaller{" + "globalStartTime=" + globalStartTime +
+    return "RpcRetryingCaller{" + "globalStartTime=" + tracker.getStartTime() +
         ", pause=" + pause + ", maxAttempts=" + maxAttempts + '}';
   }
 }
