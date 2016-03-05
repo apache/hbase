@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  * {@link #shutdown()} to terminate the thread pools they allocate.
  */
 @InterfaceAudience.Private
-public class MetricsConnection {
+public class MetricsConnection implements StatisticTrackable {
 
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
@@ -192,9 +192,15 @@ public class MetricsConnection {
     }
     Result result = (Result) r;
     ClientProtos.RegionLoadStats stats = result.getStats();
-    if(stats == null){
+    if (stats == null) {
       return;
     }
+    updateRegionStats(serverName, regionName, stats);
+  }
+
+  @Override
+  public void updateRegionStats(ServerName serverName, byte[] regionName,
+    ClientProtos.RegionLoadStats stats) {
     String name = serverName.getServerName() + "," + Bytes.toStringBinary(regionName);
     ConcurrentMap<byte[], RegionStats> rsStats = null;
     if (serverStats.containsKey(serverName)) {

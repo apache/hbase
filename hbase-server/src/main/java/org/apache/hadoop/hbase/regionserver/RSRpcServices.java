@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
@@ -324,9 +325,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private static ResultOrException getResultOrException(
-      final ClientProtos.Result r, final int index, final ClientProtos.RegionLoadStats stats) {
-    return getResultOrException(ResponseConverter.buildActionResult(r, stats), index);
+  private static ResultOrException getResultOrException(final ClientProtos.Result r,
+                                                        final int index){
+    return getResultOrException(ResponseConverter.buildActionResult(r), index);
   }
 
   private static ResultOrException getResultOrException(final Exception e, final int index) {
@@ -427,13 +428,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param cellScanner if non-null, the mutation data -- the Cell content.
    * @throws IOException
    */
-  private ClientProtos.RegionLoadStats mutateRows(final Region region,
+  private void mutateRows(final Region region,
       final List<ClientProtos.Action> actions,
-      final CellScanner cellScanner) throws IOException {
+      final CellScanner cellScanner, RegionActionResult.Builder builder) throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       regionServer.cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
+    int i = 0;
+    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+        ClientProtos.ResultOrException.newBuilder();
     for (ClientProtos.Action action: actions) {
       if (action.hasGet()) {
         throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
@@ -453,9 +457,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         default:
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
+      // To unify the response format with doNonAtomicRegionMutation and read through client's
+      // AsyncProcess we have to add an empty result instance per operation
+      resultOrExceptionOrBuilder.clear();
+      resultOrExceptionOrBuilder.setIndex(i++);
+      builder.addResultOrException(
+          resultOrExceptionOrBuilder.build());
     }
     region.mutateRow(rm);
-    return ((HRegion)region).getRegionStats();
   }
 
   /**
@@ -472,11 +481,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private boolean checkAndRowMutate(final Region region, final List<ClientProtos.Action> actions,
       final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, ByteArrayComparable comparator) throws IOException {
+      CompareOp compareOp, ByteArrayComparable comparator,
+                                    RegionActionResult.Builder builder) throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       regionServer.cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
+    int i = 0;
+    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+        ClientProtos.ResultOrException.newBuilder();
     for (ClientProtos.Action action: actions) {
       if (action.hasGet()) {
         throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
@@ -496,8 +509,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         default:
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
+      // To unify the response format with doNonAtomicRegionMutation and read through client's
+      // AsyncProcess we have to add an empty result instance per operation
+      resultOrExceptionOrBuilder.clear();
+      resultOrExceptionOrBuilder.setIndex(i++);
+      builder.addResultOrException(
+          resultOrExceptionOrBuilder.build());
     }
-    return region.checkAndRowMutate(row, family, qualifier, compareOp, comparator, rm, Boolean.TRUE);
+    return region.checkAndRowMutate(row, family, qualifier, compareOp,
+        comparator, rm, Boolean.TRUE);
   }
 
   /**
@@ -787,8 +807,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           case SUCCESS:
             builder.addResultOrException(getResultOrException(
-                ClientProtos.Result.getDefaultInstance(), index,
-                ((HRegion) region).getRegionStats()));
+              ClientProtos.Result.getDefaultInstance(), index));
             break;
         }
       }
@@ -2113,13 +2132,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     Boolean processed = null;
 
     this.rpcMultiRequestCount.increment();
+    Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
+      .getRegionActionCount());
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
       OperationQuota quota;
       Region region;
       regionActionResultBuilder.clear();
+      RegionSpecifier regionSpecifier = regionAction.getRegion();
       try {
-        region = getRegion(regionAction.getRegion());
+        region = getRegion(regionSpecifier);
         quota = getQuotaManager().checkQuota(region, regionAction.getActionList());
       } catch (IOException e) {
         rpcServer.getMetrics().exception(e);
@@ -2147,15 +2169,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             ByteArrayComparable comparator =
                 ProtobufUtil.toComparator(condition.getComparator());
             processed = checkAndRowMutate(region, regionAction.getActionList(),
-                  cellScanner, row, family, qualifier, compareOp, comparator);
+                  cellScanner, row, family, qualifier, compareOp,
+                  comparator, regionActionResultBuilder);
           } else {
-            ClientProtos.RegionLoadStats stats = mutateRows(region, regionAction.getActionList(),
-                cellScanner);
-            // add the stats to the request
-            if(stats != null) {
-              responseBuilder.addRegionActionResult(RegionActionResult.newBuilder()
-                  .addResultOrException(ResultOrException.newBuilder().setLoadStats(stats)));
-            }
+            mutateRows(region, regionAction.getActionList(), cellScanner,
+                regionActionResultBuilder);
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
@@ -2170,14 +2188,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
       quota.close();
+      ClientProtos.RegionLoadStats regionLoadStats = ((HRegion)region).getLoadStatistics();
+      if(regionLoadStats != null) {
+        regionStats.put(regionSpecifier, regionLoadStats);
+      }
     }
     // Load the controller with the Cells to return.
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
     }
+
     if (processed != null) {
       responseBuilder.setProcessed(processed);
     }
+
+    MultiRegionLoadStats.Builder builder = MultiRegionLoadStats.newBuilder();
+    for(Entry<RegionSpecifier, ClientProtos.RegionLoadStats> stat: regionStats.entrySet()){
+      builder.addRegion(stat.getKey());
+      builder.addStat(stat.getValue());
+    }
+    responseBuilder.setRegionStatistics(builder);
     return responseBuilder.build();
   }
 
