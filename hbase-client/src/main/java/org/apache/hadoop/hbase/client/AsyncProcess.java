@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
@@ -427,7 +428,7 @@ class AsyncProcess {
     if (retainedActions.isEmpty()) return NO_REQS_RESULT;
 
     return submitMultiActions(tableName, retainedActions, nonceGroup, callback, null, needResults,
-      locationErrors, locationErrorRows, actionsByServer, pool);
+        locationErrors, locationErrorRows, actionsByServer, pool);
   }
 
   <CResult> AsyncRequestFuture submitMultiActions(TableName tableName,
@@ -443,7 +444,7 @@ class AsyncProcess {
         int originalIndex = locationErrorRows.get(i);
         Row row = retainedActions.get(originalIndex).getAction();
         ars.manageError(originalIndex, row,
-          Retry.NO_LOCATION_PROBLEM, locationErrors.get(i), null);
+            Retry.NO_LOCATION_PROBLEM, locationErrors.get(i), null);
       }
     }
     ars.sendMultiAction(actionsByServer, 1, null, false);
@@ -545,9 +546,13 @@ class AsyncProcess {
    */
   public <CResult> AsyncRequestFuture submitAll(TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
-    return submitAll(null, tableName, rows, callback, results);
+    return submitAll(null, tableName, rows, callback, results, null, timeout);
   }
 
+  public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
+      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
+    return submitAll(pool, tableName, rows, callback, results, null, timeout);
+  }
   /**
    * Submit immediately the list of rows, whatever the server status. Kept for backward
    * compatibility: it allows to be used with the batch interface that return an array of objects.
@@ -559,7 +564,8 @@ class AsyncProcess {
    * @param results Optional array to return the results thru; backward compat.
    */
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
-      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
+      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
+      PayloadCarryingServerCallable callable, int curTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -578,7 +584,8 @@ class AsyncProcess {
       actions.add(action);
     }
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
-        tableName, actions, ng.getNonceGroup(), getPool(pool), callback, results, results != null);
+        tableName, actions, ng.getNonceGroup(), getPool(pool), callback, results, results != null,
+        callable, curTimeout);
     ars.groupAndSendMultiAction(actions, 1);
     return ars;
   }
@@ -710,11 +717,11 @@ class AsyncProcess {
       private final MultiAction<Row> multiAction;
       private final int numAttempt;
       private final ServerName server;
-      private final Set<MultiServerCallable<Row>> callsInProgress;
+      private final Set<PayloadCarryingServerCallable> callsInProgress;
 
       private SingleServerRequestRunnable(
           MultiAction<Row> multiAction, int numAttempt, ServerName server,
-          Set<MultiServerCallable<Row>> callsInProgress) {
+          Set<PayloadCarryingServerCallable> callsInProgress) {
         this.multiAction = multiAction;
         this.numAttempt = numAttempt;
         this.server = server;
@@ -724,19 +731,22 @@ class AsyncProcess {
       @Override
       public void run() {
         MultiResponse res;
-        MultiServerCallable<Row> callable = null;
+        PayloadCarryingServerCallable callable = currentCallable;
         try {
-          callable = createCallable(server, tableName, multiAction);
+          // setup the callable based on the actions, if we don't have one already from the request
+          if (callable == null) {
+            callable = createCallable(server, tableName, multiAction);
+          }
+          RpcRetryingCaller<MultiResponse> caller = createCaller(callable);
           try {
-            RpcRetryingCaller<MultiResponse> caller = createCaller(callable);
-            if (callsInProgress != null) callsInProgress.add(callable);
-            res = caller.callWithoutRetries(callable, timeout);
-
+            if (callsInProgress != null) {
+              callsInProgress.add(callable);
+            }
+            res = caller.callWithoutRetries(callable, currentCallTotalTimeout);
             if (res == null) {
               // Cancelled
               return;
             }
-
           } catch (IOException e) {
             // The service itself failed . It may be an error coming from the communication
             //   layer, but, as well, a functional error raised by the server.
@@ -770,7 +780,7 @@ class AsyncProcess {
     private final BatchErrors errors;
     private final ConnectionManager.ServerErrorTracker errorsByServer;
     private final ExecutorService pool;
-    private final Set<MultiServerCallable<Row>> callsInProgress;
+    private final Set<PayloadCarryingServerCallable> callsInProgress;
 
 
     private final TableName tableName;
@@ -797,10 +807,12 @@ class AsyncProcess {
     private final int[] replicaGetIndices;
     private final boolean hasAnyReplicaGets;
     private final long nonceGroup;
+    private PayloadCarryingServerCallable currentCallable;
+    private int currentCallTotalTimeout;
 
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
         ExecutorService pool, boolean needResults, Object[] results,
-        Batch.Callback<CResult> callback) {
+        Batch.Callback<CResult> callback, PayloadCarryingServerCallable callable, int timeout) {
       this.pool = pool;
       this.callback = callback;
       this.nonceGroup = nonceGroup;
@@ -864,13 +876,16 @@ class AsyncProcess {
         this.replicaGetIndices = null;
       }
       this.callsInProgress = !hasAnyReplicaGets ? null :
-          Collections.newSetFromMap(new ConcurrentHashMap<MultiServerCallable<Row>, Boolean>());
+          Collections.newSetFromMap(
+              new ConcurrentHashMap<PayloadCarryingServerCallable, Boolean>());
 
       this.errorsByServer = createServerErrorTracker();
       this.errors = (globalErrors != null) ? globalErrors : new BatchErrors();
+      this.currentCallable = callable;
+      this.currentCallTotalTimeout = timeout;
     }
 
-    public Set<MultiServerCallable<Row>> getCallsInProgress() {
+    public Set<PayloadCarryingServerCallable> getCallsInProgress() {
       return callsInProgress;
     }
 
@@ -1275,11 +1290,15 @@ class AsyncProcess {
       int failureCount = 0;
       boolean canRetry = true;
 
-      // Go by original action.
+      Map<byte[], MultiResponse.RegionResult> results = responses.getResults();
+      updateStats(server, results);
+
       int failed = 0, stopped = 0;
+      // Go by original action.
       for (Map.Entry<byte[], List<Action<Row>>> regionEntry : multiAction.actions.entrySet()) {
         byte[] regionName = regionEntry.getKey();
-        Map<Integer, Object> regionResults = responses.getResults().get(regionName);
+        Map<Integer, Object> regionResults = results.get(regionName) == null
+            ?  null : results.get(regionName).result;
         if (regionResults == null) {
           if (!responses.getExceptions().containsKey(regionName)) {
             LOG.error("Server sent us neither results nor exceptions for "
@@ -1308,7 +1327,7 @@ class AsyncProcess {
             }
             ++failureCount;
             Retry retry = manageError(sentAction.getOriginalIndex(), row,
-                canRetry ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED, (Throwable)result, server);
+                canRetry ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED, (Throwable) result, server);
             if (retry == Retry.YES) {
               toReplay.add(sentAction);
             } else if (retry == Retry.NO_OTHER_SUCCEEDED) {
@@ -1317,24 +1336,11 @@ class AsyncProcess {
               ++failed;
             }
           } else {
-            
-            if (AsyncProcess.this.connection.getConnectionMetrics() != null) {
-              AsyncProcess.this.connection.getConnectionMetrics().
-                      updateServerStats(server, regionName, result);
-            }
-
-            // update the stats about the region, if its a user table. We don't want to slow down
-            // updates to meta tables, especially from internal updates (master, etc).
-            if (AsyncProcess.this.connection.getStatisticsTracker() != null) {
-              result = ResultStatsUtil.updateStats(result,
-                  AsyncProcess.this.connection.getStatisticsTracker(), server, regionName);
-            }
-
             if (callback != null) {
               try {
                 //noinspection unchecked
                 // TODO: would callback expect a replica region name if it gets one?
-                this.callback.update(regionName, sentAction.getAction().getRow(), (CResult)result);
+                this.callback.update(regionName, sentAction.getAction().getRow(), (CResult) result);
               } catch (Throwable t) {
                 LOG.error("User callback threw an exception for "
                     + Bytes.toStringBinary(regionName) + ", ignoring", t);
@@ -1384,7 +1390,6 @@ class AsyncProcess {
           }
         }
       }
-
       if (toReplay.isEmpty()) {
         logNoResubmit(server, numAttempt, failureCount, throwable, failed, stopped);
       } else {
@@ -1620,7 +1625,7 @@ class AsyncProcess {
         throw new InterruptedIOException(iex.getMessage());
       } finally {
         if (callsInProgress != null) {
-          for (MultiServerCallable<Row> clb : callsInProgress) {
+          for (PayloadCarryingServerCallable clb : callsInProgress) {
             clb.cancel();
           }
         }
@@ -1677,13 +1682,38 @@ class AsyncProcess {
     }
   }
 
+  private void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+    boolean metrics = AsyncProcess.this.connection.getConnectionMetrics() != null;
+    boolean stats = AsyncProcess.this.connection.getStatisticsTracker() != null;
+    if (!stats && !metrics) {
+      return;
+    }
+    for (Map.Entry<byte[], MultiResponse.RegionResult> regionStats : results.entrySet()) {
+      byte[] regionName = regionStats.getKey();
+      ClientProtos.RegionLoadStats stat = regionStats.getValue().getStat();
+      ResultStatsUtil.updateStats(AsyncProcess.this.connection.getStatisticsTracker(), server,
+          regionName, stat);
+      ResultStatsUtil.updateStats(AsyncProcess.this.connection.getConnectionMetrics(),
+          server, regionName, stat);
+    }
+  }
+
+  protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
+      TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
+      Batch.Callback<CResult> callback, Object[] results, boolean needResults,
+      PayloadCarryingServerCallable callable, int curTimeout) {
+    return new AsyncRequestFutureImpl<CResult>(
+        tableName, actions, nonceGroup, getPool(pool), needResults,
+        results, callback, callable, curTimeout);
+  }
+
   @VisibleForTesting
   /** Create AsyncRequestFuture. Isolated to be easily overridden in the tests. */
   protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults) {
-    return new AsyncRequestFutureImpl<CResult>(
-        tableName, actions, nonceGroup, getPool(pool), needResults, results, callback);
+    return createAsyncRequestFuture(
+        tableName, actions, nonceGroup, pool, callback, results, needResults, null, timeout);
   }
 
   /**
@@ -1699,7 +1729,7 @@ class AsyncProcess {
    * Create a caller. Isolated to be easily overridden in the tests.
    */
   @VisibleForTesting
-  protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+  protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable) {
     return rpcCallerFactory.<MultiResponse> newCaller();
   }
 

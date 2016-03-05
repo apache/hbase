@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -33,8 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class MultiResponse {
 
   // map of regionName to map of Results by the original index for that Result
-  private Map<byte[], Map<Integer, Object>> results =
-      new TreeMap<byte[], Map<Integer, Object>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], RegionResult> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * The server can send us a failure for the region itself, instead of individual failure.
@@ -52,8 +52,8 @@ public class MultiResponse {
    */
   public int size() {
     int size = 0;
-    for (Map<?,?> c : results.values()) {
-      size += c.size();
+    for (RegionResult result: results.values()) {
+      size += result.size();
     }
     return size;
   }
@@ -66,16 +66,7 @@ public class MultiResponse {
    * @param resOrEx the result or error; will be empty for successful Put and Delete actions.
    */
   public void add(byte[] regionName, int originalIndex, Object resOrEx) {
-    Map<Integer, Object> rs = results.get(regionName);
-    if (rs == null) {
-      rs = new HashMap<Integer, Object>();
-      results.put(regionName, rs);
-    }
-    rs.put(originalIndex, resOrEx);
-  }
-
-  public Map<byte[], Map<Integer, Object>> getResults() {
-    return results;
+    getResult(regionName).addResult(originalIndex, resOrEx);
   }
 
   public void addException(byte []regionName, Throwable ie){
@@ -91,5 +82,43 @@ public class MultiResponse {
 
   public Map<byte[], Throwable> getExceptions() {
     return exceptions;
+  }
+
+  public void addStatistic(byte[] regionName, ClientProtos.RegionLoadStats stat) {
+    getResult(regionName).setStat(stat);
+  }
+
+  private RegionResult getResult(byte[] region){
+    RegionResult rs = results.get(region);
+    if (rs == null) {
+      rs = new RegionResult();
+      results.put(region, rs);
+    }
+    return rs;
+  }
+
+  public Map<byte[], RegionResult> getResults(){
+    return this.results;
+  }
+
+  static class RegionResult{
+    Map<Integer, Object> result = new HashMap<>();
+    ClientProtos.RegionLoadStats stat;
+
+    public void addResult(int index, Object result){
+      this.result.put(index, result);
+    }
+
+    public void setStat(ClientProtos.RegionLoadStats stat){
+      this.stat = stat;
+    }
+
+    public int size() {
+      return this.result.size();
+    }
+
+    public ClientProtos.RegionLoadStats getStat() {
+      return this.stat;
+    }
   }
 }

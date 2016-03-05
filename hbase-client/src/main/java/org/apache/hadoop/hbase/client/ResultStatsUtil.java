@@ -55,11 +55,15 @@ public final class ResultStatsUtil {
       return r;
     }
 
-    if (regionName != null) {
-      serverStats.updateRegionStats(server, regionName, stats);
-    }
-
+    updateStats(serverStats, server, regionName, stats);
     return r;
+  }
+
+  public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
+    ClientProtos.RegionLoadStats stats) {
+    if (regionName != null && stats != null && tracker != null) {
+      tracker.updateRegionStats(server, regionName, stats);
+    }
   }
 
   public static <T> T updateStats(T r, ServerStatisticTracker stats,
