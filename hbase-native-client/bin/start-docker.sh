@@ -19,8 +19,11 @@
 set -e
 set -x
 
+# Try out some standard docker machine names that could work
 eval "$(docker-machine env docker-vm)"
 eval "$(docker-machine env dinghy)"
+
+# Build the image
 docker build -t hbase_native .
 
 
@@ -36,6 +39,6 @@ fi;
 
 docker run -p 16010:16010/tcp \
            -e "JAVA_HOME=/usr/lib/jvm/java-8-oracle" \
-           -v ${PWD}/..:/usr/local/src/hbase \
+           -v ${PWD}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
            -it hbase_native  /bin/bash

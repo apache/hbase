@@ -33,4 +33,5 @@ cxx_library(
         + [':' + x for x in CC_FILENAMES] 
         + [ ':' + x for x in HEADER_FILENAMES ],
   visibility = [ 'PUBLIC', ],
+  exported_deps = ['//third-party:protobuf']
 )
