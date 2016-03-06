@@ -989,8 +989,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 //    protected Table table;
 
     private String testName;
-    private Histogram latency;
-    private Histogram valueSize;
+    private Histogram latencyHistogram;
+    private Histogram valueSizeHistogram;
     private RandomDistribution.Zipf zipf;
 
     /**
@@ -1041,7 +1041,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     void updateValueSize(final int valueSize) {
       if (!isRandomValueSize()) return;
-      this.valueSize.update(valueSize);
+      this.valueSizeHistogram.update(valueSize);
     }
 
     String generateStatus(final int sr, final int i, final int lr) {
@@ -1060,8 +1060,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     /**
      * Populated by testTakedown. Only implemented by RandomReadTest at the moment.
      */
-    public Histogram getLatency() {
-      return latency;
+    public Histogram getLatencyHistogram() {
+      return latencyHistogram;
     }
 
     void testSetup() throws IOException {
@@ -1069,16 +1069,28 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.connection = ConnectionFactory.createConnection(conf);
       }
       onStartup();
-      latency = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
-      valueSize = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      latencyHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      valueSizeHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
     }
 
     abstract void onStartup() throws IOException;
 
     void testTakedown() throws IOException {
-      reportLatency();
-      reportValueSize();
       onTakedown();
+      // Print all stats for this thread continuously.
+      // Synchronize on Test.class so different threads don't intermingle the
+      // output. We can't use 'this' here because each thread has its own instance of Test class.
+      synchronized (Test.class) {
+        status.setStatus("Test : " + testName + ", Thread : " + Thread.currentThread().getName());
+        status.setStatus("Latency (us) : " + YammerHistogramUtils.getHistogramReport(
+            latencyHistogram));
+        status.setStatus("Num measures (latency) : " + latencyHistogram.getCount());
+        status.setStatus(YammerHistogramUtils.getPrettyHistogramReport(latencyHistogram));
+        status.setStatus("ValueSize (bytes) : "
+            + YammerHistogramUtils.getHistogramReport(valueSizeHistogram));
+        status.setStatus("Num measures (ValueSize): " + valueSizeHistogram.getCount());
+        status.setStatus(YammerHistogramUtils.getPrettyHistogramReport(valueSizeHistogram));
+      }
       if (!opts.oneCon) {
         connection.close();
       }
@@ -1131,7 +1143,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             scope.close();
           }
           if ( (i - startRow) > opts.measureAfter) {
-            latency.update((System.nanoTime() - startTime) / 1000);
+            latencyHistogram.update((System.nanoTime() - startTime) / 1000);
             if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
               status.setStatus(generateStatus(startRow, i, lastRow));
             }
@@ -1141,48 +1153,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     /**
-     * report percentiles of latency
-     * @throws IOException
-     */
-    private void reportLatency() throws IOException {
-      status.setStatus(testName + " latency log (microseconds), on " +
-          latency.getCount() + " measures");
-      reportHistogram(this.latency);
-    }
-
-    private void reportValueSize() throws IOException {
-      status.setStatus(testName + " valueSize after " +
-          valueSize.getCount() + " measures");
-      reportHistogram(this.valueSize);
-    }
-
-    private void reportHistogram(final Histogram h) throws IOException {
-      Snapshot sn = h.getSnapshot();
-      status.setStatus(testName + " Min      = " + sn.getMin());
-      status.setStatus(testName + " Avg      = " + sn.getMean());
-      status.setStatus(testName + " StdDev   = " + sn.getStdDev());
-      status.setStatus(testName + " 50th     = " + sn.getMedian());
-      status.setStatus(testName + " 75th     = " + sn.get75thPercentile());
-      status.setStatus(testName + " 95th     = " + sn.get95thPercentile());
-      status.setStatus(testName + " 99th     = " + sn.get99thPercentile());
-      status.setStatus(testName + " 99.9th   = " + sn.get999thPercentile());
-      status.setStatus(testName + " 99.99th  = " + sn.getValue(0.9999));
-      status.setStatus(testName + " 99.999th = " + sn.getValue(0.99999));
-      status.setStatus(testName + " Max      = " + sn.getMax());
-    }
-
-    /**
      * @return Subset of the histograms' calculation.
      */
     public String getShortLatencyReport() {
-      return YammerHistogramUtils.getShortHistogramReport(this.latency);
+      return YammerHistogramUtils.getShortHistogramReport(this.latencyHistogram);
     }
 
     /**
      * @return Subset of the histograms' calculation.
      */
     public String getShortValueSizeReport() {
-      return YammerHistogramUtils.getShortHistogramReport(this.valueSize);
+      return YammerHistogramUtils.getShortHistogramReport(this.valueSizeHistogram);
     }
 
     /*
@@ -1778,7 +1759,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       " (" + calculateMbps((int)(opts.perClientRunRows * opts.sampleRate), totalElapsedTime,
           getAverageValueLength(opts), opts.columns) + ")");
 
-    return new RunResult(totalElapsedTime, t.getLatency());
+    return new RunResult(totalElapsedTime, t.getLatencyHistogram());
   }
 
   private static int getAverageValueLength(final TestOptions opts) {
@@ -1834,20 +1815,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
     System.err.println(" period          Report every 'period' rows: " +
-      "Default: opts.perClientRunRows / 10");
+      "Default: opts.perClientRunRows / 10 = " + DEFAULT_OPTS.getPerClientRunRows()/10);
     System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
     System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
       "Default: 0");
     System.err.println(" latency         Set to report operation latencies. Default: False");
     System.err.println(" measureAfter    Start to measure the latency once 'measureAfter'" +
         " rows have been treated. Default: 0");
-    System.err.println(" valueSize       Pass value size to use: Default: 1024");
+    System.err.println(" valueSize       Pass value size to use: Default: "
+        + DEFAULT_OPTS.getValueSize());
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
         "'valueSize'; set on read for stats on size: Default: Not set.");
     System.err.println();
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
-    System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" rows            Rows each client runs. Default: "
+        + DEFAULT_OPTS.getPerClientRunRows());
     System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. " +
       "Default: 1.0.");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
@@ -1875,7 +1858,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" inmemory        Tries to keep the HFiles of the CF " +
       "inmemory as far as possible. Not guaranteed that reads are always served " +
       "from memory.  Default: false");
-    System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
+    System.err.println(" bloomFilter      Bloom filter type, one of "
+        + Arrays.toString(BloomType.values()));
     System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
@@ -1892,9 +1876,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
     System.err.println();
     System.err.println("Args:");
-    System.err.println(" nclients        Integer. Required. Total number of " +
-      "clients (and HRegionServers)");
-    System.err.println("                 running: 1 <= value <= 500");
+    System.err.println(" nclients        Integer. Required. Total number of clients "
+        + "(and HRegionServers) running. 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single client doing the default 1M sequentialWrites:");
     System.err.println(" $ bin/hbase " + className + " sequentialWrite 1");

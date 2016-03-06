@@ -65,7 +65,7 @@ public final class YammerHistogramUtils {
   /** @return a summary of {@code hist}. */
   public static String getHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
-    return ", mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
+    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
         ", min=" + DOUBLE_FORMAT.format(sn.getMin()) +
         ", max=" + DOUBLE_FORMAT.format(sn.getMax()) +
         ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) +
@@ -76,5 +76,22 @@ public final class YammerHistogramUtils {
         ", 99.9th=" + DOUBLE_FORMAT.format(sn.get999thPercentile()) +
         ", 99.99th=" + DOUBLE_FORMAT.format(sn.getValue(0.9999)) +
         ", 99.999th=" + DOUBLE_FORMAT.format(sn.getValue(0.99999));
+  }
+
+  /** @return pretty summary of {@code hist}. */
+  public static String getPrettyHistogramReport(final Histogram h) {
+    Snapshot sn = h.getSnapshot();
+    return
+        "Mean      = " + DOUBLE_FORMAT.format(sn.getMean()) + "\n" +
+        "Min       = " + DOUBLE_FORMAT.format(sn.getMin()) + "\n" +
+        "Max       = " + DOUBLE_FORMAT.format(sn.getMax()) + "\n" +
+        "StdDev    = " + DOUBLE_FORMAT.format(sn.getStdDev()) + "\n" +
+        "50th      = " + DOUBLE_FORMAT.format(sn.getMedian()) + "\n" +
+        "75th      = " + DOUBLE_FORMAT.format(sn.get75thPercentile()) + "\n" +
+        "95th      = " + DOUBLE_FORMAT.format(sn.get95thPercentile()) + "\n" +
+        "99th      = " + DOUBLE_FORMAT.format(sn.get99thPercentile()) + "\n" +
+        "99.9th    = " + DOUBLE_FORMAT.format(sn.get999thPercentile()) + "\n" +
+        "99.99th   = " + DOUBLE_FORMAT.format(sn.getValue(0.9999)) + "\n" +
+        "99.999th  = " + DOUBLE_FORMAT.format(sn.getValue(0.99999));
   }
 }
