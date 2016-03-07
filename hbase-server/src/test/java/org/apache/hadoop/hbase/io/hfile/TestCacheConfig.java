@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -34,9 +35,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -208,6 +211,72 @@ public class TestCacheConfig {
     // Do asserts on block counting.
     cc.getBlockCache().cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
     return cc.getBlockCache().getBlockCount();
+  }
+
+  @Test
+  public void testDisableCacheDataBlock() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    CacheConfig cacheConfig = new CacheConfig(conf);
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheDataCompressed());
+    assertFalse(cacheConfig.shouldCacheDataOnWrite());
+    assertTrue(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
+    assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
+
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
+
+    cacheConfig = new CacheConfig(conf);
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
+    assertTrue(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
+    assertTrue(cacheConfig.shouldCacheDataCompressed());
+    assertTrue(cacheConfig.shouldCacheDataOnWrite());
+    assertTrue(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
+    assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
+
+    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, false);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+
+    cacheConfig = new CacheConfig(conf);
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheDataCompressed());
+    assertFalse(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
+    assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
+
+    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+
+    HColumnDescriptor family = new HColumnDescriptor("testDisableCacheDataBlock");
+    family.setBlockCacheEnabled(false);
+
+    cacheConfig = new CacheConfig(conf, family);
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheDataCompressed());
+    assertFalse(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
+    assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
   }
 
   @Test

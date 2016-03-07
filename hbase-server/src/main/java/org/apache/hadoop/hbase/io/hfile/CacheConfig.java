@@ -45,6 +45,12 @@ public class CacheConfig {
   private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
 
   /**
+   * Configuration key to cache data blocks on read. Bloom blocks and index blocks are always be
+   * cached if the block cache is enabled.
+   */
+  public static final String CACHE_DATA_ON_READ_KEY = "hbase.block.data.cacheonread";
+
+  /**
    * Configuration key to cache data blocks on write. There are separate
    * switches for bloom blocks and non-root index blocks.
    */
@@ -136,8 +142,9 @@ public class CacheConfig {
   private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
   private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
 
-  private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY="hbase.blockcache.external.class";
-  private static final String DROP_BEHIND_CACHE_COMPACTION_KEY="hbase.hfile.drop.behind.compaction";
+  private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY = "hbase.blockcache.external.class";
+  private static final String DROP_BEHIND_CACHE_COMPACTION_KEY =
+      "hbase.hfile.drop.behind.compaction";
   private static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
 
   /**
@@ -219,7 +226,8 @@ public class CacheConfig {
    */
   public CacheConfig(Configuration conf, HColumnDescriptor family) {
     this(CacheConfig.instantiateBlockCache(conf),
-        family.isBlockCacheEnabled(),
+        conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
+           && family.isBlockCacheEnabled(),
         family.isInMemory(),
         // For the following flags we enable them regardless of per-schema settings
         // if they are enabled in the global configuration.
@@ -236,7 +244,7 @@ public class CacheConfig {
             DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
             HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
   }
 
@@ -247,7 +255,7 @@ public class CacheConfig {
    */
   public CacheConfig(Configuration conf) {
     this(CacheConfig.instantiateBlockCache(conf),
-        DEFAULT_CACHE_DATA_ON_READ,
+        conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ),
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
                            // strictly from conf
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
@@ -258,7 +266,7 @@ public class CacheConfig {
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
           HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1),
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
   }
 
@@ -432,7 +440,7 @@ public class CacheConfig {
    * @return true if data blocks should be compressed in the cache, false if not
    */
   public boolean shouldCacheDataCompressed() {
-    return isBlockCacheEnabled() && this.cacheDataCompressed;
+    return isBlockCacheEnabled() && this.cacheDataOnRead && this.cacheDataCompressed;
   }
 
   /**
@@ -442,7 +450,7 @@ public class CacheConfig {
     if (!isBlockCacheEnabled()) return false;
     switch (category) {
       case DATA:
-        return this.cacheDataCompressed;
+        return this.cacheDataOnRead && this.cacheDataCompressed;
       default:
         return false;
     }
