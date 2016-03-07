@@ -15,68 +15,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def add_system_libs(names = []):
+def add_system_libs(names = [], lib_dir = "/usr/lib/x86_64-linux-gnu", deps = [], exported_linker_flags = []):
         rules = []
         for name in names:
-                prebuilt_cxx_library(
-                        name = name,
-                        lib_name = name,
-                        lib_dir = "/usr/lib/x86_64-linux-gnu",
-                        visibility = [ 'PUBLIC', ],
-                )
-                rules.append(":" + name)
-
+            gen_rule_name = "gen_lib{}".format(name)
+            genrule(
+              name = gen_rule_name,
+              out = gen_rule_name,
+              bash = "mkdir -p $OUT && cp {}/lib{}.* $OUT".format(lib_dir,name),
+            )
+            prebuilt_cxx_library(
+              name = name,
+              lib_name = name,
+              lib_dir = '$(location :{})'.format(gen_rule_name),
+              force_static = True,
+              deps = deps,
+              visibility = [ 'PUBLIC' ],
+              exported_linker_flags = exported_linker_flags,
+            )
+            rules.append(":" + name)
         return rules
 
 system_libs = [
-        "double-conversion",
-        "glog",
-        "protobuf",
-        "gflags",
         "unwind",
         "lzma",
+]
+local_libs = [
+        "double-conversion",
+        "glog",
+        "gflags",
+        "protobuf",
+        "zookeeper_mt",
         "boost_regex",
 ]
-tp_dep_rules = add_system_libs(system_libs)
-prebuilt_cxx_library(
-        name = "folly",
-        lib_name = "folly",
-        lib_dir = "/usr/local/lib",
-        deps = tp_dep_rules,
-        exported_linker_flags = [
-                "-pthread",
-                "-lstdc++",
-        ],
-        visibility = [
-                'PUBLIC',
-        ]
-)
-prebuilt_cxx_library(
-        name = "follybenchmark",
-        lib_name = "follybenchmark",
-        lib_dir = "/usr/local/lib",
-        deps = tp_dep_rules + [":folly"],
-        exported_linker_flags = [
-                "-pthread",
-                "-lstdc++",
-        ],
-        visibility = [
-                'PUBLIC',
-        ]
-)
-prebuilt_cxx_library(
-        name = "wangle",
-        lib_name = "wangle",
-        lib_dir = "/usr/local/lib",
-        deps = tp_dep_rules +  [":folly"],
-        exported_linker_flags = [
-                "-pthread",
-                "-lstdc++",
-        ],
-        visibility = [
-                'PUBLIC',
-        ]
-)
+
+tp_dep_rules = add_system_libs(system_libs) \
+  + add_system_libs(local_libs, lib_dir = "/usr/local/lib") 
+folly = add_system_libs(
+  ['folly'], 
+  lib_dir = '/usr/local/lib', 
+  deps = tp_dep_rules, 
+  exported_linker_flags = [ "-pthread", "-lstdc++",]
+  )
+folly_bench = add_system_libs(
+  ['follybenchmark'], 
+  lib_dir = '/usr/local/lib', 
+  deps = tp_dep_rules + folly,
+  exported_linker_flags = [ "-pthread", "-lstdc++",]
+  )
+wangle = add_system_libs(
+  ['wangle'], 
+  lib_dir = '/usr/local/lib', 
+  deps = tp_dep_rules + folly, 
+  exported_linker_flags = [ "-pthread", "-lstdc++",]
+  )
 cxx_library(
   name = 'google-test',
   srcs = [
