@@ -15,8 +15,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM pjameson/buck-folly-watchman
+FROM cpp_update 
 
-RUN apt-get install -y libprotobuf-dev protobuf-compiler clang-format-3.7 vim maven inetutils-ping
+ARG CC=/usr/bin/gcc-5
+ARG CXX=/usr/bin/g++-5
+ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
+ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
+
+RUN apt-get install -y clang-format-3.7 vim maven inetutils-ping
+RUN git clone --depth 1 --branch v2.6.1 https://github.com/google/protobuf.git /usr/src/protobuf && \
+  cd /usr/src/protobuf/ && \
+  ./autogen.sh && \
+  ./configure --disable-shared && \
+  make && \
+  make check && \
+  make install
+RUN cd /usr/src && \
+  wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz && \ 
+  tar zxf zookeeper-3.4.8.tar.gz && \ 
+  rm -rf zookeeper-3.4.8.tar.gz && \
+  cd zookeeper-3.4.8 && \
+  cd src/c && \
+  ./configure --disable-shared && \
+  make && \
+  make install && \
+  make clean 
 
 WORKDIR /usr/local/src/hbase/hbase-native-client
