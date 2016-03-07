@@ -132,7 +132,7 @@ public class TestReplicationAdmin {
     config.getConfiguration().put("key2", "value2");
     admin.addPeer(ID_ONE, config, null);
 
-    List<ReplicationPeer> peers = admin.listValidReplicationPeers();
+    List<ReplicationPeer> peers = admin.listReplicationPeers();
     assertEquals(1, peers.size());
     ReplicationPeer peerOne = peers.get(0);
     assertNotNull(peerOne);
