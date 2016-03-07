@@ -361,8 +361,8 @@ public class TestRegionServerMetrics {
   }
 
   @Test
-  public void testScanNext() throws IOException {
-    String tableNameString = "testScanNext";
+  public void testScanSize() throws IOException {
+    String tableNameString = "testScanSize";
     TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -400,9 +400,9 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
+        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
       }
-      metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
+      metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
     }
     try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
       admin.disableTable(tableName);
@@ -411,8 +411,58 @@ public class TestRegionServerMetrics {
   }
 
   @Test
-  public void testScanNextForSmallScan() throws IOException {
-    String tableNameString = "testScanNextSmall";
+  public void testScanTime() throws IOException {
+    String tableNameString = "testScanTime";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.addColumn(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (Table t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setBatch(1);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
+    }
+    numScanNext += NUM_SCAN_NEXT;
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+        metricsHelper.assertCounter(prefix + "_scanTimeNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounterGt("ScanTime_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScanSizeForSmallScan() throws IOException {
+    String tableNameString = "testScanSizeSmall";
     TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -452,9 +502,9 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
+        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
       }
-      metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
+      metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
     }
     try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
       admin.disableTable(tableName);
