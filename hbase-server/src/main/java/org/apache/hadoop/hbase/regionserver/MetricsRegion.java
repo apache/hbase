@@ -53,8 +53,12 @@ public class MetricsRegion {
     source.updateGet(getSize);
   }
 
-  public void updateScanNext(final long scanSize) {
-    source.updateScan(scanSize);
+  public void updateScanSize(final long scanSize) {
+    source.updateScanSize(scanSize);
+  }
+
+  public void updateScanTime(final long t) {
+    source.updateScanTime(t);
   }
 
   public void updateAppend() {

@@ -92,7 +92,12 @@ public interface MetricsRegionServerSource extends BaseSource {
    *
    * @param scanSize size of the scan
    */
-  void updateScannerNext(long scanSize);
+  void updateScanSize(long scanSize);
+
+  /**
+   * Update the scan time.
+   * */
+  void updateScanTime(long t);
 
   /**
    * Increment the number of slow Puts that have happened.
@@ -255,7 +260,9 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MUTATE_KEY = "mutate";
   String APPEND_KEY = "append";
   String REPLAY_KEY = "replay";
-  String SCAN_NEXT_KEY = "scanNext";
+  String SCAN_SIZE_KEY = "scanSize";
+  String SCAN_TIME_KEY = "scanTime";
+
   String SLOW_MUTATE_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";
   String SLOW_DELETE_KEY = "slowDeleteCount";
