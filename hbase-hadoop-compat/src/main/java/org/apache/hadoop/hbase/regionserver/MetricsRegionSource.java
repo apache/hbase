@@ -65,7 +65,13 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
    * Update the count and sizes of resultScanner.next()
    * @param scanSize Size in bytes of the resulting key values for a next()
    */
-  void updateScan(long scanSize);
+  void updateScanSize(long scanSize);
+
+  /**
+   * Update time used of resultScanner.next().
+   * */
+  void updateScanTime(long mills);
+
   /**
    * Update related counts of increments.
    */

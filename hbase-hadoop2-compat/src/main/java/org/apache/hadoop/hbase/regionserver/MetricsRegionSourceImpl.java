@@ -51,14 +51,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionGetKey;
   private final String regionIncrementKey;
   private final String regionAppendKey;
-  private final String regionScanNextKey;
+  private final String regionScanSizeKey;
+  private final String regionScanTimeKey;
 
   private final MutableFastCounter regionPut;
   private final MutableFastCounter regionDelete;
   private final MutableFastCounter regionIncrement;
   private final MutableFastCounter regionAppend;
   private final MetricHistogram regionGet;
-  private final MetricHistogram regionScanNext;
+  private final MetricHistogram regionScanSize;
+  private final MetricHistogram regionScanTime;
   private final int hashCode;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
@@ -94,8 +96,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
     regionGet = registry.newTimeHistogram(regionGetKey);
 
-    regionScanNextKey = regionNamePrefix + MetricsRegionServerSource.SCAN_NEXT_KEY;
-    regionScanNext = registry.newTimeHistogram(regionScanNextKey);
+    regionScanSizeKey = regionNamePrefix + MetricsRegionServerSource.SCAN_SIZE_KEY;
+    regionScanSize = registry.newSizeHistogram(regionScanSizeKey);
+
+    regionScanTimeKey = regionNamePrefix + MetricsRegionServerSource.SCAN_TIME_KEY;
+    regionScanTime = registry.newTimeHistogram(regionScanTimeKey);
 
     hashCode = regionWrapper.getRegionHashCode();
   }
@@ -125,9 +130,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionIncrementKey);
       registry.removeMetric(regionAppendKey);
       registry.removeMetric(regionGetKey);
-      registry.removeMetric(regionScanNextKey);
+      registry.removeMetric(regionScanSizeKey);
+      registry.removeMetric(regionScanTimeKey);
       registry.removeHistogramMetrics(regionGetKey);
-      registry.removeHistogramMetrics(regionScanNextKey);
+      registry.removeHistogramMetrics(regionScanSizeKey);
+      registry.removeHistogramMetrics(regionScanTimeKey);
 
       regionWrapper = null;
     }
@@ -149,8 +156,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
-  public void updateScan(long scanSize) {
-    regionScanNext.add(scanSize);
+  public void updateScanSize(long scanSize) {
+    regionScanSize.add(scanSize);
+  }
+
+  @Override
+  public void updateScanTime(long mills) {
+    regionScanTime.add(mills);
   }
 
   @Override
