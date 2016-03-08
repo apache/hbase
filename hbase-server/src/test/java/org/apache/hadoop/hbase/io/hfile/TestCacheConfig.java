@@ -255,7 +255,7 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
     assertFalse(cacheConfig.shouldCacheDataOnRead());
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
@@ -273,7 +273,7 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
     assertFalse(cacheConfig.shouldCacheDataOnRead());
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
