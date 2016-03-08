@@ -564,7 +564,7 @@ public class SplitTransactionImpl implements SplitTransaction {
   private class DaughterOpener extends HasThread {
     private final Server server;
     private final Region r;
-    private Throwable t = null;
+    private volatile Throwable t = null;
 
     DaughterOpener(final Server s, final Region r) {
       super((s == null? "null-services": s.getServerName()) +
