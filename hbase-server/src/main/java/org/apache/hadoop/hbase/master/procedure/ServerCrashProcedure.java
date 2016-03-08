@@ -767,4 +767,11 @@ implements ServerProcedureInterface {
   protected boolean isYieldBeforeExecuteFromState(MasterProcedureEnv env, ServerCrashState state) {
     return true;
   }
+
+  @Override
+  protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
+    // The operation is triggered internally on the server
+    // the client does not know about this procedure.
+    return false;
+  }
 }
