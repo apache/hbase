@@ -194,16 +194,18 @@ public class CreateNamespaceProcedure
     sb.append(")");
   }
 
+  private boolean isBootstrapNamespace() {
+    return nsDescriptor.equals(NamespaceDescriptor.DEFAULT_NAMESPACE) ||
+        nsDescriptor.equals(NamespaceDescriptor.SYSTEM_NAMESPACE);
+  }
+
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
     if (!env.getMasterServices().isInitialized()) {
       // Namespace manager might not be ready if master is not fully initialized,
       // return false to reject user namespace creation; return true for default
       // and system namespace creation (this is part of master initialization).
-      boolean isBootstrapNs = nsDescriptor.equals(NamespaceDescriptor.DEFAULT_NAMESPACE) ||
-        nsDescriptor.equals(NamespaceDescriptor.SYSTEM_NAMESPACE);
-
-      if (!isBootstrapNs && env.waitInitialized(this)) {
+      if (!isBootstrapNamespace() && env.waitInitialized(this)) {
         return false;
       }
     }
@@ -363,5 +365,12 @@ public class CreateNamespaceProcedure
       traceEnabled = LOG.isTraceEnabled();
     }
     return traceEnabled;
+  }
+
+  @Override
+  protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
+    // hbase and default namespaces are created on bootstrap internally by the system
+    // the client does not know about this procedures.
+    return !isBootstrapNamespace();
   }
 }

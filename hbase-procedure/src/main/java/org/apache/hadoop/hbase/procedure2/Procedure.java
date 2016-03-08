@@ -190,6 +190,19 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return false;
   }
 
+  /**
+   * By default, the executor will keep the procedure result around util
+   * the eviction TTL is expired. The client can cut down the waiting time
+   * by requesting that the result is removed from the executor.
+   * In case of system started procedure, we can force the executor to auto-ack.
+   * @param env the environment passed to the ProcedureExecutor
+   * @return true if the executor should wait the client ack for the result.
+   *         Defaults to return true.
+   */
+  protected boolean shouldWaitClientAck(final TEnvironment env) {
+    return true;
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

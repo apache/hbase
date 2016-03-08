@@ -165,22 +165,23 @@ public class ProcedureExecutor<TEnvironment> {
       final long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
       final long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
 
-      long now = EnvironmentEdgeManager.currentTime();
-      Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
+      final long now = EnvironmentEdgeManager.currentTime();
+      final Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
+      final boolean isDebugEnabled = LOG.isDebugEnabled();
       while (it.hasNext() && store.isRunning()) {
-        Map.Entry<Long, ProcedureInfo> entry = it.next();
-        ProcedureInfo result = entry.getValue();
+        final Map.Entry<Long, ProcedureInfo> entry = it.next();
+        final ProcedureInfo procInfo = entry.getValue();
 
         // TODO: Select TTL based on Procedure type
-        if ((result.hasClientAckTime() && (now - result.getClientAckTime()) >= evictAckTtl) ||
-            (now - result.getLastUpdate()) >= evictTtl) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Evict completed procedure " + entry.getKey());
+        if ((procInfo.hasClientAckTime() && (now - procInfo.getClientAckTime()) >= evictAckTtl) ||
+            (now - procInfo.getLastUpdate()) >= evictTtl) {
+          if (isDebugEnabled) {
+            LOG.debug("Evict completed procedure: " + procInfo);
           }
           store.delete(entry.getKey());
           it.remove();
 
-          NonceKey nonceKey = result.getNonceKey();
+          NonceKey nonceKey = procInfo.getNonceKey();
           if (nonceKey != null) {
             nonceKeysToProcIdsMap.remove(nonceKey);
           }
@@ -1272,7 +1273,12 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // update the executor internal state maps
-    completed.put(proc.getProcId(), Procedure.createProcedureInfo(proc, proc.getNonceKey()));
+    ProcedureInfo procInfo = Procedure.createProcedureInfo(proc, proc.getNonceKey());
+    if (!proc.shouldWaitClientAck(getEnvironment())) {
+      procInfo.setClientAckTime(0);
+    }
+
+    completed.put(procInfo.getProcId(), procInfo);
     rollbackStack.remove(proc.getProcId());
     procedures.remove(proc.getProcId());
 
