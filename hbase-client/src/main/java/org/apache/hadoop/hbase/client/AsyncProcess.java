@@ -1175,9 +1175,9 @@ class AsyncProcess {
         byte[] row = e.getValue().iterator().next().getAction().getRow();
         // Do not use the exception for updating cache because it might be coming from
         // any of the regions in the MultiAction.
-        // TODO: depending on type of exception we might not want to update cache at all?
         if (tableName != null) {
-          connection.updateCachedLocations(tableName, regionName, row, null, server);
+          connection.updateCachedLocations(tableName, regionName, row,
+            ClientExceptionsUtil.isMetaClearingException(t) ? null : t, server);
         }
         for (Action<Row> action : e.getValue()) {
           Retry retry = manageError(
