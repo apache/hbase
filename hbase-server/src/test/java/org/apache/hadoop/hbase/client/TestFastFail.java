@@ -36,14 +36,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
@@ -61,7 +64,7 @@ public class TestFastFail {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final Random random = new Random();
-  private static int SLAVES = 3;
+  private static int SLAVES = 1;
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final int SLEEPTIME = 5000;
 
@@ -87,6 +90,7 @@ public class TestFastFail {
   @Before
   public void setUp() throws Exception {
     MyPreemptiveFastFailInterceptor.numBraveSouls.set(0);
+    CallQueueTooBigPffeInterceptor.numCallQueueTooBig.set(0);
   }
 
   /**
@@ -298,6 +302,49 @@ public class TestFastFail {
             .get());
   }
 
+  @Test
+  public void testCallQueueTooBigException() throws Exception {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+
+    final String tableName = "testCallQueueTooBigException";
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
+      .toBytes(tableName)));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
+    admin.createTable(desc, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), 3);
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 100);
+    conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 500);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+
+    conf.setBoolean(HConstants.HBASE_CLIENT_FAST_FAIL_MODE_ENABLED, true);
+    conf.setLong(HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS, 0);
+    conf.setClass(HConstants.HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL,
+      CallQueueTooBigPffeInterceptor.class, PreemptiveFastFailInterceptor.class);
+
+    final Connection connection = ConnectionFactory.createConnection(conf);
+
+    //Set max call queues size to 0
+    SimpleRpcScheduler srs = (SimpleRpcScheduler)
+      TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer().getScheduler();
+    Configuration newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    newConf.setInt("hbase.ipc.server.max.callqueue.length", 0);
+    srs.onConfigurationChange(newConf);
+
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+      Get get = new Get(new byte[1]);
+      table.get(get);
+    } catch (Throwable ex) {
+    }
+
+    assertEquals("There should have been 1 hit", 1,
+      CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get());
+
+    newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    newConf.setInt("hbase.ipc.server.max.callqueue.length", 250);
+    srs.onConfigurationChange(newConf);
+  }
+
   public static class MyPreemptiveFastFailInterceptor extends
       PreemptiveFastFailInterceptor {
     public static AtomicInteger numBraveSouls = new AtomicInteger();
@@ -317,5 +364,20 @@ public class TestFastFail {
 
   private byte[] longToByteArrayKey(long rowKey) {
     return LoadTestKVGenerator.md5PrefixedKey(rowKey).getBytes();
+  }
+
+  public static class CallQueueTooBigPffeInterceptor extends
+    PreemptiveFastFailInterceptor {
+    public static AtomicInteger numCallQueueTooBig = new AtomicInteger();
+
+    @Override
+    protected void handleFailureToServer(ServerName serverName, Throwable t) {
+      super.handleFailureToServer(serverName, t);
+      numCallQueueTooBig.incrementAndGet();
+    }
+
+    public CallQueueTooBigPffeInterceptor(Configuration conf) {
+      super(conf);
+    }
   }
 }
