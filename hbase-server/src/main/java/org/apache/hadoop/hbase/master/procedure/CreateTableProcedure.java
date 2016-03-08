@@ -471,4 +471,11 @@ public class CreateTableProcedure
       final TableName tableName) throws IOException {
     env.getMasterServices().getTableDescriptors().get(tableName);
   }
+
+  @Override
+  protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
+    // system tables are created on bootstrap internally by the system
+    // the client does not know about this procedures.
+    return !getTableName().isSystemTable();
+  }
 }
