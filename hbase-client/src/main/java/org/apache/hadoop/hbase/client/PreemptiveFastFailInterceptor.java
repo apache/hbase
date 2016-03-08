@@ -17,31 +17,25 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.SyncFailedException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.nio.channels.ClosedChannelException;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
-import org.apache.hadoop.hbase.ipc.FailedServerException;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * 
@@ -124,7 +118,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
         throw new PreemptiveFastFailException(
             context.getFailureInfo().numConsecutiveFailures.get(),
             context.getFailureInfo().timeOfFirstFailureMilliSec,
-            context.getFailureInfo().timeOfLatestAttemptMilliSec, context.getServer());
+            context.getFailureInfo().timeOfLatestAttemptMilliSec, context.getServer(),
+            context.getGuaranteedClientSideOnly().isTrue());
       }
     }
     context.setDidTry(true);
@@ -133,7 +128,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   public void handleFailure(FastFailInterceptorContext context,
       Throwable t) throws IOException {
     handleThrowable(t, context.getServer(),
-        context.getCouldNotCommunicateWithServer());
+        context.getCouldNotCommunicateWithServer(),
+        context.getGuaranteedClientSideOnly());
   }
 
   public void updateFailureInfo(FastFailInterceptorContext context) {
@@ -153,7 +149,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    *          - the throwable to be handled.
    * @throws PreemptiveFastFailException
    */
-  private void handleFailureToServer(ServerName serverName, Throwable t) {
+  @VisibleForTesting
+  protected void handleFailureToServer(ServerName serverName, Throwable t) {
     if (serverName == null || t == null) {
       return;
     }
@@ -172,64 +169,17 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   public void handleThrowable(Throwable t1, ServerName serverName,
-      MutableBoolean couldNotCommunicateWithServer) throws IOException {
-    Throwable t2 = translateException(t1);
+      MutableBoolean couldNotCommunicateWithServer,
+      MutableBoolean guaranteedClientSideOnly) throws IOException {
+    Throwable t2 = ClientExceptionsUtil.translatePFFE(t1);
     boolean isLocalException = !(t2 instanceof RemoteException);
-    if (isLocalException && isConnectionException(t2)) {
+
+    if ((isLocalException && ClientExceptionsUtil.isConnectionException(t2)) ||
+         ClientExceptionsUtil.isCallQueueTooBigException(t2)) {
       couldNotCommunicateWithServer.setValue(true);
+      guaranteedClientSideOnly.setValue(!(t2 instanceof CallTimeoutException));
       handleFailureToServer(serverName, t2);
     }
-  }
-
-  private Throwable translateException(Throwable t) throws IOException {
-    if (t instanceof NoSuchMethodError) {
-      // We probably can't recover from this exception by retrying.
-      LOG.error(t);
-      throw (NoSuchMethodError) t;
-    }
-
-    if (t instanceof NullPointerException) {
-      // The same here. This is probably a bug.
-      LOG.error(t.getMessage(), t);
-      throw (NullPointerException) t;
-    }
-
-    if (t instanceof UndeclaredThrowableException) {
-      t = t.getCause();
-    }
-    if (t instanceof RemoteException) {
-      t = ((RemoteException) t).unwrapRemoteException();
-    }
-    if (t instanceof DoNotRetryIOException) {
-      throw (DoNotRetryIOException) t;
-    }
-    if (t instanceof NeedUnmanagedConnectionException) {
-      throw new DoNotRetryIOException(t);
-    }
-    if (t instanceof Error) {
-      throw (Error) t;
-    }
-    return t;
-  }
-
-  /**
-   * Check if the exception is something that indicates that we cannot
-   * contact/communicate with the server.
-   *
-   * @param e
-   * @return true when exception indicates that the client wasn't able to make contact with server
-   */
-  private boolean isConnectionException(Throwable e) {
-    if (e == null)
-      return false;
-    // This list covers most connectivity exceptions but not all.
-    // For example, in SocketOutputStream a plain IOException is thrown
-    // at times when the channel is closed.
-    return (e instanceof SocketTimeoutException
-        || e instanceof ConnectException || e instanceof ClosedChannelException
-        || e instanceof SyncFailedException || e instanceof EOFException
-        || e instanceof TimeoutException
-        || e instanceof ConnectionClosingException || e instanceof FailedServerException);
   }
 
   /**

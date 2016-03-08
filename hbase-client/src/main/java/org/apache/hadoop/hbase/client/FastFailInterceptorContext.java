@@ -27,8 +27,10 @@ class FastFailInterceptorContext extends
 
   // The variable that indicates whether we were able to connect with the server
   // in the last run
-  private MutableBoolean couldNotCommunicateWithServer = new MutableBoolean(
-      false);
+  private MutableBoolean couldNotCommunicateWithServer = new MutableBoolean(false);
+
+  // If set, we guarantee that no modifications went to server
+  private MutableBoolean guaranteedClientSideOnly = new MutableBoolean(false);
 
   // The variable which indicates whether this was a retry or the first time
   private boolean didTry = false;
@@ -51,6 +53,10 @@ class FastFailInterceptorContext extends
 
   public MutableBoolean getCouldNotCommunicateWithServer() {
     return couldNotCommunicateWithServer;
+  }
+
+  public MutableBoolean getGuaranteedClientSideOnly() {
+    return guaranteedClientSideOnly;
   }
 
   public FailureInfo getFailureInfo() {
@@ -78,6 +84,10 @@ class FastFailInterceptorContext extends
     this.couldNotCommunicateWithServer = couldNotCommunicateWithServer;
   }
 
+  public void setGuaranteedClientSideOnly(MutableBoolean guaranteedClientSideOnly) {
+    this.guaranteedClientSideOnly = guaranteedClientSideOnly;
+  }
+
   public void setDidTry(boolean didTry) {
     this.didTry = didTry;
   }
@@ -103,6 +113,7 @@ class FastFailInterceptorContext extends
     fInfo = null;
     didTry = false;
     couldNotCommunicateWithServer.setValue(false);
+    guaranteedClientSideOnly.setValue(false);
     retryDespiteFastFailMode = false;
     tries = 0;
   }
