@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,7 +53,10 @@ import org.junit.rules.TestRule;
 /**
  * Test for file-backed BucketCache.
  */
-@Category({IOTests.class, SmallTests.class})
+// This is marked a LargeTest so it runs in its own JVM. We do this because we are making use of
+// the cache and the cache is global. We don't want any other concurrent test polluting ours which
+// can happen if more than one test in a single JVM which can happen when tests are small.
+@Category({IOTests.class, LargeTests.class})
 public class TestHFileBackedByBucketCache {
   private static final Log LOG = LogFactory.getLog(TestHFileBackedByBucketCache.class);
   @Rule public TestName name = new TestName();
@@ -134,11 +137,14 @@ public class TestHFileBackedByBucketCache {
     this.conf.setStrings("hbase.bucketcache.bucket.sizes", Integer.toString(BUCKETSIZE));
     // This is minimum bucketcache size.... 1MB.
     this.conf.setInt("hbase.bucketcache.size", 1);
-    CacheConfig cacheConfig = new CacheConfig(conf);
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), this.name.getMethodName());
     // Write 8 entries which should make for four hfileBlocks.
     final int count = 8;
     final int hfileBlockCount = 4;
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), this.name.getMethodName());
+    // Clear out any existing global cache instance. Will pollute our tests below. Any concurrent
+    // running test will pollute our results below.
+    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig cacheConfig = new CacheConfig(conf);
     List<Cell> writtenCells = writeFile(hfilePath, Compression.Algorithm.NONE, cacheConfig, count);
     CacheStats stats = cacheConfig.getBlockCache().getStats();
     List<Cell> readCells = readFile(hfilePath, cacheConfig);
