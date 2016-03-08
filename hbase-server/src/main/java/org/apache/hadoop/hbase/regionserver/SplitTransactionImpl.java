@@ -642,7 +642,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(copyOfParent);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
     mutations.add(putParent);
-    
+
     //Puts for daughters
     Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA);
     Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB);
@@ -687,7 +687,7 @@ public class SplitTransactionImpl implements SplitTransaction {
   class DaughterOpener extends HasThread {
     private final Server server;
     private final HRegion r;
-    private Throwable t = null;
+    private volatile Throwable t = null;
 
     DaughterOpener(final Server s, final HRegion r) {
       super((s == null? "null-services": s.getServerName()) +
@@ -890,7 +890,7 @@ public class SplitTransactionImpl implements SplitTransaction {
       return splitStoreFile(family, sf);
     }
   }
-  
+
   @Override
   public boolean rollback(final Server server, final RegionServerServices services)
       throws IOException {
