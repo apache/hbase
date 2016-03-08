@@ -203,7 +203,7 @@ public class ProcedureInfo implements Cloneable {
 
   @InterfaceAudience.Private
   public boolean hasClientAckTime() {
-    return clientAckTime > 0;
+    return clientAckTime != -1;
   }
 
   @InterfaceAudience.Private
