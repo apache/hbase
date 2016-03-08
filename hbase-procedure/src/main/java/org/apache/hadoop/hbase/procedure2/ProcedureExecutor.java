@@ -876,12 +876,6 @@ public class ProcedureExecutor<TEnvironment> {
         }
         break;
       }
-
-      // if the procedure is kind enough to pass the slot to someone else, yield
-      if (proc.isYieldAfterExecutionStep(getEnvironment())) {
-        runnables.yield(proc);
-        break;
-      }
     } while (procStack.isFailed());
   }
 
@@ -1159,7 +1153,9 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       // if the procedure is kind enough to pass the slot to someone else, yield
-      if (reExecute && procedure.isYieldAfterExecutionStep(getEnvironment())) {
+      if (procedure.getState() == ProcedureState.RUNNABLE &&
+          procedure.isYieldAfterExecutionStep(getEnvironment())) {
+        runnables.yield(procedure);
         return;
       }
 
