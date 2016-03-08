@@ -254,6 +254,15 @@ final public class FilterList extends Filter {
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
     int listize = filters.size();
+    /*
+     * When all filters in a MUST_PASS_ONE FilterList return a SEEK_USING_NEXT_HINT code,
+     * we should return SEEK_NEXT_USING_HINT from the FilterList to utilize the lowest seek value.
+     * 
+     * The following variable tracks whether any of the Filters returns ReturnCode other than
+     * SEEK_NEXT_USING_HINT for MUST_PASS_ONE FilterList, in which case the optimization would
+     * be skipped.
+     */
+    boolean seenNonHintReturnCode = false;
     for (int i = 0; i < listize; i++) {
       Filter filter = filters.get(i);
       if (operator == Operator.MUST_PASS_ALL) {
@@ -279,7 +288,11 @@ final public class FilterList extends Filter {
           continue;
         }
 
-        switch (filter.filterKeyValue(c)) {
+        ReturnCode localRC = filter.filterKeyValue(c);
+        if (localRC != ReturnCode.SEEK_NEXT_USING_HINT) {
+          seenNonHintReturnCode = true;
+        }
+        switch (localRC) {
         case INCLUDE:
           if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
             rc = ReturnCode.INCLUDE;
@@ -308,6 +321,13 @@ final public class FilterList extends Filter {
     // Save the transformed Cell for transform():
     this.transformedCell = transformed;
 
+    /*
+     * The seenNonHintReturnCode flag is intended only for Operator.MUST_PASS_ONE branch.
+     * If we have seen non SEEK_NEXT_USING_HINT ReturnCode, respect that ReturnCode.
+     */
+    if (operator == Operator.MUST_PASS_ONE && !seenNonHintReturnCode) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
     return rc;
   }
 
@@ -423,6 +443,9 @@ final public class FilterList extends Filter {
     // If any condition can pass, we need to keep the min hint
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
+      if (filters.get(i).filterAllRemaining()) {
+        continue;
+      }
       Cell curKeyHint = filters.get(i).getNextCellHint(currentCell);
       if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
