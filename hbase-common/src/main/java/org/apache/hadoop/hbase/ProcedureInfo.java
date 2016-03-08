@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Procedure information
@@ -82,12 +84,50 @@ public class ProcedureInfo implements Cloneable {
       exception, lastUpdate, startTime, result);
   }
 
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Procedure=");
+    sb.append(procName);
+    sb.append(" (id=");
+    sb.append(procId);
+    if (hasParentId()) {
+      sb.append(", parent=");
+      sb.append(parentId);
+    }
+    if (hasOwner()) {
+      sb.append(", owner=");
+      sb.append(procOwner);
+    }
+    sb.append(", state=");
+    sb.append(procState);
+
+    long now = EnvironmentEdgeManager.currentTime();
+    sb.append(", startTime=");
+    sb.append(StringUtils.formatTime(now - startTime));
+    sb.append(" ago, lastUpdate=");
+    sb.append(StringUtils.formatTime(now - startTime));
+    sb.append(" ago");
+
+    if (isFailed()) {
+      sb.append(", exception=\"");
+      sb.append(getExceptionMessage());
+      sb.append("\"");
+    }
+    sb.append(")");
+    return sb.toString();
+  }
+
   public long getProcId() {
     return procId;
   }
 
   public String getProcName() {
     return procName;
+  }
+
+  private boolean hasOwner() {
+    return procOwner != null;
   }
 
   public String getProcOwner() {
