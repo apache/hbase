@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 
@@ -34,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -45,17 +44,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestMetaCache {
-  private static final Log LOG = LogFactory.getLog(TestMetaCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
   private static final byte[] FAMILY = Bytes.toBytes("fam1");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private ConnectionImplementation conn;
+  private HRegionServer badRS;
 
   /**
    * @throws java.lang.Exception
@@ -64,8 +65,9 @@ public class TestMetaCache {
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set("hbase.client.retries.number", "1");
-    conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithFakeRpcServices.class.getName());
     TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME.META_TABLE_NAME);
   }
 
 
@@ -82,8 +84,21 @@ public class TestMetaCache {
    */
   @Before
   public void setup() throws Exception {
-    conn = (ConnectionImplementation)ConnectionFactory.createConnection(
-        TEST_UTIL.getConfiguration());
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    cluster.getConfiguration().setStrings(HConstants.REGION_SERVER_IMPL,
+      RegionServerWithFakeRpcServices.class.getName());
+    JVMClusterUtil.RegionServerThread rsThread = cluster.startRegionServer();
+    rsThread.waitForServerOnline();
+    badRS = rsThread.getRegionServer();
+    assertTrue(badRS.getRSRpcServices() instanceof FakeRSRpcServices);
+    cluster.getConfiguration().setStrings(HConstants.REGION_SERVER_IMPL,
+      HRegionServer.class.getName());
+
+    assertEquals(2, cluster.getRegionServerThreads().size());
+
+    conn = (ConnectionImplementation) ConnectionFactory.createConnection(
+      TEST_UTIL.getConfiguration());
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     fam.setMaxVersions(2);
@@ -105,7 +120,7 @@ public class TestMetaCache {
   @Test
   public void testPreserveMetaCacheOnException() throws Exception {
     Table table = conn.getTable(TABLE_NAME);
-    byte [] row = HBaseTestingUtility.KEYS[2];
+    byte[] row = badRS.getOnlineRegions().get(0).getRegionInfo().getStartKey();
 
     Put put = new Put(row);
     put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(10));
@@ -151,19 +166,19 @@ public class TestMetaCache {
 
   public static List<Throwable> metaCachePreservingExceptions() {
     return new ArrayList<Throwable>() {{
-        add(new RegionOpeningException(" "));
-        add(new RegionTooBusyException());
-        add(new ThrottlingException(" "));
-        add(new MultiActionResultTooLarge(" "));
-        add(new RetryImmediatelyException(" "));
-        add(new CallQueueTooBigException());
+      add(new RegionOpeningException(" "));
+      add(new RegionTooBusyException());
+      add(new ThrottlingException(" "));
+      add(new MultiActionResultTooLarge(" "));
+      add(new RetryImmediatelyException(" "));
+      add(new CallQueueTooBigException());
     }};
   }
 
   protected static class RegionServerWithFakeRpcServices extends HRegionServer {
 
     public RegionServerWithFakeRpcServices(Configuration conf, CoordinatedStateManager cp)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       super(conf, cp);
     }
 
@@ -185,7 +200,7 @@ public class TestMetaCache {
 
     @Override
     public GetResponse get(final RpcController controller,
-        final ClientProtos.GetRequest request) throws ServiceException {
+                           final ClientProtos.GetRequest request) throws ServiceException {
       throwSomeExceptions();
       return super.get(controller, request);
     }
@@ -224,7 +239,7 @@ public class TestMetaCache {
       // single Gets.
       expCount++;
       Throwable t = metaCachePreservingExceptions.get(
-          expCount % metaCachePreservingExceptions.size());
+        expCount % metaCachePreservingExceptions.size());
       throw new ServiceException(t);
     }
   }
