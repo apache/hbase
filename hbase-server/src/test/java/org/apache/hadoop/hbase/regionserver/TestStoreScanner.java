@@ -28,9 +28,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -44,21 +43,25 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 // Can't be small as it plays with EnvironmentEdgeManager
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestStoreScanner extends TestCase {
+public class TestStoreScanner {
+  @Rule public TestName name = new TestName();
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE,
       Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, CellComparator.COMPARATOR);
   private ScanType scanType = ScanType.USER_SCAN;
-
-  public void setUp() throws Exception {
-    super.setUp();
-  }
 
   /*
    * Test utility for building a NavigableSet for scanners.
@@ -74,6 +77,7 @@ public class TestStoreScanner extends TestCase {
     return cols;
   }
 
+  @Test
   public void testScanTimeRange() throws IOException {
     String r1 = "R1";
     // returns only 1 of these 2 even though same timestamp
@@ -91,42 +95,48 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 6);
     scanSpec.setMaxVersions();
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(5, results.size());
-    assertEquals(kvs[kvs.length - 1], results.get(0));
+    List<Cell> results = null;
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(5, results.size());
+      Assert.assertEquals(kvs[kvs.length - 1], results.get(0));
+    }
     // Scan limited TimeRange
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(1, 3);
     scanSpec.setMaxVersions();
-    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
-        scanners);
-    results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(2, results.size());
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(2, results.size());
+    }
     // Another range.
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(5, 10);
     scanSpec.setMaxVersions();
-    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
-        scanners);
-    results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+    }
     // See how TimeRange and Versions interact.
     // Another range.
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 10);
     scanSpec.setMaxVersions(3);
-    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
-        scanners);
-    results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(3, results.size());
+    try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
+        scanners)) {
+      results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(3, results.size());
+    }
   }
 
+  @Test
   public void testScanSameTimestamp() throws IOException {
     // returns only 1 of these 2 even though same timestamp
     KeyValue [] kvs = new KeyValue[] {
@@ -140,13 +150,13 @@ public class TestStoreScanner extends TestCase {
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
-
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[0], results.get(0));
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[0], results.get(0));
+    }
   }
 
   /*
@@ -156,6 +166,7 @@ public class TestStoreScanner extends TestCase {
    * TODO this comment makes no sense above. Appears to do the right thing.
    * @throws IOException
    */
+  @Test
   public void testWontNextToNext() throws IOException {
     // build the scan file:
     KeyValue [] kvs = new KeyValue[] {
@@ -167,27 +178,27 @@ public class TestStoreScanner extends TestCase {
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      scan.next(results);
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[0], results.get(0));
+      // should be ok...
+      // now scan _next_ again.
+      results.clear();
+      scan.next(results);
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[2], results.get(0));
 
-    List<Cell> results = new ArrayList<Cell>();
-    scan.next(results);
-    assertEquals(1, results.size());
-    assertEquals(kvs[0], results.get(0));
-    // should be ok...
-    // now scan _next_ again.
-    results.clear();
-    scan.next(results);
-    assertEquals(1, results.size());
-    assertEquals(kvs[2], results.get(0));
-
-    results.clear();
-    scan.next(results);
-    assertEquals(0, results.size());
-
+      results.clear();
+      scan.next(results);
+      Assert.assertEquals(0, results.size());
+    }
   }
 
 
+  @Test
   public void testDeleteVersionSameTimestamp() throws IOException {
     KeyValue [] kvs = new KeyValue [] {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
@@ -195,18 +206,19 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
-
-    List<Cell> results = new ArrayList<Cell>();
-    assertFalse(scan.next(results));
-    assertEquals(0, results.size());
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertFalse(scan.next(results));
+      Assert.assertEquals(0, results.size());
+    }
   }
 
   /*
    * Test the case where there is a delete row 'in front of' the next row, the scanner
    * will move to the next row.
    */
+  @Test
   public void testDeletedRowThenGoodRow() throws IOException {
     KeyValue [] kvs = new KeyValue [] {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
@@ -215,18 +227,18 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(0, results.size());
 
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(0, results.size());
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[2], results.get(0));
 
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[2], results.get(0));
-
-    assertEquals(false, scan.next(results));
+      Assert.assertEquals(false, scan.next(results));
+    }
   }
 
   public void testDeleteVersionMaskingMultiplePuts() throws IOException {
@@ -242,15 +254,16 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
 
-    StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
-        scanInfo, scanType, getCols("a"), scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    // the two put at ts=now will be masked by the 1 delete, and
-    // since the scan default returns 1 version we'll return the newest
-    // key, which is kvs[2], now-100.
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs2[1], results.get(0));
+    try (StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")), scanInfo, scanType,
+        getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      // the two put at ts=now will be masked by the 1 delete, and
+      // since the scan default returns 1 version we'll return the newest
+      // key, which is kvs[2], now-100.
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs2[1], results.get(0));
+    }
   }
   public void testDeleteVersionsMixedAndMultipleVersionReturn() throws IOException {
     long now = System.currentTimeMillis();
@@ -267,15 +280,17 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(2, results.size());
-    assertEquals(kvs2[1], results.get(0));
-    assertEquals(kvs2[0], results.get(1));
+    try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(2, results.size());
+      Assert.assertEquals(kvs2[1], results.get(0));
+      Assert.assertEquals(kvs2[0], results.get(1));
+    }
   }
 
+  @Test
   public void testWildCardOneVersionScan() throws IOException {
     KeyValue [] kvs = new KeyValue [] {
         KeyValueTestUtil.create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"),
@@ -283,15 +298,17 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
-        scanInfo, scanType, null, scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(2, results.size());
-    assertEquals(kvs[0], results.get(0));
-    assertEquals(kvs[1], results.get(1));
+    try (StoreScanner scan =
+        new StoreScanner(new Scan(Bytes.toBytes("R1")), scanInfo, scanType, null, scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(2, results.size());
+      Assert.assertEquals(kvs[0], results.get(0));
+      Assert.assertEquals(kvs[1], results.get(1));
+    }
   }
 
+  @Test
   public void testWildCardScannerUnderDeletes() throws IOException {
     KeyValue [] kvs = new KeyValue [] {
         KeyValueTestUtil.create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"), // inc
@@ -312,18 +329,20 @@ public class TestStoreScanner extends TestCase {
 
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(new Scan().setMaxVersions(2),
-        scanInfo, scanType, null, scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(5, results.size());
-    assertEquals(kvs[0], results.get(0));
-    assertEquals(kvs[2], results.get(1));
-    assertEquals(kvs[3], results.get(2));
-    assertEquals(kvs[6], results.get(3));
-    assertEquals(kvs[7], results.get(4));
+    try (StoreScanner scan = new StoreScanner(new Scan().setMaxVersions(2),
+        scanInfo, scanType, null, scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(5, results.size());
+      Assert.assertEquals(kvs[0], results.get(0));
+      Assert.assertEquals(kvs[2], results.get(1));
+      Assert.assertEquals(kvs[3], results.get(2));
+      Assert.assertEquals(kvs[6], results.get(3));
+      Assert.assertEquals(kvs[7], results.get(4));
+    }
   }
 
+  @Test
   public void testDeleteFamily() throws IOException {
     KeyValue [] kvs = new KeyValue[] {
         KeyValueTestUtil.create("R1", "cf", "a", 100, KeyValue.Type.DeleteFamily, "dont-care"),
@@ -340,19 +359,21 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(
-        new Scan().setMaxVersions(Integer.MAX_VALUE), scanInfo, scanType, null,
-        scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(0, results.size());
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[kvs.length-1], results.get(0));
+    try (StoreScanner scan =
+        new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), scanInfo, scanType, null,
+            scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(0, results.size());
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[kvs.length-1], results.get(0));
 
-    assertEquals(false, scan.next(results));
+      Assert.assertEquals(false, scan.next(results));
+    }
   }
 
+  @Test
   public void testDeleteColumn() throws IOException {
     KeyValue [] kvs = new KeyValue[] {
         KeyValueTestUtil.create("R1", "cf", "a", 10, KeyValue.Type.DeleteColumn, "dont-care"),
@@ -361,12 +382,13 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "b", 5, KeyValue.Type.Put, "dont-care")
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType, null,
-        scanners);
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[3], results.get(0));
+    try (StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType, null,
+        scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[3], results.get(0));
+    }
   }
 
   private static final  KeyValue [] kvs = new KeyValue[] {
@@ -382,30 +404,32 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
 
+  @Test
   public void testSkipColumn() throws IOException {
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType,
-        getCols("a", "d"), scanners);
+    try (StoreScanner scan =
+        new StoreScanner(new Scan(), scanInfo, scanType, getCols("a", "d"), scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(2, results.size());
+      Assert.assertEquals(kvs[0], results.get(0));
+      Assert.assertEquals(kvs[3], results.get(1));
+      results.clear();
 
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scan.next(results));
-    assertEquals(2, results.size());
-    assertEquals(kvs[0], results.get(0));
-    assertEquals(kvs[3], results.get(1));
-    results.clear();
+      Assert.assertEquals(true, scan.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[kvs.length-1], results.get(0));
 
-    assertEquals(true, scan.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[kvs.length-1], results.get(0));
-
-    results.clear();
-    assertEquals(false, scan.next(results));
+      results.clear();
+      Assert.assertEquals(false, scan.next(results));
+    }
   }
 
   /*
    * Test expiration of KeyValues in combination with a configured TTL for
    * a column family (as should be triggered in a major compaction).
    */
+  @Test
   public void testWildCardTtlScan() throws IOException {
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -424,41 +448,41 @@ public class TestStoreScanner extends TestCase {
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
         CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
-    StoreScanner scanner =
-      new StoreScanner(scan, scanInfo, scanType,
-          null, scanners);
+    try (StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scanner.next(results));
+      Assert.assertEquals(2, results.size());
+      Assert.assertEquals(kvs[1], results.get(0));
+      Assert.assertEquals(kvs[2], results.get(1));
+      results.clear();
 
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scanner.next(results));
-    assertEquals(2, results.size());
-    assertEquals(kvs[1], results.get(0));
-    assertEquals(kvs[2], results.get(1));
-    results.clear();
+      Assert.assertEquals(true, scanner.next(results));
+      Assert.assertEquals(3, results.size());
+      Assert.assertEquals(kvs[4], results.get(0));
+      Assert.assertEquals(kvs[5], results.get(1));
+      Assert.assertEquals(kvs[6], results.get(2));
+      results.clear();
 
-    assertEquals(true, scanner.next(results));
-    assertEquals(3, results.size());
-    assertEquals(kvs[4], results.get(0));
-    assertEquals(kvs[5], results.get(1));
-    assertEquals(kvs[6], results.get(2));
-    results.clear();
-
-    assertEquals(false, scanner.next(results));
+      Assert.assertEquals(false, scanner.next(results));
+    }
   }
 
+  @Test
   public void testScannerReseekDoesntNPE() throws Exception {
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType,
-        getCols("a", "d"), scanners);
+    try (StoreScanner scan =
+        new StoreScanner(new Scan(), scanInfo, scanType, getCols("a", "d"), scanners)) {
 
-    // Previously a updateReaders twice in a row would cause an NPE.  In test this would also
-    // normally cause an NPE because scan.store is null.  So as long as we get through these
-    // two calls we are good and the bug was quashed.
+      // Previously a updateReaders twice in a row would cause an NPE.  In test this would also
+      // normally cause an NPE because scan.store is null.  So as long as we get through these
+      // two calls we are good and the bug was quashed.
 
-    scan.updateReaders(new ArrayList<StoreFile>());
+      scan.updateReaders(new ArrayList<StoreFile>());
 
-    scan.updateReaders(new ArrayList<StoreFile>());
+      scan.updateReaders(new ArrayList<StoreFile>());
 
-    scan.peek();
+      scan.peek();
+    }
   }
 
 
@@ -472,14 +496,16 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
-        getCols("a"), scanners);
-    assertNull(scan.peek());
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"), scanners)) {
+      Assert.assertNull(scan.peek());
+    }
   }
 
   /**
    * Ensure that expired delete family markers don't override valid puts
    */
+  @Test
   public void testExpiredDeleteFamily() throws Exception {
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -495,18 +521,20 @@ public class TestStoreScanner extends TestCase {
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
         CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
-    StoreScanner scanner =
-        new StoreScanner(scan, scanInfo, scanType, null, scanners);
+    try (StoreScanner scanner =
+        new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
 
-    List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, scanner.next(results));
-    assertEquals(1, results.size());
-    assertEquals(kvs[1], results.get(0));
-    results.clear();
+      List<Cell> results = new ArrayList<Cell>();
+      Assert.assertEquals(true, scanner.next(results));
+      Assert.assertEquals(1, results.size());
+      Assert.assertEquals(kvs[1], results.get(0));
+      results.clear();
 
-    assertEquals(false, scanner.next(results));
+      Assert.assertEquals(false, scanner.next(results));
+    }
   }
 
+  @Test
   public void testDeleteMarkerLongevity() throws Exception {
     try {
       final long now = System.currentTimeMillis();
@@ -558,26 +586,24 @@ public class TestStoreScanner extends TestCase {
         KeepDeletedCells.FALSE /* keepDeletedCells */,
         200, /* timeToPurgeDeletes */
         CellComparator.COMPARATOR);
-      StoreScanner scanner =
+      try (StoreScanner scanner =
         new StoreScanner(scan, scanInfo,
           ScanType.COMPACT_DROP_DELETES, null, scanners,
-          HConstants.OLDEST_TIMESTAMP);
-      List<Cell> results = new ArrayList<Cell>();
-      results = new ArrayList<Cell>();
-      assertEquals(true, scanner.next(results));
-      assertEquals(kvs[0], results.get(0));
-      assertEquals(kvs[2], results.get(1));
-      assertEquals(kvs[3], results.get(2));
-      assertEquals(kvs[5], results.get(3));
-      assertEquals(kvs[9], results.get(4));
-      assertEquals(kvs[14], results.get(5));
-      assertEquals(kvs[15], results.get(6));
-      assertEquals(7, results.size());
-      scanner.close();
-    }finally{
-    EnvironmentEdgeManagerTestHelper.reset();
+          HConstants.OLDEST_TIMESTAMP)) {
+        List<Cell> results = new ArrayList<Cell>();
+        results = new ArrayList<Cell>();
+        Assert.assertEquals(true, scanner.next(results));
+        Assert.assertEquals(kvs[0], results.get(0));
+        Assert.assertEquals(kvs[2], results.get(1));
+        Assert.assertEquals(kvs[3], results.get(2));
+        Assert.assertEquals(kvs[5], results.get(3));
+        Assert.assertEquals(kvs[9], results.get(4));
+        Assert.assertEquals(kvs[14], results.get(5));
+        Assert.assertEquals(kvs[15], results.get(6));
+        Assert.assertEquals(7, results.size());
+      }
+    } finally {
+      EnvironmentEdgeManagerTestHelper.reset();
     }
   }
-
 }
-
