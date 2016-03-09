@@ -1235,10 +1235,11 @@ public final class Canary implements Tool {
 
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    AuthUtil.launchAuthChore(conf);
-
+    
     // loading the generic options to conf
     new GenericOptionsParser(conf, args);
+    
+    AuthUtil.launchAuthChore(conf);  
 
     int numThreads = conf.getInt("hbase.canary.threads.num", MAX_THREADS_NUM);
     LOG.info("Number of exection threads " + numThreads);
