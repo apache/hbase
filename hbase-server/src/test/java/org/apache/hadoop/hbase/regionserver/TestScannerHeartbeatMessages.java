@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,6 +50,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
@@ -86,7 +90,7 @@ public class TestScannerHeartbeatMessages {
    */
   private static TableName TABLE_NAME = TableName.valueOf("testScannerHeartbeatMessagesTable");
 
-  private static int NUM_ROWS = 10;
+  private static int NUM_ROWS = 5;
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[][] ROWS = HTestConst.makeNAscii(ROW, NUM_ROWS);
 
@@ -197,6 +201,7 @@ public class TestScannerHeartbeatMessages {
   public void testScannerHeartbeatMessages() throws Exception {
     testImportanceOfHeartbeats(testHeartbeatBetweenRows());
     testImportanceOfHeartbeats(testHeartbeatBetweenColumnFamilies());
+    testImportanceOfHeartbeats(testHeartbeatWithSparseFilter());
   }
 
   /**
@@ -270,6 +275,63 @@ public class TestScannerHeartbeatMessages {
         testEquivalenceOfScanWithHeartbeats(scanCopy, -1, DEFAULT_CF_SLEEP_TIME, false);
         scanCopy = new Scan(baseScan);
         testEquivalenceOfScanWithHeartbeats(scanCopy, -1, DEFAULT_CF_SLEEP_TIME, true);
+        return null;
+      }
+    };
+  }
+
+  public static class SparseFilter extends FilterBase{
+
+    @Override
+    public ReturnCode filterKeyValue(Cell v) throws IOException {
+      try {
+        Thread.sleep(SERVER_TIME_LIMIT + 10);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      return Bytes.equals(CellUtil.cloneRow(v), ROWS[NUM_ROWS - 1]) ?
+          ReturnCode.INCLUDE :
+          ReturnCode.SKIP;
+    }
+
+    public static Filter parseFrom(final byte [] pbBytes){
+      return new SparseFilter();
+    }
+  }
+
+  /**
+   * Test the case that there is a filter which filters most of cells
+   * @throws Exception
+   */
+  public Callable<Void> testHeartbeatWithSparseFilter() throws Exception {
+    return new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Scan scan = new Scan();
+        scan.setMaxResultSize(Long.MAX_VALUE);
+        scan.setCaching(Integer.MAX_VALUE);
+        scan.setFilter(new SparseFilter());
+        ResultScanner scanner = TABLE.getScanner(scan);
+        int num = 0;
+        while (scanner.next() != null) {
+          num++;
+        }
+        assertEquals(1, num);
+        scanner.close();
+
+        scan = new Scan();
+        scan.setMaxResultSize(Long.MAX_VALUE);
+        scan.setCaching(Integer.MAX_VALUE);
+        scan.setFilter(new SparseFilter());
+        scan.setAllowPartialResults(true);
+        scanner = TABLE.getScanner(scan);
+        num = 0;
+        while (scanner.next() != null) {
+          num++;
+        }
+        assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, num);
+        scanner.close();
+
         return null;
       }
     };
