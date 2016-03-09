@@ -27,7 +27,9 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.spark.sql.datasources.hbase.Field;
 import scala.collection.mutable.MutableList;
+
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -66,7 +68,7 @@ public class SparkSQLPushDownFilter extends FilterBase{
 
   public SparkSQLPushDownFilter(DynamicLogicExpression dynamicLogicExpression,
                                 byte[][] valueFromQueryArray,
-                                MutableList<SchemaQualifierDefinition> columnDefinitions) {
+                                MutableList<Field> fields) {
     this.dynamicLogicExpression = dynamicLogicExpression;
     this.valueFromQueryArray = valueFromQueryArray;
 
@@ -74,12 +76,12 @@ public class SparkSQLPushDownFilter extends FilterBase{
     this.currentCellToColumnIndexMap =
             new HashMap<>();
 
-    for (int i = 0; i < columnDefinitions.size(); i++) {
-      SchemaQualifierDefinition definition = columnDefinitions.get(i).get();
+    for (int i = 0; i < fields.size(); i++) {
+      Field field = fields.apply(i);
 
+      byte[] cfBytes = field.cfBytes();
       ByteArrayComparable familyByteComparable =
-              new ByteArrayComparable(definition.columnFamilyBytes(),
-                      0, definition.columnFamilyBytes().length);
+          new ByteArrayComparable(cfBytes, 0, cfBytes.length);
 
       HashMap<ByteArrayComparable, String> qualifierIndexMap =
               currentCellToColumnIndexMap.get(familyByteComparable);
@@ -88,11 +90,11 @@ public class SparkSQLPushDownFilter extends FilterBase{
         qualifierIndexMap = new HashMap<>();
         currentCellToColumnIndexMap.put(familyByteComparable, qualifierIndexMap);
       }
+      byte[] qBytes = field.colBytes();
       ByteArrayComparable qualifierByteComparable =
-              new ByteArrayComparable(definition.qualifierBytes(), 0,
-                      definition.qualifierBytes().length);
+          new ByteArrayComparable(qBytes, 0, qBytes.length);
 
-      qualifierIndexMap.put(qualifierByteComparable, definition.columnName());
+      qualifierIndexMap.put(qualifierByteComparable, field.colName());
     }
   }
 

@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.client.{Put, ConnectionFactory}
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{TableName, HBaseTestingUtility}
+import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext, Logging}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
@@ -137,20 +138,37 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       connection.close()
     }
 
+    def hbaseTable1Catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"}
+            |}
+          |}""".stripMargin
+
     new HBaseContext(sc, TEST_UTIL.getConfiguration)
     sqlContext = new SQLContext(sc)
 
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
-        "hbase.table" -> "t1"))
+      Map(HBaseTableCatalog.tableCatalog->hbaseTable1Catalog))
 
     df.registerTempTable("hbaseTable1")
 
+    def hbaseTable2Catalog = s"""{
+            |"table":{"namespace":"default", "name":"t2"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"int"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"}
+            |}
+          |}""".stripMargin
+
+
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD INT :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
-        "hbase.table" -> "t2"))
+      Map(HBaseTableCatalog.tableCatalog->hbaseTable2Catalog))
 
     df.registerTempTable("hbaseTable2")
   }
@@ -512,13 +530,20 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     assert(scanRange1.isUpperBoundEqualTo)
   }
 
-
   test("Test table that doesn't exist") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1NotThere"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"c", "type":"string"}
+            |}
+          |}""".stripMargin
+
     intercept[Exception] {
       df = sqlContext.load("org.apache.hadoop.hbase.spark",
-        Map("hbase.columns.mapping" ->
-          "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
-          "hbase.table" -> "t1NotThere"))
+        Map(HBaseTableCatalog.tableCatalog->catalog))
 
       df.registerTempTable("hbaseNonExistingTmp")
 
@@ -530,11 +555,20 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
   }
 
+
   test("Test table with column that doesn't exist") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"},
+              |"C_FIELD":{"cf":"c", "col":"c", "type":"string"}
+            |}
+          |}""".stripMargin
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, C_FIELD STRING c:c,",
-        "hbase.table" -> "t1"))
+      Map(HBaseTableCatalog.tableCatalog->catalog))
 
     df.registerTempTable("hbaseFactColumnTmp")
 
@@ -549,10 +583,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   }
 
   test("Test table with INT column") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"},
+              |"I_FIELD":{"cf":"c", "col":"i", "type":"int"}
+            |}
+          |}""".stripMargin
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, I_FIELD INT c:i,",
-        "hbase.table" -> "t1"))
+      Map(HBaseTableCatalog.tableCatalog->catalog))
 
     df.registerTempTable("hbaseIntTmp")
 
@@ -571,10 +613,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   }
 
   test("Test table with INT column defined at wrong type") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"},
+              |"I_FIELD":{"cf":"c", "col":"i", "type":"string"}
+            |}
+          |}""".stripMargin
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, I_FIELD STRING c:i,",
-        "hbase.table" -> "t1"))
+      Map(HBaseTableCatalog.tableCatalog->catalog))
 
     df.registerTempTable("hbaseIntWrongTypeTmp")
 
@@ -594,32 +644,19 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     assert(localResult(0).getString(2).charAt(3).toByte == 1)
   }
 
-  test("Test improperly formatted column mapping") {
-    intercept[IllegalArgumentException] {
-      df = sqlContext.load("org.apache.hadoop.hbase.spark",
-        Map("hbase.columns.mapping" ->
-          "KEY_FIELD,STRING,:key, A_FIELD,STRING,c:a, B_FIELD,STRING,c:b, I_FIELD,STRING,c:i,",
-          "hbase.table" -> "t1"))
-
-      df.registerTempTable("hbaseBadTmp")
-
-      val result = sqlContext.sql("SELECT KEY_FIELD, " +
-        "B_FIELD, I_FIELD FROM hbaseBadTmp")
-
-      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
-      assert(executionRules.dynamicLogicExpression == null)
-
-      result.take(5)
-    }
-  }
-
-
   test("Test bad column type") {
-    intercept[IllegalArgumentException] {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"FOOBAR"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"I_FIELD":{"cf":"c", "col":"i", "type":"string"}
+            |}
+          |}""".stripMargin
+    intercept[Exception] {
       df = sqlContext.load("org.apache.hadoop.hbase.spark",
-        Map("hbase.columns.mapping" ->
-          "KEY_FIELD FOOBAR :key, A_FIELD STRING c:a, B_FIELD STRING c:b, I_FIELD STRING c:i,",
-          "hbase.table" -> "t1"))
+        Map(HBaseTableCatalog.tableCatalog->catalog))
 
       df.registerTempTable("hbaseIntWrongTypeTmp")
 
@@ -665,10 +702,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   }
 
   test("Test table with sparse column") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"},
+              |"Z_FIELD":{"cf":"c", "col":"z", "type":"string"}
+            |}
+          |}""".stripMargin
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, Z_FIELD STRING c:z,",
-        "hbase.table" -> "t1"))
+      Map(HBaseTableCatalog.tableCatalog->catalog))
 
     df.registerTempTable("hbaseZTmp")
 
@@ -688,11 +733,19 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   }
 
   test("Test with column logic disabled") {
+    val catalog = s"""{
+            |"table":{"namespace":"default", "name":"t1"},
+            |"rowkey":"key",
+            |"columns":{
+              |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+              |"B_FIELD":{"cf":"c", "col":"b", "type":"string"},
+              |"Z_FIELD":{"cf":"c", "col":"z", "type":"string"}
+            |}
+          |}""".stripMargin
     df = sqlContext.load("org.apache.hadoop.hbase.spark",
-      Map("hbase.columns.mapping" ->
-        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, Z_FIELD STRING c:z,",
-        "hbase.table" -> "t1",
-        "hbase.push.down.column.filter" -> "false"))
+      Map(HBaseTableCatalog.tableCatalog->catalog,
+        HBaseSparkConf.PUSH_DOWN_COLUMN_FILTER -> "false"))
 
     df.registerTempTable("hbaseNoPushDownTmp")
 

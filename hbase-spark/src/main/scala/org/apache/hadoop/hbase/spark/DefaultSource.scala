@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositione
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.datasources.hbase.{Field, HBaseTableCatalog}
+import org.apache.spark.sql.types.{DataType => SparkDataType}
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
@@ -48,13 +49,6 @@ import scala.collection.mutable
  *   Through the HBase Bytes object commands.
  */
 class DefaultSource extends RelationProvider with Logging {
-
-  val TABLE_KEY:String = "hbase.table"
-  val SCHEMA_COLUMNS_MAPPING_KEY:String = "hbase.columns.mapping"
-  val HBASE_CONFIG_RESOURCES_LOCATIONS:String = "hbase.config.resources"
-  val USE_HBASE_CONTEXT:String = "hbase.use.hbase.context"
-  val PUSH_DOWN_COLUMN_FILTER:String = "hbase.push.down.column.filter"
-
   /**
    * Is given input from SparkSQL to construct a BaseRelation
    * @param sqlContext SparkSQL context
@@ -64,87 +58,26 @@ class DefaultSource extends RelationProvider with Logging {
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]):
   BaseRelation = {
-
-
-    val tableName = parameters.get(TABLE_KEY)
-    if (tableName.isEmpty)
-      new IllegalArgumentException("Invalid value for " + TABLE_KEY +" '" + tableName + "'")
-
-    val schemaMappingString = parameters.getOrElse(SCHEMA_COLUMNS_MAPPING_KEY, "")
-    val hbaseConfigResources = parameters.getOrElse(HBASE_CONFIG_RESOURCES_LOCATIONS, "")
-    val useHBaseReources = parameters.getOrElse(USE_HBASE_CONTEXT, "true")
-    val usePushDownColumnFilter = parameters.getOrElse(PUSH_DOWN_COLUMN_FILTER, "true")
-
-    new HBaseRelation(tableName.get,
-      generateSchemaMappingMap(schemaMappingString),
-      hbaseConfigResources,
-      useHBaseReources.equalsIgnoreCase("true"),
-      usePushDownColumnFilter.equalsIgnoreCase("true"),
-      parameters)(sqlContext)
-  }
-
-  /**
-   * Reads the SCHEMA_COLUMNS_MAPPING_KEY and converts it to a map of
-   * SchemaQualifierDefinitions with the original sql column name as the key
-   * @param schemaMappingString The schema mapping string from the SparkSQL map
-   * @return                    A map of definitions keyed by the SparkSQL column name
-   */
-  def generateSchemaMappingMap(schemaMappingString:String):
-  java.util.HashMap[String, SchemaQualifierDefinition] = {
-    try {
-      val columnDefinitions = schemaMappingString.split(',')
-      val resultingMap = new java.util.HashMap[String, SchemaQualifierDefinition]()
-      columnDefinitions.map(cd => {
-        val parts = cd.trim.split(' ')
-
-        //Make sure we get three parts
-        //<ColumnName> <ColumnType> <ColumnFamily:Qualifier>
-        if (parts.length == 3) {
-          val hbaseDefinitionParts = if (parts(2).charAt(0) == ':') {
-            Array[String]("", "key")
-          } else {
-            parts(2).split(':')
-          }
-          resultingMap.put(parts(0), new SchemaQualifierDefinition(parts(0),
-            parts(1), hbaseDefinitionParts(0), hbaseDefinitionParts(1)))
-        } else {
-          throw new IllegalArgumentException("Invalid value for schema mapping '" + cd +
-            "' should be '<columnName> <columnType> <columnFamily>:<qualifier>' " +
-            "for columns and '<columnName> <columnType> :<qualifier>' for rowKeys")
-        }
-      })
-      resultingMap
-    } catch {
-      case e:Exception => throw
-        new IllegalArgumentException("Invalid value for " + SCHEMA_COLUMNS_MAPPING_KEY +
-          " '" + schemaMappingString + "'", e )
-    }
+    new HBaseRelation(parameters, None)(sqlContext)
   }
 }
 
 /**
  * Implementation of Spark BaseRelation that will build up our scan logic
  * , do the scan pruning, filter push down, and value conversions
- *
- * @param tableName               HBase table that we plan to read from
- * @param schemaMappingDefinition SchemaMapping information to map HBase
- *                                Qualifiers to SparkSQL columns
- * @param configResources         Optional comma separated list of config resources
- *                                to get based on their URI
- * @param useHBaseContext         If true this will look to see if
- *                                HBaseContext.latest is populated to use that
- *                                connection information
  * @param sqlContext              SparkSQL context
  */
-case class HBaseRelation (val tableName:String,
-                     val schemaMappingDefinition:
-                     java.util.HashMap[String, SchemaQualifierDefinition],
-                     val configResources:String,
-                     val useHBaseContext:Boolean,
-                     val usePushDownColumnFilter:Boolean,
-                     @transient parameters: Map[String, String] ) (
-  @transient val sqlContext:SQLContext)
+case class HBaseRelation (
+    @transient parameters: Map[String, String],
+    userSpecifiedSchema: Option[StructType]
+  )(@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan with Logging {
+  val catalog = HBaseTableCatalog(parameters)
+  def tableName = catalog.name
+  val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_RESOURCES_LOCATIONS, "")
+  val useHBaseContext =  parameters.get(HBaseSparkConf.USE_HBASE_CONTEXT).map(_.toBoolean).getOrElse(true)
+  val usePushDownColumnFilter = parameters.get(HBaseSparkConf.PUSH_DOWN_COLUMN_FILTER)
+    .map(_.toBoolean).getOrElse(true)
 
   // The user supplied per table parameter will overwrite global ones in SparkConf
   val blockCacheEnable = parameters.get(HBaseSparkConf.BLOCK_CACHE_ENABLE).map(_.toBoolean)
@@ -176,33 +109,12 @@ case class HBaseRelation (val tableName:String,
   def hbaseConf = wrappedConf.value
 
   /**
-   * Generates a Spark SQL schema object so Spark SQL knows what is being
+   * Generates a Spark SQL schema objeparametersct so Spark SQL knows what is being
    * provided by this BaseRelation
    *
    * @return schema generated from the SCHEMA_COLUMNS_MAPPING_KEY value
    */
-  override def schema: StructType = {
-
-    val metadataBuilder = new MetadataBuilder()
-
-    val structFieldArray = new Array[StructField](schemaMappingDefinition.size())
-
-    val schemaMappingDefinitionIt = schemaMappingDefinition.values().iterator()
-    var indexCounter = 0
-    while (schemaMappingDefinitionIt.hasNext) {
-      val c = schemaMappingDefinitionIt.next()
-
-      val metadata = metadataBuilder.putString("name", c.columnName).build()
-      val structField =
-        new StructField(c.columnName, c.columnSparkSqlType, nullable = true, metadata)
-
-      structFieldArray(indexCounter) = structField
-      indexCounter += 1
-    }
-
-    val result = new StructType(structFieldArray)
-    result
-  }
+  override val schema: StructType = userSpecifiedSchema.getOrElse(catalog.toDataType)
 
   /**
    * Here we are building the functionality to populate the resulting RDD[Row]
@@ -217,7 +129,6 @@ case class HBaseRelation (val tableName:String,
    *                        execute the query on
    */
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
-
 
     val pushDownTuple = buildPushDownPredicatesResource(filters)
     val pushDownRowKeyFilter = pushDownTuple._1
@@ -236,16 +147,12 @@ case class HBaseRelation (val tableName:String,
     logDebug("valueArray:                     " + valueArray.length)
 
     val requiredQualifierDefinitionList =
-      new mutable.MutableList[SchemaQualifierDefinition]
+      new mutable.MutableList[Field]
 
     requiredColumns.foreach( c => {
-      val definition = schemaMappingDefinition.get(c)
-      requiredQualifierDefinitionList += definition
+      val field = catalog.getField(c)
+      requiredQualifierDefinitionList += field
     })
-
-    //Create a local variable so that scala doesn't have to
-    // serialize the whole HBaseRelation Object
-    val serializableDefinitionMap = schemaMappingDefinition
 
     //retain the information for unit testing checks
     DefaultSourceStaticUtils.populateLatestExecutionRules(pushDownRowKeyFilter,
@@ -258,8 +165,8 @@ case class HBaseRelation (val tableName:String,
     pushDownRowKeyFilter.points.foreach(p => {
       val get = new Get(p)
       requiredQualifierDefinitionList.foreach( d => {
-        if (d.columnFamilyBytes.length > 0)
-          get.addColumn(d.columnFamilyBytes, d.qualifierBytes)
+        if (d.isRowKey)
+          get.addColumn(d.cfBytes, d.colBytes)
       })
       getList.add(get)
     })
@@ -276,7 +183,7 @@ case class HBaseRelation (val tableName:String,
     var resultRDD: RDD[Row] = {
       val tmp = hRdd.map{ r =>
         Row.fromSeq(requiredColumns.map(c =>
-          DefaultSourceStaticUtils.getValue(c, serializableDefinitionMap, r)))
+          DefaultSourceStaticUtils.getValue(catalog.getField(c), r)))
       }
       if (tmp.partitions.size > 0) {
         tmp
@@ -291,11 +198,10 @@ case class HBaseRelation (val tableName:String,
       scan.setBatch(batchNum)
       scan.setCaching(cacheSize)
       requiredQualifierDefinitionList.foreach( d =>
-        scan.addColumn(d.columnFamilyBytes, d.qualifierBytes))
+        scan.addColumn(d.cfBytes, d.colBytes))
 
       val rdd = hbaseContext.hbaseRDD(TableName.valueOf(tableName), scan).map(r => {
-        Row.fromSeq(requiredColumns.map(c => DefaultSourceStaticUtils.getValue(c,
-          serializableDefinitionMap, r._2)))
+        Row.fromSeq(requiredColumns.map(c => DefaultSourceStaticUtils.getValue(catalog.getField(c), r._2)))
       })
       resultRDD=rdd
     }
@@ -337,74 +243,73 @@ case class HBaseRelation (val tableName:String,
     filter match {
 
       case EqualTo(attr, value) =>
-        val columnDefinition = schemaMappingDefinition.get(attr)
-        if (columnDefinition != null) {
-          if (columnDefinition.columnFamily.isEmpty) {
+        val field = catalog.getField(attr)
+        if (field != null) {
+          if (field.isRowKey) {
             parentRowKeyFilter.mergeIntersect(new RowKeyFilter(
-              DefaultSourceStaticUtils.getByteValue(attr,
-                schemaMappingDefinition, value.toString), null))
+              DefaultSourceStaticUtils.getByteValue(field,
+                value.toString), null))
           }
           val byteValue =
-            DefaultSourceStaticUtils.getByteValue(attr,
-              schemaMappingDefinition, value.toString)
+            DefaultSourceStaticUtils.getByteValue(field, value.toString)
           valueArray += byteValue
         }
         new EqualLogicExpression(attr, valueArray.length - 1, false)
       case LessThan(attr, value) =>
-        val columnDefinition = schemaMappingDefinition.get(attr)
-        if (columnDefinition != null) {
-          if (columnDefinition.columnFamily.isEmpty) {
+        val field = catalog.getField(attr)
+        if (field != null) {
+          if (field.isRowKey) {
             parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(DefaultSourceStaticUtils.getByteValue(attr,
-                schemaMappingDefinition, value.toString), false,
+              new ScanRange(DefaultSourceStaticUtils.getByteValue(field,
+                value.toString), false,
                 new Array[Byte](0), true)))
           }
           val byteValue =
-            DefaultSourceStaticUtils.getByteValue(attr,
-              schemaMappingDefinition, value.toString)
+            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
+              value.toString)
           valueArray += byteValue
         }
         new LessThanLogicExpression(attr, valueArray.length - 1)
       case GreaterThan(attr, value) =>
-        val columnDefinition = schemaMappingDefinition.get(attr)
-        if (columnDefinition != null) {
-          if (columnDefinition.columnFamily.isEmpty) {
+        val field = catalog.getField(attr)
+        if (field != null) {
+          if (field.isRowKey) {
             parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(attr,
-                schemaMappingDefinition, value.toString), false)))
+              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(field,
+                value.toString), false)))
           }
           val byteValue =
-            DefaultSourceStaticUtils.getByteValue(attr,
-              schemaMappingDefinition, value.toString)
+            DefaultSourceStaticUtils.getByteValue(field,
+              value.toString)
           valueArray += byteValue
         }
         new GreaterThanLogicExpression(attr, valueArray.length - 1)
       case LessThanOrEqual(attr, value) =>
-        val columnDefinition = schemaMappingDefinition.get(attr)
-        if (columnDefinition != null) {
-          if (columnDefinition.columnFamily.isEmpty) {
+        val field = catalog.getField(attr)
+        if (field != null) {
+          if (field.isRowKey) {
             parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(DefaultSourceStaticUtils.getByteValue(attr,
-                schemaMappingDefinition, value.toString), true,
+              new ScanRange(DefaultSourceStaticUtils.getByteValue(field,
+                value.toString), true,
                 new Array[Byte](0), true)))
           }
           val byteValue =
-            DefaultSourceStaticUtils.getByteValue(attr,
-              schemaMappingDefinition, value.toString)
+            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
+              value.toString)
           valueArray += byteValue
         }
         new LessThanOrEqualLogicExpression(attr, valueArray.length - 1)
       case GreaterThanOrEqual(attr, value) =>
-        val columnDefinition = schemaMappingDefinition.get(attr)
-        if (columnDefinition != null) {
-          if (columnDefinition.columnFamily.isEmpty) {
+        val field = catalog.getField(attr)
+        if (field != null) {
+          if (field.isRowKey) {
             parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(attr,
-                schemaMappingDefinition, value.toString), true)))
+              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(field,
+                value.toString), true)))
           }
           val byteValue =
-            DefaultSourceStaticUtils.getByteValue(attr,
-              schemaMappingDefinition, value.toString)
+            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
+              value.toString)
           valueArray += byteValue
 
         }
@@ -433,32 +338,6 @@ case class HBaseRelation (val tableName:String,
         new PassThroughLogicExpression
     }
   }
-}
-
-/**
- * Construct to contains column data that spend SparkSQL and HBase
- *
- * @param columnName   SparkSQL column name
- * @param colType      SparkSQL column type
- * @param columnFamily HBase column family
- * @param qualifier    HBase qualifier name
- */
-case class SchemaQualifierDefinition(columnName:String,
-                          colType:String,
-                          columnFamily:String,
-                          qualifier:String) extends Serializable {
-  val columnFamilyBytes = Bytes.toBytes(columnFamily)
-  val qualifierBytes = Bytes.toBytes(qualifier)
-  val columnSparkSqlType:DataType = if (colType.equals("BOOLEAN")) BooleanType
-    else if (colType.equals("TINYINT")) IntegerType
-    else if (colType.equals("INT")) IntegerType
-    else if (colType.equals("BIGINT")) LongType
-    else if (colType.equals("FLOAT")) FloatType
-    else if (colType.equals("DOUBLE")) DoubleType
-    else if (colType.equals("STRING")) StringType
-    else if (colType.equals("TIMESTAMP")) TimestampType
-    else if (colType.equals("DECIMAL")) StringType
-    else throw new IllegalArgumentException("Unsupported column type :" + colType)
 }
 
 /**
@@ -788,35 +667,6 @@ class ColumnFilterCollection {
     })
   }
 
-  /**
-   * This will collect all the filter information in a way that is optimized
-   * for the HBase filter commend.  Allowing the filter to be accessed
-   * with columnFamily and qualifier information
-   *
-   * @param schemaDefinitionMap Schema Map that will help us map the right filters
-   *                            to the correct columns
-   * @return                    HashMap oc column filters
-   */
-  def generateFamilyQualifiterFilterMap(schemaDefinitionMap:
-                                        java.util.HashMap[String,
-                                          SchemaQualifierDefinition]):
-  util.HashMap[ColumnFamilyQualifierMapKeyWrapper, ColumnFilter] = {
-    val familyQualifierFilterMap =
-      new util.HashMap[ColumnFamilyQualifierMapKeyWrapper, ColumnFilter]()
-
-    columnFilterMap.foreach( e => {
-      val definition = schemaDefinitionMap.get(e._1)
-      //Don't add rowKeyFilter
-      if (definition.columnFamilyBytes.size > 0) {
-        familyQualifierFilterMap.put(
-          new ColumnFamilyQualifierMapKeyWrapper(
-            definition.columnFamilyBytes, 0, definition.columnFamilyBytes.length,
-            definition.qualifierBytes, 0, definition.qualifierBytes.length), e._2)
-      }
-    })
-    familyQualifierFilterMap
-  }
-
   override def toString:String = {
     val strBuilder = new StringBuilder
     columnFilterMap.foreach( e => strBuilder.append(e))
@@ -836,7 +686,7 @@ object DefaultSourceStaticUtils {
   val rawDouble = new RawDouble
   val rawString = RawString.ASCENDING
 
-  val byteRange = new ThreadLocal[PositionedByteRange]{
+  val byteRange = new ThreadLocal[PositionedByteRange] {
     override def initialValue(): PositionedByteRange = {
       val range = new SimplePositionedMutableByteRange()
       range.setOffset(0)
@@ -844,11 +694,11 @@ object DefaultSourceStaticUtils {
     }
   }
 
-  def getFreshByteRange(bytes:Array[Byte]): PositionedByteRange = {
+  def getFreshByteRange(bytes: Array[Byte]): PositionedByteRange = {
     getFreshByteRange(bytes, 0, bytes.length)
   }
 
-  def getFreshByteRange(bytes:Array[Byte],  offset:Int = 0, length:Int):
+  def getFreshByteRange(bytes: Array[Byte], offset: Int = 0, length: Int):
   PositionedByteRange = {
     byteRange.get().set(bytes).setLength(length).setOffset(offset)
   }
@@ -867,7 +717,7 @@ object DefaultSourceStaticUtils {
    * @param dynamicLogicExpression The dynamicLogicExpression used in the last query
    */
   def populateLatestExecutionRules(rowKeyFilter: RowKeyFilter,
-                                   dynamicLogicExpression: DynamicLogicExpression):Unit = {
+                                   dynamicLogicExpression: DynamicLogicExpression): Unit = {
     lastFiveExecutionRules.add(new ExecutionRuleForUnitTesting(
       rowKeyFilter, dynamicLogicExpression))
     while (lastFiveExecutionRules.size() > 5) {
@@ -879,25 +729,16 @@ object DefaultSourceStaticUtils {
    * This method will convert the result content from HBase into the
    * SQL value type that is requested by the Spark SQL schema definition
    *
-   * @param columnName              The name of the SparkSQL Column
-   * @param schemaMappingDefinition The schema definition map
+   * @param field              The structure of the SparkSQL Column
    * @param r                       The result object from HBase
    * @return                        The converted object type
    */
-  def getValue(columnName: String,
-               schemaMappingDefinition:
-               java.util.HashMap[String, SchemaQualifierDefinition],
-               r: Result): Any = {
-
-    val columnDef = schemaMappingDefinition.get(columnName)
-
-    if (columnDef == null) throw new IllegalArgumentException("Unknown column:" + columnName)
-
-
-    if (columnDef.columnFamilyBytes.isEmpty) {
+  def getValue(field: Field,
+      r: Result): Any = {
+    if (field.isRowKey) {
       val row = r.getRow
 
-      columnDef.columnSparkSqlType match {
+      field.dt match {
         case IntegerType => rawInteger.decode(getFreshByteRange(row))
         case LongType => rawLong.decode(getFreshByteRange(row))
         case FloatType => rawFloat.decode(getFreshByteRange(row))
@@ -908,9 +749,9 @@ object DefaultSourceStaticUtils {
       }
     } else {
       val cellByteValue =
-        r.getColumnLatestCell(columnDef.columnFamilyBytes, columnDef.qualifierBytes)
+        r.getColumnLatestCell(field.cfBytes, field.colBytes)
       if (cellByteValue == null) null
-      else columnDef.columnSparkSqlType match {
+      else field.dt match {
         case IntegerType => rawInteger.decode(getFreshByteRange(cellByteValue.getValueArray,
           cellByteValue.getValueOffset, cellByteValue.getValueLength))
         case LongType => rawLong.decode(getFreshByteRange(cellByteValue.getValueArray,
@@ -933,52 +774,41 @@ object DefaultSourceStaticUtils {
    * This will convert the value from SparkSQL to be stored into HBase using the
    * right byte Type
    *
-   * @param columnName              SparkSQL column name
-   * @param schemaMappingDefinition Schema definition map
    * @param value                   String value from SparkSQL
    * @return                        Returns the byte array to go into HBase
    */
-  def getByteValue(columnName: String,
-                   schemaMappingDefinition:
-                   java.util.HashMap[String, SchemaQualifierDefinition],
-                   value: String): Array[Byte] = {
+  def getByteValue(field: Field,
+      value: String): Array[Byte] = {
+    field.dt match {
+      case IntegerType =>
+        val result = new Array[Byte](Bytes.SIZEOF_INT)
+        val localDataRange = getFreshByteRange(result)
+        rawInteger.encode(localDataRange, value.toInt)
+        localDataRange.getBytes
+      case LongType =>
+        val result = new Array[Byte](Bytes.SIZEOF_LONG)
+        val localDataRange = getFreshByteRange(result)
+        rawLong.encode(localDataRange, value.toLong)
+        localDataRange.getBytes
+      case FloatType =>
+        val result = new Array[Byte](Bytes.SIZEOF_FLOAT)
+        val localDataRange = getFreshByteRange(result)
+        rawFloat.encode(localDataRange, value.toFloat)
+        localDataRange.getBytes
+      case DoubleType =>
+        val result = new Array[Byte](Bytes.SIZEOF_DOUBLE)
+        val localDataRange = getFreshByteRange(result)
+        rawDouble.encode(localDataRange, value.toDouble)
+        localDataRange.getBytes
+      case StringType =>
+        Bytes.toBytes(value)
+      case TimestampType =>
+        val result = new Array[Byte](Bytes.SIZEOF_LONG)
+        val localDataRange = getFreshByteRange(result)
+        rawLong.encode(localDataRange, value.toLong)
+        localDataRange.getBytes
 
-    val columnDef = schemaMappingDefinition.get(columnName)
-
-    if (columnDef == null) {
-      throw new IllegalArgumentException("Unknown column:" + columnName)
-    } else {
-      columnDef.columnSparkSqlType match {
-        case IntegerType =>
-          val result = new Array[Byte](Bytes.SIZEOF_INT)
-          val localDataRange = getFreshByteRange(result)
-          rawInteger.encode(localDataRange, value.toInt)
-          localDataRange.getBytes
-        case LongType =>
-          val result = new Array[Byte](Bytes.SIZEOF_LONG)
-          val localDataRange = getFreshByteRange(result)
-          rawLong.encode(localDataRange, value.toLong)
-          localDataRange.getBytes
-        case FloatType =>
-          val result = new Array[Byte](Bytes.SIZEOF_FLOAT)
-          val localDataRange = getFreshByteRange(result)
-          rawFloat.encode(localDataRange, value.toFloat)
-          localDataRange.getBytes
-        case DoubleType =>
-          val result = new Array[Byte](Bytes.SIZEOF_DOUBLE)
-          val localDataRange = getFreshByteRange(result)
-          rawDouble.encode(localDataRange, value.toDouble)
-          localDataRange.getBytes
-        case StringType =>
-          Bytes.toBytes(value)
-        case TimestampType =>
-          val result = new Array[Byte](Bytes.SIZEOF_LONG)
-          val localDataRange = getFreshByteRange(result)
-          rawLong.encode(localDataRange, value.toLong)
-          localDataRange.getBytes
-
-        case _ => Bytes.toBytes(value)
-      }
+      case _ => Bytes.toBytes(value)
     }
   }
 }

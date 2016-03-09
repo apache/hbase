@@ -31,4 +31,9 @@ object HBaseSparkConf{
   val defaultBatchNum = 1000
   val BULKGET_SIZE = "spark.hbase.bulkGetSize"
   val defaultBulkGetSize = 1000
+
+  val HBASE_CONFIG_RESOURCES_LOCATIONS = "hbase.config.resources"
+  val USE_HBASE_CONTEXT = "hbase.use.hbase.context"
+  val PUSH_DOWN_COLUMN_FILTER = "hbase.pushdown.column.filter"
+  val defaultPushDownColumnFilter = true
 }

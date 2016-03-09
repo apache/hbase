@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.spark.datasources.HBaseResources._
+import org.apache.spark.sql.datasources.hbase.Field
 import org.apache.spark.{SparkEnv, TaskContext, Logging, Partition}
 import org.apache.spark.rdd.RDD
 
@@ -31,7 +32,7 @@ import scala.collection.mutable
 class HBaseTableScanRDD(relation: HBaseRelation,
                        val hbaseContext: HBaseContext,
                        @transient val filter: Option[SparkSQLPushDownFilter] = None,
-                       val columns: Seq[SchemaQualifierDefinition] = Seq.empty
+                        val columns: Seq[Field] = Seq.empty
      )extends RDD[Result](relation.sqlContext.sparkContext, Nil) with Logging  {
   private def sparkConf = SparkEnv.get.conf
   @transient var ranges = Seq.empty[Range]
@@ -98,15 +99,15 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       tbr: TableResource,
       g: Seq[Array[Byte]],
       filter: Option[SparkSQLPushDownFilter],
-      columns: Seq[SchemaQualifierDefinition],
+      columns: Seq[Field],
       hbaseContext: HBaseContext): Iterator[Result] = {
     g.grouped(relation.bulkGetSize).flatMap{ x =>
       val gets = new ArrayList[Get]()
       x.foreach{ y =>
         val g = new Get(y)
         columns.foreach { d =>
-          if (d.columnFamilyBytes.length > 0) {
-            g.addColumn(d.columnFamilyBytes, d.qualifierBytes)
+          if (!d.isRowKey) {
+            g.addColumn(d.cfBytes, d.colBytes)
           }
         }
         filter.foreach(g.setFilter(_))
@@ -149,7 +150,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
 
   private def buildScan(range: Range,
       filter: Option[SparkSQLPushDownFilter],
-      columns: Seq[SchemaQualifierDefinition]): Scan = {
+      columns: Seq[Field]): Scan = {
     val scan = (range.lower, range.upper) match {
       case (Some(Bound(a, b)), Some(Bound(c, d))) => new Scan(a, c)
       case (None, Some(Bound(c, d))) => new Scan(Array[Byte](), c)
@@ -158,8 +159,8 @@ class HBaseTableScanRDD(relation: HBaseRelation,
     }
 
     columns.foreach { d =>
-      if (d.columnFamilyBytes.length > 0) {
-        scan.addColumn(d.columnFamilyBytes, d.qualifierBytes)
+      if (!d.isRowKey) {
+        scan.addColumn(d.cfBytes, d.colBytes)
       }
     }
     scan.setCacheBlocks(relation.blockCacheEnable)
