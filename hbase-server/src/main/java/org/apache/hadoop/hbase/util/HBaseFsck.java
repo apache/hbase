@@ -608,7 +608,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * region servers and the masters.  It makes each region's state in HDFS, in
    * hbase:meta, and deployments consistent.
    *
-   * @return If > 0 , number of errors detected, if &lt; 0 there was an unrecoverable
+   * @return If &gt; 0 , number of errors detected, if &lt; 0 there was an unrecoverable
    *     error.  If 0, we have a clean hbase.
    */
   public int onlineConsistencyRepair() throws IOException, KeeperException,
@@ -2126,7 +2126,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * kept in the AssignementManager.  Because disable uses this state instead of
    * that found in META, we can't seem to cleanly disable/delete tables that
    * have been hbck fixed.  When used on a version of HBase that does not have
-   * the offline ipc call exposed on the master (<0.90.5, <0.92.0) a master
+   * the offline ipc call exposed on the master (&lt;0.90.5, &lt;0.92.0) a master
    * restart or failover may be required.
    */
   private void closeRegion(HbckInfo hi) throws IOException, InterruptedException {
