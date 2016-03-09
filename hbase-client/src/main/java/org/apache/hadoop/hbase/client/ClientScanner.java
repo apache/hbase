@@ -381,9 +381,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     Result[] values = null;
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
-
-    // We need to reset it if it's a new callable that was created
-    // with a countdown in nextScanner
+    // We need to reset it if it's a new callable that was created with a countdown in nextScanner
     callable.setCaching(this.caching);
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
@@ -397,12 +395,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
         values = call(callable, caller, scannerTimeout);
-        // When the replica switch happens, we need to do certain operations
-        // again. The callable will openScanner with the right startkey
-        // but we need to pick up from there. Bypass the rest of the loop
-        // and let the catch-up happen in the beginning of the loop as it
-        // happens for the cases where we see exceptions. Since only openScanner
-        // would have happened, values would be null
+        // When the replica switch happens, we need to do certain operations again.
+        // The callable will openScanner with the right startkey but we need to pick up
+        // from there. Bypass the rest of the loop and let the catch-up happen in the beginning
+        // of the loop as it happens for the cases where we see exceptions.
+        // Since only openScanner would have happened, values would be null
         if (values == null && callable.switchedToADifferentReplica()) {
           // Any accumulated partial results are no longer valid since the callable will
           // openScanner with the correct startkey and we must pick up from there
@@ -415,7 +412,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
         // An exception was thrown which makes any partial results that we were collecting
         // invalid. The scanner will need to be reset to the beginning of a row.
         clearPartialResults();
-
         // DNRIOEs are thrown to make us break out of retries. Some types of DNRIOEs want us
         // to reset the scanner and come back in again.
         if (e instanceof UnknownScannerException) {
@@ -424,8 +420,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // a ScannerTimeoutException. Else, it's because the region moved and we used the old
           // id against the new region server; reset the scanner.
           if (timeout < System.currentTimeMillis()) {
-            LOG.info("For hints related to the following exception, please try taking a look at: " +
-                "https://hbase.apache.org/book.html#trouble.client.scantimeout");
+            LOG.info("For hints related to the following exception, please try taking a look at: "
+                    + "https://hbase.apache.org/book.html#trouble.client.scantimeout");
             long elapsed = System.currentTimeMillis() - lastNext;
             ScannerTimeoutException ex =
                 new ScannerTimeoutException(elapsed + "ms passed since the last invocation, "
@@ -440,8 +436,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
           if ((cause != null && cause instanceof NotServingRegionException) ||
               (cause != null && cause instanceof RegionServerStoppedException) ||
               e instanceof OutOfOrderScannerNextException) {
-            // Pass
-            // It is easier writing the if loop test as list of what is allowed rather than
+            // Pass. It is easier writing the if loop test as list of what is allowed rather than
             // as a list of what is not allowed... so if in here, it means we do not throw.
           } else {
             throw e;
@@ -449,11 +444,9 @@ public abstract class ClientScanner extends AbstractClientScanner {
         }
         // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
         if (this.lastResult != null) {
-          // The region has moved. We need to open a brand new scanner at
-          // the new location.
-          // Reset the startRow to the row we've seen last so that the new
-          // scanner starts at the correct row. Otherwise we may see previously
-          // returned rows again.
+          // The region has moved. We need to open a brand new scanner at the new location.
+          // Reset the startRow to the row we've seen last so that the new scanner starts at
+          // the correct row. Otherwise we may see previously returned rows again.
           // (ScannerCallable by now has "relocated" the correct region)
           if (scan.isReversed()) {
             scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
@@ -475,7 +468,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
         // Set this to zero so we don't try and do an rpc and close on remote server when
         // the exception we got was UnknownScanner or the Server is going down.
         callable = null;
-
         // This continue will take us to while at end of loop where we will set up new scanner.
         continue;
       }
@@ -499,17 +491,19 @@ public abstract class ClientScanner extends AbstractClientScanner {
           this.lastResult = rs;
         }
       }
-
-      // Caller of this method just wants a Result. If we see a heartbeat message, it means
-      // processing of the scan is taking a long time server side. Rather than continue to
-      // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
-      // unnecesary delays to the caller
-      if (callable.isHeartbeatMessage() && cache.size() > 0) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Heartbeat message received and cache contains Results."
-              + " Breaking out of scan loop");
+      if (callable.isHeartbeatMessage()) {
+        if (cache.size() > 0) {
+          // Caller of this method just wants a Result. If we see a heartbeat message, it means
+          // processing of the scan is taking a long time server side. Rather than continue to
+          // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
+          // unnecesary delays to the caller
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Heartbeat message received and cache contains Results."
+                    + " Breaking out of scan loop");
+          }
+          break;
         }
-        break;
+        continue;
       }
 
       // We expect that the server won't have more results for us when we exhaust
@@ -519,14 +513,15 @@ public abstract class ClientScanner extends AbstractClientScanner {
       if (null != values && values.length > 0 && callable.hasMoreResultsContext()) {
         // Only adhere to more server results when we don't have any partialResults
         // as it keeps the outer loop logic the same.
-        serverHasMoreResults = callable.getServerHasMoreResults() & partialResults.isEmpty();
+        serverHasMoreResults = callable.getServerHasMoreResults() && partialResults.isEmpty();
       }
       // Values == null means server-side filter has determined we must STOP
       // !partialResults.isEmpty() means that we are still accumulating partial Results for a
       // row. We should not change scanners before we receive all the partial Results for that
       // row.
-    } while (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
-        && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null)));
+    } while ((callable != null && callable.isHeartbeatMessage())
+        || (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
+        && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null))));
   }
 
   /**
