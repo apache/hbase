@@ -43,9 +43,7 @@ public class TimeRange {
   /**
    * Default constructor.
    * Represents interval [0, Long.MAX_VALUE) (allTime)
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
-  @Deprecated
   public TimeRange() {
     allTime = true;
   }
@@ -53,9 +51,7 @@ public class TimeRange {
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
-  @Deprecated
   public TimeRange(long minStamp) {
     this.minStamp = minStamp;
   }
@@ -63,9 +59,7 @@ public class TimeRange {
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
-  @Deprecated
   public TimeRange(byte [] minStamp) {
   	this.minStamp = Bytes.toLong(minStamp);
   }
@@ -74,12 +68,10 @@ public class TimeRange {
    * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
-   * @throws IllegalArgumentException if either <0,
-   * @throws IOException if max smaller than min.
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
+   * @throws IOException
    */
-  @Deprecated
-  public TimeRange(long minStamp, long maxStamp) throws IOException {
+  public TimeRange(long minStamp, long maxStamp)
+  throws IOException {
     if (minStamp < 0 || maxStamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
         + ", maxStamp" + maxStamp);
@@ -96,9 +88,7 @@ public class TimeRange {
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IOException
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
-  @Deprecated
   public TimeRange(byte [] minStamp, byte [] maxStamp)
   throws IOException {
     this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));

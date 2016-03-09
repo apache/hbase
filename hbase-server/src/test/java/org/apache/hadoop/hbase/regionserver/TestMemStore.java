@@ -53,9 +53,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /** memstore test case */
 @Category(MediumTests.class)
 public class TestMemStore extends TestCase {
@@ -736,31 +733,28 @@ public class TestMemStore extends TestCase {
    * Test to ensure correctness when using Memstore with multiple timestamps
    */
   public void testMultipleTimestamps() throws IOException {
-    long[] timestamps = new long[] { 20, 10, 5, 1 };
+    long[] timestamps = new long[] {20,10,5,1};
     Scan scan = new Scan();
 
-    for (long timestamp : timestamps)
-      addRows(memstore, timestamp);
+    for (long timestamp: timestamps)
+      addRows(memstore,timestamp);
 
-    byte[] fam = Bytes.toBytes("fam");
-    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-    when(hcd.getName()).thenReturn(fam);
-    Store store = mock(Store.class);
-    when(store.getFamily()).thenReturn(hcd);
-    scan.setColumnFamilyTimeRange(fam, 0, 2);
-    assertTrue(memstore.shouldSeek(scan, store, Long.MIN_VALUE));
+    scan.setTimeRange(0, 2);
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
-    scan.setColumnFamilyTimeRange(fam, 20, 82);
-    assertTrue(memstore.shouldSeek(scan, store, Long.MIN_VALUE));
+    scan.setTimeRange(20, 82);
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
-    scan.setColumnFamilyTimeRange(fam, 10, 20);
-    assertTrue(memstore.shouldSeek(scan, store, Long.MIN_VALUE));
+    scan.setTimeRange(10, 20);
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
-    scan.setColumnFamilyTimeRange(fam, 8, 12);
-    assertTrue(memstore.shouldSeek(scan, store, Long.MIN_VALUE));
+    scan.setTimeRange(8, 12);
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
-    scan.setColumnFamilyTimeRange(fam, 28, 42);
-    assertTrue(!memstore.shouldSeek(scan, store, Long.MIN_VALUE));
+    /*This test is not required for correctness but it should pass when
+     * timestamp range optimization is on*/
+    //scan.setTimeRange(28, 42);
+    //assertTrue(!memstore.shouldSeek(scan));
   }
 
   ////////////////////////////////////

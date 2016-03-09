@@ -234,10 +234,6 @@ public class Scan extends Query {
     for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
-    for (Map.Entry<byte[], TimeRange> entry : scan.getColumnFamilyTimeRange().entrySet()) {
-      TimeRange tr = entry.getValue();
-      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-    }
   }
 
   /**
@@ -257,10 +253,6 @@ public class Scan extends Query {
     this.getScan = true;
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
-    }
-    for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
-      TimeRange tr = entry.getValue();
-      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
   }
 
@@ -322,10 +314,6 @@ public class Scan extends Query {
   throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
-  }
-
-  @Override public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    return (Scan) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
   }
 
   /**

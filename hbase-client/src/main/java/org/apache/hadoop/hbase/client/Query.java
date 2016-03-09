@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.Map;
 
-import com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -34,47 +31,18 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Query extends OperationWithAttributes {
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
   protected Filter filter = null;
-  protected Map<byte[], TimeRange> colFamTimeRangeMap = null;
 
   /**
    * @return Filter
    */
   public Filter getFilter() {
     return filter;
-  }
-
-  /**
-   * Get versions of columns only within the specified timestamp range,
-   * [minStamp, maxStamp) on a per CF bases.  Note, default maximum versions to return is 1.  If
-   * your time range spans more than one version and you want all versions
-   * returned, up the number of versions beyond the default.
-   * Column Family time ranges take precedence over the global time range.
-   *
-   * @param cf       the column family for which you want to restrict
-   * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive
-   * @return this
-   * @see Scan#setMaxVersions()
-   * @see Scan#setMaxVersions(int)
-   */
-
-  public Query setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp)  {
-    if (this.colFamTimeRangeMap == null) {
-      this.colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
-    }
-    try {
-      colFamTimeRangeMap.put(cf, new TimeRange(minStamp, maxStamp));
-      return this;
-    } catch (IOException ioe) {
-      throw new IllegalArgumentException(ioe);
-    }
   }
 
   /**
@@ -181,15 +149,5 @@ public abstract class Query extends OperationWithAttributes {
     byte[] attr = getAttribute(ISOLATION_LEVEL);
     return attr == null ? IsolationLevel.READ_COMMITTED :
                           IsolationLevel.fromBytes(attr);
-  }
-
-  /**
-   * @return Map<byte[], TimeRange> a map of column families to time ranges
-   */
-  public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
-    if (this.colFamTimeRangeMap == null) {
-      this.colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
-    }
-    return this.colFamTimeRangeMap;
   }
 }

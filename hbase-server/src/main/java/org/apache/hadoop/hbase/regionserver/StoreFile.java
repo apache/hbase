@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -1163,16 +1162,16 @@ public class StoreFile {
     /**
      * Check if this storeFile may contain keys within the TimeRange that
      * have not expired (i.e. not older than oldestUnexpiredTS).
-     * @param timeRange the timeRange to restrict
+     * @param scan the current scan
      * @param oldestUnexpiredTS the oldest timestamp that is not expired, as
      *          determined by the column family's TTL
      * @return false if queried keys definitely don't exist in this StoreFile
      */
-    boolean passesTimerangeFilter(TimeRange timeRange, long oldestUnexpiredTS) {
+    boolean passesTimerangeFilter(Scan scan, long oldestUnexpiredTS) {
       if (timeRangeTracker == null) {
         return true;
       } else {
-        return timeRangeTracker.includesTimeRange(timeRange) &&
+        return timeRangeTracker.includesTimeRange(scan.getTimeRange()) &&
             timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
       }
     }

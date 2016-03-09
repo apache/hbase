@@ -260,7 +260,7 @@ public class TestHFileWriterV2 {
 
   // Static stuff used by various HFile v2 unit tests
 
-  public static final String COLUMN_FAMILY_NAME = "_-myColumnFamily-_";
+  private static final String COLUMN_FAMILY_NAME = "_-myColumnFamily-_";
   private static final int MIN_ROW_OR_QUALIFIER_LENGTH = 64;
   private static final int MAX_ROW_OR_QUALIFIER_LENGTH = 128;
 

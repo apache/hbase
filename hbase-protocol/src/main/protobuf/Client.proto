@@ -75,7 +75,6 @@ message Get {
   // If the row to get doesn't exist, return the
   // closest row before.
   optional bool closest_row_before = 11 [default = false];
-  repeated ColumnFamilyTimeRange cf_time_range = 13;
 }
 
 message Result {
@@ -235,7 +234,6 @@ message Scan {
   optional bool small = 14;
   optional bool reversed = 15 [default = false];
   optional uint32 caching = 17;
-  repeated ColumnFamilyTimeRange cf_time_range = 19;
 }
 
 /**

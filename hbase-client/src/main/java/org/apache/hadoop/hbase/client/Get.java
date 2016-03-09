@@ -120,10 +120,6 @@ public class Get extends Query
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
-    for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
-      TimeRange tr = entry.getValue();
-      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-    }
   }
 
   public boolean isCheckExistenceOnly() {
@@ -231,19 +227,6 @@ public class Get extends Query
   }
 
   /**
-   * Get versions of columns only within the specified timestamp range and column family,
-   * [cf, minStamp, maxStamp).
-   * @param cf the column family to restrict
-   * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException if invalid time range
-   * @return this for invocation chaining
-   */
-  public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    return (Get) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
-  }
-
-  /*
    * Set the maximum number of values to return per row per Column Family
    * @param limit the maximum number of values returned / row / CF
    * @return this for invocation chaining

@@ -23,8 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -285,12 +282,9 @@ public class TestCompoundBloomFilter {
   private boolean isInBloom(StoreFileScanner scanner, byte[] row,
       byte[] qualifier) {
     Scan scan = new Scan(row, row);
-    scan.addColumn(Bytes.toBytes(TestHFileWriterV2.COLUMN_FAMILY_NAME), qualifier);
-    Store store = mock(Store.class);
-    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-    when(hcd.getName()).thenReturn(Bytes.toBytes(TestHFileWriterV2.COLUMN_FAMILY_NAME));
-    when(store.getFamily()).thenReturn(hcd);
-    return scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    columns.add(qualifier);
+    return scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
   }
 
   private Path writeStoreFile(int t, BloomType bt, List<KeyValue> kvs)

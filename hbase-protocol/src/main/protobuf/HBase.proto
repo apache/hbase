@@ -103,12 +103,6 @@ message TimeRange {
   optional uint64 to = 2;
 }
 
-/* ColumnFamily Specific TimeRange */
-message ColumnFamilyTimeRange {
-  required bytes column_family = 1;
-  required TimeRange time_range = 2;
-}
-
 /* Comparison operators */
 enum CompareType {
   LESS = 0;
