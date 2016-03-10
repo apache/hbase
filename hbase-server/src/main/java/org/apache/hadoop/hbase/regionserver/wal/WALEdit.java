@@ -89,10 +89,14 @@ public class WALEdit implements Writable, HeapSize {
 
   // TODO: Get rid of this; see HBASE-8457
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
-  static final byte [] METAROW = Bytes.toBytes("METAROW");
-  static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
-  static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
-  static final byte [] REGION_EVENT = Bytes.toBytes("HBASE::REGION_EVENT");
+  @VisibleForTesting
+  public static final byte [] METAROW = Bytes.toBytes("METAROW");
+  @VisibleForTesting
+  public static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
+  @VisibleForTesting
+  public static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
+  @VisibleForTesting
+  public static final byte [] REGION_EVENT = Bytes.toBytes("HBASE::REGION_EVENT");
   @VisibleForTesting
   public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
@@ -343,7 +347,7 @@ public class WALEdit implements Writable, HeapSize {
     return new WALEdit().add(kv); //replication scope null so that this won't be replicated
   }
 
-  private static byte[] getRowForRegion(HRegionInfo hri) {
+  public static byte[] getRowForRegion(HRegionInfo hri) {
     byte[] startKey = hri.getStartKey();
     if (startKey.length == 0) {
       // empty row key is not allowed in mutations because it is both the start key and the end key
