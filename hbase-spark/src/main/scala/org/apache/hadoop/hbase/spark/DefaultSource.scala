@@ -21,17 +21,20 @@ import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.apache.hadoop.hbase.client._
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable
+import org.apache.hadoop.hbase.mapred.TableOutputFormat
+import org.apache.hadoop.hbase.spark.datasources.Utils
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.spark.datasources.HBaseTableScanRDD
 import org.apache.hadoop.hbase.spark.datasources.SerializableConfiguration
 import org.apache.hadoop.hbase.types._
 import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositionedMutableByteRange}
-import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
+import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, HBaseConfiguration, TableName}
+import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.datasources.hbase.{Field, HBaseTableCatalog}
-import org.apache.spark.sql.types.{DataType => SparkDataType}
-import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, SaveMode, Row, SQLContext}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
 
@@ -48,10 +51,11 @@ import scala.collection.mutable
  * - Type conversions of basic SQL types.  All conversions will be
  *   Through the HBase Bytes object commands.
  */
-class DefaultSource extends RelationProvider with Logging {
+class DefaultSource extends RelationProvider  with CreatableRelationProvider with Logging {
   /**
    * Is given input from SparkSQL to construct a BaseRelation
-   * @param sqlContext SparkSQL context
+    *
+    * @param sqlContext SparkSQL context
    * @param parameters Parameters given to us from SparkSQL
    * @return           A BaseRelation Object
    */
@@ -60,18 +64,31 @@ class DefaultSource extends RelationProvider with Logging {
   BaseRelation = {
     new HBaseRelation(parameters, None)(sqlContext)
   }
+
+
+  override def createRelation(
+      sqlContext: SQLContext,
+      mode: SaveMode,
+      parameters: Map[String, String],
+      data: DataFrame): BaseRelation = {
+    val relation = HBaseRelation(parameters, Some(data.schema))(sqlContext)
+    relation.createTable()
+    relation.insert(data, false)
+    relation
+  }
 }
 
 /**
  * Implementation of Spark BaseRelation that will build up our scan logic
  * , do the scan pruning, filter push down, and value conversions
- * @param sqlContext              SparkSQL context
+  *
+  * @param sqlContext              SparkSQL context
  */
 case class HBaseRelation (
     @transient parameters: Map[String, String],
     userSpecifiedSchema: Option[StructType]
   )(@transient val sqlContext: SQLContext)
-  extends BaseRelation with PrunedFilteredScan with Logging {
+  extends BaseRelation with PrunedFilteredScan  with InsertableRelation  with Logging {
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
   val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_RESOURCES_LOCATIONS, "")
@@ -115,6 +132,90 @@ case class HBaseRelation (
    * @return schema generated from the SCHEMA_COLUMNS_MAPPING_KEY value
    */
   override val schema: StructType = userSpecifiedSchema.getOrElse(catalog.toDataType)
+
+
+
+  def createTable() {
+    val numReg = parameters.get(HBaseTableCatalog.newTable).map(x => x.toInt).getOrElse(0)
+    val startKey =  Bytes.toBytes(
+      parameters.get(HBaseTableCatalog.regionStart)
+        .getOrElse(HBaseTableCatalog.defaultRegionStart))
+    val endKey = Bytes.toBytes(
+      parameters.get(HBaseTableCatalog.regionEnd)
+        .getOrElse(HBaseTableCatalog.defaultRegionEnd))
+    if (numReg > 3) {
+      val tName = TableName.valueOf(catalog.name)
+      val cfs = catalog.getColumnFamilies
+      val connection = ConnectionFactory.createConnection(hbaseConf)
+      // Initialize hBase table if necessary
+      val admin = connection.getAdmin()
+      try {
+        if (!admin.isTableAvailable(tName)) {
+          val tableDesc = new HTableDescriptor(tName)
+          cfs.foreach { x =>
+            val cf = new HColumnDescriptor(x.getBytes())
+            logDebug(s"add family $x to ${catalog.name}")
+            tableDesc.addFamily(cf)
+          }
+          val splitKeys = Bytes.split(startKey, endKey, numReg);
+          admin.createTable(tableDesc, splitKeys)
+
+        }
+      }finally {
+        admin.close()
+        connection.close()
+      }
+    } else {
+      logInfo(
+        s"""${HBaseTableCatalog.newTable}
+           |is not defined or no larger than 3, skip the create table""".stripMargin)
+    }
+  }
+
+  /**
+    *
+    * @param data
+    * @param overwrite
+    */
+  override def insert(data: DataFrame, overwrite: Boolean): Unit = {
+    val jobConfig: JobConf = new JobConf(hbaseConf, this.getClass)
+    jobConfig.setOutputFormat(classOf[TableOutputFormat])
+    jobConfig.set(TableOutputFormat.OUTPUT_TABLE, catalog.name)
+    var count = 0
+    val rkFields = catalog.getRowKey
+    val rkIdxedFields = rkFields.map{ case x =>
+      (schema.fieldIndex(x.colName), x)
+    }
+    val colsIdxedFields = schema
+      .fieldNames
+      .partition( x => rkFields.map(_.colName).contains(x))
+      ._2.map(x => (schema.fieldIndex(x), catalog.getField(x)))
+    val rdd = data.rdd
+    def convertToPut(row: Row) = {
+      // construct bytes for row key
+      val rowBytes = rkIdxedFields.map { case (x, y) =>
+        Utils.toBytes(row(x), y)
+      }
+      val rLen = rowBytes.foldLeft(0) { case (x, y) =>
+        x + y.length
+      }
+      val rBytes = new Array[Byte](rLen)
+      var offset = 0
+      rowBytes.foreach { x =>
+        System.arraycopy(x, 0, rBytes, offset, x.length)
+        offset += x.length
+      }
+      val put = new Put(rBytes)
+
+      colsIdxedFields.foreach { case (x, y) =>
+        val b = Utils.toBytes(row(x), y)
+        put.addColumn(Bytes.toBytes(y.cf), Bytes.toBytes(y.col), b)
+      }
+      count += 1
+      (new ImmutableBytesWritable, put)
+    }
+    rdd.map(convertToPut(_)).saveAsHadoopDataset(jobConfig)
+  }
 
   /**
    * Here we are building the functionality to populate the resulting RDD[Row]
@@ -356,7 +457,8 @@ class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
 
   /**
    * Function to merge another scan object through a AND operation
-   * @param other Other scan object
+    *
+    * @param other Other scan object
    */
   def mergeIntersect(other:ScanRange): Unit = {
     val upperBoundCompare = compareRange(upperBound, other.upperBound)
@@ -376,7 +478,8 @@ class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
 
   /**
    * Function to merge another scan object through a OR operation
-   * @param other Other scan object
+    *
+    * @param other Other scan object
    */
   def mergeUnion(other:ScanRange): Unit = {
 

@@ -121,7 +121,7 @@ case class HBaseTableCatalog(
      name: String,
      row: RowKey,
      sMap: SchemaMap,
-     numReg: Int) extends Logging {
+     @transient params: Map[String, String]) extends Logging {
   def toDataType = StructType(sMap.toFields)
   def getField(name: String) = sMap.getField(name)
   def getRowKey: Seq[Field] = row.fields
@@ -129,6 +129,8 @@ case class HBaseTableCatalog(
   def getColumnFamilies = {
     sMap.fields.map(_.cf).filter(_ != HBaseTableCatalog.rowKey)
   }
+
+  def get(key: String) = params.get(key)
 
   // Setup the start and length for each dimension of row key at runtime.
   def dynSetupRowKey(rowKey: HBaseType) {
@@ -179,8 +181,13 @@ case class HBaseTableCatalog(
 }
 
 object HBaseTableCatalog {
+  // If defined and larger than 3, a new table will be created with the nubmer of region specified.
   val newTable = "newtable"
   // The json string specifying hbase catalog information
+  val regionStart = "regionStart"
+  val defaultRegionStart = "aaaaaaa"
+  val regionEnd = "regionEnd"
+  val defaultRegionEnd = "zzzzzzz"
   val tableCatalog = "catalog"
   // The row key with format key1:key2 specifying table row key
   val rowKey = "rowkey"
@@ -232,9 +239,8 @@ object HBaseTableCatalog {
         sAvro, sd, len)
       schemaMap.+=((name, f))
     }
-    val numReg = parameters.get(newTable).map(x => x.toInt).getOrElse(0)
     val rKey = RowKey(map.get(rowKey).get.asInstanceOf[String])
-    HBaseTableCatalog(nSpace, tName, rKey, SchemaMap(schemaMap), numReg)
+    HBaseTableCatalog(nSpace, tName, rKey, SchemaMap(schemaMap), parameters)
   }
 
   val TABLE_KEY: String = "hbase.table"
