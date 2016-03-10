@@ -2672,15 +2672,36 @@ public final class ProtobufUtil {
   public static RegionEventDescriptor toRegionEventDescriptor(
       EventType eventType, HRegionInfo hri, long seqId, ServerName server,
       Map<byte[], List<Path>> storeFiles) {
+    final byte[] tableNameAsBytes = hri.getTable().getName();
+    final byte[] encodedNameAsBytes = hri.getEncodedNameAsBytes();
+    final byte[] regionNameAsBytes = hri.getRegionName();
+    return toRegionEventDescriptor(eventType,
+        tableNameAsBytes,
+        encodedNameAsBytes,
+        regionNameAsBytes,
+        seqId,
+
+        server,
+        storeFiles);
+  }
+
+  public static RegionEventDescriptor toRegionEventDescriptor(EventType eventType,
+                                                              byte[] tableNameAsBytes,
+                                                              byte[] encodedNameAsBytes,
+                                                              byte[] regionNameAsBytes,
+                                                               long seqId,
+
+                                                              ServerName server,
+                                                              Map<byte[], List<Path>> storeFiles) {
     RegionEventDescriptor.Builder desc = RegionEventDescriptor.newBuilder()
         .setEventType(eventType)
-        .setTableName(ByteStringer.wrap(hri.getTable().getName()))
-        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
-        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
+        .setTableName(ByteStringer.wrap(tableNameAsBytes))
+        .setEncodedRegionName(ByteStringer.wrap(encodedNameAsBytes))
+        .setRegionName(ByteStringer.wrap(regionNameAsBytes))
         .setLogSequenceNumber(seqId)
         .setServer(toServerName(server));
 
-    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
+    for (Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
       StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
           .setFamilyName(ByteStringer.wrap(entry.getKey()))
           .setStoreHomeDir(Bytes.toString(entry.getKey()));
