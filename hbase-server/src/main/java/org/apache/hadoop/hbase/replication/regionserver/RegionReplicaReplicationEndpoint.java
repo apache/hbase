@@ -367,6 +367,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
 
     @Override
+    public boolean keepRegionEvents() {
+      return true;
+    }
+
+    @Override
     public List<Path> finishWritingAndClose() throws IOException {
       finishWriting(true);
       return null;

@@ -966,10 +966,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private void initializeWarmup(final CancelableProgressable reporter) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
-
     // Initialize all the HStores
     status.setStatus("Warming up all the Stores");
-    initializeStores(reporter, status);
+    try {
+      initializeStores(reporter, status);
+    } finally {
+      status.markComplete("Done warming up.");
+    }
   }
 
   /**
@@ -6427,9 +6430,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       fs = FileSystem.get(conf);
     }
 
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
     r.initializeWarmup(reporter);
-    r.close();
   }
 
 

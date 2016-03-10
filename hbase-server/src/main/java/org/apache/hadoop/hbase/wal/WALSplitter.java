@@ -359,6 +359,11 @@ public class WALSplitter {
           editsSkipped++;
           continue;
         }
+        // Don't send Compaction/Close/Open region events to recovered edit type sinks.
+        if (entry.getEdit().isMetaEdit() && !outputSink.keepRegionEvents()) {
+          editsSkipped++;
+          continue;
+        }
         entryBuffers.appendEntry(entry);
         editsCount++;
         int moreWritersFromLastCheck = this.getNumOpenWriters() - numOpenedFilesLastCheck;
@@ -1266,6 +1271,15 @@ public class WALSplitter {
     public boolean flush() throws IOException {
       return false;
     }
+
+    /**
+     * Some WALEdit's contain only KV's for account on what happened to a region.
+     * Not all sinks will want to get those edits.
+     *
+     * @return Return true if this sink wants to get all WALEdit's regardless of if it's a region
+     * event.
+     */
+    public abstract boolean keepRegionEvents();
   }
 
   /**
@@ -1607,6 +1621,11 @@ public class WALSplitter {
         LOG.fatal(" Got while writing log entry to log", e);
         throw e;
       }
+    }
+
+    @Override
+    public boolean keepRegionEvents() {
+      return false;
     }
 
     /**
@@ -2058,6 +2077,11 @@ public class WALSplitter {
         return true;
       }
       return false;
+    }
+
+    @Override
+    public boolean keepRegionEvents() {
+      return true;
     }
 
     void addWriterError(Throwable t) {

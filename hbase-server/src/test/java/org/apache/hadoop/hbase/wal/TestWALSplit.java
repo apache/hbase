@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,18 +56,24 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultySequenceFileLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -422,7 +429,7 @@ public class TestWALSplit {
     REGIONS.clear();
     REGIONS.add(REGION);
 
-    generateWALs(1, 10, -1);
+    generateWALs(1, 10, -1, 0);
     useDifferentDFSClient();
     WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
     Path originalLog = (fs.listStatus(OLDLOGDIR))[0].getPath();
@@ -430,6 +437,22 @@ public class TestWALSplit {
     assertEquals(1, splitLog.length);
 
     assertTrue("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+  }
+
+  @Test (timeout=300000)
+  public void testSplitRemovesRegionEventsEdits() throws IOException{
+    final String REGION = "region__1";
+    REGIONS.clear();
+    REGIONS.add(REGION);
+
+    generateWALs(1, 10, -1, 100);
+    useDifferentDFSClient();
+    WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
+    Path originalLog = (fs.listStatus(OLDLOGDIR))[0].getPath();
+    Path[] splitLog = getLogForRegion(HBASEDIR, TABLE_NAME, REGION);
+    assertEquals(1, splitLog.length);
+
+    assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
   }
 
   /**
@@ -610,7 +633,7 @@ public class TestWALSplit {
     REGIONS.add(REGION);
 
     Path c1 = new Path(WALDIR, WAL_FILE_PREFIX + "0");
-    generateWALs(1, entryCount, -1);
+    generateWALs(1, entryCount, -1, 0);
     corruptWAL(c1, corruption, true);
 
     useDifferentDFSClient();
@@ -1120,7 +1143,11 @@ public class TestWALSplit {
   }
 
   private Writer generateWALs(int leaveOpen) throws IOException {
-    return generateWALs(NUM_WRITERS, ENTRIES, leaveOpen);
+    return generateWALs(NUM_WRITERS, ENTRIES, leaveOpen, 0);
+  }
+
+  private Writer generateWALs(int writers, int entries, int leaveOpen) throws IOException {
+    return generateWALs(writers, entries, leaveOpen, 7);
   }
 
   private void makeRegionDirs(List<String> regions) throws IOException {
@@ -1134,11 +1161,12 @@ public class TestWALSplit {
    * @param leaveOpen index to leave un-closed. -1 to close all.
    * @return the writer that's still open, or null if all were closed.
    */
-  private Writer generateWALs(int writers, int entries, int leaveOpen) throws IOException {
+  private Writer generateWALs(int writers, int entries, int leaveOpen, int regionEvents) throws IOException {
     makeRegionDirs(REGIONS);
     fs.mkdirs(WALDIR);
     Writer [] ws = new Writer[writers];
     int seq = 0;
+    int numRegionEventsAdded = 0;
     for (int i = 0; i < writers; i++) {
       ws[i] = wals.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + i));
       for (int j = 0; j < entries; j++) {
@@ -1147,6 +1175,11 @@ public class TestWALSplit {
           String row_key = region + prefix++ + i + j;
           appendEntry(ws[i], TABLE_NAME, region.getBytes(), row_key.getBytes(), FAMILY, QUALIFIER,
               VALUE, seq++);
+
+          if (numRegionEventsAdded < regionEvents) {
+            numRegionEventsAdded ++;
+            appendRegionEvent(ws[i], region);
+          }
         }
       }
       if (i != leaveOpen) {
@@ -1159,6 +1192,8 @@ public class TestWALSplit {
     }
     return ws[leaveOpen];
   }
+
+
 
   private Path[] getLogForRegion(Path rootdir, TableName table, String region)
       throws IOException {
@@ -1270,6 +1305,23 @@ public class TestWALSplit {
     return count;
   }
 
+  private static void appendRegionEvent(Writer w, String region) throws IOException {
+    WALProtos.RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
+        WALProtos.RegionEventDescriptor.EventType.REGION_OPEN,
+        TABLE_NAME.toBytes(),
+        region.getBytes(),
+        String.valueOf(region.hashCode()).getBytes(),
+        1,
+        ServerName.parseServerName("ServerName:9099"), ImmutableMap.<byte[], List<Path>>of());
+    final long time = EnvironmentEdgeManager.currentTime();
+    KeyValue kv = new KeyValue(region.getBytes(), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
+        time, regionOpenDesc.toByteArray());
+    final WALKey walKey = new WALKey(region.getBytes(), TABLE_NAME, 1, time,
+        HConstants.DEFAULT_CLUSTER_ID);
+    w.append(
+        new Entry(walKey, new WALEdit().add(kv)));
+  }
+
   public static long appendEntry(Writer writer, TableName table, byte[] region,
       byte[] row, byte[] family, byte[] qualifier,
       byte[] value, long seq)
@@ -1286,9 +1338,11 @@ public class TestWALSplit {
       byte[] row, byte[] family, byte[] qualifier,
       byte[] value, long seq) {
     long time = System.nanoTime();
-    WALEdit edit = new WALEdit();
+
     seq++;
-    edit.add(new KeyValue(row, family, qualifier, time, KeyValue.Type.Put, value));
+    final KeyValue cell = new KeyValue(row, family, qualifier, time, KeyValue.Type.Put, value);
+    WALEdit edit = new WALEdit();
+    edit.add(cell);
     return new Entry(new WALKey(region, table, seq, time,
         HConstants.DEFAULT_CLUSTER_ID), edit);
   }
