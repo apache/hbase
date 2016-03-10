@@ -270,4 +270,13 @@
     <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
 
+  <Match>
+    <Source name="~.*\.scala" />
+  </Match>
+
+  <Match>
+    <Package name="org.apache.hadoop.hbase.spark.protobuf.generated"/>
+  </Match>
+
+
 </FindBugsFilter>
