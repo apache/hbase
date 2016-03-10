@@ -5379,6 +5379,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Preconditions.checkNotNull(familyPaths);
     // we need writeLock for multi-family bulk load
     startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
+    boolean isSuccessful = false;
     try {
       this.writeRequestsCount.increment();
 
@@ -5426,7 +5427,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // problem when validating
         LOG.warn("There was a recoverable bulk load failure likely due to a" +
             " split.  These (family, HFile) pairs were not loaded: " + list);
-        return false;
+        return isSuccessful;
       }
 
       // We need to assign a sequential ID that's in between two memstores in order to preserve
@@ -5486,7 +5487,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
 
-      return true;
+      isSuccessful = true;
     } finally {
       if (wal != null && !storeFiles.isEmpty()) {
         // write a bulk load event when not all hfiles are loaded
@@ -5500,6 +5501,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (this.rsServices != null) {
             // Have to abort region server because some hfiles has been loaded but we can't write
             // the event into WAL
+            isSuccessful = false;
             this.rsServices.abort("Failed to write bulk load event into WAL.", ioe);
           }
         }
@@ -5507,6 +5509,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       closeBulkRegionOperation();
     }
+    return isSuccessful;
   }
 
   @Override
