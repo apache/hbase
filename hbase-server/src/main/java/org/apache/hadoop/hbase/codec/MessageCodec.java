@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -77,6 +79,11 @@ public class MessageCodec implements Codec {
   @Override
   public Decoder getDecoder(InputStream is) {
     return new MessageDecoder(is);
+  }
+
+  @Override
+  public Decoder getDecoder(ByteBuffer buf) {
+    return getDecoder(new ByteBufferInputStream(buf));
   }
 
   @Override

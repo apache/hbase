@@ -79,7 +79,7 @@ public class TestIPCUtil {
     CellScanner cellScanner = sized? getSizedCellScanner(cells):
       CellUtil.createCellScanner(Arrays.asList(cells).iterator());
     ByteBuffer bb = util.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = util.createCellScanner(codec, compressor, bb);
+    cellScanner = util.createCellScannerReusingBuffers(codec, compressor, bb);
     int i = 0;
     while (cellScanner.advance()) {
       i++;

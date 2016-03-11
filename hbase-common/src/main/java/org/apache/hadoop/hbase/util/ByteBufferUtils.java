@@ -782,6 +782,19 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Reads an int value at the given buffer's current position. Also advances the buffer's position
+   */
+  public static int toInt(ByteBuffer buffer) {
+    if (UNSAFE_UNALIGNED) {
+      int i = UnsafeAccess.toInt(buffer, buffer.position());
+      buffer.position(buffer.position() + Bytes.SIZEOF_INT);
+      return i;
+    } else {
+      return buffer.getInt();
+    }
+  }
+
+  /**
    * Reads an int value at the given buffer's offset.
    * @param buffer
    * @param offset
