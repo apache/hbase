@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -40,7 +39,6 @@ public final class UnsafeAccess {
   private static final Log LOG = LogFactory.getLog(UnsafeAccess.class);
 
   public static final Unsafe theUnsafe;
-  private static boolean unaligned = false;
 
   /** The offset to the first element in a byte array. */
   public static final int BYTE_ARRAY_BASE_OFFSET;
@@ -66,34 +64,12 @@ public final class UnsafeAccess {
 
     if(theUnsafe != null){
       BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
-      try {
-        // Using java.nio.Bits#unaligned() to check for unaligned-access capability
-        Class<?> clazz = Class.forName("java.nio.Bits");
-        Method m = clazz.getDeclaredMethod("unaligned");
-        m.setAccessible(true);
-        unaligned = (Boolean) m.invoke(null);
-      } catch (Exception e) {
-        unaligned = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed.
-      }
     } else{
       BYTE_ARRAY_BASE_OFFSET = -1;
     }
   }
 
   private UnsafeAccess(){}
-  
-  public static boolean isAvailable() {
-    return theUnsafe != null;
-  }
-
-  /**
-   * @return true when running JVM is having sun's Unsafe package available in it and underlying
-   *         system having unaligned-access capability.
-   */
-  public static boolean unaligned() {
-    return unaligned;
-  }
-
 
   // APIs to copy data. This will be direct memory location copy and will be much faster
   /**

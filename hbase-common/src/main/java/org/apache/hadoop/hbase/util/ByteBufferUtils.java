@@ -41,8 +41,7 @@ public final class ByteBufferUtils {
   private final static int VALUE_MASK = 0x7f;
   private final static int NEXT_BIT_SHIFT = 7;
   private final static int NEXT_BIT_MASK = 1 << 7;
-  private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
+  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
 
   private ByteBufferUtils() {
   }

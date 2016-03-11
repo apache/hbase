@@ -24,14 +24,11 @@ import static com.google.common.base.Preconditions.checkPositionIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collection;
@@ -124,7 +121,8 @@ public class Bytes {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+
   /**
    * Returns length of the byte array, returning 0 if the array is null.
    * Useful for calculating sizes.
@@ -578,7 +576,7 @@ public class Bytes {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return toLongUnsafe(bytes, offset);
     } else {
       long l = 0;
@@ -619,7 +617,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return putLongUnsafe(bytes, offset, val);
     } else {
       for(int i = offset + 7; i > offset; i--) {
@@ -774,7 +772,7 @@ public class Bytes {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return toIntUnsafe(bytes, offset);
     } else {
       int n = 0;
@@ -870,7 +868,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return putIntUnsafe(bytes, offset, val);
     } else {
       for(int i= offset + 3; i > offset; i--) {
@@ -944,7 +942,7 @@ public class Bytes {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return toShortUnsafe(bytes, offset);
     } else {
       short n = 0;
@@ -982,7 +980,7 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.unaligned()) {
+    if (UNSAFE_UNALIGNED) {
       return putShortUnsafe(bytes, offset, val);
     } else {
       bytes[offset+1] = (byte) val;
@@ -1289,13 +1287,12 @@ public class Bytes {
       INSTANCE;
 
       static final Unsafe theUnsafe;
-      private static boolean unaligned = false;
 
       /** The offset to the first element in a byte array. */
       static final int BYTE_ARRAY_BASE_OFFSET;
 
       static {
-        if (UnsafeAccess.unaligned()) {
+        if (UNSAFE_UNALIGNED) {
           theUnsafe = UnsafeAccess.theUnsafe;
         } else {
           // It doesn't matter what we throw;
@@ -1309,7 +1306,6 @@ public class Bytes {
         if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
           throw new AssertionError();
         }
-        unaligned = UnsafeAccess.unaligned();
       }
 
       static final boolean littleEndian =
@@ -1358,23 +1354,6 @@ public class Bytes {
           x2 = Short.reverseBytes(x2);
         }
         return (x1 & 0xffff) < (x2 & 0xffff);
-      }
-
-      /**
-       * Checks if Unsafe is available
-       * @return true, if available, false - otherwise
-       */
-      public static boolean isAvailable()
-      {
-        return theUnsafe != null;
-      }
-
-      /**
-       * @return true when running JVM is having sun's Unsafe package available in it and underlying
-       *         system having unaligned-access capability.
-       */
-      public static boolean unaligned() {
-        return unaligned;
       }
 
       /**
