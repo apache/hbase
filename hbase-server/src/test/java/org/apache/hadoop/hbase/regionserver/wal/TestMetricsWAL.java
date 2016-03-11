@@ -52,4 +52,15 @@ public class TestMetricsWAL {
     metricsWAL.postSync(nanos, 1);
     verify(source, times(1)).incrementSyncTime(145);
   }
+
+  @Test
+  public void testWalWrittenInBytes() throws Exception {
+    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    metricsWAL.postAppend(100, 900);
+    metricsWAL.postAppend(200, 2000);
+    verify(source, times(1)).incrementWrittenBytes(100);
+    verify(source, times(1)).incrementWrittenBytes(200);
+  }
+
 }
