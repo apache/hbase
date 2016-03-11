@@ -39,6 +39,7 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MutableCounterLong slowAppendCount;
   private final MutableCounterLong logRollRequested;
   private final MutableCounterLong lowReplicationLogRollRequested;
+  private final MutableCounterLong writtenBytes;
 
   public MetricsWALSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -61,6 +62,7 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
         this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
     lowReplicationLogRollRequested = this.getMetricsRegistry()
         .newCounter(LOW_REPLICA_ROLL_REQUESTED, LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
+    writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0l);
   }
 
   @Override
@@ -96,5 +98,10 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   @Override
   public void incrementLowReplicationLogRoll() {
     lowReplicationLogRollRequested.incr();
+  }
+
+  @Override
+  public void incrementWrittenBytes(long val) {
+    writtenBytes.incr(val);
   }
 }

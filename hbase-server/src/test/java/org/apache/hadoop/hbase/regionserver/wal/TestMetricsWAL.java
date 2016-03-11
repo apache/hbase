@@ -41,4 +41,15 @@ public class TestMetricsWAL {
     // One was because of low replication on the hlog.
     verify(source, times(1)).incrementLowReplicationLogRoll();
   }
+
+  @Test
+  public void testWalWrittenInBytes() throws Exception {
+    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    metricsWAL.finishAppend(900, 100);
+    metricsWAL.finishAppend(1000, 200);
+    verify(source, times(1)).incrementWrittenBytes(100);
+    verify(source, times(1)).incrementWrittenBytes(200);
+  }
+
 }

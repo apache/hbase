@@ -62,6 +62,8 @@ public interface MetricsWALSource extends BaseSource {
   String LOW_REPLICA_ROLL_REQUESTED = "lowReplicaRollRequest";
   String LOW_REPLICA_ROLL_REQUESTED_DESC =
       "How many times a log roll was requested due to too few DN's in the write pipeline.";
+  String WRITTEN_BYTES = "writtenBytes";
+  String WRITTEN_BYTES_DESC = "Size (in bytes) of the data written to the WAL.";
 
   /**
    * Add the append size.
@@ -92,4 +94,5 @@ public interface MetricsWALSource extends BaseSource {
 
   void incrementLowReplicationLogRoll();
 
+  void incrementWrittenBytes(long val);
 }
