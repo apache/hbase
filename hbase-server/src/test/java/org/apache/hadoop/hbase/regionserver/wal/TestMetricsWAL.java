@@ -66,4 +66,15 @@ public class TestMetricsWAL {
     metricsWAL.postAppend(1, 2000);
     assertEquals(2, source.getSlowAppendCount());
   }
+
+  @Test
+  public void testWalWrittenInBytes() throws Exception {
+    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    metricsWAL.postAppend(100, 900);
+    metricsWAL.postAppend(200, 2000);
+    verify(source, times(1)).incrementWrittenBytes(100);
+    verify(source, times(1)).incrementWrittenBytes(200);
+  }
+
 }
