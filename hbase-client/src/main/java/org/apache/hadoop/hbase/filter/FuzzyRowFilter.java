@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
+import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -60,6 +61,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class FuzzyRowFilter extends FilterBase {
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
   private boolean done = false;
 
@@ -94,7 +96,7 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   private void preprocessSearchKey(Pair<byte[], byte[]> p) {
-    if (UnsafeAccess.unaligned() == false) {
+    if (!UNSAFE_UNALIGNED) {
       // do nothing
       return;
     }
@@ -113,7 +115,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
-    if (UnsafeAccess.unaligned() == false) {
+    if (!UNSAFE_UNALIGNED) {
       // do nothing
       return mask;
     }
@@ -318,7 +320,7 @@ public class FuzzyRowFilter extends FilterBase {
   static SatisfiesCode satisfies(boolean reverse, byte[] row, int offset, int length,
       byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
 
-    if (UnsafeAccess.unaligned() == false) {
+    if (!UNSAFE_UNALIGNED) {
       return satisfiesNoUnsafe(reverse, row, offset, length, fuzzyKeyBytes, fuzzyKeyMeta);
     }
 

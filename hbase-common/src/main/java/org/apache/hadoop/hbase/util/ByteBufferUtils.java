@@ -47,8 +47,8 @@ public final class ByteBufferUtils {
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
+  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -150,7 +150,7 @@ public final class ByteBufferUtils {
    }
 
   public static byte toByte(ByteBuffer buffer, int offset) {
-    if (UnsafeAccess.isAvailable()) {
+    if (UNSAFE_AVAIL) {
       return UnsafeAccess.toByte(buffer, offset);
     } else {
       return buffer.get(offset);
@@ -202,7 +202,7 @@ public final class ByteBufferUtils {
   }
 
   public static int putByte(ByteBuffer buffer, int offset, byte b) {
-    if (UnsafeAccess.isAvailable()) {
+    if (UNSAFE_AVAIL) {
       return UnsafeAccess.putByte(buffer, offset, b);
     } else {
       buffer.put(offset, b);
@@ -369,7 +369,7 @@ public final class ByteBufferUtils {
    * @param out destination buffer
    */
   public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out) {
-    if (UnsafeAccess.isAvailable()) {
+    if (UNSAFE_AVAIL) {
       int length = in.remaining();
       UnsafeAccess.copy(in, in.position(), out, out.position(), length);
       out.position(out.position() + length);

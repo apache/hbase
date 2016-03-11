@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
+import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 
 import sun.nio.ch.DirectBuffer;
 
@@ -33,8 +34,8 @@ import sun.nio.ch.DirectBuffer;
 @InterfaceAudience.Private
 public class SingleByteBuff extends ByteBuff {
 
-  private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAccess.unaligned();
+  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   // Underlying BB
   private final ByteBuffer buf;
