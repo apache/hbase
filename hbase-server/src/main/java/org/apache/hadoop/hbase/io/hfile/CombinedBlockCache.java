@@ -63,8 +63,8 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
       final boolean cacheDataInL1) {
-    boolean isMetaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
-    if (isMetaBlock || cacheDataInL1) {
+    boolean metaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
+    if (metaBlock || cacheDataInL1) {
       lruCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     } else {
       l2Cache.cacheBlock(cacheKey, buf, inMemory, false);
@@ -81,12 +81,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       boolean repeat, boolean updateCacheMetrics) {
     // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
     // we end up calling l2Cache.getBlock.
-    if (lruCache.containsBlock(cacheKey)) {
-      return lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
-    }
-    Cacheable result = l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
-
-    return result;
+    return lruCache.containsBlock(cacheKey)?
+        lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
+        l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   @Override
