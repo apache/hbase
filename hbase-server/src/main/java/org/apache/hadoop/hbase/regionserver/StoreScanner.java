@@ -133,7 +133,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected List<KeyValueScanner> currentScanners = new ArrayList<KeyValueScanner>();
   // flush update lock
   private ReentrantLock flushLock = new ReentrantLock();
-  
+
   protected final long readPt;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
@@ -600,6 +600,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         continue;
 
       case DONE:
+        // Optimization for Gets! If DONE, no more to get on this row, early exit!
+        if (this.scan.isGetScan()) {
+          // Then no more to this row... exit.
+          close(false);// Do all cleanup except heap.close()
+          return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+        }
         matcher.curCell = null;
         return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
 
@@ -649,18 +655,67 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
   }
 
-  /*
-   * See if we should actually SEEK or rather just SKIP to the next Cell.
-   * (see HBASE-13109)
+  /**
+   * See if we should actually SEEK or rather just SKIP to the next Cell (see HBASE-13109).
+   * This method works together with ColumnTrackers and Filters. ColumnTrackers may issue SEEK
+   * hints, such as seek to next column, next row, or seek to an arbitrary seek key.
+   * This method intercepts these qcodes and decides whether a seek is the most efficient _actual_
+   * way to get us to the requested cell (SEEKs are more expensive than SKIP, SKIP, SKIP inside the
+   * current, loaded block).
+   * It does this by looking at the next indexed key of the current HFile. This key
+   * is then compared with the _SEEK_ key, where a SEEK key is an artificial 'last possible key
+   * on the row' (only in here, we avoid actually creating a SEEK key; in the compare we work with
+   * the current Cell but compare as though it were a seek key; see down in
+   * matcher.compareKeyForNextRow, etc). If the compare gets us onto the
+   * next block we *_SEEK, otherwise we just INCLUDE or SKIP, and let the ColumnTrackers or Filters
+   * go through the next Cell, and so on)
+   *
+   * <p>The ColumnTrackers and Filters must behave correctly in all cases, i.e. if they are past the
+   * Cells they care about they must issues a SKIP or SEEK.
+   *
+   * <p>Other notes:
+   * <ul>
+   * <li>Rows can straddle block boundaries</li>
+   * <li>Versions of columns can straddle block boundaries (i.e. column C1 at T1 might be in a
+   * different block than column C1 at T2)</li>
+   * <li>We want to SKIP and INCLUDE if the chance is high that we'll find the desired Cell after a
+   * few SKIPs...</li>
+   * <li>We want to INCLUDE_AND_SEEK and SEEK when the chance is high that we'll be able to seek
+   * past many Cells, especially if we know we need to go to the next block.</li>
+   * </ul>
+   * <p>A good proxy (best effort) to determine whether INCLUDE/SKIP is better than SEEK is whether
+   * we'll likely end up seeking to the next block (or past the next block) to get our next column.
+   * Example:
+   * <pre>
+   * |    BLOCK 1              |     BLOCK 2                   |
+   * |  r1/c1, r1/c2, r1/c3    |    r1/c4, r1/c5, r2/c1        |
+   *                                   ^         ^
+   *                                   |         |
+   *                           Next Index Key   SEEK_NEXT_ROW (before r2/c1)
+   *
+   *
+   * |    BLOCK 1                       |     BLOCK 2                      |
+   * |  r1/c1/t5, r1/c1/t4, r1/c1/t3    |    r1/c1/t2, r1/c1/T1, r1/c2/T3  |
+   *                                            ^              ^
+   *                                            |              |
+   *                                    Next Index Key        SEEK_NEXT_COL
+   * </pre>
+   * Now imagine we want columns c1 and c3 (see first diagram above), the 'Next Index Key' of r1/c4
+   * is > r1/c3 so we should seek to get to the c1 on the next row, r2. In second case, say we only
+   * want one version of c1, after we have it, a SEEK_COL will be issued to get to c2. Looking at
+   * the 'Next Index Key', it would land us in the next block, so we should SEEK. In other scenarios
+   * where the SEEK will not land us in the next block, it is very likely better to issues a series
+   * of SKIPs.
    */
-  private ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
+  @VisibleForTesting
+  protected ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
     switch(qcode) {
     case INCLUDE_AND_SEEK_NEXT_COL:
     case SEEK_NEXT_COL:
     {
       Cell nextIndexedKey = getNextIndexedKey();
       if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
+          && matcher.compareKeyForNextColumn(nextIndexedKey, cell) > 0) {
         return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
       break;
@@ -668,10 +723,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case INCLUDE_AND_SEEK_NEXT_ROW:
     case SEEK_NEXT_ROW:
     {
-      Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
-        return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
+      // If it is a Get Scan, then we know that we are done with this row; there are no more
+      // rows beyond the current one: don't try to optimize. We are DONE. Return the *_NEXT_ROW
+      // qcode as is. When the caller gets these flags on a Get Scan, it knows it can shut down the
+      // Scan.
+      if (!this.scan.isGetScan()) {
+        Cell nextIndexedKey = getNextIndexedKey();
+        if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
+            && matcher.compareKeyForNextRow(nextIndexedKey, cell) > 0) {
+          return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
+        }
       }
       break;
     }
@@ -809,10 +870,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // check the var without any lock. Suppose even if we see the old
     // value here still it is ok to continue because we will not be resetting
     // the heap but will continue with the referenced memstore's snapshot. For compactions
-    // any way we don't need the updateReaders at all to happen as we still continue with 
+    // any way we don't need the updateReaders at all to happen as we still continue with
     // the older files
     if (flushed) {
-      // If there is a flush and the current scan is notified on the flush ensure that the 
+      // If there is a flush and the current scan is notified on the flush ensure that the
       // scan's heap gets reset and we do a seek on the newly flushed file.
       if(!this.closing) {
         this.lastTop = this.peek();
@@ -842,7 +903,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (scanners.isEmpty()) return;
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
-    List<ParallelSeekHandler> handlers = 
+    List<ParallelSeekHandler> handlers =
         new ArrayList<ParallelSeekHandler>(storeFileScannerCount);
     for (KeyValueScanner scanner : scanners) {
       if (scanner instanceof StoreFileScanner) {
