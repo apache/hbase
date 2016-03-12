@@ -56,7 +56,7 @@ public class UnsafeAvailChecker {
         Class<?> clazz = Class.forName("java.nio.Bits");
         Method m = clazz.getDeclaredMethod("unaligned");
         m.setAccessible(true);
-        unaligned = (boolean) m.invoke(null);
+        unaligned = (Boolean) m.invoke(null);
       } catch (Exception e) {
         LOG.warn("java.nio.Bits#unaligned() check failed."
             + "Unsafe based read/write of primitive types won't be used", e);
