@@ -1653,8 +1653,12 @@ public final class CellUtil {
    * These cells are used in reseeks/seeks to improve the read performance.
    * They are not real cells that are returned back to the clients
    */
-  private static abstract class EmptyCell implements Cell {
+  private static abstract class EmptyCell implements Cell, SettableSequenceId {
 
+    @Override
+    public void setSequenceId(long seqId) {
+      // Fake cells don't need seqId, so leaving it as a noop.
+    }
     @Override
     public byte[] getRowArray() {
       return EMPTY_BYTE_ARRAY;
