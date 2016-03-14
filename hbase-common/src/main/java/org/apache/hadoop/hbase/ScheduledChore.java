@@ -230,7 +230,7 @@ public abstract class ScheduledChore implements Runnable {
 
   private double getMaximumAllowedTimeBetweenRuns() {
     // Threshold used to determine if the Chore's current run started too late
-    return 1.5 * period;
+    return 1.5 * timeUnit.toMillis(period);
   }
 
   private synchronized boolean isValidTime(final long time) {
