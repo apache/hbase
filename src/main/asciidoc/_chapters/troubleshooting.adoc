@@ -41,7 +41,7 @@ RegionServer suicides are 'normal', as this is what they do when something goes 
 For example, if ulimit and max transfer threads (the two most important initial settings, see <<ulimit>> and <<dfs.datanode.max.transfer.threads>>) aren't changed, it will make it impossible at some point for DataNodes to create new threads that from the HBase point of view is seen as if HDFS was gone.
 Think about what would happen if your MySQL database was suddenly unable to access files on your local file system, well it's the same with HBase and HDFS.
 Another very common reason to see RegionServers committing seppuku is when they enter prolonged garbage collection pauses that last longer than the default ZooKeeper session timeout.
-For more information on GC pauses, see the link:http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/[3 part blog post] by Todd Lipcon and <<gcpause>> above.
+For more information on GC pauses, see the link:https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/[3 part blog post] by Todd Lipcon and <<gcpause>> above.
 
 [[trouble.log]]
 == Logs
@@ -211,7 +211,7 @@ Similarly, to enable GC logging for client processes, uncomment one of the below
 # If <FILE-PATH> is not replaced, the log file(.gc) would be generated in the HBASE_LOG_DIR .
 ----
 
-For more information on GC pauses, see the link:http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/[3 part blog post] by Todd Lipcon and <<gcpause>> above.
+For more information on GC pauses, see the link:https://blog.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/[3 part blog post] by Todd Lipcon and <<gcpause>> above.
 
 [[trouble.resources]]
 == Resources

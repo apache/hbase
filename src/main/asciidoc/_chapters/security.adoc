@@ -126,7 +126,7 @@ A number of properties exist to configure SPNEGO authentication for the web serv
 == Secure Client Access to Apache HBase
 
 Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients.
-See also Matteo Bertozzi's article on link:http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/[Understanding User Authentication and Authorization in Apache HBase].
+See also Matteo Bertozzi's article on link:https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/[Understanding User Authentication and Authorization in Apache HBase].
 
 This describes how to set up Apache HBase and clients for connection to secure HBase resources.
 
@@ -451,7 +451,7 @@ Substitute the keytab for HTTP for _$KEYTAB_.
 == Simple User Access to Apache HBase
 
 Newer releases of Apache HBase (>= 0.92) support optional SASL authentication of clients.
-See also Matteo Bertozzi's article on link:http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/[Understanding User Authentication and Authorization in Apache HBase].
+See also Matteo Bertozzi's article on link:https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/[Understanding User Authentication and Authorization in Apache HBase].
 
 This describes how to set up Apache HBase and clients for simple user access to HBase resources.
 

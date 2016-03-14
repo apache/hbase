@@ -340,7 +340,7 @@ Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop. See link:h
 HBase will lose data unless it is running on an HDFS that has a durable `sync` implementation.
 DO NOT use Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0 which DO NOT have this attribute.
 Currently only Hadoop versions 0.20.205.x or any release in excess of this version -- this includes hadoop-1.0.0 -- have a working, durable sync.
-The Cloudera blog post link:http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/[An
+The Cloudera blog post link:https://blog.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/[An
             update on Apache Hadoop 1.0] by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
 It's worth checking out if you are having trouble making sense of the Hadoop version morass.
 
