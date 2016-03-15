@@ -25,13 +25,20 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,6 +62,7 @@ public class TestSimpleRegionNormalizer {
 
   // mocks
   private static MasterServices masterServices;
+  private static MasterRpcServices masterRpcServices;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -258,6 +266,7 @@ public class TestSimpleRegionNormalizer {
   protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
                                          List<HRegionInfo> hris) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
+    masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", -1, 1L);
@@ -274,7 +283,15 @@ public class TestSimpleRegionNormalizer {
       when(masterServices.getServerManager().getLoad(sn).
         getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
     }
+    try {
+      when(masterRpcServices.isSplitOrMergeEnabled(any(RpcController.class),
+        any(IsSplitOrMergeEnabledRequest.class))).thenReturn(
+          IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
+    } catch (ServiceException se) {
+      LOG.debug("error setting isSplitOrMergeEnabled switch", se);
+    }
 
     normalizer.setMasterServices(masterServices);
+    normalizer.setMasterRpcServices(masterRpcServices);
   }
 }
