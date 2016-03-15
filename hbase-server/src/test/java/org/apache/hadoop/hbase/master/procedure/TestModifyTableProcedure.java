@@ -25,11 +25,13 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -167,12 +169,13 @@ public class TestModifyTableProcedure {
 
   @Test(timeout = 60000)
   public void testModifyTableDeleteCF() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyTableAddCF");
+    final TableName tableName = TableName.valueOf("testModifyTableDeleteCF");
+    final String cf1 = "cf1";
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1", cf2, cf3);
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, cf1, cf2, cf3);
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
     assertEquals(3, currentHtd.getFamiliesKeys().size());
 
@@ -195,6 +198,8 @@ public class TestModifyTableProcedure {
     HTableDescriptor htd2 =
         new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
     htd2.removeFamily(cf3.getBytes());
+    // Disable Sanity check
+    htd2.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
 
     long procId2 =
         ProcedureTestingUtility.submitAndWait(procExec,
@@ -204,6 +209,21 @@ public class TestModifyTableProcedure {
     currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
     assertEquals(1, currentHtd.getFamiliesKeys().size());
     assertFalse(currentHtd.hasFamily(cf3.getBytes()));
+
+    //Removing the last family will fail
+    HTableDescriptor htd3 =
+        new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    htd3.removeFamily(cf1.getBytes());
+    long procId3 =
+        ProcedureTestingUtility.submitAndWait(procExec,
+            new ModifyTableProcedure(procExec.getEnvironment(), htd3));
+    final ProcedureInfo result = procExec.getResult(procId3);
+    assertEquals(true, result.isFailed());
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue("expected DoNotRetryIOException, got " + cause,
+        cause instanceof DoNotRetryIOException);
+    assertEquals(1, currentHtd.getFamiliesKeys().size());
+    assertTrue(currentHtd.hasFamily(cf1.getBytes()));
   }
 
   @Test(timeout=60000)
