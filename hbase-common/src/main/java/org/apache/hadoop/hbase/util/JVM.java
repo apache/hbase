@@ -45,24 +45,30 @@ public class JVM {
   private OperatingSystemMXBean osMbean;
 
   private static final boolean ibmvendor =
-    System.getProperty("java.vendor").contains("IBM");
-  private static final boolean windows = 
-    System.getProperty("os.name").startsWith("Windows");
+      System.getProperty("java.vendor") != null &&
+          System.getProperty("java.vendor").contains("IBM");
+  private static final boolean windows =
+      System.getProperty("os.name") != null &&
+          System.getProperty("os.name").startsWith("Windows");
   private static final boolean linux =
-    System.getProperty("os.name").startsWith("Linux");
+      System.getProperty("os.name") != null &&
+          System.getProperty("os.name").startsWith("Linux");
+  private static final boolean amd64 =
+      System.getProperty("os.arch") != null &&
+          System.getProperty("os.arch").contains("amd64");
+
   private static final String JVMVersion = System.getProperty("java.version");
-  private static final boolean amd64 = System.getProperty("os.arch").contains("amd64");
 
   /**
    * Constructor. Get the running Operating System instance
    */
-  public JVM () {
+  public JVM() {
     this.osMbean = ManagementFactory.getOperatingSystemMXBean();
   }
- 
+
   /**
-   * Check if the OS is unix. 
-   * 
+   * Check if the OS is unix.
+   *
    * @return whether this is unix or not.
    */
   public static boolean isUnix() {
@@ -83,15 +89,16 @@ public class JVM {
 
   /**
    * Check if the arch is amd64;
+   *
    * @return whether this is amd64 or not.
    */
   public static boolean isAmd64() {
     return amd64;
   }
-  
+
   /**
    * Check if the finish() method of GZIPOutputStream is broken
-   * 
+   *
    * @return whether GZIPOutputStream.finish() is broken.
    */
   public static boolean isGZIPOutputStreamFinishBroken() {
@@ -100,11 +107,13 @@ public class JVM {
 
   /**
    * Load the implementation of UnixOperatingSystemMXBean for Oracle jvm
-   * and runs the desired method. 
+   * and runs the desired method.
+   *
    * @param mBeanMethodName : method to run from the interface UnixOperatingSystemMXBean
+   *
    * @return the method result
    */
-  private Long runUnixMXBeanMethod (String mBeanMethodName) {  
+  private Long runUnixMXBeanMethod(String mBeanMethodName) {
     Object unixos;
     Class<?> classRef;
     Method mBeanMethod;
@@ -112,12 +121,11 @@ public class JVM {
     try {
       classRef = Class.forName("com.sun.management.UnixOperatingSystemMXBean");
       if (classRef.isInstance(osMbean)) {
-        mBeanMethod = classRef.getMethod(mBeanMethodName, new Class[0]);
+        mBeanMethod = classRef.getMethod(mBeanMethodName);
         unixos = classRef.cast(osMbean);
-        return (Long)mBeanMethod.invoke(unixos);
+        return (Long) mBeanMethod.invoke(unixos);
       }
-    }
-    catch(Exception e) {
+    } catch (Exception e) {
       LOG.warn("Not able to load class or method for" +
           " com.sun.management.UnixOperatingSystemMXBean.", e);
     }
@@ -127,19 +135,20 @@ public class JVM {
   /**
    * Get the number of opened filed descriptor for the runtime jvm.
    * If Oracle java, it will use the com.sun.management interfaces.
-   * Otherwise, this methods implements it (linux only).  
+   * Otherwise, this methods implements it (linux only).
+   *
    * @return number of open file descriptors for the jvm
    */
   public long getOpenFileDescriptorCount() {
-
     Long ofdc;
-    
+
     if (!ibmvendor) {
       ofdc = runUnixMXBeanMethod("getOpenFileDescriptorCount");
-      return (ofdc != null ? ofdc.longValue () : -1);
+      return (ofdc != null ? ofdc : -1);
     }
-    InputStream in = null;
-    BufferedReader output = null;
+    InputStream inputStream = null;
+    InputStreamReader inputStreamReader = null;
+    BufferedReader bufferedReader = null;
     try {
       //need to get the PID number of the process first
       RuntimeMXBean rtmbean = ManagementFactory.getRuntimeMXBean();
@@ -148,30 +157,39 @@ public class JVM {
 
       //using linux bash commands to retrieve info
       Process p = Runtime.getRuntime().exec(
-      new String[] { "bash", "-c",
-          "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
-      in = p.getInputStream();
-      output = new BufferedReader(new InputStreamReader(in));
+          new String[]{"bash", "-c",
+              "ls /proc/" + pidhost[0] + "/fdinfo | wc -l"});
+      inputStream = p.getInputStream();
+      inputStreamReader = new InputStreamReader(inputStream);
+      bufferedReader = new BufferedReader(inputStreamReader);
       String openFileDesCount;
-      if ((openFileDesCount = output.readLine()) != null)      
-             return Long.parseLong(openFileDesCount);
-     } catch (IOException ie) {
-       LOG.warn("Not able to get the number of open file descriptors", ie);
-     } finally {
-       if (output != null) {
-         try {
-           output.close();
-         } catch (IOException e) {
-           LOG.warn("Not able to close the InputStream", e);
-         }
-       }
-       if (in != null){
-         try {
-           in.close();
-         } catch (IOException e) {
-           LOG.warn("Not able to close the InputStream", e);
-         }
-       }
+      if ((openFileDesCount = bufferedReader.readLine()) != null) {
+        return Long.parseLong(openFileDesCount);
+      }
+    } catch (IOException ie) {
+      LOG.warn("Not able to get the number of open file descriptors", ie);
+    } finally {
+      if (bufferedReader != null) {
+        try {
+          bufferedReader.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the BufferedReader", e);
+        }
+      }
+      if (inputStreamReader != null) {
+        try {
+          inputStreamReader.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStreamReader", e);
+        }
+      }
+      if (inputStream != null) {
+        try {
+          inputStream.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStream", e);
+        }
+      }
     }
     return -1;
   }
@@ -185,15 +203,15 @@ public class JVM {
 
   /**
    * @return the physical free memory (not the JVM one, as it's not very useful as it depends on
-   *  the GC), but the one from the OS as it allows a little bit more to guess if the machine is
-   *  overloaded or not).
+   * the GC), but the one from the OS as it allows a little bit more to guess if the machine is
+   * overloaded or not).
    */
   public long getFreeMemory() {
-    if (ibmvendor){
+    if (ibmvendor) {
       return 0;
     }
 
-    Long r =  runUnixMXBeanMethod("getFreePhysicalMemorySize");
+    Long r = runUnixMXBeanMethod("getFreePhysicalMemorySize");
     return (r != null ? r : -1);
   }
 
@@ -203,28 +221,47 @@ public class JVM {
    * http://stackoverflow.com/questions/54686/how-to-get-a-list-of-current-open-windows-process-with-java
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="RV_DONT_JUST_NULL_CHECK_READLINE",
-    justification="used by testing")
-  public int getNumberOfRunningProcess(){
-    if (!isUnix()){
+      value = "RV_DONT_JUST_NULL_CHECK_READLINE",
+      justification = "used by testing")
+  public int getNumberOfRunningProcess() {
+    if (!isUnix()) {
       return 0;
     }
 
-    BufferedReader input = null;
+    InputStream inputStream = null;
+    InputStreamReader inputStreamReader = null;
+    BufferedReader bufferedReader = null;
+
     try {
       int count = 0;
       Process p = Runtime.getRuntime().exec("ps -e");
-      input = new BufferedReader(new InputStreamReader(p.getInputStream()));
-      while (input.readLine() != null) {
+      inputStream = p.getInputStream();
+      inputStreamReader = new InputStreamReader(inputStream);
+      bufferedReader = new BufferedReader(inputStreamReader);
+      while (bufferedReader.readLine() != null) {
         count++;
       }
       return count - 1; //  -1 because there is a headline
     } catch (IOException e) {
       return -1;
-    }  finally {
-      if (input != null){
+    } finally {
+      if (bufferedReader != null) {
         try {
-          input.close();
+          bufferedReader.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the BufferedReader", e);
+        }
+      }
+      if (inputStreamReader != null) {
+        try {
+          inputStreamReader.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStreamReader", e);
+        }
+      }
+      if (inputStream != null) {
+        try {
+          inputStream.close();
         } catch (IOException e) {
           LOG.warn("Not able to close the InputStream", e);
         }
@@ -235,24 +272,27 @@ public class JVM {
   /**
    * Get the number of the maximum file descriptors the system can use.
    * If Oracle java, it will use the com.sun.management interfaces.
-   * Otherwise, this methods implements it (linux only).  
+   * Otherwise, this methods implements it (linux only).
+   *
    * @return max number of file descriptors the operating system can use.
    */
   public long getMaxFileDescriptorCount() {
     Long mfdc;
     if (!ibmvendor) {
       mfdc = runUnixMXBeanMethod("getMaxFileDescriptorCount");
-      return (mfdc != null ? mfdc.longValue () : -1);
+      return (mfdc != null ? mfdc : -1);
     }
     InputStream in = null;
     BufferedReader output = null;
     try {
       //using linux bash commands to retrieve info
-      Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", "ulimit -n" });
+      Process p = Runtime.getRuntime().exec(new String[]{"bash", "-c", "ulimit -n"});
       in = p.getInputStream();
       output = new BufferedReader(new InputStreamReader(in));
       String maxFileDesCount;
-      if ((maxFileDesCount = output.readLine()) != null) return Long.parseLong(maxFileDesCount);
+      if ((maxFileDesCount = output.readLine()) != null) {
+        return Long.parseLong(maxFileDesCount);
+      }
     } catch (IOException ie) {
       LOG.warn("Not able to get the max number of file descriptors", ie);
     } finally {
@@ -263,7 +303,7 @@ public class JVM {
           LOG.warn("Not able to close the reader", e);
         }
       }
-      if (in != null){
+      if (in != null) {
         try {
           in.close();
         } catch (IOException e) {
@@ -272,5 +312,5 @@ public class JVM {
       }
     }
     return -1;
- }
+  }
 }
