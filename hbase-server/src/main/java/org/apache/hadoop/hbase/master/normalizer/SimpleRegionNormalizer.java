@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import com.google.protobuf.ServiceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -26,8 +28,11 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin.MasterSwitchType;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,6 +64,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   private static final Log LOG = LogFactory.getLog(SimpleRegionNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
   private MasterServices masterServices;
+  private MasterRpcServices masterRpcServices;
   private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
 
   /**
@@ -68,6 +74,11 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
+  }
+
+  @Override
+  public void setMasterRpcServices(MasterRpcServices masterRpcServices) {
+    this.masterRpcServices = masterRpcServices;
   }
 
   @Override
@@ -138,27 +149,44 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
 
     int candidateIdx = 0;
+    boolean splitEnabled = true, mergeEnabled = true;
+    try {
+      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether split is enabled", se);
+    }
+    try {
+      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether split is enabled", se);
+    }
     while (candidateIdx < tableRegions.size()) {
       HRegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
       // if the region is > 2 times larger than average, we split it, split
       // is more high priority normalization action than merge.
       if (regionSize > 2 * avgRegionSize) {
-        LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
-            + regionSize + ", more than twice avg size, splitting");
-        plans.add(new SplitNormalizationPlan(hri, null));
+        if (splitEnabled) {
+          LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
+              + regionSize + ", more than twice avg size, splitting");
+          plans.add(new SplitNormalizationPlan(hri, null));
+        }
       } else {
         if (candidateIdx == tableRegions.size()-1) {
           break;
         }
-        HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
-        long regionSize2 = getRegionSize(hri2);
-        if (regionSize + regionSize2 < avgRegionSize) {
-          LOG.info("Table " + table + ", small region size: " + regionSize
-            + " plus its neighbor size: " + regionSize2
-            + ", less than the avg size " + avgRegionSize + ", merging them");
-          plans.add(new MergeNormalizationPlan(hri, hri2));
-          candidateIdx++;
+        if (mergeEnabled) {
+          HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
+          long regionSize2 = getRegionSize(hri2);
+          if (regionSize + regionSize2 < avgRegionSize) {
+            LOG.info("Table " + table + ", small region size: " + regionSize
+              + " plus its neighbor size: " + regionSize2
+              + ", less than the avg size " + avgRegionSize + ", merging them");
+            plans.add(new MergeNormalizationPlan(hri, hri2));
+            candidateIdx++;
+          }
         }
       }
       candidateIdx++;

@@ -583,6 +583,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
     this.normalizer.setMasterServices(this);
+    this.normalizer.setMasterRpcServices((MasterRpcServices)rpcServices);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 
