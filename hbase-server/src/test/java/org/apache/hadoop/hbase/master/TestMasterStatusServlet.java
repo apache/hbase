@@ -135,7 +135,7 @@ public class TestMasterStatusServlet {
     setupMockTables();
 
     new MasterStatusTmpl()
-      .setMetaLocation(ServerName.valueOf("metaserver:123,12345"))
+      .setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
       .render(new StringWriter(), master);
   }
 
@@ -144,16 +144,16 @@ public class TestMasterStatusServlet {
     setupMockTables();
 
     List<ServerName> servers = Lists.newArrayList(
-        ServerName.valueOf("rootserver:123,12345"),
-        ServerName.valueOf("metaserver:123,12345"));
+        ServerName.valueOf("rootserver,123,12345"),
+        ServerName.valueOf("metaserver,123,12345"));
     Set<ServerName> deadServers = new HashSet<ServerName>(
         Lists.newArrayList(
-            ServerName.valueOf("badserver:123,12345"),
-            ServerName.valueOf("uglyserver:123,12345"))
+            ServerName.valueOf("badserver,123,12345"),
+            ServerName.valueOf("uglyserver,123,12345"))
     );
 
     new MasterStatusTmpl()
-      .setMetaLocation(ServerName.valueOf("metaserver:123,12345"))
+      .setMetaLocation(ServerName.valueOf("metaserver,123,12345"))
       .setServers(servers)
       .setDeadServers(deadServers)
       .render(new StringWriter(), master);

@@ -30,30 +30,30 @@ AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
-org.apache.hadoop.util.StringUtils;
-org.apache.hadoop.hbase.util.Bytes;
-org.apache.hadoop.hbase.util.JvmVersion;
-org.apache.hadoop.hbase.util.FSUtils;
-org.apache.hadoop.hbase.master.HMaster;
-org.apache.hadoop.hbase.master.AssignmentManager;
-org.apache.hadoop.hbase.master.ServerManager;
+org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
+org.apache.hadoop.hbase.HRegionInfo;
+org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
-org.apache.hadoop.hbase.client.Admin;
-org.apache.hadoop.hbase.HRegionInfo;
-org.apache.hadoop.hbase.master.RegionState;
-org.apache.hadoop.hbase.HTableDescriptor;
-org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.TableName;
-org.apache.hadoop.hbase.tool.Canary;
-org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+org.apache.hadoop.hbase.client.Admin;
+org.apache.hadoop.hbase.master.AssignmentManager;
 org.apache.hadoop.hbase.master.DeadServer;
+org.apache.hadoop.hbase.master.HMaster;
+org.apache.hadoop.hbase.master.RegionState;
+org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-org.apache.hadoop.hbase.security.access.AccessControlLists;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
+org.apache.hadoop.hbase.security.access.AccessControlLists;
+org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
+org.apache.hadoop.hbase.tool.Canary;
+org.apache.hadoop.hbase.util.Bytes;
+org.apache.hadoop.hbase.util.FSUtils;
+org.apache.hadoop.hbase.util.JvmVersion;
+org.apache.hadoop.util.StringUtils;
 </%import>
 
 <%if format.equals("json") %>
@@ -380,6 +380,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         } else if (tableName.equals(QuotaUtil.QUOTA_TABLE_NAME)){
             description = "The hbase:quota table holds quota information about number" +
             " or size of requests in a given time frame.";
+        } else if (tableName.equals(TableName.valueOf("hbase:rsgroup"))){
+            description = "The hbase:rsgroup table holds information about regionserver groups";
         }
     </%java>
     <td><% description %></td>

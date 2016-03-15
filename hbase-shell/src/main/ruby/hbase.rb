@@ -102,5 +102,6 @@ require 'hbase/quotas'
 require 'hbase/replication_admin'
 require 'hbase/security'
 require 'hbase/visibility_labels'
+require 'hbase/rsgroup_admin'
 
 include HBaseQuotasConstants

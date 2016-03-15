@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.common.net.HostAndPort;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
@@ -2618,5 +2620,35 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void postReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       List<WALEntry> entries, CellScanner cells) throws IOException {
+  }
+
+  @Override
+  public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                             Set<HostAndPort> servers, String targetGroup) throws IOException {
+    requirePermission("moveServers", Action.ADMIN);
+  }
+
+  @Override
+  public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                            Set<TableName> tables, String targetGroup) throws IOException {
+    requirePermission("moveTables", Action.ADMIN);
+  }
+
+  @Override
+  public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                            String name) throws IOException {
+    requirePermission("addRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                               String name) throws IOException {
+    requirePermission("removeRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                String groupName) throws IOException {
+    requirePermission("balanceRSGroup", Action.ADMIN);
   }
 }

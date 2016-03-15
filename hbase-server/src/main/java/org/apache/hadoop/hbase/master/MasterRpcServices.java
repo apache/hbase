@@ -1309,6 +1309,14 @@ public class MasterRpcServices extends RSRpcServices
       }
       Pair<HRegionInfo, ServerName> pair =
         MetaTableAccessor.getRegion(master.getConnection(), regionName);
+      if (Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),regionName)) {
+        pair = new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
+            master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper()));
+      }
+      if (pair == null) {
+        throw new UnknownRegionException(Bytes.toString(regionName));
+      }
+
       if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
       HRegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {

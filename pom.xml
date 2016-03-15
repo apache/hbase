@@ -1353,6 +1353,18 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <artifactId>hbase-rsgroup</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-rsgroup</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <artifactId>hbase-server</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
@@ -1799,6 +1811,17 @@
 
   -->
   <profiles>
+    <profile>
+      <id>rsgroup</id>
+      <activation>
+        <property>
+            <name>!skip-rsgroup</name>
+        </property>
+      </activation>
+      <modules>
+        <module>hbase-rsgroup</module>
+      </modules>
+    </profile>
     <profile>
       <id>build-with-jdk8</id>
       <activation>

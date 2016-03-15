@@ -261,7 +261,7 @@ public class TestSimpleRegionNormalizer {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
-    ServerName sn = ServerName.valueOf("localhost", -1, 1L);
+    ServerName sn = ServerName.valueOf("localhost", 0, 1L);
     when(masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(any(TableName.class))).thenReturn(hris);
     when(masterServices.getAssignmentManager().getRegionStates().

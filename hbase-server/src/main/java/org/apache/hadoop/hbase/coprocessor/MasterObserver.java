@@ -19,8 +19,11 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.common.net.HostAndPort;
+
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -1238,4 +1241,99 @@ public interface MasterObserver extends Coprocessor {
    */
   void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> c,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException;
+
+  /**
+   * Called before servers are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to move
+   * @param targetGroup destination group
+   * @throws IOException on failure
+   */
+  void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                      Set<HostAndPort> servers, String targetGroup) throws IOException;
+
+  /**
+   * Called after servers are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to move
+   * @param targetGroup name of group
+   * @throws IOException on failure
+   */
+  void postMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                       Set<HostAndPort> servers, String targetGroup) throws IOException;
+
+  /**
+   * Called before tables are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param tables set of tables to move
+   * @param targetGroup name of group
+   * @throws IOException on failure
+   */
+  void preMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                     Set<TableName> tables, String targetGroup) throws IOException;
+
+  /**
+   * Called after servers are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param tables set of tables to move
+   * @param targetGroup name of group
+   * @throws IOException on failure
+   */
+  void postMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                      Set<TableName> tables, String targetGroup) throws IOException;
+
+  /**
+   * Called before a new region server group is added
+   * @param ctx the environment to interact with the framework and master
+   * @param name group name
+   * @throws IOException on failure
+   */
+  void preAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                     String name) throws IOException;
+
+  /**
+   * Called after a new region server group is added
+   * @param ctx the environment to interact with the framework and master
+   * @param name group name
+   * @throws IOException on failure
+   */
+  void postAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                      String name) throws IOException;
+
+  /**
+   * Called before a region server group is removed
+   * @param ctx the environment to interact with the framework and master
+   * @param name group name
+   * @throws IOException on failure
+   */
+  void preRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                        String name) throws IOException;
+
+  /**
+   * Called after a region server group is removed
+   * @param ctx the environment to interact with the framework and master
+   * @param name group name
+   * @throws IOException on failure
+   */
+  void postRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                         String name) throws IOException;
+
+  /**
+   * Called before a region server group is removed
+   * @param ctx the environment to interact with the framework and master
+   * @param groupName group name
+   * @throws IOException on failure
+   */
+  void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                         String groupName) throws IOException;
+
+  /**
+   * Called after a region server group is removed
+   * @param ctx the environment to interact with the framework and master
+   * @param groupName group name
+   * @throws IOException on failure
+   */
+  void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                          String groupName, boolean balancerRan) throws IOException;
+
 }
