@@ -6850,7 +6850,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
          return results;
        }
     }
-
+    long before =  EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
 
     RegionScanner scanner = null;
@@ -6867,16 +6867,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       coprocessorHost.postGet(get, results);
     }
 
-    // do after lock
+    metricsUpdateForGet(results, before);
+
+    return results;
+  }
+
+  void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
       long totalSize = 0L;
       for (Cell cell : results) {
         totalSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
-      this.metricsRegion.updateGet(totalSize);
+      this.metricsRegion.updateGetSize(totalSize);
+      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
 
-    return results;
   }
 
   @Override

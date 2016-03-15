@@ -48,6 +48,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionNamePrefix;
   private final String regionPutKey;
   private final String regionDeleteKey;
+  private final String regionGetSizeKey;
   private final String regionGetKey;
   private final String regionIncrementKey;
   private final String regionAppendKey;
@@ -58,6 +59,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final MutableFastCounter regionDelete;
   private final MutableFastCounter regionIncrement;
   private final MutableFastCounter regionAppend;
+  private final MetricHistogram regionGetSize;
   private final MetricHistogram regionGet;
   private final MetricHistogram regionScanSize;
   private final MetricHistogram regionScanTime;
@@ -92,6 +94,9 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionAppendKey = regionNamePrefix + MetricsRegionServerSource.APPEND_KEY + suffix;
     regionAppend = registry.getCounter(regionAppendKey, 0L);
+
+    regionGetSizeKey = regionNamePrefix + MetricsRegionServerSource.GET_SIZE_KEY;
+    regionGetSize = registry.newSizeHistogram(regionGetSizeKey);
 
     regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
     regionGet = registry.newTimeHistogram(regionGetKey);
@@ -129,9 +134,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionDeleteKey);
       registry.removeMetric(regionIncrementKey);
       registry.removeMetric(regionAppendKey);
+      registry.removeMetric(regionGetSizeKey);
       registry.removeMetric(regionGetKey);
       registry.removeMetric(regionScanSizeKey);
       registry.removeMetric(regionScanTimeKey);
+      registry.removeHistogramMetrics(regionGetSizeKey);
       registry.removeHistogramMetrics(regionGetKey);
       registry.removeHistogramMetrics(regionScanSizeKey);
       registry.removeHistogramMetrics(regionScanTimeKey);
@@ -151,8 +158,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
-  public void updateGet(long getSize) {
-    regionGet.add(getSize);
+  public void updateGetSize(long getSize) {
+    regionGetSize.add(getSize);
+  }
+
+  @Override
+  public void updateGet(long mills) {
+    regionGet.add(mills);
   }
 
   @Override

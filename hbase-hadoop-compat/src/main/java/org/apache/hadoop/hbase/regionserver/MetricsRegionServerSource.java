@@ -255,6 +255,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String UPDATES_BLOCKED_DESC =
       "Number of MS updates have been blocked so that the memstore can be flushed.";
   String DELETE_KEY = "delete";
+  String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
   String INCREMENT_KEY = "increment";
   String MUTATE_KEY = "mutate";
