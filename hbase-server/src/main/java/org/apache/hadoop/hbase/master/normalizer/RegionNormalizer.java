@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 /**
@@ -43,6 +44,13 @@ public interface RegionNormalizer {
    * @param masterServices master services to use
    */
   void setMasterServices(MasterServices masterServices);
+
+  /**
+   * Set the master RPC service. Must be called before first call to
+   * {@link #computePlanForTable(TableName)}.
+   * @param masterRpcServices master RPC services to use
+   */
+  void setMasterRpcServices(MasterRpcServices masterRpcServices);
 
   /**
    * Computes next optimal normalization plan.
