@@ -1184,4 +1184,62 @@ public class TestOrderedBytes {
       assertEquals(o, OrderedBytes.skip(buff));
     }
   }
+
+  /**
+   * Test encoded value check
+   */
+  @Test
+  public void testEncodedValueCheck() {
+    BigDecimal longMax = BigDecimal.valueOf(Long.MAX_VALUE);
+    double negInf = Double.NEGATIVE_INFINITY;
+    BigDecimal negLarge = longMax.multiply(longMax).negate();
+    BigDecimal negMed = new BigDecimal("-10.0");
+    BigDecimal negSmall = new BigDecimal("-0.0010");
+    long zero = 0l;
+    BigDecimal posSmall = negSmall.negate();
+    BigDecimal posMed = negMed.negate();
+    BigDecimal posLarge = negLarge.negate();
+    double posInf = Double.POSITIVE_INFINITY;
+    double nan = Double.NaN;
+    byte int8 = 100;
+    short int16 = 100;
+    int int32 = 100;
+    long int64 = 100l;
+    float float32 = 100.0f;
+    double float64 = 100.0d;
+    String text = "hello world.";
+    byte[] blobVar = Bytes.toBytes("foo");
+
+    int cnt = 0;
+    PositionedByteRange buff = new SimplePositionedByteRange(1024);
+    for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
+      int o;
+      o = OrderedBytes.encodeNull(buff, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, negInf, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, negLarge, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, negMed, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, negSmall, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, zero, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, posSmall, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, posMed, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, posLarge, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, posInf, ord); cnt++;
+      o = OrderedBytes.encodeNumeric(buff, nan, ord); cnt++;
+      o = OrderedBytes.encodeInt8(buff, int8, ord); cnt++;
+      o = OrderedBytes.encodeInt16(buff, int16, ord); cnt++;
+      o = OrderedBytes.encodeInt32(buff, int32, ord); cnt++;
+      o = OrderedBytes.encodeInt64(buff, int64, ord); cnt++;
+      o = OrderedBytes.encodeFloat32(buff, float32, ord); cnt++;
+      o = OrderedBytes.encodeFloat64(buff, float64, ord); cnt++;
+      o = OrderedBytes.encodeString(buff, text, ord); cnt++;
+      o = OrderedBytes.encodeBlobVar(buff, blobVar, ord); cnt++;
+    }
+
+    buff.setPosition(0);
+    assertEquals(OrderedBytes.length(buff), cnt);
+    for (int i = 0; i < cnt; i++) {
+      assertEquals(OrderedBytes.isEncodedValue(buff), true);
+      OrderedBytes.skip(buff);
+    }
+  }
 }
