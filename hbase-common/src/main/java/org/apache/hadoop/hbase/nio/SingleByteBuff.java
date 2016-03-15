@@ -200,8 +200,10 @@ public class SingleByteBuff extends ByteBuff {
       // create a copy.
       ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
       src.asSubByteBuffer(srcOffset, length, pair);
-      ByteBufferUtils.copyFromBufferToBuffer(pair.getFirst(), this.buf, pair.getSecond(), offset,
-          length);
+      if (pair.getFirst() != null) {
+        ByteBufferUtils.copyFromBufferToBuffer(pair.getFirst(), this.buf, pair.getSecond(), offset,
+            length);
+      }
     }
     return this;
   }

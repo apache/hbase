@@ -117,7 +117,7 @@ public class ClassSize {
   static {
     final String version = System.getProperty("java.version");
     // Verify String looks like this: 1.6.0_29
-    if (!version.matches("\\d\\.\\d\\..*")) {
+    if (version == null || !version.matches("\\d\\.\\d\\..*")) {
       throw new RuntimeException("Unexpected version format: " + version);
     }
     // Convert char to int
@@ -331,7 +331,8 @@ public class ClassSize {
    * know this too.
    */
   public static boolean is32BitJVM() {
-    return System.getProperty("sun.arch.data.model").equals("32");
+    final String model = System.getProperty("sun.arch.data.model");
+    return model != null && model.equals("32");
   }
 
 }

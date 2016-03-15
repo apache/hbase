@@ -1092,7 +1092,9 @@ public class Base64 {
    */
   public static byte[] decodeFromFile(String filename) {
     byte[] decodedData = null;
-    Base64InputStream bis = null;
+    BufferedInputStream bufferedInputStream = null;
+    FileInputStream fileInputStream = null;
+    Base64InputStream base64InputStream = null;
     try {
       File file = new File(filename);
       byte[] buffer;
@@ -1107,14 +1109,14 @@ public class Base64 {
       buffer = new byte[(int) file.length()];
 
       // Open a stream
-
-      bis = new Base64InputStream(new BufferedInputStream(
-          new FileInputStream(file)), DECODE);
+      fileInputStream = new FileInputStream(file);
+      bufferedInputStream = new BufferedInputStream(fileInputStream);
+      base64InputStream = new Base64InputStream(bufferedInputStream, DECODE);
 
       // Read until done
 
       int length = 0;
-      for (int numBytes; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
+      for (int numBytes; (numBytes = base64InputStream.read(buffer, length, 4096)) >= 0; ) {
         length += numBytes;
       }
 
@@ -1127,9 +1129,23 @@ public class Base64 {
       LOG.error("Error decoding from file " + filename, e);
 
     } finally {
-      if (bis != null) {
+      if (fileInputStream != null) {
         try {
-          bis.close();
+          fileInputStream.close();
+        } catch (Exception e) {
+          LOG.error("error closing FileInputStream", e);
+        }
+      }
+      if (bufferedInputStream != null) {
+        try {
+          bufferedInputStream.close();
+        } catch (Exception e) {
+          LOG.error("error closing BufferedInputStream", e);
+        }
+      }
+      if (base64InputStream != null) {
+        try {
+          base64InputStream.close();
         } catch (Exception e) {
           LOG.error("error closing Base64InputStream", e);
         }
@@ -1149,7 +1165,10 @@ public class Base64 {
    */
   public static String encodeFromFile(String filename) {
     String encodedData = null;
-    Base64InputStream bis = null;
+    FileInputStream fileInputStream = null;
+    BufferedInputStream bufferedInputStream = null;
+    Base64InputStream base64InputStream = null;
+
     try {
       File file = new File(filename);
 
@@ -1159,12 +1178,13 @@ public class Base64 {
 
       // Open a stream
 
-      bis = new Base64InputStream(new BufferedInputStream(
-              new FileInputStream(file)), ENCODE);
+      fileInputStream = new FileInputStream(file);
+      bufferedInputStream = new BufferedInputStream(fileInputStream);
+      base64InputStream = new Base64InputStream(bufferedInputStream, ENCODE);
 
       // Read until done
       int length = 0;
-      for (int numBytes; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
+      for (int numBytes; (numBytes = base64InputStream.read(buffer, length, 4096)) >= 0; ) {
         length += numBytes;
       }
 
@@ -1176,9 +1196,24 @@ public class Base64 {
       LOG.error("Error encoding from file " + filename, e);
 
     } finally {
-      if (bis != null) {
+      // Can't leak exceptions but still need to clean things up.
+      if (fileInputStream != null) {
         try {
-          bis.close();
+          fileInputStream.close();
+        } catch (Exception e) {
+          LOG.error("error closing FileInputStream", e);
+        }
+      }
+      if (bufferedInputStream != null) {
+        try {
+          bufferedInputStream.close();
+        } catch (Exception e) {
+          LOG.error("error closing BufferedInputStream", e);
+        }
+      }
+      if (base64InputStream != null) {
+        try {
+          base64InputStream.close();
         } catch (Exception e) {
           LOG.error("error closing Base64InputStream", e);
         }

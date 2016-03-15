@@ -52,47 +52,53 @@ public class HFileBlockDefaultDecodingContext implements
   @Override
   public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
       ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) throws IOException {
-    InputStream in = new DataInputStream(new ByteBuffInputStream(onDiskBlock));
+    final ByteBuffInputStream byteBuffInputStream = new ByteBuffInputStream(onDiskBlock);
+    InputStream dataInputStream = new DataInputStream(byteBuffInputStream);
 
-    Encryption.Context cryptoContext = fileContext.getEncryptionContext();
-    if (cryptoContext != Encryption.Context.NONE) {
+    try {
+      Encryption.Context cryptoContext = fileContext.getEncryptionContext();
+      if (cryptoContext != Encryption.Context.NONE) {
 
-      Cipher cipher = cryptoContext.getCipher();
-      Decryptor decryptor = cipher.getDecryptor();
-      decryptor.setKey(cryptoContext.getKey());
+        Cipher cipher = cryptoContext.getCipher();
+        Decryptor decryptor = cipher.getDecryptor();
+        decryptor.setKey(cryptoContext.getKey());
 
-      // Encrypted block format:
-      // +--------------------------+
-      // | byte iv length           |
-      // +--------------------------+
-      // | iv data ...              |
-      // +--------------------------+
-      // | encrypted block data ... |
-      // +--------------------------+
+        // Encrypted block format:
+        // +--------------------------+
+        // | byte iv length           |
+        // +--------------------------+
+        // | iv data ...              |
+        // +--------------------------+
+        // | encrypted block data ... |
+        // +--------------------------+
 
-      int ivLength = in.read();
-      if (ivLength > 0) {
-        byte[] iv = new byte[ivLength];
-        IOUtils.readFully(in, iv);
-        decryptor.setIv(iv);
-        // All encrypted blocks will have a nonzero IV length. If we see an IV
-        // length of zero, this means the encoding context had 0 bytes of
-        // plaintext to encode.
-        decryptor.reset();
-        in = decryptor.createDecryptionStream(in);
+        int ivLength = dataInputStream.read();
+        if (ivLength > 0) {
+          byte[] iv = new byte[ivLength];
+          IOUtils.readFully(dataInputStream, iv);
+          decryptor.setIv(iv);
+          // All encrypted blocks will have a nonzero IV length. If we see an IV
+          // length of zero, this means the encoding context had 0 bytes of
+          // plaintext to encode.
+          decryptor.reset();
+          dataInputStream = decryptor.createDecryptionStream(dataInputStream);
+        }
+        onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE + ivLength;
       }
-      onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE + ivLength;
-    }
 
-    Compression.Algorithm compression = fileContext.getCompression();
-    assert blockBufferWithoutHeader.hasArray();
-    if (compression != Compression.Algorithm.NONE) {
-      Compression.decompress(blockBufferWithoutHeader.array(),
-        blockBufferWithoutHeader.arrayOffset(), in, onDiskSizeWithoutHeader,
-        uncompressedSizeWithoutHeader, compression);
-    } else {
-      IOUtils.readFully(in, blockBufferWithoutHeader.array(),
-        blockBufferWithoutHeader.arrayOffset(), onDiskSizeWithoutHeader);
+      Compression.Algorithm compression = fileContext.getCompression();
+      assert blockBufferWithoutHeader.hasArray();
+      if (compression != Compression.Algorithm.NONE) {
+        Compression.decompress(blockBufferWithoutHeader.array(),
+            blockBufferWithoutHeader.arrayOffset(), dataInputStream, onDiskSizeWithoutHeader,
+            uncompressedSizeWithoutHeader, compression);
+      } else {
+        IOUtils.readFully(dataInputStream, blockBufferWithoutHeader.array(),
+            blockBufferWithoutHeader.arrayOffset(), onDiskSizeWithoutHeader);
+      }
+    } finally {
+      byteBuffInputStream.close();
+      dataInputStream.close();
     }
   }
 
