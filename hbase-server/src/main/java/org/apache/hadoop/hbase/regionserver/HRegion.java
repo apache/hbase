@@ -6702,7 +6702,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return results;
       }
     }
-
+    long before =  EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
 
     RegionScanner scanner = null;
@@ -6719,12 +6719,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       coprocessorHost.postGet(get, results);
     }
 
-    metricsUpdateForGet(results);
+    metricsUpdateForGet(results, before);
 
     return results;
   }
 
-  void metricsUpdateForGet(List<Cell> results) {
+  void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
       long totalSize = 0L;
       for (Cell cell : results) {
@@ -6732,7 +6732,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // to know the serialization of how the codec works with it??
         totalSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
-      this.metricsRegion.updateGet(totalSize);
+      this.metricsRegion.updateGetSize(totalSize);
+      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
   }
 
