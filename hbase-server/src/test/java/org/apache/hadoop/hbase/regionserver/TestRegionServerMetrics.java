@@ -192,6 +192,52 @@ public class TestRegionServerMetrics {
   }
 
   @Test
+  public void testGet() throws Exception {
+    String tableNameString = "testGet";
+    TableName tName = TableName.valueOf(tableNameString);
+    byte[] cfName = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] initValue = Bytes.toBytes("Value");
+
+    TEST_UTIL.createTable(tName, cfName);
+
+    Connection connection = TEST_UTIL.getConnection();
+    connection.getTable(tName).close(); //wait for the table to come up.
+
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    Table table = connection.getTable(tName);
+    Put p = new Put(row);
+    p.addColumn(cfName, qualifier, initValue);
+    table.put(p);
+
+    Get g = new Get(row);
+    for (int i=0; i< 10; i++) {
+      table.get(g);
+    }
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    try (RegionLocator locator = connection.getRegionLocator(tName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+        metricsHelper.assertCounter(prefix + "_getSizeNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+      }
+      metricsHelper.assertCounterGt("Get_num_ops", 10, serverSource);
+    }
+    table.close();
+  }
+
+  @Test
   public void testMutationsWithoutWal() throws Exception {
     TableName tableName = TableName.valueOf("testMutationsWithoutWal");
     byte[] cf = Bytes.toBytes("d");
