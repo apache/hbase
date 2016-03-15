@@ -1257,7 +1257,6 @@ public class Bytes {
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
    */
-  @VisibleForTesting
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
