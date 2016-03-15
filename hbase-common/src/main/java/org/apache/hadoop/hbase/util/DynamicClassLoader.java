@@ -177,19 +177,21 @@ public class DynamicClassLoader extends ClassLoaderBase {
 
   private synchronized void loadNewJars() {
     // Refresh local jar file lists
-    for (File file: localDir.listFiles()) {
-      String fileName = file.getName();
-      if (jarModifiedTime.containsKey(fileName)) {
-        continue;
-      }
-      if (file.isFile() && fileName.endsWith(".jar")) {
-        jarModifiedTime.put(fileName, Long.valueOf(file.lastModified()));
-        try {
-          URL url = file.toURI().toURL();
-          addURL(url);
-        } catch (MalformedURLException mue) {
-          // This should not happen, just log it
-          LOG.warn("Failed to load new jar " + fileName, mue);
+    if (localDir != null) {
+      for (File file : localDir.listFiles()) {
+        String fileName = file.getName();
+        if (jarModifiedTime.containsKey(fileName)) {
+          continue;
+        }
+        if (file.isFile() && fileName.endsWith(".jar")) {
+          jarModifiedTime.put(fileName, Long.valueOf(file.lastModified()));
+          try {
+            URL url = file.toURI().toURL();
+            addURL(url);
+          } catch (MalformedURLException mue) {
+            // This should not happen, just log it
+            LOG.warn("Failed to load new jar " + fileName, mue);
+          }
         }
       }
     }

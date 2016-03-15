@@ -96,7 +96,10 @@ public class LoadTestKVGenerator {
   private static byte[] getValueForRowColumn(int dataSize, byte[]... seedStrings) {
     long seed = dataSize;
     for (byte[] str : seedStrings) {
-      seed += Bytes.toString(str).hashCode();
+      final String bytesString = Bytes.toString(str);
+      if (bytesString != null) {
+        seed += bytesString.hashCode();
+      }
     }
     Random seededRandom = new Random(seed);
     byte[] randomBytes = new byte[dataSize];
