@@ -144,17 +144,12 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     assertEquals(ADMIN.listNamespaceDescriptors().length, 3);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-
     HTableDescriptor tableDescOne =
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
     HTableDescriptor tableDescTwo =
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
     HTableDescriptor tableDescThree =
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table3"));
-    tableDescThree.addFamily(fam1);
     ADMIN.createTable(tableDescOne);
     boolean constraintViolated = false;
     try {
@@ -253,13 +248,10 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(namespace));
     NamespaceTableAndRegionInfo stateInfo = getNamespaceState(nspDesc.getName());
     assertNotNull("Namespace state found null for " + namespace, stateInfo);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne =
         new HTableDescriptor(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
     HTableDescriptor tableDescTwo =
         new HTableDescriptor(TableName.valueOf(namespace + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 5);
     stateInfo = getNamespaceState(nspDesc.getName());
@@ -597,13 +589,9 @@ public class TestNamespaceAuditor {
     TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
     TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     TableName tableThree = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table3");
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
-    tableDescOne.addFamily(fam1);
     HTableDescriptor tableDescTwo = new HTableDescriptor(tableTwo);
-    tableDescTwo.addFamily(fam1);
     HTableDescriptor tableDescThree = new HTableDescriptor(tableThree);
-    tableDescThree.addFamily(fam1);
     ADMIN.createTable(tableDescOne, Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
     ADMIN.createTable(tableDescThree, Bytes.toBytes("1"), Bytes.toBytes("1000"), 4);
@@ -692,13 +680,10 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     assertEquals(ADMIN.listNamespaceDescriptors().length, 3);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne =
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
-    tableDescOne.addFamily(fam1);
     HTableDescriptor tableDescTwo =
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
-    tableDescTwo.addFamily(fam1);
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
@@ -713,9 +698,7 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
-    tableDescOne.addFamily(fam1);
     ADMIN.createTable(tableDescOne);
     String snapshot = "snapshot_testTableQuotaExceedWithCloneSnapshot";
     ADMIN.snapshot(snapshot, tableName);
@@ -733,10 +716,7 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
-
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
-    tableDescOne.addFamily(fam1);
 
     ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
     String snapshot = "snapshot_testCloneSnapshot";
@@ -771,8 +751,6 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDescOne.addFamily(fam1);
     ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
@@ -808,9 +786,6 @@ public class TestNamespaceAuditor {
     assertNotNull("Namespace descriptor found null.", ndesc);
     TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDescOne.addFamily(fam1);
-
     ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
 
     NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
