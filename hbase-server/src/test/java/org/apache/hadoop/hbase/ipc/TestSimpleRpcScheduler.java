@@ -348,7 +348,9 @@ public class TestSimpleRpcScheduler {
       schedConf.setInt("hbase.ipc.server.max.callqueue.length", 0);
       scheduler.onConfigurationChange(schedConf);
       assertFalse(scheduler.dispatch(putCallTask));
-
+      while (scheduler.getGeneralQueueLength() > 0) {
+        Threads.sleepWithoutInterrupt(100);
+      }
       schedConf.setInt("hbase.ipc.server.max.callqueue.length", 1);
       scheduler.onConfigurationChange(schedConf);
       assertTrue(scheduler.dispatch(putCallTask));
