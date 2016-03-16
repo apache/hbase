@@ -31,6 +31,11 @@ import java.net.InetSocketAddress;
 @InterfaceStability.Evolving
 public abstract class RpcScheduler {
 
+  public static final String IPC_SERVER_MAX_CALLQUEUE_LENGTH =
+      "hbase.ipc.server.max.callqueue.length";
+  public static final String IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH =
+      "hbase.ipc.server.priority.max.callqueue.length";
+
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   static abstract class Context {
     public abstract InetSocketAddress getListenerAddress();

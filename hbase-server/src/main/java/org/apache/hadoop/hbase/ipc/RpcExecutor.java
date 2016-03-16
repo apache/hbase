@@ -43,6 +43,7 @@ public abstract class RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RpcExecutor.class);
 
   protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
+
   protected volatile int currentQueueLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
@@ -219,6 +220,10 @@ public abstract class RpcExecutor {
    * @param conf updated configuration
    */
   public void resizeQueues(Configuration conf) {
-    currentQueueLimit = conf.getInt("hbase.ipc.server.max.callqueue.length", currentQueueLimit);
+    String configKey = RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH;
+    if (name != null && name.toLowerCase().contains("priority")) {
+      configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
+    }
+    currentQueueLimit = conf.getInt(configKey, currentQueueLimit);
   }
 }
