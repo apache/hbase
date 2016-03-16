@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This can be used for HMaster, where no prioritization is needed.
  */
 public class FifoRpcScheduler extends RpcScheduler {
-
   private final int handlerCount;
   private final int maxQueueLength;
   private final AtomicInteger queueSize = new AtomicInteger(0);
@@ -40,7 +39,7 @@ public class FifoRpcScheduler extends RpcScheduler {
 
   public FifoRpcScheduler(Configuration conf, int handlerCount) {
     this.handlerCount = handlerCount;
-    this.maxQueueLength = conf.getInt("hbase.ipc.server.max.callqueue.length",
+    this.maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
   }
 
