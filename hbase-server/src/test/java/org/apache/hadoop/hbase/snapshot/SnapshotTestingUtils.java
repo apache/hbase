@@ -546,16 +546,30 @@ public class SnapshotTestingUtils {
       return createSnapshot(snapshotName, tableName, SnapshotManifestV1.DESCRIPTOR_VERSION);
     }
 
+    public SnapshotBuilder createSnapshotV1(final String snapshotName, final String tableName,
+        final int numRegions) throws IOException {
+      return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV1.DESCRIPTOR_VERSION);
+    }
+
     public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName)
         throws IOException {
       return createSnapshot(snapshotName, tableName, SnapshotManifestV2.DESCRIPTOR_VERSION);
     }
 
+    public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName,
+        final int numRegions) throws IOException {
+      return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV2.DESCRIPTOR_VERSION);
+    }
+
     private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
         final int version) throws IOException {
-      HTableDescriptor htd = createHtd(tableName);
+      return createSnapshot(snapshotName, tableName, TEST_NUM_REGIONS, version);
+    }
 
-      RegionData[] regions = createTable(htd, TEST_NUM_REGIONS);
+    private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
+        final int numRegions, final int version) throws IOException {
+      HTableDescriptor htd = createHtd(tableName);
+      RegionData[] regions = createTable(htd, numRegions);
 
       SnapshotDescription desc = SnapshotDescription.newBuilder()
         .setTable(htd.getNameAsString())
