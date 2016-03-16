@@ -166,8 +166,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       PriorityFunction priority,
       Abortable server,
       int highPriorityLevel) {
-    int maxQueueLength = conf.getInt("hbase.ipc.server.max.callqueue.length",
+
+    int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    int maxPriorityQueueLength =
+        conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, maxQueueLength);
+
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
     this.abortable = server;
@@ -226,7 +230,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     // Create 2 queues to help priorityExecutor be more scalable.
     this.priorityExecutor = priorityHandlerCount > 0 ?
-        new BalancedQueueRpcExecutor("Priority", priorityHandlerCount, 2, maxQueueLength) : null;
+        new BalancedQueueRpcExecutor("Priority", priorityHandlerCount, 2, maxPriorityQueueLength) :
+        null;
 
    this.replicationExecutor =
      replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
