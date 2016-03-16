@@ -36,10 +36,8 @@ import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -63,7 +61,7 @@ public final class ClientExceptionsUtil {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
         || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
-        || isCallQueueTooBigException(cur) || cur instanceof NotServingRegionException);
+        || cur instanceof CallQueueTooBigException || cur instanceof NotServingRegionException);
   }
 
 
@@ -87,12 +85,8 @@ public final class ClientExceptionsUtil {
       }
       if (cur instanceof RemoteException) {
         RemoteException re = (RemoteException) cur;
-        cur = re.unwrapRemoteException(
-            RegionOpeningException.class, RegionMovedException.class,
-            RegionTooBusyException.class);
-        if (cur == null) {
-          cur = re.unwrapRemoteException();
-        }
+        cur = re.unwrapRemoteException();
+
         // unwrapRemoteException can return the exception given as a parameter when it cannot
         //  unwrap it. In this case, there is no need to look further
         // noinspection ObjectEquality
@@ -110,25 +104,14 @@ public final class ClientExceptionsUtil {
   }
 
   /**
-   * Checks if the exception is CallQueueTooBig exception, or tries to unwrap
-   * {@link RemoteWithExtrasException} to see if we've got {@link CallQueueTooBigException}.
+   * Checks if the exception is CallQueueTooBig exception (maybe wrapped
+   * into some RemoteException).
    * @param t exception to check
    * @return true if it's a CQTBE, false otherwise
    */
   public static boolean isCallQueueTooBigException(Throwable t) {
-    if (t instanceof CallQueueTooBigException) {
-      return true;
-    }
-    Throwable t2 = t;
-    if (t instanceof RetriesExhaustedException)  {
-      t2 = t.getCause();
-    }
-    if (t2 instanceof RemoteWithExtrasException) {
-      return CallQueueTooBigException.class.getName().equals(
-        ((RemoteWithExtrasException) t2).getClassName().trim());
-    } else {
-      return false;
-    }
+    t = findException(t);
+    return (t instanceof CallQueueTooBigException);
   }
 
   /**
