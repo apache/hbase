@@ -591,9 +591,9 @@ public class RowResource extends ResourceBase {
 
           if (parts.length == 1) {
             // Only Column Family is specified
-            delete.addFamily(parts[0], cell.getTimestamp());
+            delete.deleteFamily(parts[0], cell.getTimestamp());
           } else if (parts.length == 2) {
-            delete.addColumn(parts[0], parts[1], cell.getTimestamp());
+            delete.deleteColumn(parts[0], parts[1], cell.getTimestamp());
           } else {
             servlet.getMetrics().incrementFailedDeleteRequests(1);
             return Response.status(Response.Status.BAD_REQUEST)
@@ -610,14 +610,14 @@ public class RowResource extends ResourceBase {
           // To support backcompat of deleting a cell
           // if that is the only cell passed to the rest api
           if(cellModelCount == 1) {
-            delete.addColumns(parts[0], parts[1]);
+            delete.deleteColumns(parts[0], parts[1]);
           }
           retValue = table.checkAndDelete(key, parts[0], parts[1],
             valueToDeleteCell.getValue(), delete);
         } else {
           // The case of empty qualifier.
           if(cellModelCount == 1) {
-            delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
+            delete.deleteColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
           }
           retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
             valueToDeleteCell.getValue(), delete);
