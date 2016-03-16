@@ -60,6 +60,7 @@ public class MetricsConnection {
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
   private static final String MEMLOAD_BASE = "memstoreLoad_";
   private static final String HEAP_BASE = "heapOccupancy_";
+  private static final String CACHE_BASE = "cacheDroppingExceptions_";
   private static final String CLIENT_SVC = ClientService.getDescriptor().getName();
 
   /** A container class for collecting details about the RPC call as it percolates. */
@@ -249,6 +250,12 @@ public class MetricsConnection {
     }
   };
 
+  private final NewMetric<Counter> counterFactory = new NewMetric<Counter>() {
+    @Override public Counter newMetric(Class<?> clazz, String name, String scope) {
+      return registry.newCounter(clazz, name, scope);
+    }
+  };
+
   // static metrics
 
   @VisibleForTesting protected final Counter metaCacheHits;
@@ -261,6 +268,8 @@ public class MetricsConnection {
   @VisibleForTesting protected final CallTracker putTracker;
   @VisibleForTesting protected final CallTracker multiTracker;
   @VisibleForTesting protected final RunnerStats runnerStats;
+  private final Counter metaCacheNumClearServer;
+  private final Counter metaCacheNumClearRegion;
 
   // dynamic metrics
 
@@ -272,6 +281,8 @@ public class MetricsConnection {
   @VisibleForTesting protected final ConcurrentMap<String, Histogram> rpcHistograms =
       new ConcurrentHashMap<>(CAPACITY * 2 /* tracking both request and response sizes */,
           LOAD_FACTOR, CONCURRENCY_LEVEL);
+  private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
+    new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   public MetricsConnection(final ConnectionManager.HConnectionImplementation conn) {
     this.scope = conn.toString();
@@ -299,6 +310,10 @@ public class MetricsConnection {
         });
     this.metaCacheHits = registry.newCounter(this.getClass(), "metaCacheHits", scope);
     this.metaCacheMisses = registry.newCounter(this.getClass(), "metaCacheMisses", scope);
+    this.metaCacheNumClearServer = registry.newCounter(this.getClass(),
+      "metaCacheNumClearServer", scope);
+    this.metaCacheNumClearRegion = registry.newCounter(this.getClass(),
+      "metaCacheNumClearRegion", scope);
     this.getTracker = new CallTracker(this.registry, "Get", scope);
     this.scanTracker = new CallTracker(this.registry, "Scan", scope);
     this.appendTracker = new CallTracker(this.registry, "Mutate", "Append", scope);
@@ -333,6 +348,16 @@ public class MetricsConnection {
     metaCacheMisses.inc();
   }
 
+  /** Increment the number of meta cache drops requested for entire RegionServer. */
+  public void incrMetaCacheNumClearServer() {
+    metaCacheNumClearServer.inc();
+  }
+
+  /** Increment the number of meta cache drops requested for individual region. */
+  public void incrMetaCacheNumClearRegion() {
+    metaCacheNumClearRegion.inc();
+  }
+
   /** Increment the number of normal runner counts. */
   public void incrNormalRunners() {
     this.runnerStats.incrNormalRunners();
@@ -355,7 +380,8 @@ public class MetricsConnection {
     T t = map.get(key);
     if (t == null) {
       t = factory.newMetric(this.getClass(), key, scope);
-      map.putIfAbsent(key, t);
+      T tmp = map.putIfAbsent(key, t);
+      t = (tmp == null) ? t : tmp;
     }
     return t;
   }
@@ -426,5 +452,10 @@ public class MetricsConnection {
     }
     // Fallback to dynamic registry lookup for DDL methods.
     updateRpcGeneric(method, stats);
+  }
+
+  public void incrCacheDroppingExceptions(Object exception) {
+    getMetric(CACHE_BASE + exception.getClass().getSimpleName(),
+      cacheDroppingExceptions, counterFactory).inc();
   }
 }

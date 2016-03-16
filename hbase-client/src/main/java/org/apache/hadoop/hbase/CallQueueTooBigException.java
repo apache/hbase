@@ -30,4 +30,8 @@ public class CallQueueTooBigException extends IOException {
   public CallQueueTooBigException() {
     super();
   }
+
+  public CallQueueTooBigException(String message) {
+    super(message);
+  }
 }
