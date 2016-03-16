@@ -1860,6 +1860,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     if (regionName == null) {
       // we do not know which region, so just remove the cache entry for the row and server
+      if (metrics != null) {
+        metrics.incrCacheDroppingExceptions(exception);
+      }
       metaCache.clearCache(tableName, rowkey, source);
       return;
     }
@@ -1897,6 +1900,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             regionInfo, source, rme.getServerName(), rme.getLocationSeqNum());
         return;
       }
+    }
+
+    if (metrics != null) {
+      metrics.incrCacheDroppingExceptions(exception);
     }
 
     // If we're here, it means that can cannot be sure about the location, so we remove it from
