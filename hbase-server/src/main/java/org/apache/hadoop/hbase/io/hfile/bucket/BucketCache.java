@@ -1317,25 +1317,22 @@ public class BucketCache implements BlockCache, HeapSize {
         final AtomicLong realCacheSize) throws CacheFullException, IOException,
         BucketAllocatorException {
       int len = data.getSerializedLength();
-      // This cacheable thing can't be serialized...
+      // This cacheable thing can't be serialized
       if (len == 0) return null;
       long offset = bucketAllocator.allocateBlock(len);
       BucketEntry bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory);
       bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
       try {
         if (data instanceof HFileBlock) {
-          HFileBlock block = (HFileBlock) data;
-          ByteBuff sliceBuf = block.getBufferReadOnlyWithHeader();
-          sliceBuf.rewind();
-          assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE ||
-            len == sliceBuf.limit() + block.headerSize() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
-          ByteBuffer extraInfoBuffer = ByteBuffer.allocate(HFileBlock.EXTRA_SERIALIZATION_SPACE);
-          block.serializeExtraInfo(extraInfoBuffer);
+          // If an instance of HFileBlock, save on some allocations.
+          HFileBlock block = (HFileBlock)data;
+          ByteBuff sliceBuf = block.getBufferReadOnly();
+          ByteBuffer metadata = block.getMetaData();
           if (LOG.isTraceEnabled()) {
             LOG.trace("Write offset=" + offset + ", len=" + len);
           }
           ioEngine.write(sliceBuf, offset);
-          ioEngine.write(extraInfoBuffer, offset + len - HFileBlock.EXTRA_SERIALIZATION_SPACE);
+          ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
           ByteBuffer bb = ByteBuffer.allocate(len);
           data.serialize(bb);

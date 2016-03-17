@@ -1271,7 +1271,7 @@ public class StoreFile {
     }
 
     /**
-     * Warning: Do not write further code which depends on this call. Instead
+     * @deprecated Do not write further code which depends on this call. Instead
      * use getStoreFileScanner() which uses the StoreFileScanner class/interface
      * which is the preferred way to scan a store with higher level concepts.
      *
@@ -1285,7 +1285,7 @@ public class StoreFile {
     }
 
     /**
-     * Warning: Do not write further code which depends on this call. Instead
+     * @deprecated Do not write further code which depends on this call. Instead
      * use getStoreFileScanner() which uses the StoreFileScanner class/interface
      * which is the preferred way to scan a store with higher level concepts.
      *

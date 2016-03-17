@@ -55,6 +55,26 @@ public class HFileContextBuilder {
 
   private String hfileName = null;
 
+  public HFileContextBuilder() {}
+
+  /**
+   * Use this constructor if you want to change a few settings only in another context.
+   */
+  public HFileContextBuilder(final HFileContext hfc) {
+    this.usesHBaseChecksum = hfc.isUseHBaseChecksum();
+    this.includesMvcc = hfc.isIncludesMvcc();
+    this.includesTags = hfc.isIncludesTags();
+    this.compression = hfc.getCompression();
+    this.compressTags = hfc.isCompressTags();
+    this.checksumType = hfc.getChecksumType();
+    this.bytesPerChecksum = hfc.getBytesPerChecksum();
+    this.blocksize = hfc.getBlocksize();
+    this.encoding = hfc.getDataBlockEncoding();
+    this.cryptoContext = hfc.getEncryptionContext();
+    this.fileCreateTime = hfc.getFileCreateTime();
+    this.hfileName = hfc.getHFileName();
+  }
+
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
     this.usesHBaseChecksum = useHBaseCheckSum;
     return this;
