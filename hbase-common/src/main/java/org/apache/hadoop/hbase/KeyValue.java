@@ -866,7 +866,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
    * remaining in the buffer
    */
-  private static int writeByteArray(byte [] buffer, final int boffset,
+  static int writeByteArray(byte [] buffer, final int boffset,
       final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, int flength,
       final byte [] qualifier, final int qoffset, int qlength,

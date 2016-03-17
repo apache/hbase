@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
@@ -181,6 +182,8 @@ public class KeyValueUtil {
 
   /*************** next/previous **********************************/
 
+  /*************** next/previous **********************************/
+
   /**
    * Append single byte 0x00 to the end of the input row key
    */
@@ -188,17 +191,17 @@ public class KeyValueUtil {
     byte[] nextRow = new byte[in.getRowLength() + 1];
     System.arraycopy(in.getRowArray(), in.getRowOffset(), nextRow, 0, in.getRowLength());
     nextRow[nextRow.length - 1] = 0;//maybe not necessary
-    return KeyValue.createFirstOnRow(nextRow);
+    return createFirstOnRow(nextRow);
   }
 
   /**
    * Increment the row bytes and clear the other fields
    */
   public static KeyValue createFirstKeyInIncrementedRow(final Cell in){
-    byte[] thisRow = new SimpleByteRange(in.getRowArray(), in.getRowOffset(), in.getRowLength())
-        .deepCopyToNewArray();
+    byte[] thisRow = new SimpleByteRange(in.getRowArray(), in.getRowOffset(),
+        in.getRowLength()).deepCopyToNewArray();
     byte[] nextRow = Bytes.unsignedCopyAndIncrement(thisRow);
-    return KeyValue.createFirstOnRow(nextRow);
+    return createFirstOnRow(nextRow);
   }
 
   /**
@@ -209,8 +212,286 @@ public class KeyValueUtil {
    * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
-    return KeyValue.createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
+    return createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
       CellUtil.cloneQualifier(in), in.getTimestamp() - 1);
+  }
+
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * larger than or equal to all other possible KeyValues that have the same
+   * row, family, qualifier. Used for reseeking.
+   *
+   * @param row
+   *          row key
+   * @param roffset
+   *         row offset
+   * @param rlength
+   *         row length
+   * @param family
+   *         family name
+   * @param foffset
+   *         family offset
+   * @param flength
+   *         family length
+   * @param qualifier
+   *        column qualifier
+   * @param qoffset
+   *        qualifier offset
+   * @param qlength
+   *        qualifier length
+   * @return Last possible key on passed row, family, qualifier.
+   */
+  public static KeyValue createLastOnRow(final byte[] row, final int roffset, final int rlength,
+      final byte[] family, final int foffset, final int flength, final byte[] qualifier,
+      final int qoffset, final int qlength) {
+    return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
+        qlength, HConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+  }
+  
+  /**
+   * Creates a keyValue for the specified keyvalue larger than or equal to all other possible
+   * KeyValues that have the same row, family, qualifer.  Used for reseeking
+   * @param kv
+   * @return KeyValue
+   */
+  public static KeyValue createLastOnRow(Cell kv) {
+    return createLastOnRow(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), null, 0, 0,
+        null, 0, 0);
+  }
+
+  /**
+   * Similar to
+   * {@link #createLastOnRow(byte[], int, int, byte[], int, int, byte[], int, int)}
+   * but creates the last key on the row/column of this KV (the value part of
+   * the returned KV is always empty). Used in creating "fake keys" for the
+   * multi-column Bloom filter optimization to skip the row/column we already
+   * know is not in the file.
+   * 
+   * @param kv - cell
+   * @return the last key on the row/column of the given key-value pair
+   */
+  public static KeyValue createLastOnRowCol(Cell kv) {
+    return new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), kv.getQualifierArray(),
+        kv.getQualifierOffset(), kv.getQualifierLength(), HConstants.OLDEST_TIMESTAMP,
+        Type.Minimum, null, 0, 0);
+  }
+
+  /**
+   * Creates the first KV with the row/family/qualifier of this KV and the given
+   * timestamp. Uses the "maximum" KV type that guarantees that the new KV is
+   * the lowest possible for this combination of row, family, qualifier, and
+   * timestamp. This KV's own timestamp is ignored. While this function copies
+   * the value from this KV, it is normally used on key-only KVs.
+   * 
+   * @param kv - cell
+   * @param ts
+   */
+  public static KeyValue createFirstOnRowColTS(Cell kv, long ts) {
+    return new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), kv.getQualifierArray(),
+        kv.getQualifierOffset(), kv.getQualifierLength(), ts, Type.Maximum, kv.getValueArray(),
+        kv.getValueOffset(), kv.getValueLength());
+  }
+  
+  /**
+   * Create a KeyValue that is smaller than all other possible KeyValues
+   * for the given row. That is any (valid) KeyValue on 'row' would sort
+   * _after_ the result.
+   *
+   * @param row - row key (arbitrary byte array)
+   * @return First possible KeyValue on passed <code>row</code>
+   */
+  public static KeyValue createFirstOnRow(final byte [] row, int roffset, short rlength) {
+    return new KeyValue(row, roffset, rlength,
+        null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  }
+  
+
+  /**
+   * Creates a KeyValue that is last on the specified row id. That is,
+   * every other possible KeyValue for the given row would compareTo()
+   * less than the result of this call.
+   * @param row row key
+   * @return Last possible KeyValue on passed <code>row</code>
+   */
+  public static KeyValue createLastOnRow(final byte[] row) {
+    return new KeyValue(row, null, null, HConstants.LATEST_TIMESTAMP, Type.Minimum);
+  }
+
+  /**
+   * Create a KeyValue that is smaller than all other possible KeyValues
+   * for the given row. That is any (valid) KeyValue on 'row' would sort
+   * _after_ the result.
+   *
+   * @param row - row key (arbitrary byte array)
+   * @return First possible KeyValue on passed <code>row</code>
+   */
+  public static KeyValue createFirstOnRow(final byte [] row) {
+    return createFirstOnRow(row, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Creates a KeyValue that is smaller than all other KeyValues that
+   * are older than the passed timestamp.
+   * @param row - row key (arbitrary byte array)
+   * @param ts - timestamp
+   * @return First possible key on passed <code>row</code> and timestamp.
+   */
+  public static KeyValue createFirstOnRow(final byte [] row,
+      final long ts) {
+    return new KeyValue(row, null, null, ts, Type.Maximum);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,family,qualifier.
+   * Used for seeking.
+   * @param row - row key (arbitrary byte array)
+   * @param family - family name
+   * @param qualifier - column qualifier
+   * @return First possible key on passed <code>row</code>, and column.
+   */
+  public static KeyValue createFirstOnRow(final byte [] row, final byte [] family,
+      final byte [] qualifier) {
+    return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
+  }
+
+  /**
+   * Create a Delete Family KeyValue for the specified row and family that would
+   * be smaller than all other possible Delete Family KeyValues that have the
+   * same row and family.
+   * Used for seeking.
+   * @param row - row key (arbitrary byte array)
+   * @param family - family name
+   * @return First Delete Family possible key on passed <code>row</code>.
+   */
+  public static KeyValue createFirstDeleteFamilyOnRow(final byte [] row,
+      final byte [] family) {
+    return new KeyValue(row, family, null, HConstants.LATEST_TIMESTAMP,
+        Type.DeleteFamily);
+  }
+
+  /**
+   * @param row - row key (arbitrary byte array)
+   * @param f - family name
+   * @param q - column qualifier
+   * @param ts - timestamp
+   * @return First possible key on passed <code>row</code>, column and timestamp
+   */
+  public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
+      final byte [] q, final long ts) {
+    return new KeyValue(row, f, q, ts, Type.Maximum);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @return First possible key on passed Row, Family, Qualifier.
+   */
+  public static KeyValue createFirstOnRow(final byte [] row,
+      final int roffset, final int rlength, final byte [] family,
+      final int foffset, final int flength, final byte [] qualifier,
+      final int qoffset, final int qlength) {
+    return new KeyValue(row, roffset, rlength, family,
+        foffset, flength, qualifier, qoffset, qlength,
+        HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   *
+   * @param buffer the buffer to use for the new <code>KeyValue</code> object
+   * @param row the value key
+   * @param family family name
+   * @param qualifier column qualifier
+   *
+   * @return First possible key on passed Row, Family, Qualifier.
+   *
+   * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
+   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   */
+  public static KeyValue createFirstOnRow(byte [] buffer, final byte [] row,
+      final byte [] family, final byte [] qualifier)
+          throws IllegalArgumentException {
+    return createFirstOnRow(buffer, 0, row, 0, row.length,
+        family, 0, family.length,
+        qualifier, 0, qualifier.length);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   *
+   * @param buffer the buffer to use for the new <code>KeyValue</code> object
+   * @param boffset buffer offset
+   * @param row the value key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return First possible key on passed Row, Family, Qualifier.
+   *
+   * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
+   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   */
+  public static KeyValue createFirstOnRow(byte[] buffer, final int boffset, final byte[] row,
+      final int roffset, final int rlength, final byte[] family, final int foffset,
+      final int flength, final byte[] qualifier, final int qoffset, final int qlength)
+      throws IllegalArgumentException {
+
+    long lLength = KeyValue.getKeyValueDataStructureSize(rlength, flength, qlength, 0);
+
+    if (lLength > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("KeyValue length " + lLength + " > " + Integer.MAX_VALUE);
+    }
+    int iLength = (int) lLength;
+    if (buffer.length - boffset < iLength) {
+      throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < "
+          + iLength);
+    }
+
+    int len = KeyValue.writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset,
+        flength, qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
+        null, 0, 0, null);
+    return new KeyValue(buffer, boffset, len);
+  }
+
+  /**
+   * Creates the first KV with the row/family/qualifier of this KV and the
+   * given timestamp. Uses the "maximum" KV type that guarantees that the new
+   * KV is the lowest possible for this combination of row, family, qualifier,
+   * and timestamp. This KV's own timestamp is ignored. While this function
+   * copies the value from this KV, it is normally used on key-only KVs.
+   */
+  public static KeyValue createFirstOnRowColTS(KeyValue kv, long ts) {
+    return new KeyValue(
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+        kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
+        ts, Type.Maximum, kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
   }
 
   /*************** misc **********************************/
