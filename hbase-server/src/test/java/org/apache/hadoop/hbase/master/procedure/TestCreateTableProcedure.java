@@ -23,10 +23,12 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -42,6 +44,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(MediumTests.class)
@@ -116,6 +119,27 @@ public class TestCreateTableProcedure {
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     MasterProcedureTestingUtility.validateTableCreation(
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+  }
+
+  @Test(timeout=60000)
+  public void testCreateWithoutColumnFamily() throws Exception {
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    final TableName tableName = TableName.valueOf("testCreateWithoutColumnFamily");
+    // create table with 0 families will fail
+    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName);
+
+    // disable sanity check
+    htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
+
+    long procId =
+        ProcedureTestingUtility.submitAndWait(procExec,
+            new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    final ProcedureInfo result = procExec.getResult(procId);
+    assertEquals(true, result.isFailed());
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue("expected DoNotRetryIOException, got " + cause,
+        cause instanceof DoNotRetryIOException);
   }
 
   @Test(timeout=60000, expected=TableExistsException.class)
