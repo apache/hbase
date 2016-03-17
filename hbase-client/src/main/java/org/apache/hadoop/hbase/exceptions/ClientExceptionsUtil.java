@@ -93,7 +93,11 @@ public final class ClientExceptionsUtil {
         if (cur == re) {
           return cur;
         }
-      } else if (cur.getCause() != null) {
+
+        // When we receive RemoteException which wraps IOException which has a cause as
+        // RemoteException we can get into infinite loop here; so if the cause of the exception
+        // is RemoteException, we shouldn't look further.
+      } else if (cur.getCause() != null && !(cur.getCause() instanceof RemoteException)) {
         cur = cur.getCause();
       } else {
         return cur;
