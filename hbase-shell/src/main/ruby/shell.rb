@@ -343,6 +343,8 @@ Shell.load_command_group(
     list_replicated_tables
     enable_table_replication
     disable_table_replication
+    get_peer_config
+    list_peer_configs
   ]
 )
 

@@ -160,5 +160,13 @@ module Hbase
       tableName = TableName.valueOf(table_name)
       @replication_admin.disableTableRep(tableName)
     end
+
+    def list_peer_configs
+      @replication_admin.list_peer_configs
+    end
+
+    def get_peer_config(id)
+      @replication_admin.get_peer_config(id)
+    end
   end
 end
