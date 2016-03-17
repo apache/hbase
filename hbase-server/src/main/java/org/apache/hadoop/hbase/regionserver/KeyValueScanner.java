@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -29,7 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * Scanner that returns the next KeyValue.
  */
 @InterfaceAudience.Private
-public interface KeyValueScanner extends Shipper {
+public interface KeyValueScanner extends Shipper, Closeable {
   /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
@@ -71,6 +72,7 @@ public interface KeyValueScanner extends Shipper {
    * The default implementation for this would be to return 0. A file having
    * lower sequence id will be considered to be the older one.
    */
+  // TODO: Implement SequenceId Interface instead.
   long getSequenceID();
 
   /**

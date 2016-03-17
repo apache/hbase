@@ -78,14 +78,8 @@ public class TestPrefetch {
     // Check that all of the data blocks were preloaded
     BlockCache blockCache = cacheConf.getBlockCache();
     long offset = 0;
-    HFileBlock prevBlock = null;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      long onDiskSize = -1;
-      if (prevBlock != null) {
-         onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
-      }
-      HFileBlock block = reader.readBlock(offset, onDiskSize, false, true, false, true, null,
-        null);
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true, false, true) != null;
       if (block.getBlockType() == BlockType.DATA ||
@@ -93,7 +87,6 @@ public class TestPrefetch {
           block.getBlockType() == BlockType.INTERMEDIATE_INDEX) {
         assertTrue(isCached);
       }
-      prevBlock = block;
       offset += block.getOnDiskSizeWithHeader();
     }
   }

@@ -60,7 +60,7 @@ import org.apache.hadoop.util.StringUtils;
  * Examples of how to use the block index writer can be found in
  * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
  *  {@link HFileWriterImpl}. Examples of how to use the reader can be
- *  found in {@link HFileWriterImpl} and
+ *  found in {@link HFileReaderImpl} and
  *  {@link org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex}.
  */
 @InterfaceAudience.Private

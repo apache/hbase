@@ -320,7 +320,7 @@ public class TestHFileBlock {
         .withIncludesTags(includesTag)
         .withCompression(algo).build();
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
-        HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
+        HFileBlock b = hbr.readBlockData(0, -1, pread);
         is.close();
         assertEquals(0, HFile.getChecksumFailuresCount());
 
@@ -334,17 +334,15 @@ public class TestHFileBlock {
           is = fs.open(path);
           hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE +
-                                b.totalChecksumBytes(), -1, pread);
+                                b.totalChecksumBytes(), pread);
           assertEquals(expected, b);
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
-                + HConstants.HFILEBLOCK_HEADER_SIZE, -1, pread);
+                + HConstants.HFILEBLOCK_HEADER_SIZE, pread);
             fail("Exception expected");
           } catch (IOException ex) {
-            String expectedPrefix = "On-disk size without header provided is "
-                + wrongCompressedSize + ", but block header contains "
-                + b.getOnDiskSizeWithoutHeader() + ".";
+            String expectedPrefix = "Passed in onDiskSizeWithHeader=";
             assertTrue("Invalid exception message: '" + ex.getMessage()
                 + "'.\nMessage is expected to start with: '" + expectedPrefix
                 + "'", ex.getMessage().startsWith(expectedPrefix));
@@ -424,7 +422,7 @@ public class TestHFileBlock {
           HFileBlock blockFromHFile, blockUnpacked;
           int pos = 0;
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
-            blockFromHFile = hbr.readBlockData(pos, -1, -1, pread);
+            blockFromHFile = hbr.readBlockData(pos, -1, pread);
             assertEquals(0, HFile.getChecksumFailuresCount());
             blockFromHFile.sanityCheck();
             pos += blockFromHFile.getOnDiskSizeWithHeader();
@@ -560,7 +558,7 @@ public class TestHFileBlock {
             if (detailedLogging) {
               LOG.info("Reading block #" + i + " at offset " + curOffset);
             }
-            HFileBlock b = hbr.readBlockData(curOffset, -1, -1, pread);
+            HFileBlock b = hbr.readBlockData(curOffset, -1, pread);
             if (detailedLogging) {
               LOG.info("Block #" + i + ": " + b);
             }
@@ -574,8 +572,7 @@ public class TestHFileBlock {
 
             // Now re-load this block knowing the on-disk size. This tests a
             // different branch in the loader.
-            HFileBlock b2 = hbr.readBlockData(curOffset,
-                b.getOnDiskSizeWithHeader(), -1, pread);
+            HFileBlock b2 = hbr.readBlockData(curOffset, b.getOnDiskSizeWithHeader(), pread);
             b2.sanityCheck();
 
             assertEquals(b.getBlockType(), b2.getBlockType());
@@ -601,7 +598,7 @@ public class TestHFileBlock {
               b = b.unpack(meta, hbr);
               // b's buffer has header + data + checksum while
               // expectedContents have header + data only
-              ByteBuff bufRead = b.getBufferWithHeader();
+              ByteBuff bufRead = b.getBufferReadOnly();
               ByteBuffer bufExpected = expectedContents.get(i);
               boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
                   bufRead.arrayOffset(),
@@ -684,7 +681,7 @@ public class TestHFileBlock {
         HFileBlock b;
         try {
           long onDiskSizeArg = withOnDiskSize ? expectedSize : -1;
-          b = hbr.readBlockData(offset, onDiskSizeArg, -1, pread);
+          b = hbr.readBlockData(offset, onDiskSizeArg, pread);
         } catch (IOException ex) {
           LOG.error("Error in client " + clientId + " trying to read block at "
               + offset + ", pread=" + pread + ", withOnDiskSize=" +
@@ -719,8 +716,7 @@ public class TestHFileBlock {
   protected void testConcurrentReadingInternals() throws IOException,
       InterruptedException, ExecutionException {
     for (Compression.Algorithm compressAlgo : COMPRESSION_ALGORITHMS) {
-      Path path =
-          new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
+      Path path = new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
       Random rand = defaultRandom();
       List<Long> offsets = new ArrayList<Long>();
       List<BlockType> types = new ArrayList<BlockType>();
@@ -843,8 +839,7 @@ public class TestHFileBlock {
                           .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                           .withChecksumType(ChecksumType.NULL).build();
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-          HFileBlock.FILL_HEADER, -1,
-          0, meta);
+          HFileBlock.FILL_HEADER, -1, 0, -1, meta);
       long byteBufferExpectedSize = ClassSize.align(ClassSize.estimateBase(
           new MultiByteBuff(buf).getClass(), true)
           + HConstants.HFILEBLOCK_HEADER_SIZE + size);
