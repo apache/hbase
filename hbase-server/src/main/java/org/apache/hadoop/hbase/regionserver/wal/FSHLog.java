@@ -1771,10 +1771,19 @@ public class FSHLog implements WAL {
           // If not a batch, return to consume more events from the ring buffer before proceeding;
           // we want to get up a batch of syncs and appends before we go do a filesystem sync.
           if (!endOfBatch || this.syncFuturesCount <= 0) return;
-          // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
-          // the syncRunner. We should never get an exception in here.
+          // syncRunnerIndex is bound to the range [0, Integer.MAX_INT - 1] as follows:
+          //   * The maximum value possible for syncRunners.length is Integer.MAX_INT
+          //   * syncRunnerIndex starts at 0 and is incremented only here
+          //   * after the increment, the value is bounded by the '%' operator to [0, syncRunners.length),
+          //     presuming the value was positive prior to the '%' operator.
+          //   * after being bound to [0, Integer.MAX_INT - 1], the new value is stored in syncRunnerIndex
+          //     ensuring that it can't grow without bound and overflow.
+          //   * note that the value after the increment must be positive, because the most it could have
+          //     been prior was Integer.MAX_INT - 1 and we only increment by 1.
           this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
           try {
+            // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
+            // the syncRunner. We should never get an exception in here.
             this.syncRunners[this.syncRunnerIndex].offer(sequence, this.syncFutures,
               this.syncFuturesCount);
           } catch (Exception e) {
