@@ -19,15 +19,17 @@ package org.apache.hadoop.hbase.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
 /**
  * Filter that returns only cells whose timestamp (version) is
@@ -42,6 +44,7 @@ import java.util.TreeSet;
 @InterfaceStability.Stable
 public class TimestampsFilter extends FilterBase {
 
+  private final boolean canHint;
   TreeSet<Long> timestamps;
   private static final int MAX_LOG_TIMESTAMPS = 5;
 
@@ -50,16 +53,29 @@ public class TimestampsFilter extends FilterBase {
   long minTimeStamp = Long.MAX_VALUE;
 
   /**
+   * Constructor for filter that retains only the specified timestamps in the list.
+   * @param timestamps
+   */
+  public TimestampsFilter(List<Long> timestamps) {
+    this(timestamps, false);
+  }
+
+  /**
    * Constructor for filter that retains only those
    * cells whose timestamp (version) is in the specified
    * list of timestamps.
    *
-   * @param timestamps
+   * @param timestamps list of timestamps that are wanted.
+   * @param canHint should the filter provide a seek hint? This can skip
+   *                past delete tombstones, so it should only be used when that
+   *                is not an issue ( no deletes, or don't care if data
+   *                becomes visible)
    */
-  public TimestampsFilter(List<Long> timestamps) {
+  public TimestampsFilter(List<Long> timestamps, boolean canHint) {
     for (Long timestamp : timestamps) {
       Preconditions.checkArgument(timestamp >= 0, "must be positive %s", timestamp);
     }
+    this.canHint = canHint;
     this.timestamps = new TreeSet<Long>(timestamps);
     init();
   }
@@ -96,7 +112,41 @@ public class TimestampsFilter extends FilterBase {
       // to be lesser than all of the other values.
       return ReturnCode.NEXT_COL;
     }
-    return ReturnCode.SKIP;
+    return canHint ? ReturnCode.SEEK_NEXT_USING_HINT : ReturnCode.SKIP;
+  }
+
+
+  /**
+   * Pick the next cell that the scanner should seek to. Since this can skip any number of cells
+   * any of which can be a delete this can resurect old data.
+   *
+   * The method will only be used if canHint was set to true while creating the filter.
+   *
+   * @throws IOException This will never happen.
+   */
+  public Cell getNextCellHint(Cell currentCell) throws IOException {
+    if (!canHint) {
+      return null;
+    }
+
+    Long nextTimestampObject = timestamps.lower(currentCell.getTimestamp());
+
+    if (nextTimestampObject == null) {
+      // This should only happen if the current column's
+      // timestamp is below the last one in the list.
+      //
+      // It should never happen as the filterKeyValue should return NEXT_COL
+      // but it's always better to be extra safe and protect against future
+      // behavioral changes.
+
+      return KeyValueUtil.createLastOnRowCol(currentCell);
+    }
+
+    // Since we know the nextTimestampObject isn't null here there must still be
+    // timestamps that can be included. Cast the Long to a long and return the
+    // a cell with the current row/cf/col and the next found timestamp.
+    long nextTimestamp = nextTimestampObject;
+    return KeyValueUtil.createFirstOnRowColTS(currentCell, nextTimestamp);
   }
 
   // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
@@ -118,28 +168,30 @@ public class TimestampsFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     FilterProtos.TimestampsFilter.Builder builder =
-      FilterProtos.TimestampsFilter.newBuilder();
+        FilterProtos.TimestampsFilter.newBuilder();
     builder.addAllTimestamps(this.timestamps);
+    builder.setCanHint(canHint);
     return builder.build().toByteArray();
   }
 
   /**
    * @param pbBytes A pb serialized {@link TimestampsFilter} instance
+   *
    * @return An instance of {@link TimestampsFilter} made from <code>bytes</code>
-   * @throws DeserializationException
    * @see #toByteArray
    */
-  public static TimestampsFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static TimestampsFilter parseFrom(final byte[] pbBytes)
+      throws DeserializationException {
     FilterProtos.TimestampsFilter proto;
     try {
       proto = FilterProtos.TimestampsFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    return new TimestampsFilter(proto.getTimestampsList());
+    return new TimestampsFilter(proto.getTimestampsList(),
+        proto.hasCanHint() && proto.getCanHint());
   }
 
   /**
@@ -175,7 +227,7 @@ public class TimestampsFilter extends FilterBase {
       }
     }
 
-    return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
-        count, this.timestamps.size(), tsList.toString());
+    return String.format("%s (%d/%d): [%s] canHint: [%b]", this.getClass().getSimpleName(),
+        count, this.timestamps.size(), tsList.toString(), canHint);
   }
 }

@@ -13923,6 +13923,16 @@ public final class FilterProtos {
      * <code>repeated int64 timestamps = 1 [packed = true];</code>
      */
     long getTimestamps(int index);
+
+    // optional bool can_hint = 2;
+    /**
+     * <code>optional bool can_hint = 2;</code>
+     */
+    boolean hasCanHint();
+    /**
+     * <code>optional bool can_hint = 2;</code>
+     */
+    boolean getCanHint();
   }
   /**
    * Protobuf type {@code hbase.pb.TimestampsFilter}
@@ -13996,6 +14006,11 @@ public final class FilterProtos {
               input.popLimit(limit);
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000001;
+              canHint_ = input.readBool();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -14038,6 +14053,7 @@ public final class FilterProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated int64 timestamps = 1 [packed = true];
     public static final int TIMESTAMPS_FIELD_NUMBER = 1;
     private java.util.List<java.lang.Long> timestamps_;
@@ -14062,8 +14078,25 @@ public final class FilterProtos {
     }
     private int timestampsMemoizedSerializedSize = -1;
 
+    // optional bool can_hint = 2;
+    public static final int CAN_HINT_FIELD_NUMBER = 2;
+    private boolean canHint_;
+    /**
+     * <code>optional bool can_hint = 2;</code>
+     */
+    public boolean hasCanHint() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional bool can_hint = 2;</code>
+     */
+    public boolean getCanHint() {
+      return canHint_;
+    }
+
     private void initFields() {
       timestamps_ = java.util.Collections.emptyList();
+      canHint_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14083,6 +14116,9 @@ public final class FilterProtos {
       }
       for (int i = 0; i < timestamps_.size(); i++) {
         output.writeInt64NoTag(timestamps_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(2, canHint_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -14106,6 +14142,10 @@ public final class FilterProtos {
               .computeInt32SizeNoTag(dataSize);
         }
         timestampsMemoizedSerializedSize = dataSize;
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, canHint_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14132,6 +14172,11 @@ public final class FilterProtos {
       boolean result = true;
       result = result && getTimestampsList()
           .equals(other.getTimestampsList());
+      result = result && (hasCanHint() == other.hasCanHint());
+      if (hasCanHint()) {
+        result = result && (getCanHint()
+            == other.getCanHint());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14148,6 +14193,10 @@ public final class FilterProtos {
       if (getTimestampsCount() > 0) {
         hash = (37 * hash) + TIMESTAMPS_FIELD_NUMBER;
         hash = (53 * hash) + getTimestampsList().hashCode();
+      }
+      if (hasCanHint()) {
+        hash = (37 * hash) + CAN_HINT_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getCanHint());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -14260,6 +14309,8 @@ public final class FilterProtos {
         super.clear();
         timestamps_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
+        canHint_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -14287,11 +14338,17 @@ public final class FilterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.TimestampsFilter buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.FilterProtos.TimestampsFilter result = new org.apache.hadoop.hbase.protobuf.generated.FilterProtos.TimestampsFilter(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           timestamps_ = java.util.Collections.unmodifiableList(timestamps_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
         result.timestamps_ = timestamps_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.canHint_ = canHint_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -14316,6 +14373,9 @@ public final class FilterProtos {
             timestamps_.addAll(other.timestamps_);
           }
           onChanged();
+        }
+        if (other.hasCanHint()) {
+          setCanHint(other.getCanHint());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -14406,6 +14466,39 @@ public final class FilterProtos {
       public Builder clearTimestamps() {
         timestamps_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+
+      // optional bool can_hint = 2;
+      private boolean canHint_ ;
+      /**
+       * <code>optional bool can_hint = 2;</code>
+       */
+      public boolean hasCanHint() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool can_hint = 2;</code>
+       */
+      public boolean getCanHint() {
+        return canHint_;
+      }
+      /**
+       * <code>optional bool can_hint = 2;</code>
+       */
+      public Builder setCanHint(boolean value) {
+        bitField0_ |= 0x00000002;
+        canHint_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool can_hint = 2;</code>
+       */
+      public Builder clearCanHint() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        canHint_ = false;
         onChanged();
         return this;
       }
@@ -17503,18 +17596,18 @@ public final class FilterProtos {
       "ompareType\022(\n\ncomparator\030\004 \002(\0132\024.hbase.p" +
       "b.Comparator\022\031\n\021filter_if_missing\030\005 \001(\010\022" +
       "\033\n\023latest_version_only\030\006 \001(\010\".\n\nSkipFilt" +
-      "er\022 \n\006filter\030\001 \002(\0132\020.hbase.pb.Filter\"*\n\020" +
+      "er\022 \n\006filter\030\001 \002(\0132\020.hbase.pb.Filter\"<\n\020" +
       "TimestampsFilter\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001" +
-      "\">\n\013ValueFilter\022/\n\016compare_filter\030\001 \002(\0132" +
-      "\027.hbase.pb.CompareFilter\"4\n\020WhileMatchFi" +
-      "lter\022 \n\006filter\030\001 \002(\0132\020.hbase.pb.Filter\"\021" +
-      "\n\017FilterAllFilter\"h\n\010RowRange\022\021\n\tstart_r",
-      "ow\030\001 \001(\014\022\033\n\023start_row_inclusive\030\002 \001(\010\022\020\n" +
-      "\010stop_row\030\003 \001(\014\022\032\n\022stop_row_inclusive\030\004 " +
-      "\001(\010\"A\n\023MultiRowRangeFilter\022*\n\016row_range_" +
-      "list\030\001 \003(\0132\022.hbase.pb.RowRangeBB\n*org.ap" +
-      "ache.hadoop.hbase.protobuf.generatedB\014Fi" +
-      "lterProtosH\001\210\001\001\240\001\001"
+      "\022\020\n\010can_hint\030\002 \001(\010\">\n\013ValueFilter\022/\n\016com" +
+      "pare_filter\030\001 \002(\0132\027.hbase.pb.CompareFilt" +
+      "er\"4\n\020WhileMatchFilter\022 \n\006filter\030\001 \002(\0132\020" +
+      ".hbase.pb.Filter\"\021\n\017FilterAllFilter\"h\n\010R",
+      "owRange\022\021\n\tstart_row\030\001 \001(\014\022\033\n\023start_row_" +
+      "inclusive\030\002 \001(\010\022\020\n\010stop_row\030\003 \001(\014\022\032\n\022sto" +
+      "p_row_inclusive\030\004 \001(\010\"A\n\023MultiRowRangeFi" +
+      "lter\022*\n\016row_range_list\030\001 \003(\0132\022.hbase.pb." +
+      "RowRangeBB\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\014FilterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -17670,7 +17763,7 @@ public final class FilterProtos {
           internal_static_hbase_pb_TimestampsFilter_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_TimestampsFilter_descriptor,
-              new java.lang.String[] { "Timestamps", });
+              new java.lang.String[] { "Timestamps", "CanHint", });
           internal_static_hbase_pb_ValueFilter_descriptor =
             getDescriptor().getMessageTypes().get(25);
           internal_static_hbase_pb_ValueFilter_fieldAccessorTable = new
