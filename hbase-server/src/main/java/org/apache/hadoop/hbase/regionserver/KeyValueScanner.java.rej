@@ -1,0 +1,17 @@
+diff a/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/KeyValueScanner.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/KeyValueScanner.java	(rejected hunks)
+@@ -29,7 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
+  * Scanner that returns the next KeyValue.
+  */
+ @InterfaceAudience.Private
+-public interface KeyValueScanner extends Shipper {
++public interface KeyValueScanner extends Shipper, Closeable {
+   /**
+    * The byte array represents for NO_NEXT_INDEXED_KEY;
+    * The actual value is irrelevant because this is always compared by reference.
+@@ -165,4 +167,4 @@ public interface KeyValueScanner extends Shipper {
+    * if known, or null otherwise
+    */
+   public Cell getNextIndexedKey();
+-}
++}
+\ No newline at end of file
