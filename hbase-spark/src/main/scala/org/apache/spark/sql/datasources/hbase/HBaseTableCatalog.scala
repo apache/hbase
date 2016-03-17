@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.datasources.hbase
 
+import org.apache.avro.Schema
+import org.apache.hadoop.hbase.spark.SchemaConverters
 import org.apache.hadoop.hbase.spark.datasources._
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.util.Bytes
@@ -41,6 +43,23 @@ case class Field(
   override def toString = s"$colName $cf $col"
   val isRowKey = cf == HBaseTableCatalog.rowKey
   var start: Int = _
+  def schema: Option[Schema] = avroSchema.map { x =>
+    logDebug(s"avro: $x")
+    val p = new Schema.Parser
+    p.parse(x)
+  }
+
+  lazy val exeSchema = schema
+
+  // converter from avro to catalyst structure
+  lazy val avroToCatalyst: Option[Any => Any] = {
+    schema.map(SchemaConverters.createConverterToSQL(_))
+  }
+
+  // converter from catalyst to avro
+  lazy val catalystToAvro: (Any) => Any ={
+    SchemaConverters.createConverterToAvro(dt, colName, "recordNamespace")
+  }
 
   def cfBytes: Array[Byte] = {
     if (isRowKey) {
@@ -58,7 +77,11 @@ case class Field(
   }
 
   val dt = {
-    sType.map(DataTypeParser.parse(_)).get
+    sType.map(DataTypeParser.parse(_)).getOrElse{
+      schema.map{ x=>
+        SchemaConverters.toSqlType(x).dataType
+      }.get
+    }
   }
 
   var length: Int = {

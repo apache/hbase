@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.hbase.spark
 
+import org.apache.avro.Schema
+import org.apache.avro.generic.GenericData
 import org.apache.hadoop.hbase.client.{Put, ConnectionFactory}
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.util.Bytes
@@ -43,6 +45,33 @@ object HBaseRecord {
       i.toFloat,
       i,
       i.toLong)
+  }
+}
+
+
+case class AvroHBaseKeyRecord(col0: Array[Byte],
+                              col1: Array[Byte])
+
+object AvroHBaseKeyRecord {
+  val schemaString =
+    s"""{"namespace": "example.avro",
+        |   "type": "record",      "name": "User",
+        |    "fields": [      {"name": "name", "type": "string"},
+        |      {"name": "favorite_number",  "type": ["int", "null"]},
+        |        {"name": "favorite_color", "type": ["string", "null"]}      ]    }""".stripMargin
+
+  val avroSchema: Schema = {
+    val p = new Schema.Parser
+    p.parse(schemaString)
+  }
+
+  def apply(i: Int): AvroHBaseKeyRecord = {
+    val user = new GenericData.Record(avroSchema);
+    user.put("name", s"name${"%03d".format(i)}")
+    user.put("favorite_number", i)
+    user.put("favorite_color", s"color${"%03d".format(i)}")
+    val avroByte = AvroSerdes.serialize(user, avroSchema)
+    AvroHBaseKeyRecord(avroByte, avroByte)
   }
 }
 
@@ -835,5 +864,108 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       .select("col0", "col1")
     s.show
     assert(s.count() == 6)
+  }
+
+  // catalog for insertion
+  def avroWriteCatalog = s"""{
+                             |"table":{"namespace":"default", "name":"avrotable"},
+                             |"rowkey":"key",
+                             |"columns":{
+                             |"col0":{"cf":"rowkey", "col":"key", "type":"binary"},
+                             |"col1":{"cf":"cf1", "col":"col1", "type":"binary"}
+                             |}
+                             |}""".stripMargin
+
+  // catalog for read
+  def avroCatalog = s"""{
+                        |"table":{"namespace":"default", "name":"avrotable"},
+                        |"rowkey":"key",
+                        |"columns":{
+                        |"col0":{"cf":"rowkey", "col":"key",  "avro":"avroSchema"},
+                        |"col1":{"cf":"cf1", "col":"col1", "avro":"avroSchema"}
+                        |}
+                        |}""".stripMargin
+
+  // for insert to another table
+  def avroCatalogInsert = s"""{
+                              |"table":{"namespace":"default", "name":"avrotableInsert"},
+                              |"rowkey":"key",
+                              |"columns":{
+                              |"col0":{"cf":"rowkey", "col":"key", "avro":"avroSchema"},
+                              |"col1":{"cf":"cf1", "col":"col1", "avro":"avroSchema"}
+                              |}
+                              |}""".stripMargin
+
+  def withAvroCatalog(cat: String): DataFrame = {
+    sqlContext
+      .read
+      .options(Map("avroSchema"->AvroHBaseKeyRecord.schemaString,
+        HBaseTableCatalog.tableCatalog->avroCatalog))
+      .format("org.apache.hadoop.hbase.spark")
+      .load()
+  }
+
+
+  test("populate avro table") {
+    val sql = sqlContext
+    import sql.implicits._
+
+    val data = (0 to 255).map { i =>
+      AvroHBaseKeyRecord(i)
+    }
+    sc.parallelize(data).toDF.write.options(
+      Map(HBaseTableCatalog.tableCatalog -> avroWriteCatalog,
+        HBaseTableCatalog.newTable -> "5"))
+      .format("org.apache.hadoop.hbase.spark")
+      .save()
+  }
+
+  test("avro empty column") {
+    val df = withAvroCatalog(avroCatalog)
+    df.registerTempTable("avrotable")
+    val c = sqlContext.sql("select count(1) from avrotable")
+      .rdd.collect()(0)(0).asInstanceOf[Long]
+    assert(c == 256)
+  }
+
+  test("avro full query") {
+    val df = withAvroCatalog(avroCatalog)
+    df.show
+    df.printSchema()
+    assert(df.count() == 256)
+  }
+
+  test("avro serialization and deserialization query") {
+    val df = withAvroCatalog(avroCatalog)
+    df.write.options(
+      Map("avroSchema"->AvroHBaseKeyRecord.schemaString,
+        HBaseTableCatalog.tableCatalog->avroCatalogInsert,
+        HBaseTableCatalog.newTable -> "5"))
+      .format("org.apache.hadoop.hbase.spark")
+      .save()
+    val newDF = withAvroCatalog(avroCatalogInsert)
+    newDF.show
+    newDF.printSchema()
+    assert(newDF.count() == 256)
+  }
+
+  test("avro filtered query") {
+    val sql = sqlContext
+    import sql.implicits._
+    val df = withAvroCatalog(avroCatalog)
+    val r = df.filter($"col1.name" === "name005" || $"col1.name" <= "name005")
+      .select("col0", "col1.favorite_color", "col1.favorite_number")
+    r.show
+    assert(r.count() == 6)
+  }
+
+  test("avro Or filter") {
+    val sql = sqlContext
+    import sql.implicits._
+    val df = withAvroCatalog(avroCatalog)
+    val s = df.filter($"col1.name" <= "name005" || $"col1.name".contains("name007"))
+      .select("col0", "col1.favorite_color", "col1.favorite_number")
+    s.show
+    assert(s.count() == 7)
   }
 }

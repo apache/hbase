@@ -23,17 +23,16 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
-import org.apache.hadoop.hbase.spark.datasources.Utils
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.spark.datasources.HBaseTableScanRDD
 import org.apache.hadoop.hbase.spark.datasources.SerializableConfiguration
 import org.apache.hadoop.hbase.types._
 import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositionedMutableByteRange}
-import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, HBaseConfiguration, TableName}
+import org.apache.hadoop.hbase._
 import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.datasources.hbase.{Field, HBaseTableCatalog}
+import org.apache.spark.sql.datasources.hbase.{Utils, Field, HBaseTableCatalog}
 import org.apache.spark.sql.{DataFrame, SaveMode, Row, SQLContext}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
@@ -217,6 +216,63 @@ case class HBaseRelation (
     rdd.map(convertToPut(_)).saveAsHadoopDataset(jobConfig)
   }
 
+  def getIndexedProjections(requiredColumns: Array[String]): Seq[(Field, Int)] = {
+    requiredColumns.map(catalog.sMap.getField(_)).zipWithIndex
+  }
+
+
+  /**
+    * Takes a HBase Row object and parses all of the fields from it.
+    * This is independent of which fields were requested from the key
+    * Because we have all the data it's less complex to parse everything.
+    *
+    * @param row the retrieved row from hbase.
+    * @param keyFields all of the fields in the row key, ORDERED by their order in the row key.
+    */
+  def parseRowKey(row: Array[Byte], keyFields: Seq[Field]): Map[Field, Any] = {
+    keyFields.foldLeft((0, Seq[(Field, Any)]()))((state, field) => {
+      val idx = state._1
+      val parsed = state._2
+      if (field.length != -1) {
+        val value = Utils.hbaseFieldToScalaType(field, row, idx, field.length)
+        // Return the new index and appended value
+        (idx + field.length, parsed ++ Seq((field, value)))
+      } else {
+        field.dt match {
+          case StringType =>
+            val pos = row.indexOf(HBaseTableCatalog.delimiter, idx)
+            if (pos == -1 || pos > row.length) {
+              // this is at the last dimension
+              val value = Utils.hbaseFieldToScalaType(field, row, idx, row.length)
+              (row.length + 1, parsed ++ Seq((field, value)))
+            } else {
+              val value = Utils.hbaseFieldToScalaType(field, row, idx, pos - idx)
+              (pos, parsed ++ Seq((field, value)))
+            }
+          // We don't know the length, assume it extends to the end of the rowkey.
+          case _ => (row.length + 1, parsed ++ Seq((field, Utils.hbaseFieldToScalaType(field, row, idx, row.length))))
+        }
+      }
+    })._2.toMap
+  }
+
+  def buildRow(fields: Seq[Field], result: Result): Row = {
+    val r = result.getRow
+    val keySeq = parseRowKey(r, catalog.getRowKey)
+    val valueSeq = fields.filter(!_.isRowKey).map { x =>
+      val kv = result.getColumnLatestCell(Bytes.toBytes(x.cf), Bytes.toBytes(x.col))
+      if (kv == null || kv.getValueLength == 0) {
+        (x, null)
+      } else {
+        val v = CellUtil.cloneValue(kv)
+        (x, Utils.hbaseFieldToScalaType(x, v, 0, v.length))
+      }
+    }.toMap
+    val unionedRow = keySeq ++ valueSeq
+    // Return the row ordered by the requested order
+    Row.fromSeq(fields.map(unionedRow.get(_).getOrElse(null)))
+  }
+
   /**
    * Here we are building the functionality to populate the resulting RDD[Row]
    * Here is where we will do the following:
@@ -281,10 +337,12 @@ case class HBaseRelation (
     val hRdd = new HBaseTableScanRDD(this, hbaseContext, pushDownFilterJava, requiredQualifierDefinitionList.seq)
     pushDownRowKeyFilter.points.foreach(hRdd.addPoint(_))
     pushDownRowKeyFilter.ranges.foreach(hRdd.addRange(_))
+
     var resultRDD: RDD[Row] = {
       val tmp = hRdd.map{ r =>
-        Row.fromSeq(requiredColumns.map(c =>
-          DefaultSourceStaticUtils.getValue(catalog.getField(c), r)))
+        val indexedFields = getIndexedProjections(requiredColumns).map(_._1)
+        buildRow(indexedFields, r)
+
       }
       if (tmp.partitions.size > 0) {
         tmp
@@ -302,7 +360,8 @@ case class HBaseRelation (
         scan.addColumn(d.cfBytes, d.colBytes))
 
       val rdd = hbaseContext.hbaseRDD(TableName.valueOf(tableName), scan).map(r => {
-        Row.fromSeq(requiredColumns.map(c => DefaultSourceStaticUtils.getValue(catalog.getField(c), r._2)))
+        val indexedFields = getIndexedProjections(requiredColumns).map(_._1)
+        buildRow(indexedFields, r._2)
       })
       resultRDD=rdd
     }

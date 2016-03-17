@@ -42,6 +42,8 @@
         <scala.binary.version>2.10</scala.binary.version>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <top.dir>${project.basedir}/..</top.dir>
+        <avro.version>1.7.6</avro.version>
+        <avro.mapred.classifier></avro.mapred.classifier>
     </properties>
 
     <dependencies>
@@ -526,6 +528,11 @@
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+          <version>${avro.version}</version>
         </dependency>
     </dependencies>
 
