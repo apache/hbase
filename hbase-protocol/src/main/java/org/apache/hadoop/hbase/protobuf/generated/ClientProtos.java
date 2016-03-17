@@ -29034,7 +29034,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier>
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier> 
         getRegionList();
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
@@ -29047,7 +29047,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
         getRegionOrBuilderList();
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
@@ -29059,7 +29059,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats>
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats> 
         getStatList();
     /**
      * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
@@ -29072,7 +29072,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder> 
         getStatOrBuilderList();
     /**
      * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
@@ -29204,7 +29204,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
         getRegionOrBuilderList() {
       return region_;
     }
@@ -29240,7 +29240,7 @@ public final class ClientProtos {
     /**
      * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder> 
         getStatOrBuilderList() {
       return stat_;
     }
@@ -29558,7 +29558,7 @@ public final class ClientProtos {
               regionBuilder_ = null;
               region_ = other.region_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              regionBuilder_ =
+              regionBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getRegionFieldBuilder() : null;
             } else {
@@ -29584,7 +29584,7 @@ public final class ClientProtos {
               statBuilder_ = null;
               stat_ = other.stat_;
               bitField0_ = (bitField0_ & ~0x00000002);
-              statBuilder_ =
+              statBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getStatFieldBuilder() : null;
             } else {
@@ -29599,7 +29599,7 @@ public final class ClientProtos {
       public final boolean isInitialized() {
         for (int i = 0; i < getRegionCount(); i++) {
           if (!getRegion(i).isInitialized()) {
-
+            
             return false;
           }
         }
@@ -29820,7 +29820,7 @@ public final class ClientProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
            getRegionOrBuilderList() {
         if (regionBuilder_ != null) {
           return regionBuilder_.getMessageOrBuilderList();
@@ -29846,12 +29846,12 @@ public final class ClientProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder>
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder> 
            getRegionBuilderList() {
         return getRegionFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -30060,7 +30060,7 @@ public final class ClientProtos {
       /**
        * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder> 
            getStatOrBuilderList() {
         if (statBuilder_ != null) {
           return statBuilder_.getMessageOrBuilderList();
@@ -30086,12 +30086,12 @@ public final class ClientProtos {
       /**
        * <code>repeated .hbase.pb.RegionLoadStats stat = 2;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats.Builder>
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats.Builder> 
            getStatBuilderList() {
         return getStatFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStatsOrBuilder> 
           getStatFieldBuilder() {
         if (statBuilder_ == null) {
           statBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -34220,7 +34220,7 @@ public final class ClientProtos {
         }
         if (hasRegionStatistics()) {
           if (!getRegionStatistics().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -34639,7 +34639,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder> 
           getRegionStatisticsFieldBuilder() {
         if (regionStatisticsBuilder_ == null) {
           regionStatisticsBuilder_ = new com.google.protobuf.SingleFieldBuilder<

@@ -397,12 +397,32 @@ public class TestHFile  {
   /**
    * Make sure the ordinals for our compression algorithms do not change on us.
    */
+  @Test
   public void testCompressionOrdinance() {
     assertTrue(Compression.Algorithm.LZO.ordinal() == 0);
     assertTrue(Compression.Algorithm.GZ.ordinal() == 1);
     assertTrue(Compression.Algorithm.NONE.ordinal() == 2);
     assertTrue(Compression.Algorithm.SNAPPY.ordinal() == 3);
     assertTrue(Compression.Algorithm.LZ4.ordinal() == 4);
+  }
+
+  @Test
+  public void testShortMidpointSameQual() {
+    Cell left = CellUtil.createCell(Bytes.toBytes("a"),
+        Bytes.toBytes("a"),
+        Bytes.toBytes("a"),
+        9,
+        KeyValue.Type.Maximum.getCode(),
+        HConstants.EMPTY_BYTE_ARRAY);
+    Cell right = CellUtil.createCell(Bytes.toBytes("a"),
+        Bytes.toBytes("a"),
+        Bytes.toBytes("a"),
+        11,
+        KeyValue.Type.Maximum.getCode(),
+        HConstants.EMPTY_BYTE_ARRAY);
+    Cell mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
+    assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, mid) <= 0);
+    assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(mid, right) == 0);
   }
 
   @Test
