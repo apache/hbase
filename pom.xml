@@ -361,6 +361,14 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>liyu</id>
+      <name>Yu Li</name>
+      <email>liyu@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Alibaba</organization>
+      <organizationUrl>http://www.taobao.com</organizationUrl>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
