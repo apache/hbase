@@ -1,6 +1,96 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.1.4 03/16/2016
+
+** Sub-task
+    * [HBASE-13963] - avoid leaking jdk.tools
+    * [HBASE-14798] - NPE reporting server load causes regionserver abort; causes TestAcidGuarantee to fail
+    * [HBASE-15153] - Apply checkFamilies addendum on increment to 1.1 and 1.0
+    * [HBASE-15157] - Add *PerformanceTest for Append, CheckAnd*
+    * [HBASE-15169] - Backport HBASE-14362 'TestWALProcedureStoreOnHDFS is super duper flaky' to branch-1.1
+    * [HBASE-15170] - Backport HBASE-14807 'TestWALLockup is flakey' to branch-1.1
+    * [HBASE-15213] - Fix increment performance regression caused by HBASE-8763 on branch-1.0
+    * [HBASE-15224] - Undo  "hbase.increment.fast.but.narrow.consistency" option; it is not necessary since HBASE-15213 
+    * [HBASE-15270] - Use appropriate encoding for "filter" field in TaskMonitorTmpl.jamon 
+    * [HBASE-15288] - Flakey TestMasterMetrics.testClusterRequests on branch-1.1
+    * [HBASE-15311] - Prevent NPE in BlockCacheViewTmpl
+    * [HBASE-15351] - Fix description of hbase.bucketcache.size in hbase-default.xml
+    * [HBASE-15365] - Do not write to '/tmp' in TestHBaseConfiguration
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-14192] - Fix REST Cluster constructor with String List
+    * [HBASE-14460] - [Perf Regression] Merge of MVCC and SequenceId (HBASE-8763) slowed Increments, CheckAndPuts, batch operations
+    * [HBASE-14807] - TestWALLockup is flakey
+    * [HBASE-14812] - Fix ResultBoundedCompletionService deadlock
+    * [HBASE-15019] - Replication stuck when HDFS is restarted
+    * [HBASE-15100] - Master WALProcs still never clean up
+    * [HBASE-15120] - Backport HBASE-14883 to branch-1.1
+    * [HBASE-15122] - Servlets generate XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER findbugs warnings
+    * [HBASE-15140] - Fix ResultBoundedCompletionService deadlock 
+    * [HBASE-15145] - HBCK and Replication should authenticate to zookepeer using server principal
+    * [HBASE-15147] - Shell should use Admin.listTableNames() instead of Admin.listTables() 
+    * [HBASE-15150] - Fix TestDurablity in branch-1.1
+    * [HBASE-15152] - Automatically include prefix-tree module in MR jobs if present
+    * [HBASE-15167] - Deadlock in TestNamespaceAuditor.testRegionOperations on 1.1
+    * [HBASE-15198] - RPC client not using Codec and CellBlock for puts by default
+    * [HBASE-15200] - ZooKeeper znode ACL checks should only compare the shortname
+    * [HBASE-15206] - Flakey testSplitDaughtersNotInMeta test
+    * [HBASE-15214] - Valid mutate Ops fail with RPC Codec in use and region moves across
+    * [HBASE-15218] - On RS crash and replay of WAL, loosing all Tags in Cells
+    * [HBASE-15221] - HTableMultiplexer improvements (stale region locations and resource leaks)
+    * [HBASE-15252] - Data loss when replaying wal if HDFS timeout
+    * [HBASE-15261] - Make Throwable t in DaughterOpener volatile
+    * [HBASE-15279] - OrderedBytes.isEncodedValue does not check for int8 and int16 types
+    * [HBASE-15290] - Hbase Rest CheckAndAPI should save other cells along with compared cell
+    * [HBASE-15322] - Operations using Unsafe path broken for platforms not having sun.misc.Unsafe
+    * [HBASE-15323] - Hbase Rest CheckAndDeleteAPi should be able to delete more cells
+    * [HBASE-15325] - ResultScanner allowing partial result will miss the rest of the row if the region is moved between two rpc requests
+    * [HBASE-15358] - canEnforceTimeLimitFromScope should use timeScope instead of sizeScope
+    * [HBASE-15378] - Scanner cannot handle heartbeat message with no results
+    * [HBASE-15430] - Failed taking snapshot - Manifest proto-message too large
+    * [HBASE-15439] - getMaximumAllowedTimeBetweenRuns in ScheduledChore ignores the TimeUnit
+
+
+
+
+
+
+** Improvement
+    * [HBASE-15129] - Set default value for hbase.fs.tmp.dir rather than fully depend on hbase-default.xml
+    * [HBASE-15211] - Don't run the CatalogJanitor if there are regions in transition
+    * [HBASE-15413] - Procedure-V2: print out ProcedureInfo during trace
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Test
+    * [HBASE-13590] - TestEnableTableHandler.testEnableTableWithNoRegionServers is flakey
+
+
+
+
 Release Notes - HBase - Version 1.1.3 01/16/2016
 
 ** Sub-task
