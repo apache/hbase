@@ -172,6 +172,49 @@ module Hbase
       end
     end
 
+    define_test "get_peer_config: works with simple clusterKey peer" do
+      cluster_key = "localhost:2181:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key }
+      replication_admin.add_peer(@peer_id, args)
+      peer_config = replication_admin.get_peer_config(@peer_id)
+      assert_equal(cluster_key, peer_config.get_cluster_key)
+      #cleanup
+      replication_admin.remove_peer(@peer_id)
+    end
+
+    define_test "get_peer_config: works with replicationendpointimpl peer and config params" do
+      repl_impl = "org.apache.hadoop.hbase.replication.ReplicationEndpointForTest"
+      config_params = { "config1" => "value1", "config2" => "value2" }
+      args = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params}
+      replication_admin.add_peer(@peer_id, args)
+      peer_config = replication_admin.get_peer_config(@peer_id)
+      assert_equal(repl_impl, peer_config.get_replication_endpoint_impl)
+      assert_equal(2, peer_config.get_configuration.size)
+      assert_equal("value1", peer_config.get_configuration.get("config1"))
+      #cleanup
+      replication_admin.remove_peer(@peer_id)
+    end
+
+    define_test "list_peer_configs: returns all peers' ReplicationPeerConfig objects" do
+      cluster_key = "localhost:2181:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key }
+      peer_id_second = '2'
+      replication_admin.add_peer(@peer_id, args)
+
+      repl_impl = "org.apache.hadoop.hbase.replication.ReplicationEndpointForTest"
+      config_params = { "config1" => "value1", "config2" => "value2" }
+      args2 = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params}
+      replication_admin.add_peer(peer_id_second, args2)
+
+      peer_configs = replication_admin.list_peer_configs
+      assert_equal(2, peer_configs.size)
+      assert_equal(cluster_key, peer_configs.get(@peer_id).get_cluster_key)
+      assert_equal(repl_impl, peer_configs.get(peer_id_second).get_replication_endpoint_impl)
+      #cleanup
+      replication_admin.remove_peer(@peer_id)
+      replication_admin.remove_peer(peer_id_second)
+    end
+
     # assert_raise fails on native exceptions - https://jira.codehaus.org/browse/JRUBY-5279
     # Can't catch native Java exception with assert_raise in JRuby 1.6.8 as in the test below.
     # define_test "add_peer: adding a second peer with same id should error" do
