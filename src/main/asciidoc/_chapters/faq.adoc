@@ -105,7 +105,7 @@ Can I change a table's rowkeys?::
   This is a very common question. You can't. See <<changing.rowkeys>>.
 
 What APIs does HBase support?::
-  See <<datamodel>>, <<architecture.client>>, and <<nonjava.jvm>>.
+  See <<datamodel>>, <<architecture.client>>, and <<external_apis>>.
 
 === MapReduce
 

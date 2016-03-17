@@ -84,7 +84,7 @@ expectations. Therefore, these rules of thumb are only an overview. Read the res
 of this chapter to get more details after you have gone through this list.
 
 * Aim to have regions sized between 10 and 50 GB.
-* Aim to have cells no larger than 10 MB, or 50 MB if you use <<mob>>. Otherwise,
+* Aim to have cells no larger than 10 MB, or 50 MB if you use <<hbase_mob,mob>>. Otherwise,
 consider storing your cell data in HDFS and store a pointer to the data in HBase.
 * A typical schema has between 1 and 3 column families per table. HBase tables should
 not be designed to mimic RDBMS tables.
@@ -671,7 +671,7 @@ See <<mapreduce.example.summary,mapreduce.example.summary>> for more information
 ===  Coprocessor Secondary Index
 
 Coprocessors act like RDBMS triggers. These were added in 0.92.
-For more information, see <<coprocessors,coprocessors>>
+For more information, see <<cp,coprocessors>>
 
 == Constraints
 

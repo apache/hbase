@@ -28,7 +28,9 @@
 :experimental:
 
 This chapter expands upon the <<getting_started>> chapter to further explain configuration of Apache HBase.
-Please read this chapter carefully, especially the <<basic.prerequisites,Basic Prerequisites>> to ensure that your HBase testing and deployment goes smoothly, and prevent data loss.
+Please read this chapter carefully, especially the <<basic.prerequisites,Basic Prerequisites>>
+to ensure that your HBase testing and deployment goes smoothly, and prevent data loss.
+Familiarize yourself with <<hbase_supported_tested_definitions>> as well.
 
 == Configuration Files
 Apache HBase uses the same configuration system as Apache Hadoop.
@@ -129,6 +131,7 @@ support.
 
 NOTE: In HBase 0.98.5 and newer, you must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy mechanism to do this.
 
+[[os]]
 .Operating System Utilities
 ssh::
   HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "<<passwordless.ssh.quickstart>>". If your cluster nodes use OS X, see the section, link:http://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29[SSH: Setting up Remote Desktop and Enabling Self-Login] on the Hadoop wiki.
@@ -143,6 +146,7 @@ Loopback IP::
 NTP::
   The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism, on your cluster, and that all nodes look to the same service for time synchronization. See the link:http://www.tldp.org/LDP/sag/html/basic-ntp-config.html[Basic NTP Configuration] at [citetitle]_The Linux Documentation Project (TLDP)_ to set up NTP.
 
+[[ulimit]]
 Limits on Number of Files and Processes (ulimit)::
   Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command `ulimit -n` when logged in as the user which runs HBase. See <<trouble.rs.runtime.filehandles,the Troubleshooting section>> for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
 +
@@ -409,6 +413,7 @@ Standalone mode is what is described in the <<quickstart,quickstart>> section.
 In standalone mode, HBase does not use HDFS -- it uses the local filesystem instead -- and it runs all HBase daemons and a local ZooKeeper all up in the same JVM.
 Zookeeper binds to a well known port so clients may talk to HBase.
 
+[[distributed]]
 === Distributed
 
 Distributed mode can be subdivided into distributed but all daemons run on a single node -- a.k.a. _pseudo-distributed_ -- and _fully-distributed_ where the daemons are spread across all nodes in the cluster.
@@ -767,6 +772,7 @@ Disable this functionality if you are running more than one Master: i.e. a backu
 Failing to do so, the dying Master may continue to receive RPCs though another Master has assumed the role of primary.
 See the configuration <<fail.fast.expired.active.master,fail.fast.expired.active.master>>.
 
+[[recommended_configurations]]
 === Recommended Configurations
 
 [[recommended_configurations.zk]]

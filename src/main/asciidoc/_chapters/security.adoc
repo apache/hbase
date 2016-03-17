@@ -572,6 +572,7 @@ Several procedures in this section require you to copy files between cluster nod
 When copying keys, configuration files, or other files containing sensitive strings, use a secure method, such as `ssh`, to avoid leaking sensitive data.
 ====
 
+[[security.data.basic.server.side]]
 .Procedure: Basic Server-Side Configuration
 . Enable HFile v3, by setting `hfile.format.version` to 3 in _hbase-site.xml_.
   This is the default for HBase 1.0 and newer.
@@ -1068,7 +1069,7 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
 ----
 ====
 
-
+[[hbase.visibility.labels]]
 === Visibility Labels
 
 Visibility labels control can be used to only permit users or principals associated with a given label to read or access cells with that label.
