@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -284,12 +283,6 @@ public class ModifyTableProcedure
     // Checks whether the table exists
     if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
       throw new TableNotFoundException(getTableName());
-    }
-
-    // check that we have at least 1 CF
-    if (modifiedHTableDescriptor.getColumnFamilies().length == 0) {
-      throw new DoNotRetryIOException("Table " + getTableName().toString() +
-        " should have at least one column family.");
     }
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.

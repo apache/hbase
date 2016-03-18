@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -71,9 +70,6 @@ public class TestRegionMover {
       TEST_UTIL.deleteTable(tableName);
     }
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDesc.addFamily(fam1);
-
     try {
       admin.setBalancerRunning(false, true);
       String startKey = "a";
