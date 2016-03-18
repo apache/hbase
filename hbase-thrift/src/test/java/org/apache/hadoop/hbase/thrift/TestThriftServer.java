@@ -233,7 +233,7 @@ public class TestThriftServer {
     assertEquals(handler.getTableNames().size(), 1);
     assertEquals(handler.getColumnDescriptors(tableAname).size(), 2);
     assertTrue(handler.isTableEnabled(tableAname));
-    handler.createTable(tableBname, new ArrayList<ColumnDescriptor>());
+    handler.createTable(tableBname, getColumnDescriptors());
     assertEquals(handler.getTableNames().size(), 2);
   }
 

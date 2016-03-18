@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -283,6 +284,14 @@ public class CreateTableProcedure
       setFailure("master-create-table", new TableExistsException(getTableName()));
       return false;
     }
+
+    // check that we have at least 1 CF
+    if (hTableDescriptor.getColumnFamilies().length == 0) {
+      setFailure("master-create-table", new DoNotRetryIOException("Table " +
+          getTableName().toString() + " should have at least one column family."));
+      return false;
+    }
+
     return true;
   }
 
