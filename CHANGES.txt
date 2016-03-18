@@ -1,5 +1,62 @@
 HBase Change Log
 
+Release 0.98.18 - 3/25/2016
+
+** Sub-task
+    * [HBASE-15114] - NPE when IPC server ByteBuffer reservoir is turned off 
+    * [HBASE-15171] - Avoid counting duplicate kv and generating lots of small hfiles in PutSortReducer
+    * [HBASE-15202] - Reduce garbage while setting response
+    * [HBASE-15238] - HFileReaderV2 prefetch overreaches; runs off the end of the data
+    * [HBASE-15245] - Port HBASE-15177 (Reduce garbage created under high load) to 0.98
+    * [HBASE-15365] - Do not write to '/tmp' in TestHBaseConfiguration
+    * [HBASE-15435] - Add WAL (in bytes) written metric 
+
+** Bug
+    * [HBASE-14192] - Fix REST Cluster constructor with String List
+    * [HBASE-14975] - Don't color the total RIT line yellow if it's zero
+    * [HBASE-15019] - Replication stuck when HDFS is restarted
+    * [HBASE-15083] - Gets from Multiactions are not counted in metrics for gets.
+    * [HBASE-15125] - HBaseFsck's adoptHdfsOrphan function creates region with wrong end key boundary
+    * [HBASE-15133] - Data loss after compaction when a row has more than Integer.MAX_VALUE columns
+    * [HBASE-15145] - HBCK and Replication should authenticate to zookepeer using server principal
+    * [HBASE-15148] - Resolve IS2_INCONSISTENT_SYNC findbugs warning in AuthenticationTokenSecretManager
+    * [HBASE-15152] - Automatically include prefix-tree module in MR jobs if present
+    * [HBASE-15190] - Monkey dies when running on shared cluster (gives up when can't kill the other fellows processes)
+    * [HBASE-15198] - RPC client not using Codec and CellBlock for puts by default
+    * [HBASE-15200] - ZooKeeper znode ACL checks should only compare the shortname
+    * [HBASE-15214] - Valid mutate Ops fail with RPC Codec in use and region moves across
+    * [HBASE-15216] - Canary does not accept config params from command line
+    * [HBASE-15217] - Canary -regionserver fails with cast exception
+    * [HBASE-15218] - On RS crash and replay of WAL, loosing all Tags in Cells
+    * [HBASE-15247] - InclusiveStopFilter does not respect reverse Filter property
+    * [HBASE-15252] - Data loss when replaying wal if HDFS timeout
+    * [HBASE-15274] - ClientSideRegionScanner's reaction to Scan#setBatch is not consistent between HBase versions
+    * [HBASE-15279] - OrderedBytes.isEncodedValue does not check for int8 and int16 types
+    * [HBASE-15290] - Hbase Rest CheckAndAPI should save other cells along with compared cell
+    * [HBASE-15291] - FileSystem not closed in secure bulkLoad
+    * [HBASE-15322] - Operations using Unsafe path broken for platforms not having sun.misc.Unsafe
+    * [HBASE-15323] - Hbase Rest CheckAndDeleteAPi should be able to delete more cells
+    * [HBASE-15393] - Enable table replication command will fail when parent znode is not default in peer cluster
+    * [HBASE-15423] - Fix integration issue came due HBASE-15216 from main to 0.98. 
+    * [HBASE-15430] - Failed taking snapshot - Manifest proto-message too large
+
+** Improvement
+    * [HBASE-12890] - Provide a way to throttle the number of regions moved by the balancer
+    * [HBASE-12940] - Expose listPeerConfigs and getPeerConfig to the HBase shell
+    * [HBASE-13031] - Ability to snapshot based on a key range
+    * [HBASE-15066] - Small improvements to Canary tool
+    * [HBASE-15111] - "hbase version" should write to stdout
+    * [HBASE-15129] - Set default value for hbase.fs.tmp.dir rather than fully depend on hbase-default.xml
+    * [HBASE-15211] - Don't run the CatalogJanitor if there are regions in transition
+    * [HBASE-15219] - Canary tool does not return non-zero exit code when one of regions is in stuck state 
+    * [HBASE-15229] - Canary Tools should not call System.Exit on error
+    * [HBASE-15246] - Backport branch-1 HBasePerformanceEvaluation to 0.98
+
+** New Feature
+    * [HBASE-15135] - Add metrics for storefile age
+    * [HBASE-15181] - A simple implementation of date based tiered compaction
+
+
 Release 0.98.17 - 1/22/2016
 
 ** Sub-task
