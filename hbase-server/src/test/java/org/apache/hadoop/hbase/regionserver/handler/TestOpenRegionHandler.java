@@ -60,8 +60,6 @@ public class TestOpenRegionHandler {
     HTU.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     HTU.startMiniZKCluster();
     TEST_HTD = new HTableDescriptor(TableName.valueOf("TestOpenRegionHandler.java"));
-    HColumnDescriptor fam = new HColumnDescriptor("fam");
-    TEST_HTD.addFamily(fam);
   }
 
   @AfterClass public static void after() throws IOException {

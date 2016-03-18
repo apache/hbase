@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -62,10 +61,6 @@ public class TestCloseRegionHandler {
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf("TestCloseRegionHandler"));
-  private static final HColumnDescriptor fam = new HColumnDescriptor("fam");
-  static {
-    TEST_HTD.addFamily(fam);
-  }
   private HRegionInfo TEST_HRI;
   private int testIndex = 0;
 

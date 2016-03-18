@@ -124,8 +124,6 @@ public class TestOpenedRegionHandler {
       final Server server = new MockServer(TEST_UTIL);
       HTableDescriptor htd = new HTableDescriptor(
           TableName.valueOf("testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches"));
-      HColumnDescriptor fam = new HColumnDescriptor("fam");
-      htd.addFamily(fam);
       HRegionInfo hri = new HRegionInfo(htd.getTableName(),
           Bytes.toBytes(testIndex), Bytes.toBytes(testIndex + 1));
       region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
