@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.base.Stopwatch;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -228,11 +227,11 @@ public class MetaTableLocator {
    * @throws InterruptedException if interrupted while waiting
    */
   public void waitMetaRegionLocation(ZooKeeperWatcher zkw) throws InterruptedException {
-    Stopwatch stopwatch = new Stopwatch().start();
+    long startTime = System.currentTimeMillis();
     while (!stopped) {
       try {
         if (waitMetaRegionLocation(zkw, 100) != null) break;
-        long sleepTime = stopwatch.elapsedMillis();
+        long sleepTime = System.currentTimeMillis() - startTime;
         // +1 in case sleepTime=0
         if ((sleepTime + 1) % 10000 == 0) {
           LOG.warn("Have been waiting for meta to be assigned for " + sleepTime + "ms");
@@ -590,19 +589,15 @@ public class MetaTableLocator {
   throws InterruptedException {
     if (timeout < 0) throw new IllegalArgumentException();
     if (zkw == null) throw new IllegalArgumentException();
-    Stopwatch sw = new Stopwatch().start();
+    long startTime = System.currentTimeMillis();
     ServerName sn = null;
-    try {
-      while (true) {
-        sn = getMetaRegionLocation(zkw, replicaId);
-        if (sn != null || sw.elapsedMillis()
-            > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
-          break;
-        }
-        Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
+    while (true) {
+      sn = getMetaRegionLocation(zkw, replicaId);
+      if (sn != null || (System.currentTimeMillis() - startTime)
+          > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
+        break;
       }
-    } finally {
-      sw.stop();
+      Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
     }
     return sn;
   }
