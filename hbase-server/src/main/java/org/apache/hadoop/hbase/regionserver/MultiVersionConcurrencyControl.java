@@ -145,8 +145,9 @@ public class MultiVersionConcurrencyControl {
    * of the passed in WriteEntry.  Thus, the write is visible to MVCC readers.
    */
   public void completeAndWait(WriteEntry e) {
-    complete(e);
-    waitForRead(e);
+    if (!complete(e)) {
+      waitForRead(e);
+    }
   }
 
   /**
