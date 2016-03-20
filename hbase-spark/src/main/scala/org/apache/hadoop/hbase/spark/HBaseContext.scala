@@ -425,18 +425,34 @@ class HBaseContext(@transient sc: SparkContext,
 
   /**
    * This function will use the native HBase TableInputFormat with the
-   * given scan object to generate a new RDD
+   * given scan object and mapping function to generate a new RDD
    *
    *  @param tableName the name of the table to scan
    *  @param scan      the HBase scan object to use to read data from HBase
-   *  @param f         function to convert a Result object from HBase into
+   *  @param f         mapping function to convert a Result object from HBase into
    *                   what the user wants in the final generated RDD
-   *  @return          new RDD with results from scan
+   *  @return          new RDD with results from scan and mapping
    */
   def hbaseRDD[U: ClassTag](tableName: TableName, scan: Scan,
                             f: ((ImmutableBytesWritable, Result)) => U): RDD[U] = {
     val rdd = hbaseRDD(tableName, scan)
     rdd.map(f)
+  }
+
+  /**
+   * This function will use the native HBase TableInputFormat with the
+   * given scan object and flatMap function to generate a new RDD
+   *
+   *  @param tableName the name of the table to scan
+   *  @param scan      the HBase scan object to use to read data from HBase
+   *  @param f         flatMap function to convert a Result object from HBase into
+   *                   what the user wants in the final generated RDD
+   *  @return          new RDD with results from scan and flat mapping
+   */
+  def hbaseRDD[U: ClassTag](tableName: TableName, scan: Scan,
+                            f: ((ImmutableBytesWritable, Result)) => Seq[U]): RDD[U] = {
+    val rdd = hbaseRDD(tableName, scan)
+    rdd.flatMap(f)
   }
 
   /**
