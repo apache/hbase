@@ -37,7 +37,7 @@ public final class CompactionThroughputControllerFactory {
   }
 
   private static final Class<? extends ThroughputController>
-      DEFAULT_THROUGHPUT_CONTROLLER_CLASS = PressureAwareCompactionThroughputController.class;
+      DEFAULT_THROUGHPUT_CONTROLLER_CLASS = NoLimitThroughputController.class;
 
   // for backward compatibility and may not be supported in the future
   private static final String DEPRECATED_NAME_OF_PRESSURE_AWARE_THROUGHPUT_CONTROLLER_CLASS =
@@ -70,7 +70,7 @@ public final class CompactionThroughputControllerFactory {
   }
 
   /**
-   * Resolve deprecated class name to keep backward compatibiliy
+   * Resolve deprecated class name to keep backward compatibility
    * @param oldName old name of the class
    * @return the new name if there is any
    */
