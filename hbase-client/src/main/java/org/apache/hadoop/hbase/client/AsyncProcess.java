@@ -356,7 +356,7 @@ class AsyncProcess {
 
       // Remember the previous decisions about regions or region servers we put in the
       //  final multi.
-      Map<Long, Boolean> regionIncluded = new HashMap<Long, Boolean>();
+      Map<HRegionInfo, Boolean> regionIncluded = new HashMap<HRegionInfo, Boolean>();
       Map<ServerName, Boolean> serverIncluded = new HashMap<ServerName, Boolean>();
 
       int posInList = -1;
@@ -456,10 +456,10 @@ class AsyncProcess {
    * @return true if this region is considered as busy.
    */
   protected boolean canTakeOperation(HRegionLocation loc,
-                                     Map<Long, Boolean> regionsIncluded,
+                                     Map<HRegionInfo, Boolean> regionsIncluded,
                                      Map<ServerName, Boolean> serversIncluded) {
-    long regionId = loc.getRegionInfo().getRegionId();
-    Boolean regionPrevious = regionsIncluded.get(regionId);
+    HRegionInfo regionInfo = loc.getRegionInfo();
+    Boolean regionPrevious = regionsIncluded.get(regionInfo);
 
     if (regionPrevious != null) {
       // We already know what to do with this region.
@@ -469,14 +469,14 @@ class AsyncProcess {
     Boolean serverPrevious = serversIncluded.get(loc.getServerName());
     if (Boolean.FALSE.equals(serverPrevious)) {
       // It's a new region, on a region server that we have already excluded.
-      regionsIncluded.put(regionId, Boolean.FALSE);
+      regionsIncluded.put(regionInfo, Boolean.FALSE);
       return false;
     }
 
     AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegionInfo().getRegionName());
     if (regionCnt != null && regionCnt.get() >= maxConcurrentTasksPerRegion) {
       // Too many tasks on this region already.
-      regionsIncluded.put(regionId, Boolean.FALSE);
+      regionsIncluded.put(regionInfo, Boolean.FALSE);
       return false;
     }
 
@@ -499,7 +499,7 @@ class AsyncProcess {
       }
 
       if (!ok) {
-        regionsIncluded.put(regionId, Boolean.FALSE);
+        regionsIncluded.put(regionInfo, Boolean.FALSE);
         serversIncluded.put(loc.getServerName(), Boolean.FALSE);
         return false;
       }
@@ -509,7 +509,7 @@ class AsyncProcess {
       assert serverPrevious.equals(Boolean.TRUE);
     }
 
-    regionsIncluded.put(regionId, Boolean.TRUE);
+    regionsIncluded.put(regionInfo, Boolean.TRUE);
 
     return true;
   }
