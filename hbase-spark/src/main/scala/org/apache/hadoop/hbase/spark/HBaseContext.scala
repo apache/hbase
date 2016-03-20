@@ -435,6 +435,21 @@ class HBaseContext(@transient sc: SparkContext,
    */
   def hbaseRDD[U: ClassTag](tableName: TableName, scan: Scan,
                             f: ((ImmutableBytesWritable, Result)) => U): RDD[U] = {
+    val rdd = hbaseRDD(tableName, scan)
+    rdd.map(f)
+  }
+
+  /**
+   * A overloaded version of HBaseContext hbaseRDD that defines the
+   * type of the resulting RDD
+   *
+   *  @param tableName the name of the table to scan
+   *  @param scan      the HBase scan object to use to read data from HBase
+   *  @return          New RDD with results from scan
+   *
+   */
+  def hbaseRDD(tableName: TableName, scan: Scan):
+    RDD[(ImmutableBytesWritable, Result)] = {
 
     val job: Job = Job.getInstance(getConf(broadcastedConf))
 
@@ -449,25 +464,7 @@ class HBaseContext(@transient sc: SparkContext,
       classOf[ImmutableBytesWritable],
       classOf[Result],
       job.getConfiguration,
-      this).map(f)
-  }
-
-  /**
-   * A overloaded version of HBaseContext hbaseRDD that defines the
-   * type of the resulting RDD
-   *
-   *  @param tableName the name of the table to scan
-   *  @param scans     the HBase scan object to use to read data from HBase
-   *  @return          New RDD with results from scan
-   *
-   */
-  def hbaseRDD(tableName: TableName, scans: Scan):
-  RDD[(ImmutableBytesWritable, Result)] = {
-
-    hbaseRDD[(ImmutableBytesWritable, Result)](
-      tableName,
-      scans,
-      (r: (ImmutableBytesWritable, Result)) => r)
+      this)
   }
 
   /**
