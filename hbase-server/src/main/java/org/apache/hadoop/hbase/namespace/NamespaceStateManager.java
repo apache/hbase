@@ -154,7 +154,7 @@ class NamespaceStateManager extends ZooKeeperListener {
       currentStatus = getState(nspdesc.getName());
       if ((currentStatus.getTables().size()) >= TableNamespaceManager.getMaxTables(nspdesc)) {
         throw new QuotaExceededException("The table " + table.getNameAsString()
-            + "cannot be created as it would exceed maximum number of tables allowed "
+            + " cannot be created as it would exceed maximum number of tables allowed "
             + " in the namespace.  The total number of tables permitted is "
             + TableNamespaceManager.getMaxTables(nspdesc));
       }

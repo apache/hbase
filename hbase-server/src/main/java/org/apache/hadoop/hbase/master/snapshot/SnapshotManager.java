@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescripti
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -724,12 +725,41 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       if (cpHost != null) {
         cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
       }
+
+      int tableRegionCount = -1;
       try {
-        // Table already exist. Check and update the region quota for this table namespace
-        checkAndUpdateNamespaceRegionQuota(manifest, tableName);
+        // Table already exist. Check and update the region quota for this table namespace.
+        // The region quota may not be updated correctly if there are concurrent restore snapshot
+        // requests for the same table
+
+        tableRegionCount = getRegionCountOfTable(tableName);
+        int snapshotRegionCount = manifest.getRegionManifestsMap().size();
+
+        // Update region quota when snapshotRegionCount is larger. If we updated the region count
+        // to a smaller value before retoreSnapshot and the retoreSnapshot fails, we may fail to
+        // reset the region count to its original value if the region quota is consumed by other
+        // tables in the namespace
+        if (tableRegionCount > 0 && tableRegionCount < snapshotRegionCount) {
+          checkAndUpdateNamespaceRegionQuota(snapshotRegionCount, tableName);
+        }
         restoreSnapshot(snapshot, snapshotTableDesc);
+        // Update the region quota if snapshotRegionCount is smaller. This step should not fail
+        // because we have reserved enough region quota before hand
+        if (tableRegionCount > 0 && tableRegionCount > snapshotRegionCount) {
+          checkAndUpdateNamespaceRegionQuota(snapshotRegionCount, tableName);
+        }
+      } catch (QuotaExceededException e) {
+        LOG.error("Region quota exceeded while restoring the snapshot " + snapshot.getName()
+          + " as table " + tableName.getNameAsString(), e);
+        // If QEE is thrown before restoreSnapshot, quota information is not updated, so we
+        // should throw the exception directly. If QEE is thrown after restoreSnapshot, there
+        // must be unexpected reasons, we also throw the exception directly
+        throw e;
       } catch (IOException e) {
-        this.master.getMasterQuotaManager().removeTableFromNamespaceQuota(tableName);
+        if (tableRegionCount > 0) {
+          // reset the region count for table
+          checkAndUpdateNamespaceRegionQuota(tableRegionCount, tableName);
+        }
         LOG.error("Exception occurred while restoring the snapshot " + snapshot.getName()
             + " as table " + tableName.getNameAsString(), e);
         throw e;
@@ -769,12 +799,22 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
-  private void checkAndUpdateNamespaceRegionQuota(SnapshotManifest manifest, TableName tableName)
+  private void checkAndUpdateNamespaceRegionQuota(int updatedRegionCount, TableName tableName)
       throws IOException {
     if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
       this.master.getMasterQuotaManager().checkAndUpdateNamespaceRegionQuota(tableName,
-        manifest.getRegionManifestsMap().size());
+        updatedRegionCount);
     }
+  }
+
+  /**
+   * @return cached region count, or -1 if quota manager is disabled or table status not found
+  */
+  private int getRegionCountOfTable(TableName tableName) throws IOException {
+    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
+      return this.master.getMasterQuotaManager().getRegionCountOfTable(tableName);
+    }
+    return -1;
   }
 
   /**
