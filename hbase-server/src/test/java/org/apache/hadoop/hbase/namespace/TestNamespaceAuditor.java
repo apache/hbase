@@ -801,16 +801,13 @@ public class TestNamespaceAuditor {
     assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
 
     String snapshot = "snapshot_testRestoreSnapshotQuotaExceed";
+    // snapshot has 4 regions
     ADMIN.snapshot(snapshot, tableName1);
-
-    List<HRegionInfo> regions = ADMIN.getTableRegions(tableName1);
-    Collections.sort(regions);
-
-    ADMIN.split(tableName1, Bytes.toBytes("JJJ"));
-    Thread.sleep(2000);
-    assertEquals("Total regions count should be 5.", 5, nstate.getRegionCount());
-
-    ndesc.setConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "2");
+    // recreate table with 1 region and set max regions to 3 for namespace
+    ADMIN.disableTable(tableName1);
+    ADMIN.deleteTable(tableName1);
+    ADMIN.createTable(tableDescOne);
+    ndesc.setConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "3");
     ADMIN.modifyNamespace(ndesc);
 
     ADMIN.disableTable(tableName1);
@@ -819,7 +816,9 @@ public class TestNamespaceAuditor {
       fail("Region quota is exceeded so QuotaExceededException should be thrown but HBaseAdmin"
           + " wraps IOException into RestoreSnapshotException");
     } catch (RestoreSnapshotException ignore) {
+      assertTrue(ignore.getCause() instanceof QuotaExceededException);
     }
+    assertEquals(1, getNamespaceState(nsp).getRegionCount());
     ADMIN.enableTable(tableName1);
     ADMIN.deleteSnapshot(snapshot);
   }

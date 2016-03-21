@@ -92,6 +92,21 @@ public class NamespaceAuditor {
     }
   }
 
+  /**
+   * Get region count for table
+   * @param tName - table name
+   * @return cached region count, or -1 if table status not found
+   * @throws IOException Signals that the namespace auditor has not been initialized
+   */
+  public int getRegionCountOfTable(TableName tName) throws IOException {
+    if (stateManager.isInitialized()) {
+      NamespaceTableAndRegionInfo state = stateManager.getState(tName.getNamespaceAsString());
+      return state != null ? state.getRegionCountOfTable(tName) : -1;
+    }
+    checkTableTypeAndThrowException(tName);
+    return -1;
+  }
+
   public void checkQuotaToSplitRegion(HRegionInfo hri) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
