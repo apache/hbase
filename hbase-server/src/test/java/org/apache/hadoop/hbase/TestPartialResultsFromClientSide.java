@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.filter.RandomRowFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,7 +67,7 @@ public class TestPartialResultsFromClientSide {
   private static final Log LOG = LogFactory.getLog(TestPartialResultsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
+  private final static int MINICLUSTER_SIZE = 5;
   private static Table TABLE = null;
 
   /**
@@ -99,7 +101,8 @@ public class TestPartialResultsFromClientSide {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(MINICLUSTER_SIZE);
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
   }
 
@@ -430,7 +433,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Test the method {@link Result#createCompleteResult(List, Result)}
+   * Test the method {@link Result#createCompleteResult(List)}
    * @throws Exception
    */
   @Test
@@ -829,4 +832,212 @@ public class TestPartialResultsFromClientSide {
       testEquivalenceOfScanResults(TABLE, partialScan, oneshotScan);
     }
   }
+
+  private void moveRegion(Table table, int index) throws IOException{
+    List<Pair<HRegionInfo, ServerName>> regions = MetaTableAccessor
+        .getTableRegionsAndLocations(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConnection(),
+            table.getName());
+    assertEquals(1, regions.size());
+    HRegionInfo regionInfo = regions.get(0).getFirst();
+    ServerName name = TEST_UTIL.getHBaseCluster().getRegionServer(index).getServerName();
+    TEST_UTIL.getHBaseAdmin().move(regionInfo.getEncodedNameAsBytes(),
+        Bytes.toBytes(name.getServerName()));
+  }
+
+  private void assertCell(Cell cell, byte[] row, byte[] cf, byte[] cq) {
+    assertArrayEquals(row,
+        Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    assertArrayEquals(cf,
+        Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+    assertArrayEquals(cq,
+        Bytes.copy(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
+  }
+
+  @Test
+  public void testPartialResultWhenRegionMove() throws IOException {
+    Table table=createTestTable(TableName.valueOf("testPartialResultWhenRegionMove"),
+        ROWS, FAMILIES, QUALIFIERS, VALUE);
+
+    moveRegion(table, 1);
+
+    Scan scan = new Scan();
+    scan.setMaxResultSize(1);
+    scan.setAllowPartialResults(true);
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < NUM_FAMILIES * NUM_QUALIFIERS - 1; i++) {
+      scanner.next();
+    }
+    Result result1 = scanner.next();
+    assertEquals(1, result1.rawCells().length);
+    Cell c1 = result1.rawCells()[0];
+    assertCell(c1, ROWS[0], FAMILIES[NUM_FAMILIES - 1], QUALIFIERS[NUM_QUALIFIERS - 1]);
+    assertFalse(result1.isPartial());
+
+    moveRegion(table, 2);
+
+    Result result2 = scanner.next();
+    assertEquals(1, result2.rawCells().length);
+    Cell c2 = result2.rawCells()[0];
+    assertCell(c2, ROWS[1], FAMILIES[0], QUALIFIERS[0]);
+    assertTrue(result2.isPartial());
+
+    moveRegion(table, 3);
+
+    Result result3 = scanner.next();
+    assertEquals(1, result3.rawCells().length);
+    Cell c3 = result3.rawCells()[0];
+    assertCell(c3, ROWS[1], FAMILIES[0], QUALIFIERS[1]);
+    assertTrue(result3.isPartial());
+
+  }
+
+  @Test
+  public void testReversedPartialResultWhenRegionMove() throws IOException {
+    Table table=createTestTable(TableName.valueOf("testReversedPartialResultWhenRegionMove"),
+        ROWS, FAMILIES, QUALIFIERS, VALUE);
+
+    moveRegion(table, 1);
+
+    Scan scan = new Scan();
+    scan.setMaxResultSize(1);
+    scan.setAllowPartialResults(true);
+    scan.setReversed(true);
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < NUM_FAMILIES * NUM_QUALIFIERS-1; i++) {
+      scanner.next();
+    }
+    Result result1 = scanner.next();
+    assertEquals(1, result1.rawCells().length);
+    Cell c1 = result1.rawCells()[0];
+    assertCell(c1, ROWS[NUM_ROWS-1], FAMILIES[NUM_FAMILIES - 1], QUALIFIERS[NUM_QUALIFIERS - 1]);
+    assertFalse(result1.isPartial());
+
+    moveRegion(table, 2);
+
+    Result result2 = scanner.next();
+    assertEquals(1, result2.rawCells().length);
+    Cell c2 = result2.rawCells()[0];
+    assertCell(c2, ROWS[NUM_ROWS-2], FAMILIES[0], QUALIFIERS[0]);
+    assertTrue(result2.isPartial());
+
+    moveRegion(table, 3);
+
+    Result result3 = scanner.next();
+    assertEquals(1, result3.rawCells().length);
+    Cell c3 = result3.rawCells()[0];
+    assertCell(c3, ROWS[NUM_ROWS-2], FAMILIES[0], QUALIFIERS[1]);
+    assertTrue(result3.isPartial());
+
+  }
+
+  @Test
+  public void testCompleteResultWhenRegionMove() throws IOException {
+    Table table=createTestTable(TableName.valueOf("testCompleteResultWhenRegionMove"),
+        ROWS, FAMILIES, QUALIFIERS, VALUE);
+
+    moveRegion(table, 1);
+
+    Scan scan = new Scan();
+    scan.setMaxResultSize(1);
+    scan.setCaching(1);
+    ResultScanner scanner = table.getScanner(scan);
+
+    Result result1 = scanner.next();
+    assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, result1.rawCells().length);
+    Cell c1 = result1.rawCells()[0];
+    assertCell(c1, ROWS[0], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result1.isPartial());
+
+    moveRegion(table, 2);
+
+    Result result2 = scanner.next();
+    assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, result2.rawCells().length);
+    Cell c2 = result2.rawCells()[0];
+    assertCell(c2, ROWS[1], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result2.isPartial());
+
+    moveRegion(table, 3);
+
+    Result result3 = scanner.next();
+    assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, result3.rawCells().length);
+    Cell c3 = result3.rawCells()[0];
+    assertCell(c3, ROWS[2], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result3.isPartial());
+
+  }
+
+  @Test
+  public void testReversedCompleteResultWhenRegionMove() throws IOException {
+    Table table=createTestTable(TableName.valueOf("testReversedCompleteResultWhenRegionMove"),
+        ROWS, FAMILIES, QUALIFIERS, VALUE);
+
+    moveRegion(table, 1);
+
+    Scan scan = new Scan();
+    scan.setMaxResultSize(1);
+    scan.setCaching(1);
+    scan.setReversed(true);
+    ResultScanner scanner = table.getScanner(scan);
+
+    Result result1 = scanner.next();
+    assertEquals(NUM_FAMILIES*NUM_QUALIFIERS, result1.rawCells().length);
+    Cell c1 = result1.rawCells()[0];
+    assertCell(c1, ROWS[NUM_ROWS-1], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result1.isPartial());
+
+    moveRegion(table, 2);
+
+    Result result2 = scanner.next();
+    assertEquals(NUM_FAMILIES*NUM_QUALIFIERS, result2.rawCells().length);
+    Cell c2 = result2.rawCells()[0];
+    assertCell(c2, ROWS[NUM_ROWS-2], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result2.isPartial());
+
+    moveRegion(table, 3);
+
+    Result result3 = scanner.next();
+    assertEquals(NUM_FAMILIES*NUM_QUALIFIERS, result3.rawCells().length);
+    Cell c3 = result3.rawCells()[0];
+    assertCell(c3, ROWS[NUM_ROWS-3], FAMILIES[0], QUALIFIERS[0]);
+    assertFalse(result3.isPartial());
+
+  }
+
+  @Test
+  public void testBatchingResultWhenRegionMove() throws IOException {
+    Table table =
+        createTestTable(TableName.valueOf("testBatchingResultWhenRegionMove"), ROWS, FAMILIES,
+            QUALIFIERS, VALUE);
+
+    moveRegion(table, 1);
+
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    scan.setBatch(1);
+
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < NUM_FAMILIES * NUM_QUALIFIERS - 1; i++) {
+      scanner.next();
+    }
+    Result result1 = scanner.next();
+    assertEquals(1, result1.rawCells().length);
+    Cell c1 = result1.rawCells()[0];
+    assertCell(c1, ROWS[0], FAMILIES[NUM_FAMILIES - 1], QUALIFIERS[NUM_QUALIFIERS - 1]);
+
+    moveRegion(table, 2);
+
+    Result result2 = scanner.next();
+    assertEquals(1, result2.rawCells().length);
+    Cell c2 = result2.rawCells()[0];
+    assertCell(c2, ROWS[1], FAMILIES[0], QUALIFIERS[0]);
+
+    moveRegion(table, 3);
+
+    Result result3 = scanner.next();
+    assertEquals(1, result3.rawCells().length);
+    Cell c3 = result3.rawCells()[0];
+    assertCell(c3, ROWS[1], FAMILIES[0], QUALIFIERS[1]);
+  }
+
+
 }

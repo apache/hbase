@@ -27,9 +27,11 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -38,7 +40,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -78,6 +79,10 @@ public class ClientScanner extends AbstractClientScanner {
      * via the methods {@link #addToPartialResults(Result)} and {@link #clearPartialResults()}
      */
     protected byte[] partialResultsRow = null;
+    /**
+     * The last cell from a not full Row which is added to cache
+     */
+    protected Cell lastCellLoadedToCache = null;
     protected final int caching;
     protected long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
@@ -98,6 +103,7 @@ public class ClientScanner extends AbstractClientScanner {
     protected final int primaryOperationTimeout;
     private int retries;
     protected final ExecutorService pool;
+    private static MetaComparator metaComparator = new MetaComparator();
 
   /**
    * Create a new ClientScanner for the specified table Note that the passed {@link Scan}'s start
@@ -393,7 +399,9 @@ public class ClientScanner extends AbstractClientScanner {
     // We don't expect that the server will have more results for us if
     // it doesn't tell us otherwise. We rely on the size or count of results
     boolean serverHasMoreResults = false;
+    boolean allResultsSkipped = false;
     do {
+      allResultsSkipped = false;
       try {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
@@ -452,10 +460,15 @@ public class ClientScanner extends AbstractClientScanner {
           // Reset the startRow to the row we've seen last so that the new scanner starts at
           // the correct row. Otherwise we may see previously returned rows again.
           // (ScannerCallable by now has "relocated" the correct region)
-          if (scan.isReversed()) {
-            scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
+          if (!this.lastResult.isPartial() && scan.getBatch() < 0 ) {
+            if (scan.isReversed()) {
+              scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
+            } else {
+              scan.setStartRow(Bytes.add(lastResult.getRow(), new byte[1]));
+            }
           } else {
-            scan.setStartRow(Bytes.add(lastResult.getRow(), new byte[1]));
+            // we need rescan this row because we only loaded partial row before
+            scan.setStartRow(lastResult.getRow());
           }
         }
         if (e instanceof OutOfOrderScannerNextException) {
@@ -487,13 +500,26 @@ public class ClientScanner extends AbstractClientScanner {
           getResultsToAddToCache(values, callable.isHeartbeatMessage());
       if (!resultsToAddToCache.isEmpty()) {
         for (Result rs : resultsToAddToCache) {
+          rs = filterLoadedCell(rs);
+          if (rs == null) {
+            continue;
+          }
           cache.add(rs);
-          // We don't make Iterator here
           for (Cell cell : rs.rawCells()) {
             remainingResultSize -= CellUtil.estimatedHeapSizeOf(cell);
           }
           countdown--;
           this.lastResult = rs;
+          if (this.lastResult.isPartial() || scan.getBatch() > 0 ) {
+            updateLastCellLoadedToCache(this.lastResult);
+          } else {
+            this.lastCellLoadedToCache = null;
+          }
+        }
+        if (cache.isEmpty()) {
+          // all result has been seen before, we need scan more.
+          allResultsSkipped = true;
+          continue;
         }
       }
       if (callable.isHeartbeatMessage()) {
@@ -524,7 +550,7 @@ public class ClientScanner extends AbstractClientScanner {
       // !partialResults.isEmpty() means that we are still accumulating partial Results for a
       // row. We should not change scanners before we receive all the partial Results for that
       // row.
-    } while ((callable != null && callable.isHeartbeatMessage())
+    } while (allResultsSkipped || (callable != null && callable.isHeartbeatMessage())
         || (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
         && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null))));
   }
@@ -766,5 +792,59 @@ public class ClientScanner extends AbstractClientScanner {
       return true;
     }
     return false;
+  }
+
+  protected void updateLastCellLoadedToCache(Result result) {
+    if (result.rawCells().length == 0) {
+      return;
+    }
+    this.lastCellLoadedToCache = result.rawCells()[result.rawCells().length - 1];
+  }
+
+  /**
+   * Compare two Cells considering reversed scanner.
+   * ReversedScanner only reverses rows, not columns.
+   */
+  private int compare(Cell a, Cell b) {
+    int r = 0;
+    if (currentRegion != null && currentRegion.isMetaRegion()) {
+      r = metaComparator.compareRows(a, b);
+    } else {
+      r = CellComparator.compareRows(a, b);
+    }
+    if (r != 0) {
+      return this.scan.isReversed() ? -r : r;
+    }
+    return CellComparator.compareWithoutRow(a, b);
+  }
+
+  private Result filterLoadedCell(Result result) {
+    // we only filter result when last result is partial
+    // so lastCellLoadedToCache and result should have same row key.
+    // However, if 1) read some cells; 1.1) delete this row at the same time 2) move region;
+    // 3) read more cell. lastCellLoadedToCache and result will be not at same row.
+    if (lastCellLoadedToCache == null || result.rawCells().length == 0) {
+      return result;
+    }
+    if (compare(this.lastCellLoadedToCache, result.rawCells()[0]) < 0) {
+      // The first cell of this result is larger than the last cell of loadcache.
+      // If user do not allow partial result, it must be true.
+      return result;
+    }
+    if (compare(this.lastCellLoadedToCache, result.rawCells()[result.rawCells().length - 1]) >= 0) {
+      // The last cell of this result is smaller than the last cell of loadcache, skip all.
+      return null;
+    }
+
+    // The first one must not in filtered result, we start at the second.
+    int index = 1;
+    while (index < result.rawCells().length) {
+      if (compare(this.lastCellLoadedToCache, result.rawCells()[index]) < 0) {
+        break;
+      }
+      index++;
+    }
+    Cell[] list = Arrays.copyOfRange(result.rawCells(), index, result.rawCells().length);
+    return Result.create(list, result.getExists(), result.isStale(), result.isPartial());
   }
 }
