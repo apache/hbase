@@ -707,6 +707,22 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test (timeout=180000)
+  public void testSetSplitOrMergeEnabled() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetSplitOrMergeEnabled(ObserverContext.createAndPrepare(CP_ENV, null),
+          true, Admin.MasterSwitchType.MERGE);
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test (timeout=180000)
   public void testBalance() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override

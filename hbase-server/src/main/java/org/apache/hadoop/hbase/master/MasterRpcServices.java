@@ -1479,8 +1479,17 @@ public class MasterRpcServices extends RSRpcServices
       for (MasterProtos.MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
         Admin.MasterSwitchType switchType = convert(masterSwitchType);
         boolean oldValue = master.isSplitOrMergeEnabled(switchType);
-        master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
         response.addPrevValue(oldValue);
+        boolean bypass = false;
+        if (master.cpHost != null) {
+          bypass = master.cpHost.preSetSplitOrMergeEnabled(newValue, switchType);
+        }
+        if (!bypass) {
+          master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
+        }
+        if (master.cpHost != null) {
+          master.cpHost.postSetSplitOrMergeEnabled(newValue, switchType);
+        }
       }
     } catch (IOException e) {
       throw new ServiceException(e);

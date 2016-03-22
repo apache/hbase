@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -561,6 +562,24 @@ public interface MasterObserver extends Coprocessor {
    */
   void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
       throws IOException;
+
+  /**
+   * Called prior to setting split / merge switch
+   * @param ctx the coprocessor instance's environment
+   * @param newValue the new value submitted in the call
+   * @param switchType type of switch
+   */
+  boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException;
+
+  /**
+   * Called after setting split / merge switch
+   * @param ctx the coprocessor instance's environment
+   * @param newValue the new value submitted in the call
+   * @param switchType type of switch
+   */
+  void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException;
 
   /**
    * Called prior to modifying the flag used to enable/disable region balancing.
