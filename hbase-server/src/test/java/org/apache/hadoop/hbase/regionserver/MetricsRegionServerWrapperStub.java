@@ -404,4 +404,9 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public double getMobFileCacheHitPercent() {
     return 50;
   }
+
+  @Override
+  public long getAverageRegionSize() {
+    return 10000000;
+  }
 }

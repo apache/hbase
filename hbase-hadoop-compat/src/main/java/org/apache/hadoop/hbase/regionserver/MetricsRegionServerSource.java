@@ -463,4 +463,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String RPC_MUTATE_REQUEST_COUNT = "rpcMutateRequestCount";
   String RPC_MUTATE_REQUEST_COUNT_DESC =
       "Number of rpc mutation requests this region server has answered.";
+  String AVERAGE_REGION_SIZE = "averageRegionSize";
+  String AVERAGE_REGION_SIZE_DESC = 
+      "Average region size over the region server including memstore and storefile sizes.";
 }
