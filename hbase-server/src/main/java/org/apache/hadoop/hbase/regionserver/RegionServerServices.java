@@ -243,4 +243,9 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    *         global memstore size already exceeds lower limit.
    */
   double getFlushPressure();
+
+  /**
+   * @return the metrics tracker for the region server
+   */
+  MetricsRegionServer getMetrics();
 }
