@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.http.ConnectionClosedException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -137,13 +138,17 @@ public abstract class AbstractTestIPC {
   static class TestRpcServer extends RpcServer {
 
     TestRpcServer() throws IOException {
-      this(new FifoRpcScheduler(CONF, 1));
+      this(new FifoRpcScheduler(CONF, 1), CONF);
     }
 
-    TestRpcServer(RpcScheduler scheduler) throws IOException {
+    TestRpcServer(Configuration conf) throws IOException {
+      this(new FifoRpcScheduler(conf, 1), conf);
+    }
+
+    TestRpcServer(RpcScheduler scheduler, Configuration conf) throws IOException {
       super(null, "testRpcServer", Lists
           .newArrayList(new BlockingServiceAndInterface(SERVICE, null)), new InetSocketAddress(
-          "localhost", 0), CONF, scheduler);
+          "localhost", 0), conf, scheduler);
     }
 
     @Override
@@ -267,7 +272,7 @@ public abstract class AbstractTestIPC {
   @Test
   public void testRpcScheduler() throws IOException, InterruptedException {
     RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
-    RpcServer rpcServer = new TestRpcServer(scheduler);
+    RpcServer rpcServer = new TestRpcServer(scheduler, CONF);
     verify(scheduler).init((RpcScheduler.Context) anyObject());
     AbstractRpcClient client = createRpcClient(CONF);
     try {
@@ -289,6 +294,37 @@ public abstract class AbstractTestIPC {
     } finally {
       rpcServer.stop();
       verify(scheduler).stop();
+    }
+  }
+
+  /** Tests that the rpc scheduler is called when requests arrive. */
+  @Test
+  public void testRpcMaxRequestSize() throws IOException, InterruptedException {
+    Configuration conf = new Configuration(CONF);
+    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 100);
+    RpcServer rpcServer = new TestRpcServer(conf);
+    AbstractRpcClient client = createRpcClient(conf);
+    try {
+      rpcServer.start();
+      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+      // set total RPC size bigger than 100 bytes
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello.hello.hello.hello."
+          + "hello.hello.hello.hello.hello.hello.hello.hello.hello.hello.hello.hello").build();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
+      try {
+        client.call(new PayloadCarryingRpcController(
+          CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param,
+          md.getOutputType().toProto(), User.getCurrent(), address,
+          new MetricsConnection.CallStats());
+        fail("RPC should have failed because it exceeds max request size");
+      } catch(ConnectionClosingException | ConnectionClosedException ex) {
+        // pass
+      }
+    } finally {
+      rpcServer.stop();
     }
   }
 
