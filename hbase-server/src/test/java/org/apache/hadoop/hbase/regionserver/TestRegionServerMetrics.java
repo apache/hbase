@@ -625,4 +625,25 @@ public class TestRegionServerMetrics {
 
     table.close();
   }
+
+  @Test
+  public void testAverageRegionSize() throws Exception {
+    TableName tableName = TableName.valueOf("testAverageRegionSize");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
+    //Force a hfile.
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    Put p = new Put(row);
+    p.addColumn(cf, qualifier, val);
+    t.put(p);
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
+
+    t.close();
+  }
 }
