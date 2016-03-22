@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -356,6 +357,17 @@ public class BaseMasterObserver implements MasterObserver {
   @Override
   public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> ctx,
     HRegionInfo regionInfo) throws IOException {
+  }
+
+  @Override
+  public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+    return false;
+  }
+
+  @Override
+  public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
   }
 
   @Override

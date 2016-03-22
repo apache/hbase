@@ -345,6 +345,17 @@ public class TestMasterObserver {
     }
 
     @Override
+    public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+    }
+
+    @Override
     public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
         TableName tableName, HTableDescriptor htd) throws IOException {
       if (bypass) {

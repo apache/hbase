@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -305,6 +306,17 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       LOG.error("Error while initializing VisibilityLabelService..", ioe);
       throw new RuntimeException(ioe);
     }
+  }
+
+  @Override
+  public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+    return false;
+  }
+
+  @Override
+  public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
   }
 
   @Override
