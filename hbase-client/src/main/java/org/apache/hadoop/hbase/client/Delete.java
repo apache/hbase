@@ -76,7 +76,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    * <p>
    * If no further operations are done, this will delete everything
    * associated with the specified row (all versions of all columns in all
-   * families).
+   * families), with timestamp from current point in time to the past.
+   * Cells defining timestamp for a future point in time
+   * (timestamp > current time) will not be deleted.
    * @param row row key
    */
   public Delete(byte [] row) {
