@@ -280,5 +280,10 @@ public interface MetricsRegionServerWrapper {
   /**
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
-  public long getBlockedRequestsCount();
+  long getBlockedRequestsCount();
+
+  /**
+   * Get the average region size to this region server.
+   */
+  long getAverageRegionSize();
 }

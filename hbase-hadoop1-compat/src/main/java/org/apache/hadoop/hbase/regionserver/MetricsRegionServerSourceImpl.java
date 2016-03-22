@@ -196,6 +196,7 @@ public class MetricsRegionServerSourceImpl
           .addGauge(AVG_STORE_FILE_AGE, AVG_STORE_FILE_AGE_DESC, rsWrap.getAvgStoreFileAge())
           .addGauge(NUM_REFERENCE_FILES, NUM_REFERENCE_FILES_DESC, rsWrap.getNumReferenceFiles())
           .addGauge(RS_START_TIME_NAME, RS_START_TIME_DESC, rsWrap.getStartCode())
+          .addGauge(AVERAGE_REGION_SIZE, AVERAGE_REGION_SIZE_DESC, rsWrap.getAverageRegionSize())
           .addCounter(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC, rsWrap.getTotalRequestCount())
           .addCounter(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC, rsWrap.getReadRequestsCount())
           .addCounter(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC, rsWrap.getWriteRequestsCount())

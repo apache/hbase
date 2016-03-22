@@ -286,4 +286,8 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SPLIT_SUCCESS_KEY = "splitSuccessCount";
   String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
   String FLUSH_KEY = "flushTime";
+
+  String AVERAGE_REGION_SIZE = "averageRegionSize";
+  String AVERAGE_REGION_SIZE_DESC = 
+      "Average region size over the region server including memstore and storefile sizes.";
 }

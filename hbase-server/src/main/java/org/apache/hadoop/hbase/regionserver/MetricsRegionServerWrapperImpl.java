@@ -77,6 +77,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long compactedCellsSize = 0;
   private volatile long majorCompactedCellsSize = 0;
   private volatile long blockedRequestsCount = 0L;
+  private volatile long averageRegionSize = 0L;
 
   private CacheStats cacheStats;
   private ScheduledExecutorService executor;
@@ -472,6 +473,7 @@ class MetricsRegionServerWrapperImpl
       long tempMajorCompactedCellsSize = 0;
       long tempBlockedRequestsCount = 0L;
 
+      int regionCount = 0;
       for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
         tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
         tempDataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
@@ -511,6 +513,7 @@ class MetricsRegionServerWrapperImpl
         }
 
         hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
+        regionCount++;
       }
 
       float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
@@ -526,7 +529,6 @@ class MetricsRegionServerWrapperImpl
       if (lastRan == 0) {
         lastRan = currentTime - period;
       }
-
 
       //If we've time traveled keep the last requests per second.
       if ((currentTime - lastRan) > 0) {
@@ -555,6 +557,10 @@ class MetricsRegionServerWrapperImpl
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;
+      if (regionCount > 0) {
+        averageRegionSize = (memstoreSize + storeFileSize) / regionCount;
+      }
+
       if (tempMinStoreFileAge != Long.MAX_VALUE) {
         minStoreFileAge = tempMinStoreFileAge;
       }
@@ -588,4 +594,10 @@ class MetricsRegionServerWrapperImpl
   public long getBlockedRequestsCount() {
     return blockedRequestsCount;
   }
+
+  @Override
+  public long getAverageRegionSize() {
+    return averageRegionSize;
+  }
+
 }
