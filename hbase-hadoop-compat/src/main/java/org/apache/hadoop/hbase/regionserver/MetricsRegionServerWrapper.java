@@ -322,4 +322,9 @@ public interface MetricsRegionServerWrapper {
    * Get the number of rpc mutate requests to this region server.
    */
   long getRpcMutateRequestsCount();
+
+  /**
+   * Get the average region size to this region server.
+   */
+  long getAverageRegionSize();
 }
