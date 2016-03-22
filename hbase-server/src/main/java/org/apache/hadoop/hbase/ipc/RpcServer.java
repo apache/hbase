@@ -262,15 +262,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
   protected HBaseRPCErrorHandler errorHandler = null;
 
+  static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
   private static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   private static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
 
   /** Default value for above params */
+  private static final int DEFAULT_MAX_REQUEST_SIZE = DEFAULT_MAX_CALLQUEUE_SIZE / 4; // 256M
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  private final int maxRequestSize;
   private final int warnResponseTime;
   private final int warnResponseSize;
   private final Server server;
@@ -1225,6 +1228,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected String hostAddress;
     protected int remotePort;
     ConnectionHeader connectionHeader;
+
     /**
      * Codec the client asked use.
      */
@@ -1609,11 +1613,16 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           }
         }
         if (dataLength < 0) { // A data length of zero is legal.
-          throw new IllegalArgumentException("Unexpected data length "
+          throw new DoNotRetryIOException("Unexpected data length "
               + dataLength + "!! from " + getHostAddress());
         }
 
-       // TODO: check dataLength against some limit so that the client cannot OOM the server
+        if (dataLength > maxRequestSize) {
+          throw new DoNotRetryIOException("RPC data length of " + dataLength + " received from "
+              + getHostAddress() + " is greater than max allowed " + maxRequestSize + ". Set \""
+              + MAX_REQUEST_SIZE + "\" on server to override this limit (not recommended)");
+        }
+
         data = ByteBuffer.allocate(dataLength);
 
         // Increment the rpc count. This counter will be decreased when we write
@@ -2061,6 +2070,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
     this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
+
+    this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
 
     // Start the listener here and let it bind to the port
     listener = new Listener(name);
