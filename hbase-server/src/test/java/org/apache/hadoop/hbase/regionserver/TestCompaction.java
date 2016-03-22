@@ -88,7 +88,7 @@ public class TestCompaction {
   private static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
-  
+
   private HRegion r = null;
   private HTableDescriptor htd = null;
   private static final byte [] COLUMN_FAMILY = fam1;
@@ -160,6 +160,7 @@ public class TestCompaction {
 
       HRegion spyR = spy(r);
       doAnswer(new Answer() {
+        @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
           return invocation.callRealMethod();
@@ -365,12 +366,6 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact(ThroughputController throughputController)
-          throws IOException {
-        return compact(throughputController, null);
-      }
-
-      @Override
       public List<Path> compact(ThroughputController throughputController, User user)
           throws IOException {
         finishCompaction(this.selectedFiles);
@@ -423,12 +418,6 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact(ThroughputController throughputController)
-          throws IOException {
-        return compact(throughputController, null);
-      }
-
-      @Override
       public List<Path> compact(ThroughputController throughputController, User user)
           throws IOException {
         try {
@@ -469,6 +458,7 @@ public class TestCompaction {
     @Override
     public void cancelCompaction(Object object) {}
 
+    @Override
     public int getPriority() {
       return Integer.MIN_VALUE; // some invalid value, see createStoreMock
     }
@@ -513,9 +503,10 @@ public class TestCompaction {
     when(
       r.compact(any(CompactionContext.class), any(Store.class),
         any(ThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
+      @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         invocation.getArgumentAt(0, CompactionContext.class).compact(
-          invocation.getArgumentAt(2, ThroughputController.class));
+          invocation.getArgumentAt(2, ThroughputController.class), null);
         return true;
       }
     });

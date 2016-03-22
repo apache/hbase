@@ -101,6 +101,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
     this.regionName = other.regionName;
     this.storeName = other.storeName;
     this.totalSize = other.totalSize;
+    recalculateSize();
     return this;
   }
 
@@ -206,10 +207,12 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
         Collections2.transform(Collections2.filter(
             this.getFiles(),
             new Predicate<StoreFile>() {
+              @Override
               public boolean apply(StoreFile sf) {
                 return sf.getReader() != null;
               }
           }), new Function<StoreFile, String>() {
+            @Override
             public String apply(StoreFile sf) {
               return StringUtils.humanReadableInt(
                 (sf.getReader() == null) ? 0 : sf.getReader().length());
