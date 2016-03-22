@@ -166,7 +166,6 @@ import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Leases.Lease;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
@@ -1421,14 +1420,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (shouldFlush) {
         boolean writeFlushWalMarker =  request.hasWriteFlushWalMarker() ?
             request.getWriteFlushWalMarker() : false;
-        long startTime = EnvironmentEdgeManager.currentTime();
         // Go behind the curtain so we can manage writing of the flush WAL marker
         HRegion.FlushResultImpl flushResult = (HRegion.FlushResultImpl)
             ((HRegion)region).flushcache(true, writeFlushWalMarker);
-        if (flushResult.isFlushSucceeded()) {
-          long endTime = EnvironmentEdgeManager.currentTime();
-          regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
-        }
         boolean compactionNeeded = flushResult.isCompactionNeeded();
         if (compactionNeeded) {
           regionServer.compactSplitThread.requestSystemCompaction(region,
@@ -1567,18 +1561,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       LOG.info("Receiving merging request for  " + regionA + ", " + regionB
           + ",forcible=" + forcible);
-      long startTime = EnvironmentEdgeManager.currentTime();
-      FlushResult flushResult = regionA.flush(true);
-      if (flushResult.isFlushSucceeded()) {
-        long endTime = EnvironmentEdgeManager.currentTime();
-        regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
-      }
-      startTime = EnvironmentEdgeManager.currentTime();
-      flushResult = regionB.flush(true);
-      if (flushResult.isFlushSucceeded()) {
-        long endTime = EnvironmentEdgeManager.currentTime();
-        regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
-      }
+      regionA.flush(true);
+      regionB.flush(true);
       regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible,
           masterSystemTime, RpcServer.getRequestUser());
       return MergeRegionsResponse.newBuilder().build();
@@ -1991,12 +1975,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             + "Replicas are auto-split when their primary is split.");
       }
       LOG.info("Splitting " + region.getRegionInfo().getRegionNameAsString());
-      long startTime = EnvironmentEdgeManager.currentTime();
-      FlushResult flushResult = region.flush(true);
-      if (flushResult.isFlushSucceeded()) {
-        long endTime = EnvironmentEdgeManager.currentTime();
-        regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
-      }
+      region.flush(true);
       byte[] splitPoint = null;
       if (request.hasSplitPoint()) {
         splitPoint = request.getSplitPoint().toByteArray();

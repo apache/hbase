@@ -486,25 +486,16 @@ class MemStoreFlusher implements FlushRequester {
    */
   private boolean flushRegion(final Region region, final boolean emergencyFlush,
       boolean forceFlushAllStores) {
-    long startTime = 0;
     synchronized (this.regionsInQueue) {
       FlushRegionEntry fqe = this.regionsInQueue.remove(region);
       // Use the start time of the FlushRegionEntry if available
-      if (fqe != null) {
-        startTime = fqe.createTime;
-      }
       if (fqe != null && emergencyFlush) {
         // Need to remove from region from delay queue.  When NOT an
         // emergencyFlush, then item was removed via a flushQueue.poll.
         flushQueue.remove(fqe);
-     }
+      }
     }
-    if (startTime == 0) {
-      // Avoid getting the system time unless we don't have a FlushRegionEntry;
-      // shame we can't capture the time also spent in the above synchronized
-      // block
-      startTime = EnvironmentEdgeManager.currentTime();
-    }
+
     lock.readLock().lock();
     try {
       notifyFlushRequest(region, emergencyFlush);
@@ -517,10 +508,6 @@ class MemStoreFlusher implements FlushRequester {
       } else if (shouldCompact) {
         server.compactSplitThread.requestSystemCompaction(
             region, Thread.currentThread().getName());
-      }
-      if (flushResult.isFlushSucceeded()) {
-        long endTime = EnvironmentEdgeManager.currentTime();
-        server.metricsRegionServer.updateFlushTime(endTime - startTime);
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical

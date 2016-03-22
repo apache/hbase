@@ -35,7 +35,6 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {
 
-
   final MetricsRegionServerWrapper rsWrap;
   private final MetricHistogram putHisto;
   private final MetricHistogram deleteHisto;
@@ -55,7 +54,30 @@ public class MetricsRegionServerSourceImpl
   private final MutableFastCounter splitSuccess;
 
   private final MetricHistogram splitTimeHisto;
+
+  // flush related metrics
   private final MetricHistogram flushTimeHisto;
+  private final MetricHistogram flushMemstoreSizeHisto;
+  private final MetricHistogram flushOutputSizeHisto;
+  private final MutableFastCounter flushedMemstoreBytes;
+  private final MutableFastCounter flushedOutputBytes;
+
+  // compaction related metrics
+  private final MetricHistogram compactionTimeHisto;
+  private final MetricHistogram compactionInputFileCountHisto;
+  private final MetricHistogram compactionInputSizeHisto;
+  private final MetricHistogram compactionOutputFileCountHisto;
+  private final MetricHistogram compactionOutputSizeHisto;
+  private final MutableFastCounter compactedInputBytes;
+  private final MutableFastCounter compactedOutputBytes;
+
+  private final MetricHistogram majorCompactionTimeHisto;
+  private final MetricHistogram majorCompactionInputFileCountHisto;
+  private final MetricHistogram majorCompactionInputSizeHisto;
+  private final MetricHistogram majorCompactionOutputFileCountHisto;
+  private final MetricHistogram majorCompactionOutputSizeHisto;
+  private final MutableFastCounter majorCompactedInputBytes;
+  private final MutableFastCounter majorCompactedOutputBytes;
 
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
@@ -83,14 +105,52 @@ public class MetricsRegionServerSourceImpl
 
     appendHisto = getMetricsRegistry().newTimeHistogram(APPEND_KEY);
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0L);
-    
+
     replayHisto = getMetricsRegistry().newTimeHistogram(REPLAY_KEY);
     scanSizeHisto = getMetricsRegistry().newSizeHistogram(SCAN_SIZE_KEY);
     scanTimeHisto = getMetricsRegistry().newTimeHistogram(SCAN_TIME_KEY);
 
-    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
-    flushTimeHisto = getMetricsRegistry().newTimeHistogram(FLUSH_KEY);
+    flushTimeHisto = getMetricsRegistry().newTimeHistogram(FLUSH_TIME, FLUSH_TIME_DESC);
+    flushMemstoreSizeHisto = getMetricsRegistry()
+        .newSizeHistogram(FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
+    flushOutputSizeHisto = getMetricsRegistry().newSizeHistogram(FLUSH_OUTPUT_SIZE,
+      FLUSH_OUTPUT_SIZE_DESC);
+    flushedOutputBytes = getMetricsRegistry().newCounter(FLUSHED_OUTPUT_BYTES,
+      FLUSHED_OUTPUT_BYTES_DESC, 0L);
+    flushedMemstoreBytes = getMetricsRegistry().newCounter(FLUSHED_MEMSTORE_BYTES,
+      FLUSHED_MEMSTORE_BYTES_DESC, 0L);
 
+    compactionTimeHisto = getMetricsRegistry()
+        .newTimeHistogram(COMPACTION_TIME, COMPACTION_TIME_DESC);
+    compactionInputFileCountHisto = getMetricsRegistry()
+      .newHistogram(COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
+    compactionInputSizeHisto = getMetricsRegistry()
+        .newSizeHistogram(COMPACTION_INPUT_SIZE, COMPACTION_INPUT_SIZE_DESC);
+    compactionOutputFileCountHisto = getMetricsRegistry()
+        .newHistogram(COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    compactionOutputSizeHisto = getMetricsRegistry()
+      .newSizeHistogram(COMPACTION_OUTPUT_SIZE, COMPACTION_OUTPUT_SIZE_DESC);
+    compactedInputBytes = getMetricsRegistry()
+        .newCounter(COMPACTED_INPUT_BYTES, COMPACTED_INPUT_BYTES_DESC, 0L);
+    compactedOutputBytes = getMetricsRegistry()
+        .newCounter(COMPACTED_OUTPUT_BYTES, COMPACTED_OUTPUT_BYTES_DESC, 0L);
+
+    majorCompactionTimeHisto = getMetricsRegistry()
+        .newTimeHistogram(MAJOR_COMPACTION_TIME, MAJOR_COMPACTION_TIME_DESC);
+    majorCompactionInputFileCountHisto = getMetricsRegistry()
+      .newHistogram(MAJOR_COMPACTION_INPUT_FILE_COUNT, MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC);
+    majorCompactionInputSizeHisto = getMetricsRegistry()
+        .newSizeHistogram(MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
+    majorCompactionOutputFileCountHisto = getMetricsRegistry()
+        .newHistogram(MAJOR_COMPACTION_OUTPUT_FILE_COUNT, MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    majorCompactionOutputSizeHisto = getMetricsRegistry()
+      .newSizeHistogram(MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
+    majorCompactedInputBytes = getMetricsRegistry()
+        .newCounter(MAJOR_COMPACTED_INPUT_BYTES, MAJOR_COMPACTED_INPUT_BYTES_DESC, 0L);
+    majorCompactedOutputBytes = getMetricsRegistry()
+        .newCounter(MAJOR_COMPACTED_OUTPUT_BYTES, MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
+
+    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
     splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
     splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
   }
@@ -180,6 +240,62 @@ public class MetricsRegionServerSourceImpl
     flushTimeHisto.add(t);
   }
 
+  @Override
+  public void updateFlushMemstoreSize(long bytes) {
+    flushMemstoreSizeHisto.add(bytes);
+    flushedMemstoreBytes.incr(bytes);
+  }
+
+  @Override
+  public void updateFlushOutputSize(long bytes) {
+    flushOutputSizeHisto.add(bytes);
+    flushedOutputBytes.incr(bytes);
+  }
+
+  @Override
+  public void updateCompactionTime(boolean isMajor, long t) {
+    compactionTimeHisto.add(t);
+    if (isMajor) {
+      majorCompactionTimeHisto.add(t);
+    }
+  }
+
+  @Override
+  public void updateCompactionInputFileCount(boolean isMajor, long c) {
+    compactionInputFileCountHisto.add(c);
+    if (isMajor) {
+      majorCompactionInputFileCountHisto.add(c);
+    }
+  }
+
+  @Override
+  public void updateCompactionInputSize(boolean isMajor, long bytes) {
+    compactionInputSizeHisto.add(bytes);
+    compactedInputBytes.incr(bytes);
+    if (isMajor) {
+      majorCompactionInputSizeHisto.add(bytes);
+      majorCompactedInputBytes.incr(bytes);
+    }
+  }
+
+  @Override
+  public void updateCompactionOutputFileCount(boolean isMajor, long c) {
+    compactionOutputFileCountHisto.add(c);
+    if (isMajor) {
+      majorCompactionOutputFileCountHisto.add(c);
+    }
+  }
+
+  @Override
+  public void updateCompactionOutputSize(boolean isMajor, long bytes) {
+    compactionOutputSizeHisto.add(bytes);
+    compactedOutputBytes.incr(bytes);
+    if (isMajor) {
+      majorCompactionOutputSizeHisto.add(bytes);
+      majorCompactedOutputBytes.incr(bytes);
+    }
+  }
+
   /**
    * Yes this is a get function that doesn't return anything.  Thanks Hadoop for breaking all
    * expectations of java programmers.  Instead of returning anything Hadoop metrics expects
@@ -252,6 +368,12 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getSplitQueueSize())
           .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),
               rsWrap.getCompactionQueueSize())
+          .addGauge(Interns.info(SMALL_COMPACTION_QUEUE_LENGTH, SMALL_COMPACTION_QUEUE_LENGTH_DESC),
+            rsWrap.getSmallCompactionQueueSize())
+          .addGauge(Interns.info(LARGE_COMPACTION_QUEUE_LENGTH, LARGE_COMPACTION_QUEUE_LENGTH_DESC),
+            rsWrap.getLargeCompactionQueueSize())
+          .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),
+            rsWrap.getCompactionQueueSize())
           .addGauge(Interns.info(FLUSH_QUEUE_LENGTH, FLUSH_QUEUE_LENGTH_DESC),
               rsWrap.getFlushQueueSize())
           .addGauge(Interns.info(BLOCK_CACHE_FREE_SIZE, BLOCK_CACHE_FREE_DESC),

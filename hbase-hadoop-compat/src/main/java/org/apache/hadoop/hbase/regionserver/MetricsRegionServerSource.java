@@ -146,6 +146,53 @@ public interface MetricsRegionServerSource extends BaseSource {
    */
   void updateFlushTime(long t);
 
+  /**
+   * Update the flush memstore size histogram
+   * @param bytes the number of bytes in the memstore
+   */
+  void updateFlushMemstoreSize(long bytes);
+
+  /**
+   * Update the flush output file size histogram
+   * @param bytes the number of bytes in the output file
+   */
+  void updateFlushOutputSize(long bytes);
+
+  /**
+   * Update the compaction time histogram, both major and minor
+   * @param isMajor whether compaction is a major compaction
+   * @param t time it took, in milliseconds
+   */
+  void updateCompactionTime(boolean isMajor, long t);
+
+  /**
+   * Update the compaction input number of files histogram
+   * @param isMajor whether compaction is a major compaction
+   * @param c number of files
+   */
+  void updateCompactionInputFileCount(boolean isMajor, long c);
+
+  /**
+   * Update the compaction total input file size histogram
+   * @param isMajor whether compaction is a major compaction
+   * @param bytes the number of bytes of the compaction input file
+   */
+  void updateCompactionInputSize(boolean isMajor, long bytes);
+
+  /**
+   * Update the compaction output number of files histogram
+   * @param isMajor whether compaction is a major compaction
+   * @param c number of files
+   */
+  void updateCompactionOutputFileCount(boolean isMajor, long c);
+
+  /**
+   * Update the compaction total output file size
+   * @param isMajor whether compaction is a major compaction
+   * @param bytes the number of bytes of the compaction input file
+   */
+  void updateCompactionOutputSize(boolean isMajor, long bytes);
+
   // Strings used for exporting to metrics system.
   String REGION_COUNT = "regionCount";
   String REGION_COUNT_DESC = "Number of regions";
@@ -212,6 +259,10 @@ public interface MetricsRegionServerSource extends BaseSource {
   String LARGE_COMPACTION_QUEUE_LENGTH = "largeCompactionQueueLength";
   String SMALL_COMPACTION_QUEUE_LENGTH = "smallCompactionQueueLength";
   String COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions.";
+  String LARGE_COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions with input size "
+      + "larger than throttle threshold (2.5GB by default)";
+  String SMALL_COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions with input size "
+      + "smaller than throttle threshold (2.5GB by default)";
   String FLUSH_QUEUE_LENGTH = "flushQueueLength";
   String FLUSH_QUEUE_LENGTH_DESC = "Length of the queue for region flushes";
   String BLOCK_CACHE_FREE_SIZE = "blockCacheFreeSize";
@@ -345,7 +396,61 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SPLIT_REQUEST_DESC = "Number of splits requested";
   String SPLIT_SUCCESS_KEY = "splitSuccessCount";
   String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
-  String FLUSH_KEY = "flushTime";
+
+  String FLUSH_TIME = "flushTime";
+  String FLUSH_TIME_DESC = "Histogram for the time in millis for memstore flush";
+  String FLUSH_MEMSTORE_SIZE = "flushMemstoreSize";
+  String FLUSH_MEMSTORE_SIZE_DESC = "Histogram for number of bytes in the memstore for a flush";
+  String FLUSH_OUTPUT_SIZE = "flushOutputSize";
+  String FLUSH_OUTPUT_SIZE_DESC = "Histogram for number of bytes in the resulting file for a flush";
+  String FLUSHED_OUTPUT_BYTES = "flushedOutputBytes";
+  String FLUSHED_OUTPUT_BYTES_DESC = "Total number of bytes written from flush";
+  String FLUSHED_MEMSTORE_BYTES = "flushedMemstoreBytes";
+  String FLUSHED_MEMSTORE_BYTES_DESC = "Total number of bytes of cells in memstore from flush";
+
+  String COMPACTION_TIME = "compactionTime";
+  String COMPACTION_TIME_DESC
+    = "Histogram for the time in millis for compaction, both major and minor";
+  String COMPACTION_INPUT_FILE_COUNT = "compactionInputFileCount";
+  String COMPACTION_INPUT_FILE_COUNT_DESC
+    = "Histogram for the compaction input number of files, both major and minor";
+  String COMPACTION_INPUT_SIZE = "compactionInputSize";
+  String COMPACTION_INPUT_SIZE_DESC
+    = "Histogram for the compaction total input file sizes, both major and minor";
+  String COMPACTION_OUTPUT_FILE_COUNT = "compactionOutputFileCount";
+  String COMPACTION_OUTPUT_FILE_COUNT_DESC
+    = "Histogram for the compaction output number of files, both major and minor";
+  String COMPACTION_OUTPUT_SIZE = "compactionOutputSize";
+  String COMPACTION_OUTPUT_SIZE_DESC
+    = "Histogram for the compaction total output file sizes, both major and minor";
+  String COMPACTED_INPUT_BYTES = "compactedInputBytes";
+  String COMPACTED_INPUT_BYTES_DESC
+    = "Total number of bytes that is read for compaction, both major and minor";
+  String COMPACTED_OUTPUT_BYTES = "compactedOutputBytes";
+  String COMPACTED_OUTPUT_BYTES_DESC
+    = "Total number of bytes that is output from compaction, both major and minor";
+
+  String MAJOR_COMPACTION_TIME = "majorCompactionTime";
+  String MAJOR_COMPACTION_TIME_DESC
+    = "Histogram for the time in millis for compaction, major only";
+  String MAJOR_COMPACTION_INPUT_FILE_COUNT = "majorCompactionInputFileCount";
+  String MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC
+    = "Histogram for the compaction input number of files, major only";
+  String MAJOR_COMPACTION_INPUT_SIZE = "majorCompactionInputSize";
+  String MAJOR_COMPACTION_INPUT_SIZE_DESC
+    = "Histogram for the compaction total input file sizes, major only";
+  String MAJOR_COMPACTION_OUTPUT_FILE_COUNT = "majorCompactionOutputFileCount";
+  String MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC
+    = "Histogram for the compaction output number of files, major only";
+  String MAJOR_COMPACTION_OUTPUT_SIZE = "majorCompactionOutputSize";
+  String MAJOR_COMPACTION_OUTPUT_SIZE_DESC
+    = "Histogram for the compaction total output file sizes, major only";
+  String MAJOR_COMPACTED_INPUT_BYTES = "majorCompactedInputBytes";
+  String MAJOR_COMPACTED_INPUT_BYTES_DESC
+    = "Total number of bytes that is read for compaction, major only";
+  String MAJOR_COMPACTED_OUTPUT_BYTES = "majorCompactedOutputBytes";
+  String MAJOR_COMPACTED_OUTPUT_BYTES_DESC
+    = "Total number of bytes that is output from compaction, major only";
 
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
   String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";

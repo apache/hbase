@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -664,6 +665,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return null;
   }
 
+  @Override
   public ThroughputController getFlushThroughputController() {
     return null;
   }
@@ -671,5 +673,10 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public double getFlushPressure() {
     return 0;
+  }
+
+  @Override
+  public MetricsRegionServer getMetrics() {
+    return null;
   }
 }

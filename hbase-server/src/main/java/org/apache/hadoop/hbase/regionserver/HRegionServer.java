@@ -620,6 +620,7 @@ public class HRegionServer extends HasThread implements
 
     if (!SystemUtils.IS_OS_WINDOWS) {
       Signal.handle(new Signal("HUP"), new SignalHandler() {
+        @Override
         public void handle(Signal signal) {
           getConfiguration().reloadConfiguration();
           configurationManager.notifyAllObservers(getConfiguration());
@@ -3417,5 +3418,10 @@ public class HRegionServer extends HasThread implements
       old.stop("configuration change");
     }
     this.flushThroughputController = FlushThroughputControllerFactory.create(this, newConf);
+  }
+
+  @Override
+  public MetricsRegionServer getMetrics() {
+    return metricsRegionServer;
   }
 }

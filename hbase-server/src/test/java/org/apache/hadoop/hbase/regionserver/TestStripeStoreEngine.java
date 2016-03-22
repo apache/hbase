@@ -96,7 +96,7 @@ public class TestStripeStoreEngine {
     assertEquals(2, compaction.getRequest().getFiles().size());
     assertFalse(compaction.getRequest().getFiles().contains(sf));
     // Make sure the correct method it called on compactor.
-    compaction.compact(NoLimitThroughputController.INSTANCE);
+    compaction.compact(NoLimitThroughputController.INSTANCE, null);
     verify(mockCompactor, times(1)).compact(compaction.getRequest(), targetCount, 0L,
       StripeStoreFileManager.OPEN_KEY, StripeStoreFileManager.OPEN_KEY, null, null,
       NoLimitThroughputController.INSTANCE, null);

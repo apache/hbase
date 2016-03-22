@@ -124,7 +124,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks, boolean isGet,
           boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
           byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException;
-  
+
   ScanInfo getScanInfo();
 
   /**
@@ -437,6 +437,11 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @return The total size of data flushed to disk, in bytes
    */
   long getFlushedCellsSize();
+
+  /**
+   * @return The total size of out output files on disk, in bytes
+   */
+  long getFlushedOutputFileSize();
 
   /**
    * @return The number of cells processed during minor compactions

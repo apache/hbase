@@ -184,6 +184,7 @@ public class HStore implements Store {
   private volatile long compactedCellsCount = 0;
   private volatile long majorCompactedCellsCount = 0;
   private volatile long flushedCellsSize = 0;
+  private volatile long flushedOutputFileSize = 0;
   private volatile long compactedCellsSize = 0;
   private volatile long majorCompactedCellsSize = 0;
 
@@ -1210,6 +1211,7 @@ public class HStore implements Store {
       // Commence the compaction.
       List<Path> newFiles = compaction.compact(throughputController, user);
 
+      long outputBytes = 0L;
       // TODO: get rid of this!
       if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
@@ -1235,10 +1237,23 @@ public class HStore implements Store {
         compactedCellsCount += getCompactionProgress().totalCompactingKVs;
         compactedCellsSize += getCompactionProgress().totalCompactedSize;
       }
+
+      for (StoreFile sf : sfs) {
+        outputBytes += sf.getReader().length();
+      }
+
       // At this point the store will use new files for all new scanners.
       completeCompaction(filesToCompact); // update store size.
 
-      logCompactionEndMessage(cr, sfs, compactionStartTime);
+      long now = EnvironmentEdgeManager.currentTime();
+      if (region.getRegionServerServices() != null
+          && region.getRegionServerServices().getMetrics() != null) {
+        region.getRegionServerServices().getMetrics().updateCompaction(cr.isMajor(),
+          now - compactionStartTime, cr.getFiles().size(), newFiles.size(), cr.getSize(),
+          outputBytes);
+      }
+
+      logCompactionEndMessage(cr, sfs, now, compactionStartTime);
       return sfs;
     } finally {
       finishCompactionRequest(cr);
@@ -1330,8 +1345,7 @@ public class HStore implements Store {
    * @param compactionStartTime Start time.
    */
   private void logCompactionEndMessage(
-      CompactionRequest cr, List<StoreFile> sfs, long compactionStartTime) {
-    long now = EnvironmentEdgeManager.currentTime();
+      CompactionRequest cr, List<StoreFile> sfs, long now, long compactionStartTime) {
     StringBuilder message = new StringBuilder(
       "Completed" + (cr.isMajor() ? " major" : "") + " compaction of "
       + cr.getFiles().size() + (cr.isAllFiles() ? " (all)" : "") + " file(s) in "
@@ -2129,6 +2143,7 @@ public class HStore implements Store {
     private List<Path> committedFiles;
     private long cacheFlushCount;
     private long cacheFlushSize;
+    private long outputFileSize;
 
     private StoreFlusherImpl(long cacheFlushSeqNum) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
@@ -2163,7 +2178,9 @@ public class HStore implements Store {
       List<StoreFile> storeFiles = new ArrayList<StoreFile>(this.tempFiles.size());
       for (Path storeFilePath : tempFiles) {
         try {
-          storeFiles.add(HStore.this.commitFile(storeFilePath, cacheFlushSeqNum, status));
+          StoreFile sf = HStore.this.commitFile(storeFilePath, cacheFlushSeqNum, status);
+          outputFileSize += sf.getReader().length();
+          storeFiles.add(sf);
         } catch (IOException ex) {
           LOG.error("Failed to commit store file " + storeFilePath, ex);
           // Try to delete the files we have committed before.
@@ -2189,9 +2206,15 @@ public class HStore implements Store {
 
       HStore.this.flushedCellsCount += cacheFlushCount;
       HStore.this.flushedCellsSize += cacheFlushSize;
+      HStore.this.flushedOutputFileSize += outputFileSize;
 
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
       return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
+    }
+
+    @Override
+    public long getOutputFileSize() {
+      return outputFileSize;
     }
 
     @Override
@@ -2257,7 +2280,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (10 * Bytes.SIZEOF_LONG)
+      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (11 * Bytes.SIZEOF_LONG)
               + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2302,6 +2325,11 @@ public class HStore implements Store {
   @Override
   public long getFlushedCellsSize() {
     return flushedCellsSize;
+  }
+
+  @Override
+  public long getFlushedOutputFileSize() {
+    return flushedOutputFileSize;
   }
 
   @Override

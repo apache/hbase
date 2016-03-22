@@ -85,4 +85,9 @@ interface StoreFlushContext {
    * @return a list of Paths for new files
    */
   List<Path> getCommittedFiles();
+
+  /**
+   * @return the total file size for flush output files, in bytes
+   */
+  long getOutputFileSize();
 }

@@ -100,13 +100,6 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
     }
 
     @Override
-    public List<Path> compact(ThroughputController throughputController)
-        throws IOException {
-      Preconditions.checkArgument(this.stripeRequest != null, "Cannot compact without selection");
-      return this.stripeRequest.execute(compactor, throughputController, null);
-    }
-
-    @Override
     public List<Path> compact(ThroughputController throughputController, User user)
         throws IOException {
       Preconditions.checkArgument(this.stripeRequest != null, "Cannot compact without selection");

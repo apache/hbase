@@ -66,6 +66,7 @@ public class FlushTableSubprocedure extends Subprocedure {
       try {
         LOG.debug("Flush region " + region.toString() + " started...");
         region.flush(true);
+        // TODO: flush result is not checked?
       } finally {
         LOG.debug("Closing region operation on " + region);
         region.closeRegionOperation();
