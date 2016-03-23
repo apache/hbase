@@ -496,12 +496,6 @@ public abstract class ByteBuff {
     return -(low + 1); // key not found.
   }
 
-  @Override
-  public String toString() {
-    return this.getClass().getSimpleName() + "[pos=" + position() + ", lim=" + limit() +
-        ", cap= " + capacity() + "]";
-  }
-
   public static String toStringBinary(final ByteBuff b, int off, int len) {
     StringBuilder result = new StringBuilder();
     // Just in case we are passed a 'len' that is > buffer length...

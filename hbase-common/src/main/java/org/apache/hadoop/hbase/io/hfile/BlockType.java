@@ -132,10 +132,6 @@ public enum BlockType {
     out.write(magic);
   }
 
-  public void write(ByteBuffer buf) {
-    buf.put(magic);
-  }
-
   public void write(ByteBuff buf) {
     buf.put(magic);
   }

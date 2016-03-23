@@ -99,21 +99,18 @@ public interface HFileScanner extends Shipper, Closeable {
    * @throws IOException
    */
   boolean seekTo() throws IOException;
-
   /**
    * Scans to the next entry in the file.
    * @return Returns false if you are at the end otherwise true if more in file.
    * @throws IOException
    */
   boolean next() throws IOException;
-
   /**
    * Gets the current key in the form of a cell. You must call
    * {@link #seekTo(Cell)} before this method.
    * @return gets the current key as a Cell.
    */
   Cell getKey();
-
   /**
    * Gets a buffer view to the current value.  You must call
    * {@link #seekTo(Cell)} before this method.
@@ -122,35 +119,26 @@ public interface HFileScanner extends Shipper, Closeable {
    * the position is 0, the start of the buffer view.
    */
   ByteBuffer getValue();
-
   /**
    * @return Instance of {@link org.apache.hadoop.hbase.Cell}.
    */
   Cell getCell();
-
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
    * bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
    * @return key as a string
-   * @deprecated Since hbase-2.0.0
    */
-  @Deprecated
   String getKeyString();
-
   /**
    * Convenience method to get a copy of the value as a string - interpreting
    * the bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
    * @return value as a string
-   * @deprecated Since hbase-2.0.0
    */
-  @Deprecated
   String getValueString();
-
   /**
    * @return Reader that underlies this Scanner instance.
    */
   HFile.Reader getReader();
-
   /**
    * @return True is scanner has had one of the seek calls invoked; i.e.
    * {@link #seekBefore(Cell)} or {@link #seekTo()} or {@link #seekTo(Cell)}.

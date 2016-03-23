@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -33,7 +32,7 @@ import org.apache.hadoop.hbase.client.Scan;
 // TODO: Change name from KeyValueScanner to CellScanner only we already have a simple CellScanner
 // so this should be something else altogether, a decoration on our base CellScanner. TODO.
 // This class shows in CPs so do it all in one swell swoop. HBase-2.0.0.
-public interface KeyValueScanner extends Shipper, Closeable {
+public interface KeyValueScanner extends Shipper {
   /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
@@ -75,7 +74,6 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * The default implementation for this would be to return 0. A file having
    * lower sequence id will be considered to be the older one.
    */
-  // TODO: Implement SequenceId Interface instead.
   long getSequenceID();
 
   /**
@@ -139,11 +137,11 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * peek KeyValue of scanner has the same row with specified Cell,
    * otherwise seek the scanner at the first Cell of the row which is the
    * previous row of specified KeyValue
-   *
+   * 
    * @param key seek KeyValue
    * @return true if the scanner is at the valid KeyValue, false if such
    *         KeyValue does not exist
-   *
+   * 
    */
   public boolean backwardSeek(Cell key) throws IOException;
 
@@ -158,7 +156,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
 
   /**
    * Seek the scanner at the first KeyValue of last row
-   *
+   * 
    * @return true if scanner has values left, false if the underlying data is
    *         empty
    * @throws IOException

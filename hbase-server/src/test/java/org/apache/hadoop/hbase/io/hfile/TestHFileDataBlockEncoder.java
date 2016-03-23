@@ -92,7 +92,8 @@ public class TestHFileDataBlockEncoder {
 
     if (blockEncoder.getDataBlockEncoding() ==
         DataBlockEncoding.NONE) {
-      assertEquals(block.getBufferReadOnly(), returnedBlock.getBufferReadOnly());
+      assertEquals(block.getBufferWithHeader(),
+          returnedBlock.getBufferWithHeader());
     } else {
       if (BlockType.ENCODED_DATA != returnedBlock.getBlockType()) {
         System.out.println(blockEncoder);
@@ -126,7 +127,7 @@ public class TestHFileDataBlockEncoder {
                         .build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0,
-        0, -1, hfileContext);
+        0, hfileContext);
     HFileBlock cacheBlock = createBlockOnDisk(kvs, block, useTags);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
@@ -197,7 +198,7 @@ public class TestHFileDataBlockEncoder {
                         .build();
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0, 
-         0, -1, meta);
+         0, meta);
     return b;
   }
 
@@ -219,8 +220,7 @@ public class TestHFileDataBlockEncoder {
     byte[] encodedBytes = baos.toByteArray();
     size = encodedBytes.length - block.getDummyHeaderForVersion().length;
     return new HFileBlock(context.getBlockType(), size, size, -1, ByteBuffer.wrap(encodedBytes),
-        HFileBlock.FILL_HEADER, 0, block.getOnDiskDataSizeWithHeader(), -1,
-        block.getHFileContext());
+        HFileBlock.FILL_HEADER, 0, block.getOnDiskDataSizeWithHeader(), block.getHFileContext());
   }
 
   private void writeBlock(List<Cell> kvs, HFileContext fileContext, boolean useTags)

@@ -227,10 +227,15 @@ public class TestCacheOnWriteInSchema {
       assertTrue(testDescription, scanner.seekTo());
       // Cribbed from io.hfile.TestCacheOnWrite
       long offset = 0;
+      HFileBlock prevBlock = null;
       while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+        long onDiskSize = -1;
+        if (prevBlock != null) {
+          onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
+        }
         // Flags: don't cache the block, use pread, this is not a compaction.
         // Also, pass null for expected block type to avoid checking it.
-        HFileBlock block = reader.readBlock(offset, -1, false, true,
+        HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
           false, true, null, DataBlockEncoding.NONE);
         BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset);
@@ -244,6 +249,7 @@ public class TestCacheOnWriteInSchema {
             "block: " + block + "\n" +
             "blockCacheKey: " + blockCacheKey);
         }
+        prevBlock = block;
         offset += block.getOnDiskSizeWithHeader();
       }
     } finally {
