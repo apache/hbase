@@ -378,4 +378,29 @@ public class TestMultiByteBuff {
     assertTrue(Bytes.equals(actual, 0, actual.length,
             b, 1, 3));
   }
+
+  @Test
+  public void testHasRemaining() {
+    ByteBuffer b1 = ByteBuffer.allocate(8);
+    ByteBuffer b2 = ByteBuffer.allocate(8);
+    ByteBuffer b3 = ByteBuffer.allocate(8);
+    MultiByteBuff mbb1 = new MultiByteBuff(b1, b2, b3);
+    assertTrue(mbb1.hasRemaining());
+    mbb1.limit(20); // Limit in mid of last of BB
+    mbb1.position(15);
+    mbb1.get();// We are at the end of second BB
+    assertTrue(mbb1.hasRemaining());
+    mbb1.position(20);
+    assertFalse(mbb1.hasRemaining());
+    mbb1.limit(12); // Limit in mid of second BB
+    mbb1.position(11);
+    assertTrue(mbb1.hasRemaining());
+    mbb1.get(); // Now we have reached the limit
+    assertFalse(mbb1.hasRemaining());
+    mbb1.limit(16);// Limit at begin of the last BB
+    mbb1.position(15);
+    assertTrue(mbb1.hasRemaining());
+    mbb1.get(); // Now we have reached the limit
+    assertFalse(mbb1.hasRemaining());
+  }
 }

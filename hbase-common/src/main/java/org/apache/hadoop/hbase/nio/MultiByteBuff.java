@@ -472,7 +472,8 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public final boolean hasRemaining() {
-    return this.curItem.hasRemaining() || this.curItemIndex < this.items.length - 1;
+    return this.curItem.hasRemaining() || (this.curItemIndex < this.limitedItemIndex
+        && this.items[this.curItemIndex + 1].hasRemaining());
   }
 
   /**
