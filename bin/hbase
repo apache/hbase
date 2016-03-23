@@ -71,20 +71,22 @@ if [ -d "${HBASE_HOME}/target" ]; then
   in_dev_env=true
 fi
 
+read -d '' options_string << EOF
+Options:
+  --config DIR     Configuration direction to use. Default: ./conf
+  --hosts HOSTS    Override the list in 'regionservers' file
+  --auth-as-server Authenticate to ZooKeeper using servers configuration
+EOF
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Usage: hbase [<options>] <command> [<args>]"
-  echo "Options:"
-  echo "  --config DIR    Configuration direction to use. Default: ./conf"
-  echo "  --hosts HOSTS   Override the list in 'regionservers' file"
-  echo "  --auth-as-server Authenticate to ZooKeeper using servers configuration"
+  echo "$options_string"
   echo ""
   echo "Commands:"
   echo "Some commands take arguments. Pass no args or -h for usage."
   echo "  shell           Run the HBase shell"
   echo "  hbck            Run the hbase 'fsck' tool"
-  echo "  snapshot        Create a new snapshot of a table"
-  echo "  snapshotinfo    Tool for dumping snapshot information"
+  echo "  snapshot        Tool for managing snapshots"
   echo "  wal             Write-ahead-log analyzer"
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
@@ -318,9 +320,24 @@ elif [ "$COMMAND" = "upgrade" ] ; then
   echo "Please follow the documentation at http://hbase.apache.org/book.html#upgrading."
   exit 1
 elif [ "$COMMAND" = "snapshot" ] ; then
-  CLASS="org.apache.hadoop.hbase.snapshot.CreateSnapshot"
-elif [ "$COMMAND" = "snapshotinfo" ] ; then
-  CLASS="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
+  SUBCOMMAND=$1
+  shift
+  if [ "$SUBCOMMAND" = "create" ] ; then
+    CLASS="org.apache.hadoop.hbase.snapshot.CreateSnapshot"
+  elif [ "$SUBCOMMAND" = "info" ] ; then
+    CLASS="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
+  elif [ "$SUBCOMMAND" = "export" ] ; then
+    CLASS="org.apache.hadoop.hbase.snapshot.ExportSnapshot"
+  else
+    echo "Usage: hbase [<options>] snapshot <subcommand> [<args>]"
+    echo "$options_string"
+    echo ""
+    echo "Subcommands:"
+    echo "  create          Create a new snapshot of a table"
+    echo "  info            Tool for dumping snapshot information"
+    echo "  export          Export an existing snapshot"
+    exit 1
+  fi
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] && [ "$1" != "clear" ] ; then
