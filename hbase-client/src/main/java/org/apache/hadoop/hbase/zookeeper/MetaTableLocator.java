@@ -35,11 +35,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -286,7 +289,7 @@ public class MetaTableLocator {
     } catch (RegionServerStoppedException e) {
       // Pass -- server name sends us to a server that is dying or already dead.
     }
-    return (service != null) && verifyRegionLocation(service,
+    return (service != null) && verifyRegionLocation(hConnection, service,
             getMetaRegionLocation(zkw, replicaId), RegionReplicaUtil.getRegionInfoForReplica(
                 HRegionInfo.FIRST_META_REGIONINFO, replicaId).getRegionName());
   }
@@ -306,17 +309,22 @@ public class MetaTableLocator {
   // rather than have to pass it in.  Its made awkward by the fact that the
   // HRI is likely a proxy against remote server so the getServerName needs
   // to be fixed to go to a local method or to a cache before we can do this.
-  private boolean verifyRegionLocation(AdminService.BlockingInterface hostingServer,
-      final ServerName address, final byte [] regionName)
+  private boolean verifyRegionLocation(final Connection connection,
+      AdminService.BlockingInterface hostingServer, final ServerName address,
+      final byte [] regionName)
   throws IOException {
     if (hostingServer == null) {
       LOG.info("Passed hostingServer is null");
       return false;
     }
     Throwable t;
+    PayloadCarryingRpcController controller = null;
+    if (connection instanceof ClusterConnection) {
+      controller = ((ClusterConnection) connection).getRpcControllerFactory().newController();
+    }
     try {
       // Try and get regioninfo from the hosting server.
-      return ProtobufUtil.getRegionInfo(hostingServer, regionName) != null;
+      return ProtobufUtil.getRegionInfo(controller, hostingServer, regionName) != null;
     } catch (ConnectException e) {
       t = e;
     } catch (RetriesExhaustedException e) {
