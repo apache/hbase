@@ -1256,7 +1256,7 @@ public class TestAdmin1 {
     try {
       AdminService.BlockingInterface admin = TEST_UTIL.getHBaseAdmin().getConnection()
           .getAdmin(regions.get(1).getSecond());
-      ProtobufUtil.mergeRegions(admin, regions.get(1).getFirst(), regions.get(2).getFirst(), true);
+      ProtobufUtil.mergeRegions(null, admin, regions.get(1).getFirst(), regions.get(2).getFirst(), true);
     } catch (MergeRegionException mm) {
       gotException = true;
     }

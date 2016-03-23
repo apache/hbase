@@ -32,7 +32,7 @@ import java.net.InetSocketAddress;
 public abstract class RpcScheduler {
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
-  static abstract class Context {
+  public static abstract class Context {
     public abstract InetSocketAddress getListenerAddress();
   }
 

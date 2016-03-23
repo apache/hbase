@@ -63,6 +63,11 @@ public class HConnectionTestingUtility {
       if (connection == null) {
         connection = Mockito.mock(HConnectionImplementation.class);
         Mockito.when(connection.getConfiguration()).thenReturn(conf);
+        Mockito.when(connection.getRpcControllerFactory()).thenReturn(
+        Mockito.mock(RpcControllerFactory.class));
+        // we need a real retrying caller
+        RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+        Mockito.when(connection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;

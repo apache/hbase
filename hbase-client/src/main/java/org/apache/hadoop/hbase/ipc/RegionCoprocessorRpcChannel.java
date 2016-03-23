@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -49,28 +51,28 @@ import com.google.protobuf.Message;
 public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
   private static final Log LOG = LogFactory.getLog(RegionCoprocessorRpcChannel.class);
 
-  private final HConnection connection;
+  private final ClusterConnection connection;
   private final TableName table;
   private final byte[] row;
   private byte[] lastRegion;
   private int operationTimeout;
 
-  private RpcRetryingCallerFactory rpcFactory;
+  private RpcRetryingCallerFactory rpcCallerFactory;
+  private RpcControllerFactory rpcControllerFactory;
 
-  public RegionCoprocessorRpcChannel(HConnection conn, TableName table, byte[] row) {
+  public RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row) {
     this.connection = conn;
     this.table = table;
     this.row = row;
-    this.rpcFactory = RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null);
-    this.operationTimeout = conn.getConfiguration().getInt(
-        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.rpcCallerFactory = conn.getRpcRetryingCallerFactory();
+    this.rpcControllerFactory = conn.getRpcControllerFactory();
+    this.operationTimeout = conn.getConnectionConfiguration().getOperationTimeout();
   }
 
   @Override
-  protected Message callExecService(Descriptors.MethodDescriptor method,
-                                  Message request, Message responsePrototype)
-      throws IOException {
+  protected Message callExecService(RpcController controller,
+      Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
+          throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Call: "+method.getName()+", "+request.toString());
     }
@@ -78,6 +80,9 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
     if (row == null) {
       throw new IllegalArgumentException("Missing row property for remote region location");
     }
+
+    final RpcController rpcController = controller == null
+        ? rpcControllerFactory.newController() : controller;
 
     final ClientProtos.CoprocessorServiceCall call =
         ClientProtos.CoprocessorServiceCall.newBuilder()
@@ -87,12 +92,19 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
             .setRequest(request.toByteString()).build();
     RegionServerCallable<CoprocessorServiceResponse> callable =
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
-          public CoprocessorServiceResponse call(int callTimeout) throws Exception {
-            byte[] regionName = getLocation().getRegionInfo().getRegionName();
-            return ProtobufUtil.execService(getStub(), call, regionName);
-          }
-        };
-    CoprocessorServiceResponse result = rpcFactory.<CoprocessorServiceResponse> newCaller()
+      @Override
+      public CoprocessorServiceResponse call(int callTimeout) throws Exception {
+        if (rpcController instanceof PayloadCarryingRpcController) {
+          ((PayloadCarryingRpcController) rpcController).setPriority(tableName);
+        }
+        if (rpcController instanceof TimeLimitedRpcController) {
+          ((TimeLimitedRpcController) rpcController).setCallTimeout(callTimeout);
+        }
+        byte[] regionName = getLocation().getRegionInfo().getRegionName();
+        return ProtobufUtil.execService(rpcController, getStub(), call, regionName);
+      }
+    };
+    CoprocessorServiceResponse result = rpcCallerFactory.<CoprocessorServiceResponse> newCaller()
         .callWithRetries(callable, operationTimeout);
     Message response = null;
     if (result.getValue().hasValue()) {

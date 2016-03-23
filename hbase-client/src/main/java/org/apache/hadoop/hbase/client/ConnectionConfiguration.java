@@ -18,15 +18,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- *
+ * Configuration parameters for the connection.
  * Configuration is a heavy weight registry that does a lot of string operations and regex matching.
  * Method calls into Configuration account for high CPU usage and have huge performance impact.
- * This class caches the value in the TableConfiguration object to improve performance.
+ * This class caches connection-related configuration values in the  ConnectionConfiguration
+ * object so that expensive conf.getXXX() calls are avoided every time HTable, etc is instantiated.
  * see HBASE-12128
- *
  */
 @InterfaceAudience.Private
-public class TableConfiguration {
+public class ConnectionConfiguration {
 
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
@@ -47,7 +47,7 @@ public class TableConfiguration {
    * Constructor
    * @param conf Configuration object
    */
-  TableConfiguration(Configuration conf) {
+  ConnectionConfiguration(Configuration conf) {
     this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
 
     this.metaOperationTimeout = conf.getInt(
@@ -82,7 +82,7 @@ public class TableConfiguration {
    * In real usage, we should read the configuration from the Configuration object.
    */
   @VisibleForTesting
-  protected TableConfiguration() {
+  protected ConnectionConfiguration() {
     this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;

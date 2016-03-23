@@ -284,7 +284,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
    * the result.
    */
-  class Call implements RpcCallContext {
+  @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+  @InterfaceStability.Evolving
+  public class Call implements RpcCallContext {
     protected int id;                             // the client's call id
     protected BlockingService service;
     protected MethodDescriptor md;
@@ -361,6 +363,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     protected RequestHeader getHeader() {
       return this.header;
+    }
+
+    public boolean hasPriority() {
+      return this.header.hasPriority();
+    }
+
+    public int getPriority() {
+      return this.header.getPriority();
     }
 
     /*
