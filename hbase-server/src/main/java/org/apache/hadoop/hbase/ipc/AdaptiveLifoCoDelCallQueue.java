@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Adaptive LIFO blocking queue utilizing CoDel algorithm to prevent queue overloading.
@@ -77,7 +78,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private volatile long minDelay;
 
   // the moment when current interval ends
-  private volatile long intervalTime = System.currentTimeMillis();
+  private volatile long intervalTime = EnvironmentEdgeManager.currentTime();
 
   // switch to ensure only one threads does interval cutoffs
   private AtomicBoolean resetDelay = new AtomicBoolean(true);
@@ -147,7 +148,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
    *   and internal queue state (deemed overloaded).
    */
   private boolean needToDrop(CallRunner callRunner) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     long callDelay = now - callRunner.getCall().timestamp;
 
     long localMinDelay = this.minDelay;
