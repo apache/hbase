@@ -217,7 +217,7 @@ public class TestZKBasedOpenCloseRegion {
     Whitebox.setInternalState(regionServer, "tableDescriptors", htd);
     Mockito.doThrow(new IOException()).when(htd).get((TableName) Mockito.any());
     try {
-      ProtobufUtil.openRegion(regionServer.getRSRpcServices(),
+      ProtobufUtil.openRegion(null, regionServer.getRSRpcServices(),
         regionServer.getServerName(), REGIONINFO);
       fail("It should throw IOException ");
     } catch (IOException e) {

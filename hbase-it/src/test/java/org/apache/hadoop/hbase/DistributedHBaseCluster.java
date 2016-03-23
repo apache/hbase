@@ -279,7 +279,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
     AdminProtos.AdminService.BlockingInterface client =
         ((ClusterConnection)this.connection).getAdmin(regionLoc.getServerName());
-    ServerInfo info = ProtobufUtil.getServerInfo(client);
+    ServerInfo info = ProtobufUtil.getServerInfo(null, client);
     return ProtobufUtil.toServerName(info.getServerName());
   }
 

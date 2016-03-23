@@ -695,7 +695,7 @@ public class RegionPlacementMaintainer {
           UpdateFavoredNodesResponse updateFavoredNodesResponse =
               currentRegionServer.updateFavoredNodes(null, request);
           LOG.info("Region server " +
-              ProtobufUtil.getServerInfo(currentRegionServer).getServerName() +
+              ProtobufUtil.getServerInfo(null, currentRegionServer).getServerName() +
               " has updated " + updateFavoredNodesResponse.getResponse() + " / " +
               singleServerPlan.getAssignmentMap().size() +
               " regions with the assignment plan");

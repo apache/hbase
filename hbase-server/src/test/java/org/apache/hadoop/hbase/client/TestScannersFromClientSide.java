@@ -287,7 +287,7 @@ public class TestScannersFromClientSide {
   private void verifyExpectedCounts(Table table, Scan scan, int expectedRowCount,
       int expectedCellCount) throws Exception {
     ResultScanner scanner = table.getScanner(scan);
-    
+
     int rowCount = 0;
     int cellCount = 0;
     Result r = null;
@@ -607,7 +607,7 @@ public class TestScannersFromClientSide {
     byte[] regionName = hri.getRegionName();
     int i = cluster.getServerWith(regionName);
     HRegionServer rs = cluster.getRegionServer(i);
-    ProtobufUtil.closeRegion(
+    ProtobufUtil.closeRegion(null,
       rs.getRSRpcServices(), rs.getServerName(), regionName, false);
     long startTime = EnvironmentEdgeManager.currentTime();
     long timeOut = 300000;
@@ -630,7 +630,7 @@ public class TestScannersFromClientSide {
       if (ConfigUtil.useZKForAssignment(TEST_UTIL.getConfiguration())) {
         ZKAssign.createNodeOffline(zkw, hri, loc.getServerName());
       }
-      ProtobufUtil.openRegion(rs.getRSRpcServices(), rs.getServerName(), hri);
+      ProtobufUtil.openRegion(null, rs.getRSRpcServices(), rs.getServerName(), hri);
       startTime = EnvironmentEdgeManager.currentTime();
       while (true) {
         if (rs.getOnlineRegion(regionName) != null) {

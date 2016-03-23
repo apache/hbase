@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
@@ -77,26 +79,34 @@ public class TestSnapshotFromAdmin {
     // setup the conf to match the expected properties
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
     conf.setLong("hbase.client.pause", pauseTime);
+
     // mock the master admin to our mock
     MasterKeepAliveConnection mockMaster = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(mockMaster);
+    // we need a real retrying caller
+    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+    RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
+    Mockito.when(controllerFactory.newController()).thenReturn(
+      Mockito.mock(PayloadCarryingRpcController.class));
+    Mockito.when(mockConnection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
+    Mockito.when(mockConnection.getRpcControllerFactory()).thenReturn(controllerFactory);
     // set the max wait time for the snapshot to complete
     SnapshotResponse response = SnapshotResponse.newBuilder()
         .setExpectedTimeout(maxWaitTime)
         .build();
     Mockito
-        .when(
-          mockMaster.snapshot((RpcController) Mockito.isNull(),
-            Mockito.any(SnapshotRequest.class))).thenReturn(response);
+    .when(
+      mockMaster.snapshot((RpcController) Mockito.any(),
+        Mockito.any(SnapshotRequest.class))).thenReturn(response);
     // setup the response
     IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
     builder.setDone(false);
     // first five times, we return false, last we get success
     Mockito.when(
-      mockMaster.isSnapshotDone((RpcController) Mockito.isNull(),
+      mockMaster.isSnapshotDone((RpcController) Mockito.any(),
         Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(builder.build(), builder.build(),
-      builder.build(), builder.build(), builder.build(), builder.setDone(true).build());
+          builder.build(), builder.build(), builder.build(), builder.setDone(true).build());
 
     // setup the admin and run the test
     Admin admin = new HBaseAdmin(mockConnection);
@@ -122,6 +132,13 @@ public class TestSnapshotFromAdmin {
         .mock(ConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
+    // we need a real retrying caller
+    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+    RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
+    Mockito.when(controllerFactory.newController()).thenReturn(
+      Mockito.mock(PayloadCarryingRpcController.class));
+    Mockito.when(mockConnection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
+    Mockito.when(mockConnection.getRpcControllerFactory()).thenReturn(controllerFactory);
     Admin admin = new HBaseAdmin(mockConnection);
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     // check that invalid snapshot names fail
@@ -141,11 +158,11 @@ public class TestSnapshotFromAdmin {
     Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(master);
     SnapshotResponse response = SnapshotResponse.newBuilder().setExpectedTimeout(0).build();
     Mockito.when(
-      master.snapshot((RpcController) Mockito.isNull(), Mockito.any(SnapshotRequest.class)))
+      master.snapshot((RpcController) Mockito.any(), Mockito.any(SnapshotRequest.class)))
         .thenReturn(response);
     IsSnapshotDoneResponse doneResponse = IsSnapshotDoneResponse.newBuilder().setDone(true).build();
     Mockito.when(
-      master.isSnapshotDone((RpcController) Mockito.isNull(),
+      master.isSnapshotDone((RpcController) Mockito.any(),
           Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
 
       // make sure that we can use valid names

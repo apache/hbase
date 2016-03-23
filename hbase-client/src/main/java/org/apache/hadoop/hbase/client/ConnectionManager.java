@@ -595,7 +595,7 @@ class ConnectionManager {
 
     // cache the configuration value for tables so that we can avoid calling
     // the expensive Configuration to fetch the value multiple times.
-    private final TableConfiguration tableConfig;
+    private final ConnectionConfiguration connectionConfig;
 
     // Client rpc instance.
     private RpcClient rpcClient;
@@ -644,13 +644,13 @@ class ConnectionManager {
       this.user = user;
       this.batchPool = pool;
       this.managed = managed;
-      this.tableConfig = new TableConfiguration(conf);
+      this.connectionConfig = new ConnectionConfiguration(conf);
       this.closed = false;
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
           HConstants.DEFAULT_USE_META_REPLICAS);
-      this.numTries = tableConfig.getRetriesNumber();
+      this.numTries = connectionConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -746,7 +746,7 @@ class ConnectionManager {
       if (managed) {
         throw new NeedUnmanagedConnectionException();
       }
-      return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
+      return new HTable(tableName, this, connectionConfig, rpcCallerFactory, rpcControllerFactory, pool);
     }
 
     @Override
@@ -758,10 +758,10 @@ class ConnectionManager {
         params.pool(HTable.getDefaultExecutor(getConfiguration()));
       }
       if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
-        params.writeBufferSize(tableConfig.getWriteBufferSize());
+        params.writeBufferSize(connectionConfig.getWriteBufferSize());
       }
       if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
-        params.maxKeyValueSize(tableConfig.getMaxKeyValueSize());
+        params.maxKeyValueSize(connectionConfig.getMaxKeyValueSize());
       }
       return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
     }
@@ -2641,6 +2641,21 @@ class ConnectionManager {
     @Override
     public boolean hasCellBlockSupport() {
       return this.rpcClient.hasCellBlockSupport();
+    }
+    
+    @Override
+    public ConnectionConfiguration getConnectionConfiguration() {
+      return this.connectionConfig;
+    }
+
+    @Override
+    public RpcRetryingCallerFactory getRpcRetryingCallerFactory() {
+      return this.rpcCallerFactory;
+    }
+
+    @Override
+    public RpcControllerFactory getRpcControllerFactory() {
+      return this.rpcControllerFactory;
     }
   }
 

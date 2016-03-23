@@ -39,6 +39,13 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.ipc.CallRunner;
+import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.ipc.RpcScheduler;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -563,6 +570,78 @@ public class TestMetaTableAccessor {
       assertNull(seqNumCell);
     } finally {
       meta.close();
+    }
+  }
+
+  public static class SpyingRpcSchedulerFactory extends SimpleRpcSchedulerFactory {
+    @Override
+    public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
+      final RpcScheduler delegate = super.create(conf, priority, server);
+      return new SpyingRpcScheduler(delegate);
+    }
+  }
+
+  public static class SpyingRpcScheduler extends DelegatingRpcScheduler {
+    long numPriorityCalls = 0;
+
+    public SpyingRpcScheduler(RpcScheduler delegate) {
+      super(delegate);
+    }
+
+    @Override
+    public boolean dispatch(CallRunner task) throws IOException, InterruptedException {
+      int priority = task.getCall().getPriority();
+
+      if (priority > HConstants.QOS_THRESHOLD) {
+        numPriorityCalls++;
+      }
+      return super.dispatch(task);
+    }
+  }
+
+  @Test
+  public void testMetaUpdatesGoToPriorityQueue() throws Exception {
+    // This test has to be end-to-end, and do the verification from the server side
+    Configuration c = UTIL.getConfiguration();
+
+    c.set(RSRpcServices.REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
+      SpyingRpcSchedulerFactory.class.getName());
+
+    // restart so that new config takes place
+    afterClass();
+    beforeClass();
+
+    TableName tableName = TableName.valueOf("foo");
+    try (Admin admin = connection.getAdmin();
+        RegionLocator rl = connection.getRegionLocator(tableName)) {
+
+      // create a table and prepare for a manual split
+      UTIL.createTable(tableName, "cf1");
+
+      HRegionLocation loc = rl.getAllRegionLocations().get(0);
+      HRegionInfo parent = loc.getRegionInfo();
+      long rid = 1000;
+      byte[] splitKey = Bytes.toBytes("a");
+      HRegionInfo splitA = new HRegionInfo(parent.getTable(), parent.getStartKey(),
+        splitKey, false, rid);
+      HRegionInfo splitB = new HRegionInfo(parent.getTable(), splitKey,
+        parent.getEndKey(), false, rid);
+
+      // find the meta server
+      MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
+      int rsIndex = cluster.getServerWithMeta();
+      HRegionServer rs;
+      if (rsIndex >= 0) {
+        rs = cluster.getRegionServer(rsIndex);
+      } else {
+        // it is in master
+        rs = cluster.getMaster();
+      }
+      SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
+      long prevCalls = scheduler.numPriorityCalls;
+      MetaTableAccessor.splitRegion(connection, parent, splitA, splitB, loc.getServerName(), 1);
+
+      assertTrue(prevCalls < scheduler.numPriorityCalls);
     }
   }
 }
