@@ -42,7 +42,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
   <%java return; %>
 </%if>
 <%java>
-  ServerInfo serverInfo = ProtobufUtil.getServerInfo(regionServer.getRSRpcServices());
+  ServerInfo serverInfo = ProtobufUtil.getServerInfo(null, regionServer.getRSRpcServices());
   ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
   List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices());
   MasterAddressTracker masterAddressTracker = regionServer.getMasterAddressTracker();

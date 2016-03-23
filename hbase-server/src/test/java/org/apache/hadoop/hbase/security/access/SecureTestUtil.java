@@ -364,7 +364,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(protocol, user, actions);
+            ProtobufUtil.grant(null, protocol, user, actions);
           }
         }
         return null;
@@ -387,7 +387,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(protocol, user, actions);
+            ProtobufUtil.revoke(null, protocol, user, actions);
           }
         }
         return null;
@@ -410,7 +410,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(protocol, user, namespace, actions);
+            ProtobufUtil.grant(null, protocol, user, namespace, actions);
           }
         }
         return null;
@@ -475,7 +475,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(protocol, user, namespace, actions);
+            ProtobufUtil.revoke(null, protocol, user, namespace, actions);
           }
         }
         return null;
@@ -499,7 +499,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+            ProtobufUtil.grant(null, protocol, user, table, family, qualifier, actions);
           }
         }
         return null;
@@ -565,7 +565,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
+            ProtobufUtil.revoke(null, protocol, user, table, family, qualifier, actions);
           }
         }
         return null;

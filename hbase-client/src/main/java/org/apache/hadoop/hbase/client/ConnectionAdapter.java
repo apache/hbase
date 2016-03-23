@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 /**
  * An internal class that delegates to an {@link HConnection} instance.
@@ -468,5 +469,20 @@ abstract class ConnectionAdapter implements ClusterConnection {
   @Override
   public boolean hasCellBlockSupport() {
     return wrappedConnection.hasCellBlockSupport();
+  }
+  
+  @Override
+  public ConnectionConfiguration getConnectionConfiguration() {
+    return wrappedConnection.getConnectionConfiguration();
+  }
+
+  @Override
+  public RpcRetryingCallerFactory getRpcRetryingCallerFactory() {
+    return wrappedConnection.getRpcRetryingCallerFactory();
+  }
+
+  @Override
+  public RpcControllerFactory getRpcControllerFactory() {
+    return wrappedConnection.getRpcControllerFactory();
   }
 }
