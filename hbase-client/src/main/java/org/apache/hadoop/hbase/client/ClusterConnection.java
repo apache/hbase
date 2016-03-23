@@ -31,11 +31,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 
-/** Internal methods on HConnection that should not be used by user code. */
+/** Internal methods on Connection that should not be used by user code. */
 @InterfaceAudience.Private
 // NOTE: Although this class is public, this class is meant to be used directly from internal
 // classes and unit tests only.
@@ -287,7 +288,22 @@ public interface ClusterConnection extends HConnection {
    * @return RpcRetryingCallerFactory
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
-  
+
+  /**
+   * @return Connection's RpcRetryingCallerFactory instance
+   */
+  RpcRetryingCallerFactory getRpcRetryingCallerFactory();
+
+  /**
+   * @return Connection's RpcControllerFactory instance
+   */
+  RpcControllerFactory getRpcControllerFactory();
+
+  /**
+   * @return a ConnectionConfiguration object holding parsed configuration values
+   */
+  ConnectionConfiguration getConnectionConfiguration();
+
   /**
    * @return the current statistics tracker associated with this connection
    */

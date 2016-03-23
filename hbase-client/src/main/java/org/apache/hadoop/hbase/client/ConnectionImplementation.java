@@ -25,6 +25,26 @@ import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.Nullable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -78,25 +98,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import javax.annotation.Nullable;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Main implementation of {@link Connection} and {@link ClusterConnection} interfaces.
@@ -158,7 +159,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   // cache the configuration value for tables so that we can avoid calling
   // the expensive Configuration to fetch the value multiple times.
-  private final TableConfiguration tableConfig;
+  private final ConnectionConfiguration connectionConfig;
 
   // Client rpc instance.
   private RpcClient rpcClient;
@@ -190,14 +191,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.conf = conf;
     this.user = user;
     this.batchPool = pool;
-    this.tableConfig = new TableConfiguration(conf);
+    this.connectionConfig = new ConnectionConfiguration(conf);
     this.closed = false;
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
       HConstants.DEFAULT_USE_META_REPLICAS);
     // how many times to try, one more than max *retry* time
-    this.numTries = tableConfig.getRetriesNumber() + 1;
+    this.numTries = connectionConfig.getRetriesNumber() + 1;
     this.rpcTimeout = conf.getInt(
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -306,7 +307,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
-    return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
+    return new HTable(tableName, this, connectionConfig,
+      rpcCallerFactory, rpcControllerFactory, pool);
   }
 
   @Override
@@ -318,10 +320,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       params.pool(HTable.getDefaultExecutor(getConfiguration()));
     }
     if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
-      params.writeBufferSize(tableConfig.getWriteBufferSize());
+      params.writeBufferSize(connectionConfig.getWriteBufferSize());
     }
     if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
-      params.maxKeyValueSize(tableConfig.getMaxKeyValueSize());
+      params.maxKeyValueSize(connectionConfig.getMaxKeyValueSize());
     }
     return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
   }
@@ -2280,5 +2282,20 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public boolean hasCellBlockSupport() {
     return this.rpcClient.hasCellBlockSupport();
+  }
+
+  @Override
+  public ConnectionConfiguration getConnectionConfiguration() {
+    return this.connectionConfig;
+  }
+
+  @Override
+  public RpcRetryingCallerFactory getRpcRetryingCallerFactory() {
+    return this.rpcCallerFactory;
+  }
+
+  @Override
+  public RpcControllerFactory getRpcControllerFactory() {
+    return this.rpcControllerFactory;
   }
 }

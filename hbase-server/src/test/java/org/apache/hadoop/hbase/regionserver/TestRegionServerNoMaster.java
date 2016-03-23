@@ -114,7 +114,7 @@ public class TestRegionServerNoMaster {
       return;
     }
 
-    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
+    ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
       hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
     while (true) {
       sn = mtl.getMetaRegionLocation(zkw);

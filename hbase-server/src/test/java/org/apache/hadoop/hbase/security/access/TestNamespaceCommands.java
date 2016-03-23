@@ -233,6 +233,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
   @Test
   public void testModifyNamespace() throws Exception {
     AccessTestAction modifyNamespace = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
           NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
@@ -359,7 +360,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          ProtobufUtil.grant(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         } finally {
           acl.close();
           connection.close();
@@ -376,7 +377,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+          ProtobufUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
             TEST_NAMESPACE, Action.READ);
         }
         return null;
@@ -384,6 +385,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     };
 
     AccessTestAction revokeAction = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         Connection connection = ConnectionFactory.createConnection(conf);
         Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
@@ -392,7 +394,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          ProtobufUtil.revoke(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         } finally {
           acl.close();
           connection.close();
@@ -402,6 +404,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     };
 
     AccessTestAction revokeNamespaceAction = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         Connection connection = ConnectionFactory.createConnection(conf);
         Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
@@ -410,7 +413,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+          ProtobufUtil.revoke(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
             TEST_NAMESPACE, Action.READ);
         } finally {
           acl.close();
@@ -429,7 +432,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(TEST_NAMESPACE));
+          ProtobufUtil.getUserPermissions(null, protocol, Bytes.toBytes(TEST_NAMESPACE));
         } finally {
           acl.close();
           connection.close();

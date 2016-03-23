@@ -31,10 +31,12 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
@@ -92,9 +94,12 @@ public class AccessControlClient {
   public static void grant(Connection connection, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
+    controller.setPriority(tableName);
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
-          actions);
+      ProtobufUtil.grant(controller, getAccessControlServiceStub(table), userName, tableName,
+        family, qual, actions);
     }
   }
 
@@ -108,8 +113,12 @@ public class AccessControlClient {
    */
   public static void grant(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
+
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
+      ProtobufUtil.grant(controller, getAccessControlServiceStub(table), userName, namespace,
+        actions);
     }
   }
 
@@ -119,8 +128,10 @@ public class AccessControlClient {
    */
   public static void grant(Connection connection, final String userName,
        final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
+      ProtobufUtil.grant(controller, getAccessControlServiceStub(table), userName, actions);
     }
   }
 
@@ -144,9 +155,12 @@ public class AccessControlClient {
   public static void revoke(Connection connection, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
+    controller.setPriority(tableName);
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
-          qualifier, actions);
+      ProtobufUtil.revoke(controller, getAccessControlServiceStub(table), username, tableName,
+        family, qualifier, actions);
     }
   }
 
@@ -160,8 +174,11 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
+      ProtobufUtil.revoke(controller, getAccessControlServiceStub(table), userName, namespace,
+        actions);
     }
   }
 
@@ -171,10 +188,11 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String userName,
       final Permission.Action... actions) throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
+      ProtobufUtil.revoke(controller, getAccessControlServiceStub(table), userName, actions);
     }
-
   }
 
   /**
@@ -188,6 +206,8 @@ public class AccessControlClient {
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
       throws Throwable {
+    PayloadCarryingRpcController controller
+      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     List<UserPermission> permList = new ArrayList<UserPermission>();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       try (Admin admin = connection.getAdmin()) {
@@ -196,14 +216,16 @@ public class AccessControlClient {
             AccessControlProtos.AccessControlService.newBlockingStub(service);
         HTableDescriptor[] htds = null;
         if (tableRegex == null || tableRegex.isEmpty()) {
-          permList = ProtobufUtil.getUserPermissions(protocol);
+          permList = ProtobufUtil.getUserPermissions(controller, protocol);
         } else if (tableRegex.charAt(0) == '@') {
           String namespace = tableRegex.substring(1);
-          permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
+          permList = ProtobufUtil.getUserPermissions(controller, protocol,
+            Bytes.toBytes(namespace));
         } else {
           htds = admin.listTables(Pattern.compile(tableRegex), true);
           for (HTableDescriptor hd : htds) {
-            permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+            permList.addAll(ProtobufUtil.getUserPermissions(controller, protocol,
+              hd.getTableName()));
           }
         }
       }

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint
@@ -47,8 +48,9 @@ public class RegionServerCoprocessorRpcChannel extends CoprocessorRpcChannel {
   }
 
   @Override
-  protected Message callExecService(Descriptors.MethodDescriptor method, Message request,
-      Message responsePrototype) throws IOException {
+  protected Message callExecService(RpcController controller,
+      Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
+          throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Call: " + method.getName() + ", " + request.toString());
     }
@@ -57,8 +59,10 @@ public class RegionServerCoprocessorRpcChannel extends CoprocessorRpcChannel {
             .setRow(ByteStringer.wrap(HConstants.EMPTY_BYTE_ARRAY))
             .setServiceName(method.getService().getFullName()).setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
+
+    // TODO: Are we retrying here? Does not seem so. We should use RetryingRpcCaller
     CoprocessorServiceResponse result =
-        ProtobufUtil.execRegionServerService(connection.getClient(serverName), call);
+        ProtobufUtil.execRegionServerService(controller, connection.getClient(serverName), call);
     Message response = null;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();

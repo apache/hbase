@@ -202,6 +202,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public final static byte[] HIDDEN_START_KEY = Bytes.toBytes("hidden-start-key");
 
   /** HRegionInfo for first meta region */
+  // TODO: How come Meta regions still do not have encoded region names? Fix.
   public static final HRegionInfo FIRST_META_REGIONINFO =
       new HRegionInfo(1L, TableName.META_TABLE_NAME);
 

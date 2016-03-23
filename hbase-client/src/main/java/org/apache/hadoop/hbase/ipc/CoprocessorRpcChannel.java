@@ -36,7 +36,7 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link com.google.protobuf.Service}s.  
+ * call coprocessor endpoint {@link com.google.protobuf.Service}s.
  * Note that clients should not use this class directly, except through
  * {@link org.apache.hadoop.hbase.client.HTableInterface#coprocessorService(byte[])}.
  */
@@ -53,7 +53,7 @@ public abstract class CoprocessorRpcChannel implements RpcChannel, BlockingRpcCh
                          RpcCallback<Message> callback) {
     Message response = null;
     try {
-      response = callExecService(method, request, responsePrototype);
+      response = callExecService(controller, method, request, responsePrototype);
     } catch (IOException ioe) {
       LOG.warn("Call failed on IOException", ioe);
       ResponseConverter.setControllerException(controller, ioe);
@@ -70,12 +70,13 @@ public abstract class CoprocessorRpcChannel implements RpcChannel, BlockingRpcCh
                                     Message request, Message responsePrototype)
       throws ServiceException {
     try {
-      return callExecService(method, request, responsePrototype);
+      return callExecService(controller, method, request, responsePrototype);
     } catch (IOException ioe) {
       throw new ServiceException("Error calling method "+method.getFullName(), ioe);
     }
   }
 
-  protected abstract Message callExecService(Descriptors.MethodDescriptor method,
-                                  Message request, Message responsePrototype) throws IOException;
+  protected abstract Message callExecService(RpcController controller,
+      Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
+          throws IOException;
 }

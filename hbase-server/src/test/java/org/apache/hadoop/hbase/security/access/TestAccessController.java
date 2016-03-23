@@ -1165,7 +1165,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+          ProtobufUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
             Action.READ);
         }
         return null;
@@ -1180,7 +1180,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+          ProtobufUtil.revoke(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
             Action.READ);
         }
         return null;
@@ -1195,7 +1195,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
               AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(protocol, TEST_TABLE);
+          ProtobufUtil.getUserPermissions(null, protocol, TEST_TABLE);
         }
         return null;
       }
@@ -1209,7 +1209,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(protocol);
+          ProtobufUtil.getUserPermissions(null, protocol);
         }
         return null;
       }
@@ -1620,7 +1620,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(protocol, tableName);
+        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1647,7 +1647,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(protocol, tableName);
+        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1671,7 +1671,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(protocol, tableName);
+        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1691,7 +1691,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(protocol, tableName);
+        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1711,7 +1711,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(protocol, tableName);
+        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1734,7 +1734,7 @@ public class TestAccessController extends SecureTestUtil {
       BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
-      perms = ProtobufUtil.getUserPermissions(protocol);
+      perms = ProtobufUtil.getUserPermissions(null, protocol);
     } finally {
       acl.close();
     }

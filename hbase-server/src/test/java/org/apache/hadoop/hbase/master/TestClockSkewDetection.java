@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -81,7 +84,7 @@ public class TestClockSkewDetection {
 
       @Override
       public void abort(String why, Throwable e) {}
-      
+
       @Override
       public boolean isAborted() {
         return false;
@@ -103,10 +106,11 @@ public class TestClockSkewDetection {
 
       @Override
       public ClusterConnection getClusterConnection() {
-        // TODO Auto-generated method stub
-        return null;
+        ClusterConnection conn = mock(ClusterConnection.class);
+        when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
+        return conn;
       }
-    }, null, false);
+    }, null, true);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();
@@ -135,7 +139,7 @@ public class TestClockSkewDetection {
       //we want an exception
       LOG.info("Recieved expected exception: "+e);
     }
-    
+
     try {
       // Master Time < Region Server Time
       LOG.debug("Test: Master Time < Region Server Time");
@@ -151,7 +155,7 @@ public class TestClockSkewDetection {
       // we want an exception
       LOG.info("Recieved expected exception: " + e);
     }
-    
+
     // make sure values above warning threshold but below max threshold don't kill
     LOG.debug("regionServerStartup 4");
     InetAddress ia4 = InetAddress.getLocalHost();
@@ -160,7 +164,7 @@ public class TestClockSkewDetection {
     request.setServerStartCode(-1);
     request.setServerCurrentTime(System.currentTimeMillis() - warningSkew * 2);
     sm.regionServerStartup(request.build(), ia4);
-    
+
     // make sure values above warning threshold but below max threshold don't kill
     LOG.debug("regionServerStartup 5");
     InetAddress ia5 = InetAddress.getLocalHost();
@@ -169,7 +173,7 @@ public class TestClockSkewDetection {
     request.setServerStartCode(-1);
     request.setServerCurrentTime(System.currentTimeMillis() + warningSkew * 2);
     sm.regionServerStartup(request.build(), ia5);
-    
+
   }
 
 }

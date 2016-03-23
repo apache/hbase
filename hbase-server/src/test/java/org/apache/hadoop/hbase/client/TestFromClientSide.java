@@ -604,7 +604,7 @@ public class TestFromClientSide {
   public void testMaxKeyValueSize() throws Exception {
     TableName TABLE = TableName.valueOf("testMaxKeyValueSize");
     Configuration conf = TEST_UTIL.getConfiguration();
-    String oldMaxSize = conf.get(TableConfiguration.MAX_KEYVALUE_SIZE_KEY);
+    String oldMaxSize = conf.get(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY);
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte[] value = new byte[4 * 1024 * 1024];
     Put put = new Put(ROW);
@@ -612,7 +612,7 @@ public class TestFromClientSide {
     ht.put(put);
     try {
       TEST_UTIL.getConfiguration().setInt(
-          TableConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
+          ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
       // Create new table so we pick up the change in Configuration.
       try (Connection connection =
           ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
@@ -624,7 +624,7 @@ public class TestFromClientSide {
       }
       fail("Inserting a too large KeyValue worked, should throw exception");
     } catch(Exception e) {}
-    conf.set(TableConfiguration.MAX_KEYVALUE_SIZE_KEY, oldMaxSize);
+    conf.set(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, oldMaxSize);
   }
 
   @Test

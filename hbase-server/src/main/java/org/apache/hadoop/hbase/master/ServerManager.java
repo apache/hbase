@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -158,6 +160,7 @@ public class ServerManager {
   private final long warningSkew;
 
   private final RetryCounterFactory pingRetryCounterFactory;
+  private final RpcControllerFactory rpcControllerFactory;
 
   /**
    * Set of region servers which are dead but not processed immediately. If one
@@ -222,6 +225,9 @@ public class ServerManager {
     int pingSleepInterval = Math.max(1, master.getConfiguration().getInt(
       "hbase.master.ping.server.retry.sleep.interval", 100));
     this.pingRetryCounterFactory = new RetryCounterFactory(pingMaxAttempts, pingSleepInterval);
+    this.rpcControllerFactory = this.connection == null
+        ? null
+        : connection.getRpcControllerFactory();
   }
 
   /**
@@ -784,6 +790,10 @@ public class ServerManager {
     }
   }
 
+  private PayloadCarryingRpcController newRpcController() {
+    return rpcControllerFactory == null ? null : rpcControllerFactory.newController();
+  }
+
   /**
    * Sends an CLOSE RPC to the specified server to close the specified region.
    * <p>
@@ -804,8 +814,8 @@ public class ServerManager {
         region.getRegionNameAsString() +
         " failed because no RPC connection found to this server");
     }
-    return ProtobufUtil.closeRegion(admin, server, region.getRegionName(),
-      dest);
+    PayloadCarryingRpcController controller = newRpcController();
+    return ProtobufUtil.closeRegion(controller, admin, server, region.getRegionName(), dest);
   }
 
   public boolean sendRegionClose(ServerName server,
@@ -826,7 +836,8 @@ public class ServerManager {
     if (server == null) return;
     try {
       AdminService.BlockingInterface admin = getRsAdmin(server);
-      ProtobufUtil.warmupRegion(admin, region);
+      PayloadCarryingRpcController controller = newRpcController();
+      ProtobufUtil.warmupRegion(controller, admin, region);
     } catch (IOException e) {
       LOG.error("Received exception in RPC for warmup server:" +
         server + "region: " + region +
@@ -838,11 +849,12 @@ public class ServerManager {
    * Contacts a region server and waits up to timeout ms
    * to close the region.  This bypasses the active hmaster.
    */
-  public static void closeRegionSilentlyAndWait(ClusterConnection connection, 
+  public static void closeRegionSilentlyAndWait(ClusterConnection connection,
     ServerName server, HRegionInfo region, long timeout) throws IOException, InterruptedException {
     AdminService.BlockingInterface rs = connection.getAdmin(server);
+    PayloadCarryingRpcController controller = connection.getRpcControllerFactory().newController();
     try {
-      ProtobufUtil.closeRegion(rs, server, region.getRegionName());
+      ProtobufUtil.closeRegion(controller, rs, server, region.getRegionName());
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }
@@ -850,12 +862,13 @@ public class ServerManager {
     while (System.currentTimeMillis() < expiration) {
       try {
         HRegionInfo rsRegion =
-          ProtobufUtil.getRegionInfo(rs, region.getRegionName());
+          ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
         if (rsRegion == null) return;
       } catch (IOException ioe) {
         if (ioe instanceof NotServingRegionException) // no need to retry again
           return;
-        LOG.warn("Exception when retrieving regioninfo from: " + region.getRegionNameAsString(), ioe);
+        LOG.warn("Exception when retrieving regioninfo from: "
+          + region.getRegionNameAsString(), ioe);
       }
       Thread.sleep(1000);
     }
@@ -890,7 +903,8 @@ public class ServerManager {
           + region_b.getRegionNameAsString()
           + " failed because no RPC connection found to this server");
     }
-    ProtobufUtil.mergeRegions(admin, region_a, region_b, forcible, user);
+    PayloadCarryingRpcController controller = newRpcController();
+    ProtobufUtil.mergeRegions(controller, admin, region_a, region_b, forcible, user);
   }
 
   /**
@@ -899,12 +913,14 @@ public class ServerManager {
   public boolean isServerReachable(ServerName server) {
     if (server == null) throw new NullPointerException("Passed server is null");
 
+
     RetryCounter retryCounter = pingRetryCounterFactory.create();
     while (retryCounter.shouldRetry()) {
       try {
+        PayloadCarryingRpcController controller = newRpcController();
         AdminService.BlockingInterface admin = getRsAdmin(server);
         if (admin != null) {
-          ServerInfo info = ProtobufUtil.getServerInfo(admin);
+          ServerInfo info = ProtobufUtil.getServerInfo(controller, admin);
           return info != null && info.hasServerName()
             && server.getStartcode() == info.getServerName().getStartCode();
         }

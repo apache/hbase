@@ -55,11 +55,11 @@ public class TestGlobalMemStoreSize {
 
   private HBaseTestingUtility TEST_UTIL;
   private MiniHBaseCluster cluster;
-  
+
   /**
    * Test the global mem store size in the region server is equal to sum of each
    * region's mem store size
-   * @throws Exception 
+   * @throws Exception
    */
   @Test
   public void testGlobalMemStore() throws Exception {
@@ -87,8 +87,8 @@ public class TestGlobalMemStoreSize {
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
       for (HRegionInfo regionInfo :
-          ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
-        globalMemStoreSize += 
+          ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
+        globalMemStoreSize +=
           server.getFromOnlineRegions(regionInfo.getEncodedName()).
           getMemstoreSize();
       }
@@ -103,7 +103,7 @@ public class TestGlobalMemStoreSize {
         ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
 
       for (HRegionInfo regionInfo :
-          ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
+          ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
         Region r = server.getFromOnlineRegions(regionInfo.getEncodedName());
         flush(r, server);
       }
@@ -119,7 +119,7 @@ public class TestGlobalMemStoreSize {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
         for (HRegionInfo regionInfo :
-            ProtobufUtil.getOnlineRegions(server.getRSRpcServices())) {
+            ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
           Region r = server.getFromOnlineRegions(regionInfo.getEncodedName());
           long l = r.getMemstoreSize();
           if (l > 0) {
@@ -154,7 +154,7 @@ public class TestGlobalMemStoreSize {
 
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
-    for (JVMClusterUtil.RegionServerThread rst : 
+    for (JVMClusterUtil.RegionServerThread rst :
           cluster.getRegionServerThreads()) {
       if (rst.getRegionServer().isOnline()) {
         list.add(rst.getRegionServer());

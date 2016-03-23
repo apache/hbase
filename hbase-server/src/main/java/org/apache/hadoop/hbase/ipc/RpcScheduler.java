@@ -37,7 +37,7 @@ public abstract class RpcScheduler {
       "hbase.ipc.server.priority.max.callqueue.length";
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
-  static abstract class Context {
+  public static abstract class Context {
     public abstract InetSocketAddress getListenerAddress();
   }
 

@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -45,18 +46,18 @@ import com.google.protobuf.Message;
 public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
   private static final Log LOG = LogFactory.getLog(MasterCoprocessorRpcChannel.class);
 
-  private final HConnection connection;
+  private final ClusterConnection connection;
 
-  public MasterCoprocessorRpcChannel(HConnection conn) {
+  public MasterCoprocessorRpcChannel(ClusterConnection conn) {
     this.connection = conn;
   }
 
   @Override
-  protected Message callExecService(Descriptors.MethodDescriptor method,
+  protected Message callExecService(RpcController controller, Descriptors.MethodDescriptor method,
                                   Message request, Message responsePrototype)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Call: "+method.getName()+", "+request.toString());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Call: "+method.getName()+", "+request.toString());
     }
 
     final ClientProtos.CoprocessorServiceCall call =
@@ -65,7 +66,10 @@ public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
             .setServiceName(method.getService().getFullName())
             .setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
-    CoprocessorServiceResponse result = ProtobufUtil.execService(connection.getMaster(), call);
+
+    // TODO: Are we retrying here? Does not seem so. We should use RetryingRpcCaller
+    CoprocessorServiceResponse result = ProtobufUtil.execService(controller,
+      connection.getMaster(), call);
     Message response = null;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();
