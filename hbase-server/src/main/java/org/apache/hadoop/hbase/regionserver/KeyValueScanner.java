@@ -29,9 +29,6 @@ import org.apache.hadoop.hbase.client.Scan;
  * Scanner that returns the next KeyValue.
  */
 @InterfaceAudience.Private
-// TODO: Change name from KeyValueScanner to CellScanner only we already have a simple CellScanner
-// so this should be something else altogether, a decoration on our base CellScanner. TODO.
-// This class shows in CPs so do it all in one swell swoop. HBase-2.0.0.
 public interface KeyValueScanner extends Shipper {
   /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
@@ -164,9 +161,8 @@ public interface KeyValueScanner extends Shipper {
   public boolean seekToLastRow() throws IOException;
 
   /**
-   * @return the next key in the index, usually the first key of next block OR a key that falls
-   * between last key of current block and first key of next block..
-   * see HFileWriterImpl#getMidpoint, or null if not known.
+   * @return the next key in the index (the key to seek to the next block)
+   * if known, or null otherwise
    */
   public Cell getNextIndexedKey();
 }

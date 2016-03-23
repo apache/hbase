@@ -30,7 +30,8 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
 /**
- * Utility scanner that wraps a sortable collection and serves as a KeyValueScanner.
+ * Utility scanner that wraps a sortable collection and serves
+ * as a KeyValueScanner.
  */
 @InterfaceAudience.Private
 public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {

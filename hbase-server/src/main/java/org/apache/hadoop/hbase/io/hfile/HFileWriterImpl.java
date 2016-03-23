@@ -416,7 +416,7 @@ public class HFileWriterImpl implements HFile.Writer {
     // No opportunity for optimization. Just return right key.
     return right;
   }
-
+  
   /**
    * @param leftArray
    * @param leftOffset

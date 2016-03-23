@@ -433,7 +433,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   /**
    * Used to compare two cells based on the column hint provided. This is specifically
    * used when we need to optimize the seeks based on the next indexed key. This is an
-   * advanced usage API specifically needed for some optimizations.
+   * advance usage API specifically needed for some optimizations.
    * @param nextIndexedCell the next indexed cell 
    * @param currentCell the cell to be compared
    * @param foff the family offset of the currentCell
