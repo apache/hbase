@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.security.User;
@@ -45,6 +46,11 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
+  /**
+   * @return the underlying snapshot manager
+   */
+  SnapshotManager getSnapshotManager();
+
   /**
    * @return Master's instance of {@link ClusterSchema}
    */
