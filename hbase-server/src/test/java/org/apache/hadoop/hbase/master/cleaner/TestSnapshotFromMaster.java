@@ -130,7 +130,7 @@ public class TestSnapshotFromMaster {
   @Before
   public void setup() throws Exception {
     UTIL.createTable(TABLE_NAME, TEST_FAM);
-    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(TABLE_NAME, null);
+    master.getSnapshotManager().setSnapshotHandlerForTesting(TABLE_NAME, null);
   }
 
   @After
@@ -184,7 +184,7 @@ public class TestSnapshotFromMaster {
     Mockito.when(mockHandler.getCompletionTimestamp())
       .thenReturn(EnvironmentEdgeManager.currentTime());
 
-    master.getSnapshotManagerForTesting()
+    master.getSnapshotManager()
         .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
 
     // if we do a lookup without a snapshot name, we should fail - you should always know your name

@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -233,6 +234,11 @@ public class TestCatalogJanitor {
         final long nonce) throws IOException {
       // no-op
       return -1;
+    }
+
+    @Override
+    public SnapshotManager getSnapshotManager() {
+      return null;
     }
 
     @Override
