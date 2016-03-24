@@ -140,7 +140,7 @@ public class FSHLog implements WAL {
   // high writes/syncs.
   //
   // Calls to append now also wait until the append has been done on the consumer side of the
-  // disruptor.  We used to not wait but it makes the implemenation easier to grok if we have
+  // disruptor.  We used to not wait but it makes the implementation easier to grok if we have
   // the region edit/sequence id after the append returns.
   //
   // TODO: Handlers need to coordinate appending AND syncing.  Can we have the threads contend
