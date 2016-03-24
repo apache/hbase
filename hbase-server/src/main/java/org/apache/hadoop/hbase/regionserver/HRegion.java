@@ -1189,11 +1189,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // force a flush only if region replication is set up for this region. Otherwise no need.
       boolean forceFlush = getTableDesc().getRegionReplication() > 1;
 
-      // force a flush first
-      MonitoredTask status = TaskMonitor.get().createStatus(
-        "Flushing region " + this + " because recovery is finished");
+      MonitoredTask status = TaskMonitor.get().createStatus("Recovering region " + this);
+
       try {
+        // force a flush first
         if (forceFlush) {
+          status.setStatus("Flushing region " + this + " because recovery is finished");
           internalFlushcache(status);
         }
 
@@ -1209,13 +1210,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // We cannot rethrow this exception since we are being called from the zk thread. The
           // region has already opened. In this case we log the error, but continue
           LOG.warn(getRegionInfo().getEncodedName() + " : was not able to write region opening "
-              + "event to WAL, continueing", e);
+              + "event to WAL, continuing", e);
         }
       } catch (IOException ioe) {
         // Distributed log replay semantics does not necessarily require a flush, since the replayed
         // data is already written again in the WAL. So failed flush should be fine.
         LOG.warn(getRegionInfo().getEncodedName() + " : was not able to flush "
-            + "event to WAL, continueing", ioe);
+            + "event to WAL, continuing", ioe);
       } finally {
         status.cleanup();
       }
