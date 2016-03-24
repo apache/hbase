@@ -1190,9 +1190,15 @@ class AsyncProcess {
         byte[] row = e.getValue().iterator().next().getAction().getRow();
         // Do not use the exception for updating cache because it might be coming from
         // any of the regions in the MultiAction.
-        if (tableName != null) {
-          connection.updateCachedLocations(tableName, regionName, row,
-            ClientExceptionsUtil.isMetaClearingException(t) ? null : t, server);
+        try {
+          if (tableName != null) {
+            connection.updateCachedLocations(tableName, regionName, row,
+              ClientExceptionsUtil.isMetaClearingException(t) ? null : t, server);
+          }
+        } catch (Throwable ex) {
+          // That should never happen, but if it did, we want to make sure
+          // we still process errors
+          LOG.error("Couldn't update cached region locations: " + ex);
         }
         for (Action<Row> action : e.getValue()) {
           Retry retry = manageError(
@@ -1317,8 +1323,14 @@ class AsyncProcess {
             // Register corresponding failures once per server/once per region.
             if (!regionFailureRegistered) {
               regionFailureRegistered = true;
-              connection.updateCachedLocations(
+              try {
+                connection.updateCachedLocations(
                   tableName, regionName, row.getRow(), result, server);
+              } catch (Throwable ex) {
+                // That should never happen, but if it did, we want to make sure
+                // we still process errors
+                LOG.error("Couldn't update cached region locations: " + ex);
+              }
             }
             if (failureCount == 0) {
               errorsByServer.reportServerError(server);
@@ -1372,8 +1384,14 @@ class AsyncProcess {
           // for every possible exception that comes through, however.
           connection.clearCaches(server);
         } else {
-          connection.updateCachedLocations(
+          try {
+            connection.updateCachedLocations(
               tableName, region, actions.get(0).getAction().getRow(), throwable, server);
+          } catch (Throwable ex) {
+            // That should never happen, but if it did, we want to make sure
+            // we still process errors
+            LOG.error("Couldn't update cached region locations: " + ex);
+          }
         }
         failureCount += actions.size();
 
