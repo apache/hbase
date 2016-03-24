@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -81,6 +82,7 @@ public class TestBulkLoad {
 
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final WAL log = mock(WAL.class);
   private final Configuration conf = HBaseConfiguration.create();
   private final Random random = new Random();
@@ -216,13 +218,18 @@ public class TestBulkLoad {
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
-    return new Pair<byte[], String>(family, "/tmp/does_not_exist");
+    return new Pair<byte[], String>(family, getNotExistFilePath());
+  }
+
+  private String getNotExistFilePath() {
+    Path path = new Path(TEST_UTIL.getDataTestDir(), "does_not_exist");
+    return path.toUri().getPath();
   }
 
   private Pair<byte[], String> withInvalidColumnFamilyButProperHFileLocation(byte[] family)
       throws IOException {
     createHFileForFamilies(family);
-    return new Pair<byte[], String>(new byte[]{0x00, 0x01, 0x02}, "/tmp/does_not_exist");
+    return new Pair<byte[], String>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
   }
 
 
