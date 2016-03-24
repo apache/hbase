@@ -2480,10 +2480,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   /**
-   * Exposed for TESTING!
    * @return the underlying snapshot manager
    */
-  public SnapshotManager getSnapshotManagerForTesting() {
+  public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
   }
 
