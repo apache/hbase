@@ -171,6 +171,22 @@ class RegionLocationFinder {
   }
 
   /**
+   * Returns an ordered list of hosts which have better locality for this region
+   * than the current host.
+   */
+  protected List<ServerName> getTopBlockLocations(HRegionInfo region, String currentHost) {
+    HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
+    List<String> topHosts = new ArrayList<String>();
+    for (String host : blocksDistribution.getTopHosts()) {
+      if (host.equals(currentHost)) {
+        break;
+      }
+      topHosts.add(host);
+    }
+    return mapHostNameToServerName(topHosts);
+  }
+
+  /**
    * Returns an ordered list of hosts that are hosting the blocks for this
    * region. The weight of each host is the sum of the block lengths of all
    * files on that host, so the first host in the list is the server which holds

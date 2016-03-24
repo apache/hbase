@@ -705,9 +705,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return pickRandomRegions(cluster, thisServer, otherServer);
       }
 
-      cluster.calculateRegionServerLocalities();
-      // Pick server with lowest locality
-      int thisServer = pickLowestLocalityServer(cluster);
+      int thisServer = pickRandomServer(cluster);
       int thisRegion;
       if (thisServer == -1) {
         LOG.warn("Could not pick lowest locality region server");
@@ -722,7 +720,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       // Pick the least loaded server with good locality for the region
-      int otherServer = cluster.getLeastLoadedTopServerForRegion(thisRegion);
+      int otherServer = cluster.getLeastLoadedTopServerForRegion(thisRegion, thisServer);
 
       if (otherServer == -1) {
         return Cluster.NullAction;
