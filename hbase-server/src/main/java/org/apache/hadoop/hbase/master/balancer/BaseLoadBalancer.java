@@ -826,7 +826,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int getLowestLocalityRegionOnServer(int serverIndex) {
       if (regionFinder != null) {
         float lowestLocality = 1.0f;
-        int lowestLocalityRegionIndex = 0;
+        int lowestLocalityRegionIndex = -1;
         if (regionsPerServer[serverIndex].length == 0) {
           // No regions on that region server
           return -1;
@@ -836,15 +836,24 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           HDFSBlocksDistribution distribution = regionFinder
               .getBlockDistribution(regions[regionIndex]);
           float locality = distribution.getBlockLocalityIndex(servers[serverIndex].getHostname());
+          // skip empty region
+          if (distribution.getUniqueBlocksTotalWeight() == 0) {
+            continue;
+          }
           if (locality < lowestLocality) {
             lowestLocality = locality;
             lowestLocalityRegionIndex = j;
           }
         }
+        if (lowestLocalityRegionIndex == -1) {
+          return -1;
+        }
         if (LOG.isTraceEnabled()) {
-          LOG.trace(" Lowest locality region index is " + lowestLocalityRegionIndex
-            + " and its region server contains " + regionsPerServer[serverIndex].length
-            + " regions");
+          LOG.trace("Lowest locality region is "
+              + regions[regionsPerServer[serverIndex][lowestLocalityRegionIndex]]
+                  .getRegionNameAsString() + " with locality " + lowestLocality
+              + " and its region server contains " + regionsPerServer[serverIndex].length
+              + " regions");
         }
         return regionsPerServer[serverIndex][lowestLocalityRegionIndex];
       } else {
@@ -861,9 +870,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
 
-    int getLeastLoadedTopServerForRegion(int region) {
+    /**
+     * Returns a least loaded server which has better locality for this region
+     * than the current server.
+     */
+    int getLeastLoadedTopServerForRegion(int region, int currentServer) {
       if (regionFinder != null) {
-        List<ServerName> topLocalServers = regionFinder.getTopBlockLocations(regions[region]);
+        List<ServerName> topLocalServers = regionFinder.getTopBlockLocations(regions[region],
+          servers[currentServer].getHostname());
         int leastLoadedServerIndex = -1;
         int load = Integer.MAX_VALUE;
         for (ServerName sn : topLocalServers) {
@@ -879,6 +893,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
             leastLoadedServerIndex = index;
             load = tempLoad;
           }
+        }
+        if (leastLoadedServerIndex != -1) {
+          LOG.debug("Pick the least loaded server " + servers[leastLoadedServerIndex].getHostname()
+            + " with better locality for region " + regions[region]);
         }
         return leastLoadedServerIndex;
       } else {
