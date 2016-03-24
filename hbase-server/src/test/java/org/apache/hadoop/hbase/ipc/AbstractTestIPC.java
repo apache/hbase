@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.http.ConnectionClosedException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -320,7 +319,7 @@ public abstract class AbstractTestIPC {
           md.getOutputType().toProto(), User.getCurrent(), address,
           new MetricsConnection.CallStats());
         fail("RPC should have failed because it exceeds max request size");
-      } catch(ConnectionClosingException | ConnectionClosedException ex) {
+      } catch(IOException ex) {
         // pass
       }
     } finally {
