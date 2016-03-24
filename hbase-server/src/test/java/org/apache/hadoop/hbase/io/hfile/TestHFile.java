@@ -411,13 +411,13 @@ public class TestHFile  {
     Cell left = CellUtil.createCell(Bytes.toBytes("a"),
         Bytes.toBytes("a"),
         Bytes.toBytes("a"),
-        9,
+        11,
         KeyValue.Type.Maximum.getCode(),
         HConstants.EMPTY_BYTE_ARRAY);
     Cell right = CellUtil.createCell(Bytes.toBytes("a"),
         Bytes.toBytes("a"),
         Bytes.toBytes("a"),
-        11,
+        9,
         KeyValue.Type.Maximum.getCode(),
         HConstants.EMPTY_BYTE_ARRAY);
     Cell mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
