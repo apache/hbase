@@ -22,7 +22,7 @@
 # Turn off the balancer before running this script.
 function usage {
   echo "Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] \
-[--rest] <hostname>"
+[--rest]  [-nob |--nobalancer ] <hostname>"
   echo " thrift         If we should stop/start thrift before/after the hbase stop/start"
   echo " rest           If we should stop/start rest before/after the hbase stop/start"
   echo " restart        If we should restart after graceful stop"
@@ -34,6 +34,8 @@ moving regions"
 exit with error. Default value is INT_MAX."
   echo " hostname       Hostname of server we are to stop"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
+  echo " nob| nobalancer Do not manage balancer states. This is only used as optimization in \
+rolling_restart.sh to avoid multiple calls to hbase shell"
   exit 1
 }
 
@@ -54,6 +56,7 @@ rest=
 movetimeout=2147483647
 maxthreads=1
 failfast=
+nob=false
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -65,6 +68,7 @@ do
     --noack | -n)  noack="--noack"; shift;;
     --maxthreads) shift; maxthreads=$1; shift;;
     --movetimeout) shift; movetimeout=$1; shift;;
+    --nobalancer | -nob) nob=true; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;	# terminate while loop
@@ -97,9 +101,14 @@ if [ "$localhostname" == "$hostname" ]; then
   local=true
 fi
 
-log "Disabling load balancer"
-HBASE_BALANCER_STATE=`echo 'balance_switch false' | "$bin"/hbase --config ${HBASE_CONF_DIR} shell | tail -3 | head -1`
-log "Previous balancer state was $HBASE_BALANCER_STATE"
+if [ $nob == "true"  ]; then
+  log "[ $0 ] skipping disabling balancer -nob argument is used"
+  HBASE_BALANCER_STATE=false
+else
+  log "Disabling load balancer"
+  HBASE_BALANCER_STATE=$(echo 'balance_switch false' | "$bin"/hbase --config "${HBASE_CONF_DIR}" shell | tail -3 | head -1)
+  log "Previous balancer state was $HBASE_BALANCER_STATE"
+fi
 
 log "Unloading $hostname region(s)"
 HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.apache.hadoop.hbase.util.RegionMover \
@@ -166,9 +175,11 @@ if [ "$restart" != "" ]; then
 fi
 
 # Restore balancer state
-if [ $HBASE_BALANCER_STATE != "false" ]; then
+if [ $HBASE_BALANCER_STATE != "false" ] && [ $nob != "true"  ]; then
   log "Restoring balancer state to $HBASE_BALANCER_STATE"
   echo "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
+else
+  log "[ $0 ] skipping restoring balancer"
 fi
 
 # Cleanup tmp files.

@@ -188,6 +188,10 @@ else
     if [ "$zkrs" == "null" ]; then zkrs="rs"; fi
     zkrs="$zparent/$zkrs"
     online_regionservers=`$bin/hbase zkcli ls $zkrs 2>&1 | tail -1 | sed "s/\[//" | sed "s/\]//"`
+    echo "Disabling load balancer"
+    HBASE_BALANCER_STATE=$(echo 'balance_switch false' | "$bin"/hbase --config "${HBASE_CONF_DIR}" shell | tail -3 | head -1)
+    echo "Previous balancer state was $HBASE_BALANCER_STATE"
+
     for rs in $online_regionservers
     do
         rs_parts=(${rs//,/ })
@@ -198,10 +202,14 @@ else
           continue
         else
           echo "Gracefully restarting: $hostname"
-          "$bin"/graceful_stop.sh --config ${HBASE_CONF_DIR} --restart --reload --maxthreads \
+          "$bin"/graceful_stop.sh --config ${HBASE_CONF_DIR} --restart --reload -nob --maxthreads  \
 		${RR_MAXTHREADS} ${RR_NOACK} --movetimeout ${RR_MOVE_TIMEOUT} $hostname
           sleep 1
         fi
     done
+    if [ "$HBASE_BALANCER_STATE" != "false" ]; then
+      echo "Restoring balancer state to $HBASE_BALANCER_STATE"
+      echo "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config "${HBASE_CONF_DIR}" shell &> /dev/null
+    fi
   fi
 fi
