@@ -63,6 +63,7 @@ public class MetricsConnection implements StatisticTrackable {
   private static final String MEMLOAD_BASE = "memstoreLoad_";
   private static final String HEAP_BASE = "heapOccupancy_";
   private static final String CACHE_BASE = "cacheDroppingExceptions_";
+  private static final String UNKNOWN_EXCEPTION = "UnknownException";
   private static final String CLIENT_SVC = ClientService.getDescriptor().getName();
 
   /** A container class for collecting details about the RPC call as it percolates. */
@@ -464,7 +465,8 @@ public class MetricsConnection implements StatisticTrackable {
   }
 
   public void incrCacheDroppingExceptions(Object exception) {
-    getMetric(CACHE_BASE + exception.getClass().getSimpleName(),
+    getMetric(CACHE_BASE +
+      (exception == null? UNKNOWN_EXCEPTION : exception.getClass().getSimpleName()),
       cacheDroppingExceptions, counterFactory).inc();
   }
 }
