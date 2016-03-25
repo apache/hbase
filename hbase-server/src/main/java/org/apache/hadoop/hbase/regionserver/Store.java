@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -301,6 +300,11 @@ public interface Store extends HeapSize, StoreConfigInformation {
   long getFlushableSize();
 
   HColumnDescriptor getFamily();
+
+  /**
+   * @return The maximum sequence id in all store files.
+   */
+  long getMaxSequenceId();
 
   /**
    * @return The maximum memstoreTS in all store files.

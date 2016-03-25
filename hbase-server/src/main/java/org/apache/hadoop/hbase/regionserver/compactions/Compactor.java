@@ -58,8 +58,8 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class Compactor {
   private static final Log LOG = LogFactory.getLog(Compactor.class);
   protected CompactionProgress progress;
-  protected Configuration conf;
-  protected Store store;
+  protected final Configuration conf;
+  protected final Store store;
 
   private int compactionKVMax;
   protected Compression.Algorithm compactionCompression;
