@@ -155,12 +155,6 @@ possible configurations would overwhelm and obscure the important.
     hbase-site.xml.</description>
   </property>
   <property>
-    <name>hbase.master.catalog.timeout</name>
-    <value>600000</value>
-    <description>Timeout value for the Catalog Janitor from the master to
-    META.</description>
-  </property>
-  <property>
     <name>hbase.master.infoserver.redirect</name>
     <value>true</value>
     <description>Whether or not the Master listens to the Master web
@@ -311,11 +305,6 @@ possible configurations would overwhelm and obscure the important.
     Default 1 hour. Set it to 0 to disable automatic flushing.</description>
   </property>
   <property>
-    <name>hbase.regionserver.catalog.timeout</name>
-    <value>600000</value>
-    <description>Timeout value for the Catalog Janitor from the regionserver to META.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.dns.interface</name>
     <value>default</value>
     <description>The name of the Network Interface from which a region server
@@ -371,14 +360,6 @@ possible configurations would overwhelm and obscure the important.
       files that are configured with a relative path will go under this node.
       By default, all of HBase's ZooKeeper file paths are configured with a
       relative path, so they will all go under this directory unless changed.</description>
-  </property>
-  <property>
-    <name>zookeeper.znode.rootserver</name>
-    <value>root-region-server</value>
-    <description>Path to ZNode holding root region location. This is written by
-      the master and read by clients and region servers. If a relative path is
-      given, the parent folder will be ${zookeeper.znode.parent}. By default,
-      this means the root location is stored at /hbase/root-region-server.</description>
   </property>
   <property>
     <name>zookeeper.znode.acl.parent</name>
@@ -876,7 +857,7 @@ possible configurations would overwhelm and obscure the important.
     megabytes of BucketCache. Default: 0.0</description>
   </property>
   <property>
-    <name>hbase.bucketcache.sizes</name>
+    <name>hbase.bucketcache.bucket.sizes</name>
     <value></value>
     <description>A comma-separated list of sizes for buckets for the bucketcache.
     Can be multiple sizes. List block sizes in order from smallest to largest.
@@ -1193,15 +1174,6 @@ possible configurations would overwhelm and obscure the important.
      hbase.thrift.maxQueuedRequests threads.</description>
   </property>
   <property>
-    <name>hbase.thrift.htablepool.size.max</name>
-    <value>1000</value>
-    <description>The upper bound for the table pool used in the Thrift gateways server.
-      Since this is per table name, we assume a single table and so with 1000 default
-      worker threads max this is set to a matching number. For other workloads this number
-      can be adjusted as needed.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.thrift.framed</name>
     <value>false</value>
     <description>Use Thrift TFramedTransport on the server side.
@@ -1238,21 +1210,6 @@ possible configurations would overwhelm and obscure the important.
     <value>000</value>
     <description>File permissions that should be used to write data
       files when hbase.data.umask.enable is true</description>
-  </property>
-  <property>
-    <name>hbase.metrics.showTableName</name>
-    <value>true</value>
-    <description>Whether to include the prefix "tbl.tablename" in per-column family metrics.
-	If true, for each metric M, per-cf metrics will be reported for tbl.T.cf.CF.M, if false,
-	per-cf metrics will be aggregated by column-family across tables, and reported for cf.CF.M.
-	In both cases, the aggregated metric M across tables and cfs will be reported.</description>
-  </property>
-  <property>
-    <name>hbase.metrics.exposeOperationTimes</name>
-    <value>true</value>
-    <description>Whether to report metrics about time taken performing an
-      operation on the region server.  Get, Put, Delete, Increment, and Append can all
-      have their times exposed through Hadoop metrics per CF and per region.</description>
   </property>
   <property>
     <name>hbase.snapshot.enabled</name>
