@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-$PWD/../bin/stop-hbase.sh
+ps aux | grep proc_master | awk '{print $2}' | xargs kill -9
 
 while [ $(curl -s -o /dev/null -I -w "%{http_code}" http://localhost:16010) == "200" ]
 do

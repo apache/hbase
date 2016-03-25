@@ -18,18 +18,21 @@
  */
 
 #include <gtest/gtest.h>
-#include <core/test_env.h>
 
 namespace {
 
 class NativeClientTestEnv : public ::testing::Environment {
  public:
   void SetUp() override {
-    init_test_env();
+    // start local HBase cluster to be reused by all tests
+    auto result = system("bin/start_local_hbase_and_wait.sh");
+    ASSERT_EQ(0, result);
   }
 
   void TearDown() override {
-    clean_test_env();
+    // shutdown local HBase cluster
+    auto result = system("bin/stop_local_hbase_and_wait.sh");
+    ASSERT_EQ(0, result);
   }
 };
 
