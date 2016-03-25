@@ -172,18 +172,7 @@ A comma-separated list of BaseHFileCleanerDelegate invoked by
 .Default
 `org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner`
 
-  
-[[hbase.master.catalog.timeout]]
-*`hbase.master.catalog.timeout`*::
-+
-.Description
-Timeout value for the Catalog Janitor from the master to
-    META.
-+
-.Default
-`600000`
 
-  
 [[hbase.master.infoserver.redirect]]
 *`hbase.master.infoserver.redirect`*::
 +
@@ -441,17 +430,7 @@ Maximum size of all memstores in a region server before flushes are forced.
 .Default
 `3600000`
 
-  
-[[hbase.regionserver.catalog.timeout]]
-*`hbase.regionserver.catalog.timeout`*::
-+
-.Description
-Timeout value for the Catalog Janitor from the regionserver to META.
-+
-.Default
-`600000`
 
-  
 [[hbase.regionserver.dns.interface]]
 *`hbase.regionserver.dns.interface`*::
 +
@@ -520,20 +499,7 @@ Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
 .Default
 `/hbase`
 
-  
-[[zookeeper.znode.rootserver]]
-*`zookeeper.znode.rootserver`*::
-+
-.Description
-Path to ZNode holding root region location. This is written by
-      the master and read by clients and region servers. If a relative path is
-      given, the parent folder will be ${zookeeper.znode.parent}. By default,
-      this means the root location is stored at /hbase/root-region-server.
-+
-.Default
-`root-region-server`
 
-  
 [[zookeeper.znode.acl.parent]]
 *`zookeeper.znode.acl.parent`*::
 +
@@ -1290,9 +1256,9 @@ Used along with bucket cache, this is a float that EITHER represents a percentag
 .Default
 `0` when specified as a float
 
-  
-[[hbase.bucketcache.sizes]]
-*`hbase.bucketcache.sizes`*::
+
+[[hbase.bucketcache.bucket.sizes]]
+*`hbase.bucketcache.bucket.sizes`*::
 +
 .Description
 A comma-separated list of sizes for buckets for the bucketcache 
@@ -1701,21 +1667,7 @@ The maximum number of pending Thrift connections waiting in the queue. If
 .Default
 `1000`
 
-  
-[[hbase.thrift.htablepool.size.max]]
-*`hbase.thrift.htablepool.size.max`*::
-+
-.Description
-The upper bound for the table pool used in the Thrift gateways server.
-      Since this is per table name, we assume a single table and so with 1000 default
-      worker threads max this is set to a matching number. For other workloads this number
-      can be adjusted as needed.
-    
-+
-.Default
-`1000`
 
-  
 [[hbase.regionserver.thrift.framed]]
 *`hbase.regionserver.thrift.framed`*::
 +
@@ -1771,32 +1723,7 @@ File permissions that should be used to write data
 .Default
 `000`
 
-  
-[[hbase.metrics.showTableName]]
-*`hbase.metrics.showTableName`*::
-+
-.Description
-Whether to include the prefix "tbl.tablename" in per-column family metrics.
-	If true, for each metric M, per-cf metrics will be reported for tbl.T.cf.CF.M, if false,
-	per-cf metrics will be aggregated by column-family across tables, and reported for cf.CF.M.
-	In both cases, the aggregated metric M across tables and cfs will be reported.
-+
-.Default
-`true`
 
-  
-[[hbase.metrics.exposeOperationTimes]]
-*`hbase.metrics.exposeOperationTimes`*::
-+
-.Description
-Whether to report metrics about time taken performing an
-      operation on the region server.  Get, Put, Delete, Increment, and Append can all
-      have their times exposed through Hadoop metrics per CF and per region.
-+
-.Default
-`true`
-
-  
 [[hbase.snapshot.enabled]]
 *`hbase.snapshot.enabled`*::
 +
