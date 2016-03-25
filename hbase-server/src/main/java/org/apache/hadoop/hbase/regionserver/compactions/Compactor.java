@@ -64,14 +64,14 @@ public abstract class Compactor {
   private static final Log LOG = LogFactory.getLog(Compactor.class);
   private static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
   protected CompactionProgress progress;
-  protected Configuration conf;
-  protected Store store;
+  protected final Configuration conf;
+  protected final Store store;
 
-  protected int compactionKVMax;
-  protected Compression.Algorithm compactionCompression;
+  protected final int compactionKVMax;
+  protected final Compression.Algorithm compactionCompression;
 
   /** specify how many days to keep MVCC values during major compaction **/ 
-  protected int keepSeqIdPeriod;
+  protected final int keepSeqIdPeriod;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(final Configuration conf, final Store store) {

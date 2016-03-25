@@ -261,6 +261,13 @@ public class StoreFile {
   }
 
   /**
+   * Clone a StoreFile for opening private reader.
+   */
+  public StoreFile cloneForReader() {
+    return new StoreFile(this);
+  }
+
+  /**
    * @return the StoreFile object associated to this StoreFile.
    *         null if the StoreFile is not a reference.
    */
@@ -294,7 +301,7 @@ public class StoreFile {
    * @return True if this is HFile.
    */
   public boolean isHFile() {
-    return this.fileInfo.isHFile(this.fileInfo.getPath());
+    return StoreFileInfo.isHFile(this.fileInfo.getPath());
   }
 
   /**
