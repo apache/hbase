@@ -51,9 +51,6 @@ cxx_library(name="core",
             ], )
 
 cxx_test(name="simple-test",
-         headers=[
-             "test_env.h",
-         ],
          srcs=[
              "native-client-test-env.cc",
              "simple-native-client-test.cc",
@@ -63,9 +60,6 @@ cxx_test(name="simple-test",
          ],
          run_test_separately=True, )
 cxx_test(name="location-cache-test",
-         headers=[
-             "test_env.h",
-         ],
          srcs=[
              "native-client-test-env.cc",
              "location-cache-test.cc",

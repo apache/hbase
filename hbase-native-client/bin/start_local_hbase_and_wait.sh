@@ -17,10 +17,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Clean up from any other tests.
+rm -rf /tmp/hbase-*
+
+# Start the master/regionservers.
 $PWD/../bin/start-hbase.sh
 
-until [ $(curl -s -o /dev/null -I -w "%{http_code}" http://localhost:16010) == "200" ]
+until [ $(curl -s -o /dev/null -I -w "%{http_code}" http://localhost:16010/jmx) == "200" ]
 do
      printf "Waiting for local HBase cluster to start\n"
      sleep 1
 done
+
+# This sucks, but master can easily be up and meta not be assigned yet.
+sleep 30
