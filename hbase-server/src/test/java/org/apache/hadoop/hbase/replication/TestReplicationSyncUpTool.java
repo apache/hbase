@@ -211,7 +211,9 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     /**
      * set M-S : Master: utility1 Slave1: utility2
      */
-    admin1.addPeer("1", utility2.getClusterKey());
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility2.getClusterKey());
+    admin1.addPeer("1", rpc, null);
 
     admin1.close();
     admin2.close();

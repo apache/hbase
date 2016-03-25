@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -501,8 +502,9 @@ public class TestMasterReplication {
     try {
       replicationAdmin = new ReplicationAdmin(
           configurations[masterClusterNumber]);
-      replicationAdmin.addPeer(id,
-          utilities[slaveClusterNumber].getClusterKey());
+      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+      rpc.setClusterKey(utilities[slaveClusterNumber].getClusterKey());
+      replicationAdmin.addPeer(id, rpc, null);
     } finally {
       close(replicationAdmin);
     }
@@ -513,7 +515,10 @@ public class TestMasterReplication {
     ReplicationAdmin replicationAdmin = null;
     try {
       replicationAdmin = new ReplicationAdmin(configurations[masterClusterNumber]);
-      replicationAdmin.addPeer(id, utilities[slaveClusterNumber].getClusterKey(), tableCfs);
+      ReplicationPeerConfig replicationPeerConfig = new ReplicationPeerConfig();
+      replicationPeerConfig.setClusterKey(utilities[slaveClusterNumber].getClusterKey());
+      replicationAdmin.addPeer(id, replicationPeerConfig,
+        ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs));
     } finally {
       close(replicationAdmin);
     }

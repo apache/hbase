@@ -32,7 +32,10 @@ module Shell
     # set table / table-cf to be replicable for a peer, for a table without
     # an explicit column-family list, all replicable column-families (with
     # replication_scope == 1) will be replicated
-    hbase> set_peer_tableCFs '2', "table1; table2:cf1,cf2; table3:cfA,cfB"
+    hbase> set_peer_tableCFs '2',
+     { "ns1:table1" => [],
+     "ns2:table2" => ["cf1", "cf2"],
+     "ns3:table3" => ["cfA", "cfB"]}
 
   EOF
       end

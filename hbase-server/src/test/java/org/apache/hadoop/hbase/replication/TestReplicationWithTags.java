@@ -127,12 +127,14 @@ public class TestReplicationWithTags {
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTagsAtSink.class.getName());
+            TestCoprocessorForTagsAtSink.class.getName());
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
 
-    replicationAdmin.addPeer("2", utility2.getClusterKey());
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility2.getClusterKey());
+    replicationAdmin.addPeer("2", rpc, null);
 
     LOG.info("Setup second Zk");
     utility1.startMiniCluster(2);

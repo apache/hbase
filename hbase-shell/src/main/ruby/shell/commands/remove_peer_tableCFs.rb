@@ -26,8 +26,8 @@ Remove a table / table-cf from the table-cfs config for the specified peer
 Examples:
 
   # Remove a table / table-cf from the replicable table-cfs for a peer
-  hbase> remove_peer_tableCFs '2', "table1"
-  hbase> remove_peer_tableCFs '2', "table1:cf1"
+  hbase> remove_peer_tableCFs '2',  { "ns1:table1" => []}
+  hbase> remove_peer_tableCFs '2',  { "ns1:table1" => ["cf1"]}
 
 EOF
       end

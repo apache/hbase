@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -37,6 +41,7 @@ public class ReplicationPeerConfig {
   private String replicationEndpointImpl;
   private final Map<byte[], byte[]> peerData;
   private final Map<String, String> configuration;
+  private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
 
 
   public ReplicationPeerConfig() {
@@ -78,10 +83,19 @@ public class ReplicationPeerConfig {
     return configuration;
   }
 
+  public Map<TableName, List<String>> getTableCFsMap() {
+    return (Map<TableName, List<String>>) tableCFsMap;
+  }
+
+  public void setTableCFsMap(Map<TableName,? extends Collection<String>> tableCFsMap) {
+    this.tableCFsMap = tableCFsMap;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("clusterKey=").append(clusterKey).append(",");
-    builder.append("replicationEndpointImpl=").append(replicationEndpointImpl);
+    builder.append("replicationEndpointImpl=").append(replicationEndpointImpl).append(",")
+        .append("tableCFs=").append(tableCFsMap.toString());
     return builder.toString();
   }
 }

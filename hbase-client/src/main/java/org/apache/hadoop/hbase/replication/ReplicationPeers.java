@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,10 +50,8 @@ public interface ReplicationPeers {
    * Add a new remote slave cluster for replication.
    * @param peerId a short that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
-   * @param tableCFs the table and column-family list which will be replicated for this peer or null
-   *          for all table and column families
    */
-  void addPeer(String peerId, ReplicationPeerConfig peerConfig, String tableCFs)
+  void addPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException;
 
   /**
@@ -81,21 +80,17 @@ public interface ReplicationPeers {
    * Get the table and column-family list string of the peer from ZK.
    * @param peerId a short that identifies the cluster
    */
-  public String getPeerTableCFsConfig(String peerId) throws ReplicationException;
+  public Map<TableName, List<String>> getPeerTableCFsConfig(String peerId)
+      throws ReplicationException;
 
   /**
    * Set the table and column-family list string of the peer to ZK.
    * @param peerId a short that identifies the cluster
    * @param tableCFs the table and column-family list which will be replicated for this peer
    */
-  public void setPeerTableCFsConfig(String peerId, String tableCFs) throws ReplicationException;
-
-  /**
-   * Get the table and column-family-list map of the peer.
-   * @param peerId a short that identifies the cluster
-   * @return the table and column-family list which will be replicated for this peer
-   */
-  public Map<TableName, List<String>> getTableCFs(String peerId);
+  public void setPeerTableCFsConfig(String peerId,
+                                    Map<TableName, ? extends Collection<String>>  tableCFs)
+      throws ReplicationException;
 
   /**
    * Returns the ReplicationPeer
