@@ -25,11 +25,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
@@ -41,8 +44,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Stripe store implementation of compaction policy.
@@ -84,18 +85,20 @@ public class StripeCompactionPolicy extends CompactionPolicy {
         request, OPEN_KEY, OPEN_KEY, targetKvsAndCount.getSecond(), targetKvsAndCount.getFirst());
   }
 
-  public StripeStoreFlusher.StripeFlushRequest selectFlush(
+  public StripeStoreFlusher.StripeFlushRequest selectFlush(KVComparator comparator,
       StripeInformationProvider si, int kvCount) {
     if (this.config.isUsingL0Flush()) {
-      return new StripeStoreFlusher.StripeFlushRequest(); // L0 is used, return dumb request.
+      // L0 is used, return dumb request.
+      return new StripeStoreFlusher.StripeFlushRequest(comparator);
     }
     if (si.getStripeCount() == 0) {
       // No stripes - start with the requisite count, derive KVs per stripe.
       int initialCount = this.config.getInitialCount();
-      return new StripeStoreFlusher.SizeStripeFlushRequest(initialCount, kvCount / initialCount);
+      return new StripeStoreFlusher.SizeStripeFlushRequest(comparator, initialCount,
+          kvCount / initialCount);
     }
     // There are stripes - do according to the boundaries.
-    return new StripeStoreFlusher.BoundaryStripeFlushRequest(si.getStripeBoundaries());
+    return new StripeStoreFlusher.BoundaryStripeFlushRequest(comparator, si.getStripeBoundaries());
   }
 
   public StripeCompactionRequest selectCompaction(StripeInformationProvider si,

@@ -65,10 +65,10 @@ public class DefaultCompactor extends Compactor {
     Collection<StoreFile> readersToClose;
     if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
       // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
-      // HFileFiles, and their readers
+      // HFiles, and their readers
       readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
       for (StoreFile f : request.getFiles()) {
-        readersToClose.add(new StoreFile(f));
+        readersToClose.add(f.cloneForReader());
       }
       scanners = createFileScanners(readersToClose, smallestReadPoint,
           store.throttleCompaction(request.getSize()));
