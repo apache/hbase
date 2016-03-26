@@ -351,7 +351,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (!isParallelSeek) {
         long totalScannersSoughtBytes = 0;
         for (KeyValueScanner scanner : scanners) {
-          if (totalScannersSoughtBytes >= maxRowSize) {
+          if (matcher.isUserScan() && totalScannersSoughtBytes >= maxRowSize) {
             throw new RowTooBigException("Max row size allowed: " + maxRowSize
               + ", but row is bigger than that");
           }
@@ -572,7 +572,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOf(cell));
           scannerContext.incrementBatchProgress(1);
 
-          if (totalBytesRead > maxRowSize) {
+          if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
             throw new RowTooBigException(
                 "Max row size allowed: " + maxRowSize + ", but the row is bigger than that.");
           }

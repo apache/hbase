@@ -610,6 +610,10 @@ public class ScanQueryMatcher {
     }
   }
 
+  boolean isUserScan() {
+    return this.isUserScan;
+  }
+
   //Used only for testing purposes
   static MatchCode checkColumn(ColumnTracker columnTracker, byte[] bytes, int offset,
       int length, long ttl, byte type, boolean ignoreCount) throws IOException {
