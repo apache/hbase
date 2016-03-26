@@ -167,6 +167,9 @@ public class LogRoller extends HasThread {
         }
       }
     }
+    for (WAL wal : walNeedsRoll.keySet()) {
+      wal.logRollerExited();
+    }
     LOG.info("LogRoller exiting.");
   }
 

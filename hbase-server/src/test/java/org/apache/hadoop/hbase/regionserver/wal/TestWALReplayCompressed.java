@@ -36,5 +36,4 @@ public class TestWALReplayCompressed extends TestWALReplay {
     Configuration conf = TestWALReplay.TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
   }
-
 }

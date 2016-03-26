@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,59 +19,55 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-// imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
+
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 
 /**
- * A WAL provider that use {@link FSHLog}.
+ * A WAL provider that use {@link AsyncFSWAL}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DefaultWALProvider extends AbstractFSWALProvider<FSHLog> {
-
-  private static final Log LOG = LogFactory.getLog(DefaultWALProvider.class);
+public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
 
   // Only public so classes back in regionserver.wal can access
-  public interface Writer extends WALProvider.Writer {
+  public interface AsyncWriter extends WALProvider.AsyncWriter {
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
   }
 
-  /**
-   * public because of FSHLog. Should be package-private
-   */
-  public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-      final boolean overwritable) throws IOException {
-    // Configuration already does caching for the Class lookup.
-    Class<? extends Writer> logWriterClass = conf.getClass("hbase.regionserver.hlog.writer.impl",
-      ProtobufLogWriter.class, Writer.class);
-    try {
-      Writer writer = logWriterClass.newInstance();
-      writer.init(fs, path, conf, overwritable);
-      return writer;
-    } catch (Exception e) {
-      LOG.debug("Error instantiating log writer.", e);
-      throw new IOException("cannot get log writer", e);
-    }
-  }
+  private EventLoopGroup eventLoopGroup = null;
 
   @Override
-  protected FSHLog createWAL() throws IOException {
-    return new FSHLog(FileSystem.get(conf), FSUtils.getRootDir(conf),
+  protected AsyncFSWAL createWAL() throws IOException {
+    return new AsyncFSWAL(FileSystem.get(conf), FSUtils.getRootDir(conf),
         getWALDirectoryName(factory.factoryId), HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
-        true, logPrefix, META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+        true, logPrefix, META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null,
+        eventLoopGroup.next());
   }
 
   @Override
   protected void doInit(Configuration conf) throws IOException {
+    eventLoopGroup = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("AsyncFSWAL"));
+  }
+
+  /**
+   * public because of AsyncFSWAL. Should be package-private
+   */
+  public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
+      boolean overwritable, EventLoop eventLoop) throws IOException {
+    AsyncWriter writer = new AsyncProtobufLogWriter(eventLoop);
+    writer.init(fs, path, conf, overwritable);
+    return writer;
   }
 }

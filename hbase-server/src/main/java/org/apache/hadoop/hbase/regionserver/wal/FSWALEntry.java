@@ -48,17 +48,20 @@ import org.apache.hadoop.hbase.wal.WALKey;
 class FSWALEntry extends Entry {
   // The below data members are denoted 'transient' just to highlight these are not persisted;
   // they are only in memory and held here while passing over the ring buffer.
-  private final transient long sequence;
+  private final transient long txid;
   private final transient boolean inMemstore;
   private final transient HRegionInfo hri;
-  private final Set<byte[]> familyNames;
+  private final transient Set<byte[]> familyNames;
+  // In the new WAL logic, we will rewrite failed WAL entries to new WAL file, so we need to avoid
+  // calling stampRegionSequenceId again.
+  private transient boolean stamped = false;
 
-  FSWALEntry(final long sequence, final WALKey key, final WALEdit edit,
+  FSWALEntry(final long txid, final WALKey key, final WALEdit edit,
       final HRegionInfo hri, final boolean inMemstore) {
     super(key, edit);
     this.inMemstore = inMemstore;
     this.hri = hri;
-    this.sequence = sequence;
+    this.txid = txid;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
       ArrayList<Cell> cells = this.getEdit().getCells();
@@ -80,7 +83,7 @@ class FSWALEntry extends Entry {
   }
 
   public String toString() {
-    return "sequence=" + this.sequence + ", " + super.toString();
+    return "sequence=" + this.txid + ", " + super.toString();
   };
 
   boolean isInMemstore() {
@@ -92,10 +95,10 @@ class FSWALEntry extends Entry {
   }
 
   /**
-   * @return The sequence on the ring buffer when this edit was added.
+   * @return The transaction id of this edit.
    */
-  long getSequence() {
-    return this.sequence;
+  long getTxid() {
+    return this.txid;
   }
 
   /**
@@ -103,9 +106,12 @@ class FSWALEntry extends Entry {
    * SIDE-EFFECT is our stamping the sequenceid into every Cell AND setting the sequenceid into the
    * MVCC WriteEntry!!!!
    * @return The sequenceid we stamped on this edit.
-   * @throws IOException
    */
   long stampRegionSequenceId() throws IOException {
+    if (stamped) {
+      return getKey().getSequenceId();
+    }
+    stamped = true;
     long regionSequenceId = WALKey.NO_SEQUENCE_ID;
     MultiVersionConcurrencyControl mvcc = getKey().getMvcc();
     MultiVersionConcurrencyControl.WriteEntry we = null;

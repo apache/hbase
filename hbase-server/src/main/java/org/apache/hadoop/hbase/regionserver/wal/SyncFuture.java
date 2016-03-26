@@ -18,33 +18,28 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.htrace.Span;
 
 /**
- * A Future on a filesystem sync call.  It given to a client or 'Handler' for it to wait on till
- * the sync completes.
- *
- * <p>Handlers coming in call append, append, append, and then do a flush/sync of
- * the edits they have appended the WAL before returning. Since sync takes a while to
- * complete, we give the Handlers back this sync future to wait on until the
- * actual HDFS sync completes. Meantime this sync future goes across the ringbuffer and into a
- * sync runner thread; when it completes, it finishes up the future, the handler get or failed
- * check completes and the Handler can then progress.
+ * A Future on a filesystem sync call. It given to a client or 'Handler' for it to wait on till the
+ * sync completes.
  * <p>
- * This is just a partial implementation of Future; we just implement get and
- * failure.  Unimplemented methods throw {@link UnsupportedOperationException}.
+ * Handlers coming in call append, append, append, and then do a flush/sync of the edits they have
+ * appended the WAL before returning. Since sync takes a while to complete, we give the Handlers
+ * back this sync future to wait on until the actual HDFS sync completes. Meantime this sync future
+ * goes across a queue and is handled by a background thread; when it completes, it finishes up the
+ * future, the handler get or failed check completes and the Handler can then progress.
  * <p>
- * There is not a one-to-one correlation between dfs sync invocations and
- * instances of this class. A single dfs sync call may complete and mark many
- * SyncFutures as done; i.e. we batch up sync calls rather than do a dfs sync
- * call every time a Handler asks for it.
+ * This is just a partial implementation of Future; we just implement get and failure.
  * <p>
- * SyncFutures are immutable but recycled. Call #reset(long, Span) before use even
- * if it the first time, start the sync, then park the 'hitched' thread on a call to
- * #get().
+ * There is not a one-to-one correlation between dfs sync invocations and instances of this class. A
+ * single dfs sync call may complete and mark many SyncFutures as done; i.e. we batch up sync calls
+ * rather than do a dfs sync call every time a Handler asks for it.
+ * <p>
+ * SyncFutures are immutable but recycled. Call #reset(long, Span) before use even if it the first
+ * time, start the sync, then park the 'hitched' thread on a call to #get().
  */
 @InterfaceAudience.Private
 class SyncFuture {
@@ -54,17 +49,17 @@ class SyncFuture {
   private static final long NOT_DONE = 0;
 
   /**
-   * The sequence at which we were added to the ring buffer.
+   * The transaction id of this operation, monotonically increases.
    */
-  private long ringBufferSequence;
+  private long txid;
 
   /**
-   * The sequence that was set in here when we were marked done. Should be equal
-   * or > ringBufferSequence.  Put this data member into the NOT_DONE state while this
-   * class is in use.  But for the first position on construction, let it be -1 so we can
-   * immediately call {@link #reset(long, Span)} below and it will work.
+   * The transaction id that was set in here when we were marked done. Should be equal or > txnId.
+   * Put this data member into the NOT_DONE state while this class is in use. But for the first
+   * position on construction, let it be -1 so we can immediately call {@link #reset(long, Span)}
+   * below and it will work.
    */
-  private long doneSequence = -1;
+  private long doneTxid = -1;
 
   /**
    * If error, the associated throwable. Set when the future is 'done'.
@@ -79,80 +74,83 @@ class SyncFuture {
   private Span span;
 
   /**
-   * Call this method to clear old usage and get it ready for new deploy. Call
-   * this method even if it is being used for the first time.
-   *
-   * @param sequence sequenceId from this Future's position in the RingBuffer
+   * Call this method to clear old usage and get it ready for new deploy. Call this method even if
+   * it is being used for the first time.
+   * @param txnId the new transaction id
    * @return this
    */
-  synchronized SyncFuture reset(final long sequence) {
-    return reset(sequence, null);
+  synchronized SyncFuture reset(final long txnId) {
+    return reset(txnId, null);
   }
 
   /**
-   * Call this method to clear old usage and get it ready for new deploy. Call
-   * this method even if it is being used for the first time.
-   *
+   * Call this method to clear old usage and get it ready for new deploy. Call this method even if
+   * it is being used for the first time.
    * @param sequence sequenceId from this Future's position in the RingBuffer
-   * @param span curren span, detached from caller. Don't forget to attach it when
-   *             resuming after a call to {@link #get()}.
+   * @param span curren span, detached from caller. Don't forget to attach it when resuming after a
+   *          call to {@link #get()}.
    * @return this
    */
-  synchronized SyncFuture reset(final long sequence, Span span) {
-    if (t != null && t != Thread.currentThread()) throw new IllegalStateException();
+  synchronized SyncFuture reset(final long txnId, Span span) {
+    if (t != null && t != Thread.currentThread()) {
+      throw new IllegalStateException();
+    }
     t = Thread.currentThread();
-    if (!isDone()) throw new IllegalStateException("" + sequence + " " + Thread.currentThread());
-    this.doneSequence = NOT_DONE;
-    this.ringBufferSequence = sequence;
+    if (!isDone()) {
+      throw new IllegalStateException("" + txnId + " " + Thread.currentThread());
+    }
+    this.doneTxid = NOT_DONE;
+    this.txid = txnId;
     this.span = span;
     return this;
   }
 
   @Override
   public synchronized String toString() {
-    return "done=" + isDone() + ", ringBufferSequence=" + this.ringBufferSequence;
+    return "done=" + isDone() + ", txid=" + this.txid;
   }
 
-  synchronized long getRingBufferSequence() {
-    return this.ringBufferSequence;
+  synchronized long getTxid() {
+    return this.txid;
   }
 
   /**
-   * Retrieve the {@code span} instance from this Future. EventHandler calls
-   * this method to continue the span. Thread waiting on this Future musn't call
-   * this method until AFTER calling {@link #get()} and the future has been
-   * released back to the originating thread.
+   * Retrieve the {@code span} instance from this Future. EventHandler calls this method to continue
+   * the span. Thread waiting on this Future musn't call this method until AFTER calling
+   * {@link #get()} and the future has been released back to the originating thread.
    */
   synchronized Span getSpan() {
     return this.span;
   }
 
   /**
-   * Used to re-attach a {@code span} to the Future. Called by the EventHandler
-   * after a it has completed processing and detached the span from its scope.
+   * Used to re-attach a {@code span} to the Future. Called by the EventHandler after a it has
+   * completed processing and detached the span from its scope.
    */
   synchronized void setSpan(Span span) {
     this.span = span;
   }
 
   /**
-   * @param sequence Sync sequence at which this future 'completed'.
-   * @param t Can be null.  Set if we are 'completing' on error (and this 't' is the error).
-   * @return True if we successfully marked this outstanding future as completed/done.
-   * Returns false if this future is already 'done' when this method called.
+   * @param txid the transaction id at which this future 'completed'.
+   * @param t Can be null. Set if we are 'completing' on error (and this 't' is the error).
+   * @return True if we successfully marked this outstanding future as completed/done. Returns false
+   *         if this future is already 'done' when this method called.
    */
-  synchronized boolean done(final long sequence, final Throwable t) {
-    if (isDone()) return false;
+  synchronized boolean done(final long txid, final Throwable t) {
+    if (isDone()) {
+      return false;
+    }
     this.throwable = t;
-    if (sequence < this.ringBufferSequence) {
+    if (txid < this.txid) {
       // Something badly wrong.
       if (throwable == null) {
-        this.throwable = new IllegalStateException("sequence=" + sequence +
-          ", ringBufferSequence=" + this.ringBufferSequence);
+        this.throwable =
+            new IllegalStateException("done txid=" + txid + ", my txid=" + this.txid);
       }
     }
     // Mark done.
-    this.doneSequence = sequence;
+    this.doneTxid = txid;
     // Wake up waiting threads.
     notify();
     return true;
@@ -166,21 +164,14 @@ class SyncFuture {
     while (!isDone()) {
       wait(1000);
     }
-    if (this.throwable != null) throw new ExecutionException(this.throwable);
-    return this.doneSequence;
-  }
-
-  public Long get(long timeout, TimeUnit unit)
-  throws InterruptedException, ExecutionException {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean isCancelled() {
-    throw new UnsupportedOperationException();
+    if (this.throwable != null) {
+      throw new ExecutionException(this.throwable);
+    }
+    return this.doneTxid;
   }
 
   synchronized boolean isDone() {
-    return this.doneSequence != NOT_DONE;
+    return this.doneTxid != NOT_DONE;
   }
 
   synchronized boolean isThrowable() {

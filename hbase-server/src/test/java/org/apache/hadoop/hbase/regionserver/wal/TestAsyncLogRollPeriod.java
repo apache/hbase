@@ -17,32 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.IOException;
-
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.wal.WALProvider;
-import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestProtobufLog extends AbstractTestProtobufLog<WALProvider.Writer> {
+public class TestAsyncLogRollPeriod extends TestLogRollPeriod {
 
-  @Override
-  protected Writer createWriter(Path path) throws IOException {
-    return DefaultWALProvider.createWriter(TEST_UTIL.getConfiguration(), fs, path, false);
-  }
-
-  @Override
-  protected void append(Writer writer, Entry entry) throws IOException {
-    writer.append(entry);
-  }
-
-  @Override
-  protected void sync(Writer writer) throws IOException {
-    writer.sync();
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    Configuration conf = TestLogRollPeriod.TEST_UTIL.getConfiguration();
+    conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
+    TestLogRollPeriod.setUpBeforeClass();
   }
 }

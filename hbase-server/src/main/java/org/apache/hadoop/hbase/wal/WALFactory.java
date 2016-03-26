@@ -76,7 +76,8 @@ public class WALFactory {
   static enum Providers {
     defaultProvider(DefaultWALProvider.class),
     filesystem(DefaultWALProvider.class),
-    multiwal(RegionGroupingProvider.class);
+    multiwal(RegionGroupingProvider.class),
+    asyncfs(AsyncFSWALProvider.class);
 
     Class<? extends WALProvider> clazz;
     Providers(Class<? extends WALProvider> clazz) {
@@ -350,9 +351,10 @@ public class WALFactory {
 
   /**
    * Create a writer for the WAL.
+   * <p>
    * should be package-private. public only for tests and
    * {@link org.apache.hadoop.hbase.regionserver.wal.Compressor}
-   * @return A WAL writer.  Close when done with it.
+   * @return A WAL writer. Close when done with it.
    * @throws IOException
    */
   public Writer createWALWriter(final FileSystem fs, final Path path) throws IOException {
