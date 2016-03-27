@@ -102,8 +102,9 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     }
   }
 
-  private void writeAndVerify(EventLoop eventLoop, Path f, final FanOutOneBlockAsyncDFSOutput out)
-      throws IOException, InterruptedException, ExecutionException {
+  static void writeAndVerify(EventLoop eventLoop, DistributedFileSystem dfs, Path f,
+      final FanOutOneBlockAsyncDFSOutput out)
+          throws IOException, InterruptedException, ExecutionException {
     final byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
     final FanOutOneBlockAsyncDFSOutputFlushHandler handler = new FanOutOneBlockAsyncDFSOutputFlushHandler();
@@ -117,9 +118,9 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     });
     assertEquals(b.length, handler.get());
     out.close();
-    assertEquals(b.length, FS.getFileStatus(f).getLen());
+    assertEquals(b.length, dfs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
-    try (FSDataInputStream in = FS.open(f)) {
+    try (FSDataInputStream in = dfs.open(f)) {
       in.readFully(actual);
     }
     assertArrayEquals(b, actual);
@@ -131,7 +132,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     final FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
       true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop);
-    writeAndVerify(eventLoop, f, out);
+    writeAndVerify(eventLoop, FS, f, out);
   }
 
   @Test
@@ -191,7 +192,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop);
     Thread.sleep(READ_TIMEOUT_MS * 2);
     // the connection to datanode should still alive.
-    writeAndVerify(eventLoop, f, out);
+    writeAndVerify(eventLoop, FS, f, out);
   }
 
   /**
