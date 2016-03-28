@@ -460,7 +460,7 @@ public final class SnapshotInfo extends Configured implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase snapshot info [options]%n");
+    System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -remote-dir             Root directory that contains the snapshots.");
@@ -472,7 +472,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.err.println("  -schema                 Describe the snapshotted table.");
     System.err.println();
     System.err.println("Examples:");
-    System.err.println("  hbase snapshot info \\");
+    System.err.println("  hbase " + getClass() + " \\");
     System.err.println("    -snapshot MySnapshot -files");
     System.exit(1);
   }
