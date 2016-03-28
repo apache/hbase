@@ -1050,11 +1050,11 @@ public class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -bandwidth              Limit bandwidth to this value in MB/second.");
     System.err.println();
     System.err.println("Examples:");
-    System.err.println("  hbase snapshot export \\");
+    System.err.println("  hbase " + getClass().getName() + " \\");
     System.err.println("    -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase \\");
     System.err.println("    -chuser MyUser -chgroup MyGroup -chmod 700 -mappers 16");
     System.err.println();
-    System.err.println("  hbase snapshot export \\");
+    System.err.println("  hbase " + getClass().getName() + " \\");
     System.err.println("    -snapshot MySnapshot -copy-from hdfs://srv2:8082/hbase \\");
     System.err.println("    -copy-to hdfs://srv1:50070/hbase \\");
     System.exit(1);
