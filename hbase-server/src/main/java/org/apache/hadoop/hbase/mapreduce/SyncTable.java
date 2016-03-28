@@ -683,7 +683,7 @@ public class SyncTable extends Configured implements Tool {
     System.err.println();
     System.err.println("Args:");
     System.err.println(" sourcehashdir    path to HashTable output dir for source table");
-    System.err.println("                  if not specified, then all data will be scanned");
+    System.err.println("                  (see org.apache.hadoop.hbase.mapreduce.HashTable)");
     System.err.println(" sourcetable      Name of the source table to sync from");
     System.err.println(" targettable      Name of the target table to sync to");
     System.err.println();
