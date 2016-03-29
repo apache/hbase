@@ -57,7 +57,9 @@ public class CopyTable extends Configured implements Tool {
 
   final static String NAME = "copytable";
   long startTime = 0;
-  long endTime = 0;
+  long endTime = HConstants.LATEST_TIMESTAMP;
+  int batch = Integer.MAX_VALUE;
+  int cacheRow = -1;
   int versions = -1;
   String tableName = null;
   String startRow = null;
@@ -93,11 +95,16 @@ public class CopyTable extends Configured implements Tool {
 
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
+         scan.setBatch(batch);
     scan.setCacheBlocks(false);
-    if (startTime != 0) {
-      scan.setTimeRange(startTime,
-          endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
+
+    if (cacheRow > 0) {
+      scan.setCaching(cacheRow);
+    } else {
+      scan.setCaching(getConf().getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING, 100));
     }
+
+    scan.setTimeRange(startTime, endTime);
     if (allCells) {
       scan.setRaw(true);
     }
@@ -255,6 +262,18 @@ public class CopyTable extends Configured implements Tool {
         final String endTimeArgKey = "--endtime=";
         if (cmd.startsWith(endTimeArgKey)) {
           endTime = Long.parseLong(cmd.substring(endTimeArgKey.length()));
+          continue;
+        }
+        
+        final String batchArgKey = "--batch=";
+        if (cmd.startsWith(batchArgKey)) {
+          batch = Integer.parseInt(cmd.substring(batchArgKey.length()));
+          continue;
+        }
+        
+        final String cacheRowArgKey = "--cacheRow=";
+        if (cmd.startsWith(cacheRowArgKey)) {
+          cacheRow = Integer.parseInt(cmd.substring(cacheRowArgKey.length()));
           continue;
         }
 
