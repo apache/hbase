@@ -1,5 +1,43 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.2.1 04/05/2016
+
+** Sub-task
+    * [HBASE-15113] - Procedure v2 - Speedup eviction of sys operation results
+    * [HBASE-15232] - Exceptions returned over multi RPC don't automatically trigger region location reloads
+    * [HBASE-15311] - Prevent NPE in BlockCacheViewTmpl
+    * [HBASE-15351] - Fix description of hbase.bucketcache.size in hbase-default.xml
+    * [HBASE-15365] - Do not write to '/tmp' in TestHBaseConfiguration
+    * [HBASE-15384] - Avoid using '/tmp' directory in TestBulkLoad
+    * [HBASE-15422] - Procedure v2 - Avoid double yield
+    * [HBASE-15479] - No more garbage or beware of autoboxing
+
+** Bug
+    * [HBASE-14256] - Flush task message may be confusing when region is recovered
+    * [HBASE-15290] - Hbase Rest CheckAndAPI should save other cells along with compared cell
+    * [HBASE-15291] - FileSystem not closed in secure bulkLoad
+    * [HBASE-15295] - MutateTableAccess.multiMutate() does not get high priority causing a deadlock
+    * [HBASE-15319] - clearJmxCache does not take effect actually
+    * [HBASE-15322] - Operations using Unsafe path broken for platforms not having sun.misc.Unsafe
+    * [HBASE-15323] - Hbase Rest CheckAndDeleteAPi should be able to delete more cells
+    * [HBASE-15325] - ResultScanner allowing partial result will miss the rest of the row if the region is moved between two rpc requests
+    * [HBASE-15354] - Use same criteria for clearing meta cache for all operations
+    * [HBASE-15358] - canEnforceTimeLimitFromScope should use timeScope instead of sizeScope
+    * [HBASE-15378] - Scanner cannot handle heartbeat message with no results
+    * [HBASE-15393] - Enable table replication command will fail when parent znode is not default in peer cluster
+    * [HBASE-15430] - Failed taking snapshot - Manifest proto-message too large
+    * [HBASE-15433] - SnapshotManager#restoreSnapshot not update table and region count quota correctly when encountering exception
+    * [HBASE-15439] - getMaximumAllowedTimeBetweenRuns in ScheduledChore ignores the TimeUnit
+    * [HBASE-15441] - Fix WAL splitting when region has moved multiple times
+
+** Improvement
+    * [HBASE-15219] - Canary tool does not return non-zero exit code when one of regions is in stuck state
+    * [HBASE-15413] - Procedure-V2: print out ProcedureInfo during trace
+    * [HBASE-15478] - add comments to FSHLog explaining why syncRunnerIndex won't overflow
+
+** Task
+    * [HBASE-15500] - Cut HBase 1.2.1 release
+
 Release Notes - HBase - Version 1.2.0 02/22/2016
 
 ** Sub-task
@@ -642,6 +680,7 @@ Release Notes - HBase - Version 1.2.0 02/22/2016
     * [HBASE-15220] - Change two logs in SimpleRegionNormalizer to INFO level
 
 ** Test
+    * [HBASE-13590] - TestEnableTableHandler.testEnableTableWithNoRegionServers is flakey
     * [HBASE-13591] - TestHBaseFsck is flakey
     * [HBASE-13609] - TestFastFail is still failing
     * [HBASE-13940] - IntegrationTestBulkLoad needs option to specify output folders used by test
