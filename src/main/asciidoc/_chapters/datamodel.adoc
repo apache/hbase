@@ -542,6 +542,7 @@ Thus, while HBase can support not only a wide number of columns per row, but a h
 The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows.
 For more information about how HBase stores data internally, see <<keyvalue,keyvalue>>.
 
+[[joins]]
 == Joins
 
 Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL).  As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.

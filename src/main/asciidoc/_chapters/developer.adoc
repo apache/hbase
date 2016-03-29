@@ -94,6 +94,7 @@ See link:http://hbase.apache.org/source-repository.html[Source Code
 
 == IDEs
 
+[[eclipse]]
 === Eclipse
 
 [[eclipse.code.formatting]]
@@ -1074,6 +1075,75 @@ As most as possible, tests should use the default settings for the cluster.
 When they don't, they should document it.
 This will allow to share the cluster later.
 
+[[hbase.tests.example.code]]
+==== Tests Skeleton Code
+
+Here is a test skeleton code with Categorization and a Category-based timeout Rule to copy and paste and use as basis for test contribution.
+[source,java]
+----
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase;
+
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
+
+/**
+ * Skeleton HBase test
+ */
+// NOTICE: See how we've 'categorized' this test. All hbase unit tests need to be categorized as
+// either 'small', 'medium', or 'large'. See http://hbase.apache.org/book.html#hbase.tests
+// for more on these categories.
+@Category(SmallTests.class)
+public class TestExample {
+  // Handy test rule that allows you subsequently get at the name of the current method. See
+  // down in 'test()' where we use it in the 'fail' message.
+  @Rule public TestName testName = new TestName();
+
+  // Rather than put a @Test (timeout=.... on each test so for sure the test times out, instead
+  // just the CategoryBasedTimeout... It will apply to each test in this test set, the timeout
+  // that goes w/ the particular test categorization.
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+        withLookingForStuckThread(true).build();
+
+  @Before
+  public void setUp() throws Exception {
+  }
+
+  @After
+  public void tearDown() throws Exception {
+  }
+
+  @Test
+  public void test() {
+    fail(testName.getMethodName() + " is not yet implemented");
+  }
+}
+----
+
 [[integration.tests]]
 === Integration Tests
 
@@ -1360,6 +1430,9 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.2
 | Sean Busbey
+
+| 1.3
+| Mikhail Antonov
 
 |===
 
@@ -1759,6 +1832,7 @@ Please understand that not every patch may get committed, and that feedback will
   However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
 * If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
 
+[[patching.methods]]
 .Methods to Create Patches
 Eclipse::
   Select the  menu item.
@@ -1790,6 +1864,7 @@ See <<hbase.tests,hbase.tests>> for more on how the annotations work.
 
 Significant new features should provide an integration test in addition to unit tests, suitable for exercising the new feature at different points in its configuration space.
 
+[[reviewboard]]
 ==== ReviewBoard
 
 Patches larger than one screen, or patches that will be tricky to review, should go through link:http://reviews.apache.org[ReviewBoard].
@@ -2008,6 +2083,15 @@ However any substantive discussion (as with any off-list project-related discuss
 ==== Do not edit JIRA comments
 
 Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at link:http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&fc_project=HBase[Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo]
+
+[[hbase.archetypes.development]]
+=== Development of HBase-related Maven archetypes
+
+The development of HBase-related Maven archetypes was begun with
+link:https://issues.apache.org/jira/browse/HBASE-14876[HBASE-14876].
+For an overview of the hbase-archetypes infrastructure and instructions
+for developing new HBase-related Maven archetypes, please see
+`hbase/hbase-archetypes/README.md`.
 
 ifdef::backend-docbook[]
 [index]

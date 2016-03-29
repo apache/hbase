@@ -557,7 +557,7 @@ You can also tail all the logs at the same time, edit files, etc.
 [[trouble.client]]
 == Client
 
-For more information on the HBase client, see <<client,client>>.
+For more information on the HBase client, see <<architecture.client,client>>.
 
 === Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
 If either the client or server version is lower than 0.98.11/1.0.0 and the server
@@ -1115,7 +1115,7 @@ to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal
 [[trouble.master]]
 == Master
 
-For more information on the Master, see <<master,master>>.
+For more information on the Master, see <<architecture.master,master>>.
 
 [[trouble.master.startup]]
 === Startup Errors
@@ -1346,6 +1346,28 @@ Settings for HDFS retries and timeouts are important to HBase.::
   Some of the settings important to HBase are listed here.
   Defaults are current as of Hadoop 2.3.
   Check the Hadoop documentation for the most current values and recommendations.
+
+The HBase Balancer and HDFS Balancer are incompatible::
+  The HDFS balancer attempts to spread HDFS blocks evenly among DataNodes. HBase relies
+  on compactions to restore locality after a region split or failure. These two types
+  of balancing do not work well together.
++
+In the past, the generally accepted advice was to turn off the HDFS load balancer and rely
+on the HBase balancer, since the HDFS balancer would degrade locality. This advice
+is still valid if your HDFS version is lower than 2.7.1.
++
+link:https://issues.apache.org/jira/browse/HDFS-6133[HDFS-6133] provides the ability
+to exclude a given directory from the HDFS load balancer, by setting the
+`dfs.datanode.block-pinning.enabled` property to `true` in your HDFS
+configuration and running the following hdfs command:
++
+----
+$ sudo -u hdfs hdfs balancer -exclude /hbase
+----
++
+NOTE: HDFS-6133 is available in HDFS 2.7.0 and higher, but HBase does not support
+running on HDFS 2.7.0, so you must be using HDFS 2.7.1 or higher to use this feature
+with HBase.
 
 .Connection Timeouts
 Connection timeouts occur between the client (HBASE) and the HDFS DataNode.
