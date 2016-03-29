@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -44,7 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
+public class BaseMasterAndRegionObserver extends BaseRegionObserver
     implements MasterObserver {
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -444,6 +445,22 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   @Override
   public void postBalance(ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
       throws IOException {
+  }
+
+  @Override
+  public boolean preSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                           boolean newValue,
+                                           Admin.MasterSwitchType switchType)
+      throws IOException {
+    return false;
+  }
+
+  @Override
+  public void postSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                         boolean newValue,
+                                         Admin.MasterSwitchType switchType)
+      throws IOException {
+
   }
 
   @Override

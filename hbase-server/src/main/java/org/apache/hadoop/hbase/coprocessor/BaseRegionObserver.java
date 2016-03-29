@@ -71,7 +71,7 @@ import com.google.common.collect.ImmutableList;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class BaseRegionObserver implements RegionObserver {
+public class BaseRegionObserver implements RegionObserver {
   @Override
   public void start(CoprocessorEnvironment e) throws IOException { }
 
