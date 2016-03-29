@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -41,7 +42,7 @@ import java.util.List;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
+public class BaseMasterAndRegionObserver extends BaseRegionObserver
     implements MasterObserver {
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -366,6 +367,22 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public boolean preSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                           boolean newValue,
+                                           Admin.MasterSwitchType switchType)
+      throws IOException {
+    return false;
+  }
+
+  @Override
+  public void postSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                         boolean newValue,
+                                         Admin.MasterSwitchType switchType)
+      throws IOException {
+
+  }
+
+  @Override
   public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> ctx,
       boolean b) throws IOException {
     return b;
@@ -427,7 +444,7 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
   }
-  
+
   @Override
   public void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot) throws IOException {
@@ -514,7 +531,7 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName) throws IOException {
   }
-  
+
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final Quotas quotas) throws IOException {
