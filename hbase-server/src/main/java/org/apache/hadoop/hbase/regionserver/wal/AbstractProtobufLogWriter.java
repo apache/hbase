@@ -22,7 +22,11 @@ import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRA
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.Key;
+import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,9 +37,16 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -63,15 +74,68 @@ public abstract class AbstractProtobufLogWriter {
     return WALCellCodec.create(conf, null, compressionContext);
   }
 
-  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
-      throws IOException {
+  private WALHeader buildWALHeader0(Configuration conf, WALHeader.Builder builder) {
     if (!builder.hasWriterClsName()) {
-      builder.setWriterClsName(ProtobufLogWriter.class.getSimpleName());
+      builder.setWriterClsName(getWriterClassName());
     }
     if (!builder.hasCellCodecClsName()) {
       builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf));
     }
     return builder.build();
+  }
+
+  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
+      throws IOException {
+    return buildWALHeader0(conf, builder);
+  }
+
+  // should be called in sub classes's buildWALHeader method to build WALHeader for secure
+  // environment. Do not forget to override the setEncryptor method as it will be called in this
+  // method to init your encryptor.
+  protected final WALHeader buildSecureWALHeader(Configuration conf, WALHeader.Builder builder)
+      throws IOException {
+    builder.setWriterClsName(getWriterClassName());
+    if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
+      EncryptionTest.testKeyProvider(conf);
+      EncryptionTest.testCipherProvider(conf);
+
+      // Get an instance of our cipher
+      final String cipherName =
+          conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+      Cipher cipher = Encryption.getCipher(conf, cipherName);
+      if (cipher == null) {
+        throw new RuntimeException("Cipher '" + cipherName + "' is not available");
+      }
+
+      // Generate an encryption key for this WAL
+      SecureRandom rng = new SecureRandom();
+      byte[] keyBytes = new byte[cipher.getKeyLength()];
+      rng.nextBytes(keyBytes);
+      Key key = new SecretKeySpec(keyBytes, cipher.getName());
+      builder.setEncryptionKey(ByteStringer.wrap(EncryptionUtil.wrapKey(conf,
+          conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
+              conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+                  User.getCurrent().getShortName())),
+          key)));
+
+      // Set up the encryptor
+      Encryptor encryptor = cipher.getEncryptor();
+      encryptor.setKey(key);
+      setEncryptor(encryptor);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Initialized secure protobuf WAL: cipher=" + cipher.getName());
+      }
+    }
+    builder.setCellCodecClsName(SecureWALCellCodec.class.getName());
+    return buildWALHeader0(conf, builder);
+  }
+
+  // override this if you need a encryptor
+  protected void setEncryptor(Encryptor encryptor) {
+  }
+
+  protected String getWriterClassName() {
+    return getClass().getSimpleName();
   }
 
   private boolean initializeCompressionContext(Configuration conf, Path path) throws IOException {
@@ -115,11 +179,28 @@ public abstract class AbstractProtobufLogWriter {
     }
   }
 
-  protected void initAfterHeader(boolean doCompress) throws IOException {
+  private void initAfterHeader0(boolean doCompress) throws IOException {
     WALCellCodec codec = getCodec(conf, this.compressionContext);
     this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
     if (doCompress) {
       this.compressor = codec.getByteStringCompressor();
+    }
+  }
+
+  protected void initAfterHeader(boolean doCompress) throws IOException {
+    initAfterHeader0(doCompress);
+  }
+
+  // should be called in sub classes's initAfterHeader method to init SecureWALCellCodec.
+  protected final void secureInitAfterHeader(boolean doCompress, Encryptor encryptor)
+      throws IOException {
+    if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false) && encryptor != null) {
+      WALCellCodec codec = SecureWALCellCodec.getCodec(this.conf, encryptor);
+      this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
+      // We do not support compression
+      this.compressionContext = null;
+    } else {
+      initAfterHeader0(doCompress);
     }
   }
 

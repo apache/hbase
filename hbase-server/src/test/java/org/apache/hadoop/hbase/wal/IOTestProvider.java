@@ -217,6 +217,11 @@ public class IOTestProvider implements WALProvider {
     }
 
     @Override
+    protected String getWriterClassName() {
+      return ProtobufLogWriter.class.getSimpleName();
+    }
+
+    @Override
     public void append(Entry entry) throws IOException {
       if (doAppends) {
         super.append(entry);

@@ -21,12 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -50,18 +51,38 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.log4j.Level;
+import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@RunWith(Parameterized.class)
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestSecureWAL {
-  private static final Log LOG = LogFactory.getLog(TestSecureWAL.class);
+
   static {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
       .getLogger().setLevel(Level.ALL);
   };
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
+
+  @Parameter
+  public String walProvider;
+
+  @Parameters(name = "{index}: provider={0}")
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[] { "defaultProvider" }, new Object[] { "asyncfs" });
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -72,13 +93,26 @@ public class TestSecureWAL {
       WAL.Reader.class);
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
       WALProvider.Writer.class);
+    conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
+      WALProvider.AsyncWriter.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
+    TEST_UTIL.startMiniDFSCluster(3);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Before
+  public void setUp() {
+    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
   @Test
   public void testSecureWAL() throws Exception {
-    TableName tableName = TableName.valueOf("TestSecureWAL");
+    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
@@ -92,8 +126,9 @@ public class TestSecureWAL {
     final byte[] row = Bytes.toBytes("row");
     final byte[] family = Bytes.toBytes("family");
     final byte[] value = Bytes.toBytes("Test value");
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "TestSecureWAL");
+    FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+    final WALFactory wals =
+        new WALFactory(TEST_UTIL.getConfiguration(), null, tableName.getNameAsString());
 
     // Write the WAL
     final WAL wal =
@@ -137,5 +172,4 @@ public class TestSecureWAL {
     assertEquals("Should have read back as many KVs as written", total, count);
     reader.close();
   }
-
 }

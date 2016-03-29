@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -26,10 +25,16 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 
+import io.netty.channel.EventLoop;
+
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class SecureProtobufLogWriter extends ProtobufLogWriter {
+public class SecureAsyncProtobufLogWriter extends AsyncProtobufLogWriter {
 
   private Encryptor encryptor = null;
+
+  public SecureAsyncProtobufLogWriter(EventLoop eventLoop) {
+    super(eventLoop);
+  }
 
   @Override
   protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)

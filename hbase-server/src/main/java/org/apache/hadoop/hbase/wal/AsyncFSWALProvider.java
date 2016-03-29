@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,16 +36,14 @@ import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-
 /**
  * A WAL provider that use {@link AsyncFSWAL}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
+
+  private static final Log LOG = LogFactory.getLog(AsyncFSWALProvider.class);
 
   // Only public so classes back in regionserver.wal can access
   public interface AsyncWriter extends WALProvider.AsyncWriter {
@@ -66,8 +70,17 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
       boolean overwritable, EventLoop eventLoop) throws IOException {
-    AsyncWriter writer = new AsyncProtobufLogWriter(eventLoop);
-    writer.init(fs, path, conf, overwritable);
-    return writer;
+    // Configuration already does caching for the Class lookup.
+    Class<? extends AsyncWriter> logWriterClass =
+        conf.getClass("hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class,
+          AsyncWriter.class);
+    try {
+      AsyncWriter writer = logWriterClass.getConstructor(EventLoop.class).newInstance(eventLoop);
+      writer.init(fs, path, conf, overwritable);
+      return writer;
+    } catch (Exception e) {
+      LOG.debug("Error instantiating log writer.", e);
+      throw new IOException("cannot get log writer", e);
+    }
   }
 }

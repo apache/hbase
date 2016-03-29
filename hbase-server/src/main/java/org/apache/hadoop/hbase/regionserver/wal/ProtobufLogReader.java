@@ -91,6 +91,7 @@ public class ProtobufLogReader extends ReaderBase {
   private static List<String> writerClsNames = new ArrayList<String>();
   static {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
+    writerClsNames.add(AsyncProtobufLogWriter.class.getSimpleName());
   }
   
   // cell codec classname
