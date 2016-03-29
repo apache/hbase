@@ -72,6 +72,7 @@ public class VerifyReplication extends Configured implements Tool {
   private final static String PEER_CONFIG_PREFIX = NAME + ".peer.";
   static long startTime = 0;
   static long endTime = Long.MAX_VALUE;
+  static int batch = Integer.MAX_VALUE;
   static int versions = -1;
   static String tableName = null;
   static String families = null;
@@ -110,6 +111,8 @@ public class VerifyReplication extends Configured implements Tool {
       if (replicatedScanner == null) {
         Configuration conf = context.getConfiguration();
         final Scan scan = new Scan();
+        scan.setBatch(batch);
+        scan.setCacheBlocks(false);
         scan.setCaching(conf.getInt(TableInputFormat.SCAN_CACHEDROWS, 1));
         long startTime = conf.getLong(NAME + ".startTime", 0);
         long endTime = conf.getLong(NAME + ".endTime", Long.MAX_VALUE);
@@ -336,6 +339,12 @@ public class VerifyReplication extends Configured implements Tool {
         final String versionsArgKey = "--versions=";
         if (cmd.startsWith(versionsArgKey)) {
           versions = Integer.parseInt(cmd.substring(versionsArgKey.length()));
+          continue;
+        }
+        
+        final String batchArgKey = "--batch=";
+        if (cmd.startsWith(batchArgKey)) {
+          batch = Integer.parseInt(cmd.substring(batchArgKey.length()));
           continue;
         }
 
