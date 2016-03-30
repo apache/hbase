@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -924,7 +925,12 @@ public final class Canary implements Tool {
         admin.enableTable(writeTableName);
       }
 
-      int numberOfServers = admin.getClusterStatus().getServers().size();
+      ClusterStatus status = admin.getClusterStatus();
+      int numberOfServers = status.getServersSize();
+      if (status.getServers().contains(status.getMaster())) {
+        numberOfServers -= 1;
+      }
+
       List<HRegionLocation> locations;
       RegionLocator locator = connection.getRegionLocator(writeTableName);
       try {
