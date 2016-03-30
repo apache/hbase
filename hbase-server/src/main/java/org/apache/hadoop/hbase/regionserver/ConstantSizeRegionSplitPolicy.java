@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import com.google.common.annotations.VisibleForTesting;
+
+import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-
-import java.util.Random;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A {@link RegionSplitPolicy} implementation which splits a region
@@ -37,8 +39,10 @@ import java.util.Random;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private static final Random RANDOM = new Random();
+  private static final double EPSILON = 1E-6;
 
   private long desiredMaxFileSize;
+  private double jitterRate;
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -53,7 +57,14 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
     double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", 0.25D);
-    this.desiredMaxFileSize += (long)(desiredMaxFileSize * (RANDOM.nextFloat() - 0.5D) * jitter);
+    this.jitterRate = (RANDOM.nextFloat() - 0.5D) * jitter;
+    long jitterValue = (long) (this.desiredMaxFileSize * this.jitterRate);
+    // make sure the long value won't overflow with jitter
+    if (this.jitterRate > EPSILON && jitterValue > (Long.MAX_VALUE - this.desiredMaxFileSize)) {
+      this.desiredMaxFileSize = Long.MAX_VALUE;
+    } else {
+      this.desiredMaxFileSize += jitterValue;
+    }
   }
 
   @Override
@@ -79,5 +90,10 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
   long getDesiredMaxFileSize() {
     return desiredMaxFileSize;
+  }
+
+  @VisibleForTesting
+  public boolean positiveJitterRate() {
+    return this.jitterRate > EPSILON;
   }
 }

@@ -321,4 +321,24 @@ public class TestRegionSplitPolicy {
     assertEquals("ijk", Bytes.toString(policy.getSplitPoint()));
   }
 
+  @Test
+  public void testConstantSizePolicyWithJitter() throws IOException {
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
+    htd.setMaxFileSize(Long.MAX_VALUE);
+    boolean positiveJitter = false;
+    ConstantSizeRegionSplitPolicy policy = null;
+    while (!positiveJitter) {
+      policy = (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+      positiveJitter = policy.positiveJitterRate();
+    }
+    // add a store
+    HStore mockStore = Mockito.mock(HStore.class);
+    Mockito.doReturn(2000L).when(mockStore).getSize();
+    Mockito.doReturn(true).when(mockStore).canSplit();
+    stores.add(mockStore);
+    // Jitter shouldn't cause overflow when HTableDescriptor.MAX_FILESIZE set to Long.MAX_VALUE
+    assertFalse(policy.shouldSplit());
+  }
+
 }
