@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -43,24 +47,24 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTa
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 import org.mockito.Mockito;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverWithProcedures {
   private static final Log LOG = LogFactory.getLog(TestMasterFailoverWithProcedures.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -91,7 +95,7 @@ public class TestMasterFailoverWithProcedures {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWalRecoverLease() throws Exception {
     final ProcedureStore masterStore = getMasterProcedureExecutor().getStore();
     assertTrue("expected WALStore for this test", masterStore instanceof WALProcedureStore);
@@ -232,7 +236,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Create Table
   // ==========================================================================
-  @Test(timeout=60000)
+  @Test
   public void testCreateWithFailover() throws Exception {
     // TODO: Should we try every step? (master failover takes long time)
     // It is already covered by TestCreateTableProcedure
@@ -265,7 +269,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Delete Table
   // ==========================================================================
-  @Test(timeout=60000)
+  @Test
   public void testDeleteWithFailover() throws Exception {
     // TODO: Should we try every step? (master failover takes long time)
     // It is already covered by TestDeleteTableProcedure
@@ -303,7 +307,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Truncate Table
   // ==========================================================================
-  @Test(timeout=90000)
+  @Test
   public void testTruncateWithFailover() throws Exception {
     // TODO: Should we try every step? (master failover takes long time)
     // It is already covered by TestTruncateTableProcedure
@@ -364,7 +368,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Disable Table
   // ==========================================================================
-  @Test(timeout=60000)
+  @Test
   public void testDisableTableWithFailover() throws Exception {
     // TODO: Should we try every step? (master failover takes long time)
     // It is already covered by TestDisableTableProcedure
@@ -400,7 +404,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Enable Table
   // ==========================================================================
-  @Test(timeout=60000)
+  @Test
   public void testEnableTableWithFailover() throws Exception {
     // TODO: Should we try every step? (master failover takes long time)
     // It is already covered by TestEnableTableProcedure
@@ -492,23 +496,12 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Helpers
   // ==========================================================================
-  private MasterProcedureEnv getMasterProcedureEnv() {
-    return getMasterProcedureExecutor().getEnvironment();
-  }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 
-  private FileSystem getFileSystem() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-  }
-
   private Path getRootDir() {
     return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-  }
-
-  private Path getTempDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getTempDir();
   }
 }
