@@ -169,6 +169,14 @@
       <organizationUrl>http://www.facebook.com/</organizationUrl>
     </developer>
     <developer>
+      <id>ashishsinghi</id>
+      <name>Ashish Singhi</name>
+      <email>ashishsinghi@apache.org</email>
+      <timezone>+5</timezone>
+      <organization>Huawei</organization>
+      <organizationUrl>http://www.huawei.com/en/</organizationUrl>
+    </developer>
+    <developer>
       <id>busbey</id>
       <name>Sean Busbey</name>
       <email>busbey@apache.org</email>
