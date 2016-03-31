@@ -95,7 +95,7 @@ module Hbase
         end
         @replication_admin.add_peer(id, replication_peer_config, map)
       else
-        raise(ArgumentError, "args must be either a String or Hash")
+        raise(ArgumentError, "args must be a Hash")
       end
     end
 
