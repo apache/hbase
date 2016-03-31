@@ -334,7 +334,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // monitor for snapshot of hbase tables
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
-  MasterProcedureManagerHost mpmHost;
+  private MasterProcedureManagerHost mpmHost;
 
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
@@ -2464,6 +2464,13 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
+  }
+
+  /**
+   * @return the underlying MasterProcedureManagerHost
+   */
+  public MasterProcedureManagerHost getMasterProcedureManagerHost() {
+    return mpmHost;
   }
 
   @Override

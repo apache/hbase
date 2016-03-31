@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -245,6 +246,11 @@ public class TestCatalogJanitor {
 
     @Override
     public SnapshotManager getSnapshotManager() {
+      return null;
+    }
+
+    @Override
+    public MasterProcedureManagerHost getMasterProcedureManagerHost() {
       return null;
     }
 
