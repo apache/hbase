@@ -725,7 +725,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       ProcedureDescription desc = request.getProcedure();
-      MasterProcedureManager mpm = master.mpmHost.getProcedureManager(
+      MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
         desc.getSignature());
       if (mpm == null) {
         throw new ServiceException("The procedure is not registered: "
@@ -760,7 +760,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       ProcedureDescription desc = request.getProcedure();
-      MasterProcedureManager mpm = master.mpmHost.getProcedureManager(
+      MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
         desc.getSignature());
       if (mpm == null) {
         throw new ServiceException("The procedure is not registered: "
@@ -963,7 +963,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       ProcedureDescription desc = request.getProcedure();
-      MasterProcedureManager mpm = master.mpmHost.getProcedureManager(
+      MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
         desc.getSignature());
       if (mpm == null) {
         throw new ServiceException("The procedure is not registered: "
