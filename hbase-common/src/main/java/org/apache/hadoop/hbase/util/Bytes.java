@@ -367,7 +367,7 @@ public class Bytes {
                                 final byte [] b2) {
     return toString(b1, 0, b1.length) + sep + toString(b2, 0, b2.length);
   }
-  
+
   /**
    * This method will convert utf8 encoded bytes into a string. If the given byte array is null,
    * this method will return null.
@@ -438,6 +438,10 @@ public class Bytes {
     return toStringBinary(toBytes(buf));
   }
 
+  private static final char[] HEX_CHARS_UPPER = {
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+  };
+
   /**
    * Write a printable representation of a byte array. Non-printable
    * characters are hex escaped in the format \\x%02X, eg:
@@ -455,13 +459,12 @@ public class Bytes {
     if (off + len > b.length) len = b.length - off;
     for (int i = off; i < off + len ; ++i ) {
       int ch = b[i] & 0xFF;
-      if ((ch >= '0' && ch <= '9')
-          || (ch >= 'A' && ch <= 'Z')
-          || (ch >= 'a' && ch <= 'z')
-          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {
+      if (ch >= ' ' && ch <= '~' && ch != '\\') {
         result.append((char)ch);
       } else {
-        result.append(String.format("\\x%02X", ch));
+        result.append("\\x");
+        result.append(HEX_CHARS_UPPER[ch / 0x10]);
+        result.append(HEX_CHARS_UPPER[ch % 0x10]);
       }
     }
     return result.toString();
