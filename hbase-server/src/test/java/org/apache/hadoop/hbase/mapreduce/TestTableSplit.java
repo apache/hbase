@@ -92,13 +92,31 @@ public class TestTableSplit {
             "location");
     String str =
         "HBase table split(table name: table, scan: , start row: row-start, "
-            + "end row: row-end, region location: location)";
+            + "end row: row-end, region location: location, "
+            + "encoded region name: )";
+    Assert.assertEquals(str, split.toString());
+
+    split =
+        new TableSplit(TableName.valueOf("table"), null, "row-start".getBytes(),
+            "row-end".getBytes(), "location", "encoded-region-name", 1000L);
+    str =
+        "HBase table split(table name: table, scan: , start row: row-start, "
+            + "end row: row-end, region location: location, "
+            + "encoded region name: encoded-region-name)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit((TableName) null, null, null, null);
     str =
         "HBase table split(table name: null, scan: , start row: null, "
-            + "end row: null, region location: null)";
+            + "end row: null, region location: null, "
+            + "encoded region name: )";
+    Assert.assertEquals(str, split.toString());
+
+    split = new TableSplit((TableName) null, null, null, null, null, null, 1000L);
+    str =
+        "HBase table split(table name: null, scan: , start row: null, "
+            + "end row: null, region location: null, "
+            + "encoded region name: null)";
     Assert.assertEquals(str, split.toString());
   }
 }
