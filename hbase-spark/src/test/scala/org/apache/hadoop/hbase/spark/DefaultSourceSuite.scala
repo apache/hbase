@@ -19,39 +19,32 @@ package org.apache.hadoop.hbase.spark
 
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
-import org.apache.hadoop.hbase.client.{ConnectionFactory, Put}
+import org.apache.hadoop.hbase.client.{Put, ConnectionFactory}
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.{HBaseTestingUtility, TableName}
+import org.apache.hadoop.hbase.{TableName, HBaseTestingUtility}
 import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{Logging, SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext, Logging}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 
 case class HBaseRecord(
-  col0: String,
-  col1: Boolean,
-  col2: Double,
-  col3: Float,
-  col4: Int,
-  col5: Long,
-  col6: Short,
-  col7: String,
-  col8: Byte)
+    col0: String,
+    col1: String,
+    col2: Double,
+    col3: Float,
+    col4: Int,
+    col5: Long)
 
 object HBaseRecord {
   def apply(i: Int, t: String): HBaseRecord = {
     val s = s"""row${"%03d".format(i)}"""
     HBaseRecord(s,
-      i % 2 == 0,
+      s,
       i.toDouble,
       i.toFloat,
       i,
-      i.toLong,
-      i.toShort,
-      s"String$i: $t",
-      i.toByte)
+      i.toLong)
   }
 }
 
@@ -822,14 +815,11 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
                     |"rowkey":"key",
                     |"columns":{
                     |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
-                    |"col1":{"cf":"cf1", "col":"col1", "type":"boolean"},
+                    |"col1":{"cf":"cf1", "col":"col1", "type":"string"},
                     |"col2":{"cf":"cf2", "col":"col2", "type":"double"},
                     |"col3":{"cf":"cf3", "col":"col3", "type":"float"},
                     |"col4":{"cf":"cf4", "col":"col4", "type":"int"},
-                    |"col5":{"cf":"cf5", "col":"col5", "type":"bigint"},
-                    |"col6":{"cf":"cf6", "col":"col6", "type":"smallint"},
-                    |"col7":{"cf":"cf7", "col":"col7", "type":"string"},
-                    |"col8":{"cf":"cf8", "col":"col8", "type":"tinyint"}
+                    |"col5":{"cf":"cf5", "col":"col5", "type":"bigint"}}
                     |}
                     |}""".stripMargin
 
@@ -874,75 +864,6 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       .select("col0", "col1")
     s.show
     assert(s.count() == 6)
-  }
-
-  test("Timestamp semantics") {
-    val sql = sqlContext
-    import sql.implicits._
-
-    // There's already some data in here from recently. Let's throw something in
-    // from 1993 which we can include/exclude and add some data with the implicit (now) timestamp.
-    // Then we should be able to cross-section it and only get points in between, get the most recent view
-    // and get an old view.
-    val oldMs = 754869600000L
-    val startMs = System.currentTimeMillis()
-    val oldData = (0 to 100).map { i =>
-      HBaseRecord(i, "old")
-    }
-    val newData = (200 to 255).map { i =>
-      HBaseRecord(i, "new")
-    }
-
-    sc.parallelize(oldData).toDF.write.options(
-      Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseTableCatalog.tableName -> "5",
-        HBaseSparkConf.TIMESTAMP -> oldMs.toString))
-      .format("org.apache.hadoop.hbase.spark")
-      .save()
-    sc.parallelize(newData).toDF.write.options(
-      Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseTableCatalog.tableName -> "5"))
-      .format("org.apache.hadoop.hbase.spark")
-      .save()
-
-    // Test specific timestamp -- Full scan, Timestamp
-    val individualTimestamp = sqlContext.read
-      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.TIMESTAMP -> oldMs.toString))
-      .format("org.apache.hadoop.hbase.spark")
-      .load();
-    assert(individualTimestamp.count() == 101)
-
-    // Test getting everything -- Full Scan, No range
-    val everything = sqlContext.read
-      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog))
-      .format("org.apache.hadoop.hbase.spark")
-      .load()
-    assert(everything.count() == 256)
-    // Test getting everything -- Pruned Scan, TimeRange
-    val element50 = everything.where(col("col0") === lit("row050")).select("col7").collect()(0)(0)
-    assert(element50 == "String50: extra")
-    val element200 = everything.where(col("col0") === lit("row200")).select("col7").collect()(0)(0)
-    assert(element200 == "String200: new")
-
-    // Test Getting old stuff -- Full Scan, TimeRange
-    val oldRange = sqlContext.read
-      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.MIN_TIMESTAMP -> "0",
-        HBaseSparkConf.MAX_TIMESTAMP -> (oldMs + 100).toString))
-      .format("org.apache.hadoop.hbase.spark")
-      .load()
-    assert(oldRange.count() == 101)
-    // Test Getting old stuff -- Pruned Scan, TimeRange
-    val oldElement50 = oldRange.where(col("col0") === lit("row050")).select("col7").collect()(0)(0)
-    assert(oldElement50 == "String50: old")
-
-    // Test Getting middle stuff -- Full Scan, TimeRange
-    val middleRange = sqlContext.read
-      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.MIN_TIMESTAMP -> "0",
-        HBaseSparkConf.MAX_TIMESTAMP -> (startMs + 100).toString))
-      .format("org.apache.hadoop.hbase.spark")
-      .load()
-    assert(middleRange.count() == 256)
-    // Test Getting middle stuff -- Pruned Scan, TimeRange
-    val middleElement200 = middleRange.where(col("col0") === lit("row200")).select("col7").collect()(0)(0)
-    assert(middleElement200 == "String200: extra")
   }
 
   // catalog for insertion
