@@ -43,7 +43,8 @@
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
-  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
+  import="org.apache.hadoop.hbase.HBaseConfiguration"
+  import="org.apache.hadoop.hbase.TableNotFoundException"%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -126,6 +127,7 @@
 </div>
 <%
 if ( fqtn != null ) {
+  try {
   table = (HTable) master.getConnection().getTable(TableName.valueOf(fqtn));
   if (table.getTableDescriptor().getRegionReplication() > 1) {
     tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th style=\"width:22%\">Name</th><th>Region Server</th><th style=\"width:22%\">Start Key</th><th style=\"width:22%\">End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
@@ -424,7 +426,29 @@ Actions:
 </div>
 </div>
 <% }
-} else { // handle the case for fqtn is null with error message + redirect
+  } catch(TableNotFoundException e) { %>
+  <div class="container-fluid content">
+    <div class="row inner_header">
+      <div class="page-header">
+        <h1>Table not found</h1>
+       </div>
+    </div>
+    <p><hr><p>
+    <p>Go <a href="javascript:history.back()">Back</a>
+  </div> <%
+  } catch(IllegalArgumentException e) { %>
+  <div class="container-fluid content">
+    <div class="row inner_header">
+      <div class="page-header">
+        <h1>Table qualifier must not be empty</h1>
+      </div>
+    </div>
+    <p><hr><p>
+    <p>Go <a href="javascript:history.back()">Back</a>
+  </div> <%
+  }
+}
+  else { // handle the case for fqtn is null with error message + redirect
 %>
 <div class="container-fluid content">
     <div class="row inner_header">
