@@ -52,7 +52,9 @@ implements Writable, Comparable<TableSplit> {
   enum Version {
     UNVERSIONED(0),
     // Initial number we put on TableSplit when we introduced versioning.
-    INITIAL(-1);
+    INITIAL(-1),
+    // Added an encoded region name field for easier identification of split -> region
+    WITH_ENCODED_REGION_NAME(-2);
 
     final int code;
     static final Version[] byCode;
@@ -78,11 +80,12 @@ implements Writable, Comparable<TableSplit> {
     }
   }
   
-  private static final Version VERSION = Version.INITIAL;
+  private static final Version VERSION = Version.WITH_ENCODED_REGION_NAME;
   private TableName tableName;
   private byte [] startRow;
   private byte [] endRow;
   private String regionLocation;
+  private String encodedRegionName = "";
   private String scan = ""; // stores the serialized form of the Scan
   private long length; // Contains estimation of region size in bytes
 
@@ -107,6 +110,7 @@ implements Writable, Comparable<TableSplit> {
   /**
    * Creates a new instance while assigning all variables.
    * Length of region is set to 0
+   * Encoded name of the region is set to blank
    *
    * @param tableName  The name of the current table.
    * @param scan The scan associated with this split.
@@ -121,6 +125,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Creates a new instance while assigning all variables.
+   * Encoded name of region is set to blank
    *
    * @param tableName  The name of the current table.
    * @param scan The scan associated with this split.
@@ -130,6 +135,21 @@ implements Writable, Comparable<TableSplit> {
    */
   public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
       final String location, long length) {
+    this(tableName, scan, startRow, endRow, location, "", length);
+  }
+
+  /**
+   * Creates a new instance while assigning all variables.
+   *
+   * @param tableName  The name of the current table.
+   * @param scan The scan associated with this split.
+   * @param startRow  The start row of the split.
+   * @param endRow  The end row of the split.
+   * @param encodedRegionName The region ID.
+   * @param location  The location of the region.
+   */
+  public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
+      final String location, final String encodedRegionName, long length) {
     this.tableName = tableName;
     try {
       this.scan =
@@ -140,6 +160,7 @@ implements Writable, Comparable<TableSplit> {
     this.startRow = startRow;
     this.endRow = endRow;
     this.regionLocation = location;
+    this.encodedRegionName = encodedRegionName;
     this.length = length;
   }
 
@@ -157,6 +178,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Creates a new instance without a scanner.
+   * Length of region is set to 0
    *
    * @param tableName The name of the current table.
    * @param startRow The start row of the split.
@@ -252,6 +274,15 @@ implements Writable, Comparable<TableSplit> {
   }
 
   /**
+   * Returns the region's encoded name.
+   *
+   * @return The region's encoded name.
+   */
+  public String getEncodedRegionName() {
+    return encodedRegionName;
+  }
+
+  /**
    * Returns the length of the split.
    *
    * @return The length of the split.
@@ -295,6 +326,9 @@ implements Writable, Comparable<TableSplit> {
       scan = Bytes.toString(Bytes.readByteArray(in));
     }
     length = WritableUtils.readVLong(in);
+    if (version.atLeast(Version.WITH_ENCODED_REGION_NAME)) {
+      encodedRegionName = Bytes.toString(Bytes.readByteArray(in));
+    }
   }
 
   /**
@@ -312,6 +346,7 @@ implements Writable, Comparable<TableSplit> {
     Bytes.writeByteArray(out, Bytes.toBytes(regionLocation));
     Bytes.writeByteArray(out, Bytes.toBytes(scan));
     WritableUtils.writeVLong(out, length);
+    Bytes.writeByteArray(out, Bytes.toBytes(encodedRegionName));
   }
 
   /**
@@ -340,6 +375,7 @@ implements Writable, Comparable<TableSplit> {
     sb.append(", start row: ").append(Bytes.toStringBinary(startRow));
     sb.append(", end row: ").append(Bytes.toStringBinary(endRow));
     sb.append(", region location: ").append(regionLocation);
+    sb.append(", encoded region name: ").append(encodedRegionName);
     sb.append(")");
     return sb.toString();
   }
@@ -372,13 +408,14 @@ implements Writable, Comparable<TableSplit> {
       regionLocation.equals(((TableSplit)o).regionLocation);
   }
 
-    @Override
-    public int hashCode() {
-        int result = tableName != null ? tableName.hashCode() : 0;
-        result = 31 * result + (scan != null ? scan.hashCode() : 0);
-        result = 31 * result + (startRow != null ? Arrays.hashCode(startRow) : 0);
-        result = 31 * result + (endRow != null ? Arrays.hashCode(endRow) : 0);
-        result = 31 * result + (regionLocation != null ? regionLocation.hashCode() : 0);
-        return result;
-    }
+  @Override
+  public int hashCode() {
+    int result = tableName != null ? tableName.hashCode() : 0;
+    result = 31 * result + (scan != null ? scan.hashCode() : 0);
+    result = 31 * result + (startRow != null ? Arrays.hashCode(startRow) : 0);
+    result = 31 * result + (endRow != null ? Arrays.hashCode(endRow) : 0);
+    result = 31 * result + (regionLocation != null ? regionLocation.hashCode() : 0);
+    result = 31 * result + (encodedRegionName != null ? encodedRegionName.hashCode() : 0);
+    return result;
+  }
 }
