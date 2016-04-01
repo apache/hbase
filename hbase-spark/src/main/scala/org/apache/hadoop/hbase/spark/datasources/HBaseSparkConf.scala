@@ -36,4 +36,9 @@ object HBaseSparkConf{
   val USE_HBASE_CONTEXT = "hbase.use.hbase.context"
   val PUSH_DOWN_COLUMN_FILTER = "hbase.pushdown.column.filter"
   val defaultPushDownColumnFilter = true
+
+  val TIMESTAMP = "timestamp"
+  val MIN_TIMESTAMP = "minTimestamp"
+  val MAX_TIMESTAMP = "maxTimestamp"
+  val MAX_VERSIONS = "maxVersions"
 }
