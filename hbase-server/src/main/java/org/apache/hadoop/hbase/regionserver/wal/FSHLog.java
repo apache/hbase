@@ -1399,14 +1399,14 @@ public class FSHLog implements WAL {
     }
   }
 
-  private long postAppend(final Entry e, final long elapsedTime) {
+  private long postAppend(final Entry e, final long elapsedTime) throws IOException {
     long len = 0;
     if (!listeners.isEmpty()) {
       for (Cell cell : e.getEdit().getCells()) {
         len += CellUtil.estimatedSerializedSizeOf(cell);
       }
       for (WALActionsListener listener : listeners) {
-        listener.postAppend(len, elapsedTime);
+        listener.postAppend(len, elapsedTime, e.getKey(), e.getEdit());
       }
     }
     return len;

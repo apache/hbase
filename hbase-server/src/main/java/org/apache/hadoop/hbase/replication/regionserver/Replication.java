@@ -262,6 +262,36 @@ public class Replication extends WALActionsListener.Base implements
     scopeWALEdits(htd, logKey, logEdit, this.conf, this.getReplicationManager());
   }
 
+  @Override
+  public void postAppend(long entryLen, long elapsedTimeMillis, final WALKey logKey,
+      final WALEdit edit) throws IOException {
+    NavigableMap<byte[], Integer> scopes = logKey.getScopes();
+    if (this.replicationForBulkLoadData && scopes != null && !scopes.isEmpty()) {
+      TableName tableName = logKey.getTablename();
+      for (Cell c : edit.getCells()) {
+        // Only check for bulk load events
+        if (CellUtil.matchingQualifier(c, WALEdit.BULK_LOAD)) {
+          BulkLoadDescriptor bld = null;
+          try {
+            bld = WALEdit.getBulkLoadDescriptor(c);
+          } catch (IOException e) {
+            LOG.error("Failed to get bulk load events information from the wal file.", e);
+            throw e;
+          }
+
+          for (StoreDescriptor s : bld.getStoresList()) {
+            byte[] fam = s.getFamilyName().toByteArray();
+            // We have already scoped the entries as part
+            // WALActionsListener#visitLogEntryBeforeWrite notification
+            if (scopes.containsKey(fam)) {
+              addHFileRefsToQueue(this.getReplicationManager(), tableName, fam, s);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
    * compaction WAL edits and if the scope is local.
@@ -314,10 +344,7 @@ public class Replication extends WALActionsListener.Base implements
           int scope = htd.getFamily(family).getScope();
           if (scope != REPLICATION_SCOPE_LOCAL) {
             scopes.put(family, scope);
-            addHFileRefsToQueue(replicationManager, tableName, family, s);
           }
-        } else {
-          addHFileRefsToQueue(replicationManager, tableName, family, s);
         }
       }
     } catch (IOException e) {
@@ -331,7 +358,7 @@ public class Replication extends WALActionsListener.Base implements
     try {
       replicationManager.addHFileRefs(tableName, family, s.getStoreFileList());
     } catch (ReplicationException e) {
-      LOG.error("Failed to create hfile references in ZK.", e);
+      LOG.error("Failed to add hfile references in the replication queue.", e);
       throw new IOException(e);
     }
   }

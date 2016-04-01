@@ -57,8 +57,8 @@ public class TestMetricsWAL {
   public void testWalWrittenInBytes() throws Exception {
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
-    metricsWAL.postAppend(100, 900);
-    metricsWAL.postAppend(200, 2000);
+    metricsWAL.postAppend(100, 900, null, null);
+    metricsWAL.postAppend(200, 2000, null, null);
     verify(source, times(1)).incrementWrittenBytes(100);
     verify(source, times(1)).incrementWrittenBytes(200);
   }
