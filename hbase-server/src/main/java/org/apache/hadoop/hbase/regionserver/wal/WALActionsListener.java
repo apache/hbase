@@ -98,8 +98,12 @@ public interface WALActionsListener {
    * TODO: Combine this with above.
    * @param entryLen approx length of cells in this append.
    * @param elapsedTimeMillis elapsed time in milliseconds.
+   * @param logKey A WAL key
+   * @param logEdit A WAL edit containing list of cells.
+   * @throws IOException if any network or I/O error occurred
    */
-  void postAppend(final long entryLen, final long elapsedTimeMillis);
+  void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
+      final WALEdit logEdit) throws IOException;
 
   /**
    * For notification post writer sync.  Used by metrics system at least.
@@ -136,7 +140,9 @@ public interface WALActionsListener {
     }
 
     @Override
-    public void postAppend(final long entryLen, final long elapsedTimeMillis) {}
+    public void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
+        final WALEdit logEdit) throws IOException {
+    }
 
     @Override
     public void postSync(final long timeInNanos, final int handlerSyncs) {}

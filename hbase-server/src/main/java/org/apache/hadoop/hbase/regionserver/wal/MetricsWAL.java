@@ -20,9 +20,13 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.util.StringUtils;
 
@@ -51,7 +55,8 @@ public class MetricsWAL extends WALActionsListener.Base {
   }
 
   @Override
-  public void postAppend(final long size, final long time) {
+  public void postAppend(final long size, final long time, final WALKey logkey,
+      final WALEdit logEdit) throws IOException {
     source.incrementAppendCount();
     source.incrementAppendTime(time);
     source.incrementAppendSize(size);

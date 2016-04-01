@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_ENABLE_KEY;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -256,6 +257,34 @@ public class Replication extends WALActionsListener.Base implements
     scopeWALEdits(logKey, logEdit, this.conf, this.getReplicationManager());
   }
 
+  @Override
+  public void postAppend(long entryLen, long elapsedTimeMillis, final WALKey logKey,
+      final WALEdit edit) throws IOException {
+    NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
+    if (this.replicationForBulkLoadData && scopes != null && !scopes.isEmpty()) {
+      TableName tableName = logKey.getTablename();
+      for (Cell c : edit.getCells()) {
+        // Only check for bulk load events
+        if (CellUtil.matchingQualifier(c, WALEdit.BULK_LOAD)) {
+          BulkLoadDescriptor bld = null;
+          try {
+            bld = WALEdit.getBulkLoadDescriptor(c);
+          } catch (IOException e) {
+            LOG.error("Failed to get bulk load events information from the wal file.", e);
+            throw e;
+          }
+
+          for (StoreDescriptor s : bld.getStoresList()) {
+            byte[] fam = s.getFamilyName().toByteArray();
+            if (scopes.containsKey(fam)) {
+              addHFileRefsToQueue(this.getReplicationManager(), tableName, fam, s);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
    * compaction WAL edits and if the scope is local.
@@ -268,26 +297,9 @@ public class Replication extends WALActionsListener.Base implements
       WALEdit logEdit, Configuration conf, ReplicationSourceManager replicationManager)
           throws IOException {
     boolean replicationForBulkLoadEnabled = isReplicationForBulkLoadDataEnabled(conf);
-    byte[] family;
     boolean foundOtherEdits = false;
     for (Cell cell : logEdit.getCells()) {
-      if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
-        if (replicationForBulkLoadEnabled && CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
-          try {
-            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-            for (StoreDescriptor s : bld.getStoresList()) {
-              family = s.getFamilyName().toByteArray();
-              addHFileRefsToQueue(replicationManager, logKey.getTablename(), family, s);
-            }
-          } catch (IOException e) {
-            LOG.error("Failed to get bulk load events information from the wal file.", e);
-            throw e;
-          }
-        } else {
-          // Skip the flush/compaction/region events
-          continue;
-        }
-      } else {
+      if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
         foundOtherEdits = true;
       }
     }
@@ -301,7 +313,7 @@ public class Replication extends WALActionsListener.Base implements
     try {
       replicationManager.addHFileRefs(tableName, family, s.getStoreFileList());
     } catch (ReplicationException e) {
-      LOG.error("Failed to create hfile references in ZK.", e);
+      LOG.error("Failed to add hfile references in the replication queue.", e);
       throw new IOException(e);
     }
   }

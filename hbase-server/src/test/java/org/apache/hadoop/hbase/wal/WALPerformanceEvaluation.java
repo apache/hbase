@@ -525,7 +525,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
 
         @Override
-        public void postAppend(final long size, final long elapsedTime) {
+        public void postAppend(final long size, final long elapsedTime, final WALKey logkey,
+            final WALEdit logEdit) {
           appendMeter.mark(size);
         }
       });

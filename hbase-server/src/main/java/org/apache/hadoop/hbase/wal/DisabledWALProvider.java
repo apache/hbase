@@ -153,16 +153,17 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long append(HRegionInfo info, WALKey key, WALEdit edits, boolean inMemstore) {
+    public long append(HRegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
+        throws IOException {
       if (!this.listeners.isEmpty()) {
         final long start = System.nanoTime();
         long len = 0;
         for (Cell cell : edits.getCells()) {
           len += CellUtil.estimatedSerializedSizeOf(cell);
         }
-        final long elapsed = (System.nanoTime() - start)/1000000l;
+        final long elapsed = (System.nanoTime() - start) / 1000000L;
         for (WALActionsListener listener : this.listeners) {
-          listener.postAppend(len, elapsed);
+          listener.postAppend(len, elapsed, key, edits);
         }
       }
       return -1;
