@@ -175,7 +175,7 @@ public class RestoreSnapshotHelper {
   }
 
   private RestoreMetaChanges restoreHdfsRegions(final ThreadPoolExecutor exec) throws IOException {
-    LOG.debug("starting restore");
+    LOG.info("starting restore table regions using snapshot=" + snapshotDesc);
 
     Map<String, SnapshotRegionManifest> regionManifests = snapshotManifest.getRegionManifestsMap();
     if (regionManifests == null) {
@@ -251,6 +251,8 @@ public class RestoreSnapshotHelper {
       status.setStatus("Finished cloning regions.");
     }
 
+    LOG.info("finishing restore table regions using snapshot=" + snapshotDesc);
+
     return metaChanges;
   }
 
@@ -265,13 +267,21 @@ public class RestoreSnapshotHelper {
     private List<HRegionInfo> regionsToRemove = null;
     private List<HRegionInfo> regionsToAdd = null;
 
-    RestoreMetaChanges(HTableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
+    public RestoreMetaChanges(HTableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
       this.parentsMap = parentsMap;
       this.htd = htd;
     }
 
     public HTableDescriptor getTableDescriptor() {
       return htd;
+    }
+
+    /**
+     * Returns the map of parent-children_pair.
+     * @return the map
+     */
+    public Map<String, Pair<String, String>> getParentToChildrenPairMap() {
+      return this.parentsMap;
     }
 
     /**

@@ -56,16 +56,19 @@ import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.master.procedure.CloneSnapshotProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.RestoreSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
-import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -145,12 +148,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private Map<TableName, SnapshotSentinel> snapshotHandlers =
       new HashMap<TableName, SnapshotSentinel>();
 
-  // Restore Sentinels map, with table name as key.
+  // Restore map, with table name as key, procedure ID as value.
   // The map is always accessed and modified under the object lock using synchronized.
-  // restoreSnapshot()/cloneSnapshot() will insert an Handler in the table.
-  // isRestoreDone() will remove the handler requested if the operation is finished.
-  private Map<TableName, SnapshotSentinel> restoreHandlers =
-      new HashMap<TableName, SnapshotSentinel>();
+  // restoreSnapshot()/cloneSnapshot() will insert a procedure ID in the map.
+  //
+  // TODO: just as the Apache HBase 1.x implementation, this map would not survive master
+  // restart/failover. This is just a stopgap implementation until implementation of taking
+  // snapshot using Procedure-V2.
+  private Map<TableName, Long> restoreTableToProcIdMap = new HashMap<TableName, Long>();
 
   private Path rootDir;
   private ExecutorService executorService;
@@ -426,11 +431,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // make sure we aren't running a restore on the same table
     if (isRestoringTable(snapshotTable)) {
-      SnapshotSentinel handler = restoreHandlers.get(snapshotTable);
       throw new SnapshotCreationException("Rejected taking "
           + ClientSnapshotDescriptionUtils.toString(snapshot)
-          + " because we are already have a restore in progress on the same snapshot "
-          + ClientSnapshotDescriptionUtils.toString(handler.getSnapshot()), snapshot);
+          + " because we are already have a restore in progress on the same snapshot.");
     }
 
     try {
@@ -647,14 +650,61 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
+   * Clone the specified snapshot.
+   * The clone will fail if the destination table has a snapshot or restore in progress.
+   *
+   * @param reqSnapshot Snapshot Descriptor from request
+   * @param tableName table to clone
+   * @param snapshot Snapshot Descriptor
+   * @param snapshotTableDesc Table Descriptor
+   * @param nonceGroup unique value to prevent duplicated RPC
+   * @param nonce unique value to prevent duplicated RPC
+   * @return procId the ID of the clone snapshot procedure
+   * @throws IOException
+   */
+  private long cloneSnapshot(
+      final SnapshotDescription reqSnapshot,
+      final TableName tableName,
+      final SnapshotDescription snapshot,
+      final HTableDescriptor snapshotTableDesc,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+    HTableDescriptor htd = new HTableDescriptor(tableName, snapshotTableDesc);
+    if (cpHost != null) {
+      cpHost.preCloneSnapshot(reqSnapshot, htd);
+    }
+    long procId;
+    try {
+      procId = cloneSnapshot(snapshot, htd, nonceGroup, nonce);
+    } catch (IOException e) {
+      LOG.error("Exception occurred while cloning the snapshot " + snapshot.getName()
+        + " as table " + tableName.getNameAsString(), e);
+      throw e;
+    }
+    LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
+
+    if (cpHost != null) {
+      cpHost.postCloneSnapshot(reqSnapshot, htd);
+    }
+    return procId;
+  }
+
+  /**
    * Clone the specified snapshot into a new table.
    * The operation will fail if the destination table has a snapshot or restore in progress.
    *
    * @param snapshot Snapshot Descriptor
    * @param hTableDescriptor Table Descriptor of the table to create
+   * @param nonceGroup unique value to prevent duplicated RPC
+   * @param nonce unique value to prevent duplicated RPC
+   * @return procId the ID of the clone snapshot procedure
    */
-  synchronized void cloneSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
+  synchronized long cloneSnapshot(
+      final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor,
+      final long nonceGroup,
+      final long nonce) throws HBaseSnapshotException {
     TableName tableName = hTableDescriptor.getTableName();
 
     // make sure we aren't running a snapshot on the same table
@@ -668,27 +718,34 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
 
     try {
-      CloneSnapshotHandler handler =
-        new CloneSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
-      this.executorService.submit(handler);
-      this.restoreHandlers.put(tableName, handler);
+      long procId = master.getMasterProcedureExecutor().submitProcedure(
+        new CloneSnapshotProcedure(
+          master.getMasterProcedureExecutor().getEnvironment(), hTableDescriptor, snapshot),
+        nonceGroup,
+        nonce);
+      this.restoreTableToProcIdMap.put(tableName, procId);
+      return procId;
     } catch (Exception e) {
-      String msg = "Couldn't clone the snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
-        " on table=" + tableName;
+      String msg = "Couldn't clone the snapshot="
+        + ClientSnapshotDescriptionUtils.toString(snapshot) + " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
     }
   }
 
   /**
-   * Restore the specified snapshot
+   * Restore or Clone the specified snapshot
    * @param reqSnapshot
+   * @param nonceGroup unique value to prevent duplicated RPC
+   * @param nonce unique value to prevent duplicated RPC
    * @throws IOException
    */
-  public void restoreSnapshot(SnapshotDescription reqSnapshot) throws IOException {
+  public long restoreOrCloneSnapshot(
+      SnapshotDescription reqSnapshot,
+      final long nonceGroup,
+      final long nonce) throws IOException {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
-    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
 
     // check if the snapshot exists
     if (!fs.exists(snapshotDir)) {
@@ -712,109 +769,66 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, manifest);
 
     // Execute the restore/clone operation
+    long procId;
     if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
-      if (master.getTableStateManager().isTableState(
-          TableName.valueOf(snapshot.getTable()), TableState.State.ENABLED)) {
-        throw new UnsupportedOperationException("Table '" +
-            TableName.valueOf(snapshot.getTable()) + "' must be disabled in order to " +
-            "perform a restore operation" +
-            ".");
-      }
-
-      // call coproc pre hook
-      if (cpHost != null) {
-        cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
-      }
-
-      int tableRegionCount = -1;
-      try {
-        // Table already exist. Check and update the region quota for this table namespace.
-        // The region quota may not be updated correctly if there are concurrent restore snapshot
-        // requests for the same table
-
-        tableRegionCount = getRegionCountOfTable(tableName);
-        int snapshotRegionCount = manifest.getRegionManifestsMap().size();
-
-        // Update region quota when snapshotRegionCount is larger. If we updated the region count
-        // to a smaller value before retoreSnapshot and the retoreSnapshot fails, we may fail to
-        // reset the region count to its original value if the region quota is consumed by other
-        // tables in the namespace
-        if (tableRegionCount > 0 && tableRegionCount < snapshotRegionCount) {
-          checkAndUpdateNamespaceRegionQuota(snapshotRegionCount, tableName);
-        }
-        restoreSnapshot(snapshot, snapshotTableDesc);
-        // Update the region quota if snapshotRegionCount is smaller. This step should not fail
-        // because we have reserved enough region quota before hand
-        if (tableRegionCount > 0 && tableRegionCount > snapshotRegionCount) {
-          checkAndUpdateNamespaceRegionQuota(snapshotRegionCount, tableName);
-        }
-      } catch (QuotaExceededException e) {
-        LOG.error("Region quota exceeded while restoring the snapshot " + snapshot.getName()
-          + " as table " + tableName.getNameAsString(), e);
-        // If QEE is thrown before restoreSnapshot, quota information is not updated, so we
-        // should throw the exception directly. If QEE is thrown after restoreSnapshot, there
-        // must be unexpected reasons, we also throw the exception directly
-        throw e;
-      } catch (IOException e) {
-        if (tableRegionCount > 0) {
-          // reset the region count for table
-          checkAndUpdateNamespaceRegionQuota(tableRegionCount, tableName);
-        }
-        LOG.error("Exception occurred while restoring the snapshot " + snapshot.getName()
-            + " as table " + tableName.getNameAsString(), e);
-        throw e;
-      }
-      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-      if (cpHost != null) {
-        cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
-      }
+      procId = restoreSnapshot(
+        reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceGroup, nonce);
     } else {
-      HTableDescriptor htd = new HTableDescriptor(tableName, snapshotTableDesc);
-      if (cpHost != null) {
-        cpHost.preCloneSnapshot(reqSnapshot, htd);
-      }
-      try {
-        checkAndUpdateNamespaceQuota(manifest, tableName);
-        cloneSnapshot(snapshot, htd);
-      } catch (IOException e) {
-        this.master.getMasterQuotaManager().removeTableFromNamespaceQuota(tableName);
-        LOG.error("Exception occurred while cloning the snapshot " + snapshot.getName()
-            + " as table " + tableName.getNameAsString(), e);
-        throw e;
-      }
-      LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-      if (cpHost != null) {
-        cpHost.postCloneSnapshot(reqSnapshot, htd);
-      }
+      procId = cloneSnapshot(
+        reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceGroup, nonce);
     }
-  }
-
-  private void checkAndUpdateNamespaceQuota(SnapshotManifest manifest, TableName tableName)
-      throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
-      this.master.getMasterQuotaManager().checkNamespaceTableAndRegionQuota(tableName,
-        manifest.getRegionManifestsMap().size());
-    }
-  }
-
-  private void checkAndUpdateNamespaceRegionQuota(int updatedRegionCount, TableName tableName)
-      throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
-      this.master.getMasterQuotaManager().checkAndUpdateNamespaceRegionQuota(tableName,
-        updatedRegionCount);
-    }
+    return procId;
   }
 
   /**
-   * @return cached region count, or -1 if quota manager is disabled or table status not found
-  */
-  private int getRegionCountOfTable(TableName tableName) throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
-      return this.master.getMasterQuotaManager().getRegionCountOfTable(tableName);
+   * Restore the specified snapshot.
+   * The restore will fail if the destination table has a snapshot or restore in progress.
+   *
+   * @param reqSnapshot Snapshot Descriptor from request
+   * @param tableName table to restore
+   * @param snapshot Snapshot Descriptor
+   * @param snapshotTableDesc Table Descriptor
+   * @param nonceGroup unique value to prevent duplicated RPC
+   * @param nonce unique value to prevent duplicated RPC
+   * @return procId the ID of the restore snapshot procedure
+   * @throws IOException
+   */
+  private long restoreSnapshot(
+      final SnapshotDescription reqSnapshot,
+      final TableName tableName,
+      final SnapshotDescription snapshot,
+      final HTableDescriptor snapshotTableDesc,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+
+    if (master.getTableStateManager().isTableState(
+      TableName.valueOf(snapshot.getTable()), TableState.State.ENABLED)) {
+      throw new UnsupportedOperationException("Table '" +
+        TableName.valueOf(snapshot.getTable()) + "' must be disabled in order to " +
+        "perform a restore operation.");
     }
-    return -1;
+
+    // call Coprocessor pre hook
+    if (cpHost != null) {
+      cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+    }
+
+    long procId;
+    try {
+      procId = restoreSnapshot(snapshot, snapshotTableDesc, nonceGroup, nonce);
+    } catch (IOException e) {
+      LOG.error("Exception occurred while restoring the snapshot " + snapshot.getName()
+        + " as table " + tableName.getNameAsString(), e);
+      throw e;
+    }
+    LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+
+    if (cpHost != null) {
+      cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+    }
+
+    return procId;
   }
 
   /**
@@ -823,9 +837,15 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    *
    * @param snapshot Snapshot Descriptor
    * @param hTableDescriptor Table Descriptor
+   * @param nonceGroup unique value to prevent duplicated RPC
+   * @param nonce unique value to prevent duplicated RPC
+   * @return procId the ID of the restore snapshot procedure
    */
-  private synchronized void restoreSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
+  private synchronized long restoreSnapshot(
+      final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor,
+      final long nonceGroup,
+      final long nonce) throws HBaseSnapshotException {
     TableName tableName = hTableDescriptor.getTableName();
 
     // make sure we aren't running a snapshot on the same table
@@ -839,10 +859,13 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
 
     try {
-      RestoreSnapshotHandler handler =
-        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
-      this.executorService.submit(handler);
-      restoreHandlers.put(tableName, handler);
+      long procId = master.getMasterProcedureExecutor().submitProcedure(
+        new RestoreSnapshotProcedure(
+          master.getMasterProcedureExecutor().getEnvironment(), hTableDescriptor, snapshot),
+        nonceGroup,
+        nonce);
+      this.restoreTableToProcIdMap.put(tableName, procId);
+      return procId;
     } catch (Exception e) {
       String msg = "Couldn't restore the snapshot=" + ClientSnapshotDescriptionUtils.toString(
           snapshot)  +
@@ -859,50 +882,18 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @return <tt>true</tt> if there is a restore in progress of the specified table.
    */
   private synchronized boolean isRestoringTable(final TableName tableName) {
-    SnapshotSentinel sentinel = this.restoreHandlers.get(tableName);
-    return(sentinel != null && !sentinel.isFinished());
-  }
-
-  /**
-   * Returns the status of a restore operation.
-   * If the in-progress restore is failed throws the exception that caused the failure.
-   *
-   * @param snapshot
-   * @return false if in progress, true if restore is completed or not requested.
-   * @throws IOException if there was a failure during the restore
-   */
-  public boolean isRestoreDone(final SnapshotDescription snapshot) throws IOException {
-    // check to see if the sentinel exists,
-    // and if the task is complete removes it from the in-progress restore map.
-    SnapshotSentinel sentinel = removeSentinelIfFinished(this.restoreHandlers, snapshot);
-
-    // stop tracking "abandoned" handlers
-    cleanupSentinels();
-
-    if (sentinel == null) {
-      // there is no sentinel so restore is not in progress.
+    Long procId = this.restoreTableToProcIdMap.get(tableName);
+    if (procId == null) {
+      return false;
+    }
+    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
+    if (procExec.isRunning() && !procExec.isFinished(procId)) {
       return true;
+    } else {
+      this.restoreTableToProcIdMap.remove(tableName);
+      return false;
     }
 
-    LOG.debug("Verify snapshot=" + snapshot.getName() + " against="
-        + sentinel.getSnapshot().getName() + " table=" +
-        TableName.valueOf(snapshot.getTable()));
-
-    // If the restore is failed, rethrow the exception
-    sentinel.rethrowExceptionIfFailed();
-
-    // check to see if we are done
-    if (sentinel.isFinished()) {
-      LOG.debug("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
-          " has completed. Notifying the client.");
-      return true;
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sentinel is not yet finished with restoring snapshot=" +
-          ClientSnapshotDescriptionUtils.toString(snapshot));
-    }
-    return false;
   }
 
   /**
@@ -947,7 +938,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private void cleanupSentinels() {
     cleanupSentinels(this.snapshotHandlers);
-    cleanupSentinels(this.restoreHandlers);
+    cleanupCompletedRestoreInMap();
   }
 
   /**
@@ -970,6 +961,21 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
+  /**
+   * Remove the procedures that are marked as finished
+   */
+  private synchronized void cleanupCompletedRestoreInMap() {
+    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
+    Iterator<Map.Entry<TableName, Long>> it = restoreTableToProcIdMap.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<TableName, Long> entry = it.next();
+      Long procId = entry.getValue();
+      if (procExec.isRunning() && procExec.isFinished(procId)) {
+        it.remove();
+      }
+    }
+  }
+
   //
   // Implementing Stoppable interface
   //
@@ -985,10 +991,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       snapshotHandler.cancel(why);
     }
 
-    // pass the stop onto all the restore handlers
-    for (SnapshotSentinel restoreHandler: this.restoreHandlers.values()) {
-      restoreHandler.cancel(why);
-    }
     try {
       if (coordinator != null) {
         coordinator.close();

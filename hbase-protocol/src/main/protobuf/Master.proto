@@ -370,9 +370,12 @@ message DeleteSnapshotResponse {
 
 message RestoreSnapshotRequest {
   required SnapshotDescription snapshot = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message RestoreSnapshotResponse {
+  required uint64 proc_id = 1;
 }
 
 /* if you don't send the snapshot, then you will get it back
@@ -733,11 +736,6 @@ service MasterService {
    * Restore a snapshot
    */
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
-
-  /**
-   * Determine if the snapshot restore is done yet.
-   */
-  rpc IsRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 
   /**
    * Execute a distributed procedure.

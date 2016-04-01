@@ -1330,6 +1330,22 @@ public interface Admin extends Abortable, Closeable {
   void restoreSnapshot(final String snapshotName) throws IOException, RestoreSnapshotException;
 
   /**
+   * Restore the specified snapshot on the original table. (The table must be disabled) If the
+   * "hbase.snapshot.restore.take.failsafe.snapshot" configuration property is set to true, a
+   * snapshot of the current table is taken before executing the restore operation. In case of
+   * restore failure, the failsafe snapshot will be restored. If the restore completes without
+   * problem the failsafe snapshot is deleted.
+   *
+   * @param snapshotName name of the snapshot to restore
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @return the result of the async restore snapshot. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  Future<Void> restoreSnapshotAsync(final String snapshotName)
+      throws IOException, RestoreSnapshotException;
+
+  /**
    * Restore the specified snapshot on the original table. (The table must be disabled) If
    * 'takeFailSafeSnapshot' is set to true, a snapshot of the current table is taken before
    * executing the restore operation. In case of restore failure, the failsafe snapshot will be
@@ -1360,7 +1376,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
-  void restoreSnapshot(final String snapshotName, boolean takeFailSafeSnapshot)
+  void restoreSnapshot(final String snapshotName, final boolean takeFailSafeSnapshot)
       throws IOException, RestoreSnapshotException;
 
   /**
@@ -1388,6 +1404,24 @@ public interface Admin extends Abortable, Closeable {
    */
   void cloneSnapshot(final String snapshotName, final TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException;
+
+  /**
+   * Create a new table by cloning the snapshot content, but does not block
+   * and wait for it be completely cloned.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be cloned already exists
+   * @return the result of the async clone snapshot. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  Future<Void> cloneSnapshotAsync(final String snapshotName, final TableName tableName)
+      throws IOException, TableExistsException;
 
   /**
    * Execute a distributed procedure on a cluster.

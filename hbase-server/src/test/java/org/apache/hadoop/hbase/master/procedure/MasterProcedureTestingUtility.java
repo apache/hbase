@@ -129,8 +129,8 @@ public class MasterProcedureTestingUtility {
     assertEquals(family.length, htd.getFamilies().size());
   }
 
-  public static void validateTableDeletion(final HMaster master, final TableName tableName,
-      final HRegionInfo[] regions, String... family) throws IOException {
+  public static void validateTableDeletion(
+      final HMaster master, final TableName tableName) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);

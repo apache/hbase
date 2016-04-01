@@ -1588,13 +1588,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
-      public MasterProtos.IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(
-          RpcController controller, MasterProtos.IsRestoreSnapshotDoneRequest request)
-          throws ServiceException {
-        return stub.isRestoreSnapshotDone(controller, request);
-      }
-
-      @Override
       public MasterProtos.ExecProcedureResponse execProcedure(
           RpcController controller, MasterProtos.ExecProcedureRequest request)
           throws ServiceException {

@@ -694,7 +694,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return true if the procedure execution is finished, otherwise false.
    */
   public boolean isFinished(final long procId) {
-    return completed.containsKey(procId);
+    return !procedures.containsKey(procId);
   }
 
   /**

@@ -916,33 +916,6 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   /**
-   * Returns the status of the requested snapshot restore/clone operation.
-   * This method is not exposed to the user, it is just used internally by HBaseAdmin
-   * to verify if the restore is completed.
-   *
-   * No exceptions are thrown if the restore is not running, the result will be "done".
-   *
-   * @return done <tt>true</tt> if the restore/clone operation is completed.
-   * @throws ServiceException if the operation failed.
-   */
-  @Override
-  public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
-      IsRestoreSnapshotDoneRequest request) throws ServiceException {
-    try {
-      master.checkInitialized();
-      SnapshotDescription snapshot = request.getSnapshot();
-      IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
-      boolean done = master.snapshotManager.isRestoreDone(snapshot);
-      builder.setDone(done);
-      return builder.build();
-    } catch (ForeignException e) {
-      throw new ServiceException(e.getCause());
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
-
-  /**
    * Checks if the specified snapshot is done.
    * @return true if the snapshot is in file system ready to use,
    *   false if the snapshot is in the process of completing
@@ -1215,8 +1188,9 @@ public class MasterRpcServices extends RSRpcServices
       TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
       master.getNamespace(dstTable.getNamespaceAsString());
       SnapshotDescription reqSnapshot = request.getSnapshot();
-      master.snapshotManager.restoreSnapshot(reqSnapshot);
-      return RestoreSnapshotResponse.newBuilder().build();
+      long procId = master.snapshotManager.restoreOrCloneSnapshot(
+        reqSnapshot, request.getNonceGroup(), request.getNonce());
+      return RestoreSnapshotResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
     } catch (IOException e) {

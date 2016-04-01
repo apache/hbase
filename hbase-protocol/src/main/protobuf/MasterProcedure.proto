@@ -222,6 +222,46 @@ message DisableTableStateData {
   required bool skip_table_state_check = 3;
 }
 
+message RestoreParentToChildRegionsPair {
+  required string parent_region_name = 1;
+  required string child1_region_name = 2;
+  required string child2_region_name = 3;
+}
+
+enum CloneSnapshotState {
+  CLONE_SNAPSHOT_PRE_OPERATION = 1;
+  CLONE_SNAPSHOT_WRITE_FS_LAYOUT = 2;
+  CLONE_SNAPSHOT_ADD_TO_META = 3;
+  CLONE_SNAPSHOT_ASSIGN_REGIONS = 4;
+  CLONE_SNAPSHOT_UPDATE_DESC_CACHE = 5;
+  CLONE_SNAPSHOT_POST_OPERATION = 6;
+}
+
+message CloneSnapshotStateData {
+  required UserInformation user_info = 1;
+  required SnapshotDescription snapshot = 2;
+  required TableSchema table_schema = 3;
+  repeated RegionInfo region_info = 4;
+  repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 5;
+}
+
+enum RestoreSnapshotState {
+  RESTORE_SNAPSHOT_PRE_OPERATION = 1;
+  RESTORE_SNAPSHOT_UPDATE_TABLE_DESCRIPTOR = 2;
+  RESTORE_SNAPSHOT_WRITE_FS_LAYOUT = 3;
+  RESTORE_SNAPSHOT_UPDATE_META = 4;
+}
+
+message RestoreSnapshotStateData {
+  required UserInformation user_info = 1;
+  required SnapshotDescription snapshot = 2;
+  required TableSchema modified_table_schema = 3;
+  repeated RegionInfo region_info_for_restore = 4;
+  repeated RegionInfo region_info_for_remove = 5;
+  repeated RegionInfo region_info_for_add = 6;
+  repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
+}
+
 message ServerCrashStateData {
   required ServerName server_name = 1;
   optional bool distributed_log_replay = 2;

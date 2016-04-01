@@ -165,4 +165,17 @@ public final class MasterDDLOperationHelper {
     }
     return done;
   }
+
+  /**
+   * Get the region info list of a table from meta if it is not already known by the caller.
+   **/
+  public static List<HRegionInfo> getRegionInfoList(
+    final MasterProcedureEnv env,
+    final TableName tableName,
+    List<HRegionInfo> regionInfoList) throws IOException {
+    if (regionInfoList == null) {
+      regionInfoList = ProcedureSyncWait.getRegionsFromMeta(env, tableName);
+    }
+    return regionInfoList;
+  }
 }

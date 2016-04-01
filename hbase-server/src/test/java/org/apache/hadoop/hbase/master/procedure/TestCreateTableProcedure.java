@@ -253,7 +253,7 @@ public class TestCreateTableProcedure {
         procExec, procId, 4, CreateTableState.values());
 
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+      UTIL.getHBaseCluster().getMaster(), tableName);
 
     // are we able to create the table after a rollback?
     resetProcExecutorTestingKillFlag();
@@ -310,7 +310,7 @@ public class TestCreateTableProcedure {
         procExec, procId, 4, CreateTableState.values());
     TableName tableName = htd.getTableName();
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+      UTIL.getHBaseCluster().getMaster(), tableName);
 
     // are we able to create the table after a rollback?
     resetProcExecutorTestingKillFlag();

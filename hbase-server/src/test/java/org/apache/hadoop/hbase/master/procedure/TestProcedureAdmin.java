@@ -142,7 +142,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     // Validate the delete table procedure was not aborted
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f");
+      UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
   @Test(timeout=60000)

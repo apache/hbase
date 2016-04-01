@@ -301,7 +301,7 @@ public class TestMasterFailoverWithProcedures {
     testRecoveryAndDoubleExecution(UTIL, procId, step, DeleteTableState.values());
 
     MasterProcedureTestingUtility.validateTableDeletion(
-        UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+        UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
   // ==========================================================================

@@ -139,7 +139,7 @@ public class TestDeleteTableProcedure {
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f");
+      UTIL.getHBaseCluster().getMaster(), tableName);
 
     // Second delete should fail with TableNotFound
     ProcedureInfo result = procExec.getResult(procId2);
@@ -171,7 +171,7 @@ public class TestDeleteTableProcedure {
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f");
+      UTIL.getHBaseCluster().getMaster(), tableName);
 
     // Second delete should not fail, because it is the same delete
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -205,7 +205,7 @@ public class TestDeleteTableProcedure {
       new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+      UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
   @Test(timeout=60000)
@@ -233,7 +233,7 @@ public class TestDeleteTableProcedure {
       procExec, procId, 6, DeleteTableState.values());
 
     MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+      UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
