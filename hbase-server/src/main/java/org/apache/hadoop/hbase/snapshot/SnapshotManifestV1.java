@@ -116,7 +116,7 @@ public class SnapshotManifestV1 {
       final SnapshotDescription desc) throws IOException {
     FileStatus[] regions = FSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      LOG.info("No regions under directory:" + snapshotDir);
+      LOG.debug("No regions under directory:" + snapshotDir);
       return null;
     }
 
