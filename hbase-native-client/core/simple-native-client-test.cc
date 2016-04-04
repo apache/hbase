@@ -22,7 +22,4 @@
 /**
  * Sample test.
  */
-TEST(SampleTest, sample) {
-  EXPECT_TRUE(true);
-}
-
+TEST(SampleTest, sample) { EXPECT_TRUE(true); }

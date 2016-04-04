@@ -16,30 +16,17 @@
  * limitations under the License.
  *
  */
+#pragma once
 
-#include <gtest/gtest.h>
+#include <string>
 
-namespace {
+namespace hbase {
 
-class NativeClientTestEnv : public ::testing::Environment {
+class GetResult {
 public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+  explicit GetResult(std::string key);
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+private:
+  std::string key_;
 };
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
-}
+}  // namespace hbase

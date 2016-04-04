@@ -17,29 +17,26 @@
  *
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-namespace {
+#include <wangle/service/ClientDispatcher.h>
 
-class NativeClientTestEnv : public ::testing::Environment {
+#include "core/pipeline.h"
+#include "core/request.h"
+#include "core/response.h"
+
+namespace hbase {
+class ClientDispatcher
+    : public wangle::ClientDispatcherBase<SerializePipeline, Request,
+                                          Response> {
 public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+  void read(Context *ctx, Response in) override;
+  folly::Future<Response> operator()(Request arg) override;
+  folly::Future<folly::Unit> close(Context *ctx) override;
+  folly::Future<folly::Unit> close() override;
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+private:
+  std::unordered_map<int32_t, folly::Promise<Response>> requests_;
+  uint32_t current_call_id_ = 1;
 };
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
-}
+}  // namespace hbase

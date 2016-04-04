@@ -1,3 +1,21 @@
+##
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 PROTO_SRCS = glob(['*.proto'])
 HEADER_FILENAMES = [ x.replace('.proto','.pb.h') for x in PROTO_SRCS]
 CC_FILENAMES = [ x.replace('.proto', '.pb.cc') for x in PROTO_SRCS]
@@ -20,7 +38,7 @@ for cc_filename in CC_FILENAMES:
   genrule(
     name = cc_filename,
     cmd = 'mkdir -p `dirname $OUT` '
-          ' && cp $(location :generate-proto-sources)/{} $OUT '
+          ' && cp $(location :generate-proto-sources)/*.cc `dirname $OUT` '
           ' && cp $(location :generate-proto-sources)/*.h `dirname $OUT`'.format(cc_filename),
     out = cc_filename,
   )
@@ -29,9 +47,7 @@ cxx_library(
   name = 'if',
   exported_headers =  [':' + x for x in HEADER_FILENAMES],
   srcs = [':' + x for x in CC_FILENAMES],
-  deps = [ '//third-party:protobuf'] 
-        + [':' + x for x in CC_FILENAMES] 
-        + [ ':' + x for x in HEADER_FILENAMES ],
+  deps = [ '//third-party:protobuf'],
   visibility = [ 'PUBLIC', ],
   exported_deps = ['//third-party:protobuf']
 )

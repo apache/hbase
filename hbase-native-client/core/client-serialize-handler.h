@@ -16,30 +16,29 @@
  * limitations under the License.
  *
  */
+#pragma once
 
-#include <gtest/gtest.h>
+#include <wangle/channel/Handler.h>
 
-namespace {
+#include "if/HBase.pb.h"
+#include "if/RPC.pb.h"
+#include "core/request.h"
+#include "core/response.h"
 
-class NativeClientTestEnv : public ::testing::Environment {
+namespace hbase {
+class ClientSerializeHandler
+    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, Response, Request,
+                             std::unique_ptr<folly::IOBuf>> {
 public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+  void read(Context *ctx, std::unique_ptr<folly::IOBuf> msg) override;
+  folly::Future<folly::Unit> write(Context *ctx, Request r) override;
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+private:
+  folly::Future<folly::Unit> write_preamble(Context *ctx);
+  folly::Future<folly::Unit> write_header(Context *ctx);
+  // Our own simple version of LengthFieldPrepender
+  std::unique_ptr<folly::IOBuf>
+  prepend_length(std::unique_ptr<folly::IOBuf> msg);
+  bool need_send_header_ = true;
 };
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
-}
+}  // namespace hbase

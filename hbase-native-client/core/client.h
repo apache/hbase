@@ -20,7 +20,23 @@
 #pragma once
 
 #include <folly/io/IOBuf.h>
+#include <folly/futures/Future.h>
 
+#include <string>
+
+#include "core/get-request.h"
+#include "core/get-result.h"
+#include "core/location-cache.h"
 #include "if/Cell.pb.h"
 
-class Client {};
+namespace hbase {
+class Client {
+public:
+  explicit Client(std::string quorum_spec);
+  folly::Future<GetResult> get(const GetRequest &get_request);
+
+private:
+  LocationCache location_cache;
+};
+
+}  // namespace hbase

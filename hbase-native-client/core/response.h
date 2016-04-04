@@ -16,30 +16,19 @@
  * limitations under the License.
  *
  */
+#pragma once
 
-#include <gtest/gtest.h>
+#include <cstdint>
 
-namespace {
+namespace hbase {
 
-class NativeClientTestEnv : public ::testing::Environment {
+class Response {
 public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+  Response() : call_id_(0) {}
+  uint32_t call_id() { return call_id_; }
+  void set_call_id(uint32_t call_id) { call_id_ = call_id; }
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+private:
+  uint32_t call_id_;
 };
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
-}
+}  // namespace hbase

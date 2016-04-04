@@ -16,30 +16,27 @@
  * limitations under the License.
  *
  */
+#include "core/pipeline.h"
 
-#include <gtest/gtest.h>
+#include <folly/Logging.h>
+#include <wangle/channel/AsyncSocketHandler.h>
+#include <wangle/channel/EventBaseHandler.h>
+#include <wangle/channel/OutputBufferingHandler.h>
+#include <wangle/codec/LengthFieldBasedFrameDecoder.h>
 
-namespace {
+#include "core/client-serialize-handler.h"
 
-class NativeClientTestEnv : public ::testing::Environment {
-public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
+using namespace folly;
+using namespace hbase;
+using namespace wangle;
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
-    ASSERT_EQ(0, result);
-  }
-};
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
+SerializePipeline::Ptr
+RpcPipelineFactory::newPipeline(std::shared_ptr<AsyncTransportWrapper> sock) {
+  auto pipeline = SerializePipeline::create();
+  pipeline->addBack(AsyncSocketHandler(sock));
+  pipeline->addBack(EventBaseHandler());
+  pipeline->addBack(LengthFieldBasedFrameDecoder());
+  pipeline->addBack(ClientSerializeHandler());
+  pipeline->finalize();
+  return pipeline;
 }
