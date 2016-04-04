@@ -23,19 +23,30 @@ def add_system_libs(names=[],
                     exported_linker_flags=[]):
     rules = []
     for name in names:
+        rule_visibility = ['PUBLIC']
         gen_rule_name = "gen_lib{}".format(name)
-        genrule(name=gen_rule_name,
-                out=gen_rule_name,
-                bash="mkdir -p $OUT && cp {}/lib{}.a $OUT".format(lib_dir,
-                                                                   name), )
+        genrule(
+            name=gen_rule_name,
+            out=gen_rule_name,
+            bash="mkdir -p $OUT && cp {}/lib{}.a $OUT".format(lib_dir, name), )
         prebuilt_cxx_library(name=name,
                              lib_name=name,
                              lib_dir='$(location :{})'.format(gen_rule_name),
                              deps=deps,
-			     force_static = True,
+                             force_static=True,
                              exported_deps=exported_deps,
-                             visibility=['PUBLIC'],
-                             exported_linker_flags=exported_linker_flags, )
+                             visibility=rule_visibility, )
+        rules.append(":" + name)
+    return rules
+
+
+def add_dynamic_libs(names=[]):
+    rules = []
+    for name in names:
+        prebuilt_cxx_library(name=name,
+                             header_only=True,
+                             exported_linker_flags=["-l" + name],
+                             visibility=["PUBLIC"], )
         rules.append(":" + name)
     return rules
 
@@ -54,58 +65,46 @@ local_libs = [
     "glog",
     "protobuf",
 ]
+dynamic_libs = ["stdc++", "pthread", "ssl", "crypto", "dl", "atomic", ]
+dynamic_rules = add_dynamic_libs(dynamic_libs)
+tp_dep_rules =  add_system_libs(system_libs,) \
+  + add_system_libs(local_libs, lib_dir = "/usr/local/lib") \
+  + dynamic_rules
 
-
-
-tp_dep_rules = add_system_libs(system_libs) \
-  + add_system_libs(local_libs, lib_dir = "/usr/local/lib")
-
-zookeeper = add_system_libs(["zookeeper_mt"], lib_dir =  "/usr/local/lib")
+zookeeper = add_system_libs(["zookeeper_mt"], lib_dir="/usr/local/lib")
 folly = add_system_libs(['folly'],
                         lib_dir='/usr/local/lib',
-                        exported_deps=tp_dep_rules,
-                        exported_linker_flags=["-pthread",
-                                               "-lstdc++", ])
+                        exported_deps=tp_dep_rules, )
 folly_bench = add_system_libs(['follybenchmark'],
                               lib_dir='/usr/local/lib',
-                              exported_deps=tp_dep_rules + folly,
-                              exported_linker_flags=["-pthread",
-                                                     "-lstdc++", ])
+                              exported_deps=folly + tp_dep_rules, )
 wangle = add_system_libs(['wangle'],
                          lib_dir='/usr/local/lib',
-                         exported_deps=tp_dep_rules + folly,
-                         exported_linker_flags=["-pthread",
-                                                "-lstdc++", ])
-
+                         exported_deps=folly + tp_dep_rules)
 
 genrule(
-name = "gen_zk",
-out = "gen_zk",
-bash = "mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*"
-)
-cxx_library(
-    name = 'google-test',
-    srcs = [
-    'googletest/googletest/src/gtest-all.cc',
-    'googletest/googlemock/src/gmock-all.cc',
-    'googletest/googlemock/src/gmock_main.cc',
-    ],
-    header_namespace = '',
-    exported_headers = subdir_glob([
-    ('googletest/googletest/include', '**/*.h'),
-    ('googletest/googlemock/include', '**/*.h'),
-    ]),
-    headers = subdir_glob([
-    ('googletest/googletest', 'src/*.h'),
-    ('googletest/googletest', 'src/*.cc'),
-    ('googletest/googlemock', 'src/*.h'),
-    ('googletest/googlemock', 'src/*.cc'),
-    ]),
-    exported_linker_flags = [
-    "-pthread",
-    "-lstdc++",
-    ],
-    visibility = [
-    'PUBLIC',
-    ],
-)
+    name="gen_zk",
+    out="gen_zk",
+    bash=
+    "mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*")
+cxx_library(name='google-test',
+            srcs=[
+                'googletest/googletest/src/gtest-all.cc',
+                'googletest/googlemock/src/gmock-all.cc',
+                'googletest/googlemock/src/gmock_main.cc',
+            ],
+            header_namespace='',
+            exported_headers=subdir_glob([
+                ('googletest/googletest/include', '**/*.h'),
+                ('googletest/googlemock/include', '**/*.h'),
+            ]),
+            headers=subdir_glob([
+                ('googletest/googletest', 'src/*.h'),
+                ('googletest/googletest', 'src/*.cc'),
+                ('googletest/googlemock', 'src/*.h'),
+                ('googletest/googlemock', 'src/*.cc'),
+            ]),
+            exported_deps=dynamic_rules,
+            visibility=[
+                'PUBLIC',
+            ], )

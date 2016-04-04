@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 #include "location-cache.h"
 
 #include <folly/Logging.h>
@@ -7,11 +25,10 @@
 using namespace std;
 using namespace folly;
 using namespace hbase::pb;
+using namespace hbase;
 
-namespace hbase {
-
-// TODO(elliott): make this configurable on client creation
-const static string META_LOCATION = "/hbase/meta-region-server";
+// TODO(eclark): make this configurable on client creation
+static const char META_LOCATION[] = "/hbase/meta-region-server";
 
 LocationCache::LocationCache(string quorum_spec,
                              shared_ptr<folly::Executor> executor)
@@ -50,18 +67,45 @@ void LocationCache::RefreshMetaLocation() {
 
 ServerName LocationCache::ReadMetaLocation() {
   char contents[4096];
+  // This needs to be int rather than size_t as that's what ZK expects.
   int len = sizeof(contents);
   // TODO(elliott): handle disconnects/reconntion as needed.
   int zk_result =
-      zoo_get(this->zk_, META_LOCATION.c_str(), 0, contents, &len, nullptr);
-
-  if (zk_result != ZOK) {
+      zoo_get(this->zk_, META_LOCATION, 0, contents, &len, nullptr);
+  if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
     throw runtime_error("Error getting meta location");
   }
+  // There should be a magic number for recoverable zk
+  if (static_cast<uint8_t>(contents[0]) != 255) {
+    LOG(ERROR) << "Magic number not in ZK znode data expected 255 got ="
+               << unsigned(static_cast<uint8_t>(contents[0]));
+    throw runtime_error("Magic number not in znode data");
+  }
+  // pos will keep track of skipped bytes.
+  int pos = 1;
+  // How long is the id?
+  int id_len = 0;
+  for (int i = 0; i < 4; ++i) {
+    id_len = id_len << 8;
+    id_len = id_len | static_cast<uint8_t>(contents[pos]);
+    ++pos;
+  }
+  // Skip the id
+  pos += id_len;
+  // Then all protobuf's for HBase are prefixed with a magic string.
+  // PBUF, so we skip that.
+  // TODO(eclark): check to make sure that the magic string is correct
+  // though I am not sure that will get us much.
+  pos += 4;
 
   MetaRegionServer mrs;
-  mrs.ParseFromArray(contents, len);
+  // Try to decode the protobuf.
+  // If there's an error bail out.
+  if (mrs.ParseFromArray(contents + pos, len - pos) == false) {
+    LOG(ERROR) << "Error parsing Protobuf Message";
+    throw runtime_error("Error parsing protobuf");
+  }
+
   return mrs.server();
-}
 }
