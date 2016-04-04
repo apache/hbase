@@ -5652,7 +5652,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // partial Result means that we should not reset the filters; filters
         // should only be reset in
         // between rows
-        if (!scannerContext.partialResultFormed()) resetFilters();
+        if (!scannerContext.midRowResultFormed()) resetFilters();
 
         if (isFilterDoneInternal()) {
           moreValues = false;
@@ -5727,7 +5727,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           nextKv = heap.peek();
           moreCellsInRow = moreCellsInRow(nextKv, currentRowCell);
           if (!moreCellsInRow) incrementCountOfRowsScannedMetric(scannerContext);
-          if (scannerContext.checkBatchLimit(limitScope)) {
+          if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
             return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
           } else if (scannerContext.checkSizeLimit(limitScope)) {
             ScannerContext.NextState state =
