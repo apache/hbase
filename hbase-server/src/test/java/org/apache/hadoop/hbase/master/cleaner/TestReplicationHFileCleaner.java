@@ -10,9 +10,14 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -26,12 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -45,7 +52,10 @@ import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -201,6 +211,48 @@ public class TestReplicationHFileCleaner {
     cleaner.isFileDeletable(fs.getFileStatus(file));
   }
 
+  /**
+   * ReplicationHFileCleaner should be able to ride over ZooKeeper errors without aborting.
+   */
+  @Test
+  public void testZooKeeperAbort() throws Exception {
+    ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
+
+    List<FileStatus> dummyFiles =
+        Lists.newArrayList(new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
+            "hfile1")), new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
+            "hfile2")));
+
+    FaultyZooKeeperWatcher faultyZK =
+        new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
+    try {
+      faultyZK.init();
+      cleaner.setConf(conf, faultyZK);
+      // should keep all files due to a ConnectionLossException getting the queues znodes
+      Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
+      assertFalse(toDelete.iterator().hasNext());
+      assertFalse(cleaner.isStopped());
+    } finally {
+      faultyZK.close();
+    }
+
+    // when zk is working both files should be returned
+    cleaner = new ReplicationHFileCleaner();
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testZooKeeperAbort-normal", null);
+    try {
+      cleaner.setConf(conf, zkw);
+      Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
+      Iterator<FileStatus> iter = filesToDelete.iterator();
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("hfile1"), iter.next().getPath());
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("hfile2"), iter.next().getPath());
+      assertFalse(iter.hasNext());
+    } finally {
+      zkw.close();
+    }
+  }
+
   static class DummyServer implements Server {
 
     @Override
@@ -259,6 +311,24 @@ public class TestReplicationHFileCleaner {
     @Override
     public ChoreService getChoreService() {
       return null;
+    }
+  }
+
+  static class FaultyZooKeeperWatcher extends ZooKeeperWatcher {
+    private RecoverableZooKeeper zk;
+    public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
+        throws ZooKeeperConnectionException, IOException {
+      super(conf, identifier, abortable);
+    }
+
+    public void init() throws Exception {
+      this.zk = spy(super.getRecoverableZooKeeper());
+      doThrow(new KeeperException.ConnectionLossException())
+          .when(zk).getData("/hbase/replication/hfile-refs", null, new Stat());
+    }
+
+    public RecoverableZooKeeper getRecoverableZooKeeper() {
+      return zk;
     }
   }
 }
