@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -5461,7 +5460,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
       // between rows
-      if (!scannerContext.partialResultFormed()) resetFilters();
+      if (!scannerContext.midRowResultFormed()) resetFilters();
 
       if (isFilterDoneInternal()) {
         moreValues = false;
@@ -5519,7 +5518,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         nextKv = heap.peek();
         moreCellsInRow = moreCellsInRow(nextKv, currentRow, offset, length);
 
-        if (scannerContext.checkBatchLimit(limitScope)) {
+        if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
           return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
         } else if (scannerContext.checkSizeLimit(limitScope)) {
           ScannerContext.NextState state =
