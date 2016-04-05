@@ -33972,6 +33972,46 @@ public final class MasterProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNamesOrBuilder(
         int index);
+
+    // optional string regex = 2;
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    boolean hasRegex();
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    java.lang.String getRegex();
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getRegexBytes();
+
+    // optional bool include_sys_tables = 3 [default = false];
+    /**
+     * <code>optional bool include_sys_tables = 3 [default = false];</code>
+     */
+    boolean hasIncludeSysTables();
+    /**
+     * <code>optional bool include_sys_tables = 3 [default = false];</code>
+     */
+    boolean getIncludeSysTables();
+
+    // optional string namespace = 4;
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    boolean hasNamespace();
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    java.lang.String getNamespace();
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getNamespaceBytes();
   }
   /**
    * Protobuf type {@code GetTableDescriptorsRequest}
@@ -34032,6 +34072,21 @@ public final class MasterProtos {
               tableNames_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry));
               break;
             }
+            case 18: {
+              bitField0_ |= 0x00000001;
+              regex_ = input.readBytes();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000002;
+              includeSysTables_ = input.readBool();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000004;
+              namespace_ = input.readBytes();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -34074,6 +34129,7 @@ public final class MasterProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated .TableName table_names = 1;
     public static final int TABLE_NAMES_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableNames_;
@@ -34110,8 +34166,113 @@ public final class MasterProtos {
       return tableNames_.get(index);
     }
 
+    // optional string regex = 2;
+    public static final int REGEX_FIELD_NUMBER = 2;
+    private java.lang.Object regex_;
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    public boolean hasRegex() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    public java.lang.String getRegex() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          regex_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string regex = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRegexBytes() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        regex_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional bool include_sys_tables = 3 [default = false];
+    public static final int INCLUDE_SYS_TABLES_FIELD_NUMBER = 3;
+    private boolean includeSysTables_;
+    /**
+     * <code>optional bool include_sys_tables = 3 [default = false];</code>
+     */
+    public boolean hasIncludeSysTables() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bool include_sys_tables = 3 [default = false];</code>
+     */
+    public boolean getIncludeSysTables() {
+      return includeSysTables_;
+    }
+
+    // optional string namespace = 4;
+    public static final int NAMESPACE_FIELD_NUMBER = 4;
+    private java.lang.Object namespace_;
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    public boolean hasNamespace() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    public java.lang.String getNamespace() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          namespace_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string namespace = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNamespaceBytes() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        namespace_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       tableNames_ = java.util.Collections.emptyList();
+      regex_ = "";
+      includeSysTables_ = false;
+      namespace_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -34134,6 +34295,15 @@ public final class MasterProtos {
       for (int i = 0; i < tableNames_.size(); i++) {
         output.writeMessage(1, tableNames_.get(i));
       }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(2, getRegexBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(3, includeSysTables_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(4, getNamespaceBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -34146,6 +34316,18 @@ public final class MasterProtos {
       for (int i = 0; i < tableNames_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, tableNames_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getRegexBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, includeSysTables_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getNamespaceBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -34172,6 +34354,21 @@ public final class MasterProtos {
       boolean result = true;
       result = result && getTableNamesList()
           .equals(other.getTableNamesList());
+      result = result && (hasRegex() == other.hasRegex());
+      if (hasRegex()) {
+        result = result && getRegex()
+            .equals(other.getRegex());
+      }
+      result = result && (hasIncludeSysTables() == other.hasIncludeSysTables());
+      if (hasIncludeSysTables()) {
+        result = result && (getIncludeSysTables()
+            == other.getIncludeSysTables());
+      }
+      result = result && (hasNamespace() == other.hasNamespace());
+      if (hasNamespace()) {
+        result = result && getNamespace()
+            .equals(other.getNamespace());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -34188,6 +34385,18 @@ public final class MasterProtos {
       if (getTableNamesCount() > 0) {
         hash = (37 * hash) + TABLE_NAMES_FIELD_NUMBER;
         hash = (53 * hash) + getTableNamesList().hashCode();
+      }
+      if (hasRegex()) {
+        hash = (37 * hash) + REGEX_FIELD_NUMBER;
+        hash = (53 * hash) + getRegex().hashCode();
+      }
+      if (hasIncludeSysTables()) {
+        hash = (37 * hash) + INCLUDE_SYS_TABLES_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getIncludeSysTables());
+      }
+      if (hasNamespace()) {
+        hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespace().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -34305,6 +34514,12 @@ public final class MasterProtos {
         } else {
           tableNamesBuilder_.clear();
         }
+        regex_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        includeSysTables_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        namespace_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -34332,6 +34547,7 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (tableNamesBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             tableNames_ = java.util.Collections.unmodifiableList(tableNames_);
@@ -34341,6 +34557,19 @@ public final class MasterProtos {
         } else {
           result.tableNames_ = tableNamesBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.regex_ = regex_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.includeSysTables_ = includeSysTables_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.namespace_ = namespace_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -34381,6 +34610,19 @@ public final class MasterProtos {
               tableNamesBuilder_.addAllMessages(other.tableNames_);
             }
           }
+        }
+        if (other.hasRegex()) {
+          bitField0_ |= 0x00000002;
+          regex_ = other.regex_;
+          onChanged();
+        }
+        if (other.hasIncludeSysTables()) {
+          setIncludeSysTables(other.getIncludeSysTables());
+        }
+        if (other.hasNamespace()) {
+          bitField0_ |= 0x00000008;
+          namespace_ = other.namespace_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -34653,6 +34895,187 @@ public final class MasterProtos {
           tableNames_ = null;
         }
         return tableNamesBuilder_;
+      }
+
+      // optional string regex = 2;
+      private java.lang.Object regex_ = "";
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public boolean hasRegex() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public java.lang.String getRegex() {
+        java.lang.Object ref = regex_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          regex_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRegexBytes() {
+        java.lang.Object ref = regex_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          regex_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public Builder setRegex(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public Builder clearRegex() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        regex_ = getDefaultInstance().getRegex();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 2;</code>
+       */
+      public Builder setRegexBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional bool include_sys_tables = 3 [default = false];
+      private boolean includeSysTables_ ;
+      /**
+       * <code>optional bool include_sys_tables = 3 [default = false];</code>
+       */
+      public boolean hasIncludeSysTables() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool include_sys_tables = 3 [default = false];</code>
+       */
+      public boolean getIncludeSysTables() {
+        return includeSysTables_;
+      }
+      /**
+       * <code>optional bool include_sys_tables = 3 [default = false];</code>
+       */
+      public Builder setIncludeSysTables(boolean value) {
+        bitField0_ |= 0x00000004;
+        includeSysTables_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool include_sys_tables = 3 [default = false];</code>
+       */
+      public Builder clearIncludeSysTables() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        includeSysTables_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional string namespace = 4;
+      private java.lang.Object namespace_ = "";
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public boolean hasNamespace() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public java.lang.String getNamespace() {
+        java.lang.Object ref = namespace_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          namespace_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNamespaceBytes() {
+        java.lang.Object ref = namespace_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          namespace_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public Builder setNamespace(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public Builder clearNamespace() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        namespace_ = getDefaultInstance().getNamespace();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string namespace = 4;</code>
+       */
+      public Builder setNamespaceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        namespace_ = value;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:GetTableDescriptorsRequest)
@@ -35389,6 +35812,46 @@ public final class MasterProtos {
 
   public interface GetTableNamesRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string regex = 1;
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    boolean hasRegex();
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    java.lang.String getRegex();
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getRegexBytes();
+
+    // optional bool include_sys_tables = 2 [default = false];
+    /**
+     * <code>optional bool include_sys_tables = 2 [default = false];</code>
+     */
+    boolean hasIncludeSysTables();
+    /**
+     * <code>optional bool include_sys_tables = 2 [default = false];</code>
+     */
+    boolean getIncludeSysTables();
+
+    // optional string namespace = 3;
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    boolean hasNamespace();
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    java.lang.String getNamespace();
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getNamespaceBytes();
   }
   /**
    * Protobuf type {@code GetTableNamesRequest}
@@ -35423,6 +35886,7 @@ public final class MasterProtos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
+      int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
@@ -35438,6 +35902,21 @@ public final class MasterProtos {
                                      extensionRegistry, tag)) {
                 done = true;
               }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              regex_ = input.readBytes();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              includeSysTables_ = input.readBool();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              namespace_ = input.readBytes();
               break;
             }
           }
@@ -35479,7 +35958,113 @@ public final class MasterProtos {
       return PARSER;
     }
 
+    private int bitField0_;
+    // optional string regex = 1;
+    public static final int REGEX_FIELD_NUMBER = 1;
+    private java.lang.Object regex_;
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public boolean hasRegex() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public java.lang.String getRegex() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          regex_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRegexBytes() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        regex_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional bool include_sys_tables = 2 [default = false];
+    public static final int INCLUDE_SYS_TABLES_FIELD_NUMBER = 2;
+    private boolean includeSysTables_;
+    /**
+     * <code>optional bool include_sys_tables = 2 [default = false];</code>
+     */
+    public boolean hasIncludeSysTables() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bool include_sys_tables = 2 [default = false];</code>
+     */
+    public boolean getIncludeSysTables() {
+      return includeSysTables_;
+    }
+
+    // optional string namespace = 3;
+    public static final int NAMESPACE_FIELD_NUMBER = 3;
+    private java.lang.Object namespace_;
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    public boolean hasNamespace() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    public java.lang.String getNamespace() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          namespace_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string namespace = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNamespaceBytes() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        namespace_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
+      regex_ = "";
+      includeSysTables_ = false;
+      namespace_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -35493,6 +36078,15 @@ public final class MasterProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getRegexBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, includeSysTables_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getNamespaceBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -35502,6 +36096,18 @@ public final class MasterProtos {
       if (size != -1) return size;
 
       size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getRegexBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, includeSysTables_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getNamespaceBytes());
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
@@ -35525,6 +36131,21 @@ public final class MasterProtos {
       org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest) obj;
 
       boolean result = true;
+      result = result && (hasRegex() == other.hasRegex());
+      if (hasRegex()) {
+        result = result && getRegex()
+            .equals(other.getRegex());
+      }
+      result = result && (hasIncludeSysTables() == other.hasIncludeSysTables());
+      if (hasIncludeSysTables()) {
+        result = result && (getIncludeSysTables()
+            == other.getIncludeSysTables());
+      }
+      result = result && (hasNamespace() == other.hasNamespace());
+      if (hasNamespace()) {
+        result = result && getNamespace()
+            .equals(other.getNamespace());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -35538,6 +36159,18 @@ public final class MasterProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasRegex()) {
+        hash = (37 * hash) + REGEX_FIELD_NUMBER;
+        hash = (53 * hash) + getRegex().hashCode();
+      }
+      if (hasIncludeSysTables()) {
+        hash = (37 * hash) + INCLUDE_SYS_TABLES_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getIncludeSysTables());
+      }
+      if (hasNamespace()) {
+        hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespace().hashCode();
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -35647,6 +36280,12 @@ public final class MasterProtos {
 
       public Builder clear() {
         super.clear();
+        regex_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        includeSysTables_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        namespace_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -35673,6 +36312,21 @@ public final class MasterProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.regex_ = regex_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.includeSysTables_ = includeSysTables_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.namespace_ = namespace_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -35688,6 +36342,19 @@ public final class MasterProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest.getDefaultInstance()) return this;
+        if (other.hasRegex()) {
+          bitField0_ |= 0x00000001;
+          regex_ = other.regex_;
+          onChanged();
+        }
+        if (other.hasIncludeSysTables()) {
+          setIncludeSysTables(other.getIncludeSysTables());
+        }
+        if (other.hasNamespace()) {
+          bitField0_ |= 0x00000004;
+          namespace_ = other.namespace_;
+          onChanged();
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -35711,6 +36378,188 @@ public final class MasterProtos {
             mergeFrom(parsedMessage);
           }
         }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string regex = 1;
+      private java.lang.Object regex_ = "";
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public boolean hasRegex() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public java.lang.String getRegex() {
+        java.lang.Object ref = regex_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          regex_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRegexBytes() {
+        java.lang.Object ref = regex_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          regex_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder setRegex(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder clearRegex() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        regex_ = getDefaultInstance().getRegex();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder setRegexBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional bool include_sys_tables = 2 [default = false];
+      private boolean includeSysTables_ ;
+      /**
+       * <code>optional bool include_sys_tables = 2 [default = false];</code>
+       */
+      public boolean hasIncludeSysTables() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool include_sys_tables = 2 [default = false];</code>
+       */
+      public boolean getIncludeSysTables() {
+        return includeSysTables_;
+      }
+      /**
+       * <code>optional bool include_sys_tables = 2 [default = false];</code>
+       */
+      public Builder setIncludeSysTables(boolean value) {
+        bitField0_ |= 0x00000002;
+        includeSysTables_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool include_sys_tables = 2 [default = false];</code>
+       */
+      public Builder clearIncludeSysTables() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        includeSysTables_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional string namespace = 3;
+      private java.lang.Object namespace_ = "";
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public boolean hasNamespace() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public java.lang.String getNamespace() {
+        java.lang.Object ref = namespace_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          namespace_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNamespaceBytes() {
+        java.lang.Object ref = namespace_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          namespace_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public Builder setNamespace(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public Builder clearNamespace() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        namespace_ = getDefaultInstance().getNamespace();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string namespace = 3;</code>
+       */
+      public Builder setNamespaceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        namespace_ = value;
+        onChanged();
         return this;
       }
 
@@ -46507,114 +47356,117 @@ public final class MasterProtos {
       "false\"=\n\033GetSchemaAlterStatusRequest\022\036\n\n" +
       "table_name\030\001 \002(\0132\n.TableName\"T\n\034GetSchem" +
       "aAlterStatusResponse\022\035\n\025yet_to_update_re",
-      "gions\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"=\n\032Ge" +
-      "tTableDescriptorsRequest\022\037\n\013table_names\030" +
-      "\001 \003(\0132\n.TableName\"A\n\033GetTableDescriptors" +
-      "Response\022\"\n\014table_schema\030\001 \003(\0132\014.TableSc" +
-      "hema\"\026\n\024GetTableNamesRequest\"8\n\025GetTable" +
-      "NamesResponse\022\037\n\013table_names\030\001 \003(\0132\n.Tab" +
-      "leName\"\031\n\027GetClusterStatusRequest\"B\n\030Get" +
-      "ClusterStatusResponse\022&\n\016cluster_status\030" +
-      "\001 \002(\0132\016.ClusterStatus\"\030\n\026IsMasterRunning" +
-      "Request\"4\n\027IsMasterRunningResponse\022\031\n\021is",
-      "_master_running\030\001 \002(\010\"@\n\024ExecProcedureRe" +
-      "quest\022(\n\tprocedure\030\001 \002(\0132\025.ProcedureDesc" +
-      "ription\"1\n\025ExecProcedureResponse\022\030\n\020expe" +
-      "cted_timeout\030\001 \002(\003\"B\n\026IsProcedureDoneReq" +
-      "uest\022(\n\tprocedure\030\001 \001(\0132\025.ProcedureDescr" +
-      "iption\"W\n\027IsProcedureDoneResponse\022\023\n\004don" +
-      "e\030\001 \001(\010:\005false\022\'\n\010snapshot\030\002 \001(\0132\025.Proce" +
-      "dureDescription\"T\n\024TruncateTableRequest\022" +
-      "\035\n\ttableName\030\001 \002(\0132\n.TableName\022\035\n\016preser" +
-      "veSplits\030\002 \001(\010:\005false\"\027\n\025TruncateTableRe",
-      "sponse\"\035\n\033SecurityCapabilitiesRequest\"\343\001" +
-      "\n\034SecurityCapabilitiesResponse\022>\n\014capabi" +
-      "lities\030\001 \003(\0162(.SecurityCapabilitiesRespo" +
-      "nse.Capability\"\202\001\n\nCapability\022\031\n\025SIMPLE_" +
-      "AUTHENTICATION\020\000\022\031\n\025SECURE_AUTHENTICATIO" +
-      "N\020\001\022\021\n\rAUTHORIZATION\020\002\022\026\n\022CELL_AUTHORIZA" +
-      "TION\020\003\022\023\n\017CELL_VISIBILITY\020\0042\322\030\n\rMasterSe" +
-      "rvice\022S\n\024GetSchemaAlterStatus\022\034.GetSchem" +
-      "aAlterStatusRequest\032\035.GetSchemaAlterStat" +
-      "usResponse\022P\n\023GetTableDescriptors\022\033.GetT",
-      "ableDescriptorsRequest\032\034.GetTableDescrip" +
-      "torsResponse\022>\n\rGetTableNames\022\025.GetTable" +
-      "NamesRequest\032\026.GetTableNamesResponse\022G\n\020" +
-      "GetClusterStatus\022\030.GetClusterStatusReque" +
-      "st\032\031.GetClusterStatusResponse\022D\n\017IsMaste" +
-      "rRunning\022\027.IsMasterRunningRequest\032\030.IsMa" +
-      "sterRunningResponse\0222\n\tAddColumn\022\021.AddCo" +
-      "lumnRequest\032\022.AddColumnResponse\022;\n\014Delet" +
-      "eColumn\022\024.DeleteColumnRequest\032\025.DeleteCo" +
-      "lumnResponse\022;\n\014ModifyColumn\022\024.ModifyCol",
-      "umnRequest\032\025.ModifyColumnResponse\0225\n\nMov" +
-      "eRegion\022\022.MoveRegionRequest\032\023.MoveRegion" +
-      "Response\022Y\n\026DispatchMergingRegions\022\036.Dis" +
-      "patchMergingRegionsRequest\032\037.DispatchMer" +
-      "gingRegionsResponse\022;\n\014AssignRegion\022\024.As" +
-      "signRegionRequest\032\025.AssignRegionResponse" +
-      "\022A\n\016UnassignRegion\022\026.UnassignRegionReque" +
-      "st\032\027.UnassignRegionResponse\022>\n\rOfflineRe" +
-      "gion\022\025.OfflineRegionRequest\032\026.OfflineReg" +
-      "ionResponse\0228\n\013DeleteTable\022\023.DeleteTable",
-      "Request\032\024.DeleteTableResponse\0228\n\013EnableT" +
-      "able\022\023.EnableTableRequest\032\024.EnableTableR" +
-      "esponse\022;\n\014DisableTable\022\024.DisableTableRe" +
-      "quest\032\025.DisableTableResponse\0228\n\013ModifyTa" +
-      "ble\022\023.ModifyTableRequest\032\024.ModifyTableRe" +
-      "sponse\0228\n\013CreateTable\022\023.CreateTableReque" +
-      "st\032\024.CreateTableResponse\022/\n\010Shutdown\022\020.S" +
-      "hutdownRequest\032\021.ShutdownResponse\0225\n\nSto" +
-      "pMaster\022\022.StopMasterRequest\032\023.StopMaster" +
-      "Response\022,\n\007Balance\022\017.BalanceRequest\032\020.B",
-      "alanceResponse\022M\n\022SetBalancerRunning\022\032.S" +
-      "etBalancerRunningRequest\032\033.SetBalancerRu" +
-      "nningResponse\022J\n\021IsBalancerEnabled\022\031.IsB" +
-      "alancerEnabledRequest\032\032.IsBalancerEnable" +
-      "dResponse\022A\n\016RunCatalogScan\022\026.RunCatalog" +
-      "ScanRequest\032\027.RunCatalogScanResponse\022S\n\024" +
-      "EnableCatalogJanitor\022\034.EnableCatalogJani" +
-      "torRequest\032\035.EnableCatalogJanitorRespons" +
-      "e\022\\\n\027IsCatalogJanitorEnabled\022\037.IsCatalog" +
-      "JanitorEnabledRequest\032 .IsCatalogJanitor",
-      "EnabledResponse\022L\n\021ExecMasterService\022\032.C" +
-      "oprocessorServiceRequest\032\033.CoprocessorSe" +
-      "rviceResponse\022/\n\010Snapshot\022\020.SnapshotRequ" +
-      "est\032\021.SnapshotResponse\022V\n\025GetCompletedSn" +
-      "apshots\022\035.GetCompletedSnapshotsRequest\032\036" +
-      ".GetCompletedSnapshotsResponse\022A\n\016Delete" +
-      "Snapshot\022\026.DeleteSnapshotRequest\032\027.Delet" +
-      "eSnapshotResponse\022A\n\016IsSnapshotDone\022\026.Is" +
-      "SnapshotDoneRequest\032\027.IsSnapshotDoneResp" +
-      "onse\022D\n\017RestoreSnapshot\022\027.RestoreSnapsho",
-      "tRequest\032\030.RestoreSnapshotResponse\022V\n\025Is" +
-      "RestoreSnapshotDone\022\035.IsRestoreSnapshotD" +
-      "oneRequest\032\036.IsRestoreSnapshotDoneRespon" +
-      "se\022>\n\rExecProcedure\022\025.ExecProcedureReque" +
-      "st\032\026.ExecProcedureResponse\022D\n\017IsProcedur" +
-      "eDone\022\027.IsProcedureDoneRequest\032\030.IsProce" +
-      "dureDoneResponse\022D\n\017ModifyNamespace\022\027.Mo" +
-      "difyNamespaceRequest\032\030.ModifyNamespaceRe" +
-      "sponse\022D\n\017CreateNamespace\022\027.CreateNamesp" +
-      "aceRequest\032\030.CreateNamespaceResponse\022D\n\017",
-      "DeleteNamespace\022\027.DeleteNamespaceRequest" +
-      "\032\030.DeleteNamespaceResponse\022Y\n\026GetNamespa" +
-      "ceDescriptor\022\036.GetNamespaceDescriptorReq" +
-      "uest\032\037.GetNamespaceDescriptorResponse\022_\n" +
-      "\030ListNamespaceDescriptors\022 .ListNamespac" +
-      "eDescriptorsRequest\032!.ListNamespaceDescr" +
-      "iptorsResponse\022t\n\037ListTableDescriptorsBy" +
-      "Namespace\022\'.ListTableDescriptorsByNamesp" +
-      "aceRequest\032(.ListTableDescriptorsByNames" +
-      "paceResponse\022b\n\031ListTableNamesByNamespac",
-      "e\022!.ListTableNamesByNamespaceRequest\032\".L" +
-      "istTableNamesByNamespaceResponse\022>\n\rtrun" +
-      "cateTable\022\025.TruncateTableRequest\032\026.Trunc" +
-      "ateTableResponse\022V\n\027getSecurityCapabilit" +
-      "ies\022\034.SecurityCapabilitiesRequest\032\035.Secu" +
-      "rityCapabilitiesResponseBB\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\014MasterPr" +
-      "otosH\001\210\001\001\240\001\001"
+      "gions\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\202\001\n\032G" +
+      "etTableDescriptorsRequest\022\037\n\013table_names" +
+      "\030\001 \003(\0132\n.TableName\022\r\n\005regex\030\002 \001(\t\022!\n\022inc" +
+      "lude_sys_tables\030\003 \001(\010:\005false\022\021\n\tnamespac" +
+      "e\030\004 \001(\t\"A\n\033GetTableDescriptorsResponse\022\"" +
+      "\n\014table_schema\030\001 \003(\0132\014.TableSchema\"[\n\024Ge" +
+      "tTableNamesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022inc" +
+      "lude_sys_tables\030\002 \001(\010:\005false\022\021\n\tnamespac" +
+      "e\030\003 \001(\t\"8\n\025GetTableNamesResponse\022\037\n\013tabl" +
+      "e_names\030\001 \003(\0132\n.TableName\"\031\n\027GetClusterS",
+      "tatusRequest\"B\n\030GetClusterStatusResponse" +
+      "\022&\n\016cluster_status\030\001 \002(\0132\016.ClusterStatus" +
+      "\"\030\n\026IsMasterRunningRequest\"4\n\027IsMasterRu" +
+      "nningResponse\022\031\n\021is_master_running\030\001 \002(\010" +
+      "\"@\n\024ExecProcedureRequest\022(\n\tprocedure\030\001 " +
+      "\002(\0132\025.ProcedureDescription\"1\n\025ExecProced" +
+      "ureResponse\022\030\n\020expected_timeout\030\001 \002(\003\"B\n" +
+      "\026IsProcedureDoneRequest\022(\n\tprocedure\030\001 \001" +
+      "(\0132\025.ProcedureDescription\"W\n\027IsProcedure" +
+      "DoneResponse\022\023\n\004done\030\001 \001(\010:\005false\022\'\n\010sna",
+      "pshot\030\002 \001(\0132\025.ProcedureDescription\"T\n\024Tr" +
+      "uncateTableRequest\022\035\n\ttableName\030\001 \002(\0132\n." +
+      "TableName\022\035\n\016preserveSplits\030\002 \001(\010:\005false" +
+      "\"\027\n\025TruncateTableResponse\"\035\n\033SecurityCap" +
+      "abilitiesRequest\"\343\001\n\034SecurityCapabilitie" +
+      "sResponse\022>\n\014capabilities\030\001 \003(\0162(.Securi" +
+      "tyCapabilitiesResponse.Capability\"\202\001\n\nCa" +
+      "pability\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025S" +
+      "ECURE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZATION\020" +
+      "\002\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_VISIBI",
+      "LITY\020\0042\322\030\n\rMasterService\022S\n\024GetSchemaAlt" +
+      "erStatus\022\034.GetSchemaAlterStatusRequest\032\035" +
+      ".GetSchemaAlterStatusResponse\022P\n\023GetTabl" +
+      "eDescriptors\022\033.GetTableDescriptorsReques" +
+      "t\032\034.GetTableDescriptorsResponse\022>\n\rGetTa" +
+      "bleNames\022\025.GetTableNamesRequest\032\026.GetTab" +
+      "leNamesResponse\022G\n\020GetClusterStatus\022\030.Ge" +
+      "tClusterStatusRequest\032\031.GetClusterStatus" +
+      "Response\022D\n\017IsMasterRunning\022\027.IsMasterRu" +
+      "nningRequest\032\030.IsMasterRunningResponse\0222",
+      "\n\tAddColumn\022\021.AddColumnRequest\032\022.AddColu" +
+      "mnResponse\022;\n\014DeleteColumn\022\024.DeleteColum" +
+      "nRequest\032\025.DeleteColumnResponse\022;\n\014Modif" +
+      "yColumn\022\024.ModifyColumnRequest\032\025.ModifyCo" +
+      "lumnResponse\0225\n\nMoveRegion\022\022.MoveRegionR" +
+      "equest\032\023.MoveRegionResponse\022Y\n\026DispatchM" +
+      "ergingRegions\022\036.DispatchMergingRegionsRe" +
+      "quest\032\037.DispatchMergingRegionsResponse\022;" +
+      "\n\014AssignRegion\022\024.AssignRegionRequest\032\025.A" +
+      "ssignRegionResponse\022A\n\016UnassignRegion\022\026.",
+      "UnassignRegionRequest\032\027.UnassignRegionRe" +
+      "sponse\022>\n\rOfflineRegion\022\025.OfflineRegionR" +
+      "equest\032\026.OfflineRegionResponse\0228\n\013Delete" +
+      "Table\022\023.DeleteTableRequest\032\024.DeleteTable" +
+      "Response\0228\n\013EnableTable\022\023.EnableTableReq" +
+      "uest\032\024.EnableTableResponse\022;\n\014DisableTab" +
+      "le\022\024.DisableTableRequest\032\025.DisableTableR" +
+      "esponse\0228\n\013ModifyTable\022\023.ModifyTableRequ" +
+      "est\032\024.ModifyTableResponse\0228\n\013CreateTable" +
+      "\022\023.CreateTableRequest\032\024.CreateTableRespo",
+      "nse\022/\n\010Shutdown\022\020.ShutdownRequest\032\021.Shut" +
+      "downResponse\0225\n\nStopMaster\022\022.StopMasterR" +
+      "equest\032\023.StopMasterResponse\022,\n\007Balance\022\017" +
+      ".BalanceRequest\032\020.BalanceResponse\022M\n\022Set" +
+      "BalancerRunning\022\032.SetBalancerRunningRequ" +
+      "est\032\033.SetBalancerRunningResponse\022J\n\021IsBa" +
+      "lancerEnabled\022\031.IsBalancerEnabledRequest" +
+      "\032\032.IsBalancerEnabledResponse\022A\n\016RunCatal" +
+      "ogScan\022\026.RunCatalogScanRequest\032\027.RunCata" +
+      "logScanResponse\022S\n\024EnableCatalogJanitor\022",
+      "\034.EnableCatalogJanitorRequest\032\035.EnableCa" +
+      "talogJanitorResponse\022\\\n\027IsCatalogJanitor" +
+      "Enabled\022\037.IsCatalogJanitorEnabledRequest" +
+      "\032 .IsCatalogJanitorEnabledResponse\022L\n\021Ex" +
+      "ecMasterService\022\032.CoprocessorServiceRequ" +
+      "est\032\033.CoprocessorServiceResponse\022/\n\010Snap" +
+      "shot\022\020.SnapshotRequest\032\021.SnapshotRespons" +
+      "e\022V\n\025GetCompletedSnapshots\022\035.GetComplete" +
+      "dSnapshotsRequest\032\036.GetCompletedSnapshot" +
+      "sResponse\022A\n\016DeleteSnapshot\022\026.DeleteSnap",
+      "shotRequest\032\027.DeleteSnapshotResponse\022A\n\016" +
+      "IsSnapshotDone\022\026.IsSnapshotDoneRequest\032\027" +
+      ".IsSnapshotDoneResponse\022D\n\017RestoreSnapsh" +
+      "ot\022\027.RestoreSnapshotRequest\032\030.RestoreSna" +
+      "pshotResponse\022V\n\025IsRestoreSnapshotDone\022\035" +
+      ".IsRestoreSnapshotDoneRequest\032\036.IsRestor" +
+      "eSnapshotDoneResponse\022>\n\rExecProcedure\022\025" +
+      ".ExecProcedureRequest\032\026.ExecProcedureRes" +
+      "ponse\022D\n\017IsProcedureDone\022\027.IsProcedureDo" +
+      "neRequest\032\030.IsProcedureDoneResponse\022D\n\017M",
+      "odifyNamespace\022\027.ModifyNamespaceRequest\032" +
+      "\030.ModifyNamespaceResponse\022D\n\017CreateNames" +
+      "pace\022\027.CreateNamespaceRequest\032\030.CreateNa" +
+      "mespaceResponse\022D\n\017DeleteNamespace\022\027.Del" +
+      "eteNamespaceRequest\032\030.DeleteNamespaceRes" +
+      "ponse\022Y\n\026GetNamespaceDescriptor\022\036.GetNam" +
+      "espaceDescriptorRequest\032\037.GetNamespaceDe" +
+      "scriptorResponse\022_\n\030ListNamespaceDescrip" +
+      "tors\022 .ListNamespaceDescriptorsRequest\032!" +
+      ".ListNamespaceDescriptorsResponse\022t\n\037Lis",
+      "tTableDescriptorsByNamespace\022\'.ListTable" +
+      "DescriptorsByNamespaceRequest\032(.ListTabl" +
+      "eDescriptorsByNamespaceResponse\022b\n\031ListT" +
+      "ableNamesByNamespace\022!.ListTableNamesByN" +
+      "amespaceRequest\032\".ListTableNamesByNamesp" +
+      "aceResponse\022>\n\rtruncateTable\022\025.TruncateT" +
+      "ableRequest\032\026.TruncateTableResponse\022V\n\027g" +
+      "etSecurityCapabilities\022\034.SecurityCapabil" +
+      "itiesRequest\032\035.SecurityCapabilitiesRespo" +
+      "nseBB\n*org.apache.hadoop.hbase.protobuf.",
+      "generatedB\014MasterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -47046,7 +47898,7 @@ public final class MasterProtos {
           internal_static_GetTableDescriptorsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableDescriptorsRequest_descriptor,
-              new java.lang.String[] { "TableNames", });
+              new java.lang.String[] { "TableNames", "Regex", "IncludeSysTables", "Namespace", });
           internal_static_GetTableDescriptorsResponse_descriptor =
             getDescriptor().getMessageTypes().get(71);
           internal_static_GetTableDescriptorsResponse_fieldAccessorTable = new
@@ -47058,7 +47910,7 @@ public final class MasterProtos {
           internal_static_GetTableNamesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableNamesRequest_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { "Regex", "IncludeSysTables", "Namespace", });
           internal_static_GetTableNamesResponse_descriptor =
             getDescriptor().getMessageTypes().get(73);
           internal_static_GetTableNamesResponse_fieldAccessorTable = new

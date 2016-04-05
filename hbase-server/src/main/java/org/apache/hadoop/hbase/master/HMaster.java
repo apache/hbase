@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import javax.management.ObjectName;
 
@@ -262,6 +264,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 
 import com.google.common.collect.Lists;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
@@ -1232,11 +1235,6 @@ MasterServices, Server {
     return result;
   }
 
-  @Override
-  public TableDescriptors getTableDescriptors() {
-    return this.tableDescriptors;
-  }
-
   /** @return InfoServer object. Maybe null.*/
   public InfoServer getInfoServer() {
     return this.infoServer;
@@ -1245,6 +1243,11 @@ MasterServices, Server {
   @Override
   public Configuration getConfiguration() {
     return this.conf;
+  }
+
+  @Override
+  public TableDescriptors getTableDescriptors() {
+    return this.tableDescriptors;
   }
 
   @Override
@@ -1852,7 +1855,7 @@ MasterServices, Server {
     }
 
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
-    getNamespaceDescriptor(namespace); // ensure namespace exists
+    ensureNamespaceExists(namespace);
 
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
@@ -3521,39 +3524,80 @@ MasterServices, Server {
     }
   }
 
-  @Override
-  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+  private void checkNamespaceManagerReady() throws IOException {
     boolean ready = tableNamespaceManager != null &&
         tableNamespaceManager.isTableAvailableAndInitialized();
     if (!ready) {
       throw new IOException("Table Namespace Manager not ready yet, try again later");
     }
+  }
+
+  /**
+   * Ensure that the specified namespace exists, otherwise throws a NamespaceNotFoundException
+   *
+   * @param name the namespace to check
+   * @throws IOException if the namespace manager is not ready yet.
+   * @throws NamespaceNotFoundException if the namespace does not exists
+   */
+  private void ensureNamespaceExists(final String name)
+      throws IOException, NamespaceNotFoundException {
+    checkNamespaceManagerReady();
     NamespaceDescriptor nsd = tableNamespaceManager.get(name);
     if (nsd == null) {
       throw new NamespaceNotFoundException(name);
     }
+  }
+
+  @Override
+  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+    checkNamespaceManagerReady();
+
+    if (cpHost != null) {
+      cpHost.preGetNamespaceDescriptor(name);
+    }
+
+    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
+    if (nsd == null) {
+      throw new NamespaceNotFoundException(name);
+    }
+
+    if (cpHost != null) {
+      cpHost.postGetNamespaceDescriptor(nsd);
+    }
+
     return nsd;
   }
 
   @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
-    return Lists.newArrayList(tableNamespaceManager.list());
+    checkNamespaceManagerReady();
+
+    final List<NamespaceDescriptor> descriptors = new ArrayList<NamespaceDescriptor>();
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preListNamespaceDescriptors(descriptors);
+    }
+
+    if (!bypass) {
+      descriptors.addAll(tableNamespaceManager.list());
+
+      if (cpHost != null) {
+        cpHost.postListNamespaceDescriptors(descriptors);
+      }
+    }
+    return descriptors;
   }
 
   @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    getNamespaceDescriptor(name); // check that namespace exists
-    return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
+    ensureNamespaceExists(name);
+    return listTableDescriptors(name, null, null, true);
   }
 
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-    List<TableName> tableNames = Lists.newArrayList();
-    getNamespaceDescriptor(name); // check that namespace exists
-    for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
-      tableNames.add(descriptor.getTableName());
-    }
-    return tableNames;
+    ensureNamespaceExists(name);
+    return listTableNames(name, null, true);
   }
 
   @Override
@@ -3599,7 +3643,6 @@ MasterServices, Server {
     }
   }
 
-
   @Override
   public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
       throws ServiceException {
@@ -3617,6 +3660,119 @@ MasterServices, Server {
     IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
     response.setEnabled(isBalancerOn());
     return response.build();
+  }
+
+  /**
+   * Returns the list of table descriptors that match the specified request
+   *
+   * @param namespace the namespace to query, or null if querying for all
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param tableNameList the list of table names, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table descriptors
+   */
+  public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
+      final List<TableName> tableNameList, final boolean includeSysTables)
+      throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preGetTableDescriptors(tableNameList, descriptors);
+    }
+
+    if (!bypass) {
+      if (tableNameList == null || tableNameList.size() == 0) {
+        // request for all TableDescriptors
+        Collection<HTableDescriptor> htds;
+        if (namespace != null && namespace.length() > 0) {
+          htds = tableDescriptors.getByNamespace(namespace).values();
+        } else {
+          htds = tableDescriptors.getAll().values();
+        }
+
+        for (HTableDescriptor desc: htds) {
+          if (includeSysTables || !desc.getTableName().isSystemTable()) {
+            descriptors.add(desc);
+          }
+        }
+      } else {
+        for (TableName s: tableNameList) {
+          HTableDescriptor desc = tableDescriptors.get(s);
+          if (desc != null) {
+            descriptors.add(desc);
+          }
+        }
+      }
+
+      // Retains only those matched by regular expression.
+      if (regex != null) {
+        filterTablesByRegex(descriptors, Pattern.compile(regex));
+      }
+
+      if (cpHost != null) {
+        cpHost.postGetTableDescriptors(descriptors);
+      }
+    }
+    return descriptors;
+  }
+
+  /**
+   * Returns the list of table names that match the specified request
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param namespace the namespace to query, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table names
+   */
+  public List<TableName> listTableNames(final String namespace, final String regex,
+      final boolean includeSysTables) throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+    // get all descriptors
+    Collection<HTableDescriptor> htds;
+    if (namespace != null && namespace.length() > 0) {
+      htds = tableDescriptors.getByNamespace(namespace).values();
+    } else {
+      htds = tableDescriptors.getAll().values();
+    }
+
+    for (HTableDescriptor htd: htds) {
+      if (includeSysTables || !htd.getTableName().isSystemTable()) {
+        descriptors.add(htd);
+      }
+    }
+
+    // Retains only those matched by regular expression.
+    if (regex != null) {
+      filterTablesByRegex(descriptors, Pattern.compile(regex));
+    }
+
+    List<TableName> result = new ArrayList<TableName>(descriptors.size());
+    for (HTableDescriptor htd: descriptors) {
+      result.add(htd.getTableName());
+    }
+    return result;
+  }
+
+  /**
+   * Removes the table descriptors that don't match the pattern.
+   * @param descriptors list of table descriptors to filter
+   * @param pattern the regex to use
+   */
+  private static void filterTablesByRegex(final Collection<HTableDescriptor> descriptors,
+      final Pattern pattern) {
+    final String defaultNS = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      HTableDescriptor htd = itr.next();
+      String tableName = htd.getTableName().getNameAsString();
+      boolean matched = pattern.matcher(tableName).matches();
+      if (!matched && htd.getTableName().getNamespaceAsString().equals(defaultNS)) {
+        matched = pattern.matcher(defaultNS + TableName.NAMESPACE_DELIM + tableName).matches();
+      }
+      if (!matched) {
+        itr.remove();
+      }
+    }
   }
 
   /**
@@ -3679,4 +3835,5 @@ MasterServices, Server {
     }
     return response.build();
   }
+
 }

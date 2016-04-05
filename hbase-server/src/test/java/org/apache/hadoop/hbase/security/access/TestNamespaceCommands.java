@@ -22,7 +22,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.Arrays;
+import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -33,6 +37,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -52,6 +57,7 @@ import com.google.protobuf.BlockingRpcChannel;
 @Category(MediumTests.class)
 public class TestNamespaceCommands extends SecureTestUtil {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final Log LOG = LogFactory.getLog(TestNamespaceCommands.class);
   private static String TEST_NAMESPACE = "ns1";
   private static String TEST_NAMESPACE2 = "ns2";
   private static Configuration conf;
@@ -60,21 +66,42 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
   // user with all permissions
   private static User SUPERUSER;
+
+  // user with A permission on global
+  private static User USER_GLOBAL_ADMIN;
+  // user with C permission on global
+  private static User USER_GLOBAL_CREATE;
+  // user with W permission on global
+  private static User USER_GLOBAL_WRITE;
+  // user with R permission on global
+  private static User USER_GLOBAL_READ;
+  // user with X permission on global
+  private static User USER_GLOBAL_EXEC;
+
+  // user with A permission on namespace
+  private static User USER_NS_ADMIN;
+  // user with C permission on namespace
+  private static User USER_NS_CREATE;
+  // user with W permission on namespace
+  private static User USER_NS_WRITE;
+  // user with R permission on namespace.
+  private static User USER_NS_READ;
+  // user with X permission on namespace.
+  private static User USER_NS_EXEC;
+
   // user with rw permissions
-  private static User USER_RW;
-  // user with create table permissions alone
-  private static User USER_CREATE;
-  // user with permission on namespace for testing all operations.
-  private static User USER_NSP_WRITE;
-  // user with admin permission on namespace.
-  private static User USER_NSP_ADMIN;
+  private static User USER_TABLE_WRITE;  // TODO: WE DO NOT GIVE ANY PERMS TO THIS USER
+  //user with create table permissions alone
+  private static User USER_TABLE_CREATE; // TODO: WE DO NOT GIVE ANY PERMS TO THIS USER
 
   private static final String GROUP_ADMIN = "group_admin";
+  private static final String GROUP_NS_ADMIN = "group_ns_admin";
   private static final String GROUP_CREATE = "group_create";
   private static final String GROUP_READ = "group_read";
   private static final String GROUP_WRITE = "group_write";
 
   private static User USER_GROUP_ADMIN;
+  private static User USER_GROUP_NS_ADMIN;
   private static User USER_GROUP_CREATE;
   private static User USER_GROUP_READ;
   private static User USER_GROUP_WRITE;
@@ -88,13 +115,27 @@ public class TestNamespaceCommands extends SecureTestUtil {
     enableSecurity(conf);
 
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    USER_RW = User.createUserForTesting(conf, "rw_user", new String[0]);
-    USER_CREATE = User.createUserForTesting(conf, "create_user", new String[0]);
-    USER_NSP_WRITE = User.createUserForTesting(conf, "namespace_write", new String[0]);
-    USER_NSP_ADMIN = User.createUserForTesting(conf, "namespace_admin", new String[0]);
+    // Users with global permissions
+    USER_GLOBAL_ADMIN = User.createUserForTesting(conf, "global_admin", new String[0]);
+    USER_GLOBAL_CREATE = User.createUserForTesting(conf, "global_create", new String[0]);
+    USER_GLOBAL_WRITE = User.createUserForTesting(conf, "global_write", new String[0]);
+    USER_GLOBAL_READ = User.createUserForTesting(conf, "global_read", new String[0]);
+    USER_GLOBAL_EXEC = User.createUserForTesting(conf, "global_exec", new String[0]);
+
+    USER_NS_ADMIN = User.createUserForTesting(conf, "namespace_admin", new String[0]);
+    USER_NS_CREATE = User.createUserForTesting(conf, "namespace_create", new String[0]);
+    USER_NS_WRITE = User.createUserForTesting(conf, "namespace_write", new String[0]);
+    USER_NS_READ = User.createUserForTesting(conf, "namespace_read", new String[0]);
+    USER_NS_EXEC = User.createUserForTesting(conf, "namespace_exec", new String[0]);
+
+    USER_TABLE_CREATE = User.createUserForTesting(conf, "table_create", new String[0]);
+    USER_TABLE_WRITE = User.createUserForTesting(conf, "table_write", new String[0]);
+    // TODO: other table perms
 
     USER_GROUP_ADMIN =
         User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_GROUP_NS_ADMIN =
+        User.createUserForTesting(conf, "user_group_ns_admin", new String[] { GROUP_NS_ADMIN });
     USER_GROUP_CREATE =
         User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
@@ -113,16 +154,27 @@ public class TestNamespaceCommands extends SecureTestUtil {
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
 
-    grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
-      TEST_NAMESPACE, Permission.Action.WRITE, Permission.Action.CREATE);
-
-    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE, Permission.Action.ADMIN);
-    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
+    // grants on global
+    grantGlobal(UTIL, USER_GLOBAL_ADMIN.getShortName(),  Permission.Action.ADMIN);
+    grantGlobal(UTIL, USER_GLOBAL_CREATE.getShortName(), Permission.Action.CREATE);
+    grantGlobal(UTIL, USER_GLOBAL_WRITE.getShortName(),  Permission.Action.WRITE);
+    grantGlobal(UTIL, USER_GLOBAL_READ.getShortName(),   Permission.Action.READ);
+    grantGlobal(UTIL, USER_GLOBAL_EXEC.getShortName(),   Permission.Action.EXEC);
 
     grantGlobal(UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
     grantGlobal(UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
     grantGlobal(UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
     grantGlobal(UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
+
+    // grants on namespace
+    grantOnNamespace(UTIL, USER_NS_ADMIN.getShortName(),  TEST_NAMESPACE, Permission.Action.ADMIN);
+    grantOnNamespace(UTIL, USER_NS_CREATE.getShortName(), TEST_NAMESPACE, Permission.Action.CREATE);
+    grantOnNamespace(UTIL, USER_NS_WRITE.getShortName(),  TEST_NAMESPACE, Permission.Action.WRITE);
+    grantOnNamespace(UTIL, USER_NS_READ.getShortName(),   TEST_NAMESPACE, Permission.Action.READ);
+    grantOnNamespace(UTIL, USER_NS_EXEC.getShortName(),   TEST_NAMESPACE, Permission.Action.EXEC);
+
+    grantOnNamespace(UTIL, USER_NS_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
+    grantOnNamespace(UTIL, toGroupEntry(GROUP_NS_ADMIN), TEST_NAMESPACE, Permission.Action.ADMIN);
   }
 
   @AfterClass
@@ -137,15 +189,23 @@ public class TestNamespaceCommands extends SecureTestUtil {
     String userTestNamespace = "userTestNsp";
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
+      ListMultimap<String, TablePermission> perms =
+          AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
+
+      perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
+      for (Map.Entry<String, TablePermission> entry : perms.entries()) {
+        LOG.debug(entry);
+      }
+      assertEquals(6, perms.size());
+
       // Grant and check state in ACL table
       grantOnNamespace(UTIL, userTestNamespace, TEST_NAMESPACE,
         Permission.Action.WRITE);
 
       Result result = acl.get(new Get(Bytes.toBytes(userTestNamespace)));
       assertTrue(result != null);
-      ListMultimap<String, TablePermission> perms =
-          AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      assertEquals(3, perms.size());
+      perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
+      assertEquals(7, perms.size());
       List<TablePermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
       assertEquals(1, namespacePerms.size());
@@ -161,7 +221,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
         Permission.Action.WRITE);
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      assertEquals(2, perms.size());
+      assertEquals(6, perms.size());
     } finally {
       acl.close();
     }
@@ -176,16 +236,28 @@ public class TestNamespaceCommands extends SecureTestUtil {
         return null;
       }
     };
-    // verify that superuser or hbase admin can modify namespaces.
-    verifyAllowed(modifyNamespace, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
-    // all others should be denied
-    verifyDenied(modifyNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    // modifyNamespace: superuser | global(A) | NS(A)
+    verifyAllowed(modifyNamespace,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN);
+
+    verifyDenied(modifyNamespace,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_ADMIN,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC);
   }
 
   @Test
   public void testCreateAndDeleteNamespace() throws Exception {
     AccessTestAction createNamespace = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
           NamespaceDescriptor.create(TEST_NAMESPACE2).build());
@@ -194,6 +266,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     };
 
     AccessTestAction deleteNamespace = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_NAMESPACE2);
@@ -201,16 +274,111 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
-    // verify that only superuser can create namespaces.
-    verifyAllowed(createNamespace, SUPERUSER, USER_GROUP_ADMIN);
-    // verify that superuser or hbase admin can delete namespaces.
-    verifyAllowed(deleteNamespace, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
+    // createNamespace: superuser | global(A)
+    verifyAllowed(createNamespace,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN);
 
     // all others should be denied
-    verifyDenied(createNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_NSP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
-    verifyDenied(deleteNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(createNamespace,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
+
+    // deleteNamespace: superuser | global(A) | NS(A)
+    verifyAllowed(deleteNamespace,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN);
+
+    verifyDenied(deleteNamespace,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_ADMIN,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE);
+  }
+
+  @Test
+  public void testGetNamespaceDescriptor() throws Exception {
+    AccessTestAction getNamespaceAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContext.createAndPrepare(CP_ENV, null),
+          TEST_NAMESPACE);
+        return null;
+      }
+    };
+    // getNamespaceDescriptor : superuser | global(A) | NS(A)
+    verifyAllowed(getNamespaceAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_NS_ADMIN);
+
+    verifyDenied(getNamespaceAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE);
+  }
+
+  @Test
+  public void testListNamespaces() throws Exception {
+    AccessTestAction listAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+        try {
+          return Arrays.asList(admin.listNamespaceDescriptors());
+        } finally {
+          admin.close();
+        }
+      }
+    };
+
+    // listNamespaces         : All access*
+    // * Returned list will only show what you can call getNamespaceDescriptor()
+
+    verifyAllowed(listAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_NS_ADMIN);
+
+    // we have 3 namespaces: [default, hbase, TEST_NAMESPACE, TEST_NAMESPACE2]
+    assertEquals(4, ((List)SUPERUSER.runAs(listAction)).size());
+    assertEquals(4, ((List)USER_GLOBAL_ADMIN.runAs(listAction)).size());
+
+    assertEquals(2, ((List)USER_NS_ADMIN.runAs(listAction)).size());
+
+    assertEquals(0, ((List)USER_GLOBAL_CREATE.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_GLOBAL_WRITE.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_GLOBAL_READ.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_GLOBAL_EXEC.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_NS_CREATE.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_NS_WRITE.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_NS_READ.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_NS_EXEC.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_TABLE_CREATE.runAs(listAction)).size());
+    assertEquals(0, ((List)USER_TABLE_WRITE.runAs(listAction)).size());
   }
 
   @Test
@@ -220,6 +388,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     // Test if client API actions are authorized
 
     AccessTestAction grantAction = new AccessTestAction() {
+      @Override
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
@@ -228,6 +397,23 @@ public class TestNamespaceCommands extends SecureTestUtil {
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.grant(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+        } finally {
+          acl.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction grantNamespaceAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.grant(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+            TEST_NAMESPACE, Action.READ);
         } finally {
           acl.close();
         }
@@ -251,6 +437,23 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
+    AccessTestAction revokeNamespaceAction = new AccessTestAction() {
+      public Object run() throws Exception {
+        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          BlockingRpcChannel service =
+              acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.revoke(protocol, USER_GROUP_NS_ADMIN.getShortName(),
+            TEST_NAMESPACE, Action.READ);
+        } finally {
+          acl.close();
+        }
+        return null;
+      }
+    };
+
     AccessTestAction getPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -267,18 +470,106 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
-    // Only HBase super user should be able to grant and revoke permissions to
-    // namespaces
-    verifyAllowed(grantAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(grantAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
-      USER_GROUP_CREATE);
-    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+    verifyAllowed(grantAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_GROUP_ADMIN,
+      USER_NS_ADMIN);
+    verifyDenied(grantAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE,
+      USER_GROUP_READ,
+      USER_GROUP_WRITE,
       USER_GROUP_CREATE);
 
-    // Only an admin should be able to get the user permission
-    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+    verifyAllowed(grantNamespaceAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_GROUP_ADMIN,
+      USER_NS_ADMIN,
+      USER_GROUP_NS_ADMIN);
+    verifyDenied(grantNamespaceAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE,
+      USER_GROUP_READ,
+      USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
+
+    verifyAllowed(revokeAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_GROUP_ADMIN,
+      USER_NS_ADMIN);
+    verifyDenied(revokeAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE,
+      USER_GROUP_READ,
+      USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
+
+    verifyAllowed(revokeNamespaceAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_GROUP_ADMIN,
+      USER_NS_ADMIN,
+      USER_GROUP_NS_ADMIN);
+    verifyDenied(revokeNamespaceAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE,
+      USER_GROUP_READ,
+      USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
+
+    verifyAllowed(getPermissionsAction,
+      SUPERUSER,
+      USER_GLOBAL_ADMIN,
+      USER_NS_ADMIN,
+      USER_GROUP_ADMIN);
+    verifyDenied(getPermissionsAction,
+      USER_GLOBAL_CREATE,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_CREATE,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE,
+      USER_GROUP_READ,
+      USER_GROUP_WRITE,
       USER_GROUP_CREATE);
   }
 
@@ -294,11 +585,22 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
 
-    // Only users with create permissions on namespace should be able to create a new table
-    verifyAllowed(createTable, SUPERUSER, USER_NSP_WRITE, USER_GROUP_CREATE);
+    //createTable            : superuser | global(C) | NS(C)
+    verifyAllowed(createTable,
+      SUPERUSER,
+      USER_GLOBAL_CREATE,
+      USER_NS_CREATE);
 
-    // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
-      USER_GROUP_ADMIN);
+    verifyDenied(createTable,
+      USER_GLOBAL_ADMIN,
+      USER_GLOBAL_WRITE,
+      USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC,
+      USER_NS_ADMIN,
+      USER_NS_WRITE,
+      USER_NS_READ,
+      USER_NS_EXEC,
+      USER_TABLE_CREATE,
+      USER_TABLE_WRITE);
   }
 }

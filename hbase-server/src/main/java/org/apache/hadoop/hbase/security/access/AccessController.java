@@ -523,8 +523,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
     User user = getActiveUser();
-    if (authManager.authorize(user, perm) || (tableName != null &&
-        authManager.authorize(user, tableName.getNamespaceAsString(), perm))) {
+    if (authManager.authorize(user, perm)) {
       logResult(AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap));
     } else {
       logResult(AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap));
@@ -546,8 +545,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm,
                                        String namespace) throws IOException {
     User user = getActiveUser();
-    if (authManager.authorize(user, perm)
-        || (namespace != null && authManager.authorize(user, namespace, perm))) {
+    if (authManager.authorize(user, perm)) {
       logResult(AuthResult.allow(request, "Global check allowed", user, perm, namespace));
     } else {
       logResult(AuthResult.deny(request, "Global check failed", user, perm, namespace));
@@ -920,7 +918,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   /* ---- MasterObserver implementation ---- */
-
+  @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     CompoundConfiguration conf = new CompoundConfiguration();
     conf.add(env.getConfiguration());
@@ -981,6 +979,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     tableAcls = new MapMaker().weakValues().makeMap();
   }
 
+  @Override
   public void stop(CoprocessorEnvironment env) {
     if (this.authManager != null) {
       TableAuthManager.release(authManager);
@@ -1039,7 +1038,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
-    requireGlobalPermission("createTable", Action.CREATE, desc.getTableName(), familyMap);
+    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(), Action.CREATE);
   }
 
   @Override
@@ -1274,7 +1273,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
-    requirePermission("createNamespace", Action.ADMIN);
+    requireGlobalPermission("createNamespace", Action.ADMIN, ns.getName());
   }
 
   @Override
@@ -1301,7 +1300,31 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
+    // We require only global permission so that 
+    // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
     requireGlobalPermission("modifyNamespace", Action.ADMIN, ns.getName());
+  }
+
+  @Override
+  public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
+      throws IOException {
+    requireNamespacePermission("getNamespaceDescriptor", namespace, Action.ADMIN);
+  }
+
+  @Override
+  public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException {
+    // Retains only those which passes authorization checks, as the checks weren't done as part
+    // of preGetTableDescriptors.
+    Iterator<NamespaceDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      NamespaceDescriptor desc = itr.next();
+      try {
+        requireNamespacePermission("listNamespaces", desc.getName(), Action.ADMIN);
+      } catch (AccessDeniedException e) {
+        itr.remove();
+      }
+    }
   }
 
   /* ---- RegionObserver implementation ---- */
@@ -2129,7 +2152,7 @@ public class AccessController extends BaseMasterAndRegionObserver
               perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
-            requireGlobalPermission("grant", Action.ADMIN, perm.getNamespace());
+            requireNamespacePermission("grant", perm.getNamespace(), Action.ADMIN);
            break;
         }
 
@@ -2180,7 +2203,7 @@ public class AccessController extends BaseMasterAndRegionObserver
               perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
-            requireGlobalPermission("revoke", Action.ADMIN, perm.getNamespace());
+            requireNamespacePermission("revoke", perm.getNamespace(), Action.ADMIN);
             break;
         }
 
@@ -2232,7 +2255,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           });
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
           final String namespace = request.getNamespaceName().toStringUtf8();
-          requireGlobalPermission("userPermissions", Action.ADMIN, namespace);
+          requireNamespacePermission("userPermissions", namespace, Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
