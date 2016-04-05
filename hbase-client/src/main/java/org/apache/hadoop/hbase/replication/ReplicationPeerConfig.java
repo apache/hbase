@@ -87,8 +87,10 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
-  public void setTableCFsMap(Map<TableName,? extends Collection<String>> tableCFsMap) {
+  public ReplicationPeerConfig setTableCFsMap(Map<TableName,
+                                              ? extends Collection<String>> tableCFsMap) {
     this.tableCFsMap = tableCFsMap;
+    return this;
   }
 
   @Override
