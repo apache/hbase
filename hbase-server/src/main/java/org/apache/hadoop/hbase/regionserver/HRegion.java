@@ -5721,7 +5721,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
       // between rows
-      if (!scannerContext.partialResultFormed()) resetFilters();
+      if (!scannerContext.midRowResultFormed()) resetFilters();
 
       if (isFilterDoneInternal()) {
         moreValues = false;
@@ -5781,7 +5781,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           moreCellsInRow = moreCellsInRow(nextKv, currentRow, offset, length);
           if (!moreCellsInRow) incrementCountOfRowsScannedMetric(scannerContext);
 
-          if (scannerContext.checkBatchLimit(limitScope)) {
+          if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
             return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
           } else if (scannerContext.checkSizeLimit(limitScope)) {
             ScannerContext.NextState state =
