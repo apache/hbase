@@ -82,7 +82,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
    * @param listeners may be null
-   * @param providerId differentiate between providers from one facotry, used for FS layout. may be
+   * @param providerId differentiate between providers from one factory, used for FS layout. may be
    *          null
    */
   @Override
@@ -109,7 +109,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   @Override
-  public WAL getWAL(byte[] identifier, byte[] namespace) throws IOException {
+  public T getWAL(byte[] identifier, byte[] namespace) throws IOException {
     T walCopy = wal;
     if (walCopy == null) {
       // only lock when need to create wal, and need to lock since

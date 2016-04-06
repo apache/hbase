@@ -26,12 +26,12 @@ import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 @Category({ReplicationTests.class, LargeTests.class})
-public class TestReplicationKillMasterRSCompressedWithMultipleWAL extends
+public class TestReplicationKillMasterRSCompressedWithMultipleAsyncWAL extends
     TestReplicationKillMasterRSCompressed {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.set(WALFactory.WAL_PROVIDER, "multiwal");
-    conf1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
+    conf1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "asyncfs");
     TestReplicationKillMasterRSCompressed.setUpBeforeClass();
   }
 }

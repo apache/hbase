@@ -678,6 +678,10 @@ public abstract class AbstractFSWAL<W> implements WAL {
         // NewPath could be equal to oldPath if replaceWriter fails.
         newPath = replaceWriter(oldPath, newPath, nextWriter);
         tellListenersAboutPostLogRoll(oldPath, newPath);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Create new " + getClass().getSimpleName() + " writer with pipeline: "
+              + Arrays.toString(getPipeline()));
+        }
         // Can we delete any of the old log files?
         if (getNumRolledLogFiles() > 0) {
           cleanOldLogs();
