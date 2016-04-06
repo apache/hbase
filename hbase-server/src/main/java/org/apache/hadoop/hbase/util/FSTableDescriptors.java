@@ -125,11 +125,13 @@ public class FSTableDescriptors implements TableDescriptors {
     this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(conf);
   }
 
+  @Override
   public void setCacheOn() throws IOException {
     this.cache.clear();
     this.usecache = true;
   }
 
+  @Override
   public void setCacheOff() throws IOException {
     this.usecache = false;
     this.cache.clear();
@@ -173,7 +175,9 @@ public class FSTableDescriptors implements TableDescriptors {
       tdmt = getTableDescriptorFromFs(fs, rootdir, tablename, !fsreadonly);
     } catch (NullPointerException e) {
       LOG.debug("Exception during readTableDecriptor. Current table name = "
-                  + tablename, e);
+          + tablename, e);
+    } catch (TableInfoMissingException e) {
+      // ignore. This is regular operation
     } catch (IOException ioe) {
       LOG.debug("Exception during readTableDecriptor. Current table name = "
                   + tablename, ioe);
