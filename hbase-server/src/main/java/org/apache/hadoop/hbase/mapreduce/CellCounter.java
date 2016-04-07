@@ -64,10 +64,11 @@ import com.google.common.base.Preconditions;
  * 6. Total number of versions of each qualifier.
  * </pre>
  *
- * The cellcounter takes two optional parameters one to use a user
+ * The cellcounter can take optional parameters to use a user
  * supplied row/family/qualifier string to use in the report and
  * second a regex based or prefix based row filter to restrict the
- * count operation to a limited subset of rows from the table.
+ * count operation to a limited subset of rows from the table or a
+ * start time and/or end time to limit the count to a time range.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

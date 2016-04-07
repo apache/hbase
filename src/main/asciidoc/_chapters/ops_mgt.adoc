@@ -304,12 +304,15 @@ The following utilities are available:
 `RowCounter`::
   Count rows in an HBase table.
 
+`CellCounter`::
+  Count cells in an HBase table.
+
 `replication.VerifyReplication`::
   Compare the data from tables in two different clusters.
   WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is changed.
   Note that this command is in a different package than the others.
 
-Each command except `RowCounter` accepts a single `--help` argument to print usage instructions.
+Each command except `RowCounter` and `CellCounter` accept a single `--help` argument to print usage instructions.
 
 [[hbck]]
 === HBase `hbck`
@@ -619,7 +622,8 @@ To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in 
 
 link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit.
+It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit. It is also possible to limit
+the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
 
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter <tablename> [<column1> <column2>...]
@@ -642,6 +646,8 @@ The statistics gathered by RowCounter are more fine-grained and include:
 
 The program allows you to limit the scope of the run.
 Provide a row regex or prefix to limit the rows to analyze.
+Specify a time range to scan the table by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
+
 Use `hbase.mapreduce.scan.column.family` to specify scanning a single column family.
 
 ----
