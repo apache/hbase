@@ -45,7 +45,7 @@ public abstract class CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
-  public abstract boolean isMajorCompaction(
+  public abstract boolean shouldPerformMajorCompaction(
     final Collection<StoreFile> filesToCompact) throws IOException;
 
   /**

@@ -84,6 +84,8 @@ public class CompactionConfiguration {
     "hbase.hstore.compaction.date.tiered.incoming.window.min";
   public static final String COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY =
     "hbase.hstore.compaction.date.tiered.window.policy.class";
+  public static final String SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
+    "hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction";
 
   private static final Class<? extends RatioBasedCompactionPolicy>
     DEFAULT_TIER_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
@@ -109,6 +111,7 @@ public class CompactionConfiguration {
   private final int windowsPerTier;
   private final int incomingWindowMin;
   private final String compactionPolicyForTieredWindow;
+  private final boolean singleOutputForMinorCompaction;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -138,6 +141,9 @@ public class CompactionConfiguration {
     incomingWindowMin = conf.getInt(INCOMING_WINDOW_MIN_KEY, 6);
     compactionPolicyForTieredWindow = conf.get(COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY,
         DEFAULT_TIER_COMPACTION_POLICY_CLASS.getName());
+    singleOutputForMinorCompaction = conf.getBoolean(SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY,
+      true);
+
     LOG.info(this);
   }
 
@@ -277,5 +283,9 @@ public class CompactionConfiguration {
 
   public String getCompactionPolicyForTieredWindow() {
     return compactionPolicyForTieredWindow;
+  }
+
+  public boolean useSingleOutputForMinorCompaction() {
+    return singleOutputForMinorCompaction;
   }
 }
