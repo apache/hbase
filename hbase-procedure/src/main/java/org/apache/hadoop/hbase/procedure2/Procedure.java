@@ -205,6 +205,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   @Override
   public String toString() {
+    // Return the simple String presentation of the procedure.
+    return toStringSimpleSB().toString();
+  }
+
+  /**
+   * Build the StringBuilder for the simple form of
+   * procedure string.
+   * @return the StringBuilder
+   */
+  protected StringBuilder toStringSimpleSB() {
     StringBuilder sb = new StringBuilder();
     toStringClassDetails(sb);
 
@@ -225,6 +235,29 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
     sb.append(" state=");
     toStringState(sb);
+
+    return sb;
+  }
+
+  /**
+   * Extend the toString() information with more procedure
+   * details
+   */
+  public String toStringDetails() {
+    StringBuilder sb = toStringSimpleSB();
+
+    sb.append(" startTime=");
+    sb.append(getStartTime());
+
+    sb.append(" lastUpdate=");
+    sb.append(getLastUpdate());
+
+    if (stackIndexes != null) {
+      sb.append("\n");
+      sb.append("stackIndexes=");
+      sb.append(Arrays.toString(getStackIndexes()));
+    }
+
     return sb.toString();
   }
 
