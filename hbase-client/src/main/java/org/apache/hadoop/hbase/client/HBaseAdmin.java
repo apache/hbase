@@ -3017,12 +3017,12 @@ public class HBaseAdmin implements Admin {
         break;
       case NORMAL:
       default:
-        ZooKeeperWatcher zookeeper =
-                new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-                        new ThrowableAbortable());
+        ZooKeeperWatcher zookeeper = null;
         try {
           List<Pair<HRegionInfo, ServerName>> pairs;
           if (TableName.META_TABLE_NAME.equals(tableName)) {
+            zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
+              new ThrowableAbortable());
             pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
           } else {
             pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
@@ -3074,7 +3074,9 @@ public class HBaseAdmin implements Admin {
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         } finally {
-          zookeeper.close();
+          if (zookeeper != null) {
+            zookeeper.close();
+          }
         }
         break;
     }
