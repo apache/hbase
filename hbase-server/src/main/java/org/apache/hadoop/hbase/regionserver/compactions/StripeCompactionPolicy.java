@@ -166,7 +166,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   @Override
-  public boolean isMajorCompaction(Collection<StoreFile> filesToCompact) throws IOException {
+  public boolean shouldPerformMajorCompaction(Collection<StoreFile> filesToCompact)
+    throws IOException {
     return false; // there's never a major compaction!
   }
 
