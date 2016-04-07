@@ -18,6 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -30,12 +36,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 
 /**
  * This class holds all logical details necessary to run a compaction.
@@ -72,6 +72,10 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
     Preconditions.checkNotNull(files);
     this.filesToCompact = files;
     recalculateSize();
+  }
+
+  public void updateFiles(Collection<StoreFile> files) {
+    this.filesToCompact = files;
   }
 
   /**

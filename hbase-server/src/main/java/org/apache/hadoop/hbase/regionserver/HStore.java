@@ -1556,7 +1556,7 @@ public class HStore implements Store {
         return false;
       }
     }
-    return storeEngine.getCompactionPolicy().isMajorCompaction(
+    return storeEngine.getCompactionPolicy().shouldPerformMajorCompaction(
         this.storeEngine.getStoreFileManager().getStorefiles());
   }
 
