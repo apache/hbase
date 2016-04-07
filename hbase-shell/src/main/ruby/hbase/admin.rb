@@ -146,7 +146,7 @@ module Hbase
       end
       @admin.setSplitOrMergeEnabled(
         java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false),
-        switch_type)[0]
+        java.lang.Boolean.valueOf(true), switch_type)[0]
     end
 
     #----------------------------------------------------------------------------------------------

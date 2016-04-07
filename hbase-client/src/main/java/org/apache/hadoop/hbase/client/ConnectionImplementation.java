@@ -1751,6 +1751,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.ReleaseSplitOrMergeLockAndRollbackResponse
+        releaseSplitOrMergeLockAndRollback(RpcController controller,
+        MasterProtos.ReleaseSplitOrMergeLockAndRollbackRequest request) throws ServiceException {
+        return stub.releaseSplitOrMergeLockAndRollback(controller, request);
+      }
+
+      @Override
       public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
           IsNormalizerEnabledRequest request) throws ServiceException {
         return stub.isNormalizerEnabled(controller, request);

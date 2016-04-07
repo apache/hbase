@@ -3570,13 +3570,13 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public boolean[] setSplitOrMergeEnabled(final boolean enabled, final boolean synchronous,
-                                          final MasterSwitchType... switchTypes)
-    throws IOException {
+    final boolean skipLock, final MasterSwitchType... switchTypes) throws IOException {
     return executeCallable(new MasterCallable<boolean[]>(getConnection()) {
       @Override
       public boolean[] call(int callTimeout) throws ServiceException {
         MasterProtos.SetSplitOrMergeEnabledResponse response = master.setSplitOrMergeEnabled(null,
-          RequestConverter.buildSetSplitOrMergeEnabledRequest(enabled, synchronous, switchTypes));
+          RequestConverter.buildSetSplitOrMergeEnabledRequest(enabled, synchronous,
+            skipLock, switchTypes));
         boolean[] result = new boolean[switchTypes.length];
         int i = 0;
         for (Boolean prevValue : response.getPrevValueList()) {
@@ -3594,6 +3594,18 @@ public class HBaseAdmin implements Admin {
       public Boolean call(int callTimeout) throws ServiceException {
         return master.isSplitOrMergeEnabled(null,
           RequestConverter.buildIsSplitOrMergeEnabledRequest(switchType)).getEnabled();
+      }
+    });
+  }
+
+  @Override
+  public void releaseSplitOrMergeLockAndRollback() throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
+      @Override
+      public Void call(int callTimeout) throws ServiceException {
+        master.releaseSplitOrMergeLockAndRollback(null,
+          RequestConverter.buildReleaseSplitOrMergeLockAndRollbackRequest());
+        return null;
       }
     });
   }

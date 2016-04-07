@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ReleaseSplitOrMergeLockAndRollbackRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
@@ -1710,6 +1711,13 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  public static ReleaseSplitOrMergeLockAndRollbackRequest
+    buildReleaseSplitOrMergeLockAndRollbackRequest() {
+    ReleaseSplitOrMergeLockAndRollbackRequest.Builder builder =
+      ReleaseSplitOrMergeLockAndRollbackRequest.newBuilder();
+    return builder.build();
+  }
+
   /**
    * Creates a protocol buffer SetSplitOrMergeEnabledRequest
    *
@@ -1720,10 +1728,11 @@ public final class RequestConverter {
    * @return a SetSplitOrMergeEnabledRequest
    */
   public static SetSplitOrMergeEnabledRequest buildSetSplitOrMergeEnabledRequest(boolean enabled,
-    boolean synchronous, Admin.MasterSwitchType... switchTypes) {
+    boolean synchronous, boolean skipLock, Admin.MasterSwitchType... switchTypes) {
     SetSplitOrMergeEnabledRequest.Builder builder = SetSplitOrMergeEnabledRequest.newBuilder();
     builder.setEnabled(enabled);
     builder.setSynchronous(synchronous);
+    builder.setSkipLock(skipLock);
     for (Admin.MasterSwitchType switchType : switchTypes) {
       builder.addSwitchTypes(convert(switchType));
     }

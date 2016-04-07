@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -1495,6 +1496,10 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       boolean newValue = request.getEnabled();
+      boolean skipLock = request.getSkipLock();
+      if (!master.getSplitOrMergeTracker().lock(skipLock)) {
+        throw new DoNotRetryIOException("can't set splitOrMerge switch due to lock");
+      }
       for (MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
         Admin.MasterSwitchType switchType = convert(masterSwitchType);
         boolean oldValue = master.isSplitOrMergeEnabled(switchType);
@@ -1524,6 +1529,24 @@ public class MasterRpcServices extends RSRpcServices
     IsSplitOrMergeEnabledResponse.Builder response = IsSplitOrMergeEnabledResponse.newBuilder();
     response.setEnabled(master.isSplitOrMergeEnabled(convert(request.getSwitchType())));
     return response.build();
+  }
+
+  @Override
+  public ReleaseSplitOrMergeLockAndRollbackResponse
+  releaseSplitOrMergeLockAndRollback(RpcController controller,
+    ReleaseSplitOrMergeLockAndRollbackRequest request) throws ServiceException {
+    try {
+      master.getSplitOrMergeTracker().releaseLockAndRollback();
+    } catch (KeeperException e) {
+      throw new ServiceException(e);
+    } catch (DeserializationException e) {
+      throw new ServiceException(e);
+    } catch (InterruptedException e) {
+      throw new ServiceException(e);
+    }
+    ReleaseSplitOrMergeLockAndRollbackResponse.Builder builder =
+      ReleaseSplitOrMergeLockAndRollbackResponse.newBuilder();
+    return builder.build();
   }
 
   @Override

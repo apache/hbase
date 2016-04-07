@@ -54,6 +54,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -307,6 +308,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
 
+  ZooKeeperWatcher zkw = null;
   /**
    * Constructor
    *
@@ -345,6 +347,7 @@ public class HBaseFsck extends Configured implements Closeable {
         "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
       getConf().getInt(
         "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
+    zkw = createZooKeeperWatcher();
   }
 
   private class FileLockCallable implements Callable<FSDataOutputStream> {
@@ -686,7 +689,8 @@ public class HBaseFsck extends Configured implements Closeable {
     }
     boolean[] oldSplitAndMerge = null;
     if (shouldDisableSplitAndMerge()) {
-      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false,
+      admin.releaseSplitOrMergeLockAndRollback();
+      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false, false,
         Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
     }
 
@@ -703,14 +707,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       if (shouldDisableSplitAndMerge()) {
         if (oldSplitAndMerge != null) {
-          if (oldSplitAndMerge[0] && oldSplitAndMerge[1]) {
-            admin.setSplitOrMergeEnabled(true, false,
-              Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
-          } else if (oldSplitAndMerge[0]) {
-            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.SPLIT);
-          } else if (oldSplitAndMerge[1]) {
-            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.MERGE);
-          }
+          admin.releaseSplitOrMergeLockAndRollback();
         }
       }
     }
@@ -749,6 +746,10 @@ public class HBaseFsck extends Configured implements Closeable {
     } catch (Exception io) {
       LOG.warn(io);
     } finally {
+      if (zkw != null) {
+        zkw.close();
+        zkw = null;
+      }
       IOUtils.closeQuietly(admin);
       IOUtils.closeQuietly(meta);
       IOUtils.closeQuietly(connection);
@@ -1789,14 +1790,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private ServerName getMetaRegionServerName(int replicaId)
   throws IOException, KeeperException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    ServerName sn = null;
-    try {
-      sn = new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
-    } finally {
-      zkw.close();
-    }
-    return sn;
+    return new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
   }
 
   /**
@@ -3281,28 +3275,21 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixTableLocks() throws IOException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
     TableLockChecker checker = new TableLockChecker(zkw, errors);
     checker.checkTableLocks();
 
     if (this.fixTableLocks) {
       checker.fixExpiredTableLocks();
     }
-    zkw.close();
   }
   
   private void checkAndFixReplication() throws IOException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    try {
-      ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
-      checker.checkUnDeletedQueues();
+    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+    checker.checkUnDeletedQueues();
 
-      if (checker.hasUnDeletedQueues() && this.fixReplication) {
-        checker.fixUnDeletedQueues();
-        setShouldRerun();
-      }
-    } finally {
-      zkw.close();
+    if (checker.hasUnDeletedQueues() && this.fixReplication) {
+      checker.fixUnDeletedQueues();
+      setShouldRerun();
     }
   }
 
@@ -3372,12 +3359,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
   KeeperException {
     undeployRegions(hi);
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    try {
-      ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
-    } finally {
-      zkw.close();
-    }
+    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)
@@ -4206,7 +4188,12 @@ public class HBaseFsck extends Configured implements Closeable {
    * Disable the split and merge
    */
   public static void setDisableSplitAndMerge() {
-    disableSplitAndMerge = true;
+    setDisableSplitAndMerge(true);
+  }
+
+  @VisibleForTesting
+  public static void setDisableSplitAndMerge(boolean flag) {
+    disableSplitAndMerge = flag;
   }
 
   /**
@@ -4226,7 +4213,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public boolean shouldDisableSplitAndMerge() {
     return fixAny || disableSplitAndMerge;
   }
-
+  
   /**
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
