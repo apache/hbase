@@ -33,6 +33,7 @@
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
         org.apache.hadoop.hbase.client.RegionReplicaUtil;
         org.apache.hadoop.hbase.regionserver.MetricsRegionWrapper;
+        org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
 
@@ -170,10 +171,14 @@
             <%if load != null %>
             <td><% load.getStores() %></td>
             <td><% load.getStorefiles() %></td>
-            <td><% load.getStoreUncompressedSizeMB() %>m</td>
-            <td><% load.getStorefileSizeMB() %>m</td>
-            <td><% load.getTotalStaticIndexSizeKB() %>k</td>
-            <td><% load.getTotalStaticBloomSizeKB() %>k</td>
+            <td><% TraditionalBinaryPrefix.long2String(load.getStoreUncompressedSizeMB()
+                * TraditionalBinaryPrefix.MEGA.value, "B", 1)%></td>
+            <td><% TraditionalBinaryPrefix.long2String(load.getStorefileSizeMB()
+                * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticIndexSizeKB()
+                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticBloomSizeKB()
+                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
             <td><% load.getDataLocality() %></td>
             </%if>
         </tr>
@@ -238,7 +243,8 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getMemstoreSizeMB() %>m</td>
+            <td><% TraditionalBinaryPrefix.long2String(
+                load.getMemstoreSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
             </%if>
         </tr>
         </%for>

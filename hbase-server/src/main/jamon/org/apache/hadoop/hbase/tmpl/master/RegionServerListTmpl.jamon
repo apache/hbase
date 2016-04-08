@@ -29,6 +29,7 @@ HMaster master;
         org.apache.hadoop.hbase.ServerLoad;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.util.VersionInfo;
+        org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 
 
@@ -148,9 +149,12 @@ for (ServerName serverName: serverNames) {
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-    <td><% sl.getUsedHeapMB() %>m</td>
-    <td><% sl.getMaxHeapMB() %>m</td>
-    <td><% sl.getMemstoreSizeInMB() %>m</td>
+    <td><% TraditionalBinaryPrefix.long2String(sl.getUsedHeapMB()
+      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(sl.getMaxHeapMB()
+      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(sl.getMemstoreSizeInMB()
+      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 
 </tr>
 <%java>
@@ -226,10 +230,14 @@ if (sl != null) {
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
 <td><% sl.getStores() %></td>
 <td><% sl.getStorefiles() %></td>
-<td><% sl.getStoreUncompressedSizeMB() %>m</td>
-<td><% sl.getStorefileSizeInMB() %>mb</td>
-<td><% sl.getTotalStaticIndexSizeKB() %>k</td>
-<td><% sl.getTotalStaticBloomSizeKB() %>k</td>
+<td><% TraditionalBinaryPrefix.long2String(
+  sl.getStoreUncompressedSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+<td><% TraditionalBinaryPrefix.long2String(sl.getStorefileSizeInMB()
+  * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+<td><% TraditionalBinaryPrefix.long2String(sl.getTotalStaticIndexSizeKB()
+  * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+<td><% TraditionalBinaryPrefix.long2String(sl.getTotalStaticBloomSizeKB()
+  * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
 </tr>
 <%java>
         }  else {
