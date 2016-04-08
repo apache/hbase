@@ -25,24 +25,19 @@
   import="java.util.Date"
   import="java.util.List"
   import="java.util.Set"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
   import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
-  import="org.apache.hadoop.hbase.procedure2.ProcedureUtil"
   import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
   import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos"
-  import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
   import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
 <%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
   WALProcedureStore walStore = master.getWalProcedureStore();
 
@@ -62,49 +57,12 @@
   });
 
   List<LockedResource> lockedResources = master.getLocks();
+  pageContext.setAttribute("pageTitle", "HBase Master Procedures: " + master.getServerName());
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title>HBase Master Procedures: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet" />
-    <link href="/static/css/hbase.css" rel="stylesheet" />
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/processMaster.jsp">Process Metrics</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
@@ -271,19 +229,16 @@
 
       if (!waitingProcedures.isEmpty()) {
     %>
-	    <h3>Waiting procedures</h3>
-	    <table class="table table-striped" width="90%" >
+        <h3>Waiting procedures</h3>
+        <table class="table table-striped" width="90%" >
         <% for (Procedure<?> proc : procedures) { %>
          <tr>
             <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
           </tr>
         <% } %>
-	    </table>
+        </table>
     <% } %>
   <% } %>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
+<jsp:include page="footer.jsp" />

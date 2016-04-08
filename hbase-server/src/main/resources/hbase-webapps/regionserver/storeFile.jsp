@@ -22,58 +22,18 @@
   import="java.io.PrintStream"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.fs.Path"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
-  import="org.apache.hadoop.hbase.regionserver.StoreFile"
-  %>
+%>
 <%
   String storeFile = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   Configuration conf = rs.getConfiguration();
+  pageContext.setAttribute("pageTitle", "HBase RegionServer: " + rs.getServerName());
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>HBase RegionServer: <%= rs.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-
-      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-      <link href="/static/css/hbase.css" rel="stylesheet">
-  </head>
-
-  <body>
-
-  <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container-fluid">
-          <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-              </button>
-              <a class="navbar-brand" href="/rs-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-          </div>
-          <div class="collapse navbar-collapse">
-              <ul class="nav navbar-nav">
-                  <li class="active"><a href="/rs-status">Home</a></li>
-                  <li><a href="/logs/">Local Logs</a></li>
-                  <li><a href="/logLevel">Log Level</a></li>
-                  <li><a href="/dump">Debug Dump</a></li>
-                  <li><a href="/jmx">Metrics Dump</a></li>
-                  <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                  <li><a href="/conf">HBase Configuration</a></li>
-                  <% } %>
-              </ul>
-          </div><!--/.nav-collapse -->
-      </div>
-  </div>
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
   <div class="container-fluid content">
     <div class="row inner_header">
@@ -103,8 +63,5 @@
 %>
   </pre>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
+<jsp:include page="footer.jsp" />
