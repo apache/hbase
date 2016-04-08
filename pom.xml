@@ -1130,7 +1130,7 @@
     <maven.min.version>3.0.3</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-two.version>2.5.1</hadoop-two.version>
+    <hadoop-two.version>2.6.0</hadoop-two.version>
     <!-- minikdc introduced in hadoop-2.3; override when building earlier versions -->
     <hadoop-two-minikdc.version>${hadoop-two.version}</hadoop-two-minikdc.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
@@ -1147,7 +1147,7 @@
     <collections.version>3.2.2</collections.version>
     <httpclient.version>3.1</httpclient.version>
     <metrics-core.version>2.2.0</metrics-core.version>
-    <guava.version>12.0.1</guava.version>
+    <guava.version>18.0</guava.version>
     <jsr305.version>1.3.9</jsr305.version>
     <jackson.version>1.9.13</jackson.version>
     <jasper.version>5.5.23</jasper.version>

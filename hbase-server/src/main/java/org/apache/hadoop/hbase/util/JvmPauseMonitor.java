@@ -35,6 +35,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 /**
  * Class which sets up a simple thread which runs in a loop sleeping
  * for a short interval of time. If the sleep takes significantly longer
@@ -53,13 +55,13 @@ public class JvmPauseMonitor {
 
   /** The target sleep time */
   private static final long SLEEP_INTERVAL_MS = 500;
-  
+
   /** log WARN if we detect a pause longer than this threshold */
   private final long warnThresholdMs;
   private static final String WARN_THRESHOLD_KEY =
       "jvm.pause.warn-threshold.ms";
   private static final long WARN_THRESHOLD_DEFAULT = 10000;
-  
+
   /** log INFO if we detect a pause longer than this threshold */
   private final long infoThresholdMs;
   private static final String INFO_THRESHOLD_KEY =
@@ -73,7 +75,7 @@ public class JvmPauseMonitor {
     this.warnThresholdMs = conf.getLong(WARN_THRESHOLD_KEY, WARN_THRESHOLD_DEFAULT);
     this.infoThresholdMs = conf.getLong(INFO_THRESHOLD_KEY, INFO_THRESHOLD_DEFAULT);
   }
-  
+
   public void start() {
     Preconditions.checkState(monitorThread == null, "Already started");
     monitorThread = new Thread(new Monitor());
@@ -91,7 +93,7 @@ public class JvmPauseMonitor {
       Thread.currentThread().interrupt();
     }
   }
-  
+
   private String formatMessage(long extraSleepTime, Map<String, GcTimes> gcTimesAfterSleep,
       Map<String, GcTimes> gcTimesBeforeSleep) {
 
@@ -114,7 +116,7 @@ public class JvmPauseMonitor {
     }
     return ret;
   }
-  
+
   private Map<String, GcTimes> getGcTimes() {
     Map<String, GcTimes> map = Maps.newHashMap();
     List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
@@ -151,7 +153,7 @@ public class JvmPauseMonitor {
   private class Monitor implements Runnable {
     @Override
     public void run() {
-      Stopwatch sw = new Stopwatch();
+      Stopwatch sw = Stopwatch.createUnstarted();
       Map<String, GcTimes> gcTimesBeforeSleep = getGcTimes();
       while (shouldRun) {
         sw.reset().start();
@@ -160,7 +162,7 @@ public class JvmPauseMonitor {
         } catch (InterruptedException ie) {
           return;
         }
-        long extraSleepTime = sw.elapsedMillis() - SLEEP_INTERVAL_MS;
+        long extraSleepTime = sw.elapsed(MILLISECONDS) - SLEEP_INTERVAL_MS;
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
         if (extraSleepTime > warnThresholdMs) {
@@ -176,7 +178,7 @@ public class JvmPauseMonitor {
 
   /**
    * Simple 'main' to facilitate manual testing of the pause monitor.
-   * 
+   *
    * This main function just leaks memory into a list. Running this class
    * with a 1GB heap will very quickly go into "GC hell" and result in
    * log messages about the GC pauses.

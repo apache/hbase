@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.lang.NotImplementedException;
@@ -716,14 +717,14 @@ public class TestClientNoCluster extends Configured implements Tool {
     TableName tableName = TableName.valueOf(BIG_USER_TABLE);
     if (get) {
       try (Table table = sharedConnection.getTable(tableName)){
-        Stopwatch stopWatch = new Stopwatch();
+        Stopwatch stopWatch = Stopwatch.createUnstarted();
         stopWatch.start();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
           if (i % printInterval == 0) {
-            LOG.info("Get " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Get " + printInterval + "/" + stopWatch.elapsed(MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
@@ -733,7 +734,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       }
     } else {
       try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
-        Stopwatch stopWatch = new Stopwatch();
+        Stopwatch stopWatch = Stopwatch.createUnstarted();
         stopWatch.start();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
@@ -741,7 +742,7 @@ public class TestClientNoCluster extends Configured implements Tool {
           p.add(HConstants.CATALOG_FAMILY, b, b);
           mutator.mutate(p);
           if (i % printInterval == 0) {
-            LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Put " + printInterval + "/" + stopWatch.elapsed(MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
