@@ -45,7 +45,7 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
-org.apache.hadoop.util.StringUtils;
+org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <div class="tabbable">
     <ul class="nav nav-pills">
@@ -245,12 +245,14 @@ org.apache.hadoop.util.StringUtils;
     </tr>
     <tr>
         <td>Size</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getCurrentSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getCurrentSize(),
+            "B", 1) %></td>
         <td>Current size of block cache in use (bytes)</td>
     </tr>
     <tr>
         <td>Free</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getFreeSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getFreeSize(),
+            "B", 1) %></td>
         <td>The total free memory currently available to store more cache entries (bytes)</td>
     </tr>
     <tr>
@@ -337,13 +339,13 @@ are combined counts. Request count is sum of hits and misses.</p>
 </%if>
     <tr>
         <td>Size</td>
-        <td><% StringUtils.humanReadableInt(cbsbf.getSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getSize(), "B", 1) %></td>
         <td>Size of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
         <td>Size</td>
-        <td><% StringUtils.humanReadableInt(cbsbf.getDataSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getDataSize(), "B", 1) %></td>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if> 

@@ -33,7 +33,7 @@ org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;
-org.apache.hadoop.util.StringUtils;
+org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 java.lang.management.ManagementFactory;
 </%import>
 <div class="tabbable">
@@ -106,18 +106,20 @@ MetricsRegionServerWrapper mWrap;
 </tr>
 <tr>
     <td>
-        <% StringUtils.humanReadableInt(ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed()) %>
+        <% TraditionalBinaryPrefix.long2String(
+            ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(), "B", 1) %>
     </td>
     <td>
-        <% StringUtils.humanReadableInt(ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()) %>
+        <% TraditionalBinaryPrefix.long2String(
+            ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax(), "B", 1) %>
     </td>
     <td>
-        <% StringUtils.humanReadableInt(DirectMemoryUtils.getDirectMemoryUsage()) %>
+        <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemoryUsage(), "B", 1) %>
     </td>
     <td>
-        <% StringUtils.humanReadableInt(DirectMemoryUtils.getDirectMemorySize()) %>
+        <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemorySize(), "B", 1) %>
     </td>
-    <td><% StringUtils.humanReadableInt(mWrap.getMemstoreSize()) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>
@@ -135,7 +137,7 @@ MetricsRegionServerWrapper mWrap;
 </tr>
 <tr>
     <td><% mWrap.getNumWALFiles() %></td>
-    <td><% mWrap.getWALFileSize() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mWrap.getWALFileSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>
@@ -154,11 +156,11 @@ MetricsRegionServerWrapper mWrap;
     <th>Bloom Size (bytes)</th>
 </tr>
 <tr>
-    <td><% StringUtils.humanReadableInt(mWrap.getNumStores()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getNumStoreFiles()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getStoreFileIndexSize()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getTotalStaticIndexSize()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getTotalStaticBloomSize()) %></td>
+    <td><% mWrap.getNumStores() %></td>
+    <td><% mWrap.getNumStoreFiles() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mWrap.getStoreFileIndexSize(), "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mWrap.getTotalStaticIndexSize(), "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mWrap.getTotalStaticBloomSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>
@@ -197,8 +199,7 @@ MetricsHBaseServerWrapper mServerWrap;
 <tr>
     <td><% mWrap.getCompactionQueueSize() %></td>
     <td><% mWrap.getFlushQueueSize() %></td>
-    <td><% StringUtils.TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(),
-      "", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>
