@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.multiwal;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.replication.TestReplicationSyncUpTool;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.wal.RegionGroupingProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
@@ -29,6 +30,7 @@ public class TestReplicationSyncUpToolWithMultipleWAL extends TestReplicationSyn
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.set(WALFactory.WAL_PROVIDER, "multiwal");
+    conf1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
     TestReplicationBase.setUpBeforeClass();
   }
 }

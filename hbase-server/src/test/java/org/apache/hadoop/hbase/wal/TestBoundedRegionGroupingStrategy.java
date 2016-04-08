@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
