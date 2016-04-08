@@ -154,14 +154,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   long timeOfOldestEdit();
 
-  /**
-   * Removes a Cell from the memstore. The Cell is removed only if its key
-   * &amp; memstoreTS match the key &amp; memstoreTS value of the cell
-   * parameter.
-   * @param cell
-   */
-  void rollback(final Cell cell);
-
   FileSystem getFileSystem();
 
 

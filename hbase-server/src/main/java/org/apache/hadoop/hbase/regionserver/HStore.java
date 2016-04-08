@@ -646,16 +646,6 @@ public class HStore implements Store {
     }
   }
 
-  @Override
-  public void rollback(final Cell cell) {
-    lock.readLock().lock();
-    try {
-      this.memstore.rollback(cell);
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
   /**
    * @return All store files.
    */
@@ -1817,8 +1807,10 @@ public class HStore implements Store {
     try {
       // Not split-able if we find a reference store file present in the store.
       boolean result = !hasReferences();
-      if (!result && LOG.isDebugEnabled()) {
-        LOG.debug("Cannot split region due to reference files being there");
+      if (!result) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Not splittable; has references: " + this);
+          }
       }
       return result;
     } finally {

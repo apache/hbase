@@ -87,13 +87,6 @@ public interface MemStore extends HeapSize {
   long timeOfOldestEdit();
 
   /**
-   * Remove n key from the memstore. Only kvs that have the same key and the same memstoreTS are
-   * removed. It is ok to not update timeRangeTracker in this call.
-   * @param cell
-   */
-  void rollback(final Cell cell);
-
-  /**
    * Write a delete
    * @param deleteCell
    * @return approximate size of the passed key and value.
