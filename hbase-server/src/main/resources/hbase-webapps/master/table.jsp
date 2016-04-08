@@ -30,7 +30,6 @@
   import="java.util.TreeMap"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
@@ -118,65 +117,19 @@
   }
   int numRegions = 0;
 
+  String pageTitle;
+  if ( !readOnly && action != null ) {
+      pageTitle = "HBase Master: " + StringEscapeUtils.escapeHtml4(master.getServerName().toString());
+  } else {
+      pageTitle = "Table: " + escaped_fqtn;
+  }
+  pageContext.setAttribute("pageTitle", pageTitle);
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta charset="utf-8">
-    <% if ( !readOnly && action != null ) { %>
-        <title>HBase Master: <%= StringEscapeUtils.escapeHtml4(master.getServerName().toString()) %></title>
-    <% } else { %>
-        <title>Table: <%= escaped_fqtn %></title>
-    <% } %>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
 
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-      <link href="/static/css/hbase.css" rel="stylesheet">
-      <% if ( ( !readOnly && action != null ) || fqtn == null ) { %>
-	  <script type="text/javascript">
-      <!--
-		  setTimeout("history.back()",5000);
-	  -->
-	  </script>
-      <% } else { %>
-      <!--[if lt IE 9]>
-          <script src="/static/js/html5shiv.js"></script>
-      <![endif]-->
-      <% } %>
-</head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/processMaster.jsp">Process Metrics</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
 <%
 if ( fqtn != null ) {
   try {
@@ -889,11 +842,8 @@ Actions:
 <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
 </div>
 <% } %>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
+<jsp:include page="footer.jsp" />
 
 <script>
 var index=0;
