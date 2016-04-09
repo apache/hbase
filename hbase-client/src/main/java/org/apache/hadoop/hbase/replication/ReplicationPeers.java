@@ -151,4 +151,6 @@ public interface ReplicationPeers {
    * @return the configuration for the peer cluster, null if it was unable to get the configuration
    */
   Pair<ReplicationPeerConfig, Configuration> getPeerConf(String peerId) throws ReplicationException;
+
+  void updatePeerConfig(String id, ReplicationPeerConfig peerConfig) throws ReplicationException;
 }

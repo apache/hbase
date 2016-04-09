@@ -109,7 +109,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
     this.readPeerConfig();
   }
 
-  private void readPeerConfig() {
+  private ReplicationPeerConfig readPeerConfig() {
     try {
       byte[] data = peerConfigTracker.getData(false);
       if (data != null) {
@@ -118,6 +118,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
     } catch (DeserializationException e) {
       LOG.error("", e);
     }
+    return this.peerConfig;
   }
 
   @Override
@@ -160,6 +161,13 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   public Map<TableName, List<String>> getTableCFs() {
     this.tableCFs = peerConfig.getTableCFsMap();
     return this.tableCFs;
+  }
+
+  @Override
+  public void trackPeerConfigChanges(ReplicationPeerConfigListener listener) {
+    if (this.peerConfigTracker != null){
+      this.peerConfigTracker.setListener(listener);
+    }
   }
 
   @Override
@@ -260,24 +268,36 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    */
   public class PeerConfigTracker extends ZooKeeperNodeTracker {
 
+    ReplicationPeerConfigListener listener;
+
     public PeerConfigTracker(String peerConfigNode, ZooKeeperWatcher watcher,
         Abortable abortable) {
       super(watcher, peerConfigNode, abortable);
     }
-    
+
+    public synchronized void setListener(ReplicationPeerConfigListener listener){
+      this.listener = listener;
+    }
+
     @Override
     public synchronized void nodeCreated(String path) {
       if (path.equals(node)) {
         super.nodeCreated(path);
-        readPeerConfig();
+        ReplicationPeerConfig config = readPeerConfig();
+        if (listener != null){
+          listener.peerConfigUpdated(config);
+        }
       }
     }
 
     @Override
     public synchronized void nodeDataChanged(String path) {
+      //superclass calls nodeCreated
       if (path.equals(node)) {
         super.nodeDataChanged(path);
       }
+
     }
+
   }
 }

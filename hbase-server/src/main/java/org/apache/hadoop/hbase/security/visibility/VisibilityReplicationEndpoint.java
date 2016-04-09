@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -54,6 +55,11 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   @Override
   public void init(Context context) throws IOException {
     delegator.init(context);
+  }
+
+  @Override
+  public void peerConfigUpdated(ReplicationPeerConfig rpc){
+
   }
 
   @Override

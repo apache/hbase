@@ -71,4 +71,6 @@ public interface ReplicationPeer {
    */
   public Map<TableName, List<String>> getTableCFs();
 
+  void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
+
 }

@@ -18,6 +18,7 @@ import static org.junit.Assert.fail;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -27,6 +28,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -193,6 +196,61 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
       adminExt.disableTableRep(tableName);
+    }
+  }
+
+  @Test(timeout=300000)
+  public void testReplicationPeerConfigUpdateCallback() throws Exception {
+    String peerId = "1";
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility2.getClusterKey());
+    rpc.setReplicationEndpointImpl(TestUpdatableReplicationEndpoint.class.getName());
+    rpc.getConfiguration().put("key1", "value1");
+
+    admin.addPeer(peerId, rpc);
+    admin.peerAdded(peerId);
+
+    rpc.getConfiguration().put("key1", "value2");
+    admin.updatePeerConfig(peerId, rpc);
+    if (!TestUpdatableReplicationEndpoint.hasCalledBack()) {
+      synchronized(TestUpdatableReplicationEndpoint.class) {
+        TestUpdatableReplicationEndpoint.class.wait(2000L);
+      }
+    }
+
+    assertEquals(true, TestUpdatableReplicationEndpoint.hasCalledBack());
+  }
+
+  public static class TestUpdatableReplicationEndpoint extends BaseReplicationEndpoint {
+    private static boolean calledBack = false;
+    public static boolean hasCalledBack(){
+      return calledBack;
+    }
+    @Override
+    public synchronized void peerConfigUpdated(ReplicationPeerConfig rpc){
+      calledBack = true;
+      notifyAll();
+    }
+
+    @Override
+    protected void doStart() {
+      notifyStarted();
+    }
+
+    @Override
+    protected void doStop() {
+      notifyStopped();
+    }
+
+
+    @Override
+    public UUID getPeerUUID() {
+      return UUID.randomUUID();
+    }
+
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
+      return false;
     }
   }
 }

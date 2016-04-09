@@ -351,6 +351,45 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     return new Pair<ReplicationPeerConfig, Configuration>(peerConfig, otherConf);
   }
 
+  @Override
+  public void updatePeerConfig(String id, ReplicationPeerConfig newConfig)
+      throws ReplicationException {
+    ReplicationPeer peer = getPeer(id);
+    if (peer == null){
+      throw new ReplicationException("Could not find peer Id " + id);
+    }
+    ReplicationPeerConfig existingConfig = peer.getPeerConfig();
+    if (newConfig.getClusterKey() != null && !newConfig.getClusterKey().isEmpty() &&
+        !newConfig.getClusterKey().equals(existingConfig.getClusterKey())){
+      throw new ReplicationException("Changing the cluster key on an existing peer is not allowed."
+          + " Existing key '" + existingConfig.getClusterKey() + "' does not match new key '"
+          + newConfig.getClusterKey() +
+      "'");
+    }
+    String existingEndpointImpl = existingConfig.getReplicationEndpointImpl();
+    if (newConfig.getReplicationEndpointImpl() != null &&
+        !newConfig.getReplicationEndpointImpl().isEmpty() &&
+        !newConfig.getReplicationEndpointImpl().equals(existingEndpointImpl)){
+      throw new ReplicationException("Changing the replication endpoint implementation class " +
+          "on an existing peer is not allowed. Existing class '"
+          + existingConfig.getReplicationEndpointImpl()
+          + "' does not match new class '" + newConfig.getReplicationEndpointImpl() + "'");
+    }
+    //Update existingConfig's peer config and peer data with the new values, but don't touch config
+    // or data that weren't explicitly changed
+    existingConfig.getConfiguration().putAll(newConfig.getConfiguration());
+    existingConfig.getPeerData().putAll(newConfig.getPeerData());
+
+    try {
+      ZKUtil.setData(this.zookeeper, getPeerNode(id),
+          ReplicationSerDeHelper.toByteArray(existingConfig));
+    }
+    catch(KeeperException ke){
+      throw new ReplicationException("There was a problem trying to save changes to the " +
+          "replication peer " + id, ke);
+    }
+  }
+
   /**
    * List all registered peer clusters and set a watch on their znodes.
    */

@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -201,7 +200,11 @@ public class ReplicationAdmin implements Closeable {
   public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
     return ReplicationSerDeHelper.parseTableCFsFromConfig(tableCFsConfig);
   }
-  
+
+  public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
+      throws ReplicationException {
+    this.replicationPeers.updatePeerConfig(id, peerConfig);
+  }
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
@@ -547,6 +550,11 @@ public class ReplicationAdmin implements Closeable {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  public void peerAdded(String id) throws ReplicationException {
+    this.replicationPeers.peerAdded(id);
   }
 
   @VisibleForTesting
