@@ -222,8 +222,8 @@ Use the following legend to interpret this table:
 |Hadoop-0.23.x | S | X | X | X | X
 |Hadoop-2.0.x-alpha | NT | X | X | X | X
 |Hadoop-2.1.0-beta | NT | X | X | X | X
-|Hadoop-2.2.0 | NT | S | NT | NT | NT
-|Hadoop-2.3.x | NT | S | NT | NT | NT
+|Hadoop-2.2.0 | NT | S | NT | NT | X 
+|Hadoop-2.3.x | NT | S | NT | NT | X 
 |Hadoop-2.4.x | NT | S | S | S | S
 |Hadoop-2.5.x | NT | S | S | S | S
 |Hadoop-2.6.0 | X | X | X | X | X
