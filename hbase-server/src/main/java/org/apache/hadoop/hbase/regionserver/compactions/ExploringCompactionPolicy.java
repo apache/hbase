@@ -51,7 +51,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   }
 
   @Override
-  final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
+  protected final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
     final boolean mayUseOffPeak, final boolean mightBeStuck) throws IOException {
     return new ArrayList<StoreFile>(applyCompactionPolicy(candidates, mightBeStuck,
         mayUseOffPeak, comConf.getMinFilesToCompact(), comConf.getMaxFilesToCompact()));

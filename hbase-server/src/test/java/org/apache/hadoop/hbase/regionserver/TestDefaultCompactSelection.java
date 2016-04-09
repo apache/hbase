@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -89,6 +91,10 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
     store.storeEngine.getCompactionPolicy().setConf(conf);
+    ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(timeMachine);
+    // Has to be  > 0 and < now.
+    timeMachine.setValue(1);
     try {
       // trigger an aged major compaction
       compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);

@@ -52,11 +52,11 @@ public class CompactionConfiguration {
   public static final String RATIO_KEY = CONFIG_PREFIX + "ratio";
   public static final String MIN_KEY = CONFIG_PREFIX + "min";
   public static final String MAX_KEY = CONFIG_PREFIX + "max";
-
+  
   /*
    * The epoch time length for the windows we no longer compact
    */
-  public static final String MAX_AGE_KEY =CONFIG_PREFIX + "date.tiered.max.storefile.age.millis";
+  public static final String MAX_AGE_MILLIS_KEY =CONFIG_PREFIX + "date.tiered.max.storefile.age.millis";
   public static final String BASE_WINDOW_MILLIS_KEY =
     CONFIG_PREFIX + "date.tiered.base.window.millis";
   public static final String WINDOWS_PER_TIER_KEY = CONFIG_PREFIX + "date.tiered.windows.per.tier";
@@ -64,6 +64,8 @@ public class CompactionConfiguration {
     CONFIG_PREFIX + "date.tiered.incoming.window.min";
   public static final String COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY =
       CONFIG_PREFIX + "date.tiered.window.policy.class";
+  public static final String SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
+      CONFIG_PREFIX + "date.tiered.single.output.for.minor.compaction";
 
   private static final Class<? extends RatioBasedCompactionPolicy>
     DEFAULT_TIER_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
@@ -86,7 +88,8 @@ public class CompactionConfiguration {
   private final int windowsPerTier;
   private final int incomingWindowMin;
   private final String compactionPolicyForTieredWindow;
-
+  private final boolean singleOutputForMinorCompaction;
+  
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
     this.storeConfigInfo = storeConfigInfo;
@@ -107,12 +110,14 @@ public class CompactionConfiguration {
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
     minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
-    maxStoreFileAgeMillis = conf.getLong(MAX_AGE_KEY, Long.MAX_VALUE);
+    maxStoreFileAgeMillis = conf.getLong(MAX_AGE_MILLIS_KEY, Long.MAX_VALUE);
     baseWindowMillis = conf.getLong(BASE_WINDOW_MILLIS_KEY, 3600000 * 6);
     windowsPerTier = conf.getInt(WINDOWS_PER_TIER_KEY, 4);
     incomingWindowMin = conf.getInt(INCOMING_WINDOW_MIN_KEY, 6);
     compactionPolicyForTieredWindow = conf.get(COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY,
         DEFAULT_TIER_COMPACTION_POLICY_CLASS.getName());
+    singleOutputForMinorCompaction = conf.getBoolean(SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY,
+      true);
     LOG.info(this);
   }
 
@@ -167,7 +172,7 @@ public class CompactionConfiguration {
   public void setMinFilesToCompact(int threshold) {
     minFilesToCompact = threshold;
   }
-
+  
   /**
    * @return upper bound on number of files to be included in minor compactions
    */
@@ -239,5 +244,9 @@ public class CompactionConfiguration {
 
   public String getCompactionPolicyForTieredWindow() {
     return compactionPolicyForTieredWindow;
+  }
+  
+  public boolean useSingleOutputForMinorCompaction() {
+    return singleOutputForMinorCompaction;
   }
 }

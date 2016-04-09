@@ -76,11 +76,11 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   @Override
-  public boolean isMajorCompaction(Collection<StoreFile> filesToCompact) throws IOException {
+  public boolean shouldPerformMajorCompaction(Collection<StoreFile> filesToCompact) throws IOException {
     boolean isAfterSplit = StoreUtils.hasReferences(filesToCompact);
     if(isAfterSplit){
       LOG.info("Split detected, delegate to the parent policy.");
-      return super.isMajorCompaction(filesToCompact);
+      return super.shouldPerformMajorCompaction(filesToCompact);
     }
     return false;
   }

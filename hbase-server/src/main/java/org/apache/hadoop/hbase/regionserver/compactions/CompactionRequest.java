@@ -215,6 +215,10 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
       ", priority=" + priority + ", time=" + timeInNanos;
   }
 
+  public void updateFiles(Collection<StoreFile> files) {
+    this.filesToCompact = files;
+  }
+  
   /**
    * Recalculate the size of the compaction based on current files.
    * @param files files that should be included in the compaction

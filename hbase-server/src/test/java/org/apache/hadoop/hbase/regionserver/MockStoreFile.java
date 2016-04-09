@@ -24,9 +24,11 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /** A mock used so our tests don't deal with actual StoreFiles */
 public class MockStoreFile extends StoreFile {
@@ -38,7 +40,10 @@ public class MockStoreFile extends StoreFile {
   byte[] splitPoint = null;
   TimeRangeTracker timeRangeTracker;
   long entryCount;
-
+  boolean isMajor;
+  HDFSBlocksDistribution hdfsBlocksDistribution;
+  long modificationTime;
+  
   MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
@@ -47,6 +52,11 @@ public class MockStoreFile extends StoreFile {
     this.isRef = isRef;
     this.ageInDisk = ageInDisk;
     this.sequenceid = sequenceid;
+    this.isMajor = false;
+    hdfsBlocksDistribution = new HDFSBlocksDistribution();
+    hdfsBlocksDistribution.addHostsAndBlockWeight(
+      new String[] { HRegionServer.getHostname(testUtil.getConfiguration()) }, 1);
+    modificationTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   void setLength(long newLen) {
@@ -65,16 +75,19 @@ public class MockStoreFile extends StoreFile {
 
   @Override
   public boolean isMajorCompaction() {
-    return false;
+    return isMajor;
   }
 
+  public void setIsMajor(boolean isMajor) {
+    this.isMajor = isMajor;
+  }
   @Override
   public boolean isReference() {
     return this.isRef;
   }
 
   @Override
-  boolean isBulkLoadResult() {
+  public boolean isBulkLoadResult() {
     return false;
   }
 
@@ -96,17 +109,27 @@ public class MockStoreFile extends StoreFile {
   }
 
   public Long getMinimumTimestamp() {
-    return (timeRangeTracker == null) ?
-      null :
-      timeRangeTracker.getMinimumTimestamp();
+	    return (timeRangeTracker == null) ?
+	        null :
+	        timeRangeTracker.getMinimumTimestamp();
   }
-
+	  
   public Long getMaximumTimestamp() {
-    return (timeRangeTracker == null) ?
-      null :
-      timeRangeTracker.getMaximumTimestamp();
+		    return (timeRangeTracker == null) ?
+		        null :
+		        timeRangeTracker.getMaximumTimestamp();
   }
 
+  @Override
+  public HDFSBlocksDistribution getHDFSBlockDistribution() {
+    return hdfsBlocksDistribution;
+  }
+
+  @Override
+  public long getModificationTimeStamp() {
+    return modificationTime;
+  }
+  
   @Override
   public StoreFile.Reader getReader() {
     final long len = this.length;

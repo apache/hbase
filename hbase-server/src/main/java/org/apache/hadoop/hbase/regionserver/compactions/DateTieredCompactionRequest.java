@@ -15,40 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
-import java.io.IOException;
-import java.util.ArrayList;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
-/**
- * Test Policy to compact everything every time.
- */
-public class EverythingPolicy extends RatioBasedCompactionPolicy {
-  /**
-   * Constructor.
-   *
-   * @param conf            The Conf.
-   * @param storeConfigInfo Info about the store.
-   */
-  public EverythingPolicy(final Configuration conf,
-                          final StoreConfigInformation storeConfigInfo) {
-    super(conf, storeConfigInfo);
+public class DateTieredCompactionRequest extends CompactionRequest {
+  private List<Long> boundaries;
+  
+  public DateTieredCompactionRequest(Collection<StoreFile> files, List<Long> boundaryList) {
+    super(files);
+    boundaries = boundaryList;
   }
-
+  
+  public List<Long> getBoundaries() {
+    return boundaries;
+  }
+  
   @Override
-  protected final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
-    final boolean mayUseOffPeak, final boolean mayBeStuck) throws IOException {
-
-    if (candidates.size() < comConf.getMinFilesToCompact()) {
-      return new ArrayList<StoreFile>(0);
-    }
-
-    return new ArrayList<StoreFile>(candidates);
+  public String toString() {
+    return super.toString() + " boundaries=" + Arrays.toString(boundaries.toArray());
   }
 }
