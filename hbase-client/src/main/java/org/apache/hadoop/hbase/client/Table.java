@@ -341,10 +341,9 @@ public interface Table extends Closeable {
   /**
    * Appends values to one or more columns within a single row.
    * <p>
-   * This operation does not appear atomic to readers.  Appends are done
-   * under a single row lock, so write operations to a row are synchronized, but
-   * readers do not take row locks so get and scan operations can see this
-   * operation partially completed.
+   * This operation guaranteed atomicity to readers. Appends are done
+   * under a single row lock, so write operations to a row are synchronized, and
+   * readers are guaranteed to see this operation fully completed.
    *
    * @param append object that specifies the columns and amounts to be used
    *                  for the increment operations
@@ -356,10 +355,9 @@ public interface Table extends Closeable {
   /**
    * Increments one or more columns within a single row.
    * <p>
-   * This operation does not appear atomic to readers.  Increments are done
-   * under a single row lock, so write operations to a row are synchronized, but
-   * readers do not take row locks so get and scan operations can see this
-   * operation partially completed.
+   * This operation ensures atomicity to readers. Increments are done
+   * under a single row lock, so write operations to a row are synchronized, and
+   * readers are guaranteed to see this operation fully completed.
    *
    * @param increment object that specifies the columns and amounts to be used
    *                  for the increment operations
