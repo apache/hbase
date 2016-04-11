@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -146,6 +147,56 @@ public class TestRegionSplitPolicy {
     assertWithinJitter(maxSplitSize, policy.getSizeToCheck(1000));
     // Assert same is true if count of regions is zero.
     assertWithinJitter(maxSplitSize, policy.getSizeToCheck(0));
+  }
+
+  @Test
+  public void testBusyRegionSplitPolicy() throws Exception {
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+        BusyRegionSplitPolicy.class.getName());
+    conf.setLong("hbase.busy.policy.minAge", 1000000L);
+    conf.setFloat("hbase.busy.policy.blockedRequests", 0.1f);
+
+    RegionServerServices rss  = Mockito.mock(RegionServerServices.class);
+    final List<Region> regions = new ArrayList<Region>();
+    Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
+    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
+    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
+
+
+    BusyRegionSplitPolicy policy =
+        (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+
+    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
+    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(10L);
+    // Not enough time since region came online
+    assertFalse(policy.shouldSplit());
+
+
+    // Reset min age for split to zero
+    conf.setLong("hbase.busy.policy.minAge", 0L);
+    // Aggregate over 500 ms periods
+    conf.setLong("hbase.busy.policy.aggWindow", 500L);
+    policy =
+        (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+    long start = EnvironmentEdgeManager.currentTime();
+    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
+    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(20L);
+    Thread.sleep(300);
+    assertFalse(policy.shouldSplit());
+    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(12L);
+    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(30L);
+    Thread.sleep(2);
+    // Enough blocked requests since last time, but aggregate blocked request
+    // rate over last 500 ms is still low, because major portion of the window is constituted
+    // by the previous zero blocked request period which lasted at least 300 ms off last 500 ms.
+    if (EnvironmentEdgeManager.currentTime() - start < 500) {
+      assertFalse(policy.shouldSplit());
+    }
+    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(14L);
+    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(40L);
+    Thread.sleep(200);
+    assertTrue(policy.shouldSplit());
   }
 
   private void assertWithinJitter(long maxSplitSize, long sizeToCheck) {
