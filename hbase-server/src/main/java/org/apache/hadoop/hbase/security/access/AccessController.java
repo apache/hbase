@@ -2468,7 +2468,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     User activeUser = getActiveUser();
     if (!Superusers.isSuperUser(activeUser)) {
       throw new AccessDeniedException("User '" + (activeUser != null ?
-        activeUser.getShortName() : "null") + "is not system or super user.");
+        activeUser.getShortName() : "null") + "' is not system or super user.");
     }
   }
 
