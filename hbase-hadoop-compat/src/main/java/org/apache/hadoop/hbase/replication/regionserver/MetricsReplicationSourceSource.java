@@ -36,7 +36,6 @@ public interface MetricsReplicationSourceSource {
   public static final String SOURCE_SIZE_OF_HFILE_REFS_QUEUE = "source.sizeOfHFileRefsQueue";
 
   void setLastShippedAge(long age);
-  void setSizeOfLogQueue(int size);
   void incrSizeOfLogQueue(int size);
   void decrSizeOfLogQueue(int size);
   void incrLogEditsFiltered(long size);
@@ -47,6 +46,7 @@ public interface MetricsReplicationSourceSource {
   void incrLogReadInEdits(long size);
   void clear();
   long getLastShippedAge();
+  int getSizeOfLogQueue();
   void incrHFilesShipped(long hfiles);
   void incrSizeOfHFileRefsQueue(long size);
   void decrSizeOfHFileRefsQueue(long size);

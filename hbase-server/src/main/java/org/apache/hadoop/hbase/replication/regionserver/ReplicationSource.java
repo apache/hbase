@@ -31,7 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.StringUtils;
@@ -138,7 +137,6 @@ public class ReplicationSource extends Thread
   private WALEntryFilter walEntryFilter;
   // throttler
   private ReplicationThrottler throttler;
-  private AtomicInteger logQueueSize = new AtomicInteger(0);
   private ConcurrentHashMap<String, ReplicationSourceWorkerThread> workerThreads =
       new ConcurrentHashMap<String, ReplicationSourceWorkerThread>();
 
@@ -221,10 +219,10 @@ public class ReplicationSource extends Thread
       }
     }
     queue.put(log);
-    int queueSize = logQueueSize.incrementAndGet();
-    this.metrics.setSizeOfLogQueue(queueSize);
+    this.metrics.incrSizeOfLogQueue();
     // This will log a warning for each new log that gets created above the warn threshold
-    if (queue.size() > this.logQueueWarnThreshold) {
+    int queueSize = queue.size();
+    if (queueSize > this.logQueueWarnThreshold) {
       LOG.warn("WAL group " + logPrefix + " queue size: " + queueSize
           + " exceeds value of replication.source.log.queue.warn: " + logQueueWarnThreshold);
     }
@@ -510,7 +508,8 @@ public class ReplicationSource extends Thread
     private long currentNbHFiles = 0;
 
     public ReplicationSourceWorkerThread(String walGroupId,
-        PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo, ReplicationSource source) {
+        PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo,
+        ReplicationSource source) {
       this.walGroupId = walGroupId;
       this.queue = queue;
       this.replicationQueueInfo = replicationQueueInfo;
@@ -769,8 +768,7 @@ public class ReplicationSource extends Thread
       try {
         if (this.currentPath == null) {
           this.currentPath = queue.poll(sleepForRetries, TimeUnit.MILLISECONDS);
-          int queueSize = logQueueSize.decrementAndGet();
-          metrics.setSizeOfLogQueue(queueSize);
+          metrics.decrSizeOfLogQueue();
           if (this.currentPath != null) {
             // For recovered queue: must use peerClusterZnode since peerId is a parsed value
             manager.cleanOldLogs(this.currentPath.getName(), peerClusterZnode,

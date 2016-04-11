@@ -89,14 +89,16 @@ public class MetricsSource {
   }
 
   /**
-   * Set the size of the log queue
-   *
-   * @param size the size.
+   * Increment size of the log queue.
    */
-  public void setSizeOfLogQueue(int size) {
-    singleSourceSource.setSizeOfLogQueue(size);
-    globalSourceSource.incrSizeOfLogQueue(size - lastQueueSize);
-    lastQueueSize = size;
+  public void incrSizeOfLogQueue() {
+    singleSourceSource.incrSizeOfLogQueue(1);
+    globalSourceSource.incrSizeOfLogQueue(1);
+  }
+
+  public void decrSizeOfLogQueue() {
+    singleSourceSource.decrSizeOfLogQueue(1);
+    globalSourceSource.decrSizeOfLogQueue(1);
   }
 
   /**
@@ -186,7 +188,7 @@ public class MetricsSource {
    * @return sizeOfLogQueue
    */
   public int getSizeOfLogQueue() {
-    return this.lastQueueSize;
+    return singleSourceSource.getSizeOfLogQueue();
   }
 
   /**
