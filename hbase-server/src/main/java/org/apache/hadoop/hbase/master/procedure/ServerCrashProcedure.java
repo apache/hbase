@@ -173,7 +173,7 @@ implements ServerProcedureInterface {
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ServerCrashState state)
-  throws ProcedureYieldException {
+      throws ProcedureYieldException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(state);
     }
@@ -209,10 +209,17 @@ implements ServerProcedureInterface {
       case SERVER_CRASH_GET_REGIONS:
         // If hbase:meta is not assigned, yield.
         if (!isMetaAssignedQuickTest(env)) {
+          // isMetaAssignedQuickTest does not really wait. Let's delay a little before
+          // another round of execution.
+          long wait =
+              env.getMasterConfiguration().getLong(KEY_SHORT_WAIT_ON_META,
+                DEFAULT_SHORT_WAIT_ON_META);
+          wait = wait / 10;
+          Thread.sleep(wait);
           throwProcedureYieldException("Waiting on hbase:meta assignment");
         }
         this.regionsOnCrashedServer =
-          services.getAssignmentManager().getRegionStates().getServerRegions(this.serverName);
+            services.getAssignmentManager().getRegionStates().getServerRegions(this.serverName);
         // Where to go next? Depends on whether we should split logs at all or if we should do
         // distributed log splitting (DLS) vs distributed log replay (DLR).
         if (!this.shouldSplitWal) {
@@ -292,8 +299,12 @@ implements ServerProcedureInterface {
         return Flow.NO_MORE_STATE;
 
       default:
-          throw new UnsupportedOperationException("unhandled state=" + state);
+        throw new UnsupportedOperationException("unhandled state=" + state);
       }
+    } catch (ProcedureYieldException e) {
+      LOG.warn("Failed serverName=" + this.serverName + ", state=" + state + "; retry "
+          + e.getMessage());
+      throw e;
     } catch (IOException e) {
       LOG.warn("Failed serverName=" + this.serverName + ", state=" + state + "; retry", e);
     } catch (InterruptedException e) {
