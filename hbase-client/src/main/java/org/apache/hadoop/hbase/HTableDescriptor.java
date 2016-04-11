@@ -41,13 +41,9 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -1519,8 +1515,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @return This instance serialized with pb with pb magic prefix
    * @see #parseFrom(byte[])
    */
-  public byte [] toByteArray() {
-    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  public byte[] toByteArray() {
+    return ProtobufUtil.prependPBMagic(ProtobufUtil.convertToTableSchema(this).toByteArray());
   }
 
   /**
@@ -1544,54 +1540,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     } catch (IOException e) {
       throw new DeserializationException(e);
     }
-    return convert(ts);
-  }
-
-  /**
-   * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
-   */
-  public TableSchema convert() {
-    TableSchema.Builder builder = TableSchema.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName(getTableName()));
-    for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
-      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
-      builder.addAttributes(aBuilder.build());
-    }
-    for (HColumnDescriptor hcd: getColumnFamilies()) {
-      builder.addColumnFamilies(hcd.convert());
-    }
-    for (Map.Entry<String, String> e : this.configuration.entrySet()) {
-      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
-      aBuilder.setName(e.getKey());
-      aBuilder.setValue(e.getValue());
-      builder.addConfiguration(aBuilder.build());
-    }
-    return builder.build();
-  }
-
-  /**
-   * @param ts A pb TableSchema instance.
-   * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
-   */
-  public static HTableDescriptor convert(final TableSchema ts) {
-    List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
-    HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
-    int index = 0;
-    for (ColumnFamilySchema cfs: list) {
-      hcds[index++] = HColumnDescriptor.convert(cfs);
-    }
-    HTableDescriptor htd = new HTableDescriptor(
-        ProtobufUtil.toTableName(ts.getTableName()),
-        hcds);
-    for (BytesBytesPair a: ts.getAttributesList()) {
-      htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
-    }
-    for (NameStringPair a: ts.getConfigurationList()) {
-      htd.setConfiguration(a.getName(), a.getValue());
-    }
-    return htd;
+    return ProtobufUtil.convertToHTableDesc(ts);
   }
 
   /**

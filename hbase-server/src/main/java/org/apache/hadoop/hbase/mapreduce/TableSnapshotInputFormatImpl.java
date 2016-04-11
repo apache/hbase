@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -141,7 +142,7 @@ public class TableSnapshotInputFormatImpl {
     @Override
     public void write(DataOutput out) throws IOException {
       TableSnapshotRegionSplit.Builder builder = TableSnapshotRegionSplit.newBuilder()
-          .setTable(htd.convert())
+          .setTable(ProtobufUtil.convertToTableSchema(htd))
           .setRegion(HRegionInfo.convert(regionInfo));
 
       for (String location : locations) {
@@ -168,7 +169,7 @@ public class TableSnapshotInputFormatImpl {
       byte[] buf = new byte[len];
       in.readFully(buf);
       TableSnapshotRegionSplit split = TableSnapshotRegionSplit.PARSER.parseFrom(buf);
-      this.htd = HTableDescriptor.convert(split.getTable());
+      this.htd = ProtobufUtil.convertToHTableDesc(split.getTable());
       this.regionInfo = HRegionInfo.convert(split.getRegion());
       List<String> locationsList = split.getLocationsList();
       this.locations = locationsList.toArray(new String[locationsList.size()]);

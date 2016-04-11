@@ -220,7 +220,8 @@ public class DeleteColumnFamilyProcedure
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setColumnfamilyName(ByteStringer.wrap(familyName));
     if (unmodifiedHTableDescriptor != null) {
-      deleteCFMsg.setUnmodifiedTableSchema(unmodifiedHTableDescriptor.convert());
+      deleteCFMsg
+          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
     }
 
     deleteCFMsg.build().writeDelimitedTo(stream);
@@ -236,7 +237,7 @@ public class DeleteColumnFamilyProcedure
     familyName = deleteCFMsg.getColumnfamilyName().toByteArray();
 
     if (deleteCFMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedHTableDescriptor = HTableDescriptor.convert(deleteCFMsg.getUnmodifiedTableSchema());
+      unmodifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(deleteCFMsg.getUnmodifiedTableSchema());
     }
   }
 

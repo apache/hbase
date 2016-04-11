@@ -17,21 +17,6 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,11 +39,14 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
+.RegionSpecifierType.REGION_NAME;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -126,10 +114,14 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -171,11 +163,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
-    .RegionSpecifierType.REGION_NAME;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -394,7 +385,7 @@ public final class ProtobufUtil {
 
     HTableDescriptor[] ret = new HTableDescriptor[proto.getTableSchemaCount()];
     for (int i = 0; i < proto.getTableSchemaCount(); ++i) {
-      ret[i] = HTableDescriptor.convert(proto.getTableSchema(i));
+      ret[i] = convertToHTableDesc(proto.getTableSchema(i));
     }
     return ret;
   }
@@ -3312,5 +3303,98 @@ public final class ProtobufUtil {
     return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName())
         .addAllServers(hostports)
         .addAllTables(tables).build();
+  }
+
+  /**
+   * Converts an HColumnDescriptor to ColumnFamilySchema
+   * @param hcd the HColummnDescriptor
+   * @return Convert this instance to a the pb column family type
+   */
+  public static ColumnFamilySchema convertToColumnFamilySchema(HColumnDescriptor hcd) {
+    ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
+    builder.setName(ByteStringer.wrap(hcd.getName()));
+    for (Map.Entry<Bytes, Bytes> e : hcd.getValues().entrySet()) {
+      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
+      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
+      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
+      builder.addAttributes(aBuilder.build());
+    }
+    for (Map.Entry<String, String> e : hcd.getConfiguration().entrySet()) {
+      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
+      aBuilder.setName(e.getKey());
+      aBuilder.setValue(e.getValue());
+      builder.addConfiguration(aBuilder.build());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts a ColumnFamilySchema to HColumnDescriptor
+   * @param cfs the ColumnFamilySchema
+   * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
+   */
+  public static HColumnDescriptor convertToHColumnDesc(final ColumnFamilySchema cfs) {
+    // Use the empty constructor so we preserve the initial values set on construction for things
+    // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
+    // unrelated-looking test failures that are hard to trace back to here.
+    HColumnDescriptor hcd = new HColumnDescriptor(cfs.getName().toByteArray());
+    for (BytesBytesPair a: cfs.getAttributesList()) {
+      hcd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
+    }
+    for (NameStringPair a: cfs.getConfigurationList()) {
+      hcd.setConfiguration(a.getName(), a.getValue());
+    }
+    return hcd;
+  }
+
+  /**
+   * Converts an HTableDescriptor to TableSchema
+   * @param htd the HTableDescriptor
+   * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
+   */
+  public static TableSchema convertToTableSchema(HTableDescriptor htd) {
+    TableSchema.Builder builder = TableSchema.newBuilder();
+    builder.setTableName(toProtoTableName(htd.getTableName()));
+    for (Map.Entry<Bytes, Bytes> e : htd.getValues().entrySet()) {
+      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
+      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
+      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
+      builder.addAttributes(aBuilder.build());
+    }
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      builder.addColumnFamilies(convertToColumnFamilySchema(hcd));
+    }
+    for (Map.Entry<String, String> e : htd.getConfiguration().entrySet()) {
+      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
+      aBuilder.setName(e.getKey());
+      aBuilder.setValue(e.getValue());
+      builder.addConfiguration(aBuilder.build());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts a TableSchema to HTableDescriptor
+   * @param ts A pb TableSchema instance.
+   * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
+   */
+  public static HTableDescriptor convertToHTableDesc(final TableSchema ts) {
+    List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
+    HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
+    int index = 0;
+    for (ColumnFamilySchema cfs: list) {
+      hcds[index++] = ProtobufUtil.convertToHColumnDesc(cfs);
+    }
+    HTableDescriptor htd = new HTableDescriptor(ProtobufUtil.toTableName(ts.getTableName()));
+    for (HColumnDescriptor hcd : hcds) {
+      htd.addFamily(hcd);
+    }
+    for (BytesBytesPair a: ts.getAttributesList()) {
+      htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
+    }
+    for (NameStringPair a: ts.getConfigurationList()) {
+      htd.setConfiguration(a.getName(), a.getValue());
+    }
+    return htd;
   }
 }

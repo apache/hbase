@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -104,7 +105,8 @@ public class TestSnapshotManifest {
       startKey = stopKey;
     }
 
-    dataManifestBuilder.setTableSchema(builder.getTableDescriptor().convert());
+    dataManifestBuilder
+        .setTableSchema(ProtobufUtil.convertToTableSchema(builder.getTableDescriptor()));
 
     SnapshotDataManifest dataManifest = dataManifestBuilder.build();
     writeDataManifest(dataManifest);

@@ -298,7 +298,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.addColumn(
           ProtobufUtil.toTableName(req.getTableName()),
-          HColumnDescriptor.convert(req.getColumnFamilies()),
+          ProtobufUtil.convertToHColumnDesc(req.getColumnFamilies()),
           req.getNonceGroup(),
           req.getNonce());
       if (procId == -1) {
@@ -373,7 +373,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public CreateTableResponse createTable(RpcController controller, CreateTableRequest req)
   throws ServiceException {
-    HTableDescriptor hTableDescriptor = HTableDescriptor.convert(req.getTableSchema());
+    HTableDescriptor hTableDescriptor = ProtobufUtil.convertToHTableDesc(req.getTableSchema());
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
       long procId =
@@ -807,7 +807,7 @@ public class MasterRpcServices extends RSRpcServices
       if (descriptors != null && descriptors.size() > 0) {
         // Add the table descriptors to the response
         for (HTableDescriptor htd: descriptors) {
-          builder.addTableSchema(htd.convert());
+          builder.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
         }
       }
       return builder.build();
@@ -1032,7 +1032,7 @@ public class MasterRpcServices extends RSRpcServices
           ListTableDescriptorsByNamespaceResponse.newBuilder();
       for (HTableDescriptor htd : master
           .listTableDescriptorsByNamespace(request.getNamespaceName())) {
-        b.addTableSchema(htd.convert());
+        b.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
       }
       return b.build();
     } catch (IOException e) {
@@ -1061,7 +1061,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.modifyColumn(
         ProtobufUtil.toTableName(req.getTableName()),
-        HColumnDescriptor.convert(req.getColumnFamilies()),
+        ProtobufUtil.convertToHColumnDesc(req.getColumnFamilies()),
         req.getNonceGroup(),
         req.getNonce());
       if (procId == -1) {
@@ -1095,7 +1095,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.modifyTable(
         ProtobufUtil.toTableName(req.getTableName()),
-        HTableDescriptor.convert(req.getTableSchema()),
+        ProtobufUtil.convertToHTableDesc(req.getTableSchema()),
         req.getNonceGroup(),
         req.getNonce());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();

@@ -2241,7 +2241,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       master.close();
     }
     if (!htds.getTableSchemaList().isEmpty()) {
-      return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+      return ProtobufUtil.convertToHTableDesc(htds.getTableSchemaList().get(0));
     }
     throw new TableNotFoundException(tableName.getNameAsString());
   }

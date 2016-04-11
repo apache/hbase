@@ -210,7 +210,7 @@ public class TruncateTableProcedure
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
         .setPreserveSplits(preserveSplits);
     if (hTableDescriptor != null) {
-      state.setTableSchema(hTableDescriptor.convert());
+      state.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     } else {
       state.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
@@ -230,7 +230,7 @@ public class TruncateTableProcedure
       MasterProcedureProtos.TruncateTableStateData.parseDelimitedFrom(stream);
     user = MasterProcedureUtil.toUserInfo(state.getUserInfo());
     if (state.hasTableSchema()) {
-      hTableDescriptor = HTableDescriptor.convert(state.getTableSchema());
+      hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
       tableName = hTableDescriptor.getTableName();
     } else {
       tableName = ProtobufUtil.toTableName(state.getTableName());

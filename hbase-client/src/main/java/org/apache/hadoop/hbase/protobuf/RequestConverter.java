@@ -1034,7 +1034,7 @@ public final class RequestConverter {
       final long nonce) {
     AddColumnRequest.Builder builder = AddColumnRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    builder.setColumnFamilies(column.convert());
+    builder.setColumnFamilies(ProtobufUtil.convertToColumnFamilySchema(column));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1074,7 +1074,7 @@ public final class RequestConverter {
       final long nonce) {
     ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setColumnFamilies(column.convert());
+    builder.setColumnFamilies(ProtobufUtil.convertToColumnFamilySchema(column));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1236,7 +1236,7 @@ public final class RequestConverter {
       final long nonceGroup,
       final long nonce) {
     CreateTableRequest.Builder builder = CreateTableRequest.newBuilder();
-    builder.setTableSchema(hTableDesc.convert());
+    builder.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDesc));
     if (splitKeys != null) {
       for (byte [] splitKey : splitKeys) {
         builder.addSplitKeys(ByteStringer.wrap(splitKey));
@@ -1262,7 +1262,7 @@ public final class RequestConverter {
       final long nonce) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setTableSchema(hTableDesc.convert());
+    builder.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

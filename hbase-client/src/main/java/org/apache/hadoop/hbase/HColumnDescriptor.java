@@ -32,11 +32,8 @@ import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
@@ -295,13 +292,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * Cache the max versions rather than calculate it every time.
    */
   private int cachedMaxVersions = UNINITIALIZED;
-
-  /**
-   * Default constructor. Must be present for PB deserializations.
-   */
-  private HColumnDescriptor() {
-    this.name = null;
-  }
 
   /**
    * Construct a column descriptor specifying only the family name
@@ -1075,8 +1065,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @return This instance serialized with pb with pb magic prefix
    * @see #parseFrom(byte[])
    */
-  public byte [] toByteArray() {
-    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  public byte[] toByteArray() {
+    return ProtobufUtil
+        .prependPBMagic(ProtobufUtil.convertToColumnFamilySchema(this).toByteArray());
   }
 
   /**
@@ -1096,47 +1087,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     } catch (IOException e) {
       throw new DeserializationException(e);
     }
-    return convert(cfs);
-  }
-
-  /**
-   * @param cfs
-   * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
-   */
-  public static HColumnDescriptor convert(final ColumnFamilySchema cfs) {
-    // Use the empty constructor so we preserve the initial values set on construction for things
-    // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
-    // unrelated-looking test failures that are hard to trace back to here.
-    HColumnDescriptor hcd = new HColumnDescriptor();
-    hcd.name = cfs.getName().toByteArray();
-    for (BytesBytesPair a: cfs.getAttributesList()) {
-      hcd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
-    }
-    for (NameStringPair a: cfs.getConfigurationList()) {
-      hcd.setConfiguration(a.getName(), a.getValue());
-    }
-    return hcd;
-  }
-
-  /**
-   * @return Convert this instance to a the pb column family type
-   */
-  public ColumnFamilySchema convert() {
-    ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
-    builder.setName(ByteStringer.wrap(getName()));
-    for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
-      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
-      builder.addAttributes(aBuilder.build());
-    }
-    for (Map.Entry<String, String> e : this.configuration.entrySet()) {
-      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
-      aBuilder.setName(e.getKey());
-      aBuilder.setValue(e.getValue());
-      builder.addConfiguration(aBuilder.build());
-    }
-    return builder.build();
+    return ProtobufUtil.convertToHColumnDesc(cfs);
   }
 
   /**

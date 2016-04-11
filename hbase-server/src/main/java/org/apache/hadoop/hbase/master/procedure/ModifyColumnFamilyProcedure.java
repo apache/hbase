@@ -198,9 +198,10 @@ public class ModifyColumnFamilyProcedure
         MasterProcedureProtos.ModifyColumnFamilyStateData.newBuilder()
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
-            .setColumnfamilySchema(cfDescriptor.convert());
+            .setColumnfamilySchema(ProtobufUtil.convertToColumnFamilySchema(cfDescriptor));
     if (unmodifiedHTableDescriptor != null) {
-      modifyCFMsg.setUnmodifiedTableSchema(unmodifiedHTableDescriptor.convert());
+      modifyCFMsg
+          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
     }
 
     modifyCFMsg.build().writeDelimitedTo(stream);
@@ -214,9 +215,9 @@ public class ModifyColumnFamilyProcedure
         MasterProcedureProtos.ModifyColumnFamilyStateData.parseDelimitedFrom(stream);
     user = MasterProcedureUtil.toUserInfo(modifyCFMsg.getUserInfo());
     tableName = ProtobufUtil.toTableName(modifyCFMsg.getTableName());
-    cfDescriptor = HColumnDescriptor.convert(modifyCFMsg.getColumnfamilySchema());
+    cfDescriptor = ProtobufUtil.convertToHColumnDesc(modifyCFMsg.getColumnfamilySchema());
     if (modifyCFMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedHTableDescriptor = HTableDescriptor.convert(modifyCFMsg.getUnmodifiedTableSchema());
+      unmodifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(modifyCFMsg.getUnmodifiedTableSchema());
     }
   }
 

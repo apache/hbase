@@ -61,7 +61,7 @@ public class TableDescriptor {
   @SuppressWarnings("deprecation")
   public HBaseProtos.TableDescriptor convert() {
     HBaseProtos.TableDescriptor.Builder builder = HBaseProtos.TableDescriptor.newBuilder()
-        .setSchema(hTableDescriptor.convert());
+        .setSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     return builder.build();
   }
 
@@ -69,7 +69,7 @@ public class TableDescriptor {
    * Convert from PB
    */
   public static TableDescriptor convert(HBaseProtos.TableDescriptor proto) {
-    return new TableDescriptor(HTableDescriptor.convert(proto.getSchema()));
+    return new TableDescriptor(ProtobufUtil.convertToHTableDesc(proto.getSchema()));
   }
 
   /**

@@ -360,7 +360,7 @@ public final class SnapshotManifest {
       case SnapshotManifestV2.DESCRIPTOR_VERSION: {
         SnapshotDataManifest dataManifest = readDataManifest();
         if (dataManifest != null) {
-          htd = HTableDescriptor.convert(dataManifest.getTableSchema());
+          htd = ProtobufUtil.convertToHTableDesc(dataManifest.getTableSchema());
           regionManifests = dataManifest.getRegionManifestsList();
         } else {
           // Compatibility, load the v1 regions
@@ -465,7 +465,7 @@ public final class SnapshotManifest {
     }
 
     SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
-    dataManifestBuilder.setTableSchema(htd.convert());
+    dataManifestBuilder.setTableSchema(ProtobufUtil.convertToTableSchema(htd));
 
     if (v1Regions != null && v1Regions.size() > 0) {
       dataManifestBuilder.addAllRegionManifests(v1Regions);

@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsR
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
@@ -268,7 +269,7 @@ public class CloneSnapshotProcedure
       MasterProcedureProtos.CloneSnapshotStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
         .setSnapshot(this.snapshot)
-        .setTableSchema(hTableDescriptor.convert());
+        .setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     if (newRegions != null) {
       for (HRegionInfo hri: newRegions) {
         cloneSnapshotMsg.addRegionInfo(HRegionInfo.convert(hri));
@@ -299,7 +300,7 @@ public class CloneSnapshotProcedure
       MasterProcedureProtos.CloneSnapshotStateData.parseDelimitedFrom(stream);
     user = MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo());
     snapshot = cloneSnapshotMsg.getSnapshot();
-    hTableDescriptor = HTableDescriptor.convert(cloneSnapshotMsg.getTableSchema());
+    hTableDescriptor = ProtobufUtil.convertToHTableDesc(cloneSnapshotMsg.getTableSchema());
     if (cloneSnapshotMsg.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {

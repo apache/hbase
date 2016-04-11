@@ -420,7 +420,7 @@ public class HBaseAdmin implements Admin {
           htds = master.getTableDescriptors(controller, req);
 
           if (!htds.getTableSchemaList().isEmpty()) {
-            return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+            return ProtobufUtil.convertToHTableDesc(htds.getTableSchemaList().get(0));
           }
           return null;
         }
@@ -2033,7 +2033,7 @@ public class HBaseAdmin implements Admin {
             HTableDescriptor[] res = new HTableDescriptor[list.size()];
             for(int i=0; i < list.size(); i++) {
 
-              res[i] = HTableDescriptor.convert(list.get(i));
+              res[i] = ProtobufUtil.convertToHTableDesc(list.get(i));
             }
             return res;
           }

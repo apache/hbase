@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
@@ -235,7 +236,7 @@ public class RestoreSnapshotProcedure
       MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
         .setSnapshot(this.snapshot)
-        .setModifiedTableSchema(modifiedHTableDescriptor.convert());
+        .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor));
 
     if (regionsToRestore != null) {
       for (HRegionInfo hri: regionsToRestore) {
@@ -278,7 +279,7 @@ public class RestoreSnapshotProcedure
     user = MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo());
     snapshot = restoreSnapshotMsg.getSnapshot();
     modifiedHTableDescriptor =
-      HTableDescriptor.convert(restoreSnapshotMsg.getModifiedTableSchema());
+      ProtobufUtil.convertToHTableDesc(restoreSnapshotMsg.getModifiedTableSchema());
 
     if (restoreSnapshotMsg.getRegionInfoForRestoreCount() == 0) {
       regionsToRestore = null;

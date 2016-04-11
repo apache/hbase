@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
@@ -238,7 +239,7 @@ public class CreateTableProcedure
     MasterProcedureProtos.CreateTableStateData.Builder state =
       MasterProcedureProtos.CreateTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
-        .setTableSchema(hTableDescriptor.convert());
+            .setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     if (newRegions != null) {
       for (HRegionInfo hri: newRegions) {
         state.addRegionInfo(HRegionInfo.convert(hri));
@@ -254,7 +255,7 @@ public class CreateTableProcedure
     MasterProcedureProtos.CreateTableStateData state =
       MasterProcedureProtos.CreateTableStateData.parseDelimitedFrom(stream);
     user = MasterProcedureUtil.toUserInfo(state.getUserInfo());
-    hTableDescriptor = HTableDescriptor.convert(state.getTableSchema());
+    hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
     if (state.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
