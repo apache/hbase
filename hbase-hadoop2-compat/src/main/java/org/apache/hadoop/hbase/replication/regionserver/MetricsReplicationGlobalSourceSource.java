@@ -64,10 +64,6 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     ageOfLastShippedOpGauge.set(age);
   }
 
-  @Override public void setSizeOfLogQueue(int size) {
-    sizeOfLogQueueGauge.set(size);
-  }
-
   @Override public void incrSizeOfLogQueue(int size) {
     sizeOfLogQueueGauge.incr(size);
   }
@@ -120,5 +116,10 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public void decrSizeOfHFileRefsQueue(long size) {
     sizeOfHFileRefsQueueGauge.decr(size);
+  }
+
+  @Override
+  public int getSizeOfLogQueue() {
+    return (int)sizeOfLogQueueGauge.value();
   }
 }
