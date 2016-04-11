@@ -1434,6 +1434,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param cfs
    * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
    */
+  @Deprecated
   public static HColumnDescriptor convert(final ColumnFamilySchema cfs) {
     // Use the empty constructor so we preserve the initial values set on construction for things
     // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
@@ -1452,6 +1453,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Convert this instance to a the pb column family type
    */
+  @Deprecated
   public ColumnFamilySchema convert() {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     builder.setName(ByteStringer.wrap(getName()));
