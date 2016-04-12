@@ -207,7 +207,7 @@ public class TestCacheOnWriteInSchema {
   @Test
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
-    StoreFile.Writer writer = store.createWriterInTmp(Integer.MAX_VALUE,
+    StoreFileWriter writer = store.createWriterInTmp(Integer.MAX_VALUE,
         HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false);
     writeStoreFile(writer);
     writer.close();
@@ -267,7 +267,7 @@ public class TestCacheOnWriteInSchema {
     }
   }
 
-  private void writeStoreFile(StoreFile.Writer writer) throws IOException {
+  private void writeStoreFile(StoreFileWriter writer) throws IOException {
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
       byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);

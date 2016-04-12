@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class TestMobFile extends TestCase {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();
@@ -105,7 +106,7 @@ public class TestMobFile extends TestCase {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();

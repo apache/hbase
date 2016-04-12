@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.util.Counter;
 
 /**
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.util.Counter;
 @InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFileScanner implements KeyValueScanner {
   // the reader it comes from:
-  private final StoreFile.Reader reader;
+  private final StoreFileReader reader;
   private final HFileScanner hfs;
   private Cell cur = null;
   private boolean closed = false;
@@ -70,7 +69,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC,
+  public StoreFileScanner(StoreFileReader reader, HFileScanner hfs, boolean useMVCC,
       boolean hasMVCC, long readPt) {
     this.readPt = readPt;
     this.reader = reader;
@@ -117,7 +116,7 @@ public class StoreFileScanner implements KeyValueScanner {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
     for (StoreFile file : files) {
-      StoreFile.Reader r = file.createReader(canUseDrop);
+      StoreFileReader r = file.createReader(canUseDrop);
       r.setReplicaStoreFile(isPrimaryReplica);
       StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
           isCompaction, readPt);
@@ -384,7 +383,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  Reader getReader() {
+  StoreFileReader getReader() {
     return reader;
   }
 

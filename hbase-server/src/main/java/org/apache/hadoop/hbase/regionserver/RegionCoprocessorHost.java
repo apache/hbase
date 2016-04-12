@@ -1541,11 +1541,11 @@ public class RegionCoprocessorHost
    * default behavior, null otherwise
    * @throws IOException
    */
-  public StoreFile.Reader preStoreFileReaderOpen(final FileSystem fs, final Path p,
+  public StoreFileReader preStoreFileReaderOpen(final FileSystem fs, final Path p,
       final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,
       final Reference r) throws IOException {
     return execOperationWithResult(null,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<StoreFile.Reader>() {
+        coprocessors.isEmpty() ? null : new RegionOperationWithResult<StoreFileReader>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -1565,11 +1565,11 @@ public class RegionCoprocessorHost
    * @return The reader to use
    * @throws IOException
    */
-  public StoreFile.Reader postStoreFileReaderOpen(final FileSystem fs, final Path p,
+  public StoreFileReader postStoreFileReaderOpen(final FileSystem fs, final Path p,
       final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,
-      final Reference r, final StoreFile.Reader reader) throws IOException {
+      final Reference r, final StoreFileReader reader) throws IOException {
     return execOperationWithResult(reader,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<StoreFile.Reader>() {
+        coprocessors.isEmpty() ? null : new RegionOperationWithResult<StoreFileReader>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {

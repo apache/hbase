@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.regionserver.MobCompactionStoreScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -86,17 +86,17 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
   };
 
-  private final CellSinkFactory<Writer> writerFactory = new CellSinkFactory<Writer>() {
-
-    @Override
-    public Writer createWriter(InternalScanner scanner,
-        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-        boolean shouldDropBehind) throws IOException {
-      // make this writer with tags always because of possible new cells with tags.
-      return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
-        shouldDropBehind);
-    }
-  };
+  private final CellSinkFactory<StoreFileWriter> writerFactory =
+      new CellSinkFactory<StoreFileWriter>() {
+        @Override
+        public StoreFileWriter createWriter(InternalScanner scanner,
+            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+            boolean shouldDropBehind) throws IOException {
+          // make this writer with tags always because of possible new cells with tags.
+          return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
+            shouldDropBehind);
+        }
+      };
 
   public DefaultMobStoreCompactor(Configuration conf, Store store) {
     super(conf, store);
@@ -180,7 +180,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     boolean hasMore;
     Path path = MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
     byte[] fileName = null;
-    Writer mobFileWriter = null, delFileWriter = null;
+    StoreFileWriter mobFileWriter = null, delFileWriter = null;
     long mobCells = 0, deleteMarkersCount = 0;
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
         store.getTableName().getName());

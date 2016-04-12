@@ -57,7 +57,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }
 
-    StoreFile.Writer writer;
+    StoreFileWriter writer;
     try {
       // TODO:  We can fail in the below block before we complete adding this flush to
       //        list of store files.  Add cleanup of anything put on filesystem if we fail.

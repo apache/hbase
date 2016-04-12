@@ -267,7 +267,7 @@ public class TestStore {
     init(name.getMethodName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
+    StoreFileWriter writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -434,7 +434,7 @@ public class TestStore {
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
-    StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
+    StoreFileWriter w = new StoreFileWriter.Builder(c, new CacheConfig(c),
         fs)
             .withOutputDir(storedir)
             .withFileContext(meta)
@@ -1009,7 +1009,7 @@ public class TestStore {
     Configuration c = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(c);
     HFileContext fileContext = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
-    StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
+    StoreFileWriter w = new StoreFileWriter.Builder(c, new CacheConfig(c),
         fs)
             .withOutputDir(storedir)
             .withFileContext(fileContext)

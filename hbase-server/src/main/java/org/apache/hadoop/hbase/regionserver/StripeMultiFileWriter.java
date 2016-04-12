@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,7 +42,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
   private static final Log LOG = LogFactory.getLog(StripeMultiFileWriter.class);
 
   protected final CellComparator comparator;
-  protected List<StoreFile.Writer> existingWriters;
+  protected List<StoreFileWriter> existingWriters;
   protected List<byte[]> boundaries;
 
   /** Whether to write stripe metadata */
@@ -58,7 +57,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  protected Collection<Writer> writers() {
+  protected Collection<StoreFileWriter> writers() {
     return existingWriters;
   }
 
@@ -73,7 +72,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  protected void preCloseWriter(Writer writer) throws IOException {
+  protected void preCloseWriter(StoreFileWriter writer) throws IOException {
     if (doWriteStripeMetadata) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Write stripe metadata for " + writer.getPath().toString());
@@ -126,7 +125,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
    * separate from all other such pairs.
    */
   public static class BoundaryMultiWriter extends StripeMultiFileWriter {
-    private StoreFile.Writer currentWriter;
+    private StoreFileWriter currentWriter;
     private byte[] currentWriterEndKey;
 
     private Cell lastCell;
@@ -144,7 +143,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         byte[] majorRangeFrom, byte[] majorRangeTo) throws IOException {
       super(comparator);
       this.boundaries = targetBoundaries;
-      this.existingWriters = new ArrayList<StoreFile.Writer>(this.boundaries.size() - 1);
+      this.existingWriters = new ArrayList<StoreFileWriter>(this.boundaries.size() - 1);
       // "major" range (range for which all files are included) boundaries, if any,
       // must match some target boundaries, let's find them.
       assert (majorRangeFrom == null) == (majorRangeTo == null);
@@ -264,7 +263,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
     private byte[] right;
 
     private Cell lastCell;
-    private StoreFile.Writer currentWriter;
+    private StoreFileWriter currentWriter;
     protected byte[] lastRowInCurrentWriter = null;
     private long cellsInCurrentWriter = 0;
     private long cellsSeen = 0;
@@ -284,7 +283,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       this.left = left;
       this.right = right;
       int preallocate = Math.min(this.targetCount, 64);
-      this.existingWriters = new ArrayList<StoreFile.Writer>(preallocate);
+      this.existingWriters = new ArrayList<StoreFileWriter>(preallocate);
       this.boundaries = new ArrayList<byte[]>(preallocate + 1);
     }
 

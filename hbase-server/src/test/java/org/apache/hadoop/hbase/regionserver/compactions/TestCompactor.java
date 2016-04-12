@@ -46,7 +46,9 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.mockito.invocation.InvocationOnMock;
@@ -58,7 +60,7 @@ public class TestCompactor {
     // "Files" are totally unused, it's Scanner class below that gives compactor fake KVs.
     // But compaction depends on everything under the sun, so stub everything with dummies.
     StoreFile sf = mock(StoreFile.class);
-    StoreFile.Reader r = mock(StoreFile.Reader.class);
+    StoreFileReader r = mock(StoreFileReader.class);
     when(r.length()).thenReturn(1L);
     when(r.getBloomFilterType()).thenReturn(BloomType.NONE);
     when(r.getHFileReader()).thenReturn(mock(HFile.Reader.class));
@@ -78,7 +80,7 @@ public class TestCompactor {
 
   // StoreFile.Writer has private ctor and is unwieldy, so this has to be convoluted.
   public static class StoreFileWritersCapture
-      implements Answer<StoreFile.Writer>, StripeMultiFileWriter.WriterFactory {
+      implements Answer<StoreFileWriter>, StripeMultiFileWriter.WriterFactory {
     public static class Writer {
       public ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
       public TreeMap<byte[], byte[]> data = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
@@ -88,10 +90,10 @@ public class TestCompactor {
     private List<Writer> writers = new ArrayList<Writer>();
 
     @Override
-    public StoreFile.Writer createWriter() throws IOException {
+    public StoreFileWriter createWriter() throws IOException {
       final Writer realWriter = new Writer();
       writers.add(realWriter);
-      StoreFile.Writer writer = mock(StoreFile.Writer.class);
+      StoreFileWriter writer = mock(StoreFileWriter.class);
       doAnswer(new Answer<Object>() {
         public Object answer(InvocationOnMock invocation) {
           return realWriter.kvs.add((KeyValue) invocation.getArguments()[0]);
@@ -120,7 +122,7 @@ public class TestCompactor {
     }
 
     @Override
-    public StoreFile.Writer answer(InvocationOnMock invocation) throws Throwable {
+    public StoreFileWriter answer(InvocationOnMock invocation) throws Throwable {
       return createWriter();
     }
 

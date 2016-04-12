@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
@@ -744,7 +745,7 @@ public class TestStripeCompactionPolicy {
   private static StoreFile createFile(long size) throws Exception {
     StoreFile sf = mock(StoreFile.class);
     when(sf.getPath()).thenReturn(new Path("moo"));
-    StoreFile.Reader r = mock(StoreFile.Reader.class);
+    StoreFileReader r = mock(StoreFileReader.class);
     when(r.getEntries()).thenReturn(size);
     when(r.length()).thenReturn(size);
     when(r.getBloomFilterType()).thenReturn(BloomType.NONE);

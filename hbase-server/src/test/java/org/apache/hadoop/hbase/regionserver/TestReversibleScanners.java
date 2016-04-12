@@ -97,7 +97,7 @@ public class TestReversibleScanners {
       hcBuilder.withBlockSize(2 * 1024);
       hcBuilder.withDataBlockEncoding(encoding);
       HFileContext hFileContext = hcBuilder.build();
-      StoreFile.Writer writer = new StoreFile.WriterBuilder(
+      StoreFileWriter writer = new StoreFileWriter.Builder(
           TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(hfilePath)
           .withFileContext(hFileContext).build();
       writeStoreFile(writer);
@@ -145,15 +145,15 @@ public class TestReversibleScanners {
     HFileContextBuilder hcBuilder = new HFileContextBuilder();
     hcBuilder.withBlockSize(2 * 1024);
     HFileContext hFileContext = hcBuilder.build();
-    StoreFile.Writer writer1 = new StoreFile.WriterBuilder(
+    StoreFileWriter writer1 = new StoreFileWriter.Builder(
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
-    StoreFile.Writer writer2 = new StoreFile.WriterBuilder(
+    StoreFileWriter writer2 = new StoreFileWriter.Builder(
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
 
     MemStore memstore = new DefaultMemStore();
-    writeMemstoreAndStoreFiles(memstore, new StoreFile.Writer[] { writer1,
+    writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
     StoreFile sf1 = new StoreFile(fs, writer1.getPath(),
@@ -235,15 +235,15 @@ public class TestReversibleScanners {
     HFileContextBuilder hcBuilder = new HFileContextBuilder();
     hcBuilder.withBlockSize(2 * 1024);
     HFileContext hFileContext = hcBuilder.build();
-    StoreFile.Writer writer1 = new StoreFile.WriterBuilder(
+    StoreFileWriter writer1 = new StoreFileWriter.Builder(
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
-    StoreFile.Writer writer2 = new StoreFile.WriterBuilder(
+    StoreFileWriter writer2 = new StoreFileWriter.Builder(
         TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
         hfilePath).withFileContext(hFileContext).build();
 
     MemStore memstore = new DefaultMemStore();
-    writeMemstoreAndStoreFiles(memstore, new StoreFile.Writer[] { writer1,
+    writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
     StoreFile sf1 = new StoreFile(fs, writer1.getPath(),
@@ -633,7 +633,7 @@ public class TestReversibleScanners {
   }
 
   private static void writeMemstoreAndStoreFiles(MemStore memstore,
-      final StoreFile.Writer[] writers) throws IOException {
+      final StoreFileWriter[] writers) throws IOException {
     try {
       for (int i = 0; i < ROWSIZE; i++) {
         for (int j = 0; j < QUALSIZE; j++) {
@@ -651,7 +651,7 @@ public class TestReversibleScanners {
     }
   }
 
-  private static void writeStoreFile(final StoreFile.Writer writer)
+  private static void writeStoreFile(final StoreFileWriter writer)
       throws IOException {
     try {
       for (int i = 0; i < ROWSIZE; i++) {

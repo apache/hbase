@@ -68,13 +68,13 @@ public class TestStoreFileScannerWithTagCompression {
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).withIncludesTags(true)
         .withCompressTags(true).withDataBlockEncoding(DataBlockEncoding.PREFIX).build();
     // Make a store file and write data to it.
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs).withFilePath(f)
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(f)
         .withFileContext(meta).build();
 
     writeStoreFile(writer);
     writer.close();
 
-    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, conf);
+    StoreFileReader reader = new StoreFileReader(fs, f, cacheConf, conf);
     StoreFileScanner s = reader.getStoreFileScanner(false, false);
     try {
       // Now do reseek with empty KV to position to the beginning of the file
@@ -94,7 +94,7 @@ public class TestStoreFileScannerWithTagCompression {
     }
   }
 
-  private void writeStoreFile(final StoreFile.Writer writer) throws IOException {
+  private void writeStoreFile(final StoreFileWriter writer) throws IOException {
     byte[] fam = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
     long now = System.currentTimeMillis();

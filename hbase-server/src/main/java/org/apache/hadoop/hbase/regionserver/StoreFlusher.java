@@ -61,7 +61,7 @@ abstract class StoreFlusher {
   public abstract List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
       MonitoredTask status, ThroughputController throughputController) throws IOException;
 
-  protected void finalizeWriter(StoreFile.Writer writer, long cacheFlushSeqNum,
+  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
     // Write out the log sequence number that corresponds to this output
     // hfile. Also write current time in metadata as minFlushTime.

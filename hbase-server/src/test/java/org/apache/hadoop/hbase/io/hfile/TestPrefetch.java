@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
@@ -96,7 +96,7 @@ public class TestPrefetch {
     HFileContext meta = new HFileContextBuilder()
       .withBlockSize(DATA_BLOCK_SIZE)
       .build();
-    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeFileParentDir)
       .withComparator(CellComparator.COMPARATOR)
       .withFileContext(meta)

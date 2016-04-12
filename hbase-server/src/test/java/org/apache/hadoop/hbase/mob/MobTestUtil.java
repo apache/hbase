@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
@@ -47,7 +47,7 @@ public class MobTestUtil {
     }
     return sb.toString();
   }
-  protected static void writeStoreFile(final StoreFile.Writer writer, String caseName)
+  protected static void writeStoreFile(final StoreFileWriter writer, String caseName)
       throws IOException {
     writeStoreFile(writer, Bytes.toBytes(caseName), Bytes.toBytes(caseName));
   }
@@ -60,7 +60,7 @@ public class MobTestUtil {
    *
    * @throws IOException
    */
-  private static void writeStoreFile(final StoreFile.Writer writer, byte[] fam,
+  private static void writeStoreFile(final StoreFileWriter writer, byte[] fam,
       byte[] qualifier) throws IOException {
     long now = System.currentTimeMillis();
     try {

@@ -46,8 +46,9 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor.CellSink;
@@ -144,7 +145,7 @@ public abstract class Compactor<T extends CellSink> {
       }
       long seqNum = file.getMaxSequenceId();
       fd.maxSeqId = Math.max(fd.maxSeqId, seqNum);
-      StoreFile.Reader r = file.getReader();
+      StoreFileReader r = file.getReader();
       if (r == null) {
         LOG.warn("Null reader for " + file.getPath());
         continue;
@@ -258,7 +259,8 @@ public abstract class Compactor<T extends CellSink> {
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException if creation failed
    */
-  protected Writer createTmpWriter(FileDetails fd, boolean shouldDropBehind) throws IOException {
+  protected StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind)
+      throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
     return store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,

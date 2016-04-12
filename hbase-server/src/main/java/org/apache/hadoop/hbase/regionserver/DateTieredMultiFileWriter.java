@@ -26,7 +26,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 
 /**
  * class for cell sink that separates the provided cells into multiple files for date tiered
@@ -35,8 +34,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 @InterfaceAudience.Private
 public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
-  private final NavigableMap<Long, StoreFile.Writer> lowerBoundary2Writer
-    = new TreeMap<Long, StoreFile.Writer>();
+  private final NavigableMap<Long, StoreFileWriter> lowerBoundary2Writer
+    = new TreeMap<Long, StoreFileWriter>();
 
   private final boolean needEmptyFile;
 
@@ -53,8 +52,8 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
   @Override
   public void append(Cell cell) throws IOException {
-    Map.Entry<Long, StoreFile.Writer> entry = lowerBoundary2Writer.floorEntry(cell.getTimestamp());
-    StoreFile.Writer writer = entry.getValue();
+    Map.Entry<Long, StoreFileWriter> entry = lowerBoundary2Writer.floorEntry(cell.getTimestamp());
+    StoreFileWriter writer = entry.getValue();
     if (writer == null) {
       writer = writerFactory.createWriter();
       lowerBoundary2Writer.put(entry.getKey(), writer);
@@ -63,7 +62,7 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  protected Collection<Writer> writers() {
+  protected Collection<StoreFileWriter> writers() {
     return lowerBoundary2Writer.values();
   }
 
@@ -72,7 +71,7 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
     if (!needEmptyFile) {
       return;
     }
-    for (StoreFile.Writer writer : lowerBoundary2Writer.values()) {
+    for (StoreFileWriter writer : lowerBoundary2Writer.values()) {
       if (writer != null) {
         return;
       }

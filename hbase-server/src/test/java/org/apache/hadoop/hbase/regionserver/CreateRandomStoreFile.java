@@ -185,7 +185,7 @@ public class CreateRandomStoreFile {
 
     HFileContext meta = new HFileContextBuilder().withCompression(compr)
                         .withBlockSize(blockSize).build();
-    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf,
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf,
         new CacheConfig(conf), fs)
             .withOutputDir(outputDir)
             .withBloomType(bloomType)

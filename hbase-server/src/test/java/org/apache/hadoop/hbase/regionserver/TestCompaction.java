@@ -562,7 +562,7 @@ public class TestCompaction {
   private static StoreFile createFile() throws Exception {
     StoreFile sf = mock(StoreFile.class);
     when(sf.getPath()).thenReturn(new Path("file"));
-    StoreFile.Reader r = mock(StoreFile.Reader.class);
+    StoreFileReader r = mock(StoreFileReader.class);
     when(r.length()).thenReturn(10L);
     when(sf.getReader()).thenReturn(r);
     return sf;

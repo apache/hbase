@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -57,7 +57,7 @@ public class TestCachedMobFile extends TestCase{
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
         .withOutputDir(testDir).withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile = CachedMobFile.create(fs, writer.getPath(), conf, cacheConf);
@@ -79,12 +79,12 @@ public class TestCachedMobFile extends TestCase{
     FileSystem fs = testDir.getFileSystem(conf);
     Path outputDir1 = new Path(testDir, FAMILY1);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
-    StoreFile.Writer writer1 = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer1 = new StoreFileWriter.Builder(conf, cacheConf, fs)
         .withOutputDir(outputDir1).withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer1, caseName);
     CachedMobFile cachedMobFile1 = CachedMobFile.create(fs, writer1.getPath(), conf, cacheConf);
     Path outputDir2 = new Path(testDir, FAMILY2);
-    StoreFile.Writer writer2 = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer2 = new StoreFileWriter.Builder(conf, cacheConf, fs)
     .withOutputDir(outputDir2)
     .withFileContext(meta)
     .build();
@@ -102,7 +102,7 @@ public class TestCachedMobFile extends TestCase{
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
         .withOutputDir(testDir).withFileContext(meta).build();
     String caseName = getName();
     MobTestUtil.writeStoreFile(writer, caseName);

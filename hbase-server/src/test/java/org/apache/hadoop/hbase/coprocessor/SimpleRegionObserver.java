@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -683,17 +683,17 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public Reader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      Reference r, Reader reader) throws IOException {
+      Reference r, StoreFileReader reader) throws IOException {
     ctPreStoreFileReaderOpen.incrementAndGet();
     return null;
   }
 
   @Override
-  public Reader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      Reference r, Reader reader) throws IOException {
+      Reference r, StoreFileReader reader) throws IOException {
     ctPostStoreFileReaderOpen.incrementAndGet();
     return reader;
   }

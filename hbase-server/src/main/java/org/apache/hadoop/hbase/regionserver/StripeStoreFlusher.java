@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
-import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 
@@ -110,8 +108,8 @@ public class StripeStoreFlusher extends StoreFlusher {
       final TimeRangeTracker tracker, final long kvCount) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
-      public Writer createWriter() throws IOException {
-        StoreFile.Writer writer = store.createWriterInTmp(
+      public StoreFileWriter createWriter() throws IOException {
+        StoreFileWriter writer = store.createWriterInTmp(
             kvCount, store.getFamily().getCompressionType(),
             /* isCompaction = */ false,
             /* includeMVCCReadpoint = */ true,

@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -131,11 +130,11 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
-  public StoreFile.Reader getReader() {
+  public StoreFileReader getReader() {
     final long len = this.length;
     final TimeRangeTracker timeRange = this.timeRangeTracker;
     final long entries = this.entryCount;
-    return new StoreFile.Reader() {
+    return new StoreFileReader() {
       @Override
       public long length() {
         return len;

@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -41,22 +41,22 @@ import com.google.common.collect.Lists;
  * {@link #compact(CompactionRequest, ThroughputController, User)}
  */
 @InterfaceAudience.Private
-public class DefaultCompactor extends Compactor<Writer> {
+public class DefaultCompactor extends Compactor<StoreFileWriter> {
   private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
 
   public DefaultCompactor(final Configuration conf, final Store store) {
     super(conf, store);
   }
 
-  private final CellSinkFactory<Writer> writerFactory = new CellSinkFactory<Writer>() {
-
-    @Override
-    public Writer createWriter(InternalScanner scanner,
-        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-        boolean shouldDropBehind) throws IOException {
-      return createTmpWriter(fd, shouldDropBehind);
-    }
-  };
+  private final CellSinkFactory<StoreFileWriter> writerFactory =
+      new CellSinkFactory<StoreFileWriter>() {
+        @Override
+        public StoreFileWriter createWriter(InternalScanner scanner,
+            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+            boolean shouldDropBehind) throws IOException {
+          return createTmpWriter(fd, shouldDropBehind);
+        }
+      };
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
@@ -84,7 +84,7 @@ public class DefaultCompactor extends Compactor<Writer> {
   }
 
   @Override
-  protected List<Path> commitWriter(Writer writer, FileDetails fd,
+  protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
       CompactionRequest request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
@@ -93,7 +93,7 @@ public class DefaultCompactor extends Compactor<Writer> {
   }
 
   @Override
-  protected void abortWriter(Writer writer) throws IOException {
+  protected void abortWriter(StoreFileWriter writer) throws IOException {
     Path leftoverFile = writer.getPath();
     try {
       writer.close();

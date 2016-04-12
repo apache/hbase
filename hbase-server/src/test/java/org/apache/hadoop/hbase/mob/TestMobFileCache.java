@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -133,7 +133,7 @@ public class TestMobFileCache extends TestCase {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     HRegionInfo regionInfo = new HRegionInfo(tn);
-    StoreFile.Writer mobWriter = mobStore.createWriterInTmp(currentDate,
+    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
         maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey());
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();

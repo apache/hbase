@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.io.compress.Compression
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
 import org.apache.hadoop.hbase.io.hfile.{CacheConfig, HFileContextBuilder, HFileWriterImpl}
-import org.apache.hadoop.hbase.regionserver.{HStore, StoreFile, BloomType}
+import org.apache.hadoop.hbase.regionserver.{HStore, StoreFile, StoreFileWriter, BloomType}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.broadcast.Broadcast
@@ -893,7 +893,7 @@ class HBaseContext(@transient sc: SparkContext,
     //Add a '_' to the file name because this is a unfinished file.  A rename will happen
     // to remove the '_' when the file is closed.
     new WriterLength(0,
-      new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
+      new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
         .withBloomType(BloomType.valueOf(familyOptions.bloomType))
         .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
         .withFilePath(new Path(familydir, "_" + UUID.randomUUID.toString.replaceAll("-", "")))
@@ -1048,7 +1048,7 @@ class HBaseContext(@transient sc: SparkContext,
    * @param compactionExclude      The exclude compaction metadata flag for the HFile
    */
   private def closeHFileWriter(fs:FileSystem,
-                               w: StoreFile.Writer,
+                               w: StoreFileWriter,
                                regionSplitPartitioner: BulkLoadPartitioner,
                                previousRow: Array[Byte],
                                compactionExclude: Boolean): Unit = {
@@ -1079,13 +1079,13 @@ class HBaseContext(@transient sc: SparkContext,
   }
 
   /**
-   * This is a wrapper class around StoreFile.Writer.  The reason for the
+   * This is a wrapper class around StoreFileWriter.  The reason for the
    * wrapper is to keep the length of the file along side the writer
    *
    * @param written The writer to be wrapped
    * @param writer  The number of bytes written to the writer
    */
-  class WriterLength(var written:Long, val writer:StoreFile.Writer)
+  class WriterLength(var written:Long, val writer:StoreFileWriter)
 }
 
 object LatestHBaseContextCache {

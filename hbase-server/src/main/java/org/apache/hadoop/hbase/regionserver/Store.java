@@ -164,7 +164,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @param includeMVCCReadpoint whether we should out the MVCC readpoint
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  StoreFile.Writer createWriterInTmp(
+  StoreFileWriter createWriterInTmp(
       long maxKeyCount,
       Compression.Algorithm compression,
       boolean isCompaction,
@@ -180,7 +180,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @param shouldDropBehind should the writer drop caches behind writes
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  StoreFile.Writer createWriterInTmp(
+  StoreFileWriter createWriterInTmp(
     long maxKeyCount,
     Compression.Algorithm compression,
     boolean isCompaction,

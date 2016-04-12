@@ -233,7 +233,7 @@ public class StoreFileInfo {
    * @param cacheConf The cache configuration and block cache reference.
    * @return The StoreFile.Reader for the file
    */
-  public StoreFile.Reader open(final FileSystem fs,
+  public StoreFileReader open(final FileSystem fs,
       final CacheConfig cacheConf, final boolean canUseDropBehind) throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
@@ -257,7 +257,7 @@ public class StoreFileInfo {
     long length = status.getLen();
     hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
 
-    StoreFile.Reader reader = null;
+    StoreFileReader reader = null;
     if (this.coprocessorHost != null) {
       reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(), in, length,
         cacheConf, reference);
@@ -267,7 +267,7 @@ public class StoreFileInfo {
         reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
           conf);
       } else {
-        reader = new StoreFile.Reader(fs, status.getPath(), in, length, cacheConf, conf);
+        reader = new StoreFileReader(fs, status.getPath(), in, length, cacheConf, conf);
       }
     }
     if (this.coprocessorHost != null) {

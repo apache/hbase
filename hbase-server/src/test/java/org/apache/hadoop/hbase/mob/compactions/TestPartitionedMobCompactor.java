@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest;
-import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.mob.compactions.MobCompactionRequest.CompactionType;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartition;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -306,7 +304,7 @@ public class TestPartitionedMobCompactor {
         mobFileName = MobFileName.create(Bytes.toBytes(startKey + i), MobUtils.formatDate(
             new Date()), mobSuffix);
       }
-      StoreFile.Writer mobFileWriter = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+      StoreFileWriter mobFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withFileContext(meta).withFilePath(new Path(basePath, mobFileName.getFileName())).build();
       writeStoreFile(mobFileWriter, startRow, Bytes.toBytes(family), Bytes.toBytes(qualifier),
           type, (i+1)*1000);
@@ -322,7 +320,7 @@ public class TestPartitionedMobCompactor {
    * @param type the key type
    * @param size the size of value
    */
-  private static void writeStoreFile(final StoreFile.Writer writer, byte[]row, byte[] family,
+  private static void writeStoreFile(final StoreFileWriter writer, byte[]row, byte[] family,
       byte[] qualifier, Type type, int size) throws IOException {
     long now = System.currentTimeMillis();
     try {

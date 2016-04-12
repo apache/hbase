@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
@@ -256,7 +256,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   private void recalculateSize() {
     long sz = 0;
     for (StoreFile sf : this.filesToCompact) {
-      Reader r = sf.getReader();
+      StoreFileReader r = sf.getReader();
       sz += r == null ? 0 : r.length();
     }
     this.totalSize = sz;

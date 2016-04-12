@@ -201,7 +201,7 @@ public class TestCompoundBloomFilter {
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
     StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt);
-    StoreFile.Reader r = sf.createReader();
+    StoreFileReader r = sf.createReader();
     final boolean pread = true; // does not really matter
     StoreFileScanner scanner = r.getStoreFileScanner(true, pread);
 
@@ -301,7 +301,7 @@ public class TestCompoundBloomFilter {
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     cacheConf = new CacheConfig(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCK_SIZES[t]).build();
-    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs)
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs)
             .withOutputDir(TEST_UTIL.getDataTestDir())
             .withBloomType(bt)
             .withFileContext(meta)

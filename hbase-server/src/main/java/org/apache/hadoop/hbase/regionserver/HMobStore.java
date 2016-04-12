@@ -188,7 +188,7 @@ public class HMobStore extends HStore {
    * @return The writer for the mob file.
    * @throws IOException
    */
-  public StoreFile.Writer createWriterInTmp(Date date, long maxKeyCount,
+  public StoreFileWriter createWriterInTmp(Date date, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
@@ -208,7 +208,7 @@ public class HMobStore extends HStore {
    * @return The writer for the del file.
    * @throws IOException
    */
-  public StoreFile.Writer createDelFileWriterInTmp(Date date, long maxKeyCount,
+  public StoreFileWriter createDelFileWriterInTmp(Date date, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
@@ -230,7 +230,7 @@ public class HMobStore extends HStore {
    * @return The writer for the mob file.
    * @throws IOException
    */
-  public StoreFile.Writer createWriterInTmp(String date, Path basePath, long maxKeyCount,
+  public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey) throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID()
         .toString().replaceAll("-", ""));
@@ -246,7 +246,7 @@ public class HMobStore extends HStore {
    * @return The writer for the mob file.
    * @throws IOException
    */
-  public StoreFile.Writer createWriterInTmp(MobFileName mobFileName, Path basePath,
+  public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
       long maxKeyCount, Compression.Algorithm compression) throws IOException {
     final CacheConfig writerCacheConf = mobCacheConfig;
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
@@ -259,7 +259,7 @@ public class HMobStore extends HStore {
         .withEncryptionContext(cryptoContext)
         .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
-    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf, region.getFilesystem())
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, region.getFilesystem())
         .withFilePath(new Path(basePath, mobFileName.getFileName()))
         .withComparator(CellComparator.COMPARATOR).withBloomType(BloomType.NONE)
         .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();

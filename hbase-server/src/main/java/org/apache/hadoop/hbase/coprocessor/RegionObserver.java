@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -1210,9 +1211,9 @@ public interface RegionObserver extends Coprocessor {
    * default behavior, null otherwise
    * @throws IOException
    */
-  StoreFile.Reader preStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  StoreFileReader preStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
-      final CacheConfig cacheConf, final Reference r, StoreFile.Reader reader) throws IOException;
+      final CacheConfig cacheConf, final Reference r, StoreFileReader reader) throws IOException;
 
   /**
    * Called after the creation of Reader for a store file.
@@ -1228,9 +1229,9 @@ public interface RegionObserver extends Coprocessor {
    * @return The reader to use
    * @throws IOException
    */
-  StoreFile.Reader postStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  StoreFileReader postStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
-      final CacheConfig cacheConf, final Reference r, StoreFile.Reader reader) throws IOException;
+      final CacheConfig cacheConf, final Reference r, StoreFileReader reader) throws IOException;
 
   /**
    * Called after a new cell has been created during an increment operation, but before

@@ -26,6 +26,7 @@ import com.google.common.base.Objects;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.mockito.Mockito.mock;
@@ -62,7 +63,7 @@ class MockStoreFileGenerator {
 
   protected StoreFile createMockStoreFile(final long sizeInBytes, final long seqId) {
     StoreFile mockSf = mock(StoreFile.class);
-    StoreFile.Reader reader = mock(StoreFile.Reader.class);
+    StoreFileReader reader = mock(StoreFileReader.class);
     String stringPath = "/hbase/testTable/regionA/"
         + RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null, random);
     Path path = new Path(stringPath);

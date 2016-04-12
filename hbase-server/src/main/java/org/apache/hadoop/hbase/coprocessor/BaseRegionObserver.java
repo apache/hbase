@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -485,16 +485,16 @@ public class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public Reader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      Reference r, Reader reader) throws IOException {
+      Reference r, StoreFileReader reader) throws IOException {
     return reader;
   }
 
   @Override
-  public Reader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-      Reference r, Reader reader) throws IOException {
+      Reference r, StoreFileReader reader) throws IOException {
     return reader;
   }
 

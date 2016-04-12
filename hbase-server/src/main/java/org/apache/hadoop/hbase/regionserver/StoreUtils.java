@@ -74,7 +74,7 @@ public class StoreUtils {
     long maxSize = -1L;
     StoreFile largestSf = null;
     for (StoreFile sf : candidates) {
-      StoreFile.Reader r = sf.getReader();
+      StoreFileReader r = sf.getReader();
       if (r == null) continue;
       long size = r.length();
       if (size > maxSize) {

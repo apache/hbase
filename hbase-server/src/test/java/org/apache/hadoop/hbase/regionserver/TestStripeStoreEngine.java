@@ -106,7 +106,7 @@ public class TestStripeStoreEngine {
     StoreFile sf = mock(StoreFile.class);
     when(sf.getMetadataValue(any(byte[].class)))
       .thenReturn(StripeStoreFileManager.INVALID_KEY);
-    when(sf.getReader()).thenReturn(mock(StoreFile.Reader.class));
+    when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
     when(sf.getPath()).thenReturn(new Path("moo"));
     return sf;
   }

@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor.CellSink;
 
 /**
@@ -44,7 +43,7 @@ public abstract class AbstractMultiFileWriter implements CellSink {
   protected StoreScanner sourceScanner;
 
   public interface WriterFactory {
-    public StoreFile.Writer createWriter() throws IOException;
+    public StoreFileWriter createWriter() throws IOException;
   }
 
   /**
@@ -66,13 +65,13 @@ public abstract class AbstractMultiFileWriter implements CellSink {
    */
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction) throws IOException {
     preCommitWriters();
-    Collection<StoreFile.Writer> writers = this.writers();
+    Collection<StoreFileWriter> writers = this.writers();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId
           + ", majorCompaction=" + majorCompaction);
     }
     List<Path> paths = new ArrayList<Path>();
-    for (Writer writer : writers) {
+    for (StoreFileWriter writer : writers) {
       if (writer == null) {
         continue;
       }
@@ -89,7 +88,7 @@ public abstract class AbstractMultiFileWriter implements CellSink {
    */
   public List<Path> abortWriters() {
     List<Path> paths = new ArrayList<Path>();
-    for (StoreFile.Writer writer : writers()) {
+    for (StoreFileWriter writer : writers()) {
       try {
         if (writer != null) {
           paths.add(writer.getPath());
@@ -102,7 +101,7 @@ public abstract class AbstractMultiFileWriter implements CellSink {
     return paths;
   }
 
-  protected abstract Collection<StoreFile.Writer> writers();
+  protected abstract Collection<StoreFileWriter> writers();
 
   /**
    * Subclasses override this method to be called at the end of a successful sequence of append; all
@@ -115,6 +114,6 @@ public abstract class AbstractMultiFileWriter implements CellSink {
    * Subclasses override this method to be called before we close the give writer. Usually you can
    * append extra metadata to the writer.
    */
-  protected void preCloseWriter(StoreFile.Writer writer) throws IOException {
+  protected void preCloseWriter(StoreFileWriter writer) throws IOException {
   }
 }

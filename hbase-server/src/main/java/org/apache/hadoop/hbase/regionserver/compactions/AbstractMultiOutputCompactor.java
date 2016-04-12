@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter.WriterFactory;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 
 /**
@@ -50,7 +50,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
       final FileDetails fd, final boolean shouldDropBehind) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
-      public Writer createWriter() throws IOException {
+      public StoreFileWriter createWriter() throws IOException {
         return createTmpWriter(fd, shouldDropBehind);
       }
     };

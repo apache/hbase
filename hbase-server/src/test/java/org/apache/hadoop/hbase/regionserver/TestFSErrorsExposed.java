@@ -81,7 +81,7 @@ public class TestFSErrorsExposed {
     FileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     HFileContext meta = new HFileContextBuilder().withBlockSize(2 * 1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(
+    StoreFileWriter writer = new StoreFileWriter.Builder(
         util.getConfiguration(), cacheConf, hfs)
             .withOutputDir(hfilePath)
             .withFileContext(meta)
@@ -92,7 +92,7 @@ public class TestFSErrorsExposed {
     StoreFile sf = new StoreFile(fs, writer.getPath(),
       util.getConfiguration(), cacheConf, BloomType.NONE);
 
-    StoreFile.Reader reader = sf.createReader();
+    StoreFileReader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
     FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
@@ -131,7 +131,7 @@ public class TestFSErrorsExposed {
     HFileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     HFileContext meta = new HFileContextBuilder().withBlockSize(2 * 1024).build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(
+    StoreFileWriter writer = new StoreFileWriter.Builder(
         util.getConfiguration(), cacheConf, hfs)
             .withOutputDir(hfilePath)
             .withFileContext(meta)

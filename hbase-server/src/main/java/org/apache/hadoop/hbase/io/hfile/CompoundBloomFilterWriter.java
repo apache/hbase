@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -155,7 +156,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
    * Adds a Bloom filter key. This key must be greater than the previous key,
    * as defined by the comparator this compound Bloom filter is configured
    * with. For efficiency, key monotonicity is not checked here. See
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile.Writer#append(
+   * {@link StoreFileWriter#append(
    * org.apache.hadoop.hbase.Cell)} for the details of deduplication.
    */
   @Override

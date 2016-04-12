@@ -4214,7 +4214,7 @@ public class TestHRegion {
       HStore store = (HStore) region.getStore(fam1);
       Collection<StoreFile> storeFiles = store.getStorefiles();
       for (StoreFile storefile : storeFiles) {
-        StoreFile.Reader reader = storefile.getReader();
+        StoreFileReader reader = storefile.getReader();
         reader.loadFileInfo();
         reader.loadBloomfilter();
         assertEquals(num_unique_rows * duplicate_multiplier, reader.getEntries());
@@ -4226,7 +4226,7 @@ public class TestHRegion {
       // after compaction
       storeFiles = store.getStorefiles();
       for (StoreFile storefile : storeFiles) {
-        StoreFile.Reader reader = storefile.getReader();
+        StoreFileReader reader = storefile.getReader();
         reader.loadFileInfo();
         reader.loadBloomfilter();
         assertEquals(num_unique_rows * duplicate_multiplier * num_storefiles, reader.getEntries());

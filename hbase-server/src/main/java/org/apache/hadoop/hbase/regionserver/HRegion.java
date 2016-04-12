@@ -1691,7 +1691,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Collection<StoreFile> storeFiles = store.getStorefiles();
       if (storeFiles == null) continue;
       for (StoreFile file : storeFiles) {
-        StoreFile.Reader sfReader = file.getReader();
+        StoreFileReader sfReader = file.getReader();
         if (sfReader == null) continue;
         HFile.Reader reader = sfReader.getHFileReader();
         if (reader == null) continue;

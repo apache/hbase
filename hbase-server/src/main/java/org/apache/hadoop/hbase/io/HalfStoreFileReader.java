@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
 @InterfaceAudience.Private
-public class HalfStoreFileReader extends StoreFile.Reader {
+public class HalfStoreFileReader extends StoreFileReader {
   private static final Log LOG = LogFactory.getLog(HalfStoreFileReader.class);
   final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:

@@ -595,7 +595,7 @@ public class DataBlockEncodingTool {
     StoreFile hsf = new StoreFile(fs, path, conf, cacheConf,
       BloomType.NONE);
 
-    StoreFile.Reader reader = hsf.createReader();
+    StoreFileReader reader = hsf.createReader();
     reader.loadFileInfo();
     KeyValueScanner scanner = reader.getStoreFileScanner(true, true);
 

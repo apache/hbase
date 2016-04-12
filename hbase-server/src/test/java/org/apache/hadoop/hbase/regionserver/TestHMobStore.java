@@ -178,7 +178,7 @@ public class TestHMobStore {
     KeyValue key3 = new KeyValue(row2, family, qf3, 1, value2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
-    StoreFile.Writer mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
+    StoreFileWriter mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
         hcd.getCompactionCompression(), region.getRegionInfo().getStartKey());
     mobFilePath = mobWriter.getPath();
 

@@ -147,7 +147,7 @@ public class TestScanWithBloomError {
       }
     });
 
-    StoreFile.Reader lastStoreFileReader = null;
+    StoreFileReader lastStoreFileReader = null;
     for (StoreFileScanner sfScanner : scanners)
       lastStoreFileReader = sfScanner.getReader();
 
