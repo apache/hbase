@@ -996,7 +996,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final String MOVE_COST_KEY = "hbase.master.balancer.stochastic.moveCost";
     private static final String MAX_MOVES_PERCENT_KEY =
         "hbase.master.balancer.stochastic.maxMovePercent";
-    private static final float DEFAULT_MOVE_COST = 100;
+    private static final float DEFAULT_MOVE_COST = 7;
     private static final int DEFAULT_MAX_MOVES = 600;
     private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
 
