@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.master.snapshot;
 import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,11 +32,15 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -42,13 +50,25 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestSnapshotHFileCleaner {
 
+  private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final String TABLE_NAME_STR = "testSnapshotManifest";
+  private static final String SNAPSHOT_NAME_STR = "testSnapshotManifest-snapshot";
+  private static Path rootDir;
+  private static FileSystem fs;
+
+  /**
+   * Setup the test environment
+   */
+  @BeforeClass
+  public static void setup() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    rootDir = FSUtils.getRootDir(conf);
+    fs = FileSystem.get(conf);
+  }
 
   @AfterClass
   public static void cleanup() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = FileSystem.get(conf);
     // cleanup
     fs.delete(rootDir, true);
   }
@@ -85,5 +105,65 @@ public class TestSnapshotHFileCleaner {
 
     // make sure that the file isn't deletable
     assertFalse(cleaner.isFileDeletable(fs.getFileStatus(refFile)));
+  }
+
+  class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
+    public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
+      Collection<String> files =  new HashSet<String>();
+      files.addAll(SnapshotReferenceUtil.getHFileNames(TEST_UTIL.getConfiguration(), fs, snapshotDir));
+      return files;
+    }
+  }
+
+  /**
+   * If there is a corrupted region manifest, it should throw out CorruptedSnapshotException,
+   * instead of an IOException
+   */
+  @Test
+  public void testCorruptedRegionManifest() throws IOException {
+    SnapshotTestingUtils.SnapshotMock
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    builder.addRegionV2();
+    builder.corruptOneRegionManifest();
+
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } catch (CorruptedSnapshotException cse) {
+      LOG.info("Expected exception " + cse);
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
+    }
+  }
+
+  /**
+   * If there is a corrupted data manifest, it should throw out CorruptedSnapshotException,
+   * instead of an IOException
+   */
+  @Test
+  public void testCorruptedDataManifest() throws IOException {
+    SnapshotTestingUtils.SnapshotMock
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    builder.addRegionV2();
+    // consolidate to generate a data.manifest file
+    builder.consolidate();
+    builder.corruptDataManifest();
+
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } catch (CorruptedSnapshotException cse) {
+      LOG.info("Expected exception " + cse);
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
+    }
   }
 }
