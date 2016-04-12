@@ -96,7 +96,7 @@ public class TimeRangeTracker implements Writable {
    * If required, update the current TimestampRange to include timestamp
    * @param timestamp the timestamp value to include
    */
-  private synchronized void includeTimestamp(final long timestamp) {
+  synchronized void includeTimestamp(final long timestamp) {
     if (maximumTimestamp == -1) {
       minimumTimestamp = timestamp;
       maximumTimestamp = timestamp;

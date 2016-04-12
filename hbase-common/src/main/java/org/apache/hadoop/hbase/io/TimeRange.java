@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TimeRange {
-  private long minStamp = 0L;
-  private long maxStamp = Long.MAX_VALUE;
+  private static final long MIN_TIME = 0L;
+  private static final long MAX_TIME = Long.MAX_VALUE;
+  private long minStamp = MIN_TIME;
+  private long maxStamp = MAX_TIME;
   private boolean allTime = false;
 
   /**
@@ -54,6 +56,9 @@ public class TimeRange {
    */
   public TimeRange(long minStamp) {
     this.minStamp = minStamp;
+    if (this.minStamp == MIN_TIME){
+      this.allTime = true;
+    }
   }
 
   /**
@@ -81,6 +86,9 @@ public class TimeRange {
     }
     this.minStamp = minStamp;
     this.maxStamp = maxStamp;
+    if (this.minStamp == MIN_TIME && this.maxStamp == MAX_TIME){
+      this.allTime = true;
+    }
   }
 
   /**
