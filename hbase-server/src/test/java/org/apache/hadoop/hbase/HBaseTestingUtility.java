@@ -3354,14 +3354,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Wait until all regions for a table in hbase:meta have a non-empty
-   * info:server, up to 60 seconds. This means all regions have been deployed,
+   * info:server, up to a configuable timeout value (default is 60 seconds)
+   * This means all regions have been deployed,
    * master has been informed and updated hbase:meta with the regions deployed
    * server.
    * @param tableName the table name
    * @throws IOException
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName) throws IOException {
-    waitUntilAllRegionsAssigned(tableName, 60000);
+    waitUntilAllRegionsAssigned(
+      tableName,
+      this.conf.getLong("hbase.client.sync.wait.timeout.msec", 60000));
   }
 
   /**
