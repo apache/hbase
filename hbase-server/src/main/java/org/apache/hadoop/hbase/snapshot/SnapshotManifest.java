@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -289,6 +290,9 @@ public class SnapshotManifest {
           try {
             v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
             v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc);
+          } catch (InvalidProtocolBufferException e) {
+            throw new CorruptedSnapshotException("unable to parse region manifest " +
+                e.getMessage(), e);
           } finally {
             tpool.shutdown();
           }
@@ -442,6 +446,8 @@ public class SnapshotManifest {
       return SnapshotDataManifest.parseFrom(cin);
     } catch (FileNotFoundException e) {
       return null;
+    } catch (InvalidProtocolBufferException e) {
+      throw new CorruptedSnapshotException("unable to parse data manifest " + e.getMessage(), e);
     } finally {
       if (in != null) in.close();
     }
