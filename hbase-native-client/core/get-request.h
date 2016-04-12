@@ -32,4 +32,4 @@ private:
   TableName table_name_;
   std::string key_;
 };
-}  // namespace hbase
+} // namespace hbase

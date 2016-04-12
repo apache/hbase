@@ -15,39 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 PROTO_SRCS = glob(['*.proto'])
-HEADER_FILENAMES = [ x.replace('.proto','.pb.h') for x in PROTO_SRCS]
-CC_FILENAMES = [ x.replace('.proto', '.pb.cc') for x in PROTO_SRCS]
+HEADER_FILENAMES = [x.replace('.proto', '.pb.h') for x in PROTO_SRCS]
+CC_FILENAMES = [x.replace('.proto', '.pb.cc') for x in PROTO_SRCS]
 
 genrule(
-  name = 'generate-proto-sources',
-  srcs = PROTO_SRCS,
-  cmd = 'mkdir -p $OUT && pwd && protoc --proto_path=. --cpp_out=$OUT *.proto',
-  out = 'output',
-)
+    name='generate-proto-sources',
+    srcs=PROTO_SRCS,
+    cmd='mkdir -p $OUT && pwd && protoc --proto_path=. --cpp_out=$OUT *.proto',
+    out='output', )
 
 for header_filename in HEADER_FILENAMES:
-  genrule(
-    name = header_filename,
-    cmd = 'mkdir -p `dirname $OUT` '
-          ' && cp $(location :generate-proto-sources)/{} $OUT'.format(header_filename),
-    out = header_filename,
-  )
+    genrule(name=header_filename,
+            cmd='mkdir -p `dirname $OUT` '
+            ' && cp $(location :generate-proto-sources)/{} $OUT'.format(
+                header_filename),
+            out=header_filename, )
 for cc_filename in CC_FILENAMES:
-  genrule(
-    name = cc_filename,
-    cmd = 'mkdir -p `dirname $OUT` '
-          ' && cp $(location :generate-proto-sources)/*.cc `dirname $OUT` '
-          ' && cp $(location :generate-proto-sources)/*.h `dirname $OUT`'.format(cc_filename),
-    out = cc_filename,
-  )
+    genrule(
+        name=cc_filename,
+        cmd='mkdir -p `dirname $OUT` '
+        ' && cp $(location :generate-proto-sources)/*.cc `dirname $OUT` '
+        ' && cp $(location :generate-proto-sources)/*.h `dirname $OUT`'.format(
+            cc_filename),
+        out=cc_filename, )
 
-cxx_library(
-  name = 'if',
-  exported_headers =  [':' + x for x in HEADER_FILENAMES],
-  srcs = [':' + x for x in CC_FILENAMES],
-  deps = [ '//third-party:protobuf'],
-  visibility = [ 'PUBLIC', ],
-  exported_deps = ['//third-party:protobuf']
-)
+cxx_library(name='if',
+            exported_headers=[':' + x for x in HEADER_FILENAMES],
+            srcs=[':' + x for x in CC_FILENAMES],
+            deps=['//third-party:protobuf'],
+            visibility=['PUBLIC', ],
+            exported_deps=['//third-party:protobuf'])

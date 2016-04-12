@@ -17,41 +17,42 @@
  *
  */
 
-#include "core/connection-factory.h"
+#include "connection/connection-factory.h"
 
+#include <folly/futures/Future.h>
+#include <wangle/bootstrap/ClientBootstrap.h>
 #include <wangle/channel/AsyncSocketHandler.h>
 #include <wangle/channel/EventBaseHandler.h>
 #include <wangle/channel/OutputBufferingHandler.h>
 #include <wangle/service/ClientDispatcher.h>
+#include <wangle/service/CloseOnReleaseFilter.h>
 #include <wangle/service/ExpiringFilter.h>
-#include <folly/futures/Future.h>
 
 #include <string>
 
-#include "core/client-dispatcher.h"
-#include "core/pipeline.h"
-#include "core/request.h"
-#include "core/response.h"
-#include "core/service.h"
+#include "connection/client-dispatcher.h"
+#include "connection/pipeline.h"
+#include "connection/request.h"
+#include "connection/response.h"
+#include "connection/service.h"
 
 using namespace folly;
 using namespace hbase;
 using namespace wangle;
 
 ConnectionFactory::ConnectionFactory() {
-  bootstrap_.group(std::make_shared<wangle::IOThreadPoolExecutor>(2));
+  bootstrap_.group(std::make_shared<wangle::IOThreadPoolExecutor>(1));
   bootstrap_.pipelineFactory(std::make_shared<RpcPipelineFactory>());
 }
 
-Future<ClientDispatcher> ConnectionFactory::make_connection(std::string host,
-                                                            int port) {
+std::shared_ptr<Service<Request, Response>>
+ConnectionFactory::make_connection(std::string host, int port) {
   // Connect to a given server
   // Then when connected create a ClientDispactcher.
-  auto srv = bootstrap_.connect(SocketAddress(host, port, true))
-                 .then([](SerializePipeline *pipeline) {
-                   ClientDispatcher dispatcher;
-                   dispatcher.setPipeline(pipeline);
-                   return dispatcher;
-                 });
-  return srv;
+  auto pipeline = bootstrap_.connect(SocketAddress(host, port, true)).get();
+  auto dispatcher = std::make_shared<ClientDispatcher>();
+  dispatcher->setPipeline(pipeline);
+  auto service =
+      std::make_shared<CloseOnReleaseFilter<Request, Response>>(dispatcher);
+  return service;
 }

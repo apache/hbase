@@ -16,27 +16,25 @@
  * limitations under the License.
  *
  */
-#include "core/pipeline.h"
+#pragma once
 
-#include <folly/Logging.h>
-#include <wangle/channel/AsyncSocketHandler.h>
-#include <wangle/channel/EventBaseHandler.h>
-#include <wangle/channel/OutputBufferingHandler.h>
-#include <wangle/codec/LengthFieldBasedFrameDecoder.h>
+#include <wangle/service/Service.h>
 
-#include "core/client-serialize-handler.h"
+#include <string>
 
-using namespace folly;
-using namespace hbase;
-using namespace wangle;
+#include "connection/pipeline.h"
+#include "connection/request.h"
+#include "connection/response.h"
+#include "connection/service.h"
 
-SerializePipeline::Ptr
-RpcPipelineFactory::newPipeline(std::shared_ptr<AsyncTransportWrapper> sock) {
-  auto pipeline = SerializePipeline::create();
-  pipeline->addBack(AsyncSocketHandler(sock));
-  pipeline->addBack(EventBaseHandler());
-  pipeline->addBack(LengthFieldBasedFrameDecoder());
-  pipeline->addBack(ClientSerializeHandler());
-  pipeline->finalize();
-  return pipeline;
-}
+namespace hbase {
+class ConnectionFactory {
+public:
+  ConnectionFactory();
+  std::shared_ptr<wangle::Service<Request, Response>>
+  make_connection(std::string host, int port);
+
+private:
+  wangle::ClientBootstrap<SerializePipeline> bootstrap_;
+};
+} // namespace hbase

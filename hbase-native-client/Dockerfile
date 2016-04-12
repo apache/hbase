@@ -22,7 +22,14 @@ ARG CXX=/usr/bin/g++-5
 ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
 ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
 
-RUN apt-get install -y clang-format-3.7 vim maven inetutils-ping
+RUN apt-get install -y clang-format-3.7 vim maven inetutils-ping python-pip && \
+      pip install yapf && \
+      ln -sf /usr/bin/clang-format-3.7 /usr/bin/clang-format && \
+      apt-get -qq clean && \
+      apt-get -y -qq autoremove && \
+      rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
+      rm -rf /tmp/*
+
 RUN git clone --depth 1 --branch v2.6.1 https://github.com/google/protobuf.git /usr/src/protobuf && \
   cd /usr/src/protobuf/ && \
   ldconfig && \
@@ -31,9 +38,8 @@ RUN git clone --depth 1 --branch v2.6.1 https://github.com/google/protobuf.git /
   make && \
   make install && \ 
   make clean && \
-  rm -rf .git
-
-RUN cd /usr/src && \
+  rm -rf .git && \
+  cd /usr/src && \
   wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz && \ 
   tar zxf zookeeper-3.4.8.tar.gz && \ 
   rm -rf zookeeper-3.4.8.tar.gz && \
@@ -43,8 +49,7 @@ RUN cd /usr/src && \
   ./configure && \
   make && \
   make install && \
-  make clean
-
-RUN ldconfig
+  make clean && \
+  ldconfig
 
 WORKDIR /usr/src/hbase/hbase-native-client

@@ -18,16 +18,19 @@
  */
 #pragma once
 
-#include <cstdint>
+#include <folly/io/IOBuf.h>
+
+// Forward
+namespace google {
+namespace protobuf {
+class Message;
+}
+}
 
 namespace hbase {
-class Request {
+class ClientDeserializer {
 public:
-  Request() : call_id_(0) {}
-  uint32_t call_id() { return call_id_; }
-  void set_call_id(uint32_t call_id) { call_id_ = call_id; }
-
-private:
-  uint32_t call_id_;
+  int parse_delimited(const folly::IOBuf *buf, google::protobuf::Message *msg);
 };
-}  // namespace hbase
+
+} // namespace hbase

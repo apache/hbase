@@ -39,4 +39,4 @@ private:
   LocationCache location_cache;
 };
 
-}  // namespace hbase
+} // namespace hbase

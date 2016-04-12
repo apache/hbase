@@ -15,45 +15,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is the main library.
-cxx_library(name="core",
+cxx_library(name="serde",
             exported_headers=[
-                "client.h",
-                "connection.h",
-                "get-request.h",
-                "get-result.h",
-                "hbase_macros.h",
-                "location-cache.h",
-                "table-name.h",
+                "client-serializer.h",
+                "client-deserializer.h",
             ],
             srcs=[
-                "client.cc",
-                "get-request.cc",
-                "get-result.cc",
-                "location-cache.cc",
-                "table-name.cc",
+                "client-serializer.cc",
+                "client-deserializer.cc",
             ],
             deps=[
-                "//connection:connection",
                 "//if:if",
-                "//serde:serde",
                 "//third-party:folly",
-                "//third-party:wangle",
-                "//third-party:zookeeper_mt",
+            ],
+            tests=[
+                ":client-serializer-test",
+                ":client-deserializer-test",
             ],
             visibility=[
                 'PUBLIC',
             ], )
 
-cxx_test(name="location-cache-test",
+cxx_test(name="client-serializer-test",
          srcs=[
-             "test-env.cc",
-             "location-cache-test.cc",
+             "client-serializer-test.cc",
          ],
          deps=[
-             ":core",
+             ":serde",
+             "//if:if",
+         ], )
+cxx_test(name="client-deserializer-test",
+         srcs=[
+             "client-deserializer-test.cc",
          ],
-         run_test_separately=True, )
-cxx_binary(name="simple-client",
-           srcs=["simple-client.cc", ],
-           deps=[":core", "//connection:connection"], )
+         deps=[
+             ":serde",
+             "//if:if",
+         ], )

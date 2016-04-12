@@ -17,25 +17,26 @@
  *
  */
 
-#include "core/mutation.h"
+#pragma once
 
-void Mutation::set_namespace(char *name_space, size_t name_space_length) {
-  this->name_space = name_space;
-  this->name_space_length = name_space_length;
-}
+#include <wangle/service/ClientDispatcher.h>
 
-void Mutation::set_table(char *table, size_t table_length) {
-  this->table = table;
-  this->table_length = table_length;
-}
+#include "connection/pipeline.h"
+#include "connection/request.h"
+#include "connection/response.h"
 
-void Mutation::set_row(unsigned char *row, size_t row_length) {
-  this->row = row;
-  this->row_length = row_length;
-}
+namespace hbase {
+class ClientDispatcher
+    : public wangle::ClientDispatcherBase<SerializePipeline, Request,
+                                          Response> {
+public:
+  void read(Context *ctx, Response in) override;
+  folly::Future<Response> operator()(Request arg) override;
+  folly::Future<folly::Unit> close(Context *ctx) override;
+  folly::Future<folly::Unit> close() override;
 
-void Mutation::set_durability(durability_type durability) {
-  this->durability = durability;
-}
-
-Mutation::~Mutation() {}
+private:
+  std::unordered_map<uint32_t, folly::Promise<Response>> requests_;
+  uint32_t current_call_id_ = 10;
+};
+} // namespace hbase

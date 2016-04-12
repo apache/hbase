@@ -29,4 +29,4 @@ public:
 private:
   std::string key_;
 };
-}  // namespace hbase
+} // namespace hbase

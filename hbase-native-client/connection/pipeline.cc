@@ -16,27 +16,27 @@
  * limitations under the License.
  *
  */
+#include "connection/pipeline.h"
 
-#pragma once
+#include <folly/Logging.h>
+#include <wangle/channel/AsyncSocketHandler.h>
+#include <wangle/channel/EventBaseHandler.h>
+#include <wangle/channel/OutputBufferingHandler.h>
+#include <wangle/codec/LengthFieldBasedFrameDecoder.h>
 
-#include <wangle/service/ClientDispatcher.h>
+#include "connection/client-handler.h"
 
-#include "core/pipeline.h"
-#include "core/request.h"
-#include "core/response.h"
+using namespace folly;
+using namespace hbase;
+using namespace wangle;
 
-namespace hbase {
-class ClientDispatcher
-    : public wangle::ClientDispatcherBase<SerializePipeline, Request,
-                                          Response> {
-public:
-  void read(Context *ctx, Response in) override;
-  folly::Future<Response> operator()(Request arg) override;
-  folly::Future<folly::Unit> close(Context *ctx) override;
-  folly::Future<folly::Unit> close() override;
-
-private:
-  std::unordered_map<int32_t, folly::Promise<Response>> requests_;
-  uint32_t current_call_id_ = 1;
-};
-}  // namespace hbase
+SerializePipeline::Ptr
+RpcPipelineFactory::newPipeline(std::shared_ptr<AsyncTransportWrapper> sock) {
+  auto pipeline = SerializePipeline::create();
+  pipeline->addBack(AsyncSocketHandler{sock});
+  pipeline->addBack(EventBaseHandler{});
+  pipeline->addBack(LengthFieldBasedFrameDecoder{});
+  pipeline->addBack(ClientHandler{user_util_.user_name()});
+  pipeline->finalize();
+  return pipeline;
+}

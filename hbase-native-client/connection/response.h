@@ -16,12 +16,31 @@
  * limitations under the License.
  *
  */
-
 #pragma once
 
-#include "core/mutation.h"
+#include <cstdint>
 
-class Delete : public Mutation {
+// Forward
+namespace google {
+namespace protobuf {
+class Message;
+}
+}
+
+namespace hbase {
+
+class Response {
 public:
-  ~Delete();
+  Response() : call_id_(0) {}
+  uint32_t call_id() { return call_id_; }
+  void set_call_id(uint32_t call_id) { call_id_ = call_id; }
+  std::shared_ptr<google::protobuf::Message> response() { return response_; }
+  void set_response(std::shared_ptr<google::protobuf::Message> response) {
+    response_ = std::move(response);
+  }
+
+private:
+  uint32_t call_id_;
+  std::shared_ptr<google::protobuf::Message> response_;
 };
+} // namespace hbase

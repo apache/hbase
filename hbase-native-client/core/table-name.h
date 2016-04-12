@@ -29,4 +29,4 @@ public:
   explicit TableName(std::string tableName);
   explicit TableName(std::string namespaceName, std::string tableName);
 };
-}  // namespace hbase
+} // namespace hbase
