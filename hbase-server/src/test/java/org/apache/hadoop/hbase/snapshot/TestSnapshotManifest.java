@@ -122,12 +122,12 @@ public class TestSnapshotManifest {
     try {
       SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
       fail("fail to test snapshot manifest because message size is too small.");
-    } catch (InvalidProtocolBufferException ipbe) {
+    } catch (CorruptedSnapshotException cse) {
       try {
         conf.setInt(SnapshotManifest.SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 128 * 1024 * 1024);
         SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
         LOG.info("open snapshot manifest succeed.");
-      } catch (InvalidProtocolBufferException ipbe2) {
+      } catch (CorruptedSnapshotException cse2) {
         fail("fail to take snapshot because Manifest proto-message too large.");
       }
     }
