@@ -136,7 +136,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
   private boolean isByTable = false;
   private TableName tableName = null;
-  
+
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
    * default MetricsBalancer
@@ -200,7 +200,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       regionLoadFunctions[2],
       regionLoadFunctions[3],
     };
-    
+
     curFunctionCosts= new Double[costFunctions.length];
     tempFunctionCosts= new Double[costFunctions.length];
 
@@ -230,7 +230,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       LOG.error("failed to get the size of all tables, exception = " + e.getMessage());
     }
   }
-  
+
   /**
    * Update the number of metrics that are reported to JMX
    */
@@ -263,7 +263,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     this.tableName = tableName;
     return balanceCluster(clusterState);
   }
-  
+
   /**
    * Given the cluster state this will try and approach an optimal balance. This
    * should always approach the optimal state given enough steps.
@@ -371,7 +371,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             + plans.size() + " regions; Going from a computed cost of "
             + initCost + " to a new cost of " + currentCost);
       }
-      
+
       return plans;
     }
     if (LOG.isDebugEnabled()) {
@@ -381,7 +381,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     return null;
   }
-  
+
   /**
    * update costs to JMX
    */
@@ -392,7 +392,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (metricsBalancer instanceof MetricsStochasticBalancer) {
       MetricsStochasticBalancer balancer = (MetricsStochasticBalancer) metricsBalancer;
       // overall cost
-      balancer.updateStochasticCost(tableName.getNameAsString(), 
+      balancer.updateStochasticCost(tableName.getNameAsString(),
         "Overall", "Overall cost", overall);
 
       // each cost function
@@ -512,7 +512,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (int i = 0; i < costFunctions.length; i++) {
       CostFunction c = costFunctions[i];
       this.tempFunctionCosts[i] = 0.0;
-      
+
       if (c.getMultiplier() <= 0) {
         continue;
       }
@@ -527,7 +527,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         break;
       }
     }
-   
+
     return total;
   }
 
@@ -996,7 +996,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final String MOVE_COST_KEY = "hbase.master.balancer.stochastic.moveCost";
     private static final String MAX_MOVES_PERCENT_KEY =
         "hbase.master.balancer.stochastic.maxMovePercent";
-    private static final float DEFAULT_MOVE_COST = 100;
+    private static final float DEFAULT_MOVE_COST = 7;
     private static final int DEFAULT_MAX_MOVES = 600;
     private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
 
@@ -1430,7 +1430,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     public RegionReplicaRackCostFunction(Configuration conf) {
       super(conf);
-      this.setMultiplier(conf.getFloat(REGION_REPLICA_RACK_COST_KEY, 
+      this.setMultiplier(conf.getFloat(REGION_REPLICA_RACK_COST_KEY,
         DEFAULT_REGION_REPLICA_RACK_COST_KEY));
     }
 
@@ -1503,7 +1503,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return rl.getStorefileSizeMB();
     }
   }
-  
+
   /**
    * A helper function to compose the attribute name from tablename and costfunction name
    */
