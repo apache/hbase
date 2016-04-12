@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -60,10 +61,12 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
       return cache.getUnreferencedFiles(files);
+    } catch (CorruptedSnapshotException cse) {
+      LOG.debug("Corrupted in-progress snapshot file exception, ignored ", cse);
     } catch (IOException e) {
       LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
-      return Collections.emptyList();
     }
+    return Collections.emptyList();
   }
 
   @Override

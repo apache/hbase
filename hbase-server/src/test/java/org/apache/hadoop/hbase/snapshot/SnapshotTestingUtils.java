@@ -35,7 +35,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -524,6 +527,69 @@ public class SnapshotTestingUtils {
         return regionData.files;
       }
 
+      private void corruptFile(Path p) throws IOException {
+        String manifestName = p.getName();
+
+        // Rename the original region-manifest file
+        Path newP = new Path(p.getParent(), manifestName + "1");
+        fs.rename(p, newP);
+
+        // Create a new region-manifest file
+        FSDataOutputStream out = fs.create(p);
+
+        //Copy the first 25 bytes of the original region-manifest into the new one,
+        //make it a corrupted region-manifest file.
+        FSDataInputStream input = fs.open(newP);
+        byte[] buffer = new byte[25];
+        int len = input.read(0, buffer, 0, 25);
+        if (len > 1) {
+          out.write(buffer, 0, len - 1);
+        }
+        out.close();
+
+        // Delete the original region-manifest
+        fs.delete(newP);
+      }
+
+      /**
+       * Corrupt one region-manifest file
+       *
+       * @throws IOException on unexecpted error from the FS
+       */
+      public void corruptOneRegionManifest() throws IOException {
+        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+          @Override public boolean accept(Path path) {
+            return path.getName().startsWith(SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX);
+          }
+        });
+
+        if (manifestFiles.length == 0) return;
+
+        // Just choose the first one
+        Path p = manifestFiles[0].getPath();
+        corruptFile(p);
+      }
+
+      /**
+       * Corrupt data-manifest file
+       *
+       * @throws IOException on unexecpted error from the FS
+       */
+      public void corruptDataManifest() throws IOException {
+        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+          @Override
+          public boolean accept(Path path) {
+            return path.getName().startsWith(SnapshotManifest.DATA_MANIFEST_NAME);
+          }
+        });
+
+        if (manifestFiles.length == 0) return;
+
+        // Just choose the first one
+        Path p = manifestFiles[0].getPath();
+        corruptFile(p);
+      }
+
       public Path commit() throws IOException {
         ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
@@ -532,6 +598,13 @@ public class SnapshotTestingUtils {
         SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
         snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
         return snapshotDir;
+      }
+
+      public void consolidate() throws IOException {
+        ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
+        SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addTableDescriptor(htd);
+        manifest.consolidate();
       }
     }
 
