@@ -20,21 +20,30 @@
 #include <folly/Logging.h>
 #include <folly/Random.h>
 #include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 
 #include <iostream>
+#include <chrono>
 
 #include "core/client.h"
-#include "core/connection-factory.h"
+#include "connection/connection-factory.h"
 #include "if/ZooKeeper.pb.h"
+#include "if/Client.pb.h"
 
 using namespace folly;
 using namespace std;
+using namespace std::chrono;
 using namespace hbase;
 using namespace hbase::pb;
+using namespace google::protobuf;
+
+// TODO(eclark): remove the need for this.
+DEFINE_string(region, "1588230740", "What region to send a get to");
+DEFINE_string(row, "test", "What row to get");
 
 int main(int argc, char *argv[]) {
+  google::SetUsageMessage(
+      "Simple client to get a single row from HBase on the comamnd line");
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
@@ -44,14 +53,40 @@ int main(int argc, char *argv[]) {
   LocationCache cache{"localhost:2181", wangle::getCPUExecutor()};
 
   auto result = cache.LocateMeta().get();
-  cout << "ServerName = " << result.host_name() << ":" << result.port() << endl;
 
   // Create a connection to the local host
-  auto conn = cf.make_connection(result.host_name(), result.port()).get();
+  auto conn = cf.make_connection(result.host_name(), result.port());
 
   // Send the request
   Request r;
-  conn(r).get();
+
+  // This is a get request so make that
+  auto msg = make_shared<hbase::pb::GetRequest>();
+
+  // Set what region
+  msg->mutable_region()->set_value(FLAGS_region);
+  // It's always this.
+  msg->mutable_region()->set_type(
+      RegionSpecifier_RegionSpecifierType::
+          RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
+  // What row.
+  msg->mutable_get()->set_row(FLAGS_row);
+  // Send it.
+  r.set_msg(std::move(msg));
+  auto resp = (*conn)(r).get(milliseconds(5000));
+
+  auto get_resp = std::static_pointer_cast<GetResponse>(resp.response());
+  cout << "GetResponse has_result = " << get_resp->has_result() << '\n';
+  if (get_resp->has_result()) {
+    auto &r = get_resp->result();
+    cout << "Result cell_size = " << r.cell_size() << endl;
+    for (auto &cell : r.cell()) {
+      cout << "\trow = " << cell.row() << " family = " << cell.family()
+           << " qualifier = " << cell.qualifier()
+           << " timestamp = " << cell.timestamp() << " value = " << cell.value()
+           << endl;
+    }
+  }
 
   return 0;
 }

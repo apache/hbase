@@ -51,4 +51,4 @@ private:
 
   zhandle_t *zk_;
 };
-}  // namespace hbase
+} // namespace hbase

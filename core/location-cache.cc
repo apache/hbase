@@ -70,8 +70,7 @@ ServerName LocationCache::ReadMetaLocation() {
   // This needs to be int rather than size_t as that's what ZK expects.
   int len = sizeof(contents);
   // TODO(elliott): handle disconnects/reconntion as needed.
-  int zk_result =
-      zoo_get(this->zk_, META_LOCATION, 0, contents, &len, nullptr);
+  int zk_result = zoo_get(this->zk_, META_LOCATION, 0, contents, &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
     throw runtime_error("Error getting meta location");

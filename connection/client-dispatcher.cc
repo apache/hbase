@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  */
-#include "core/client-dispatcher.h"
+#include "connection/client-dispatcher.h"
 
 using namespace folly;
 using namespace hbase;
@@ -27,6 +27,7 @@ void ClientDispatcher::read(Context *ctx, Response in) {
   auto search = requests_.find(call_id);
   CHECK(search != requests_.end());
   auto p = std::move(search->second);
+
   requests_.erase(call_id);
 
   // TODO(eclark): check if the response
@@ -36,6 +37,7 @@ void ClientDispatcher::read(Context *ctx, Response in) {
 
 Future<Response> ClientDispatcher::operator()(Request arg) {
   auto call_id = ++current_call_id_;
+
   arg.set_call_id(call_id);
   auto &p = requests_[call_id];
   auto f = p.getFuture();

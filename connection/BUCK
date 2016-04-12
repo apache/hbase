@@ -15,45 +15,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is the main library.
-cxx_library(name="core",
+# This is the library dealing with a single connection
+# to a single server.
+cxx_library(name="connection",
             exported_headers=[
-                "client.h",
-                "connection.h",
-                "get-request.h",
-                "get-result.h",
-                "hbase_macros.h",
-                "location-cache.h",
-                "table-name.h",
+                "client-dispatcher.h",
+                "client-handler.h",
+                "connection-factory.h",
+                "pipeline.h",
+                "request.h",
+                "response.h",
+                "service.h",
             ],
             srcs=[
-                "client.cc",
-                "get-request.cc",
-                "get-result.cc",
-                "location-cache.cc",
-                "table-name.cc",
+                "client-dispatcher.cc",
+                "client-handler.cc",
+                "connection-factory.cc",
+                "pipeline.cc",
             ],
             deps=[
-                "//connection:connection",
                 "//if:if",
+                "//utils:utils",
                 "//serde:serde",
                 "//third-party:folly",
                 "//third-party:wangle",
-                "//third-party:zookeeper_mt",
             ],
-            visibility=[
-                'PUBLIC',
-            ], )
-
-cxx_test(name="location-cache-test",
-         srcs=[
-             "test-env.cc",
-             "location-cache-test.cc",
-         ],
-         deps=[
-             ":core",
-         ],
-         run_test_separately=True, )
-cxx_binary(name="simple-client",
-           srcs=["simple-client.cc", ],
-           deps=[":core", "//connection:connection"], )
+            visibility=['//core/...', ], )

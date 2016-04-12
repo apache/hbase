@@ -16,7 +16,34 @@
  * limitations under the License.
  *
  */
-
 #pragma once
 
-class Scanner {};
+#include <wangle/channel/Handler.h>
+
+#include <string>
+
+#include "serde/client-serializer.h"
+#include "serde/client-deserializer.h"
+
+// Forward decs.
+namespace hbase {
+class Request;
+class Response;
+}
+
+namespace hbase {
+class ClientHandler
+    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, Response, Request,
+                             std::unique_ptr<folly::IOBuf>> {
+public:
+  ClientHandler(std::string user_name);
+  void read(Context *ctx, std::unique_ptr<folly::IOBuf> msg) override;
+  folly::Future<folly::Unit> write(Context *ctx, Request r) override;
+
+private:
+  bool need_send_header_ = true;
+  std::string user_name_;
+  ClientSerializer ser_;
+  ClientDeserializer deser_;
+};
+} // namespace hbase

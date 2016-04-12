@@ -18,24 +18,9 @@
  */
 #pragma once
 
-#include <wangle/bootstrap/ClientBootstrap.h>
-#include <wangle/service/Service.h>
-
-#include <string>
-
-#include "core/service.h"
-#include "core/pipeline.h"
-#include "core/client-dispatcher.h"
-#include "core/request.h"
-#include "core/response.h"
+#include "connection/request.h"
+#include "connection/response.h"
 
 namespace hbase {
-class ConnectionFactory {
-public:
-  ConnectionFactory();
-  folly::Future<ClientDispatcher> make_connection(std::string host, int port);
-
-private:
-  wangle::ClientBootstrap<SerializePipeline> bootstrap_;
-};
-}  // namespace hbase
+using HBaseService = wangle::Service<Request, Response>;
+} // namespace hbase

@@ -25,13 +25,13 @@ class NativeClientTestEnv : public ::testing::Environment {
 public:
   void SetUp() override {
     // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start_local_hbase_and_wait.sh");
+    auto result = system("bin/start-local-hbase.sh");
     ASSERT_EQ(0, result);
   }
 
   void TearDown() override {
     // shutdown local HBase cluster
-    auto result = system("bin/stop_local_hbase_and_wait.sh");
+    auto result = system("bin/stop-local-hbase.sh");
     ASSERT_EQ(0, result);
   }
 };

@@ -14,8 +14,29 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
+#pragma once
 
-#include "core/delete.h"
+#include <google/protobuf/message.h>
 
-Delete::~Delete() {}
+#include <cstdint>
+#include <string>
+
+namespace hbase {
+class Request {
+public:
+  Request() : call_id_(0) {}
+  uint32_t call_id() { return call_id_; }
+  void set_call_id(uint32_t call_id) { call_id_ = call_id; }
+  google::protobuf::Message *msg() { return msg_.get(); }
+  void set_msg(std::shared_ptr<google::protobuf::Message> msg) { msg_ = msg; }
+  std::string method() { return method_; }
+  void set_method(std::string method) { method_ = method; }
+
+private:
+  uint32_t call_id_;
+  std::shared_ptr<google::protobuf::Message> msg_ = nullptr;
+  std::string method_ = "Get";
+};
+} // namespace hbase
