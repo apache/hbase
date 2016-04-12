@@ -1659,8 +1659,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public long getEarliestFlushTimeForAllStores() {
-    return lastStoreFlushTimeMap.isEmpty() ? Long.MAX_VALUE : Collections.min(lastStoreFlushTimeMap
-        .values());
+    return Collections.min(lastStoreFlushTimeMap.values());
   }
 
   @Override
