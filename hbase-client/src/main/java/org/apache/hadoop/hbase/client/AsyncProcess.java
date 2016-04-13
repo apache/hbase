@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -346,7 +347,7 @@ class AsyncProcess<CResult> {
     } while (retainedActions.isEmpty() && atLeastOne && !hasError());
 
     HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
-    sendMultiAction(retainedActions, actionsByServer, 1, errorsByServer, batchCallback);
+    sendMultiAction(retainedActions, actionsByServer, 1, errorsByServer, batchCallback, null);
   }
 
   /**
@@ -478,7 +479,8 @@ class AsyncProcess<CResult> {
    *
    * @param rows the list of rows.
    */
-  public void submitAll(List<? extends Row> rows) {
+  public void submitAll(List<? extends Row> rows, Batch.Callback<CResult> batchCallback,
+                        PayloadCarryingServerCallable callable) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -497,7 +499,11 @@ class AsyncProcess<CResult> {
       actions.add(action);
     }
     HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
-    submit(actions, actions, 1, errorsByServer);
+    submit(actions, actions, 1, errorsByServer, batchCallback, callable);
+  }
+
+  public void submitAll(List<? extends Row> rows) {
+    submitAll(rows, null, null);
   }
 
   private void setNonce(NonceGenerator ng, Row r, Action<Row> action) {
@@ -516,7 +522,9 @@ class AsyncProcess<CResult> {
    */
   private void submit(List<Action<Row>> initialActions,
                       List<Action<Row>> currentActions, int numAttempt,
-                      final HConnectionManager.ServerErrorTracker errorsByServer) {
+                      final HConnectionManager.ServerErrorTracker errorsByServer,
+                      Batch.Callback<CResult> batchCallback,
+                      PayloadCarryingServerCallable callable) {
 
     if (numAttempt > 1){
       retriesCnt.incrementAndGet();
@@ -535,7 +543,8 @@ class AsyncProcess<CResult> {
     }
 
     if (!actionsByServer.isEmpty()) {
-      sendMultiAction(initialActions, actionsByServer, numAttempt, errorsByServer, null);
+      sendMultiAction(initialActions, actionsByServer, numAttempt,
+        errorsByServer, batchCallback, callable);
     }
   }
 
@@ -551,14 +560,15 @@ class AsyncProcess<CResult> {
                               Map<HRegionLocation, MultiAction<Row>> actionsByServer,
                               final int numAttempt,
                               final HConnectionManager.ServerErrorTracker errorsByServer,
-                              Batch.Callback<CResult> batchCallback) {
+                              Batch.Callback<CResult> batchCallback,
+                              PayloadCarryingServerCallable callable) {
     // Send the queries and add them to the inProgress list
     // This iteration is by server (the HRegionLocation comparator is by server portion only).
     for (Map.Entry<HRegionLocation, MultiAction<Row>> e : actionsByServer.entrySet()) {
       HRegionLocation loc = e.getKey();
       MultiAction<Row> multiAction = e.getValue();
       Collection<? extends Runnable> runnables = getNewMultiActionRunnable(initialActions, loc,
-        multiAction, numAttempt, errorsByServer, batchCallback);
+        multiAction, numAttempt, errorsByServer, batchCallback, callable);
       for (Runnable runnable: runnables) {
         try {
           incTaskCounters(multiAction.getRegions(), loc.getServerName());
@@ -576,45 +586,50 @@ class AsyncProcess<CResult> {
           decTaskCounters(multiAction.getRegions(), loc.getServerName());
           // We're likely to fail again, but this will increment the attempt counter, so it will
           //  finish.
-          receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t, errorsByServer);
+          receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t,
+            errorsByServer, callable);
         }
       }
     }
   }
 
   private Runnable getNewSingleServerRunnable(
-      final List<Action<Row>> initialActions,
-      final HRegionLocation loc,
-      final MultiAction<Row> multiAction,
-      final int numAttempt,
-      final HConnectionManager.ServerErrorTracker errorsByServer,
-      final Batch.Callback<CResult> batchCallback) {
+    final List<Action<Row>> initialActions,
+    final HRegionLocation loc,
+    final MultiAction<Row> multiAction,
+    final int numAttempt,
+    final HConnectionManager.ServerErrorTracker errorsByServer,
+    final Batch.Callback<CResult> batchCallback,
+    final PayloadCarryingServerCallable pcsCallable) {
     return new Runnable() {
       @Override
       public void run() {
         MultiResponse res;
         try {
-          MultiServerCallable<Row> callable = createCallable(loc, multiAction);
+          PayloadCarryingServerCallable callable = pcsCallable;
+          if (pcsCallable == null) {
+            callable = createCallable(loc, multiAction);
+          }
           try {
             res = createCaller(callable).callWithoutRetries(callable, timeout);
           } catch (IOException e) {
             // The service itself failed . It may be an error coming from the communication
             //   layer, but, as well, a functional error raised by the server.
             receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, e,
-                errorsByServer);
+                errorsByServer, pcsCallable);
             return;
           } catch (Throwable t) {
             // This should not happen. Let's log & retry anyway.
             LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
                 " Retrying. Server is " + loc.getServerName() + ", tableName=" + tableName, t);
             receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t,
-                errorsByServer);
+                errorsByServer, pcsCallable);
             return;
           }
 
           // Nominal case: we received an answer from the server, and it's not an exception.
           receiveMultiAction(initialActions, multiAction, loc, res, numAttempt, errorsByServer,
-            batchCallback);
+            batchCallback, pcsCallable);
 
         } finally {
           decTaskCounters(multiAction.getRegions(), loc.getServerName());
@@ -629,7 +644,7 @@ class AsyncProcess<CResult> {
       final MultiAction<Row> multiAction,
       final int numAttempt,
       final HConnectionManager.ServerErrorTracker errorsByServer,
-      final Batch.Callback<CResult> batchCallback) {
+      final Batch.Callback<CResult> batchCallback, PayloadCarryingServerCallable callable) {
     // no stats to manage, just do the standard action
     if (AsyncProcess.this.hConnection.getStatisticsTracker() == null) {
       if (hConnection.getConnectionMetrics() != null) {
@@ -638,7 +653,7 @@ class AsyncProcess<CResult> {
       List<Runnable> toReturn = new ArrayList<Runnable>(1);
       toReturn.add(Trace.wrap("AsyncProcess.sendMultiAction", 
         getNewSingleServerRunnable(initialActions, loc, multiAction, numAttempt,
-          errorsByServer, batchCallback)));
+          errorsByServer, batchCallback, callable)));
       return toReturn;
     } else {
       // group the actions by the amount of delay
@@ -660,7 +675,7 @@ class AsyncProcess<CResult> {
       for (DelayingRunner runner : actions.values()) {
         String traceText = "AsyncProcess.sendMultiAction";
         Runnable runnable = getNewSingleServerRunnable(initialActions, loc, runner.getActions(),
-          numAttempt, errorsByServer, batchCallback);
+          numAttempt, errorsByServer, batchCallback, callable);
         // use a delay runner only if we need to sleep for some time
         if (runner.getSleepTime() > 0) {
           runner.setRunner(runnable);
@@ -683,8 +698,6 @@ class AsyncProcess<CResult> {
   }
 
   /**
-   * @param server server location where the target region is hosted
-   * @param regionName name of the region which we are going to write some data
    * @return the amount of time the client should wait until it submit a request to the
    * specified server and region
    */
@@ -709,7 +722,7 @@ class AsyncProcess<CResult> {
    * @param callable: used in tests.
    * @return Returns a caller.
    */
-  protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+  protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable) {
     return rpcCallerFactory.<MultiResponse> newCaller();
   }
 
@@ -760,7 +773,8 @@ class AsyncProcess<CResult> {
    */
   private void receiveGlobalFailure(List<Action<Row>> initialActions, MultiAction<Row> rsActions,
                                     HRegionLocation location, int numAttempt, Throwable t,
-                                    HConnectionManager.ServerErrorTracker errorsByServer) {
+                                    HConnectionManager.ServerErrorTracker errorsByServer,
+                                    PayloadCarryingServerCallable callable) {
     // Do not use the exception for updating cache because it might be coming from
     // any of the regions in the MultiAction.
     hConnection.updateCachedLocations(tableName,
@@ -776,9 +790,8 @@ class AsyncProcess<CResult> {
         }
       }
     }
-
     logAndResubmit(initialActions, location, toReplay, numAttempt, rsActions.size(),
-        t, errorsByServer);
+        t, errorsByServer, callable);
   }
 
   /**
@@ -788,7 +801,8 @@ class AsyncProcess<CResult> {
   private void logAndResubmit(List<Action<Row>> initialActions, HRegionLocation oldLocation,
                               List<Action<Row>> toReplay, int numAttempt, int failureCount,
                               Throwable throwable,
-                              HConnectionManager.ServerErrorTracker errorsByServer) {
+                              HConnectionManager.ServerErrorTracker errorsByServer,
+                              PayloadCarryingServerCallable callable) {
     if (toReplay.isEmpty()) {
       // it's either a success or a last failure
       if (failureCount != 0) {
@@ -830,7 +844,7 @@ class AsyncProcess<CResult> {
       return;
     }
 
-    submit(initialActions, toReplay, numAttempt + 1, errorsByServer);
+    submit(initialActions, toReplay, numAttempt + 1, errorsByServer, null, callable);
   }
 
   /**
@@ -846,7 +860,8 @@ class AsyncProcess<CResult> {
                                   HRegionLocation location,
                                   MultiResponse responses, int numAttempt,
                                   HConnectionManager.ServerErrorTracker errorsByServer,
-                                  Batch.Callback<CResult> batchCallback) {
+                                  Batch.Callback<CResult> batchCallback,
+                                  PayloadCarryingServerCallable callable) {
      assert responses != null;
 
     // Success or partial success
@@ -860,17 +875,20 @@ class AsyncProcess<CResult> {
     int failureCount = 0;
     boolean canRetry = true;
 
-    for (Map.Entry<byte[], List<Pair<Integer, Object>>> resultsForRS :
+    Map<byte[], MultiResponse.RegionResult> results = responses.getResults();
+    updateStats(location.getServerName(), results);
+
+    for (Map.Entry<byte[], MultiResponse.RegionResult> resultsForRS :
         responses.getResults().entrySet()) {
 
       boolean regionFailureRegistered = false;
-      for (Pair<Integer, Object> regionResult : resultsForRS.getValue()) {
-        Object result = regionResult.getSecond();
+      for (Map.Entry<Integer, Object> regionResult : resultsForRS.getValue().result.entrySet()) {
+        Object result = regionResult.getValue();
 
         // Failure: retry if it's make sense else update the errors lists
         if (result == null || result instanceof Throwable) {
           throwable = (Throwable) result;
-          Action<Row> correspondingAction = initialActions.get(regionResult.getFirst());
+          Action<Row> correspondingAction = initialActions.get(regionResult.getKey());
           Row row = correspondingAction.getAction();
           failureCount++;
           if (!regionFailureRegistered) { // We're doing this once per location.
@@ -889,14 +907,8 @@ class AsyncProcess<CResult> {
           }
         } else { // success
 
-          if (AsyncProcess.this.hConnection.getConnectionMetrics() != null) {
-            AsyncProcess.this.hConnection.getConnectionMetrics().
-              updateServerStats(location.getServerName(),
-                location.getRegionInfo().getRegionName(), result);
-          }
-
           if (callback != null || batchCallback != null) {
-            int index = regionResult.getFirst();
+            int index = regionResult.getKey();
             Action<Row> correspondingAction = initialActions.get(index);
             Row row = correspondingAction.getAction();
             if (callback != null) {
@@ -940,19 +952,19 @@ class AsyncProcess<CResult> {
     }
 
     logAndResubmit(initialActions, location, toReplay, numAttempt, failureCount,
-        throwable, errorsByServer);
+        throwable, errorsByServer, callable);
   }
 
   private String createLog(int numAttempt, int failureCount, int replaySize, ServerName sn,
-                           Throwable error, long backOffTime, boolean willRetry, String startTime){
+                           Throwable error, long backOffTime, boolean willRetry, String startTime) {
     StringBuilder sb = new StringBuilder();
 
     sb.append("#").append(id).append(", table=").append(tableName).
-        append(", attempt=").append(numAttempt).append("/").append(numTries).append(" ");
+      append(", attempt=").append(numAttempt).append("/").append(numTries).append(" ");
 
-    if (failureCount > 0 || error != null){
+    if (failureCount > 0 || error != null) {
       sb.append("failed ").append(failureCount).append(" ops").append(", last exception: ").
-          append(error == null ? "null" : error);
+        append(error == null ? "null" : error);
     } else {
       sb.append("SUCCEEDED");
     }
@@ -963,12 +975,28 @@ class AsyncProcess<CResult> {
 
     if (willRetry) {
       sb.append(", retrying after ").append(backOffTime).append(" ms").
-          append(", replay ").append(replaySize).append(" ops.");
+        append(", replay ").append(replaySize).append(" ops.");
     } else if (failureCount > 0) {
       sb.append(" - FAILED, NOT RETRYING ANYMORE");
     }
 
     return sb.toString();
+  }
+
+  private void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+    boolean metrics = AsyncProcess.this.hConnection.getConnectionMetrics() != null;
+    boolean stats = AsyncProcess.this.hConnection.getStatisticsTracker() != null;
+    if (!stats && !metrics) {
+      return;
+    }
+    for (Map.Entry<byte[], MultiResponse.RegionResult> regionStats : results.entrySet()) {
+      byte[] regionName = regionStats.getKey();
+      ClientProtos.RegionLoadStats stat = regionStats.getValue().getStat();
+      ResultStatsUtil.updateStats(AsyncProcess.this.hConnection.getStatisticsTracker(), server,
+          regionName, stat);
+      ResultStatsUtil.updateStats(AsyncProcess.this.hConnection.getConnectionMetrics(),
+          server, regionName, stat);
+    }
   }
 
   /**

@@ -3619,13 +3619,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
     Boolean processed = null;
-
+    Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats =
+      new HashMap<RegionSpecifier, ClientProtos.RegionLoadStats>(request.getRegionActionCount());
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
       HRegion region;
       regionActionResultBuilder.clear();
+      RegionSpecifier regionSpecifier = regionAction.getRegion();
       try {
-        region = getRegion(regionAction.getRegion());
+        region = getRegion(regionSpecifier);
       } catch (IOException e) {
         rpcServer.getMetrics().exception(e);
         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
@@ -3649,15 +3651,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             ByteArrayComparable comparator =
               ProtobufUtil.toComparator(condition.getComparator());
             processed = checkAndRowMutate(region, regionAction.getActionList(),
-              cellScanner, row, family, qualifier, compareOp, comparator);
+              cellScanner, row, family, qualifier, compareOp, comparator, regionActionResultBuilder);
           } else {
-            ClientProtos.RegionLoadStats stats = mutateRows(region, regionAction.getActionList(),
-              cellScanner);
-            // add the stats to the request
-            if (stats != null) {
-              responseBuilder.addRegionActionResult(RegionActionResult.newBuilder()
-                .addResultOrException(ResultOrException.newBuilder().setLoadStats(stats)));
-            }
+            mutateRows(region, regionAction.getActionList(),
+              cellScanner, regionActionResultBuilder);
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
@@ -3671,12 +3668,23 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             regionActionResultBuilder, cellsToReturn, nonceGroup);
       }
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+      ClientProtos.RegionLoadStats regionLoadStats = ((HRegion)region).getLoadStatistics();
+      if(regionLoadStats != null) {
+        regionStats.put(regionSpecifier, regionLoadStats);
+      }
     }
     // Load the controller with the Cells to return.
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
     }
     if (processed != null) responseBuilder.setProcessed(processed);
+    ClientProtos.MultiRegionLoadStats.Builder builder =
+      ClientProtos.MultiRegionLoadStats.newBuilder();
+    for(Entry<RegionSpecifier, ClientProtos.RegionLoadStats> stat: regionStats.entrySet()){
+      builder.addRegion(stat.getKey());
+      builder.addStat(stat.getValue());
+    }
+    responseBuilder.setRegionStatistics(builder);
     return responseBuilder.build();
   }
 
@@ -4677,7 +4685,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
           case SUCCESS:
             builder.addResultOrException(getResultOrException(
-              ClientProtos.Result.getDefaultInstance(), index, region.getRegionStats()));
+              ClientProtos.Result.getDefaultInstance(), index));
             break;
         }
       }
@@ -4696,8 +4704,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   private static ResultOrException getResultOrException(final ClientProtos.Result r,
-      final int index, final ClientProtos.RegionLoadStats stats) {
-    return getResultOrException(ResponseConverter.buildActionResult(r, stats), index);
+      final int index) {
+    return getResultOrException(ResponseConverter.buildActionResult(r), index);
   }
 
   private static ResultOrException getResultOrException(final Exception e, final int index) {
@@ -4769,12 +4777,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws IOException
    */
   protected ClientProtos.RegionLoadStats mutateRows(final HRegion region,
-      final List<ClientProtos.Action> actions, final CellScanner cellScanner)
+      final List<ClientProtos.Action> actions, final CellScanner cellScanner,
+      RegionActionResult.Builder builder)
       throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
+    int i = 0;
+    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+      ClientProtos.ResultOrException.newBuilder();
     for (ClientProtos.Action action: actions) {
       if (action.hasGet()) {
         throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
@@ -4794,9 +4806,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       default:
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
+      // To unify the response format with doNonAtomicRegionMutation and read through client's
+      // AsyncProcess we have to add an empty result instance per operation
+      resultOrExceptionOrBuilder.clear();
+      resultOrExceptionOrBuilder.setIndex(i++);
+      builder.addResultOrException(
+        resultOrExceptionOrBuilder.build());
     }
     region.mutateRow(rm);
-    return region.getRegionStats();
+    return region.getLoadStatistics();
   }
 
   /**
@@ -4814,11 +4832,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
       final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, ByteArrayComparable comparator) throws IOException {
+      CompareOp compareOp, ByteArrayComparable comparator,
+      RegionActionResult.Builder builder) throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
+    int i = 0;
+    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+      ClientProtos.ResultOrException.newBuilder();
     for (ClientProtos.Action action: actions) {
       if (action.hasGet()) {
         throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
@@ -4838,8 +4860,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       default:
         throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
+      // To unify the response format with doNonAtomicRegionMutation and read through client's
+      // AsyncProcess we have to add an empty result instance per operation
+      resultOrExceptionOrBuilder.clear();
+      resultOrExceptionOrBuilder.setIndex(i++);
+      builder.addResultOrException(
+        resultOrExceptionOrBuilder.build());
     }
-    return region.checkAndRowMutate(row, family, qualifier, compareOp, comparator, rm, Boolean.TRUE);
+    return region.checkAndRowMutate(row, family, qualifier, compareOp,
+      comparator, rm, Boolean.TRUE);
   }
 
   private static class MovedRegionInfo {

@@ -86,7 +86,7 @@ public final class ResponseConverter {
     int requestRegionActionCount = request.getRegionActionCount();
     int responseRegionActionResultCount = response.getRegionActionResultCount();
     if (requestRegionActionCount != responseRegionActionResultCount) {
-      throw new IllegalStateException("Request mutation count=" + responseRegionActionResultCount +
+      throw new IllegalStateException("Request mutation count=" + requestRegionActionCount +
           " does not match response mutation result count=" + responseRegionActionResultCount);
     }
 
@@ -122,18 +122,24 @@ public final class ResponseConverter {
           responseValue = ProtobufUtil.toException(roe.getException());
         } else if (roe.hasResult()) {
           responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
-          // add the load stats, if we got any
-          if (roe.hasLoadStats()) {
-            ((Result) responseValue).addResults(roe.getLoadStats());
-          }
         } else if (roe.hasServiceResult()) {
           responseValue = roe.getServiceResult();
-        } else {
-          // no result & no exception. Unexpected.
-          throw new IllegalStateException("No result & no exception roe=" + roe +
-              " for region " + actions.getRegion());
+        } else{
+          // Sometimes, the response is just "it was processed". Generally, this occurs for things
+          // like mutateRows where either we get back 'processed' (or not) and optionally some
+          // statistics about the regions we touched.
+          responseValue = response.getProcessed() ?
+                          ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+                          ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
         }
         results.add(regionName, roe.getIndex(), responseValue);
+      }
+    }
+
+    if (response.hasRegionStatistics()) {
+      ClientProtos.MultiRegionLoadStats stats = response.getRegionStatistics();
+      for (int i = 0; i < stats.getRegionCount(); i++) {
+        results.addStatistic(stats.getRegion(i).getValue().toByteArray(), stats.getStat(i));
       }
     }
 
@@ -156,14 +162,11 @@ public final class ResponseConverter {
    * Wrap a throwable to an action result.
    *
    * @param r
-   * @param stats
    * @return an action result builder
    */
-  public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r,
-      ClientProtos.RegionLoadStats stats) {
+  public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r) {
     ResultOrException.Builder builder = ResultOrException.newBuilder();
     if (r != null) builder.setResult(r);
-    if (stats != null) builder.setLoadStats(stats);
     return builder;
   }
 

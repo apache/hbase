@@ -58,31 +58,14 @@ public final class ResultStatsUtil {
     if (stats == null) {
       return r;
     }
-    serverStats.updateRegionStats(server, regionName, stats);
+    updateStats(serverStats, server, regionName, stats);
     return r;
   }
 
-  public static <T> T updateStats(T r, ServerStatisticTracker stats,
-      HRegionLocation regionLocation) {
-    // Writes submitted using multi() will receive MultiResponses
-    if (r instanceof MultiResponse) {
-      MultiResponse mr = (MultiResponse) r;
-      for (Map.Entry<byte[], List<Pair<Integer, Object>>> e: mr.getResults().entrySet()) {
-        byte[] regionName = e.getKey();
-        for (Pair<Integer, Object> regionResult : e.getValue()) {
-          Object o = regionResult.getSecond();
-          if (o instanceof Result) {
-            Result result = (Result) o;
-            ClientProtos.RegionLoadStats loadStats = result.getStats();
-            if (loadStats != null) {
-              stats.updateRegionStats(regionLocation.getServerName(), regionName, loadStats);
-              // Once we have stats for one region we can move on to the next
-              break;
-            }
-          }
-        }
-      }
+  public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
+    ClientProtos.RegionLoadStats stats) {
+    if (regionName != null && stats != null && tracker != null) {
+      tracker.updateRegionStats(server, regionName, stats);
     }
-    return r;
   }
 }

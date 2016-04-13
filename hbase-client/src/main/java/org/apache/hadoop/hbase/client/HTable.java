@@ -59,9 +59,11 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
@@ -1053,33 +1055,46 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void mutateRow(final RowMutations rm) throws IOException {
-    RegionServerCallable<Void> callable =
-        new RegionServerCallable<Void>(connection, getName(), rm.getRow()) {
-      public Void call() throws IOException {
-        try {
-          RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
-            getLocation().getRegionInfo().getRegionName(), rm);
-          regionMutationBuilder.setAtomic(true);
-          MultiRequest request =
-            MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    PayloadCarryingServerCallable<MultiResponse> callable =
+      new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
+            rpcControllerFactory) {
+        @Override
+        public MultiResponse call() throws IOException {
+          tracker.start();
           controller.setPriority(tableName);
-          ClientProtos.MultiResponse response = getStub().multi(controller, request);
-          ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-          if (res.hasException()) {
-            Throwable ex = ProtobufUtil.toException(res.getException());
-            if(ex instanceof IOException) {
-              throw (IOException)ex;
-            }
-            throw new IOException("Failed to mutate row: "+Bytes.toStringBinary(rm.getRow()), ex);
+          int remainingTime = tracker.getRemainingTime(operationTimeout);
+          if (remainingTime == 0) {
+            throw new DoNotRetryIOException("Timeout for mutate row");
           }
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
+          RpcClient.setRpcTimeout(remainingTime);
+          try {
+            RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
+              getLocation().getRegionInfo().getRegionName(), rm);
+            regionMutationBuilder.setAtomic(true);
+            MultiRequest request =
+              MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
+            ClientProtos.MultiResponse response = getStub().multi(controller, request);
+            ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+            if (res.hasException()) {
+              Throwable ex = ProtobufUtil.toException(res.getException());
+              if (ex instanceof IOException) {
+                throw (IOException) ex;
+              }
+              throw new IOException("Failed to mutate row: " +
+                Bytes.toStringBinary(rm.getRow()), ex);
+            }
+            return ResponseConverter.getResults(request, response, controller.cellScanner());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
         }
-        return null;
-      }
-    };
-    rpcCallerFactory.<Void> newCaller().callWithRetries(callable, this.operationTimeout);
+      };
+    ap.submitAll(rm.getMutations(), null, callable);
+    ap.waitUntilDone();
+    if (ap.hasError()) {
+      throw ap.getErrors();
+    }
   }
 
   /**
@@ -1269,34 +1284,62 @@ public class HTable implements HTableInterface {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final RowMutations rm)
   throws IOException {
-    RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(connection, getName(), row) {
-          @Override
-          public Boolean call() throws IOException {
-            PayloadCarryingRpcController controller = rpcControllerFactory.newController();
-            controller.setPriority(tableName);
-            try {
-              CompareType compareType = CompareType.valueOf(compareOp.name());
-              MultiRequest request = RequestConverter.buildMutateRequest(
-                  getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-                  new BinaryComparator(value), compareType, rm);
-              ClientProtos.MultiResponse response = getStub().multi(controller, request);
-              ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-              if (res.hasException()) {
-                Throwable ex = ProtobufUtil.toException(res.getException());
-                if(ex instanceof IOException) {
-                  throw (IOException)ex;
-                }
-                throw new IOException("Failed to checkAndMutate row: "+
-                    Bytes.toStringBinary(rm.getRow()), ex);
-              }
-              return Boolean.valueOf(response.getProcessed());
-            } catch (ServiceException se) {
-              throw ProtobufUtil.getRemoteException(se);
-            }
+    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    PayloadCarryingServerCallable<MultiResponse> callable =
+      new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
+        rpcControllerFactory) {
+        @Override
+        public MultiResponse call() throws IOException {
+          tracker.start();
+          controller.setPriority(tableName);
+          int remainingTime = tracker.getRemainingTime(operationTimeout);
+          if (remainingTime == 0) {
+            throw new DoNotRetryIOException("Timeout for mutate row");
           }
-        };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+          RpcClient.setRpcTimeout(remainingTime);
+          try {
+            RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
+              getLocation().getRegionInfo().getRegionName(), rm);
+            regionMutationBuilder.setAtomic(true);
+            MultiRequest request =
+              MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
+            ClientProtos.MultiResponse response = getStub().multi(controller, request);
+            response.getRegionActionResult(0).getResultOrException(0).getResult();
+            ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+            if (res.hasException()) {
+              Throwable ex = ProtobufUtil.toException(res.getException());
+              if (ex instanceof IOException) {
+                throw (IOException) ex;
+              }
+              throw new IOException("Failed to mutate row: " +
+                Bytes.toStringBinary(rm.getRow()), ex);
+            }
+            return ResponseConverter.getResults(request, response, controller.cellScanner());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+        }
+      };
+    /**
+     *  Currently, we use one array to store 'processed' flag which return by server.
+     *  It is some excessive, but that its required by the framework right now
+     * */
+    final boolean[] processed = new boolean[1];
+    ap.submitAll(rm.getMutations(), new Batch.Callback<Object>() {
+      @Override
+      public void update(byte[] region, byte[] row, Object result) {
+        processed[0] = ((Result)result).getExists();
+      }
+    }, callable);
+    ap.waitUntilDone();
+    try {
+      if (ap.hasError()) {
+        throw ap.getErrors();
+      }
+    } finally {
+      ap.clearErrors();
+    }
+    return processed[0];
   }
 
   /**

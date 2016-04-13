@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
@@ -47,7 +48,7 @@ import com.google.protobuf.ServiceException;
  * {@link RegionServerCallable} that goes against multiple regions.
  * @param <R>
  */
-class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
+class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse> {
   private final MultiAction<R> multiAction;
   private final boolean cellBlock;
   private RpcControllerFactory rpcFactory;
@@ -55,7 +56,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   MultiServerCallable(final HConnection connection, final TableName tableName,
       final HRegionLocation location, final RpcControllerFactory rpcFactory,
       final MultiAction<R> multi) {
-    super(connection, tableName, null);
+    super(connection, tableName, null, rpcFactory);
     this.multiAction = multi;
     this.rpcFactory = rpcFactory;
     setLocation(location);
@@ -115,8 +116,6 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
     }
     return ResponseConverter.getResults(requestProto, responseProto, controller.cellScanner());
   }
-
-
 
   /**
    * @return True if we should send data in cellblocks.  This is an expensive call.  Cache the

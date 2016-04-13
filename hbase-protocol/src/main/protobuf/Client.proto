@@ -358,6 +358,11 @@ message RegionLoadStats {
   optional int32 compactionPressure = 3 [default = 0];
 }
 
+message MultiRegionLoadStats{
+  repeated RegionSpecifier region = 1;
+  repeated RegionLoadStats stat = 2;
+}
+
 /**
  * Either a Result or an Exception NameBytesPair (keyed by
  * exception name whose value is the exception stringified)
@@ -372,7 +377,7 @@ message ResultOrException {
   // result if this was a coprocessor service call
   optional CoprocessorServiceResult service_result = 4;
   // current load on the region
-  optional RegionLoadStats loadStats = 5;  
+  optional RegionLoadStats loadStats = 5 [deprecated=true];
 }
 
 /**
@@ -401,6 +406,7 @@ message MultiResponse {
   repeated RegionActionResult regionActionResult = 1;
   // used for mutate to indicate processed only
   optional bool processed = 2;
+  optional MultiRegionLoadStats regionStatistics = 3;
 }
 
 

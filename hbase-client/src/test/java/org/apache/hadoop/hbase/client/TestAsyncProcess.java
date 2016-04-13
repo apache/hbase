@@ -107,8 +107,14 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
-      final MultiResponse mr = createMultiResponse(callable.getLocation(), callable.getMulti(),
+    protected RpcRetryingCaller<MultiResponse> createCaller(
+      PayloadCarryingServerCallable callable) {
+      if (!(callable instanceof MultiServerCallable)) {
+        throw new RuntimeException(
+          "can't cast PayloadCarryingServerCallable to be MultiServerCallable!");
+      }
+      final MultiResponse mr = createMultiResponse(callable.getLocation(),
+        ((MultiServerCallable<Row>)callable).getMulti(),
           nbMultiResponse, nbActions);
       return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
         @Override
@@ -148,11 +154,11 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+    protected RpcRetryingCaller<MultiResponse> createCaller(
+      PayloadCarryingServerCallable callable) {
       return new CallerWithFailure();
     }
   }
-
 
   static MultiResponse createMultiResponse(final HRegionLocation loc,
       final MultiAction<Row> multi, AtomicInteger nbMultiResponse, AtomicInteger nbActions) {

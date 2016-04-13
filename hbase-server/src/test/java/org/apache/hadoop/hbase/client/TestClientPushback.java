@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -173,4 +174,32 @@ public class TestClientPushback {
     assertNotEquals("AsyncProcess did not submit the work in time", endTime.get(), 0);
     assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
   }
+
+  @Test
+  public void testMutateRowStats() throws IOException {
+    Configuration conf = UTIL.getConfiguration();
+    HConnection conn = HConnectionManager.createConnection(conf);
+    HTable table = (HTable) conn.getTable(tableName);
+    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
+    HRegion region = rs.getOnlineRegions(TableName.valueOf(tableName)).get(0);
+
+    RowMutations mutations = new RowMutations(Bytes.toBytes("row"));
+    Put p = new Put(Bytes.toBytes("row"));
+    p.add(family, qualifier, Bytes.toBytes("value2"));
+    mutations.add(p);
+    table.mutateRow(mutations);
+
+    ServerStatisticTracker stats = conn.getStatisticsTracker();
+    assertNotNull( "No stats configured for the client!", stats);
+    // get the names so we can query the stats
+    ServerName server = rs.getServerName();
+    byte[] regionName = region.getRegionInfo().getRegionName();
+
+    // check to see we found some load on the memstore
+    ServerStatistics serverStats = stats.getServerStatsForTesting(server);
+    ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
+
+    assertNotNull(regionStats);
+    assertTrue(regionStats.getMemstoreLoadPercent() > 0);
+    }
 }

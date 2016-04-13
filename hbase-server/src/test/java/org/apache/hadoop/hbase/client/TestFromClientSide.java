@@ -4532,7 +4532,13 @@ public class TestFromClientSide {
       arm.add(p);
       t.mutateRow(arm);
       fail("Expected NoSuchColumnFamilyException");
-    } catch(NoSuchColumnFamilyException e) {
+    } catch(RetriesExhaustedWithDetailsException e) {
+      for(Throwable rootCause: e.getCauses()){
+        if(rootCause instanceof NoSuchColumnFamilyException){
+          return;
+        }
+      }
+      throw e;
     }
   }
 

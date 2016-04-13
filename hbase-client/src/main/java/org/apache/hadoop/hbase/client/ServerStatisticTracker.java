@@ -32,11 +32,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * Tracks the statistics for multiple regions
  */
 @InterfaceAudience.Private
-public class ServerStatisticTracker {
+public class ServerStatisticTracker implements StatisticTrackable {
 
   private final Map<ServerName, ServerStatistics> stats =
       new ConcurrentHashMap<ServerName, ServerStatistics>();
 
+  @Override
   public void updateRegionStats(ServerName server, byte[] region, ClientProtos.RegionLoadStats
       currentStats) {
     ServerStatistics stat = stats.get(server);

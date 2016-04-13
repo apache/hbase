@@ -522,7 +522,7 @@ public class HTableMultiplexer {
           try {
             HConnectionManager.ServerErrorTracker errorsByServer =
                 new HConnectionManager.ServerErrorTracker(1, 10);
-            ap.sendMultiAction(retainedActions, actionsByServer, 10, errorsByServer, null);
+            ap.sendMultiAction(retainedActions, actionsByServer, 10, errorsByServer, null, null);
             ap.waitUntilDone();
 
             if (ap.hasError()) {

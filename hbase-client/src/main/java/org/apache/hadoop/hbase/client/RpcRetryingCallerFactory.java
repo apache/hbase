@@ -64,13 +64,8 @@ public class RpcRetryingCallerFactory {
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    RpcRetryingCaller<T> caller;
-    if (enableBackPressure && this.stats != null) {
-      caller = new StatsTrackingRpcRetryingCaller<T>(pause, retries, startLogErrorsCnt,
-        this.stats);
-    } else {
-      caller = new RpcRetryingCaller<T>(pause, retries, startLogErrorsCnt);
-    }
+    RpcRetryingCaller<T> caller = new RpcRetryingCaller<T>(pause, retries,
+        startLogErrorsCnt);
     return caller;
   }
 

@@ -21,13 +21,16 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
 
 /**
  * A container for Result objects, grouped by regionName.
@@ -35,10 +38,10 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 public class MultiResponse {
 
-  // map of regionName to list of (Results paired to the original index for that
-  // Result)
-  private Map<byte[], List<Pair<Integer, Object>>> results =
-      new TreeMap<byte[], List<Pair<Integer, Object>>>(Bytes.BYTES_COMPARATOR);
+
+  // map of regionName to map of Results by the original index for that Result
+  private Map<byte[], RegionResult> results =
+    new TreeMap<byte[], RegionResult>(Bytes.BYTES_COMPARATOR);
 
   /**
    * The server can send us a failure for the region itself, instead of individual failure.
@@ -56,8 +59,8 @@ public class MultiResponse {
    */
   public int size() {
     int size = 0;
-    for (Collection<?> c : results.values()) {
-      size += c.size();
+    for (RegionResult result: results.values()) {
+      size += result.size();
     }
     return size;
   }
@@ -66,26 +69,12 @@ public class MultiResponse {
    * Add the pair to the container, grouped by the regionName
    *
    * @param regionName
-   * @param r
    *          First item in the pair is the original index of the Action
    *          (request). Second item is the Result. Result will be empty for
    *          successful Put and Delete actions.
    */
-  public void add(byte[] regionName, Pair<Integer, Object> r) {
-    List<Pair<Integer, Object>> rs = results.get(regionName);
-    if (rs == null) {
-      rs = new ArrayList<Pair<Integer, Object>>();
-      results.put(regionName, rs);
-    }
-    rs.add(r);
-  }
-
-  public void add(byte []regionName, int originalIndex, Object resOrEx) {
-    add(regionName, new Pair<Integer,Object>(originalIndex, resOrEx));
-  }
-
-  public Map<byte[], List<Pair<Integer, Object>>> getResults() {
-    return results;
+  public void add(byte[] regionName, int originalIndex, Object resOrEx) {
+    getResult(regionName).addResult(originalIndex, resOrEx);
   }
 
   public void addException(byte []regionName, Throwable ie){
@@ -101,5 +90,43 @@ public class MultiResponse {
 
   public Map<byte[], Throwable> getExceptions() {
     return exceptions;
+  }
+
+  public void addStatistic(byte[] regionName, ClientProtos.RegionLoadStats stat) {
+    getResult(regionName).setStat(stat);
+  }
+
+  private RegionResult getResult(byte[] region){
+    RegionResult rs = results.get(region);
+    if (rs == null) {
+      rs = new RegionResult();
+      results.put(region, rs);
+    }
+    return rs;
+  }
+
+  public Map<byte[], RegionResult> getResults(){
+    return this.results;
+  }
+
+  static class RegionResult{
+    Map<Integer, Object> result = new HashMap<Integer, Object>();
+    ClientProtos.RegionLoadStats stat;
+
+    public void addResult(int index, Object result){
+      this.result.put(index, result);
+    }
+
+    public void setStat(ClientProtos.RegionLoadStats stat){
+      this.stat = stat;
+    }
+
+    public int size() {
+      return this.result.size();
+    }
+
+    public ClientProtos.RegionLoadStats getStat() {
+      return this.stat;
+    }
   }
 }

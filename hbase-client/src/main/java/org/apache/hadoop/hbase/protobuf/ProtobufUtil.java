@@ -178,8 +178,15 @@ public final class ProtobufUtil {
    */
   private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
-  private final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
-  private final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
+
+  final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
+  final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
+  private final static Result EMPTY_RESULT_STALE = Result.create(null, true);
+  private final static Result EMPTY_RESULT_EXISTS_TRUE_STALE
+    = Result.create(null, true);
+  private final static Result EMPTY_RESULT_EXISTS_FALSE_STALE
+    = Result.create(null, true);
+
 
   private final static ClientProtos.Result EMPTY_RESULT_PB;
   private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
