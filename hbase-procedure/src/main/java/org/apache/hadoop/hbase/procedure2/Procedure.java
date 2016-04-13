@@ -252,10 +252,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     sb.append(" lastUpdate=");
     sb.append(getLastUpdate());
 
-    if (stackIndexes != null) {
+    int[] stackIndices = getStackIndexes();
+    if (stackIndices != null) {
       sb.append("\n");
       sb.append("stackIndexes=");
-      sb.append(Arrays.toString(getStackIndexes()));
+      sb.append(Arrays.toString(stackIndices));
     }
 
     return sb.toString();
