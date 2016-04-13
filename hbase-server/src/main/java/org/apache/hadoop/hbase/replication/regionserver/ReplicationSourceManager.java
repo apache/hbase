@@ -494,7 +494,7 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     // init replication endpoint
     replicationEndpoint.init(new ReplicationEndpoint.Context(replicationPeer.getConfiguration(),
-      fs, peerConfig, peerId, clusterId, replicationPeer, metrics, tableDescriptors));
+      fs, peerId, clusterId, replicationPeer, metrics, tableDescriptors));
 
     return src;
   }

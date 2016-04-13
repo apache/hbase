@@ -200,6 +200,11 @@ public class ReplicationAdmin implements Closeable {
     this.replicationPeers.addPeer(id, peerConfig, getTableCfsStr(tableCfs));
   }
 
+  public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
+    throws ReplicationException {
+    this.replicationPeers.updatePeerConfig(id, peerConfig);
+  }
+
   public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
     if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
       return null;
@@ -629,6 +634,11 @@ public class ReplicationAdmin implements Closeable {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  public void peerAdded(String id) throws ReplicationException {
+    this.replicationPeers.peerAdded(id);
   }
 
   @VisibleForTesting

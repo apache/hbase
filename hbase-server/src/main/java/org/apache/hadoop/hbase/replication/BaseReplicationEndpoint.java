@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import com.google.common.collect.Lists;
@@ -35,11 +37,30 @@ import com.google.common.util.concurrent.AbstractService;
 public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
+  private static final Log LOG = LogFactory.getLog(BaseReplicationEndpoint.class);
   protected Context ctx;
 
   @Override
   public void init(Context context) throws IOException {
     this.ctx = context;
+
+    if (this.ctx != null){
+      ReplicationPeer peer = this.ctx.getReplicationPeer();
+      if (peer != null){
+        peer.trackPeerConfigChanges(this);
+      } else {
+        LOG.warn("Not tracking replication peer config changes for Peer Id " + this.ctx.getPeerId() +
+            " because there's no such peer");
+      }
+    }
+  }
+
+  @Override
+  /**
+   * No-op implementation for subclasses to override if they wish to execute logic if their config changes
+   */
+  public void peerConfigUpdated(ReplicationPeerConfig rpc){
+
   }
 
   /** Returns a default set of filters */

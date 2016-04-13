@@ -70,4 +70,9 @@ public interface ReplicationPeer {
    */
   public Map<TableName, List<String>> getTableCFs();
 
+  /**
+   * Setup a callback for chanages to the replication peer config
+   * @param listener Listener for config changes, usually a replication endpoint
+   */
+  void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
 }

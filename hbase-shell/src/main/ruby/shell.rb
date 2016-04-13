@@ -361,6 +361,7 @@ Shell.load_command_group(
     disable_table_replication
     get_peer_config
     list_peer_configs
+    update_peer_config
   ]
 )
 
