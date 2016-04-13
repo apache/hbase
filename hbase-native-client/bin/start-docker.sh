@@ -23,22 +23,38 @@ set -x
 eval "$(docker-machine env docker-vm)"
 eval "$(docker-machine env dinghy)"
 
-# Build the image
-docker build -t hbase_native .
+BIN_DIR=$(pushd `dirname "$0"` 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
+BASE_DIR=$(pushd "${BIN_DIR}/../" 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
 
+${BIN_DIR}/copy-protobuf.sh
 
+# Go into the base dir. This just makes things cleaner.
+pushd ${BASE_DIR}
+
+# Make sure that there is a thrid-party dir.
 mkdir third-party || true
+
+# Get gtest
+# TODO(eclark): Remove this ( see HBASE-15427 )
 if [[ ! -d third-party/googletest ]]; then
         git clone https://github.com/google/googletest.git third-party/googletest
 fi
 
+# We don't want to have to re-download all the jars in docker if we can help it
 if [[ ! -d ~/.m2 ]]; then
     echo "~/.m2 directory doesn't exist. Check Apache Maven is installed."
     exit 1
 fi;
 
+# Build the image
+# 
+# This shouldn't be needed after the development environment is a little more stable.
+docker build -t hbase_native .
+
+# After the image is built run the thing
 docker run -p 16010:16010/tcp \
            -e "JAVA_HOME=/usr/lib/jvm/java-8-oracle" \
-           -v ${PWD}/..:/usr/src/hbase \
+           -v ${BASE_DIR}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
            -it hbase_native  /bin/bash
+popd

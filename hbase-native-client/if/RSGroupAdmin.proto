@@ -1,0 +1,136 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package hbase.pb;
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "RSGroupAdminProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "HBase.proto";
+import "RSGroup.proto";
+
+/** Group level protobufs */
+
+message ListTablesOfRSGroupRequest {
+  required string r_s_group_name = 1;
+}
+
+message ListTablesOfRSGroupResponse {
+  repeated TableName table_name = 1;
+}
+
+message GetRSGroupInfoRequest {
+  required string r_s_group_name = 1;
+}
+
+message GetRSGroupInfoResponse {
+  optional RSGroupInfo r_s_group_info = 1;
+}
+
+message GetRSGroupInfoOfTableRequest {
+  required TableName table_name = 1;
+}
+
+message GetRSGroupInfoOfTableResponse {
+  optional RSGroupInfo r_s_group_info = 1;
+}
+
+message MoveServersRequest {
+  required string target_group = 1;
+  repeated ServerName servers = 3;
+}
+
+message MoveServersResponse {
+}
+
+message MoveTablesRequest {
+  required string target_group = 1;
+  repeated TableName table_name = 2;
+}
+
+message MoveTablesResponse {
+}
+
+message AddRSGroupRequest {
+  required string r_s_group_name = 1;
+}
+
+message AddRSGroupResponse {
+}
+
+message RemoveRSGroupRequest {
+  required string r_s_group_name = 1;
+}
+
+message RemoveRSGroupResponse {
+}
+
+message BalanceRSGroupRequest {
+  required string r_s_group_name = 1;
+}
+
+message BalanceRSGroupResponse {
+  required bool balanceRan = 1;
+}
+
+message ListRSGroupInfosRequest {
+}
+
+message ListRSGroupInfosResponse {
+  repeated RSGroupInfo  r_s_group_info = 1;
+}
+
+message GetRSGroupInfoOfServerRequest {
+  required ServerName server = 2;
+}
+
+message GetRSGroupInfoOfServerResponse {
+  optional RSGroupInfo r_s_group_info = 1;
+}
+
+service RSGroupAdminService {
+  rpc GetRSGroupInfo(GetRSGroupInfoRequest)
+    returns (GetRSGroupInfoResponse);
+
+  rpc GetRSGroupInfoOfTable(GetRSGroupInfoOfTableRequest)
+    returns (GetRSGroupInfoOfTableResponse);
+
+  rpc GetRSGroupInfoOfServer(GetRSGroupInfoOfServerRequest)
+    returns (GetRSGroupInfoOfServerResponse);
+
+  rpc MoveServers(MoveServersRequest)
+    returns (MoveServersResponse);
+
+  rpc MoveTables(MoveTablesRequest)
+    returns (MoveTablesResponse);
+
+  rpc AddRSGroup(AddRSGroupRequest)
+    returns (AddRSGroupResponse);
+
+  rpc RemoveRSGroup(RemoveRSGroupRequest)
+    returns (RemoveRSGroupResponse);
+
+  rpc BalanceRSGroup(BalanceRSGroupRequest)
+    returns (BalanceRSGroupResponse);
+
+  rpc ListRSGroupInfos(ListRSGroupInfosRequest)
+    returns (ListRSGroupInfosResponse);
+}
