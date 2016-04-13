@@ -630,6 +630,8 @@ public class FSHLog implements WAL {
    */
   private void tellListenersAboutPreLogRoll(final Path oldPath, final Path newPath)
   throws IOException {
+    coprocessorHost.preWALRoll(oldPath, newPath);
+
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
         i.preLogRoll(oldPath, newPath);
@@ -648,6 +650,8 @@ public class FSHLog implements WAL {
         i.postLogRoll(oldPath, newPath);
       }
     }
+
+    coprocessorHost.postWALRoll(oldPath, newPath);
   }
 
   /**

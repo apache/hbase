@@ -450,6 +450,20 @@ public class TestWALObserver {
     assertNotNull(getCoprocessor(log, SampleRegionWALObserver.class));
   }
 
+  @Test
+  public void testWALObserverRoll() throws Exception {
+    final WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
+    final SampleRegionWALObserver cp = getCoprocessor(wal, SampleRegionWALObserver.class);
+    cp.setTestValues(TEST_TABLE, null, null, null, null, null, null, null);
+
+    assertFalse(cp.isPreWALRollCalled());
+    assertFalse(cp.isPostWALRollCalled());
+
+    wal.rollWriter(true);
+    assertTrue(cp.isPreWALRollCalled());
+    assertTrue(cp.isPostWALRollCalled());
+  }
+
   private SampleRegionWALObserver getCoprocessor(WAL wal,
       Class<? extends SampleRegionWALObserver> clazz) throws Exception {
     WALCoprocessorHost host = wal.getCoprocessorHost();
