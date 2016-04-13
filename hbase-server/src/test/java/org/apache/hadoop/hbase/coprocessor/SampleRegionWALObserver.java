@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -60,6 +61,8 @@ implements WALObserver {
   private boolean postWALWriteCalled = false;
   private boolean preWALRestoreCalled = false;
   private boolean postWALRestoreCalled = false;
+  private boolean preWALRollCalled = false;
+  private boolean postWALRollCalled = false;
 
   // Deprecated versions
   private boolean preWALWriteDeprecatedCalled = false;
@@ -89,6 +92,8 @@ implements WALObserver {
     postWALWriteDeprecatedCalled = false;
     preWALRestoreDeprecatedCalled = false;
     postWALRestoreDeprecatedCalled = false;
+    preWALRollCalled = false;
+    postWALRollCalled = false;
   }
 
   @Override
@@ -167,6 +172,18 @@ implements WALObserver {
     preWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
+  @Override
+  public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException {
+    preWALRollCalled = true;
+  }
+
+  @Override
+  public void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException {
+    postWALRollCalled = true;
+  }
+
   /**
    * Triggered after {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is
    * Restoreed.
@@ -218,6 +235,14 @@ implements WALObserver {
 
   public boolean isPostWALRestoreDeprecatedCalled() {
     return postWALRestoreDeprecatedCalled;
+  }
+
+  public boolean isPreWALRollCalled() {
+    return preWALRollCalled;
+  }
+
+  public boolean isPostWALRollCalled() {
+    return postWALRollCalled;
   }
 
   /**

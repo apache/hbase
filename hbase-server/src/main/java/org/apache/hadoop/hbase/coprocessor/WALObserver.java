@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -112,4 +113,21 @@ public interface WALObserver extends Coprocessor {
   @Deprecated
   void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
+
+  /**
+   * Called before rolling the current WAL
+   * @param oldPath the path of the current wal that we are replacing
+   * @param newPath the path of the wal we are going to create
+   */
+  void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException;
+
+  /**
+   * Called after rolling the current WAL
+   * @param oldPath the path of the wal that we replaced
+   * @param newPath the path of the wal we have created and now is the current
+   */
+  void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException;
 }
+
