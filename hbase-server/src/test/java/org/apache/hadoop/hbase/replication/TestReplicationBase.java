@@ -103,7 +103,7 @@ public class TestReplicationBase {
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     // Have to reget conf1 in case zk cluster location different
     // than default
-    conf1 = utility1.getConfiguration();  
+    conf1 = utility1.getConfiguration();
     zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null, true);
     admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");

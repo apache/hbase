@@ -45,13 +45,12 @@ import com.google.common.util.concurrent.Service;
  * and persisting of the WAL entries in the other cluster.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
-public interface ReplicationEndpoint extends Service {
+public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListener {
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class Context {
     private final Configuration conf;
     private final FileSystem fs;
-    private final ReplicationPeerConfig peerConfig;
     private final ReplicationPeer replicationPeer;
     private final String peerId;
     private final UUID clusterId;
@@ -61,12 +60,10 @@ public interface ReplicationEndpoint extends Service {
     public Context(
         final Configuration conf,
         final FileSystem fs,
-        final ReplicationPeerConfig peerConfig,
         final String peerId,
         final UUID clusterId,
         final ReplicationPeer replicationPeer,
         final MetricsSource metrics) {
-      this.peerConfig = peerConfig;
       this.conf = conf;
       this.fs = fs;
       this.clusterId = clusterId;
@@ -87,7 +84,7 @@ public interface ReplicationEndpoint extends Service {
       return peerId;
     }
     public ReplicationPeerConfig getPeerConfig() {
-      return peerConfig;
+      return replicationPeer.getPeerConfig();
     }
     public ReplicationPeer getReplicationPeer() {
       return replicationPeer;

@@ -29,6 +29,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.util.UUID;
+import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 
 /**
  * Unit testing of ReplicationAdmin with clusters
@@ -40,6 +43,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   static HConnection connection2;
   static HBaseAdmin admin1;
   static HBaseAdmin admin2;
+  static ReplicationAdmin adminExt;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -48,6 +52,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     connection2 = HConnectionManager.createConnection(conf2);
     admin1 = new HBaseAdmin(connection1.getConfiguration());
     admin2 = new HBaseAdmin(connection2.getConfiguration());
+    adminExt = new ReplicationAdmin(conf1);
   }
 
   @AfterClass
@@ -64,7 +69,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.disableTable(tableName);
     admin2.deleteTable(tableName);
     assertFalse(admin2.tableExists(tableName));
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.enableTableRep(TableName.valueOf(tableName));
     assertTrue(admin2.tableExists(tableName));
   }
@@ -83,7 +87,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.modifyTable(tableName, table);
     admin2.enableTable(tableName);
 
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.enableTableRep(TableName.valueOf(tableName));
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
@@ -100,7 +103,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.modifyTable(tableName, table);
     admin2.enableTable(tableName);
 
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     try {
       adminExt.enableTableRep(TableName.valueOf(tableName));
       fail("Exception should be thrown if table descriptors in the clusters are not same.");
@@ -119,7 +121,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000)
   public void testDisableAndEnableReplication() throws Exception {
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.disableTableRep(TableName.valueOf(tableName));
     HTableDescriptor table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
@@ -138,25 +139,75 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testDisableReplicationForNonExistingTable() throws Exception {
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.disableTableRep(TableName.valueOf("nonExistingTable"));
   }
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testEnableReplicationForNonExistingTable() throws Exception {
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.enableTableRep(TableName.valueOf("nonExistingTable"));
   }
 
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.disableTableRep(null);
   }
 
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
-    ReplicationAdmin adminExt = new ReplicationAdmin(conf1);
     adminExt.enableTableRep(null);
+  }
+
+  @Test(timeout=300000)
+  public void testReplicationPeerConfigUpdateCallback() throws Exception {
+    String peerId = "1";
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility2.getClusterKey());
+    rpc.setReplicationEndpointImpl(TestUpdatableReplicationEndpoint.class.getName());
+    rpc.getConfiguration().put("key1", "value1");
+    adminExt.addPeer(peerId, rpc, null);
+    adminExt.peerAdded(peerId);
+    rpc.getConfiguration().put("key1", "value2");
+    adminExt.updatePeerConfig(peerId, rpc);
+    if (!TestUpdatableReplicationEndpoint.hasCalledBack()) {
+      synchronized(TestUpdatableReplicationEndpoint.class) {
+        TestUpdatableReplicationEndpoint.class.wait(2000L);
+      }
+    }
+    assertEquals(true, TestUpdatableReplicationEndpoint.hasCalledBack());
+    adminExt.removePeer(peerId);
+  }
+
+  public static class TestUpdatableReplicationEndpoint extends BaseReplicationEndpoint {
+    private static boolean calledBack = false;
+
+    public static boolean hasCalledBack() {
+      return calledBack;
+    }
+
+    @Override
+    public synchronized void peerConfigUpdated(ReplicationPeerConfig rpc) {
+      calledBack = true;
+      notifyAll();
+    }
+
+    @Override
+    protected void doStart() {
+      notifyStarted();
+    }
+
+    @Override
+    protected void doStop() {
+      notifyStopped();
+    }
+
+    @Override
+    public UUID getPeerUUID() {
+      return UUID.randomUUID();
+    }
+
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
+      return false;
+    }
   }
 }

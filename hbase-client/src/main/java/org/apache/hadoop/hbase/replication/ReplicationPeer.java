@@ -67,6 +67,12 @@ public interface ReplicationPeer {
   public Configuration getConfiguration();
 
   /**
+   * Setup a callback for chanages to the replication peer config
+   * @param listener Listener for config changes, usually a replication endpoint
+   */
+  void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
+
+  /*
    * Get replicable (table, cf-list) map of this peer
    * 
    * @return the replicable (table, cf-list) map

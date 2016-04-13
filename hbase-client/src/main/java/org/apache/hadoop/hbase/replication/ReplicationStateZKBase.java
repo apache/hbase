@@ -110,4 +110,8 @@ public abstract class ReplicationStateZKBase {
   protected boolean isPeerPath(String path) {
     return path.split("/").length == peersZNode.split("/").length + 1;
   }
+
+  protected String getPeerNode(String id) {
+    return ZKUtil.joinZNode(this.peersZNode, id);
+  }
 }

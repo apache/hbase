@@ -35,9 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,8 +43,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.ByteString;
 
 /**
  * This class provides an implementation of the ReplicationPeers interface using Zookeeper. The
@@ -118,9 +113,8 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
-      ZKUtilOp op1 =
-          ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(this.peersZNode, id),
-            toByteArray(peerConfig));
+      ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(this.peersZNode, id),
+          ReplicationSerDeHelper.toByteArray(peerConfig));
       // There is a race (if hbase.zookeeper.useMulti is false)
       // b/w PeerWatcher and ReplicationZookeeper#add method to create the
       // peer-state znode. This happens while adding a peer
@@ -275,7 +269,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
 
     try {
-      return parsePeerFrom(data);
+      return ReplicationSerDeHelper.parsePeerFrom(data);
     } catch (DeserializationException e) {
       LOG.warn("Failed to parse cluster key from peerId=" + peerId
           + ", specifically the content from the following znode: " + znode);
@@ -365,6 +359,43 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
   }
 
+  @Override
+  public void updatePeerConfig(String id, ReplicationPeerConfig newConfig)
+    throws ReplicationException {
+    ReplicationPeer peer = getPeer(id);
+    if (peer == null){
+      throw new ReplicationException("Could not find peer Id " + id);
+    }
+    ReplicationPeerConfig existingConfig = peer.getPeerConfig();
+    if (newConfig.getClusterKey() != null && !newConfig.getClusterKey().isEmpty() &&
+        !newConfig.getClusterKey().equals(existingConfig.getClusterKey())){
+      throw new ReplicationException("Changing the cluster key on an existing peer is not allowed."
+          + " Existing key '" + existingConfig.getClusterKey() + "' does not match new key '"
+          + newConfig.getClusterKey() +
+      "'");
+    }
+    String existingEndpointImpl = existingConfig.getReplicationEndpointImpl();
+    if (newConfig.getReplicationEndpointImpl() != null &&
+        !newConfig.getReplicationEndpointImpl().isEmpty() &&
+        !newConfig.getReplicationEndpointImpl().equals(existingEndpointImpl)){
+      throw new ReplicationException("Changing the replication endpoint implementation class " +
+          "on an existing peer is not allowed. Existing class '"
+          + existingConfig.getReplicationEndpointImpl()
+          + "' does not match new class '" + newConfig.getReplicationEndpointImpl() + "'");
+    }
+    //Update existingConfig's peer config and peer data with the new values, but don't touch config
+    // or data that weren't explicitly changed
+    existingConfig.getConfiguration().putAll(newConfig.getConfiguration());
+    existingConfig.getPeerData().putAll(newConfig.getPeerData());
+    try {
+      ZKUtil.setData(this.zookeeper, getPeerNode(id),
+          ReplicationSerDeHelper.toByteArray(existingConfig));
+    }
+    catch(KeeperException ke){
+      throw new ReplicationException("There was a problem trying to save changes to the " +
+          "replication peer " + id, ke);
+    }
+  }
   /**
    * Attempt to connect to a new remote slave cluster.
    * @param peerId a short that identifies the cluster
@@ -461,91 +492,13 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
           peerId, e);
     }
 
-    return peer;
-  }
-
-  /**
-   * @param bytes Content of a peer znode.
-   * @return ClusterKey parsed from the passed bytes.
-   * @throws DeserializationException
-   */
-  private static ReplicationPeerConfig parsePeerFrom(final byte[] bytes)
-      throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationPeer.Builder builder =
-          ZooKeeperProtos.ReplicationPeer.newBuilder();
-      ZooKeeperProtos.ReplicationPeer peer;
-      try {
-        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
-        peer = builder.build();
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
-      return convert(peer);
-    } else {
-      if (bytes.length > 0) {
-        return new ReplicationPeerConfig().setClusterKey(Bytes.toString(bytes));
-      }
-      return new ReplicationPeerConfig().setClusterKey("");
+    try {
+      peer.startPeerConfigTracker(this.zookeeper, this.getPeerNode(peerId));
+    } catch(KeeperException e) {
+      throw new ReplicationException("Error starting the peer config tracker for peerId=" +
+          peerId, e);
     }
-  }
-
-  private static ReplicationPeerConfig convert(ZooKeeperProtos.ReplicationPeer peer) {
-    ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
-    if (peer.hasClusterkey()) {
-      peerConfig.setClusterKey(peer.getClusterkey());
+      return peer;
     }
-    if (peer.hasReplicationEndpointImpl()) {
-      peerConfig.setReplicationEndpointImpl(peer.getReplicationEndpointImpl());
-    }
-
-    for (BytesBytesPair pair : peer.getDataList()) {
-      peerConfig.getPeerData().put(pair.getFirst().toByteArray(), pair.getSecond().toByteArray());
-    }
-
-    for (NameStringPair pair : peer.getConfigurationList()) {
-      peerConfig.getConfiguration().put(pair.getName(), pair.getValue());
-    }
-    return peerConfig;
-  }
-
-  private static ZooKeeperProtos.ReplicationPeer convert(ReplicationPeerConfig  peerConfig) {
-    ZooKeeperProtos.ReplicationPeer.Builder builder = ZooKeeperProtos.ReplicationPeer.newBuilder();
-    if (peerConfig.getClusterKey() != null) {
-      builder.setClusterkey(peerConfig.getClusterKey());
-    }
-    if (peerConfig.getReplicationEndpointImpl() != null) {
-      builder.setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl());
-    }
-
-    for (Map.Entry<byte[], byte[]> entry : peerConfig.getPeerData().entrySet()) {
-      builder.addData(BytesBytesPair.newBuilder()
-        .setFirst(ByteString.copyFrom(entry.getKey()))
-        .setSecond(ByteString.copyFrom(entry.getValue()))
-          .build());
-    }
-
-    for (Map.Entry<String, String> entry : peerConfig.getConfiguration().entrySet()) {
-      builder.addConfiguration(NameStringPair.newBuilder()
-        .setName(entry.getKey())
-        .setValue(entry.getValue())
-        .build());
-    }
-
-    return builder.build();
-  }
-
-  /**
-   * @param peerConfig
-   * @return Serialized protobuf of <code>peerConfig</code> with pb magic prefix prepended suitable
-   *         for use as content of a this.peersZNode; i.e. the content of PEER_ID znode under
-   *         /hbase/replication/peers/PEER_ID
-   */
-  private static byte[] toByteArray(final ReplicationPeerConfig peerConfig) {
-    byte[] bytes = convert(peerConfig).toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
-  }
-
 
 }

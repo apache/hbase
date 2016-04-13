@@ -168,5 +168,30 @@ module Hbase
     def get_peer_config(id)
       @replication_admin.get_peer_config(id)
     end
+    def peer_added(id)
+      @replication_admin.peer_added(id)
+    end
+
+    def update_peer_config(id, args={})
+      # Optional parameters
+      config = args.fetch(CONFIG, nil)
+      data = args.fetch(DATA, nil)
+
+      # Create and populate a ReplicationPeerConfig
+      replication_peer_config = ReplicationPeerConfig.new
+      unless config.nil?
+        replication_peer_config.get_configuration.put_all(config)
+      end
+
+      unless data.nil?
+        # Convert Strings to Bytes for peer_data
+        peer_data = replication_peer_config.get_peer_data
+        data.each{|key, val|
+          peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
+        }
+      end
+
+      @replication_admin.update_peer_config(id, replication_peer_config)
+    end
   end
 end

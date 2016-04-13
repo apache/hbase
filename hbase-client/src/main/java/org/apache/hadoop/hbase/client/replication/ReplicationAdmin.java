@@ -217,6 +217,10 @@ public class ReplicationAdmin implements Closeable {
     return tableCfsStr;
   }
 
+  public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
+    throws ReplicationException {
+    this.replicationPeers.updatePeerConfig(id, peerConfig);
+  }
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
@@ -494,6 +498,11 @@ public class ReplicationAdmin implements Closeable {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  public void peerAdded(String id) throws ReplicationException {
+    this.replicationPeers.peerAdded(id);
   }
 
   @VisibleForTesting
