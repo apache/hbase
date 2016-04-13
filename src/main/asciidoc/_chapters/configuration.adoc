@@ -1111,6 +1111,37 @@ Only a subset of all configurations can currently be changed in the running serv
 Here is an incomplete list: `hbase.regionserver.thread.compaction.large`, `hbase.regionserver.thread.compaction.small`, `hbase.regionserver.thread.split`, `hbase.regionserver.thread.merge`, as well as compaction policy and configurations and adjustment to offpeak hours.
 For the full list consult the patch attached to  link:https://issues.apache.org/jira/browse/HBASE-12147[HBASE-12147 Porting Online Config Change from 89-fb].
 
+[[amazon_s3_configuration]]
+== Using Amazon S3 Storage
+
+HBase is designed to be tightly coupled with HDFS, and testing of other filesystems
+has not been thorough.
+
+The following limitations have been reported:
+
+- RegionServers should be deployed in Amazon EC2 to mitigate latency and bandwidth
+limitations when accessing the filesystem, and RegionServers must remain available
+to preserve data locality.
+- S3 writes each inbound and outbound file to disk, which adds overhead to each operation.
+- The best performance is achieved when all clients and servers are in the Amazon
+cloud, rather than a heterogenous architecture.
+- You must be aware of the location of `hadoop.tmp.dir` so that the local `/tmp/`
+directory is not filled to capacity.
+- HBase has a different file usage pattern than MapReduce jobs and has been optimized for
+HDFS, rather than distant networked storage.
+- The `s3a://` protocol is strongly recommended. The `s3n://` and `s3://` protocols have serious
+limitations and do not use the Amazon AWS SDK. The `s3a://` protocol is supported
+for use with HBase if you use Hadoop 2.6.1 or higher with HBase 1.2 or higher. Hadoop
+2.6.0 is not supported with HBase at all.
+
+Configuration details for Amazon S3 and associated Amazon services such as EMR are
+out of the scope of the HBase documentation. See the
+link:https://wiki.apache.org/hadoop/AmazonS3[Hadoop Wiki entry on Amazon S3 Storage]
+and
+link:http://docs.aws.amazon.com/ElasticMapReduce/latest/DeveloperGuide/emr-hbase.html[Amazon's documentation for deploying HBase in EMR].
+
+One use case that is well-suited for Amazon S3 is storing snapshots. See <<snapshots_s3>>.
+
 ifdef::backend-docbook[]
 [index]
 == Index
