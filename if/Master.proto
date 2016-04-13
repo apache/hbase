@@ -186,6 +186,7 @@ message CreateNamespaceRequest {
 }
 
 message CreateNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DeleteNamespaceRequest {
@@ -195,6 +196,7 @@ message DeleteNamespaceRequest {
 }
 
 message DeleteNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ModifyNamespaceRequest {
@@ -204,6 +206,7 @@ message ModifyNamespaceRequest {
 }
 
 message ModifyNamespaceResponse {
+  optional uint64 proc_id = 1;
 }
 
 message GetNamespaceDescriptorRequest {
@@ -276,6 +279,29 @@ message IsBalancerEnabledResponse {
   required bool enabled = 1;
 }
 
+enum MasterSwitchType {
+  SPLIT = 0;
+  MERGE = 1;
+}
+
+message SetSplitOrMergeEnabledRequest {
+  required bool enabled = 1;
+  optional bool synchronous = 2;
+  repeated MasterSwitchType switch_types = 3;
+}
+
+message SetSplitOrMergeEnabledResponse {
+  repeated bool prev_value = 1;
+}
+
+message IsSplitOrMergeEnabledRequest {
+  required MasterSwitchType switch_type = 1;
+}
+
+message IsSplitOrMergeEnabledResponse {
+  required bool enabled = 1;
+}
+
 message NormalizeRequest {
 }
 
@@ -344,9 +370,12 @@ message DeleteSnapshotResponse {
 
 message RestoreSnapshotRequest {
   required SnapshotDescription snapshot = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message RestoreSnapshotResponse {
+  required uint64 proc_id = 1;
 }
 
 /* if you don't send the snapshot, then you will get it back
@@ -630,6 +659,19 @@ service MasterService {
     returns(IsBalancerEnabledResponse);
 
   /**
+   * Turn the split or merge switch on or off.
+   * If synchronous is true, it waits until current operation call, if outstanding, to return.
+   */
+  rpc SetSplitOrMergeEnabled(SetSplitOrMergeEnabledRequest)
+    returns(SetSplitOrMergeEnabledResponse);
+
+  /**
+   * Query whether the split or merge switch is on/off.
+   */
+  rpc IsSplitOrMergeEnabled(IsSplitOrMergeEnabledRequest)
+    returns(IsSplitOrMergeEnabledResponse);
+
+  /**
    * Run region normalizer. Can NOT run for various reasons. Check logs.
    */
   rpc Normalize(NormalizeRequest)
@@ -694,11 +736,6 @@ service MasterService {
    * Restore a snapshot
    */
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
-
-  /**
-   * Determine if the snapshot restore is done yet.
-   */
-  rpc IsRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 
   /**
    * Execute a distributed procedure.
