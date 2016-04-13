@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -70,4 +71,12 @@ public class BaseWALObserver implements WALObserver {
       HLogKey logKey, WALEdit logEdit) throws IOException {
     postWALWrite(ctx, info, (WALKey)logKey, logEdit);
   }
+
+  @Override
+  public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException { }
+
+  @Override
+  public void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException { }
 }

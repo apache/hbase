@@ -473,6 +473,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   private void tellListenersAboutPreLogRoll(final Path oldPath, final Path newPath)
       throws IOException {
+    coprocessorHost.preWALRoll(oldPath, newPath);
+
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
         i.preLogRoll(oldPath, newPath);
@@ -490,6 +492,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
         i.postLogRoll(oldPath, newPath);
       }
     }
+
+    coprocessorHost.postWALRoll(oldPath, newPath);
   }
 
   // public only until class moves to o.a.h.h.wal

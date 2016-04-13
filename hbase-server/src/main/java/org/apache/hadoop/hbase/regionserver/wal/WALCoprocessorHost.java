@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.*;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 @InterfaceAudience.Private
 public class WALCoprocessorHost
     extends CoprocessorHost<WALCoprocessorHost.WALEnvironment> {
-  
+
   /**
    * Encapsulation of the environment of each coprocessor
    */
@@ -184,6 +185,68 @@ public class WALCoprocessorHost
           } else {
             observer.postWALWrite(ctx, info, logKey, logEdit);
           }
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Called before rolling the current WAL
+   * @param oldPath the path of the current wal that we are replacing
+   * @param newPath the path of the wal we are going to create
+   */
+  public void preWALRoll(Path oldPath, Path newPath) throws IOException {
+    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
+    ObserverContext<WALCoprocessorEnvironment> ctx = null;
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
+      if (env.getInstance() instanceof WALObserver) {
+        final WALObserver observer = (WALObserver)env.getInstance();
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          observer.preWALRoll(ctx, oldPath, newPath);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Called after rolling the current WAL
+   * @param oldPath the path of the wal that we replaced
+   * @param newPath the path of the wal we have created and now is the current
+   */
+  public void postWALRoll(Path oldPath, Path newPath) throws IOException {
+    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
+    ObserverContext<WALCoprocessorEnvironment> ctx = null;
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
+      if (env.getInstance() instanceof WALObserver) {
+        final WALObserver observer = (WALObserver)env.getInstance();
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          observer.postWALRoll(ctx, oldPath, newPath);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {
