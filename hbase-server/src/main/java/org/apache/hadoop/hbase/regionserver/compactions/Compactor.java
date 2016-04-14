@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.Compactor.CellSink;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
@@ -163,7 +163,7 @@ public abstract class Compactor<T extends CellSink> {
         LOG.debug("Compacting " + file +
           ", keycount=" + keyCount +
           ", bloomtype=" + r.getBloomFilterType().toString() +
-          ", size=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1) +
+          ", size=" + StringUtils.humanReadableInt(r.length()) +
           ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
           (calculatePutTs ? ", earliestPutTs=" + earliestPutTs: ""));
