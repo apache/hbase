@@ -395,6 +395,41 @@ The HBase-Spark module includes support for Spark SQL and DataFrames, which allo
 you to write SparkSQL directly on HBase tables. In addition the HBase-Spark
 will push down query filtering logic to HBase.
 
+In HBaseSparkConf, four parameters related to timestamp can be set. They are TIMESTAMP,
+MIN_TIMESTAMP, MAX_TIMESTAMP and MAX_VERSIONS respectively. Users can query records
+with different timestamps or time ranges with MIN_TIMESTAMP and MAX_TIMESTAMP.
+In the meantime, use concrete value instead of tsSpecified and oldMs in the examples below.
+
+.Query with different timestamps
+====
+
+The example below shows how to load df DataFrame with different timestamps.
+tsSpecified is specified by the user.
+HBaseTableCatalog defines the HBase and Relation relation schema.
+writeCatalog defines catalog for the schema mapping.
+----
+val df = sqlContext.read
+      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.TIMESTAMP -> tsSpecified.toString))
+      .format("org.apache.hadoop.hbase.spark")
+      .load()
+----
+
+The example below shows how to load df DataFrame with different time ranges.
+oldMs is specified by the user.
+----
+val df = sqlContext.read
+      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.MIN_TIMESTAMP -> "0",
+        HBaseSparkConf.MAX_TIMESTAMP -> oldMs.toString))
+      .format("org.apache.hadoop.hbase.spark")
+      .load()
+----
+
+After loading df DataFrame, users can query data.
+----
+    df.registerTempTable("table")
+    sqlContext.sql("select count(col1) from table").show
+----
+
 === Predicate Push Down
 
 There are two examples of predicate push down in the HBase-Spark implementation.

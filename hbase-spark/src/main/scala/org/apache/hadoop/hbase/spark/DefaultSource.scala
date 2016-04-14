@@ -88,6 +88,11 @@ case class HBaseRelation (
     userSpecifiedSchema: Option[StructType]
   )(@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan  with InsertableRelation  with Logging {
+  val timestamp = parameters.get(HBaseSparkConf.TIMESTAMP).map(_.toLong)
+  val minTimestamp = parameters.get(HBaseSparkConf.MIN_TIMESTAMP).map(_.toLong)
+  val maxTimestamp = parameters.get(HBaseSparkConf.MAX_TIMESTAMP).map(_.toLong)
+  val maxVersions = parameters.get(HBaseSparkConf.MAX_VERSIONS).map(_.toInt)
+
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
   val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_RESOURCES_LOCATIONS, "")
@@ -204,7 +209,7 @@ case class HBaseRelation (
         System.arraycopy(x, 0, rBytes, offset, x.length)
         offset += x.length
       }
-      val put = new Put(rBytes)
+      val put = timestamp.fold(new Put(rBytes))(new Put(rBytes, _))
 
       colsIdxedFields.foreach { case (x, y) =>
         val b = Utils.toBytes(row(x), y)
