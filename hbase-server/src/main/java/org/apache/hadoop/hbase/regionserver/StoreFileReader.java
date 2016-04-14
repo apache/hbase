@@ -60,8 +60,8 @@ public class StoreFileReader {
   protected BloomFilter deleteFamilyBloomFilter = null;
   protected BloomType bloomFilterType;
   private final HFile.Reader reader;
-  protected TimeRangeTracker timeRangeTracker = null;
   protected long sequenceID = -1;
+  protected TimeRange timeRange = null;
   private byte[] lastBloomKey;
   private long deleteFamilyCnt = -1;
   private boolean bulkLoadResult = false;
@@ -214,13 +214,9 @@ public class StoreFileReader {
    *          determined by the column family's TTL
    * @return false if queried keys definitely don't exist in this StoreFile
    */
-  boolean passesTimerangeFilter(TimeRange timeRange, long oldestUnexpiredTS) {
-    if (timeRangeTracker == null) {
-      return true;
-    } else {
-      return timeRangeTracker.includesTimeRange(timeRange) &&
-          timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
-    }
+  boolean passesTimerangeFilter(TimeRange tr, long oldestUnexpiredTS) {
+    return this.timeRange == null? true:
+      this.timeRange.includesTimeRange(tr) && this.timeRange.getMax() >= oldestUnexpiredTS;
   }
 
   /**
@@ -634,7 +630,7 @@ public class StoreFileReader {
   }
 
   public long getMaxTimestamp() {
-    return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
+    return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
   }
 
   boolean isSkipResetSeqId() {

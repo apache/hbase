@@ -18,7 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 /**
@@ -29,9 +32,16 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
  */
 @InterfaceAudience.Private
 public class ImmutableSegment extends Segment {
+  /**
+   * This is an immutable segment so use the read-only TimeRange rather than the heavy-weight
+   * TimeRangeTracker with all its synchronization when doing time range stuff.
+   */
+  private final TimeRange timeRange;
 
   protected ImmutableSegment(Segment segment) {
     super(segment);
+    TimeRangeTracker trt = getTimeRangeTracker();
+    this.timeRange =  trt == null? null: trt.toTimeRange();
   }
 
   /**
@@ -43,4 +53,19 @@ public class ImmutableSegment extends Segment {
     return new CollectionBackedScanner(getCellSet(), getComparator());
   }
 
+  @Override
+  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
+    return this.timeRange.includesTimeRange(scan.getTimeRange()) &&
+        this.timeRange.getMax() >= oldestUnexpiredTS;
+  }
+
+  @Override
+  public long getMinTimestamp() {
+    return this.timeRange.getMin();
+  }
+
+  @Override
+  protected void updateMetaInfo(Cell toAdd, long s) {
+    throw new IllegalAccessError("This is an immutable segment");
+  }
 }

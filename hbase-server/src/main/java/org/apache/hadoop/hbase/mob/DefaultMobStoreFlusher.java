@@ -161,7 +161,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         HConstants.COMPACTION_KV_MAX_DEFAULT);
     long mobCount = 0;
     long mobSize = 0;
-    long time = snapshot.getTimeRangeTracker().getMaximumTimestamp();
+    long time = snapshot.getTimeRangeTracker().getMax();
     mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
         store.getFamily().getCompression(), store.getRegionInfo().getStartKey());
     // the target path is {tableName}/.mob/{cfName}/mobFiles

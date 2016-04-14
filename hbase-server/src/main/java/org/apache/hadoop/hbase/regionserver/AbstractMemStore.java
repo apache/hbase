@@ -78,8 +78,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   protected void resetCellSet() {
     // Reset heap to not include any keys
-    this.active = SegmentFactory.instance().createMutableSegment(
-        conf, comparator, DEEP_OVERHEAD);
+    this.active = SegmentFactory.instance().createMutableSegment(conf, comparator, DEEP_OVERHEAD);
     this.timeOfOldestEdit = Long.MAX_VALUE;
   }
 

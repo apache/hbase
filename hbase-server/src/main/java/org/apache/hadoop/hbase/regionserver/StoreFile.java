@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -498,15 +497,11 @@ public class StoreFile {
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
 
     try {
-      byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
-      if (timerangeBytes != null) {
-        this.reader.timeRangeTracker = new TimeRangeTracker();
-        Writables.copyWritable(timerangeBytes, this.reader.timeRangeTracker);
-      }
+      this.reader.timeRange = TimeRangeTracker.getTimeRange(metadataMap.get(TIMERANGE_KEY));
     } catch (IllegalArgumentException e) {
       LOG.error("Error reading timestamp range data from meta -- " +
           "proceeding without", e);
-      this.reader.timeRangeTracker = null;
+      this.reader.timeRange = null;
     }
     // initialize so we can reuse them after reader closed.
     firstKey = reader.getFirstKey();
@@ -530,7 +525,7 @@ public class StoreFile {
       } catch (IOException e) {
         try {
           boolean evictOnClose =
-              cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+              cacheConf != null? cacheConf.shouldEvictOnClose(): true;
           this.closeReader(evictOnClose);
         } catch (IOException ee) {
         }
@@ -576,7 +571,7 @@ public class StoreFile {
    */
   public void deleteReader() throws IOException {
     boolean evictOnClose =
-        cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+        cacheConf != null? cacheConf.shouldEvictOnClose(): true;
     closeReader(evictOnClose);
     this.fs.delete(getPath(), true);
   }
@@ -631,15 +626,11 @@ public class StoreFile {
   }
 
   public Long getMinimumTimestamp() {
-    return (getReader().timeRangeTracker == null) ?
-        null :
-        getReader().timeRangeTracker.getMinimumTimestamp();
+    return getReader().timeRange == null? null: getReader().timeRange.getMin();
   }
 
   public Long getMaximumTimestamp() {
-    return (getReader().timeRangeTracker == null) ?
-        null :
-        getReader().timeRangeTracker.getMaximumTimestamp();
+    return getReader().timeRange == null? null: getReader().timeRange.getMax();
   }
 
 
@@ -648,7 +639,6 @@ public class StoreFile {
    * @param comparator Comparator used to compare KVs.
    * @return The split point row, or null if splitting is not possible, or reader is null.
    */
-  @SuppressWarnings("deprecation")
   byte[] getFileSplitPoint(CellComparator comparator) throws IOException {
     if (this.reader == null) {
       LOG.warn("Storefile " + this + " Reader is null; cannot get split point");

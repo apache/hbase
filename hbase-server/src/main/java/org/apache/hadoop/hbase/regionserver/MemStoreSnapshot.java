@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MemStoreSnapshot {
-
   private final long id;
   private final int cellsCount;
   private final long size;

@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 import com.google.common.io.Closeables;
@@ -188,13 +187,8 @@ public abstract class Compactor<T extends CellSink> {
         }
       }
       tmp = fileInfo.get(StoreFile.TIMERANGE_KEY);
-      TimeRangeTracker trt = new TimeRangeTracker();
-      if (tmp == null) {
-        fd.latestPutTs = HConstants.LATEST_TIMESTAMP;
-      } else {
-        Writables.copyWritable(tmp, trt);
-        fd.latestPutTs = trt.getMaximumTimestamp();
-      }
+      TimeRangeTracker trt = TimeRangeTracker.getTimeRangeTracker(tmp);
+      fd.latestPutTs = trt == null? HConstants.LATEST_TIMESTAMP: trt.getMax();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Compacting " + file +
           ", keycount=" + keyCount +

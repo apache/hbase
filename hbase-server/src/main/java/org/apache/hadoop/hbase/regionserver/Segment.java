@@ -40,22 +40,21 @@ import org.apache.hadoop.hbase.util.ByteRange;
  */
 @InterfaceAudience.Private
 public abstract class Segment {
-
   private volatile CellSet cellSet;
   private final CellComparator comparator;
   private volatile MemStoreLAB memStoreLAB;
-  private final AtomicLong size;
-  private final TimeRangeTracker timeRangeTracker;
+  protected final AtomicLong size;
   protected volatile boolean tagsPresent;
+  private final TimeRangeTracker timeRangeTracker;
 
-  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB, long
-      size) {
+  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
+      long size) {
     this.cellSet = cellSet;
     this.comparator = comparator;
     this.memStoreLAB = memStoreLAB;
     this.size = new AtomicLong(size);
-    this.timeRangeTracker = new TimeRangeTracker();
     this.tagsPresent = false;
+    this.timeRangeTracker = new TimeRangeTracker();
   }
 
   protected Segment(Segment segment) {
@@ -63,8 +62,8 @@ public abstract class Segment {
     this.comparator = segment.getComparator();
     this.memStoreLAB = segment.getMemStoreLAB();
     this.size = new AtomicLong(segment.getSize());
-    this.timeRangeTracker = segment.getTimeRangeTracker();
     this.tagsPresent = segment.isTagsPresent();
+    this.timeRangeTracker = segment.getTimeRangeTracker();
   }
 
   /**
@@ -139,15 +138,9 @@ public abstract class Segment {
     return newKv;
   }
 
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return (getTimeRangeTracker().includesTimeRange(scan.getTimeRange())
-        && (getTimeRangeTracker().getMaximumTimestamp() >=
-        oldestUnexpiredTS));
-  }
+  public abstract boolean shouldSeek(Scan scan, long oldestUnexpiredTS);
 
-  public long getMinTimestamp() {
-    return getTimeRangeTracker().getMinimumTimestamp();
-  }
+  public abstract long getMinTimestamp();
 
   public boolean isTagsPresent() {
     return tagsPresent;
@@ -191,7 +184,7 @@ public abstract class Segment {
   }
 
   public TimeRangeTracker getTimeRangeTracker() {
-    return timeRangeTracker;
+    return this.timeRangeTracker;
   }
 
   //*** Methods for SegmentsScanner
@@ -238,17 +231,10 @@ public abstract class Segment {
     return s;
   }
 
-  protected void updateMetaInfo(Cell toAdd, long s) {
-    getTimeRangeTracker().includeTimestamp(toAdd);
-    size.addAndGet(s);
-    // In no tags case this NoTagsKeyValue.getTagsLength() is a cheap call.
-    // When we use ACL CP or Visibility CP which deals with Tags during
-    // mutation, the TagRewriteCell.getTagsLength() is a cheaper call. We do not
-    // parse the byte[] to identify the tags length.
-    if(toAdd.getTagsLength() > 0) {
-      tagsPresent = true;
-    }
-  }
+  /**
+   * Only mutable Segments implement this.
+   */
+  protected abstract void updateMetaInfo(Cell toAdd, long s);
 
   /**
    * Returns a subset of the segment cell set, which starts with the given cell
@@ -282,5 +268,4 @@ public abstract class Segment {
     res += "Min ts "+getMinTimestamp()+"; ";
     return res;
   }
-
 }
