@@ -32,8 +32,8 @@ public class TestTimeRangeTracker {
     trr.includeTimestamp(3);
     trr.includeTimestamp(2);
     trr.includeTimestamp(1);
-    assertTrue(trr.getMinimumTimestamp() != TimeRangeTracker.INITIAL_MINIMUM_TIMESTAMP);
-    assertTrue(trr.getMaximumTimestamp() != -1 /*The initial max value*/);
+    assertTrue(trr.getMin() != TimeRangeTracker.INITIAL_MIN_TIMESTAMP);
+    assertTrue(trr.getMax() != -1 /*The initial max value*/);
   }
 
   @Test
@@ -76,8 +76,8 @@ public class TestTimeRangeTracker {
     for (int i = 0; i < threads.length; i++) {
       threads[i].join();
     }
-    assertTrue(trr.getMaximumTimestamp() == calls * threadCount);
-    assertTrue(trr.getMinimumTimestamp() == 0);
+    assertTrue(trr.getMax() == calls * threadCount);
+    assertTrue(trr.getMin() == 0);
   }
 
   /**
@@ -104,7 +104,7 @@ public class TestTimeRangeTracker {
     for (int i = 0; i < threads.length; i++) {
       threads[i].join();
     }
-    System.out.println(trr.getMinimumTimestamp() + " " + trr.getMaximumTimestamp() + " " +
+    System.out.println(trr.getMin() + " " + trr.getMax() + " " +
       (System.currentTimeMillis() - start));
   }
 }

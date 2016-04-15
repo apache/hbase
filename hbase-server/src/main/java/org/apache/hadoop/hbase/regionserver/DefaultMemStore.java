@@ -678,10 +678,8 @@ public class DefaultMemStore implements MemStore {
       timeRange = scan.getTimeRange();
     }
     return (timeRangeTracker.includesTimeRange(timeRange) ||
-        snapshotTimeRangeTracker.includesTimeRange(timeRange))
-        && (Math.max(timeRangeTracker.getMaximumTimestamp(),
-                     snapshotTimeRangeTracker.getMaximumTimestamp()) >=
-            oldestUnexpiredTS);
+      snapshotTimeRangeTracker.includesTimeRange(timeRange)) &&
+      (Math.max(timeRangeTracker.getMax(), snapshotTimeRangeTracker.getMax()) >= oldestUnexpiredTS);
   }
 
   /*
