@@ -1355,6 +1355,31 @@ possible configurations would overwhelm and obscure the important.
       as the SimpleLoadBalancer).
     </description>
   </property>
+<property>
+	<name>hbase.rest.csrf.enabled</name>
+	<value>false</value>
+  <description>
+    Set to true to enable protection against cross-site request forgery (CSRF)
+	</description>
+</property>
+<property>
+  <name>hbase.rest-csrf.browser-useragents-regex</name>
+  <value>^Mozilla.*,^Opera.*</value>
+  <description>
+    A comma-separated list of regular expressions used to match against an HTTP
+    request's User-Agent header when protection against cross-site request
+    forgery (CSRF) is enabled for REST server by setting
+    hbase.rest.csrf.enabled to true.  If the incoming User-Agent matches
+    any of these regular expressions, then the request is considered to be sent
+    by a browser, and therefore CSRF prevention is enforced.  If the request's
+    User-Agent does not match any of these regular expressions, then the request
+    is considered to be sent by something other than a browser, such as scripted
+    automation.  In this case, CSRF is not a potential attack vector, so
+    the prevention is not enforced.  This helps achieve backwards-compatibility
+    with existing automation that has not been updated to send the CSRF
+    prevention header.
+  </description>
+</property>
   <property>
     <name>hbase.security.exec.permission.checks</name>
     <value>false</value>

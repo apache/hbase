@@ -19,9 +19,11 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -35,13 +37,17 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
+import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.HttpServerUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
@@ -66,6 +72,15 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
+  static Log LOG = LogFactory.getLog("RESTServer");
+
+  static String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
+  static boolean REST_CSRF_ENABLED_DEFAULT = false;
+  static boolean restCSRFEnabled = false;
+  static String REST_CSRF_CUSTOM_HEADER_KEY ="hbase.rest.csrf.custom.header";
+  static String REST_CSRF_CUSTOM_HEADER_DEFAULT = "X-XSRF-HEADER";
+  static String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
+  static String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
@@ -76,19 +91,42 @@ public class RESTServer implements Constants {
   }
 
   /**
-   * The main method for the HBase rest server.
-   * @param args command-line arguments
-   * @throws Exception exception
+   * Returns a list of strings from a comma-delimited configuration value.
+   *
+   * @param conf configuration to check
+   * @param name configuration property name
+   * @param defaultValue default value if no value found for name
+   * @return list of strings from comma-delimited configuration value, or an
+   *     empty list if not found
    */
-  public static void main(String[] args) throws Exception {
-    Log LOG = LogFactory.getLog("RESTServer");
+  private static List<String> getTrimmedStringList(Configuration conf,
+    String name, String defaultValue) {
+    String valueString = conf.get(name, defaultValue);
+    if (valueString == null) {
+      return new ArrayList<>();
+    }
+    return new ArrayList<>(StringUtils.getTrimmedStringCollection(valueString));
+  }
 
-    VersionInfo.logVersion();
-    FilterHolder authFilter = null;
-    Configuration conf = HBaseConfiguration.create();
+  static String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY = "hbase.rest-csrf.browser-useragents-regex";
+  static void addCSRFFilter(Context context, Configuration conf) {
+    restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
+    if (restCSRFEnabled) {
+      String[] urls = { "/*" };
+      Set<String> restCsrfMethodsToIgnore = new HashSet<>();
+      restCsrfMethodsToIgnore.addAll(getTrimmedStringList(conf,
+        REST_CSRF_METHODS_TO_IGNORE_KEY, REST_CSRF_METHODS_TO_IGNORE_DEFAULT));
+      Map<String, String> restCsrfParams = RestCsrfPreventionFilter
+          .getFilterParams(conf, "hbase.rest-csrf.");
+      HttpServer.defineFilter(context, "csrf", RestCsrfPreventionFilter.class.getName(),
+        restCsrfParams, urls);
+    }
+  }
+
+  // login the server principal (if using secure Hadoop)
+  private static Pair<FilterHolder, Class<? extends ServletContainer>> loginServerPrincipal(
+    UserProvider userProvider, Configuration conf) throws Exception {
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
-    UserProvider userProvider = UserProvider.instantiate(conf);
-    // login the server principal (if using secure Hadoop)
     if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get(REST_DNS_INTERFACE, "default"),
@@ -102,14 +140,16 @@ public class RESTServer implements Constants {
       userProvider.login(REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
       if (conf.get(REST_AUTHENTICATION_TYPE) != null) {
         containerClass = RESTServletContainer.class;
-        authFilter = new FilterHolder();
+        FilterHolder authFilter = new FilterHolder();
         authFilter.setClassName(AuthFilter.class.getName());
         authFilter.setName("AuthenticationFilter");
+        return new Pair<FilterHolder, Class<? extends ServletContainer>>(authFilter,containerClass);
       }
     }
+    return new Pair<FilterHolder, Class<? extends ServletContainer>>(null, containerClass);
+  }
 
-    RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
-
+  private static void parseCommandLine(String[] args, RESTServlet servlet) {
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: 8080]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
@@ -161,6 +201,24 @@ public class RESTServer implements Constants {
     } else {
       printUsageAndExit(options, 1);
     }
+  }
+
+  /**
+   * The main method for the HBase rest server.
+   * @param args command-line arguments
+   * @throws Exception exception
+   */
+  public static void main(String[] args) throws Exception {
+    VersionInfo.logVersion();
+    Configuration conf = HBaseConfiguration.create();
+    UserProvider userProvider = UserProvider.instantiate(conf);
+    Pair<FilterHolder, Class<? extends ServletContainer>> pair = loginServerPrincipal(
+      userProvider, conf);
+    FilterHolder authFilter = pair.getFirst();
+    Class<? extends ServletContainer> containerClass = pair.getSecond();
+    RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
+
+    parseCommandLine(args, servlet);
 
     // set up the Jersey servlet container for Jetty
     ServletHolder sh = new ServletHolder(containerClass);
@@ -236,6 +294,7 @@ public class RESTServer implements Constants {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
+    addCSRFFilter(context, conf);
     HttpServerUtil.constrainHttpMethods(context);
 
     // Put up info server.
@@ -247,7 +306,6 @@ public class RESTServer implements Constants {
       infoServer.setAttribute("hbase.conf", conf);
       infoServer.start();
     }
-
     // start server
     server.start();
     server.join();
