@@ -565,8 +565,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     checkCodecs(this.conf);
     this.userProvider = UserProvider.instantiate(conf);
 
-    Superusers.initialize(conf);
-
     FSUtils.setupShortCircuitRead(this.conf);
 
     // Config'ed params
@@ -646,6 +644,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // login the server principal (if using secure Hadoop)
     userProvider.login("hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
+    Superusers.initialize(conf);
+
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
     uncaughtExceptionHandler = new UncaughtExceptionHandler() {
