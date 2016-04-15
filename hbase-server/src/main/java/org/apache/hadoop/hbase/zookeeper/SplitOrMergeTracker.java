@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -25,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SwitchState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
@@ -37,8 +40,13 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class SplitOrMergeTracker {
 
+  public static final String LOCK = "splitOrMergeLock";
+  public static final String STATE = "splitOrMergeState";
+
   private String splitZnode;
   private String mergeZnode;
+  private String splitOrMergeLock;
+  private ZooKeeperWatcher watcher;
 
   private SwitchStateTracker splitStateTracker;
   private SwitchStateTracker mergeStateTracker;
@@ -49,6 +57,9 @@ public class SplitOrMergeTracker {
       if (ZKUtil.checkExists(watcher, watcher.getSwitchZNode()) < 0) {
         ZKUtil.createAndFailSilent(watcher, watcher.getSwitchZNode());
       }
+      if (ZKUtil.checkExists(watcher, watcher.getSwitchLockZNode()) < 0) {
+        ZKUtil.createAndFailSilent(watcher, watcher.getSwitchLockZNode());
+      }
     } catch (KeeperException e) {
       throw new RuntimeException(e);
     }
@@ -56,8 +67,12 @@ public class SplitOrMergeTracker {
       conf.get("zookeeper.znode.switch.split", "split"));
     mergeZnode = ZKUtil.joinZNode(watcher.getSwitchZNode(),
       conf.get("zookeeper.znode.switch.merge", "merge"));
+
+    splitOrMergeLock = ZKUtil.joinZNode(watcher.getSwitchLockZNode(), LOCK);
+
     splitStateTracker = new SwitchStateTracker(watcher, splitZnode, abortable);
     mergeStateTracker = new SwitchStateTracker(watcher, mergeZnode, abortable);
+    this.watcher = watcher;
   }
 
   public void start() {
@@ -89,6 +104,76 @@ public class SplitOrMergeTracker {
       default:
         break;
     }
+  }
+
+  /**
+   *  rollback the original state and delete lock node.
+   * */
+  public void releaseLockAndRollback()
+    throws KeeperException, DeserializationException, InterruptedException {
+    if (ZKUtil.checkExists(watcher, splitOrMergeLock) != -1) {
+      List<ZKUtil.ZKUtilOp> ops = new ArrayList<>();
+      rollback(ops);
+      ops.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(splitOrMergeLock));
+      ZKUtil.multiOrSequential(watcher, ops, false);
+    }
+  }
+
+  // If there is old states of switch on zk, do rollback
+  private void rollback(List<ZKUtil.ZKUtilOp> ops) throws KeeperException, InterruptedException, DeserializationException {
+    String splitOrMergeState = ZKUtil.joinZNode(watcher.getSwitchLockZNode(),
+      SplitOrMergeTracker.STATE);
+    if (ZKUtil.checkExists(watcher, splitOrMergeState) != -1) {
+      byte[] bytes = ZKUtil.getData(watcher, splitOrMergeState);
+      ProtobufUtil.expectPBMagicPrefix(bytes);
+      ZooKeeperProtos.SplitAndMergeState.Builder builder =
+        ZooKeeperProtos.SplitAndMergeState.newBuilder();
+      try {
+        int magicLen = ProtobufUtil.lengthOfPBMagic();
+        ProtobufUtil.mergeFrom(builder, bytes, magicLen, bytes.length - magicLen);
+      } catch (IOException e) {
+        throw new DeserializationException(e);
+      }
+      ZooKeeperProtos.SplitAndMergeState splitAndMergeState =  builder.build();
+      splitStateTracker.setSwitchEnabled(splitAndMergeState.hasSplitEnabled());
+      mergeStateTracker.setSwitchEnabled(splitAndMergeState.hasMergeEnabled());
+      ops.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(splitOrMergeState));
+    }
+  }
+
+  /**
+   *  If there is no lock, you could acquire the lock.
+   *  After we create lock on zk, we save original splitOrMerge switches on zk.
+   *  @param skipLock if true, it means we will skip the lock action
+   *                  but we still need to check whether the lock exists or not.
+   *  @return true, lock successfully.  otherwise, false
+   * */
+  public boolean lock(boolean skipLock) throws KeeperException {
+    if (ZKUtil.checkExists(watcher, splitOrMergeLock) != -1) {
+      return false;
+    }
+    if (skipLock) {
+      return true;
+    }
+    ZKUtil.createAndFailSilent(watcher,  splitOrMergeLock);
+    if (ZKUtil.checkExists(watcher, splitOrMergeLock) != -1) {
+      saveOriginalState();
+      return true;
+    }
+    return false;
+  }
+
+  private void saveOriginalState() throws KeeperException {
+    boolean splitEnabled = isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
+    boolean mergeEnabled = isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
+    String splitOrMergeStates = ZKUtil.joinZNode(watcher.getSwitchLockZNode(),
+      SplitOrMergeTracker.STATE);
+    ZooKeeperProtos.SplitAndMergeState.Builder builder
+      = ZooKeeperProtos.SplitAndMergeState.newBuilder();
+    builder.setSplitEnabled(splitEnabled);
+    builder.setMergeEnabled(mergeEnabled);
+    ZKUtil.createSetData(watcher,  splitOrMergeStates,
+      ProtobufUtil.prependPBMagic(builder.build().toByteArray()));
   }
 
   private static class SwitchStateTracker extends ZooKeeperNodeTracker {
