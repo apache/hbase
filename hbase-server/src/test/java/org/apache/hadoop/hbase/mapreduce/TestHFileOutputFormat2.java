@@ -278,10 +278,9 @@ public class TestHFileOutputFormat2  {
       // unmarshall and check values.
       TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
       Writables.copyWritable(range, timeRangeTracker);
-      LOG.info(timeRangeTracker.getMinimumTimestamp() +
-          "...." + timeRangeTracker.getMaximumTimestamp());
-      assertEquals(1000, timeRangeTracker.getMinimumTimestamp());
-      assertEquals(2000, timeRangeTracker.getMaximumTimestamp());
+      LOG.info(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
+      assertEquals(1000, timeRangeTracker.getMin());
+      assertEquals(2000, timeRangeTracker.getMax());
       rd.close();
     } finally {
       if (writer != null && context != null) writer.close(context);

@@ -27,20 +27,28 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Stores the minimum and maximum timestamp values (both are inclusive).
- * Can be used to find if any given time range overlaps with its time range
- * MemStores use this class to track its minimum and maximum timestamps.
- * When writing StoreFiles, this information is stored in meta blocks and used
- * at read time to match against the required TimeRange.
+ * Stores minimum and maximum timestamp values. Both timestamps are inclusive.
+ * Use this class at write-time ONLY. Too much synchronization to use at read time
+ * (TODO: there are two scenarios writing, once when lots of concurrency as part of memstore
+ * updates but then later we can make one as part of a compaction when there is only one thread
+ * involved -- consider making different version, the synchronized and the unsynchronized).
+ * Use {@link TimeRange} at read time instead of this. See toTimeRange() to make TimeRange to use.
+ * MemStores use this class to track minimum and maximum timestamps. The TimeRangeTracker made by
+ * the MemStore is passed to the StoreFile for it to write out as part a flush in the the file
+ * metadata. If no memstore involved -- i.e. a compaction -- then the StoreFile will calculate its
+ * own TimeRangeTracker as it appends. The StoreFile serialized TimeRangeTracker is used
+ * at read time via an instance of {@link TimeRange} to test if Cells fit the StoreFile TimeRange.
  */
 @InterfaceAudience.Private
 public class TimeRangeTracker implements Writable {
-
-  long minimumTimestamp = -1;
-  long maximumTimestamp = -1;
+  static final long INITIAL_MIN_TIMESTAMP = Long.MAX_VALUE;
+  long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
+  static final long INITIAL_MAX_TIMESTAMP = -1;
+  long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
 
   /**
    * Default constructor.
@@ -55,8 +63,8 @@ public class TimeRangeTracker implements Writable {
    * @param trt source TimeRangeTracker
    */
   public TimeRangeTracker(final TimeRangeTracker trt) {
-    this.minimumTimestamp = trt.getMinimumTimestamp();
-    this.maximumTimestamp = trt.getMaximumTimestamp();
+    this.minimumTimestamp = trt.getMin();
+    this.maximumTimestamp = trt.getMax();
   }
 
   public TimeRangeTracker(long minimumTimestamp, long maximumTimestamp) {
@@ -123,14 +131,14 @@ public class TimeRangeTracker implements Writable {
   /**
    * @return the minimumTimestamp
    */
-  public synchronized long getMinimumTimestamp() {
+  public synchronized long getMin() {
     return minimumTimestamp;
   }
 
   /**
    * @return the maximumTimestamp
    */
-  public synchronized long getMaximumTimestamp() {
+  public synchronized long getMax() {
     return maximumTimestamp;
   }
 
@@ -147,5 +155,47 @@ public class TimeRangeTracker implements Writable {
   @Override
   public synchronized String toString() {
     return "[" + minimumTimestamp + "," + maximumTimestamp + "]";
+  }
+
+  /**
+   * @return An instance of TimeRangeTracker filled w/ the content of serialized
+   * TimeRangeTracker in <code>timeRangeTrackerBytes</code>.
+   * @throws IOException
+   */
+  public static TimeRangeTracker getTimeRangeTracker(final byte [] timeRangeTrackerBytes)
+      throws IOException {
+    if (timeRangeTrackerBytes == null) return null;
+    TimeRangeTracker trt = new TimeRangeTracker();
+    Writables.copyWritable(timeRangeTrackerBytes, trt);
+    return trt;
+  }
+
+  /**
+   * @return An instance of a TimeRange made from the serialized TimeRangeTracker passed in
+   * <code>timeRangeTrackerBytes</code>.
+   * @throws IOException
+   */
+  static TimeRange getTimeRange(final byte [] timeRangeTrackerBytes) throws IOException {
+    TimeRangeTracker trt = getTimeRangeTracker(timeRangeTrackerBytes);
+    return trt == null? null: trt.toTimeRange();
+  }
+
+  private boolean isFreshInstance() {
+    return getMin() == INITIAL_MIN_TIMESTAMP && getMax() == INITIAL_MAX_TIMESTAMP;
+  }
+
+  /**
+   * @return Make a TimeRange from current state of <code>this</code>.
+   */
+  TimeRange toTimeRange() throws IOException {
+    long min = getMin();
+    long max = getMax();
+    // Check for the case where the TimeRangeTracker is fresh. In that case it has
+    // initial values that are antithetical to a TimeRange... Return an uninitialized TimeRange
+    // if passed an uninitialized TimeRangeTracker.
+    if (isFreshInstance()) {
+      return new TimeRange();
+    }
+    return new TimeRange(min, max);
   }
 }
