@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -1476,6 +1478,10 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       boolean newValue = request.getEnabled();
+      boolean skipLock = request.getSkipLock();
+      if (!master.getSplitOrMergeTracker().lock(skipLock)) {
+        throw new DoNotRetryIOException("can't set splitOrMerge switch due to lock");
+      }
       for (MasterProtos.MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
         Admin.MasterSwitchType switchType = convert(masterSwitchType);
         boolean oldValue = master.isSplitOrMergeEnabled(switchType);
@@ -1506,6 +1512,24 @@ public class MasterRpcServices extends RSRpcServices
             MasterProtos.IsSplitOrMergeEnabledResponse.newBuilder();
     response.setEnabled(master.isSplitOrMergeEnabled(convert(request.getSwitchType())));
     return response.build();
+  }
+
+  @Override
+  public MasterProtos.ReleaseSplitOrMergeLockAndRollbackResponse
+  releaseSplitOrMergeLockAndRollback(RpcController controller,
+    MasterProtos.ReleaseSplitOrMergeLockAndRollbackRequest request) throws ServiceException {
+    try {
+      master.getSplitOrMergeTracker().releaseLockAndRollback();
+    } catch (KeeperException e) {
+      throw new ServiceException(e);
+    } catch (DeserializationException e) {
+      throw new ServiceException(e);
+    } catch (InterruptedException e) {
+      throw new ServiceException(e);
+    }
+    MasterProtos.ReleaseSplitOrMergeLockAndRollbackResponse.Builder builder =
+      MasterProtos.ReleaseSplitOrMergeLockAndRollbackResponse.newBuilder();
+    return builder.build();
   }
 
   @Override
