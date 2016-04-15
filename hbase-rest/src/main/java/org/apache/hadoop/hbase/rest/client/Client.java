@@ -375,17 +375,52 @@ public class Client {
 
   /**
    * Send a PUT request
+   * @param path the path or URI
+   * @param contentType the content MIME type
+   * @param content the content bytes
+   * @param extraHdr extra Header to send
+   * @return a Response object with response detail
+   * @throws IOException
+   */
+  public Response put(String path, String contentType, byte[] content, Header extraHdr)
+      throws IOException {
+    return put(cluster, path, contentType, content, extraHdr);
+  }
+
+  /**
+   * Send a PUT request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @param contentType the content MIME type
    * @param content the content bytes
    * @return a Response object with response detail
-   * @throws IOException
+   * @throws IOException for error
    */
   public Response put(Cluster cluster, String path, String contentType, 
       byte[] content) throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new Header("Content-Type", contentType);
+    return put(cluster, path, headers, content);
+  }
+
+  /**
+   * Send a PUT request
+   * @param cluster the cluster definition
+   * @param path the path or URI
+   * @param contentType the content MIME type
+   * @param content the content bytes
+   * @param extraHdr additional Header to send
+   * @return a Response object with response detail
+   * @throws IOException for error
+   */
+  public Response put(Cluster cluster, String path, String contentType, 
+      byte[] content, Header extraHdr) throws IOException {
+    int cnt = extraHdr == null ? 1 : 2;
+    Header[] headers = new Header[cnt];
+    headers[0] = new Header("Content-Type", contentType);
+    if (extraHdr != null) {
+      headers[1] = extraHdr;
+    }
     return put(cluster, path, headers, content);
   }
 
@@ -442,17 +477,52 @@ public class Client {
 
   /**
    * Send a POST request
+   * @param path the path or URI
+   * @param contentType the content MIME type
+   * @param content the content bytes
+   * @param extraHdr additional Header to send
+   * @return a Response object with response detail
+   * @throws IOException
+   */
+  public Response post(String path, String contentType, byte[] content, Header extraHdr)
+      throws IOException {
+    return post(cluster, path, contentType, content, extraHdr);
+  }
+
+  /**
+   * Send a POST request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @param contentType the content MIME type
    * @param content the content bytes
    * @return a Response object with response detail
-   * @throws IOException
+   * @throws IOException for error
    */
   public Response post(Cluster cluster, String path, String contentType, 
       byte[] content) throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new Header("Content-Type", contentType);
+    return post(cluster, path, headers, content);
+  }
+
+  /**
+   * Send a POST request
+   * @param cluster the cluster definition
+   * @param path the path or URI
+   * @param contentType the content MIME type
+   * @param content the content bytes
+   * @param extraHdr additional Header to send
+   * @return a Response object with response detail
+   * @throws IOException for error
+   */
+  public Response post(Cluster cluster, String path, String contentType, 
+      byte[] content, Header extraHdr) throws IOException {
+    int cnt = extraHdr == null ? 1 : 2;
+    Header[] headers = new Header[cnt];
+    headers[0] = new Header("Content-Type", contentType);
+    if (extraHdr != null) {
+      headers[1] = extraHdr;
+    }
     return post(cluster, path, headers, content);
   }
 
@@ -506,16 +576,47 @@ public class Client {
 
   /**
    * Send a DELETE request
+   * @param path the path or URI
+   * @param extraHdr additional Header to send
+   * @return a Response object with response detail
+   * @throws IOException
+   */
+  public Response delete(String path, Header extraHdr) throws IOException {
+    return delete(cluster, path, extraHdr);
+  }
+
+  /**
+   * Send a DELETE request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @return a Response object with response detail
-   * @throws IOException
+   * @throws IOException for error
    */
   public Response delete(Cluster cluster, String path) throws IOException {
     DeleteMethod method = new DeleteMethod();
     try {
       int code = execute(cluster, method, null, path);
       Header[] headers = method.getResponseHeaders();
+      byte[] content = method.getResponseBody();
+      return new Response(code, headers, content);
+    } finally {
+      method.releaseConnection();
+    }
+  }
+
+  /**
+   * Send a DELETE request
+   * @param cluster the cluster definition
+   * @param path the path or URI
+   * @return a Response object with response detail
+   * @throws IOException for error
+   */
+  public Response delete(Cluster cluster, String path, Header extraHdr) throws IOException {
+    DeleteMethod method = new DeleteMethod();
+    try {
+      Header[] headers = { extraHdr };
+      int code = execute(cluster, method, headers, path);
+      headers = method.getResponseHeaders();
       byte[] content = method.getResponseBody();
       return new Response(code, headers, content);
     } finally {

@@ -75,6 +75,8 @@ public class HBaseRESTTestingUtility {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
+    conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
+    RESTServer.addCSRFFilter(context, conf);
     HttpServerUtil.constrainHttpMethods(context);
     LOG.info("Loaded filter classes :" + filterClasses);
       // start the server

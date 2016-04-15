@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
@@ -36,6 +37,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
@@ -43,10 +46,14 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({RestTests.class, MediumTests.class})
+@RunWith(Parameterized.class)
 public class TestMultiRowResource {
 
   private static final TableName TABLE = TableName.valueOf("TestRowResource");
@@ -69,10 +76,27 @@ public class TestMultiRowResource {
   private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
+  private static Header extraHdr = null;
+  private static boolean csrfEnabled = true;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    List<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[] {Boolean.TRUE});
+    params.add(new Object[] {Boolean.FALSE});
+    return params;
+  }
+
+  public TestMultiRowResource(Boolean csrf) {
+    csrfEnabled = csrf;
+  }
+
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
+    extraHdr = new Header(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     context = JAXBContext.newInstance(
@@ -113,16 +137,21 @@ public class TestMultiRowResource {
     path.append("&row=");
     path.append(ROW_2);
 
-    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
-    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2));
+    if (csrfEnabled) {
+      Response response = client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
+      assertEquals(400, response.getCode());
+    }
+
+    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
+    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
 
-    client.delete(row_5_url);
-    client.delete(row_6_url);
+    client.delete(row_5_url, extraHdr);
+    client.delete(row_6_url, extraHdr);
 
   }
 
@@ -140,16 +169,16 @@ public class TestMultiRowResource {
     path.append("&row=");
     path.append(ROW_2);
 
-    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
-    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2));
+    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
+    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
 
-    client.delete(row_5_url);
-    client.delete(row_6_url);
+    client.delete(row_5_url, extraHdr);
+    client.delete(row_6_url, extraHdr);
 
   }
 
@@ -165,7 +194,7 @@ public class TestMultiRowResource {
     path.append("&row=");
     path.append(ROW_2);
 
-    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
+    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
     ObjectMapper mapper = new JacksonProvider().locateMapper(CellSetModel.class,
@@ -174,7 +203,7 @@ public class TestMultiRowResource {
     assertEquals(1, cellSet.getRows().size());
     assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));
     assertEquals(VALUE_1, Bytes.toString(cellSet.getRows().get(0).getCells().get(0).getValue()));
-    client.delete(row_5_url);
+    client.delete(row_5_url, extraHdr);
   }
 
 }
