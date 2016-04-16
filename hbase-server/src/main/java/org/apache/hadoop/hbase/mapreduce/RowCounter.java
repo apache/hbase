@@ -147,10 +147,10 @@ public class RowCounter extends Configured implements Tool {
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
     if (startKey != null && !startKey.equals("")) {
-      scan.setStartRow(Bytes.toBytes(startKey));
+      scan.setStartRow(Bytes.toBytesBinary(startKey));
     }
     if (endKey != null && !endKey.equals("")) {
-      scan.setStopRow(Bytes.toBytes(endKey));
+      scan.setStopRow(Bytes.toBytesBinary(endKey));
     }
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {

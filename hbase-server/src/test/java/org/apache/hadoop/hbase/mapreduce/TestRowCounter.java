@@ -149,7 +149,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterColumnAndRowRange() throws Exception {
     String[] args = new String[] {
-            TABLE_NAME, "--range=rov,rox", COL_FAM + ":" + COL1
+            TABLE_NAME, "--range=\\x00rov,\\x00rox", COL_FAM + ":" + COL1
     };
     runRowCount(args, 8);
   }
@@ -245,7 +245,8 @@ public class TestRowCounter {
     // write few rows with two columns
     int i = 0;
     for (; i < TOTAL_ROWS - ROWS_WITH_ONE_COL; i++) {
-      byte[] row = Bytes.toBytes("row" + i);
+      // Use binary rows values to test for HBASE-15287.
+      byte[] row = Bytes.toBytesBinary("\\x00row" + i);
       Put put = new Put(row);
       put.addColumn(family, col1, value);
       put.addColumn(family, col2, value);
