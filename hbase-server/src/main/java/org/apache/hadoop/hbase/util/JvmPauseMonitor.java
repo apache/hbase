@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Joiner;
@@ -56,22 +57,28 @@ public class JvmPauseMonitor {
   
   /** log WARN if we detect a pause longer than this threshold */
   private final long warnThresholdMs;
-  private static final String WARN_THRESHOLD_KEY =
+  public static final String WARN_THRESHOLD_KEY =
       "jvm.pause.warn-threshold.ms";
   private static final long WARN_THRESHOLD_DEFAULT = 10000;
   
   /** log INFO if we detect a pause longer than this threshold */
   private final long infoThresholdMs;
-  private static final String INFO_THRESHOLD_KEY =
+  public static final String INFO_THRESHOLD_KEY =
       "jvm.pause.info-threshold.ms";
   private static final long INFO_THRESHOLD_DEFAULT = 1000;
 
   private Thread monitorThread;
   private volatile boolean shouldRun = true;
+  private JvmPauseMonitorSource metricsSource;
 
   public JvmPauseMonitor(Configuration conf) {
+    this(conf, null);
+  }
+
+  public JvmPauseMonitor(Configuration conf, JvmPauseMonitorSource metricsSource) {
     this.warnThresholdMs = conf.getLong(WARN_THRESHOLD_KEY, WARN_THRESHOLD_DEFAULT);
     this.infoThresholdMs = conf.getLong(INFO_THRESHOLD_KEY, INFO_THRESHOLD_DEFAULT);
+    this.metricsSource = metricsSource;
   }
   
   public void start() {
@@ -92,19 +99,7 @@ public class JvmPauseMonitor {
     }
   }
   
-  private String formatMessage(long extraSleepTime, Map<String, GcTimes> gcTimesAfterSleep,
-      Map<String, GcTimes> gcTimesBeforeSleep) {
-
-    Set<String> gcBeanNames = Sets.intersection(gcTimesAfterSleep.keySet(),
-      gcTimesBeforeSleep.keySet());
-    List<String> gcDiffs = Lists.newArrayList();
-    for (String name : gcBeanNames) {
-      GcTimes diff = gcTimesAfterSleep.get(name).subtract(gcTimesBeforeSleep.get(name));
-      if (diff.gcCount != 0) {
-        gcDiffs.add("GC pool '" + name + "' had collection(s): " + diff.toString());
-      }
-    }
-
+  private String formatMessage(long extraSleepTime, List<String> gcDiffs) {
     String ret = "Detected pause in JVM or host machine (eg GC): " + "pause of approximately "
         + extraSleepTime + "ms\n";
     if (gcDiffs.isEmpty()) {
@@ -160,18 +155,55 @@ public class JvmPauseMonitor {
         } catch (InterruptedException ie) {
           return;
         }
+
         long extraSleepTime = sw.elapsedMillis() - SLEEP_INTERVAL_MS;
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
-        if (extraSleepTime > warnThresholdMs) {
-          LOG.warn(formatMessage(extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
-        } else if (extraSleepTime > infoThresholdMs) {
-          LOG.info(formatMessage(extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
-        }
+        if (extraSleepTime > infoThresholdMs) {
+          Set<String> gcBeanNames = Sets.intersection(gcTimesAfterSleep.keySet(),
+            gcTimesBeforeSleep.keySet());
+          List<String> gcDiffs = Lists.newArrayList();
+          for (String name : gcBeanNames) {
+            GcTimes diff = gcTimesAfterSleep.get(name).subtract(gcTimesBeforeSleep.get(name));
+            if (diff.gcCount != 0) {
+              gcDiffs.add("GC pool '" + name + "' had collection(s): " + diff.toString());
+            }
+          }
 
+          updateMetrics(extraSleepTime, !gcDiffs.isEmpty());
+
+          if (extraSleepTime > warnThresholdMs) {
+            LOG.warn(formatMessage(extraSleepTime, gcDiffs));
+          } else {
+            LOG.info(formatMessage(extraSleepTime, gcDiffs));
+          }
+        }
         gcTimesBeforeSleep = gcTimesAfterSleep;
       }
     }
+  }
+
+  public void updateMetrics(long sleepTime, boolean gcDetected) {
+    if (metricsSource != null) {
+      if (sleepTime > warnThresholdMs) {
+        metricsSource.incWarnThresholdExceeded(1);
+      } else {
+        metricsSource.incInfoThresholdExceeded(1);
+      }
+      if (gcDetected) {
+        metricsSource.updatePauseTimeWithGc(sleepTime);
+      } else {
+        metricsSource.updatePauseTimeWithoutGc(sleepTime);
+      }
+    }
+  }
+
+  public JvmPauseMonitorSource getMetricsSource() {
+    return metricsSource;
+  }
+
+  public void setMetricsSource(JvmPauseMonitorSource metricsSource) {
+    this.metricsSource = metricsSource;
   }
 
   /**

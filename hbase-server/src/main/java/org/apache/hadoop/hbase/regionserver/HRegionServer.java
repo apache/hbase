@@ -876,8 +876,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // TODO: no single connection managed anywhere, so no central metrics object to obtain.
     rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
         this.isa.getAddress(), 0), null);
-    this.pauseMonitor = new JvmPauseMonitor(conf);
-    pauseMonitor.start();
   }
 
   /**
@@ -968,6 +966,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       mxBean = null;
     }
     if (this.leases != null) this.leases.closeAfterLeasesExpire();
+    if (this.pauseMonitor != null) pauseMonitor.stop();
     this.rpcServer.stop();
     if (this.splitLogWorker != null) {
       splitLogWorker.stop();
@@ -1357,6 +1356,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
+      // Metrics are up, now we can init the pause monitor
+      this.pauseMonitor = new JvmPauseMonitor(conf, metricsRegionServer.getMetricsSource());
+      pauseMonitor.start();
 
       spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
 

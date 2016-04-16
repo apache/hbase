@@ -52,6 +52,12 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram splitTimeHisto;
   private final MetricHistogram flushTimeHisto;
 
+  // pause monitor metrics
+  private final MetricMutableCounterLong infoPauseThresholdExceeded;
+  private final MetricMutableCounterLong warnPauseThresholdExceeded;
+  private final MetricHistogram pausesWithGc;
+  private final MetricHistogram pausesWithoutGc;
+
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
   }
@@ -87,6 +93,14 @@ public class MetricsRegionServerSourceImpl
 
     splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0l);
     splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0l);
+
+    // pause monitor metrics
+    infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
+      INFO_THRESHOLD_COUNT_DESC, 0L);
+    warnPauseThresholdExceeded = getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY,
+      WARN_THRESHOLD_COUNT_DESC, 0L);
+    pausesWithGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITH_GC_KEY);
+    pausesWithoutGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITHOUT_GC_KEY);
   }
 
   @Override
@@ -294,5 +308,23 @@ public class MetricsRegionServerSourceImpl
     metricsRegistry.snapshot(mrb, all);
   }
 
+  @Override
+  public void incInfoThresholdExceeded(int count) {
+    infoPauseThresholdExceeded.incr(count);
+  }
 
+  @Override
+  public void incWarnThresholdExceeded(int count) {
+    warnPauseThresholdExceeded.incr(count);
+  }
+
+  @Override
+  public void updatePauseTimeWithGc(long t) {
+    pausesWithGc.add(t);
+  }
+
+  @Override
+  public void updatePauseTimeWithoutGc(long t) {
+    pausesWithoutGc.add(t);
+  }
 }
