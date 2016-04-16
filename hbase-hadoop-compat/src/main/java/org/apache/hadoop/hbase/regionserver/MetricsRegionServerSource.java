@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 
 /**
  * Interface for classes that expose metrics about the regionserver.
  */
-public interface MetricsRegionServerSource extends BaseSource {
+public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSource {
 
   /**
    * The name of the metrics

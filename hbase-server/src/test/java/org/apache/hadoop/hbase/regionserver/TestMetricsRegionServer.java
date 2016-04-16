@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -202,5 +204,24 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("majorCompactedInputBytes", 400, serverSource);
     HELPER.assertCounter("majorCompactedoutputBytes", 500, serverSource);
   }
+
+  @Test
+  public void testPauseMonitor() {
+    Configuration conf = new Configuration();
+    conf.setLong(JvmPauseMonitor.INFO_THRESHOLD_KEY, 1000L);
+    conf.setLong(JvmPauseMonitor.WARN_THRESHOLD_KEY, 10000L);
+    JvmPauseMonitor monitor = new JvmPauseMonitor(conf, serverSource);
+    monitor.updateMetrics(1500, false);
+    HELPER.assertCounter("pauseInfoThresholdExceeded", 1, serverSource);
+    HELPER.assertCounter("pauseWarnThresholdExceeded", 0, serverSource);
+    HELPER.assertCounter("pauseTimeWithoutGc_num_ops", 1, serverSource);
+    HELPER.assertCounter("pauseTimeWithGc_num_ops", 0, serverSource);
+    monitor.updateMetrics(15000, true);
+    HELPER.assertCounter("pauseInfoThresholdExceeded", 1, serverSource);
+    HELPER.assertCounter("pauseWarnThresholdExceeded", 1, serverSource);
+    HELPER.assertCounter("pauseTimeWithoutGc_num_ops", 1, serverSource);
+    HELPER.assertCounter("pauseTimeWithGc_num_ops", 1, serverSource);
+  }
+
 }
 
