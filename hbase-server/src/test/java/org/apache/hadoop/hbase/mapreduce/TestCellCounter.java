@@ -45,8 +45,8 @@ import static org.junit.Assert.fail;
 @Category(LargeTests.class)
 public class TestCellCounter {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final byte[] ROW1 = Bytes.toBytes("row1");
-  private static final byte[] ROW2 = Bytes.toBytes("row2");
+  private static final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
+  private static final byte[] ROW2 = Bytes.toBytesBinary("\\x01row2");
   private static final String FAMILY_A_STRING = "a";
   private static final String FAMILY_B_STRING = "b";
   private static final byte[] FAMILY_A = Bytes.toBytes(FAMILY_A_STRING);
@@ -109,6 +109,44 @@ public class TestCellCounter {
       FileUtil.fullyDelete(new File(OUTPUT_DIR));
     }
 
+  }
+
+  /**
+   * Test CellCounter all data should print to output
+   */
+  @Test(timeout = 300000)
+  public void testCellCounterPrefix() throws Exception {
+    String sourceTable = "testCellCounterPrefix";
+    byte[][] families = { FAMILY_A, FAMILY_B };
+    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    try {
+      Put p = new Put(ROW1);
+      p.addColumn(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
+      p.addColumn(FAMILY_B, QUALIFIER, now + 1, Bytes.toBytes("Data12"));
+      p.addColumn(FAMILY_A, QUALIFIER, now + 2, Bytes.toBytes("Data13"));
+      t.put(p);
+      p = new Put(ROW2);
+      p.addColumn(FAMILY_B, QUALIFIER, now, Bytes.toBytes("Dat21"));
+      p.addColumn(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
+      p.addColumn(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
+      t.put(p);
+      String[] args = { sourceTable, FQ_OUTPUT_DIR.toString(), ";", "\\x01row1" };
+      runCount(args);
+      FileInputStream inputStream =
+          new FileInputStream(OUTPUT_DIR + File.separator + "part-r-00000");
+      String data = IOUtils.toString(inputStream);
+      inputStream.close();
+      assertTrue(data.contains("Total Families Across all Rows" + "\t" + "2"));
+      assertTrue(data.contains("Total Qualifiers across all Rows" + "\t" + "2"));
+      assertTrue(data.contains("Total ROWS" + "\t" + "1"));
+      assertTrue(data.contains("b;q" + "\t" + "1"));
+      assertTrue(data.contains("a;q" + "\t" + "1"));
+      assertTrue(data.contains("row1;a;q_Versions" + "\t" + "1"));
+      assertTrue(data.contains("row1;b;q_Versions" + "\t" + "1"));
+    } finally {
+      t.close();
+      FileUtil.fullyDelete(new File(OUTPUT_DIR));
+    }
   }
 
   /**

@@ -116,11 +116,11 @@ public class CopyTable extends Configured implements Tool {
     }
 
     if (startRow != null) {
-      scan.setStartRow(Bytes.toBytes(startRow));
+      scan.setStartRow(Bytes.toBytesBinary(startRow));
     }
 
     if (stopRow != null) {
-      scan.setStopRow(Bytes.toBytes(stopRow));
+      scan.setStopRow(Bytes.toBytesBinary(stopRow));
     }
 
     if(families != null) {

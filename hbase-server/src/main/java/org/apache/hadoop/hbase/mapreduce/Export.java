@@ -96,10 +96,10 @@ public class Export {
     s.setCacheBlocks(false);
     // set Start and Stop row
     if (conf.get(TableInputFormat.SCAN_ROW_START) != null) {
-      s.setStartRow(Bytes.toBytes(conf.get(TableInputFormat.SCAN_ROW_START)));
+      s.setStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
     }
     if (conf.get(TableInputFormat.SCAN_ROW_STOP) != null) {
-      s.setStopRow(Bytes.toBytes(conf.get(TableInputFormat.SCAN_ROW_STOP)));
+      s.setStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));
     }
     // Set Scan Column Family
     boolean raw = Boolean.parseBoolean(conf.get(RAW_SCAN));
@@ -138,7 +138,7 @@ public class Export {
       String regexPattern = filterCriteria.substring(1, filterCriteria.length());
       exportFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator(regexPattern));
     } else {
-      exportFilter = new PrefixFilter(Bytes.toBytes(filterCriteria));
+      exportFilter = new PrefixFilter(Bytes.toBytesBinary(filterCriteria));
     }
     return exportFilter;
   }

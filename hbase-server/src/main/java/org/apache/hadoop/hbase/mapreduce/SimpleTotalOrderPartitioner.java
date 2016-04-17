@@ -94,7 +94,7 @@ implements Configurable {
     }
     LOG.warn("Using deprecated configuration " + deprecatedKey +
         " - please use static accessor methods instead.");
-    return Bytes.toBytes(oldStyleVal);
+    return Bytes.toBytesBinary(oldStyleVal);
   }
   
   @Override

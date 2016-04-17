@@ -90,8 +90,9 @@ import org.mockito.stubbing.Answer;
 public class TestImportExport {
   private static final Log LOG = LogFactory.getLog(TestImportExport.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final byte[] ROW1 = Bytes.toBytes("row1");
-  private static final byte[] ROW2 = Bytes.toBytes("row2");
+  private static final byte[] ROW1 = Bytes.toBytesBinary("\\x32row1");
+  private static final byte[] ROW2 = Bytes.toBytesBinary("\\x32row2");
+  private static final byte[] ROW3 = Bytes.toBytesBinary("\\x32row3");
   private static final String FAMILYA_STRING = "a";
   private static final String FAMILYB_STRING = "b";
   private static final byte[] FAMILYA = Bytes.toBytes(FAMILYA_STRING);
@@ -179,9 +180,17 @@ public class TestImportExport {
       p.add(FAMILYA, QUAL, now+1, QUAL);
       p.add(FAMILYA, QUAL, now+2, QUAL);
       t.put(p);
+      p = new Put(ROW3);
+      p.add(FAMILYA, QUAL, now, QUAL);
+      p.add(FAMILYA, QUAL, now + 1, QUAL);
+      p.add(FAMILYA, QUAL, now + 2, QUAL);
+      t.put(p);
     }
 
     String[] args = new String[] {
+        // Only export row1 & row2.
+        "-D" + TableInputFormat.SCAN_ROW_START + "=\\x32row1",
+        "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3",
         EXPORT_TABLE,
         FQ_OUTPUT_DIR,
         "1000", // max number of key versions per key to export
@@ -205,6 +214,9 @@ public class TestImportExport {
       g.setMaxVersions();
       r = t.get(g);
       assertEquals(3, r.size());
+      g = new Get(ROW3);
+      r = t.get(g);
+      assertEquals(0, r.size());
     }
   }
 
