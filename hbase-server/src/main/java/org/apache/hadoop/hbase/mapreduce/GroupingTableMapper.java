@@ -145,7 +145,7 @@ extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
       }
       sb.append(Bytes.toString(vals[i]));
     }
-    return new ImmutableBytesWritable(Bytes.toBytes(sb.toString()));
+    return new ImmutableBytesWritable(Bytes.toBytesBinary(sb.toString()));
   }
 
   /**

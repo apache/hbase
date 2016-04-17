@@ -106,7 +106,7 @@ public class TestCopyTable {
       assertEquals(1, r.size());
       assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
     }
-    
+
     t1.close();
     t2.close();
     TEST_UTIL.deleteTable(TABLENAME1);
@@ -121,7 +121,7 @@ public class TestCopyTable {
   public void testCopyTable() throws Exception {
     doCopyTableTest(false);
   }
-  
+
   /**
    * Simple end-to-end test with bulkload.
    */
@@ -129,16 +129,16 @@ public class TestCopyTable {
   public void testCopyTableWithBulkload() throws Exception {
     doCopyTableTest(true);
   }
-  
+
   @Test
   public void testStartStopRow() throws Exception {
     final TableName TABLENAME1 = TableName.valueOf("testStartStopRow1");
     final TableName TABLENAME2 = TableName.valueOf("testStartStopRow2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
-    final byte[] ROW0 = Bytes.toBytes("row0");
-    final byte[] ROW1 = Bytes.toBytes("row1");
-    final byte[] ROW2 = Bytes.toBytes("row2");
+    final byte[] ROW0 = Bytes.toBytesBinary("\\x01row0");
+    final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
+    final byte[] ROW2 = Bytes.toBytesBinary("\\x01row2");
 
     Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
     Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
@@ -157,8 +157,8 @@ public class TestCopyTable {
     CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
     assertEquals(
       0,
-      copy.run(new String[] { "--new.name=" + TABLENAME2, "--startrow=row1",
-          "--stoprow=row2", TABLENAME1.getNameAsString() }));
+      copy.run(new String[] { "--new.name=" + TABLENAME2, "--startrow=\\x01row1",
+          "--stoprow=\\x01row2", TABLENAME1.getNameAsString() }));
 
     // verify the data was copied into table 2
     // row1 exist, row0, row2 do not exist
@@ -170,11 +170,11 @@ public class TestCopyTable {
     g = new Get(ROW0);
     r = t2.get(g);
     assertEquals(0, r.size());
-    
+
     g = new Get(ROW2);
     r = t2.get(g);
     assertEquals(0, r.size());
-    
+
     t1.close();
     t2.close();
     TEST_UTIL.deleteTable(TABLENAME1);

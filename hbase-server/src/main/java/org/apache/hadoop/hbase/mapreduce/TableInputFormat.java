@@ -129,11 +129,11 @@ implements Configurable {
         scan = new Scan();
 
         if (conf.get(SCAN_ROW_START) != null) {
-          scan.setStartRow(Bytes.toBytes(conf.get(SCAN_ROW_START)));
+          scan.setStartRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_START)));
         }
 
         if (conf.get(SCAN_ROW_STOP) != null) {
-          scan.setStopRow(Bytes.toBytes(conf.get(SCAN_ROW_STOP)));
+          scan.setStopRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_STOP)));
         }
 
         if (conf.get(SCAN_COLUMNS) != null) {

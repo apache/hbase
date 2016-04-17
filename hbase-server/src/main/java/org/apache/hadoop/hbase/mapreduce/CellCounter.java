@@ -236,7 +236,7 @@ public class CellCounter {
       String regexPattern = filterCriteria.substring(1, filterCriteria.length());
       rowFilter = new RowFilter(CompareFilter.CompareOp.EQUAL, new RegexStringComparator(regexPattern));
     } else {
-      rowFilter = new PrefixFilter(Bytes.toBytes(filterCriteria));
+      rowFilter = new PrefixFilter(Bytes.toBytesBinary(filterCriteria));
     }
     return rowFilter;
   }
