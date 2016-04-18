@@ -371,7 +371,6 @@ MasterServices, Server {
 
   // RPC server for the HMaster
   private final RpcServerInterface rpcServer;
-  private JvmPauseMonitor pauseMonitor;
   // Set after we've called HBaseServer#openServer and ready to receive RPCs.
   // Set back to false after we stop rpcServer.  Used by tests.
   private volatile boolean rpcServerOpen = false;
@@ -386,6 +385,8 @@ MasterServices, Server {
 
   // Metrics for the HMaster
   private final MetricsMaster metricsMaster;
+  // Pause monitor
+  private final JvmPauseMonitor pauseMonitor;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
 
@@ -553,8 +554,6 @@ MasterServices, Server {
 
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
-    this.pauseMonitor = new JvmPauseMonitor(conf);
-    this.pauseMonitor.start();
 
     // metrics interval: using the same property as region server.
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
@@ -566,6 +565,8 @@ MasterServices, Server {
     this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+    this.pauseMonitor = new JvmPauseMonitor(conf, metricsMaster.getMetricsSource());
+    this.pauseMonitor.start();
 
     // preload table descriptor at startup
     this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);

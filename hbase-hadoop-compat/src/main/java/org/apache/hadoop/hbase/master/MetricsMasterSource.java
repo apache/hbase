@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 
 /**
  * Interface that classes that expose metrics about the master will implement.
  */
-public interface MetricsMasterSource extends BaseSource {
+public interface MetricsMasterSource extends BaseSource, JvmPauseMonitorSource {
 
   /**
    * The name of the metrics
