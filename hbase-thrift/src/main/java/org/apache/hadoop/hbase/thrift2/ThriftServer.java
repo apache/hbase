@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
@@ -427,6 +428,7 @@ public class ThriftServer {
     boolean hsha = cmd.hasOption("hsha");
 
     ThriftMetrics metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
+    final JvmPauseMonitor pauseMonitor = new JvmPauseMonitor(conf, metrics.getSource());
 
     String implType = "threadpool";
     if (nonblocking) {
@@ -532,8 +534,13 @@ public class ThriftServer {
       new PrivilegedAction<Object>() {
         @Override
         public Object run() {
-          tserver.serve();
-          return null;
+          pauseMonitor.start();
+          try {
+            tserver.serve();
+            return null;
+          } finally {
+            pauseMonitor.stop();
+          }
         }
       });
   }
