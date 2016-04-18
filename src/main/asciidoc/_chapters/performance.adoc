@@ -361,7 +361,7 @@ Bloom filters need to be rebuilt upon deletion, so may not be appropriate in env
 
 Bloom filters are enabled on a Column Family.
 You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API.
-Valid values are `NONE` (the default), `ROW`, or `ROWCOL`.
+Valid values are `NONE`, `ROW` (default), or `ROWCOL`.
 See <<bloom.filters.when>> for more information on `ROW` versus `ROWCOL`.
 See also the API documentation for link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
@@ -382,17 +382,17 @@ You can configure the following settings in the _hbase-site.xml_.
 | Default
 | Description
 
-| io.hfile.bloom.enabled
+| io.storefile.bloom.enabled
 | yes
 | Set to no to kill bloom filters server-wide if something goes wrong
 
-| io.hfile.bloom.error.rate
+| io.storefile.bloom.error.rate
 | .01
 | The average false positive rate for bloom filters. Folding is used to
                   maintain the false positive rate. Expressed as a decimal representation of a
                   percentage.
 
-| io.hfile.bloom.max.fold
+| io.storefile.bloom.max.fold
 | 7
 | The guaranteed maximum fold rate. Changing this setting should not be
                   necessary and is not recommended.
@@ -406,7 +406,7 @@ You can configure the following settings in the _hbase-site.xml_.
 | Master switch to enable Delete Family Bloom filters and store them in the StoreFile.
 
 | io.storefile.bloom.block.size
-| 65536
+| 131072
 | Target Bloom block size. Bloom filter blocks of approximately this size
                   are interleaved with data blocks.
 
@@ -713,20 +713,20 @@ Stored in the LRU cache, if it is enabled (It's enabled by default).
 [[config.bloom]]
 ==== Bloom Filter Configuration
 
-===== `io.hfile.bloom.enabled` global kill switch
+===== `io.storefile.bloom.enabled` global kill switch
 
-`io.hfile.bloom.enabled` in `Configuration` serves as the kill switch in case something goes wrong.
+`io.storefile.bloom.enabled` in `Configuration` serves as the kill switch in case something goes wrong.
 Default = `true`.
 
-===== `io.hfile.bloom.error.rate`
+===== `io.storefile.bloom.error.rate`
 
-`io.hfile.bloom.error.rate` = average false positive rate.
+`io.storefile.bloom.error.rate` = average false positive rate.
 Default = 1%. Decrease rate by ½ (e.g.
 to .5%) == +1 bit per bloom entry.
 
-===== `io.hfile.bloom.max.fold`
+===== `io.storefile.bloom.max.fold`
 
-`io.hfile.bloom.max.fold` = guaranteed minimum fold rate.
+`io.storefile.bloom.max.fold` = guaranteed minimum fold rate.
 Most people should leave this alone.
 Default = 7, or can collapse to at least 1/128th of original size.
 See the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] for more on what this option means.
