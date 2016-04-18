@@ -321,4 +321,24 @@ public class RegionAsTable implements Table {
   throws IOException {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void setOperationTimeout(int operationTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getOperationTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setRpcTimeout(int rpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getRpcTimeout() {
+    throw new UnsupportedOperationException();
+  }
 }

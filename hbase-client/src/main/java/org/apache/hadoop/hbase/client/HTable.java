@@ -112,7 +112,8 @@ public class HTable implements HTableInterface {
   protected int scannerCaching;
   protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi & Scan
-  private int operationTimeout;
+  private int operationTimeout; // global timeout for each blocking method with retrying rpc
+  private int rpcTimeout; // timeout for each rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
@@ -212,6 +213,8 @@ public class HTable implements HTableInterface {
 
     this.operationTimeout = tableName.isSystemTable() ?
         connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
+    this.rpcTimeout = configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
     if (this.rpcCallerFactory == null) {
@@ -266,7 +269,7 @@ public class HTable implements HTableInterface {
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
-      rpcControllerFactory, operationTimeout);
+      rpcControllerFactory, operationTimeout, rpcTimeout);
     if (htd != null) {
       return new UnmodifyableHTableDescriptor(htd);
     }
@@ -439,7 +442,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-      return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
+      return rpcCallerFactory.<Result>newCaller(rpcTimeout).callWithRetries(callable,
+          this.operationTimeout);
     }
 
     // Call that takes into account the replica
@@ -525,7 +529,8 @@ public class HTable implements HTableInterface {
         }
       }
     };
-    rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -654,7 +659,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -685,7 +691,8 @@ public class HTable implements HTableInterface {
         }
       }
     };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -740,7 +747,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Long> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Long> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -769,7 +777,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -799,7 +808,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -828,7 +838,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -858,7 +869,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1203,12 +1215,24 @@ public class HTable implements HTableInterface {
     return getKeysAndRegionsInRange(start, end, true).getFirst();
   }
 
+  @Override
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
   }
 
+  @Override
   public int getOperationTimeout() {
     return operationTimeout;
+  }
+
+  @Override
+  public int getRpcTimeout() {
+    return rpcTimeout;
+  }
+
+  @Override
+  public void setRpcTimeout(int rpcTimeout) {
+    this.rpcTimeout = rpcTimeout;
   }
 
   @Override

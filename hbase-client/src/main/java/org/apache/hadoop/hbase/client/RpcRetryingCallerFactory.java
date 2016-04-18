@@ -33,6 +33,7 @@ public class RpcRetryingCallerFactory {
   protected final Configuration conf;
   private final long pause;
   private final int retries;
+  private final int rpcTimeout;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
   private final boolean enableBackPressure;
@@ -53,6 +54,7 @@ public class RpcRetryingCallerFactory {
     this.interceptor = interceptor;
     enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
         HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+    rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
   }
 
   /**
@@ -62,11 +64,25 @@ public class RpcRetryingCallerFactory {
     this.stats = statisticTracker;
   }
 
+  /**
+   * Create a new RetryingCaller with specific rpc timeout.
+   */
+  public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
+    // We store the values in the factory instance. This way, constructing new objects
+    //  is cheap as it does not require parsing a complex structure.
+    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<T>(pause, retries, interceptor,
+        startLogErrorsCnt, rpcTimeout);
+    return caller;
+  }
+
+  /**
+   * Create a new RetryingCaller with configured rpc timeout.
+   */
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
     RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<T>(pause, retries, interceptor,
-        startLogErrorsCnt);
+        startLogErrorsCnt, rpcTimeout);
     return caller;
   }
 
