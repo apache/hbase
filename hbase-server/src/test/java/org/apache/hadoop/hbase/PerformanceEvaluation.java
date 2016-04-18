@@ -1143,7 +1143,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
             scope.close();
           }
           if ( (i - startRow) > opts.measureAfter) {
-            latencyHistogram.update((System.nanoTime() - startTime) / 1000);
+            // If multiget is enabled, say set to 10, testRow() returns immediately first 9 times
+            // and sends the actual get request in the 10th iteration. We should only set latency
+            // when actual request is sent because otherwise it turns out to be 0.
+            if (opts.multiGet == 0 || (i - startRow + 1) % opts.multiGet == 0) {
+              latencyHistogram.update((System.nanoTime() - startTime) / 1000);
+            }
             if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
               status.setStatus(generateStatus(startRow, i, lastRow));
             }
@@ -1826,6 +1831,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + DEFAULT_OPTS.getValueSize());
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
         "'valueSize'; set on read for stats on size: Default: Not set.");
+    System.err.println(" blockEncoding   Block encoding to use. Value should be one of "
+        + Arrays.toString(DataBlockEncoding.values()) + ". Default: NONE");
     System.err.println();
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
@@ -1840,12 +1847,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "'valueSize' in zipf form: Default: Not set.");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" autoFlush       Set autoFlush on htable. Default: False");
-    System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
-      "analysis (see guide).  Default: disabled");
+    System.err.println(" presplit        Create presplit table. If a table with same name exists,"
+        + " it'll be deleted and recreated (instead of verifying count of its existing regions). "
+        + "Recommended for accurate perf analysis (see guide). Default: disabled");
     System.err.println(" usetags         Writes tags along with KVs. Use with HFile V3. " +
       "Default: false");
     System.err.println(" numoftags       Specify the no of tags that would be needed. " +
-       "This works only if usetags is true.");
+       "This works only if usetags is true. Default: " + DEFAULT_OPTS.noOfTags);
     System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
     System.err.println(" columns         Columns to write per row. Default: 1");
     System.err.println();
