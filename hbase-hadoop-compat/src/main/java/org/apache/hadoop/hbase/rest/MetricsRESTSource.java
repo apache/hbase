@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 
 /**
  * Interface of the Metrics Source that will export data to Hadoop's Metrics2 system.
  */
-public interface MetricsRESTSource extends BaseSource {
+public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
 
   String METRICS_NAME = "REST";
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ConnectionCache;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 
@@ -36,9 +37,10 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 public class RESTServlet implements Constants {
   private static RESTServlet INSTANCE;
   private final Configuration conf;
-  private final MetricsREST metrics = new MetricsREST();
+  private final MetricsREST metrics;
   private final ConnectionCache connectionCache;
   private final UserGroupInformation realUser;
+  private final JvmPauseMonitor pauseMonitor;
 
   static final String CLEANUP_INTERVAL = "hbase.rest.connection.cleanup-interval";
   static final String MAX_IDLETIME = "hbase.rest.connection.max-idletime";
@@ -92,6 +94,11 @@ public class RESTServlet implements Constants {
     if (supportsProxyuser()) {
       ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     }
+
+    metrics = new MetricsREST();
+
+    pauseMonitor = new JvmPauseMonitor(conf, metrics.getSource());
+    pauseMonitor.start();
   }
 
   HBaseAdmin getAdmin() throws IOException {
