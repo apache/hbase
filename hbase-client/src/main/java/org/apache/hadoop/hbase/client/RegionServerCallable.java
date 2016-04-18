@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,13 +67,19 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   /**
    * Prepare for connection to the server hosting region with row from tablename.  Does lookup
    * to find region location and hosting server.
-   * @param reload Set this to true if connection should re-find the region
+   * @param reload Set to true to re-check the table state
    * @throws IOException e
    */
   @Override
   public void prepare(final boolean reload) throws IOException {
+    // check table state if this is a retry
+    if (reload &&
+        !tableName.equals(TableName.META_TABLE_NAME) &&
+        getConnection().isTableDisabled(tableName)) {
+      throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
+    }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-      this.location = regionLocator.getRegionLocation(row, reload);
+      this.location = regionLocator.getRegionLocation(row);
     }
     if (this.location == null) {
       throw new IOException("Failed to find location, tableName=" + tableName +

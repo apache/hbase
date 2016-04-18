@@ -283,8 +283,8 @@ public class MetricsConnection implements StatisticTrackable {
   @VisibleForTesting protected final CallTracker putTracker;
   @VisibleForTesting protected final CallTracker multiTracker;
   @VisibleForTesting protected final RunnerStats runnerStats;
-  private final Counter metaCacheNumClearServer;
-  private final Counter metaCacheNumClearRegion;
+  @VisibleForTesting protected final Counter metaCacheNumClearServer;
+  @VisibleForTesting protected final Counter metaCacheNumClearRegion;
 
   // dynamic metrics
 

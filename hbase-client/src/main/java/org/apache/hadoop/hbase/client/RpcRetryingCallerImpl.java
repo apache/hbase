@@ -96,7 +96,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     for (int tries = 0;; tries++) {
       long expectedSleep;
       try {
-        callable.prepare(tries != 0); // if called with false, check table status on ZK
+        // bad cache entries are cleared in the call to RetryingCallable#throwable() in catch block
+        callable.prepare(tries != 0);
         interceptor.intercept(context.prepare(callable, tries));
         return callable.call(getTimeout(callTimeout));
       } catch (PreemptiveFastFailException e) {

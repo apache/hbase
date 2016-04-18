@@ -54,7 +54,7 @@ public class MetaCache {
 
   // The presence of a server in the map implies it's likely that there is an
   // entry in cachedRegionLocations that map to this server; but the absence
-  // of a server in this map guarentees that there is no entry in cache that
+  // of a server in this map guarantees that there is no entry in cache that
   // maps to the absent server.
   // The access to this attribute must be protected by a lock on cachedRegionLocations
   private final Set<ServerName> cachedServers = new CopyOnWriteArraySet<>();
