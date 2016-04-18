@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -201,6 +202,8 @@ public class ThriftServerRunner implements Runnable {
 
   private final boolean securityEnabled;
   private final boolean doAsEnabled;
+
+  private final JvmPauseMonitor pauseMonitor;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -315,6 +318,7 @@ public class ThriftServerRunner implements Runnable {
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
     this.metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
+    this.pauseMonitor = new JvmPauseMonitor(conf, this.metrics.getSource());
     this.hbaseHandler = new HBaseHandler(conf, userProvider);
     this.hbaseHandler.initMetrics(metrics);
     this.handler = HbaseHandlerMetricsProxy.newInstance(
@@ -344,6 +348,7 @@ public class ThriftServerRunner implements Runnable {
       @Override
       public Object run() {
         try {
+          pauseMonitor.start();
           if (conf.getBoolean(USE_HTTP_CONF_KEY, false)) {
             setupHTTPServer();
             httpServer.start();
@@ -364,6 +369,9 @@ public class ThriftServerRunner implements Runnable {
   }
 
   public void shutdown() {
+    if (pauseMonitor != null) {
+      pauseMonitor.stop();
+    }
     if (tserver != null) {
       tserver.stop();
       tserver = null;

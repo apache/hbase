@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 
 /**
  * Interface of a class that will export metrics about Thrift to hadoop's metrics2.
  */
-public interface MetricsThriftServerSource extends BaseSource {
+public interface MetricsThriftServerSource extends BaseSource, JvmPauseMonitorSource {
 
   String BATCH_GET_KEY = "batchGet";
   String BATCH_MUTATE_KEY = "batchMutate";
