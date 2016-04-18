@@ -70,7 +70,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
         StoreFile sf = filesToCompact.iterator().next();
         Long minTimestamp = sf.getMinimumTimestamp();
         long oldest = (minTimestamp == null) ? Long.MIN_VALUE : now - minTimestamp.longValue();
-        if (sf.isMajorCompaction() && (cfTTL == HConstants.FOREVER || oldest < cfTTL)) {
+        if (sf.isMajorCompaction() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
           float blockLocalityIndex =
             sf.getHDFSBlockDistribution().getBlockLocalityIndex(
             RSRpcServices.getHostname(comConf.conf, false));
