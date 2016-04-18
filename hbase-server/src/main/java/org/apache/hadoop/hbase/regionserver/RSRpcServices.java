@@ -1083,7 +1083,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException if the specifier is not null,
    *    but failed to find the region
    */
-  Region getRegion(
+  @VisibleForTesting
+  public Region getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
     ByteString value = regionSpecifier.getValue();
     RegionSpecifierType type = regionSpecifier.getType();
