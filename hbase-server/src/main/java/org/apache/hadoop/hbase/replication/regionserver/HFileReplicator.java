@@ -378,11 +378,11 @@ public class HFileReplicator {
             FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, localHFilePath, false, conf);
           } catch (FileNotFoundException e1) {
             // This will mean that the hfile does not exists any where in source cluster FS. So we
-            // cannot do anything here just log and return.
+            // cannot do anything here just log and continue.
             LOG.error("Failed to copy hfile from " + sourceHFilePath + " to " + localHFilePath
                 + ". Hence ignoring this hfile from replication..",
               e1);
-            return null;
+            continue;
           }
         }
         sinkFs.setPermission(localHFilePath, PERM_ALL_ACCESS);
