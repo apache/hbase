@@ -1088,7 +1088,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         } finally {
           scope.close();
         }
-        latencyHistogram.update((System.nanoTime() - startTime) / 1000);
+        // If multiget is enabled, say set to 10, testRow() returns immediately first 9 times
+        // and sends the actual get request in the 10th iteration. We should only set latency
+        // when actual request is sent because otherwise it turns out to be 0.
+        if (opts.multiGet == 0 || (i - startRow + 1) % opts.multiGet == 0) {
+          latencyHistogram.update((System.nanoTime() - startTime) / 1000);
+        }
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(startRow, i, lastRow));
         }
@@ -1756,20 +1761,23 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" autoFlush       Set autoFlush on htable. Default: False");
     System.err.println(" oneCon          all the threads share the same connection. Default: False");
-    System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
-        "analysis (see guide).  Default: disabled");
+    System.err.println(" presplit        Create presplit table. If a table with same name exists,"
+        + " it'll be deleted and recreated (instead of verifying count of its existing regions). "
+        + "Recommended for accurate perf analysis (see guide). Default: disabled");
     System.err.println(" inmemory        Tries to keep the HFiles of the CF " +
         "inmemory as far as possible. Not guaranteed that reads are always served " +
         "from memory.  Default: false");
     System.err.println(" usetags         Writes tags along with KVs. Use with HFile V3. " +
         "Default: false");
     System.err.println(" numoftags       Specify the no of tags that would be needed. " +
-        "This works only if usetags is true.");
+        "This works only if usetags is true. Default: " + DEFAULT_OPTS.noOfTags);
     System.err.println(" filterAll       Helps to filter out all the rows on the server side" +
         " there by not returning any thing back to the client.  Helps to check the server side" +
         " performance.  Uses FilterAllFilter internally. ");
     System.err.println(" latency         Set to report operation latencies. Default: False");
     System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
+    System.err.println(" blockEncoding   Block encoding to use. Value should be one of "
+        + Arrays.toString(DataBlockEncoding.values()) + ". Default: NONE");
     System.err.println(" valueSize       Pass value size to use: Default: " +
         DEFAULT_OPTS.getValueSize());
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
