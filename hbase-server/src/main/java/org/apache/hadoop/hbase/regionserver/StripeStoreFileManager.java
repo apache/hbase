@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -1047,5 +1048,10 @@ public class StripeStoreFileManager
       }
     }
     return max;
+  }
+
+  @Override
+  public Comparator<StoreFile> getStoreFileComparator() {
+    return StoreFile.Comparators.SEQ_ID;
   }
 }
