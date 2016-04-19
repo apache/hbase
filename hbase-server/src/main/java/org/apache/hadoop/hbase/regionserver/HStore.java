@@ -1511,7 +1511,8 @@ public class HStore implements Store {
         filesToCompact = filesToCompact.subList(count - N, count);
         isMajor = (filesToCompact.size() == storeEngine.getStoreFileManager().getStorefileCount());
         filesCompacting.addAll(filesToCompact);
-        Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
+        Collections.sort(filesCompacting, storeEngine.getStoreFileManager()
+            .getStoreFileComparator());
       }
     } finally {
       this.lock.readLock().unlock();
@@ -1700,7 +1701,7 @@ public class HStore implements Store {
       Preconditions.checkArgument(false, "%s overlaps with %s", filesToAdd, filesCompacting);
     }
     filesCompacting.addAll(filesToAdd);
-    Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
+    Collections.sort(filesCompacting, storeEngine.getStoreFileManager().getStoreFileComparator());
   }
 
   private void removeUnneededFiles() throws IOException {
