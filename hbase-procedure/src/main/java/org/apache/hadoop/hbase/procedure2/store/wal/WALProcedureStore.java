@@ -800,7 +800,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     ProcedureWALHeader header = ProcedureWALHeader.newBuilder()
       .setVersion(ProcedureWALFormat.HEADER_VERSION)
       .setType(ProcedureWALFormat.LOG_TYPE_STREAM)
-      .setMinProcId(storeTracker.getMinProcId())
+      .setMinProcId(storeTracker.getActiveMinProcId())
       .setLogId(logId)
       .build();
 
@@ -876,6 +876,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
+  /**
+   * Remove all logs with logId <= {@code lastLogId}.
+   */
   private void removeAllLogs(long lastLogId) {
     if (logs.size() <= 1) return;
 
@@ -927,11 +930,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private static long getLogIdFromName(final String name) {
     int end = name.lastIndexOf(".log");
     int start = name.lastIndexOf('-') + 1;
-    while (start < end) {
-      if (name.charAt(start) != '0')
-        break;
-      start++;
-    }
     return Long.parseLong(name.substring(start, end));
   }
 
