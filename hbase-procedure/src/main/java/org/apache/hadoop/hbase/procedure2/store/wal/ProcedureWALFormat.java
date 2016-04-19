@@ -158,7 +158,8 @@ public final class ProcedureWALFormat {
 
   public static ProcedureWALTrailer readTrailer(FSDataInputStream stream, long startPos, long size)
       throws IOException {
-    long trailerPos = size - 17; // Beginning of the Trailer Jump
+    // Beginning of the Trailer Jump. 17 = 1 byte version + 8 byte magic + 8 byte offset
+    long trailerPos = size - 17;
 
     if (trailerPos < startPos) {
       throw new InvalidWALDataException("Missing trailer: size=" + size + " startPos=" + startPos);
