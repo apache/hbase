@@ -81,7 +81,9 @@ public class DefaultStoreEngine extends StoreEngine<
     } catch (Exception e) {
       throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
     }
-    storeFileManager = new DefaultStoreFileManager(kvComparator, conf, compactionPolicy.getConf());
+    storeFileManager =
+        new DefaultStoreFileManager(kvComparator, StoreFile.Comparators.SEQ_ID, conf,
+            compactionPolicy.getConf());
     className = conf.get(
         DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
     try {

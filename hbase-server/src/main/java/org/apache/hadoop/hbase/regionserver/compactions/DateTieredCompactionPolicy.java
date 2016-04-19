@@ -194,10 +194,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     long oldestToCompact = getOldestToCompact(comConf.getMaxStoreFileAgeMillis(), now);    
 
-    // Make sure the store files is sorted by SeqId then maxTimestamp
     List<StoreFile> storeFileList = Lists.newArrayList(filterOldStoreFiles(candidateSelection,
       oldestToCompact));
-    Collections.sort(storeFileList, StoreFile.Comparators.SEQ_ID_MAX_TIMESTAMP);
 
     List<Pair<StoreFile, Long>> storefileMaxTimestampPairs =
         Lists.newArrayListWithCapacity(Iterables.size(storeFileList));
