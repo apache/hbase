@@ -71,7 +71,7 @@ public class TestReplicationThrottler {
       assertTrue(ticks1 >= 750 && ticks1 <=1000);
     }
     if (ticks2 != 10000 && ticks2 != 9999) {
-      assertTrue(ticks1 >= 7500 && ticks1 <=10000);
+      assertTrue(ticks2 >= 7500 && ticks2 <=10000);
     }
 
     throttler1.resetStartTick();
