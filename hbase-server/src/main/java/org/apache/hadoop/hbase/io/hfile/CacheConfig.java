@@ -232,11 +232,14 @@ public class CacheConfig {
             HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
+    LOG.info("Created cacheConfig for " + family.getNameAsString() + ": " + this);
   }
 
   /**
    * Create a cache configuration using the specified configuration object and
-   * defaults for family level settings.
+   * defaults for family level settings. Only use if no column family context. Prefer
+   * {@link CacheConfig#CacheConfig(Configuration, HColumnDescriptor)}
+   * @see #CacheConfig(Configuration, HColumnDescriptor)
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
@@ -254,6 +257,7 @@ public class CacheConfig {
           HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
+    LOG.info("Created cacheConfig: " + this);
   }
 
   /**
@@ -289,7 +293,6 @@ public class CacheConfig {
     this.prefetchOnOpen = prefetchOnOpen;
     this.cacheDataInL1 = cacheDataInL1;
     this.dropBehindCompaction = dropBehindCompaction;
-    LOG.info(this);
   }
 
   /**
