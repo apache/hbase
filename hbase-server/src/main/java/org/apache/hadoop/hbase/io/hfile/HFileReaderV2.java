@@ -189,7 +189,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
             end = getTrailer().getLoadOnOpenDataOffset();
             HFileBlock prevBlock = null;
             if (LOG.isTraceEnabled()) {
-              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end);
+              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end);
             }
             while (offset < end) {
               if (Thread.interrupted()) {
@@ -206,11 +206,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
-              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
             }
           } catch (Exception e) {
             // Other exceptions are interesting
-            LOG.warn("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+            LOG.warn("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
           } finally {
             PrefetchExecutor.complete(path);
           }
