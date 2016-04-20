@@ -253,7 +253,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           try {
             end = getTrailer().getLoadOnOpenDataOffset();
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end);
+              LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
             // TODO: Could we use block iterator in here? Would that get stuff into the cache?
             HFileBlock prevBlock = null;
@@ -267,7 +267,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // cached block. This 'optimization' triggers extremely rarely I'd say.
               long onDiskSize = prevBlock != null? prevBlock.getNextBlockOnDiskSize(): -1;
               HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false,
-                null, null);
+                  null, null);
               // Need not update the current block. Ideally here the readBlock won't find the
               // block in cache. We call this readBlock so that block data is read from FS and
               // cached in BC. So there is no reference count increment that happens here.
@@ -279,11 +279,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+              LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
+          } catch (NullPointerException e) {
+            LOG.warn("Stream moved/closed or prefetch cancelled?" +
+                getPathOffsetEndStr(path, offset, end), e);
           } catch (Exception e) {
             // Other exceptions are interesting
-            LOG.warn("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+            LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
           } finally {
             PrefetchExecutor.complete(path);
           }
@@ -300,6 +303,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         hfileContext.setCompressTags(true);
       }
     }
+  }
+
+  private static String getPathOffsetEndStr(final Path path, final long offset, final long end) {
+    return "path=" + path.toString() + ", offset=" + offset + ", end=" + end;
   }
 
   /**
