@@ -207,6 +207,11 @@ tableDesc.addFamily(cfDesc);
 See the API documentation for
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
 
+To see prefetch in operation, enable TRACE level logging on
+`org.apache.hadoop.hbase.io.hfile.HFileReaderImpl` in hbase-2.0+
+or on `org.apache.hadoop.hbase.io.hfile.HFileReaderV2` in earlier versions, hbase-1.x, of HBase.
+
+
 [[perf.rs.memstore.size]]
 === `hbase.regionserver.global.memstore.size`
 

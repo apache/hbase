@@ -253,7 +253,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           try {
             end = getTrailer().getLoadOnOpenDataOffset();
             if (LOG.isTraceEnabled()) {
-              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end);
+              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end);
             }
             // TODO: Could we use block iterator in here? Would that get stuff into the cache?
             HFileBlock prevBlock = null;
@@ -279,11 +279,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
-              LOG.trace("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+              LOG.trace("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
             }
           } catch (Exception e) {
             // Other exceptions are interesting
-            LOG.warn("File=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
+            LOG.warn("Prefetch=" + path.toString() + ", offset=" + offset + ", end=" + end, e);
           } finally {
             PrefetchExecutor.complete(path);
           }
