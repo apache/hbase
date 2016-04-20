@@ -238,16 +238,22 @@ public class BlockCacheUtil {
     private long size;
     private long dataSize;
     private final long now = System.nanoTime();
+    /**
+     * How many blocks to look at before we give up.
+     * There could be many millions of blocks. We don't want the
+     * ui to freeze while we run through 1B blocks... users will
+     * think hbase dead. UI displays warning in red when stats
+     * are incomplete.
+     */
     private final int max;
-    public static final int DEFAULT_MAX = 100000;
- 
+    public static final int DEFAULT_MAX = 1000000;
+
     CachedBlocksByFile() {
       this(null);
     }
 
     CachedBlocksByFile(final Configuration c) {
-      this.max = c == null? DEFAULT_MAX:
-        c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+      this.max = c == null? DEFAULT_MAX: c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
     }
 
     /**
@@ -289,7 +295,7 @@ public class BlockCacheUtil {
     public boolean isFull() {
       return this.count >= this.max;
     }
- 
+
     public NavigableMap<String, NavigableSet<CachedBlock>> getCachedBlockStatsByFile() {
       return this.cachedBlockByFile;
     }
