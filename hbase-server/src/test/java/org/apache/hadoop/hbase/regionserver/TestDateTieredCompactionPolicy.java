@@ -17,47 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.ExponentialCompactionWindowFactory;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
-public class TestDateTieredCompactionPolicy extends TestCompactionPolicy {
-  ArrayList<StoreFile> sfCreate(long[] minTimestamps, long[] maxTimestamps, long[] sizes)
-      throws IOException {
-    ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
-    EnvironmentEdgeManager.injectEdge(timeMachine);
-    // Has to be  > 0 and < now.
-    timeMachine.setValue(1);
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
-    for (int i = 0; i < sizes.length; i++) {
-      ageInDisk.add(0L);
-    }
-
-    ArrayList<StoreFile> ret = Lists.newArrayList();
-    for (int i = 0; i < sizes.length; i++) {
-      MockStoreFile msf =
-          new MockStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
-      msf.setTimeRangeTracker(new TimeRangeTracker(minTimestamps[i], maxTimestamps[i]));
-      ret.add(msf);
-    }
-    return ret;
-  }
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompactionPolicy {
 
   @Override
   protected void config() {
@@ -66,11 +37,12 @@ public class TestDateTieredCompactionPolicy extends TestCompactionPolicy {
     // Set up policy
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY,
       "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
-    conf.setLong(CompactionConfiguration.MAX_AGE_MILLIS_KEY, 100);
-    conf.setLong(CompactionConfiguration.INCOMING_WINDOW_MIN_KEY, 3);
-    conf.setLong(CompactionConfiguration.BASE_WINDOW_MILLIS_KEY, 6);
-    conf.setInt(CompactionConfiguration.WINDOWS_PER_TIER_KEY, 4);
-    conf.setBoolean(CompactionConfiguration.SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY, false);
+    conf.setLong(CompactionConfiguration.DATE_TIERED_MAX_AGE_MILLIS_KEY, 100);
+    conf.setLong(CompactionConfiguration.DATE_TIERED_INCOMING_WINDOW_MIN_KEY, 3);
+    conf.setLong(ExponentialCompactionWindowFactory.BASE_WINDOW_MILLIS_KEY, 6);
+    conf.setInt(ExponentialCompactionWindowFactory.WINDOWS_PER_TIER_KEY, 4);
+    conf.setBoolean(CompactionConfiguration.DATE_TIERED_SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY,
+      false);
 
     // Special settings for compaction policy per window
     this.conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 2);
@@ -79,32 +51,6 @@ public class TestDateTieredCompactionPolicy extends TestCompactionPolicy {
 
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 20);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 10);
-  }
-
-  void compactEquals(long now, ArrayList<StoreFile> candidates, long[] expectedFileSizes,
-      long[] expectedBoundaries, boolean isMajor, boolean toCompact) throws IOException {
-    ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
-    EnvironmentEdgeManager.injectEdge(timeMachine);
-    timeMachine.setValue(now);
-    DateTieredCompactionRequest request;
-    if (isMajor) {
-      for (StoreFile file : candidates) {
-        ((MockStoreFile)file).setIsMajor(true);
-      }
-      Assert.assertEquals(toCompact, ((DateTieredCompactionPolicy) store.storeEngine.getCompactionPolicy())
-        .shouldPerformMajorCompaction(candidates));
-      request = (DateTieredCompactionRequest) ((DateTieredCompactionPolicy) store.storeEngine
-          .getCompactionPolicy()).selectMajorCompaction(candidates);
-    } else {
-      Assert.assertEquals(toCompact, ((DateTieredCompactionPolicy) store.storeEngine.getCompactionPolicy())
-          .needsCompaction(candidates, ImmutableList.<StoreFile> of()));
-      request = (DateTieredCompactionRequest) ((DateTieredCompactionPolicy) store.storeEngine
-          .getCompactionPolicy()).selectMinorCompaction(candidates, false, false);
-    }
-    List<StoreFile> actual = Lists.newArrayList(request.getFiles());
-    Assert.assertEquals(Arrays.toString(expectedFileSizes), Arrays.toString(getSizes(actual)));
-    Assert.assertEquals(Arrays.toString(expectedBoundaries),
-    Arrays.toString(request.getBoundaries().toArray()));
   }
 
   /**
@@ -283,8 +229,9 @@ public class TestDateTieredCompactionPolicy extends TestCompactionPolicy {
     long[] maxTimestamps = new long[] { 44, 60, 61, 96, 100, 104, 105, 106, 113, 145, 157 };
     long[] sizes = new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 };
 
-    compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 0, 50, 51, 40,41, 42,
-      33, 30, 31, 2, 1 }, new long[] { Long.MIN_VALUE, 24, 48, 72, 96, 120, 144, 150, 156 }, true, true);
+    compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 },
+      new long[] { Long.MIN_VALUE, 24, 48, 72, 96, 120, 144, 150, 156 }, true, true);
   }
 
   /**
@@ -301,25 +248,5 @@ public class TestDateTieredCompactionPolicy extends TestCompactionPolicy {
     compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 0, 50, 51, 40,
         41, 42, 33, 30, 31, 2, 1 },
       new long[] { Long.MIN_VALUE, -144, -120, -96, -72, -48, -24, 0, 6, 12 }, true, true);
-  }
-
-  /**
-   * Major compaction with maximum values
-   * @throws IOException with error
-   */
-  @Test
-  public void maxValuesForMajor() throws IOException {
-    conf.setLong(CompactionConfiguration.BASE_WINDOW_MILLIS_KEY, Long.MAX_VALUE / 2);
-    conf.setInt(CompactionConfiguration.WINDOWS_PER_TIER_KEY, 2);
-    store.storeEngine.getCompactionPolicy().setConf(conf);
-    long[] minTimestamps =
-        new long[] { Long.MIN_VALUE, -100 };
-    long[] maxTimestamps = new long[] { -8, Long.MAX_VALUE };
-    long[] sizes = new long[] { 0, 1 };
-
-    compactEquals(Long.MAX_VALUE, sfCreate(minTimestamps, maxTimestamps, sizes),
-      new long[] { 0, 1 },
-      new long[] { Long.MIN_VALUE, -4611686018427387903L, 0, 4611686018427387903L,
-      9223372036854775806L }, true, true);
   }
 }
