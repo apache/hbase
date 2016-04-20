@@ -34,8 +34,24 @@ public interface MetricsRegionServerSourceFactory {
   /**
    * Create a MetricsRegionSource from a MetricsRegionWrapper.
    *
-   * @param wrapper
+   * @param wrapper The wrapped region
    * @return A metrics region source
    */
   MetricsRegionSource createRegion(MetricsRegionWrapper wrapper);
+
+  /**
+   * Create a MetricsTableSource from a MetricsTableWrapper.
+   *
+   * @param table The table name
+   * @param wrapper The wrapped table aggregate
+   * @return A metrics table source
+   */
+  MetricsTableSource createTable(String table, MetricsTableWrapperAggregate wrapper);
+
+  /**
+   * Get a MetricsTableAggregateSource
+   *
+   * @return A metrics table aggregate source
+   */
+  MetricsTableAggregateSource getTableAggregate();
 }

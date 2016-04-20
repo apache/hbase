@@ -346,6 +346,7 @@ public class HRegionServer extends HasThread implements
   public static final String REGIONSERVER = "regionserver";
 
   MetricsRegionServer metricsRegionServer;
+  MetricsTable metricsTable;
   private SpanReceiverHost spanReceiverHost;
 
   /**
@@ -1408,6 +1409,7 @@ public class HRegionServer extends HasThread implements
       this.walFactory = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
+      this.metricsTable = new MetricsTable(new MetricsTableWrapperAggregateImpl(this));
 
       startServiceThreads();
       startHeapMemoryManager();
