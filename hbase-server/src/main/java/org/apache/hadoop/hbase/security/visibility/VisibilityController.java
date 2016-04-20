@@ -436,7 +436,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      kv.updateLatestStamp(Bytes.toBytes(Long.MIN_VALUE));
+      kv.updateLatestStamp(Bytes.toBytes(byteNow));
       return;
     }
     if (result.size() > get.getMaxVersions()) {
