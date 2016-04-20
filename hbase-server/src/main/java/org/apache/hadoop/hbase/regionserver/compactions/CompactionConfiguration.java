@@ -70,21 +70,23 @@ public class CompactionConfiguration {
   /*
    * The epoch time length for the windows we no longer compact
    */
-  public static final String MAX_AGE_MILLIS_KEY =
+  public static final String DATE_TIERED_MAX_AGE_MILLIS_KEY =
     "hbase.hstore.compaction.date.tiered.max.storefile.age.millis";
-  public static final String BASE_WINDOW_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.base.window.millis";
-  public static final String WINDOWS_PER_TIER_KEY =
-    "hbase.hstore.compaction.date.tiered.windows.per.tier";
-  public static final String INCOMING_WINDOW_MIN_KEY =
+  public static final String DATE_TIERED_INCOMING_WINDOW_MIN_KEY =
     "hbase.hstore.compaction.date.tiered.incoming.window.min";
-  public static final String COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY =
+  public static final String COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY =
     "hbase.hstore.compaction.date.tiered.window.policy.class";
-  public static final String SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
+  public static final String DATE_TIERED_SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
     "hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction";
 
   private static final Class<? extends RatioBasedCompactionPolicy>
-    DEFAULT_TIER_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
+    DEFAULT_COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS = ExploringCompactionPolicy.class;
+
+  public static final String DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY =
+    "hbase.hstore.compaction.date.tiered.window.factory.class";
+
+  private static final Class<? extends CompactionWindowFactory>
+    DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS = ExponentialCompactionWindowFactory.class;
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
@@ -102,12 +104,11 @@ public class CompactionConfiguration {
   private final long majorCompactionPeriod;
   private final float majorCompactionJitter;
   private final float minLocalityToForceCompact;
-  private final long maxStoreFileAgeMillis;
-  private final long baseWindowMillis;
-  private final int windowsPerTier;
-  private final int incomingWindowMin;
-  private final String compactionPolicyForTieredWindow;
-  private final boolean singleOutputForMinorCompaction;
+  private final long dateTieredMaxStoreFileAgeMillis;
+  private final int dateTieredIncomingWindowMin;
+  private final String compactionPolicyForDateTieredWindow;
+  private final boolean dateTieredSingleOutputForMinorCompaction;
+  private final String dateTieredCompactionWindowFactory;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -131,15 +132,16 @@ public class CompactionConfiguration {
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
     minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
-    maxStoreFileAgeMillis = conf.getLong(MAX_AGE_MILLIS_KEY, Long.MAX_VALUE);
-    baseWindowMillis = conf.getLong(BASE_WINDOW_MILLIS_KEY, 3600000 * 6);
-    windowsPerTier = conf.getInt(WINDOWS_PER_TIER_KEY, 4);
-    incomingWindowMin = conf.getInt(INCOMING_WINDOW_MIN_KEY, 6);
-    compactionPolicyForTieredWindow = conf.get(COMPACTION_POLICY_CLASS_FOR_TIERED_WINDOWS_KEY,
-        DEFAULT_TIER_COMPACTION_POLICY_CLASS.getName());
-    singleOutputForMinorCompaction = conf.getBoolean(SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY,
-      true);
-
+    dateTieredMaxStoreFileAgeMillis = conf.getLong(DATE_TIERED_MAX_AGE_MILLIS_KEY, Long.MAX_VALUE);
+    dateTieredIncomingWindowMin = conf.getInt(DATE_TIERED_INCOMING_WINDOW_MIN_KEY, 6);
+    compactionPolicyForDateTieredWindow = conf.get(
+      COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY,
+      DEFAULT_COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS.getName());
+    dateTieredSingleOutputForMinorCompaction = conf
+        .getBoolean(DATE_TIERED_SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY, true);
+    this.dateTieredCompactionWindowFactory = conf.get(
+      DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY,
+      DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS.getName());
     LOG.info(this);
   }
 
@@ -148,8 +150,9 @@ public class CompactionConfiguration {
     return String.format(
       "size [%d, %d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f;"
-      + " tiered compaction: max_age %d, base window in milliseconds %d, windows per tier %d,"
-      + "incoming window min %d",
+      + " tiered compaction: max_age %d, incoming window min %d,"
+      + " compaction policy for tiered window %s, single output for minor %b,"
+      + " compaction window factory %s",
       minCompactSize,
       maxCompactSize,
       offPeakMaxCompactSize,
@@ -161,10 +164,12 @@ public class CompactionConfiguration {
       majorCompactionPeriod,
       majorCompactionJitter,
       minLocalityToForceCompact,
-      maxStoreFileAgeMillis,
-      baseWindowMillis,
-      windowsPerTier,
-      incomingWindowMin);
+      dateTieredMaxStoreFileAgeMillis,
+      dateTieredIncomingWindowMin,
+      compactionPolicyForDateTieredWindow,
+      dateTieredSingleOutputForMinorCompaction,
+      dateTieredCompactionWindowFactory
+      );
   }
 
   /**
@@ -261,27 +266,23 @@ public class CompactionConfiguration {
     }
   }
 
-  public long getMaxStoreFileAgeMillis() {
-    return maxStoreFileAgeMillis;
+  public long getDateTieredMaxStoreFileAgeMillis() {
+    return dateTieredMaxStoreFileAgeMillis;
   }
 
-  public long getBaseWindowMillis() {
-    return baseWindowMillis;
+  public int getDateTieredIncomingWindowMin() {
+    return dateTieredIncomingWindowMin;
   }
 
-  public int getWindowsPerTier() {
-    return windowsPerTier;
+  public String getCompactionPolicyForDateTieredWindow() {
+    return compactionPolicyForDateTieredWindow;
   }
 
-  public int getIncomingWindowMin() {
-    return incomingWindowMin;
+  public boolean useDateTieredSingleOutputForMinorCompaction() {
+    return dateTieredSingleOutputForMinorCompaction;
   }
 
-  public String getCompactionPolicyForTieredWindow() {
-    return compactionPolicyForTieredWindow;
-  }
-
-  public boolean useSingleOutputForMinorCompaction() {
-    return singleOutputForMinorCompaction;
+  public String getDateTieredCompactionWindowFactory() {
+    return dateTieredCompactionWindowFactory;
   }
 }
