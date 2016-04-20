@@ -443,7 +443,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      CellUtil.updateLatestStamp(cell, Long.MIN_VALUE);
+      CellUtil.updateLatestStamp(cell, byteNow, 0);
       return;
     }
     if (result.size() > get.getMaxVersions()) {
