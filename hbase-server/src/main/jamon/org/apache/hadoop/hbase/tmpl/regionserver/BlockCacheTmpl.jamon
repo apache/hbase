@@ -305,7 +305,11 @@ are combined counts. Request count is sum of hits and misses.</p>
   }
 </%java>
 <%if cbsbf.isFull() %>
-<p><b>Statistics below is based on sampling first <% cbsbfSnapshot.getMax() %> blocks only</b> (hbase.ui.blockcache.by.file.max)</p> 
+<p>
+<div class="alert alert-danger">
+<strong>The stats below are incomplete!</strong> We ran into our accounting limit of <% cbsbf.getCount() %> blocks. Up the configuration <i>hbase.ui.blockcache.by.file.max</i>.
+</div>
+</p> 
 </%if>
 <table id="blocks_summary" class="table table-striped">
     <tr>
