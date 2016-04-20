@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
@@ -49,33 +47,48 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 /**
  * HBASE-15181 This is a simple implementation of date-based tiered compaction similar to
  * Cassandra's for the following benefits:
- * 1. Improve date-range-based scan by structuring store files in date-based tiered layout.
- * 2. Reduce compaction overhead.
- * 3. Improve TTL efficiency.
+ * <ol>
+ * <li>Improve date-range-based scan by structuring store files in date-based tiered layout.</li>
+ * <li>Reduce compaction overhead.</li>
+ * <li>Improve TTL efficiency.</li>
+ * </ol>
  * Perfect fit for the use cases that:
- * 1. has mostly date-based data write and scan and a focus on the most recent data.
- * Out-of-order writes are handled gracefully. Time range overlapping among store files is
- * tolerated and the performance impact is minimized. Configuration can be set at hbase-site
- * or overridden at per-table or per-column-family level by hbase shell. Design spec is at
+ * <ol>
+ * <li>has mostly date-based data write and scan and a focus on the most recent data.</li>
+ * </ol>
+ * Out-of-order writes are handled gracefully. Time range overlapping among store files is tolerated
+ * and the performance impact is minimized. Configuration can be set at hbase-site or overridden at
+ * per-table or per-column-family level by hbase shell. Design spec is at
  * https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8/
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
+
   private static final Log LOG = LogFactory.getLog(DateTieredCompactionPolicy.class);
 
-  private RatioBasedCompactionPolicy compactionPolicyPerWindow;
+  private final RatioBasedCompactionPolicy compactionPolicyPerWindow;
+
+  private final CompactionWindowFactory windowFactory;
 
   public DateTieredCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo)
       throws IOException {
     super(conf, storeConfigInfo);
     try {
-      compactionPolicyPerWindow =
-        ReflectionUtils.instantiateWithCustomCtor(comConf.getCompactionPolicyForTieredWindow(),
-          new Class[] { Configuration.class, StoreConfigInformation.class }, new Object[] { conf,
-            storeConfigInfo });
+      compactionPolicyPerWindow = ReflectionUtils.instantiateWithCustomCtor(
+        comConf.getCompactionPolicyForDateTieredWindow(),
+        new Class[] { Configuration.class, StoreConfigInformation.class },
+        new Object[] { conf, storeConfigInfo });
     } catch (Exception e) {
       throw new IOException("Unable to load configured compaction policy '"
-          + comConf.getCompactionPolicyForTieredWindow() + "'", e);
+          + comConf.getCompactionPolicyForDateTieredWindow() + "'", e);
+    }
+    try {
+      windowFactory = ReflectionUtils.instantiateWithCustomCtor(
+        comConf.getDateTieredCompactionWindowFactory(),
+        new Class[] { CompactionConfiguration.class }, new Object[] { comConf });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured window factory '"
+          + comConf.getDateTieredCompactionWindowFactory() + "'", e);
     }
   }
 
@@ -88,7 +101,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       final List<StoreFile> filesCompacting) {
     ArrayList<StoreFile> candidates = new ArrayList<StoreFile>(storeFiles);
     try {
-      return selectMinorCompaction(candidates, false, true) != null;
+      return !selectMinorCompaction(candidates, false, true).getFiles().isEmpty();
     } catch (Exception e) {
       LOG.error("Can not check for compaction: ", e);
       return false;
@@ -111,8 +124,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
 
     long cfTTL = this.storeConfigInfo.getStoreFileTtl();
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
-    long oldestToCompact = getOldestToCompact(comConf.getMaxStoreFileAgeMillis(), now);
-    List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, oldestToCompact, now);
+    List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, now);
     boolean[] filesInWindow = new boolean[boundaries.size()];
 
     for (StoreFile file: filesToCompact) {
@@ -167,15 +179,16 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     CompactionRequest result = tryingMajor ? selectMajorCompaction(candidateSelection)
       : selectMinorCompaction(candidateSelection, mayUseOffPeak, mayBeStuck);
-    LOG.debug("Generated compaction request: " + result);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Generated compaction request: " + result);
+    }
     return result;
   }
 
   public CompactionRequest selectMajorCompaction(ArrayList<StoreFile> candidateSelection) {
     long now = EnvironmentEdgeManager.currentTime();
-    long oldestToCompact = getOldestToCompact(comConf.getMaxStoreFileAgeMillis(), now);
     return new DateTieredCompactionRequest(candidateSelection,
-      this.getCompactBoundariesForMajor(candidateSelection, oldestToCompact, now));
+      this.getCompactBoundariesForMajor(candidateSelection, now));
   }
 
   /**
@@ -189,15 +202,12 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   public CompactionRequest selectMinorCompaction(ArrayList<StoreFile> candidateSelection,
       boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
-    long oldestToCompact = getOldestToCompact(comConf.getMaxStoreFileAgeMillis(), now);
-
-    List<StoreFile> storeFileList = Lists.newArrayList(filterOldStoreFiles(candidateSelection,
-      oldestToCompact));
+    long oldestToCompact = getOldestToCompact(comConf.getDateTieredMaxStoreFileAgeMillis(), now);
 
     List<Pair<StoreFile, Long>> storefileMaxTimestampPairs =
-        Lists.newArrayListWithCapacity(Iterables.size(storeFileList));
+        Lists.newArrayListWithCapacity(candidateSelection.size());
     long maxTimestampSeen = Long.MIN_VALUE;
-    for (StoreFile storeFile : storeFileList) {
+    for (StoreFile storeFile : candidateSelection) {
       // if there is out-of-order data,
       // we put them in the same window as the last file in increasing order
       maxTimestampSeen = Math.max(maxTimestampSeen,
@@ -206,16 +216,18 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     }
     Collections.reverse(storefileMaxTimestampPairs);
 
-    Window window = getIncomingWindow(now, comConf.getBaseWindowMillis());
-    int minThreshold = comConf.getIncomingWindowMin();
+    CompactionWindow window = getIncomingWindow(now);
+    int minThreshold = comConf.getDateTieredIncomingWindowMin();
     PeekingIterator<Pair<StoreFile, Long>> it =
         Iterators.peekingIterator(storefileMaxTimestampPairs.iterator());
     while (it.hasNext()) {
+      if (window.compareToTimestamp(oldestToCompact) < 0) {
+        break;
+      }
       int compResult = window.compareToTimestamp(it.peek().getSecond());
       if (compResult > 0) {
         // If the file is too old for the window, switch to the next window
-        window = window.nextWindow(comConf.getWindowsPerTier(),
-          oldestToCompact);
+        window = window.nextEarlierWindow();
         minThreshold = comConf.getMinFilesToCompact();
       } else {
         // The file is within the target window
@@ -226,7 +238,9 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
           fileList.add(it.next().getFirst());
         }
         if (fileList.size() >= minThreshold) {
-          LOG.debug("Processing files: " + fileList + " for window: " + window);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Processing files: " + fileList + " for window: " + window);
+          }
           DateTieredCompactionRequest request = generateCompactionRequest(fileList, window,
             mayUseOffPeak, mayBeStuck, minThreshold);
           if (request != null) {
@@ -240,8 +254,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   private DateTieredCompactionRequest generateCompactionRequest(ArrayList<StoreFile> storeFiles,
-      Window window, boolean mayUseOffPeak, boolean mayBeStuck, int minThreshold)
-    throws IOException {
+      CompactionWindow window, boolean mayUseOffPeak, boolean mayBeStuck, int minThreshold)
+      throws IOException {
     // The files has to be in ascending order for ratio-based compaction to work right
     // and removeExcessFile to exclude youngest files.
     Collections.reverse(storeFiles);
@@ -254,7 +268,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       // If there is any file in the window excluded from compaction,
       // only one file will be output from compaction.
       boolean singleOutput = storeFiles.size() != storeFileSelection.size() ||
-        comConf.useSingleOutputForMinorCompaction();
+        comConf.useDateTieredSingleOutputForMinorCompaction();
       List<Long> boundaries = getCompactionBoundariesForMinor(window, singleOutput);
       DateTieredCompactionRequest result = new DateTieredCompactionRequest(storeFileSelection,
         boundaries);
@@ -267,20 +281,20 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
    * Return a list of boundaries for multiple compaction output
    *   in ascending order.
    */
-  private List<Long> getCompactBoundariesForMajor(Collection<StoreFile> filesToCompact,
-    long oldestToCompact, long now) {
+  private List<Long> getCompactBoundariesForMajor(Collection<StoreFile> filesToCompact, long now) {
     long minTimestamp = Long.MAX_VALUE;
     for (StoreFile file : filesToCompact) {
-      minTimestamp = Math.min(minTimestamp,
-        file.getMinimumTimestamp() == null? Long.MAX_VALUE : file.getMinimumTimestamp());
+      minTimestamp =
+        Math.min(minTimestamp,
+          file.getMinimumTimestamp() == null ? Long.MAX_VALUE : file.getMinimumTimestamp());
     }
 
     List<Long> boundaries = new ArrayList<Long>();
 
     // Add startMillis of all windows between now and min timestamp
-    for (Window window = getIncomingWindow(now, comConf.getBaseWindowMillis());
-      window.compareToTimestamp(minTimestamp) > 0;
-      window = window.nextWindow(comConf.getWindowsPerTier(), oldestToCompact)) {
+    for (CompactionWindow window = getIncomingWindow(now);
+        window.compareToTimestamp(minTimestamp) > 0;
+        window = window.nextEarlierWindow()) {
       boundaries.add(window.startMillis());
     }
     boundaries.add(Long.MIN_VALUE);
@@ -289,10 +303,10 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   /**
-   * @return a list of boundaries for multiple compaction output
-   *   from minTimestamp to maxTimestamp.
+   * @return a list of boundaries for multiple compaction output from minTimestamp to maxTimestamp.
    */
-  private static List<Long> getCompactionBoundariesForMinor(Window window, boolean singleOutput) {
+  private static List<Long> getCompactionBoundariesForMinor(CompactionWindow window,
+      boolean singleOutput) {
     List<Long> boundaries = new ArrayList<Long>();
     boundaries.add(Long.MIN_VALUE);
     if (!singleOutput) {
@@ -301,122 +315,17 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     return boundaries;
   }
 
-  /**
-   * Removes all store files with max timestamp older than (current - maxAge).
-   * @param storeFiles all store files to consider
-   * @param maxAge the age in milliseconds when a store file stops participating in compaction.
-   * @return a list of storeFiles with the store file older than maxAge excluded
-   */
-  private static Iterable<StoreFile> filterOldStoreFiles(List<StoreFile> storeFiles,
-    final long cutoff) {
-    return Iterables.filter(storeFiles, new Predicate<StoreFile>() {
-      @Override
-      public boolean apply(StoreFile storeFile) {
-        // Known findbugs issue to guava. SuppressWarning or Nonnull annotation don't work.
-        if (storeFile == null) {
-          return false;
-        }
-        Long maxTimestamp = storeFile.getMaximumTimestamp();
-        return maxTimestamp == null ? true : maxTimestamp >= cutoff;
-      }
-    });
-  }
-
-  private static Window getIncomingWindow(long now, long baseWindowMillis) {
-    return new Window(baseWindowMillis, now / baseWindowMillis);
+  private CompactionWindow getIncomingWindow(long now) {
+    return windowFactory.newIncomingWindow(now);
   }
 
   private static long getOldestToCompact(long maxAgeMillis, long now) {
     try {
       return LongMath.checkedSubtract(now, maxAgeMillis);
     } catch (ArithmeticException ae) {
-      LOG.warn("Value for " + CompactionConfiguration.MAX_AGE_MILLIS_KEY + ": " + maxAgeMillis
-        + ". All the files will be eligible for minor compaction.");
+      LOG.warn("Value for " + CompactionConfiguration.DATE_TIERED_MAX_AGE_MILLIS_KEY + ": "
+          + maxAgeMillis + ". All the files will be eligible for minor compaction.");
       return Long.MIN_VALUE;
-    }
-  }
-
-  /**
-   * This is the class we use to partition from epoch time to now into tiers of exponential sizes of
-   * windows.
-   */
-  private static final class Window {
-    /**
-     * How big a range of timestamps fit inside the window in milliseconds.
-     */
-    private final long windowMillis;
-
-    /**
-     * A timestamp t is within the window iff t / size == divPosition.
-     */
-    private final long divPosition;
-
-    private Window(long baseWindowMillis, long divPosition) {
-      windowMillis = baseWindowMillis;
-      this.divPosition = divPosition;
-    }
-
-    /**
-     * Compares the window to a timestamp.
-     * @param timestamp the timestamp to compare.
-     * @return a negative integer, zero, or a positive integer as the window lies before, covering,
-     *         or after than the timestamp.
-     */
-    public int compareToTimestamp(long timestamp) {
-      if (timestamp < 0) {
-        try {
-          timestamp = LongMath.checkedSubtract(timestamp, windowMillis - 1);
-        } catch (ArithmeticException ae) {
-          timestamp = Long.MIN_VALUE;
-        }
-      }
-      long pos = timestamp / windowMillis;
-      return divPosition == pos ? 0 : divPosition < pos ? -1 : 1;
-    }
-
-    /**
-     * Move to the new window of the same tier or of the next tier, which represents an earlier time
-     * span.
-     * @param windowsPerTier The number of contiguous windows that will have the same size. Windows
-     *          following those will be <code>tierBase</code> times as big.
-     * @return The next window
-     */
-    public Window nextWindow(int windowsPerTier, long oldestToCompact) {
-      // Don't promote to the next tier if there is not even 1 window at current tier
-      // or if the next window crosses the max age.
-      if (divPosition % windowsPerTier > 0 ||
-          startMillis() - windowMillis * windowsPerTier < oldestToCompact) {
-        return new Window(windowMillis, divPosition - 1);
-      } else {
-        return new Window(windowMillis * windowsPerTier, divPosition / windowsPerTier - 1);
-      }
-    }
-
-    /**
-     * Inclusive lower bound
-     */
-    public long startMillis() {
-      try {
-        return LongMath.checkedMultiply(windowMillis, divPosition);
-      } catch (ArithmeticException ae) {
-        return Long.MIN_VALUE;
-      }
-    }
-
-    /**
-     * Exclusive upper bound
-     */
-    public long endMillis() {
-      try {
-        return LongMath.checkedMultiply(windowMillis, (divPosition + 1));
-      } catch (ArithmeticException ae) {
-        return Long.MAX_VALUE;
-      }
-    }
-
-    @Override
-    public String toString() {
-      return "[" + startMillis() + ", " + endMillis() + ")";
     }
   }
 }
