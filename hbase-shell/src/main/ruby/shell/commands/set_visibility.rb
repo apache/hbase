@@ -39,7 +39,7 @@ Examples:
 
     hbase> set_visibility 't1', 'A|B', {COLUMNS => ['c1', 'c2']}
     hbase> set_visibility 't1', '(A&B)|C', {COLUMNS => 'c1',
-        TIMERANGE => [1303668804, 1303668904]}
+        TIMERANGE => [1303668804000, 1303668904000]}
     hbase> set_visibility 't1', 'A&B&C', {ROWPREFIXFILTER => 'row2',
         FILTER => "(QualifierFilter (>=, 'binary:xyz')) AND
         (TimestampsFilter ( 123, 456))"}

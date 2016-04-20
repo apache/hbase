@@ -47,7 +47,7 @@ Some examples:
   hbase> scan 'hbase:meta', {COLUMNS => 'info:regioninfo'}
   hbase> scan 'ns1:t1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
-  hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
+  hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804000, 1303668904000]}
   hbase> scan 't1', {REVERSED => true}
   hbase> scan 't1', {ALL_METRICS => true}
   hbase> scan 't1', {METRICS => ['RPC_RETRIES', 'ROWS_FILTERED']}
