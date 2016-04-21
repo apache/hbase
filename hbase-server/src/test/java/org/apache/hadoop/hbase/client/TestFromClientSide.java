@@ -6141,4 +6141,20 @@ public class TestFromClientSide {
       }
     }
   }
+
+  @Test
+  public void testRegionCache() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionCache"));
+    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
+    htd.addFamily(fam);
+    byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd, KEYS);
+    HRegionLocator locator =
+      (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
+    List<HRegionLocation> results = locator.getAllRegionLocations();
+    int number = ((ConnectionImplementation)admin.getConnection())
+      .getNumberOfCachedRegionLocations(htd.getTableName());
+    assertEquals(results.size(), number);
+  }
 }

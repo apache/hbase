@@ -86,6 +86,9 @@ public interface ClusterConnection extends HConnection {
   @Override
   void clearRegionCache();
 
+
+  void cacheLocation(final TableName tableName, final RegionLocations location);
+
   /**
    * Allows flushing the region cache of all locations that pertain to
    * <code>tableName</code>

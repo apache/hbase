@@ -83,11 +83,16 @@ public class HRegionLocator implements RegionLocator {
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
+    TableName tableName = getName();
     List<Pair<HRegionInfo, ServerName>> locations =
-        MetaTableAccessor.getTableRegionsAndLocations(this.connection, getName());
+        MetaTableAccessor.getTableRegionsAndLocations(this.connection, tableName);
     ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
     for (Pair<HRegionInfo, ServerName> entry : locations) {
       regions.add(new HRegionLocation(entry.getFirst(), entry.getSecond()));
+
+    }
+    if (regions.size() > 0) {
+      connection.cacheLocation(tableName, new RegionLocations(regions));
     }
     return regions;
   }
