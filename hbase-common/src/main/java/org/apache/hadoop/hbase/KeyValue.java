@@ -2035,6 +2035,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
       right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
 
+    public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
+          roffset, rlength);
+    }
+
     /**
      * Get the b[],o,l for left and right rowkey portions and compare.
      * @param left
