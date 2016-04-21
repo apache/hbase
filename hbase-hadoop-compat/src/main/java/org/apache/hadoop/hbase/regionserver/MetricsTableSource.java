@@ -30,6 +30,12 @@ public interface MetricsTableSource extends Comparable<MetricsTableSource> {
   String WRITE_REQUEST_COUNT_DESC = "Number fo write requests";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC = "Number fo total requests";
+  String MEMSTORE_SIZE = "memstoreSize";
+  String MEMSTORE_SIZE_DESC = "The size of memory stores";
+  String STORE_FILE_SIZE = "storeFileSize";
+  String STORE_FILE_SIZE_DESC = "The size of store files size";
+  String TABLE_SIZE = "tableSize";
+  String TABLE_SIZE_DESC = "Total size of the table in the region server";
 
   String getTableName();
 
