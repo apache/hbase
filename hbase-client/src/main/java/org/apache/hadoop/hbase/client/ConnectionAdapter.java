@@ -238,6 +238,12 @@ abstract class ConnectionAdapter implements ClusterConnection {
     wrappedConnection.clearRegionCache(tableName);
   }
 
+
+  @Override
+  public void cacheLocation(TableName tableName, RegionLocations location) {
+    wrappedConnection.cacheLocation(tableName, location);
+  }
+
   @Override
   public void deleteCachedRegionLocation(HRegionLocation location) {
     wrappedConnection.deleteCachedRegionLocation(location);

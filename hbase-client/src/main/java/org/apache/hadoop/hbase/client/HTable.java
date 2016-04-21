@@ -686,6 +686,9 @@ public class HTable implements HTableInterface, RegionLocator {
     for (Entry<HRegionInfo, ServerName> entry : locations.entrySet()) {
       regions.add(new HRegionLocation(entry.getKey(), entry.getValue()));
     }
+    if (regions.size() > 0) {
+      connection.cacheLocation(tableName, new RegionLocations(regions));
+    }
     return regions;
   }
 

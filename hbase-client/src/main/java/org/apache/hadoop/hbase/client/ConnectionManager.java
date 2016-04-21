@@ -1296,7 +1296,8 @@ class ConnectionManager {
      * @param tableName The table name.
      * @param location the new location
      */
-    private void cacheLocation(final TableName tableName, final RegionLocations location) {
+    @Override
+    public void cacheLocation(final TableName tableName, final RegionLocations location) {
       metaCache.cacheLocation(tableName, location);
     }
 
