@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.log4j.Level;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
@@ -6192,5 +6193,21 @@ public class TestFromClientSide {
     ResultScanner s = table.getScanner(scan);
     assertNull(s.next());
     table.close();
+  }
+
+  @Test
+  public void testRegionCache() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionCache"));
+    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
+    htd.addFamily(fam);
+    byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd, KEYS);
+    HRegionLocator locator =
+      (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
+    List<HRegionLocation> results = locator.getAllRegionLocations();
+    int number = ((ConnectionManager.HConnectionImplementation)admin.getConnection())
+      .getNumberOfCachedRegionLocations(htd.getTableName());
+    assertEquals(results.size(), number);
   }
 }
