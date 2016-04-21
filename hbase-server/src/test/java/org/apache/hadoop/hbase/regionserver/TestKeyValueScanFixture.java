@@ -44,8 +44,7 @@ public class TestKeyValueScanFixture extends TestCase {
         KeyValueTestUtil.create("RowB", "family", "qf1",
             10, KeyValue.Type.Put, "value-10")
     };
-    KeyValueScanner scan = new KeyValueScanFixture(
-        KeyValue.COMPARATOR, kvs);
+    KeyValueScanner scan = new KeyValueScanFixture(KeyValue.COMPARATOR, kvs);
 
     KeyValue kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
     // should seek to this:

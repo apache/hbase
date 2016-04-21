@@ -93,7 +93,7 @@ public class ScanQueryMatcher {
   byte [] row;
   int rowOffset;
   short rowLength;
-  
+
   /**
    * Oldest put in any of the involved store files
    * Used to decide whether it is ok to delete
@@ -119,7 +119,7 @@ public class ScanQueryMatcher {
    * first column.
    * */
   private boolean hasNullColumn = true;
-  
+
   private RegionCoprocessorHost regionCoprocessorHost= null;
 
   // By default, when hbase.hstore.time.to.purge.deletes is 0ms, a delete
@@ -140,22 +140,22 @@ public class ScanQueryMatcher {
   // currently influencing. This is because Puts, that this delete can
   // influence.  may appear out of order.
   private final long timeToPurgeDeletes;
-  
+
   private final boolean isUserScan;
 
   private final boolean isReversed;
 
   /**
+   * True if we are doing a 'Get' Scan. Every Get is actually a one-row Scan.
+   */
+  private final boolean get;
+
+  /**
    * Construct a QueryMatcher for a scan
-   * @param scan
    * @param scanInfo The store's immutable scan info
-   * @param columns
    * @param scanType Type of the scan
    * @param earliestPutTs Earliest put seen in any of the store files.
-   * @param oldestUnexpiredTS the oldest timestamp we are interested in,
-   *  based on TTL
-   * @param regionCoprocessorHost 
-   * @throws IOException 
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in, based on TTL
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       ScanType scanType, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
@@ -166,6 +166,7 @@ public class ScanQueryMatcher {
     } else {
       this.tr = timeRange;
     }
+    this.get = scan.isGetScan();
     this.rowComparator = scanInfo.getComparator();
     this.regionCoprocessorHost = regionCoprocessorHost;
     this.deletes =  instantiateDeleteTracker();
@@ -234,8 +235,8 @@ public class ScanQueryMatcher {
    * @param now the current server time
    * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
    * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
-   * @param regionCoprocessorHost 
-   * @throws IOException 
+   * @param regionCoprocessorHost
+   * @throws IOException
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now,
@@ -280,7 +281,7 @@ public class ScanQueryMatcher {
    *      caused by a data corruption.
    */
   public MatchCode match(Cell cell) throws IOException {
-      if (filter != null && filter.filterAllRemaining()) {
+    if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
     if (row != null) {
@@ -327,7 +328,7 @@ public class ScanQueryMatcher {
     // check if the cell is expired by cell TTL
     if (HStore.isCellTTLExpired(cell, this.oldestUnexpiredTS, this.now)) {
       return MatchCode.SKIP;
-    }    
+    }
 
     /*
      * The delete logic is pretty complicated now.
@@ -362,10 +363,10 @@ public class ScanQueryMatcher {
         }
         // Can't early out now, because DelFam come before any other keys
       }
-     
+
       if ((!isUserScan)
           && timeToPurgeDeletes > 0
-          && (EnvironmentEdgeManager.currentTime() - timestamp) 
+          && (EnvironmentEdgeManager.currentTime() - timestamp)
             <= timeToPurgeDeletes) {
         return MatchCode.INCLUDE;
       } else if (retainDeletesInOutput || mvccVersion > maxReadPointToTrackVersions) {
@@ -417,7 +418,7 @@ public class ScanQueryMatcher {
     }
 
     // STEP 1: Check if the column is part of the requested columns
-    MatchCode colChecker = columns.checkColumn(cell.getQualifierArray(), 
+    MatchCode colChecker = columns.checkColumn(cell.getQualifierArray(),
         qualifierOffset, qualifierLength, typeByte);
     if (colChecker == MatchCode.INCLUDE) {
       ReturnCode filterResponse = ReturnCode.SKIP;
@@ -429,7 +430,7 @@ public class ScanQueryMatcher {
         case SKIP:
           return MatchCode.SKIP;
         case NEXT_COL:
-          return columns.getNextRowOrNextColumn(cell.getQualifierArray(), 
+          return columns.getNextRowOrNextColumn(cell.getQualifierArray(),
               qualifierOffset, qualifierLength);
         case NEXT_ROW:
           stickyNextRow = true;
@@ -502,24 +503,27 @@ public class ScanQueryMatcher {
     }
   }
 
+  /**
+   * @return Returns false if we know there are no more rows to be scanned (We've reached the
+   * <code>stopRow</code> or we are scanning on row only because this Scan is for a Get, etc.
+   */
   public boolean moreRowsMayExistAfter(Cell kv) {
-    if (this.isReversed) {
-      if (rowComparator.compareRows(kv.getRowArray(), kv.getRowOffset(),
-          kv.getRowLength(), stopRow, 0, stopRow.length) <= 0) {
-        return false;
-      } else {
-        return true;
-      }
-    }
-    if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
-        rowComparator.compareRows(kv.getRowArray(),kv.getRowOffset(),
-            kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
-      // KV >= STOPROW
-      // then NO there is nothing left.
+    // If a 'get' Scan -- we are doing a Get (every Get is a single-row Scan in implementation) --
+    // then we are looking at one row only, the one specified in the Get coordinate..so we know
+    // for sure that there are no more rows on this Scan
+    if (this.get) {
       return false;
-    } else {
-      return true;
     }
+    // If no stopRow, return that there may be more rows. The tests that follow depend on a
+    // non-empty, non-default stopRow so this little test below short-circuits out doing the
+    // following compares.
+    if (this.stopRow == null || this.stopRow == HConstants.EMPTY_BYTE_ARRAY) {
+       return true;
+    }
+    return this.isReversed?
+      rowComparator.compareRows(kv, stopRow, 0, stopRow.length) > 0:
+      Bytes.equals(stopRow, HConstants.EMPTY_END_ROW) ||
+        rowComparator.compareRows(kv, stopRow, 0, stopRow.length) < 0;
   }
 
   /**

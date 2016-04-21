@@ -33,8 +33,7 @@ import java.util.List;
  * to be a store file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
-  public KeyValueScanFixture(KeyValue.KVComparator comparator,
-                             KeyValue... incData) {
+  public KeyValueScanFixture(KeyValue.KVComparator comparator, KeyValue... incData) {
     super(comparator, incData);
   }
 
