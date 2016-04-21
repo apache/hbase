@@ -83,7 +83,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   }
 
   private static long getBlkAccessCount() {
-    return HFile.dataBlockReadCnt.get();
+    return HFile.DATABLOCK_READ_COUNT.get();
   }
 
   @Test

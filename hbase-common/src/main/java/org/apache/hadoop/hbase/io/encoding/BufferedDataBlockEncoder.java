@@ -47,7 +47,9 @@ import org.apache.hadoop.io.WritableUtils;
  */
 @InterfaceAudience.Private
 abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
-
+  /**
+   * TODO: This datablockencoder is dealing in internals of hfileblocks. Purge reference to HFBs
+   */
   private static int INITIAL_KEY_BUFFER_SIZE = 512;
 
   @Override
@@ -967,8 +969,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
         .getEncodingState();
     // Write the unencodedDataSizeWritten (with header size)
-    Bytes.putInt(uncompressedBytesWithHeader, HConstants.HFILEBLOCK_HEADER_SIZE
-        + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
+    Bytes.putInt(uncompressedBytesWithHeader,
+      HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
         );
     if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
       encodingCtx.postEncoding(BlockType.ENCODED_DATA);

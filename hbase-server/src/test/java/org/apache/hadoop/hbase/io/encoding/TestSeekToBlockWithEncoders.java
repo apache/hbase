@@ -37,6 +37,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestSeekToBlockWithEncoders {
+  static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
 
   /**
    * Test seeking while file is encoded.
@@ -261,8 +262,7 @@ public class TestSeekToBlockWithEncoders {
       HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
           .withIncludesMvcc(false).withIncludesTags(false)
           .withCompression(Compression.Algorithm.NONE).build();
-      HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding, HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
           encodingContext);
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
