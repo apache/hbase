@@ -131,6 +131,15 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addCounter(Interns.info(tableNamePrefix + MetricsTableSource.TOTAL_REQUEST_COUNT,
           MetricsTableSource.TOTAL_REQUEST_COUNT_DESC),
           tableWrapperAgg.getTotalRequestsCount(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.MEMSTORE_SIZE,
+          MetricsTableSource.MEMSTORE_SIZE_DESC),
+          tableWrapperAgg.getMemstoresSize(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.STORE_FILE_SIZE,
+          MetricsTableSource.STORE_FILE_SIZE_DESC),
+          tableWrapperAgg.getStoreFilesSize(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.TABLE_SIZE,
+          MetricsTableSource.TABLE_SIZE_DESC),
+          tableWrapperAgg.getTableSize(tableName.getNameAsString()));
       }
     }
   }

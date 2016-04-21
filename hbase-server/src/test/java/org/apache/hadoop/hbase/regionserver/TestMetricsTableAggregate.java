@@ -34,15 +34,19 @@ public class TestMetricsTableAggregate {
 
   @Test
   public void testTableWrapperAggregateMetrics() throws IOException {
-    String tableName = "testRequestCount";
+    String tableName = "testTableMetrics";
     MetricsTableWrapperStub tableWrapper = new MetricsTableWrapperStub(tableName);
     CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
     .createTable(tableName, tableWrapper);
     MetricsTableAggregateSource agg = CompatibilitySingletonFactory
         .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
 
-    HELPER.assertCounter("Namespace_default_table_testRequestCount_metric_readRequestCount", 10, agg);
-    HELPER.assertCounter("Namespace_default_table_testRequestCount_metric_writeRequestCount", 20, agg);
-    HELPER.assertCounter("Namespace_default_table_testRequestCount_metric_totalRequestCount", 30, agg);
+    HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_readRequestCount", 10, agg);
+    HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_writeRequestCount", 20, agg);
+    HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_totalRequestCount", 30, agg);
+
+    HELPER.assertGauge("Namespace_default_table_testTableMetrics_metric_memstoreSize", 1000, agg);
+    HELPER.assertGauge("Namespace_default_table_testTableMetrics_metric_storeFileSize", 2000, agg);
+    HELPER.assertGauge("Namespace_default_table_testTableMetrics_metric_tableSize", 3000, agg);
   }
 }

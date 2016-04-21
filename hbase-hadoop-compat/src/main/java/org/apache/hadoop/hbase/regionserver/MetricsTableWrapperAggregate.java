@@ -39,4 +39,19 @@ public interface MetricsTableWrapperAggregate {
    * Get the total number of requests that have been issued against this table
    */
   long getTotalRequestsCount(String table);
+
+  /**
+   * Get the memory store size against this table
+   */
+  long getMemstoresSize(String table);
+
+  /**
+   * Get the store file size against this table
+   */
+  long getStoreFilesSize(String table);
+
+  /**
+   * Get the table region size against this table
+   */
+  long getTableSize(String table);
 }
