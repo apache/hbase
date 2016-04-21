@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
 import org.apache.hadoop.metrics2.lib.MetricMutableStat;
@@ -41,11 +42,25 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
 
   private MetricMutableGaugeLong callQueueLenGauge;
 
+  // pause monitor metrics
+  private final MetricMutableCounterLong infoPauseThresholdExceeded;
+  private final MetricMutableCounterLong warnPauseThresholdExceeded;
+  private final MetricMutableHistogram pausesWithGc;
+  private final MetricMutableHistogram pausesWithoutGc;
+
   public MetricsThriftServerSourceImpl(String metricsName,
                                        String metricsDescription,
                                        String metricsContext,
                                        String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+
+    // pause monitor metrics
+    infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
+      INFO_THRESHOLD_COUNT_DESC, 0L);
+    warnPauseThresholdExceeded = getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY,
+      WARN_THRESHOLD_COUNT_DESC, 0L);
+    pausesWithGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITH_GC_KEY);
+    pausesWithoutGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITHOUT_GC_KEY);
   }
 
 
@@ -96,4 +111,23 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     thriftSlowCallStat.add(time);
   }
 
+  @Override
+  public void incInfoThresholdExceeded(int count) {
+    infoPauseThresholdExceeded.incr(count);
+  }
+
+  @Override
+  public void incWarnThresholdExceeded(int count) {
+    warnPauseThresholdExceeded.incr(count);
+  }
+
+  @Override
+  public void updatePauseTimeWithGc(long t) {
+    pausesWithGc.add(t);
+  }
+
+  @Override
+  public void updatePauseTimeWithoutGc(long t) {
+    pausesWithoutGc.add(t);
+  }
 }
