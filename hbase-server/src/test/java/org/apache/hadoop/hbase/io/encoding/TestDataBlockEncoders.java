@@ -72,6 +72,7 @@ public class TestDataBlockEncoders {
 
   private static int ENCODED_DATA_OFFSET = HConstants.HFILEBLOCK_HEADER_SIZE
       + DataBlockEncoding.ID_SIZE;
+  static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
 
   private RedundantKVGenerator generator = new RedundantKVGenerator();
   private Random randomizer = new Random(42l);
@@ -87,7 +88,7 @@ public class TestDataBlockEncoders {
     this.includesMemstoreTS = includesMemstoreTS;
     this.includesTags = includesTag;
   }
-  
+
   private HFileBlockEncodingContext getEncodingContext(Compression.Algorithm algo,
       DataBlockEncoding encoding) {
     DataBlockEncoder encoder = encoding.getEncoder();
@@ -97,17 +98,15 @@ public class TestDataBlockEncoders {
                         .withIncludesTags(includesTags)
                         .withCompression(algo).build();
     if (encoder != null) {
-      return encoder.newDataBlockEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      return encoder.newDataBlockEncodingContext(encoding, HFILEBLOCK_DUMMY_HEADER, meta);
     } else {
-      return new HFileBlockDefaultEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      return new HFileBlockDefaultEncodingContext(encoding, HFILEBLOCK_DUMMY_HEADER, meta);
     }
   }
 
   /**
    * Test data block encoding of empty KeyValue.
-   * 
+   *
    * @throws IOException
    *           On test failure.
    */
@@ -134,7 +133,7 @@ public class TestDataBlockEncoders {
 
   /**
    * Test KeyValues with negative timestamp.
-   * 
+   *
    * @throws IOException
    *           On test failure.
    */
@@ -179,7 +178,7 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     // create all seekers
-    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers =
         new ArrayList<DataBlockEncoder.EncodedSeeker>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       LOG.info("Encoding: " + encoding);
@@ -237,7 +236,7 @@ public class TestDataBlockEncoders {
       HFileBlockEncodingContext encodingContext) throws IOException {
     DataBlockEncoder encoder = encoding.getEncoder();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+    baos.write(HFILEBLOCK_DUMMY_HEADER);
     DataOutputStream dos = new DataOutputStream(baos);
     encoder.startBlockEncoding(encodingContext, dos);
     for (KeyValue kv : kvs) {
@@ -332,7 +331,7 @@ public class TestDataBlockEncoders {
       }
     }
   }
-  
+
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
       boolean seekBefore, KeyValue keyValue) {
     ByteBuffer expectedKeyValue = null;
@@ -378,10 +377,10 @@ public class TestDataBlockEncoders {
         continue;
       }
       HFileBlockEncodingContext encodingContext = new HFileBlockDefaultEncodingContext(encoding,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
+          HFILEBLOCK_DUMMY_HEADER, fileContext);
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+      baos.write(HFILEBLOCK_DUMMY_HEADER);
       DataOutputStream dos = new DataOutputStream(baos);
       encoder.startBlockEncoding(encodingContext, dos);
       for (KeyValue kv : kvList) {
@@ -395,7 +394,7 @@ public class TestDataBlockEncoders {
       testAlgorithm(encodedData, unencodedDataBuf, encoder);
     }
   }
-  
+
   @Test
   public void testZeroByte() throws IOException {
     List<KeyValue> kvList = new ArrayList<KeyValue>();

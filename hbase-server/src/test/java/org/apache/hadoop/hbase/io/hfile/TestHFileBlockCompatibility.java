@@ -344,8 +344,7 @@ public class TestHFileBlockCompatibility {
     // These constants are as they were in minorVersion 0.
     private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     private static final boolean DONT_FILL_HEADER = HFileBlock.DONT_FILL_HEADER;
-    private static final byte[] DUMMY_HEADER =
-      HFileBlock.DUMMY_HEADER_NO_CHECKSUM;
+    private static final byte[] DUMMY_HEADER = HFileBlock.DUMMY_HEADER_NO_CHECKSUM;
 
     private enum State {
       INIT,
