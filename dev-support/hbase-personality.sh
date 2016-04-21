@@ -92,8 +92,34 @@ function personality_modules
     return
   fi
 
+  # If EXCLUDE_TESTS_URL/INCLUDE_TESTS_URL is set, fetches the url
+  # and sets -Dtest.exclude.pattern/-Dtest to exclude/include the
+  # tests respectively.
   if [[ ${testtype} = unit ]]; then
     extra="${extra} -PrunAllTests"
+    if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
+        wget "$EXCLUDE_TESTS_URL" -O "excludes"
+        if [[ $? -eq 0 ]]; then
+          excludes=$(cat excludes)
+          if [[ -n "${excludes}" ]]; then
+            extra="${extra} -Dtest.exclude.pattern=${excludes}"
+          fi
+        else
+          echo "Wget error $? in fetching excludes file from url" \
+               "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
+        fi
+    elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
+        wget "$INCLUDE_TESTS_URL" -O "includes"
+        if [[ $? -eq 0 ]]; then
+          includes=$(cat includes)
+          if [[ -n "${includes}" ]]; then
+            extra="${extra} -Dtest=${includes}"
+          fi
+        else
+          echo "Wget error $? in fetching includes file from url" \
+               "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
+        fi
+    fi
 
     # Inject the jenkins build-id for our surefire invocations
     # Used by zombie detection stuff, even though we're not including that yet.
