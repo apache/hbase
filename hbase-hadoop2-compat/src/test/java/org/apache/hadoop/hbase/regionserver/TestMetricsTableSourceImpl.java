@@ -91,6 +91,21 @@ public class TestMetricsTableSourceImpl {
       return 30;
     }
 
+    @Override
+    public long getMemstoresSize(String table) {
+      return 1000;
+    }
+
+    @Override
+    public long getStoreFilesSize(String table) {
+      return 2000;
+    }
+
+    @Override
+    public long getTableSize(String table) {
+      return 3000;
+    }
+
     public String getTableName() {
       return tableName;
     }
