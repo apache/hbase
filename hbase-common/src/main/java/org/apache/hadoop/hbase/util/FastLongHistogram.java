@@ -58,7 +58,7 @@ public class FastLongHistogram {
     // set to true when any of data has been inserted to the Bins. It is set after the counts are
     // updated.
     private final AtomicBoolean hasData = new AtomicBoolean(false);
-    
+
     /**
      * The constructor for creating a Bins without any prior data.
      */
@@ -134,7 +134,7 @@ public class FastLongHistogram {
       // hasData needs to be updated as last
       this.hasData.set(true);
     }
-    
+
     /**
      * Computes the quantiles give the ratios.
      */
@@ -157,7 +157,7 @@ public class FastLongHistogram {
       int rIndex = 0;
       double qCount = total * quantiles[0];
       long cum = 0L;
-      
+
       long[] res = new long[quantiles.length];
       countsLoop: for (int i = 0; i < counts.length; i++) {
         // mn and mx define a value range
@@ -281,7 +281,8 @@ public class FastLongHistogram {
   }
 
   public long getMin() {
-    return this.bins.min.get();
+    long min = this.bins.min.get();
+    return min == Long.MAX_VALUE ? 0 : min; // in case it is not initialized
   }
 
   public long getMax() {
