@@ -42,8 +42,12 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationServiceNullResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationNullResponseSumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationNullResponseSumResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -108,22 +112,22 @@ public class TestBatchCoprocessorEndpoint {
   @Test
   public void testAggregationNullResponse() throws Throwable {
     Table table = util.getConnection().getTable(TEST_TABLE);
-    ColumnAggregationWithNullResponseProtos.SumRequest.Builder builder =
-        ColumnAggregationWithNullResponseProtos.SumRequest
+    ColumnAggregationNullResponseSumRequest.Builder builder =
+        ColumnAggregationNullResponseSumRequest
         .newBuilder();
     builder.setFamily(ByteStringer.wrap(TEST_FAMILY));
     if (TEST_QUALIFIER != null && TEST_QUALIFIER.length > 0) {
       builder.setQualifier(ByteStringer.wrap(TEST_QUALIFIER));
     }
-    Map<byte[], ColumnAggregationWithNullResponseProtos.SumResponse> results =
+    Map<byte[], ColumnAggregationNullResponseSumResponse> results =
         table.batchCoprocessorService(
             ColumnAggregationServiceNullResponse.getDescriptor().findMethodByName("sum"),
             builder.build(), ROWS[0], ROWS[ROWS.length - 1],
-            ColumnAggregationWithNullResponseProtos.SumResponse.getDefaultInstance());
+            ColumnAggregationNullResponseSumResponse.getDefaultInstance());
 
     int sumResult = 0;
     int expectedResult = 0;
-    for (Map.Entry<byte[], ColumnAggregationWithNullResponseProtos.SumResponse> e :
+    for (Map.Entry<byte[], ColumnAggregationNullResponseSumResponse> e :
         results.entrySet()) {
       LOG.info("Got value " + e.getValue().getSum() + " for region "
           + Bytes.toStringBinary(e.getKey()));
@@ -230,13 +234,13 @@ public class TestBatchCoprocessorEndpoint {
   @Test
   public void testAggregationWithErrors() throws Throwable {
     Table table = util.getConnection().getTable(TEST_TABLE);
-    final Map<byte[], ColumnAggregationWithErrorsProtos.SumResponse> results =
+    final Map<byte[], ColumnAggregationWithErrorsSumResponse> results =
         Collections.synchronizedMap(
-            new TreeMap<byte[], ColumnAggregationWithErrorsProtos.SumResponse>(
+            new TreeMap<byte[], ColumnAggregationWithErrorsSumResponse>(
                 Bytes.BYTES_COMPARATOR
             ));
-    ColumnAggregationWithErrorsProtos.SumRequest.Builder builder =
-        ColumnAggregationWithErrorsProtos.SumRequest
+    ColumnAggregationWithErrorsSumRequest.Builder builder =
+        ColumnAggregationWithErrorsSumRequest
         .newBuilder();
     builder.setFamily(ByteStringer.wrap(TEST_FAMILY));
     if (TEST_QUALIFIER != null && TEST_QUALIFIER.length > 0) {
@@ -249,12 +253,12 @@ public class TestBatchCoprocessorEndpoint {
           ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors.getDescriptor()
               .findMethodByName("sum"),
           builder.build(), ROWS[0], ROWS[ROWS.length - 1],
-          ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance(),
-          new Batch.Callback<ColumnAggregationWithErrorsProtos.SumResponse>() {
+          ColumnAggregationWithErrorsSumResponse.getDefaultInstance(),
+          new Batch.Callback<ColumnAggregationWithErrorsSumResponse>() {
 
             @Override
             public void update(byte[] region, byte[] row,
-                ColumnAggregationWithErrorsProtos.SumResponse result) {
+                ColumnAggregationWithErrorsSumResponse result) {
               results.put(region, result);
             }
           });
@@ -265,7 +269,7 @@ public class TestBatchCoprocessorEndpoint {
 
     int sumResult = 0;
     int expectedResult = 0;
-    for (Map.Entry<byte[], ColumnAggregationWithErrorsProtos.SumResponse> e : results.entrySet()) {
+    for (Map.Entry<byte[], ColumnAggregationWithErrorsSumResponse> e : results.entrySet()) {
       LOG.info("Got value " + e.getValue().getSum() + " for region "
           + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
