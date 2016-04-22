@@ -8,7 +8,7 @@ public final class ColumnAggregationWithErrorsProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public interface SumRequestOrBuilder
+  public interface ColumnAggregationWithErrorsSumRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required bytes family = 1;
@@ -32,24 +32,29 @@ public final class ColumnAggregationWithErrorsProtos {
     com.google.protobuf.ByteString getQualifier();
   }
   /**
-   * Protobuf type {@code SumRequest}
+   * Protobuf type {@code ColumnAggregationWithErrorsSumRequest}
+   *
+   * <pre>
+   * use unique names for messages in ColumnAggregationXXX.protos due to a bug in
+   * protoc or hadoop's protoc compiler.
+   * </pre>
    */
-  public static final class SumRequest extends
+  public static final class ColumnAggregationWithErrorsSumRequest extends
       com.google.protobuf.GeneratedMessage
-      implements SumRequestOrBuilder {
-    // Use SumRequest.newBuilder() to construct.
-    private SumRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ColumnAggregationWithErrorsSumRequestOrBuilder {
+    // Use ColumnAggregationWithErrorsSumRequest.newBuilder() to construct.
+    private ColumnAggregationWithErrorsSumRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private SumRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ColumnAggregationWithErrorsSumRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final SumRequest defaultInstance;
-    public static SumRequest getDefaultInstance() {
+    private static final ColumnAggregationWithErrorsSumRequest defaultInstance;
+    public static ColumnAggregationWithErrorsSumRequest getDefaultInstance() {
       return defaultInstance;
     }
 
-    public SumRequest getDefaultInstanceForType() {
+    public ColumnAggregationWithErrorsSumRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -59,7 +64,7 @@ public final class ColumnAggregationWithErrorsProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private SumRequest(
+    private ColumnAggregationWithErrorsSumRequest(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -106,28 +111,28 @@ public final class ColumnAggregationWithErrorsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumRequest_descriptor;
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.Builder.class);
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<SumRequest> PARSER =
-        new com.google.protobuf.AbstractParser<SumRequest>() {
-      public SumRequest parsePartialFrom(
+    public static com.google.protobuf.Parser<ColumnAggregationWithErrorsSumRequest> PARSER =
+        new com.google.protobuf.AbstractParser<ColumnAggregationWithErrorsSumRequest>() {
+      public ColumnAggregationWithErrorsSumRequest parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new SumRequest(input, extensionRegistry);
+        return new ColumnAggregationWithErrorsSumRequest(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<SumRequest> getParserForType() {
+    public com.google.protobuf.Parser<ColumnAggregationWithErrorsSumRequest> getParserForType() {
       return PARSER;
     }
 
@@ -224,10 +229,10 @@ public final class ColumnAggregationWithErrorsProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest) obj;
+      org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest) obj;
 
       boolean result = true;
       result = result && (hasFamily() == other.hasFamily());
@@ -266,53 +271,53 @@ public final class ColumnAggregationWithErrorsProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -321,7 +326,7 @@ public final class ColumnAggregationWithErrorsProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -333,24 +338,29 @@ public final class ColumnAggregationWithErrorsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SumRequest}
+     * Protobuf type {@code ColumnAggregationWithErrorsSumRequest}
+     *
+     * <pre>
+     * use unique names for messages in ColumnAggregationXXX.protos due to a bug in
+     * protoc or hadoop's protoc compiler.
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequestOrBuilder {
+       implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.Builder.class);
+                org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.newBuilder()
+      // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -383,23 +393,23 @@ public final class ColumnAggregationWithErrorsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumRequest_descriptor;
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.getDefaultInstance();
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest build() {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest result = buildPartial();
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest build() {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest buildPartial() {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest(this);
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest buildPartial() {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -416,16 +426,16 @@ public final class ColumnAggregationWithErrorsProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest)other);
+        if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest other) {
-        if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest other) {
+        if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.getDefaultInstance()) return this;
         if (other.hasFamily()) {
           setFamily(other.getFamily());
         }
@@ -448,11 +458,11 @@ public final class ColumnAggregationWithErrorsProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest parsedMessage = null;
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -535,18 +545,18 @@ public final class ColumnAggregationWithErrorsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SumRequest)
+      // @@protoc_insertion_point(builder_scope:ColumnAggregationWithErrorsSumRequest)
     }
 
     static {
-      defaultInstance = new SumRequest(true);
+      defaultInstance = new ColumnAggregationWithErrorsSumRequest(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SumRequest)
+    // @@protoc_insertion_point(class_scope:ColumnAggregationWithErrorsSumRequest)
   }
 
-  public interface SumResponseOrBuilder
+  public interface ColumnAggregationWithErrorsSumResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required int64 sum = 1;
@@ -560,24 +570,24 @@ public final class ColumnAggregationWithErrorsProtos {
     long getSum();
   }
   /**
-   * Protobuf type {@code SumResponse}
+   * Protobuf type {@code ColumnAggregationWithErrorsSumResponse}
    */
-  public static final class SumResponse extends
+  public static final class ColumnAggregationWithErrorsSumResponse extends
       com.google.protobuf.GeneratedMessage
-      implements SumResponseOrBuilder {
-    // Use SumResponse.newBuilder() to construct.
-    private SumResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ColumnAggregationWithErrorsSumResponseOrBuilder {
+    // Use ColumnAggregationWithErrorsSumResponse.newBuilder() to construct.
+    private ColumnAggregationWithErrorsSumResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private SumResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ColumnAggregationWithErrorsSumResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final SumResponse defaultInstance;
-    public static SumResponse getDefaultInstance() {
+    private static final ColumnAggregationWithErrorsSumResponse defaultInstance;
+    public static ColumnAggregationWithErrorsSumResponse getDefaultInstance() {
       return defaultInstance;
     }
 
-    public SumResponse getDefaultInstanceForType() {
+    public ColumnAggregationWithErrorsSumResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -587,7 +597,7 @@ public final class ColumnAggregationWithErrorsProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private SumResponse(
+    private ColumnAggregationWithErrorsSumResponse(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -629,28 +639,28 @@ public final class ColumnAggregationWithErrorsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumResponse_descriptor;
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.Builder.class);
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<SumResponse> PARSER =
-        new com.google.protobuf.AbstractParser<SumResponse>() {
-      public SumResponse parsePartialFrom(
+    public static com.google.protobuf.Parser<ColumnAggregationWithErrorsSumResponse> PARSER =
+        new com.google.protobuf.AbstractParser<ColumnAggregationWithErrorsSumResponse>() {
+      public ColumnAggregationWithErrorsSumResponse parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new SumResponse(input, extensionRegistry);
+        return new ColumnAggregationWithErrorsSumResponse(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<SumResponse> getParserForType() {
+    public com.google.protobuf.Parser<ColumnAggregationWithErrorsSumResponse> getParserForType() {
       return PARSER;
     }
 
@@ -723,10 +733,10 @@ public final class ColumnAggregationWithErrorsProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse) obj;
+      org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse) obj;
 
       boolean result = true;
       result = result && (hasSum() == other.hasSum());
@@ -756,53 +766,53 @@ public final class ColumnAggregationWithErrorsProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parseFrom(
+    public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -811,7 +821,7 @@ public final class ColumnAggregationWithErrorsProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -823,24 +833,24 @@ public final class ColumnAggregationWithErrorsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SumResponse}
+     * Protobuf type {@code ColumnAggregationWithErrorsSumResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponseOrBuilder {
+       implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.Builder.class);
+                org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.newBuilder()
+      // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -871,23 +881,23 @@ public final class ColumnAggregationWithErrorsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_SumResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.internal_static_ColumnAggregationWithErrorsSumResponse_descriptor;
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance();
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse build() {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse result = buildPartial();
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse build() {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse buildPartial() {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse(this);
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse buildPartial() {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -900,16 +910,16 @@ public final class ColumnAggregationWithErrorsProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse) {
-          return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse)other);
+        if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse other) {
-        if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse other) {
+        if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance()) return this;
         if (other.hasSum()) {
           setSum(other.getSum());
         }
@@ -929,11 +939,11 @@ public final class ColumnAggregationWithErrorsProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse parsedMessage = null;
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -977,15 +987,15 @@ public final class ColumnAggregationWithErrorsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SumResponse)
+      // @@protoc_insertion_point(builder_scope:ColumnAggregationWithErrorsSumResponse)
     }
 
     static {
-      defaultInstance = new SumResponse(true);
+      defaultInstance = new ColumnAggregationWithErrorsSumResponse(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SumResponse)
+    // @@protoc_insertion_point(class_scope:ColumnAggregationWithErrorsSumResponse)
   }
 
   /**
@@ -997,12 +1007,12 @@ public final class ColumnAggregationWithErrorsProtos {
 
     public interface Interface {
       /**
-       * <code>rpc sum(.SumRequest) returns (.SumResponse);</code>
+       * <code>rpc sum(.ColumnAggregationWithErrorsSumRequest) returns (.ColumnAggregationWithErrorsSumResponse);</code>
        */
       public abstract void sum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse> done);
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse> done);
 
     }
 
@@ -1012,8 +1022,8 @@ public final class ColumnAggregationWithErrorsProtos {
         @java.lang.Override
         public  void sum(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse> done) {
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse> done) {
           impl.sum(controller, request, done);
         }
 
@@ -1040,7 +1050,7 @@ public final class ColumnAggregationWithErrorsProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return impl.sum(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest)request);
+              return impl.sum(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1056,7 +1066,7 @@ public final class ColumnAggregationWithErrorsProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1072,7 +1082,7 @@ public final class ColumnAggregationWithErrorsProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1082,12 +1092,12 @@ public final class ColumnAggregationWithErrorsProtos {
     }
 
     /**
-     * <code>rpc sum(.SumRequest) returns (.SumResponse);</code>
+     * <code>rpc sum(.ColumnAggregationWithErrorsSumRequest) returns (.ColumnAggregationWithErrorsSumResponse);</code>
      */
     public abstract void sum(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse> done);
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse> done);
 
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -1112,8 +1122,8 @@ public final class ColumnAggregationWithErrorsProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          this.sum(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse>specializeCallback(
+          this.sum(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse>specializeCallback(
               done));
           return;
         default:
@@ -1131,7 +1141,7 @@ public final class ColumnAggregationWithErrorsProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1147,7 +1157,7 @@ public final class ColumnAggregationWithErrorsProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1171,17 +1181,17 @@ public final class ColumnAggregationWithErrorsProtos {
 
       public  void sum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse> done) {
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance(),
           com.google.protobuf.RpcUtil.generalizeCallback(
             done,
-            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.class,
-            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance()));
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.class,
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance()));
       }
     }
 
@@ -1191,9 +1201,9 @@ public final class ColumnAggregationWithErrorsProtos {
     }
 
     public interface BlockingInterface {
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse sum(
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse sum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request)
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -1204,15 +1214,15 @@ public final class ColumnAggregationWithErrorsProtos {
 
       private final com.google.protobuf.BlockingRpcChannel channel;
 
-      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse sum(
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse sum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest request)
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest request)
           throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse) channel.callBlockingMethod(
+        return (org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse.getDefaultInstance());
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse.getDefaultInstance());
       }
 
     }
@@ -1221,15 +1231,15 @@ public final class ColumnAggregationWithErrorsProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SumRequest_descriptor;
+    internal_static_ColumnAggregationWithErrorsSumRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SumRequest_fieldAccessorTable;
+      internal_static_ColumnAggregationWithErrorsSumRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SumResponse_descriptor;
+    internal_static_ColumnAggregationWithErrorsSumResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SumResponse_fieldAccessorTable;
+      internal_static_ColumnAggregationWithErrorsSumResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1240,30 +1250,32 @@ public final class ColumnAggregationWithErrorsProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n)ColumnAggregationWithErrorsProtocol.pr" +
-      "oto\"/\n\nSumRequest\022\016\n\006family\030\001 \002(\014\022\021\n\tqua" +
-      "lifier\030\002 \001(\014\"\032\n\013SumResponse\022\013\n\003sum\030\001 \002(\003" +
-      "2F\n\"ColumnAggregationServiceWithErrors\022 " +
-      "\n\003sum\022\013.SumRequest\032\014.SumResponseBa\n6org." +
-      "apache.hadoop.hbase.coprocessor.protobuf" +
-      ".generatedB!ColumnAggregationWithErrorsP" +
-      "rotos\210\001\001\240\001\001"
+      "oto\"J\n%ColumnAggregationWithErrorsSumReq" +
+      "uest\022\016\n\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \001(\014\"" +
+      "5\n&ColumnAggregationWithErrorsSumRespons" +
+      "e\022\013\n\003sum\030\001 \002(\0032|\n\"ColumnAggregationServi" +
+      "ceWithErrors\022V\n\003sum\022&.ColumnAggregationW" +
+      "ithErrorsSumRequest\032\'.ColumnAggregationW" +
+      "ithErrorsSumResponseBa\n6org.apache.hadoo" +
+      "p.hbase.coprocessor.protobuf.generatedB!" +
+      "ColumnAggregationWithErrorsProtos\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_SumRequest_descriptor =
+          internal_static_ColumnAggregationWithErrorsSumRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_SumRequest_fieldAccessorTable = new
+          internal_static_ColumnAggregationWithErrorsSumRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SumRequest_descriptor,
+              internal_static_ColumnAggregationWithErrorsSumRequest_descriptor,
               new java.lang.String[] { "Family", "Qualifier", });
-          internal_static_SumResponse_descriptor =
+          internal_static_ColumnAggregationWithErrorsSumResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_SumResponse_fieldAccessorTable = new
+          internal_static_ColumnAggregationWithErrorsSumResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SumResponse_descriptor,
+              internal_static_ColumnAggregationWithErrorsSumResponse_descriptor,
               new java.lang.String[] { "Sum", });
           return null;
         }
