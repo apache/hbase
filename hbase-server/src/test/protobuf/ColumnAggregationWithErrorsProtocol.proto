@@ -21,15 +21,18 @@ option java_outer_classname = "ColumnAggregationWithErrorsProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
-message SumRequest {
+// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
+// protoc or hadoop's protoc compiler.
+message ColumnAggregationWithErrorsSumRequest {
   required bytes family = 1;
   optional bytes qualifier = 2;
 }
 
-message SumResponse {
+message ColumnAggregationWithErrorsSumResponse {
   required int64 sum = 1;
 }
 
 service ColumnAggregationServiceWithErrors {
-  rpc sum(SumRequest) returns(SumResponse);
+  rpc sum(ColumnAggregationWithErrorsSumRequest)
+    returns(ColumnAggregationWithErrorsSumResponse);
 }
