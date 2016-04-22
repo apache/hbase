@@ -98,7 +98,7 @@ public class TestHFileEncryption {
 
   private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderImpl hbr, int size)
       throws IOException {
-    HFileBlock b = hbr.readBlockData(pos, -1, -1, false);
+    HFileBlock b = hbr.readBlockData(pos, -1, false);
     assertEquals(0, HFile.getChecksumFailuresCount());
     b.sanityCheck();
     assertFalse(b.isUnpacked());

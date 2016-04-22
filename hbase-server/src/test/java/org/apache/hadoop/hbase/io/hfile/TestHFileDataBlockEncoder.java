@@ -90,8 +90,7 @@ public class TestHFileDataBlockEncoder {
 
     if (blockEncoder.getDataBlockEncoding() ==
         DataBlockEncoding.NONE) {
-      assertEquals(block.getBufferWithHeader(),
-          returnedBlock.getBufferWithHeader());
+      assertEquals(block.getBufferReadOnly(), returnedBlock.getBufferReadOnly());
     } else {
       if (BlockType.ENCODED_DATA != returnedBlock.getBlockType()) {
         System.out.println(blockEncoder);
@@ -125,7 +124,7 @@ public class TestHFileDataBlockEncoder {
                         .build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0,
-        0, hfileContext);
+        0, -1, hfileContext);
     HFileBlock cacheBlock = createBlockOnDisk(kvs, block, useTags);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
@@ -172,8 +171,8 @@ public class TestHFileDataBlockEncoder {
                         .withChecksumType(ChecksumType.NULL)
                         .build();
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0, 
-         0, meta);
+        HFileBlock.FILL_HEADER, 0,
+         0, -1, meta);
     return b;
   }
 
@@ -197,7 +196,8 @@ public class TestHFileDataBlockEncoder {
     byte[] encodedBytes = baos.toByteArray();
     size = encodedBytes.length - block.getDummyHeaderForVersion().length;
     return new HFileBlock(context.getBlockType(), size, size, -1, ByteBuffer.wrap(encodedBytes),
-        HFileBlock.FILL_HEADER, 0, block.getOnDiskDataSizeWithHeader(), block.getHFileContext());
+        HFileBlock.FILL_HEADER, 0, block.getOnDiskDataSizeWithHeader(), -1,
+        block.getHFileContext());
   }
 
   /**
@@ -210,7 +210,7 @@ public class TestHFileDataBlockEncoder {
 
     for (DataBlockEncoding diskAlgo : DataBlockEncoding.values()) {
       for (boolean includesMemstoreTS : new boolean[] { false, true }) {
-        HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE) ? 
+        HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE) ?
             NoOpDataBlockEncoder.INSTANCE : new HFileDataBlockEncoderImpl(diskAlgo);
         configurations.add(new Object[] { dbe, new Boolean(includesMemstoreTS) });
       }

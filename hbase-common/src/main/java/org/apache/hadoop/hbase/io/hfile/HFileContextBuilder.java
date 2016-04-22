@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
 /**
- * A builder that helps in building up the HFileContext 
+ * A builder that helps in building up the HFileContext
  */
 @InterfaceAudience.Private
 public class HFileContextBuilder {
@@ -52,6 +52,28 @@ public class HFileContextBuilder {
   /** Crypto context */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
   private long fileCreateTime = 0;
+
+  private String hfileName = null;
+
+  public HFileContextBuilder() {}
+
+  /**
+   * Use this constructor if you want to change a few settings only in another context.
+   */
+  public HFileContextBuilder(final HFileContext hfc) {
+    this.usesHBaseChecksum = hfc.isUseHBaseChecksum();
+    this.includesMvcc = hfc.isIncludesMvcc();
+    this.includesTags = hfc.isIncludesTags();
+    this.compression = hfc.getCompression();
+    this.compressTags = hfc.isCompressTags();
+    this.checksumType = hfc.getChecksumType();
+    this.bytesPerChecksum = hfc.getBytesPerChecksum();
+    this.blocksize = hfc.getBlocksize();
+    this.encoding = hfc.getDataBlockEncoding();
+    this.cryptoContext = hfc.getEncryptionContext();
+    this.fileCreateTime = hfc.getFileCreateTime();
+    this.hfileName = hfc.getHFileName();
+  }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
     this.usesHBaseChecksum = useHBaseCheckSum;
@@ -108,9 +130,14 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withHFileName(String name) {
+    this.hfileName = name;
+    return this;
+  }
+
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
         compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
-        fileCreateTime);
+        fileCreateTime, hfileName);
   }
 }
