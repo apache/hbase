@@ -429,6 +429,7 @@ After loading df DataFrame, users can query data.
     df.registerTempTable("table")
     sqlContext.sql("select count(col1) from table").show
 ----
+====
 
 === Predicate Push Down
 
