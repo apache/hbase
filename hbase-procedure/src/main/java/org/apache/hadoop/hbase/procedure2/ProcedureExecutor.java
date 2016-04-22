@@ -635,34 +635,23 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(!proc.hasParent());
 
-    Long currentProcId;
+    // Initialize the Procedure ID
+    long currentProcId = nextProcId();
+    proc.setProcId(currentProcId);
 
-    // The following part of the code has to be synchronized to prevent multiple request
-    // with the same nonce to execute at the same time.
-    synchronized (this) {
-      // Check whether the proc exists.  If exist, just return the proc id.
-      // This is to prevent the same proc to submit multiple times (it could happen
-      // when client could not talk to server and resubmit the same request).
-      NonceKey noncekey = null;
-      if (nonce != HConstants.NO_NONCE) {
-        noncekey = new NonceKey(nonceGroup, nonce);
-        currentProcId = nonceKeysToProcIdsMap.get(noncekey);
-        if (currentProcId != null) {
-          // Found the proc
-          return currentProcId;
-        }
+    // Check whether the proc exists.  If exist, just return the proc id.
+    // This is to prevent the same proc to submit multiple times (it could happen
+    // when client could not talk to server and resubmit the same request).
+    if (nonce != HConstants.NO_NONCE) {
+      NonceKey noncekey = new NonceKey(nonceGroup, nonce);
+      proc.setNonceKey(noncekey);
+
+      Long oldProcId = nonceKeysToProcIdsMap.putIfAbsent(noncekey, currentProcId);
+      if (oldProcId != null) {
+        // Found the proc
+        return oldProcId.longValue();
       }
-
-      // Initialize the Procedure ID
-      currentProcId = nextProcId();
-      proc.setProcId(currentProcId);
-
-      // This is new procedure. Set the noncekey and insert into the map.
-      if (noncekey != null) {
-        proc.setNonceKey(noncekey);
-        nonceKeysToProcIdsMap.put(noncekey, currentProcId);
-      }
-    } // end of synchronized (this)
+    }
 
     // Commit the transaction
     store.insert(proc, null);

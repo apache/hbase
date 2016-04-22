@@ -208,6 +208,32 @@ public class TestWALProcedureStore {
   }
 
   @Test
+  public void testProcIdHoles() throws Exception {
+    // Insert
+    for (int i = 0; i < 100; i += 2) {
+      procStore.insert(new TestProcedure(i), null);
+      if (i > 0 && (i % 10) == 0) {
+        LoadCounter loader = new LoadCounter();
+        storeRestart(loader);
+        assertEquals(0, loader.getCorruptedCount());
+        assertEquals((i / 2) + 1, loader.getLoadedCount());
+      }
+    }
+    assertEquals(10, procStore.getActiveLogs().size());
+
+    // Delete
+    for (int i = 0; i < 100; i += 2) {
+      procStore.delete(i);
+    }
+    assertEquals(1, procStore.getActiveLogs().size());
+
+    LoadCounter loader = new LoadCounter();
+    storeRestart(loader);
+    assertEquals(0, loader.getLoadedCount());
+    assertEquals(0, loader.getCorruptedCount());
+  }
+
+  @Test
   public void testCorruptedTrailer() throws Exception {
     // Insert something
     for (int i = 0; i < 100; ++i) {
