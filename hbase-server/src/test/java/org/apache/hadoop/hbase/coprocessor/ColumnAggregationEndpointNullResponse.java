@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationServiceNullResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationNullResponseSumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.ColumnAggregationNullResponseSumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -72,7 +72,8 @@ implements Coprocessor, CoprocessorService  {
   }
 
   @Override
-  public void sum(RpcController controller, SumRequest request, RpcCallback<SumResponse> done) {
+  public void sum(RpcController controller, ColumnAggregationNullResponseSumRequest request,
+       RpcCallback<ColumnAggregationNullResponseSumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
@@ -120,7 +121,8 @@ implements Coprocessor, CoprocessorService  {
         }
       }
     }
-    done.run(SumResponse.newBuilder().setSum(sumResult).build());
+    done.run(ColumnAggregationNullResponseSumResponse.newBuilder().setSum(sumResult)
+      .build());
     LOG.info("Returning sum " + sumResult + " for region " +
         Bytes.toStringBinary(env.getRegion().getRegionName()));
   }
