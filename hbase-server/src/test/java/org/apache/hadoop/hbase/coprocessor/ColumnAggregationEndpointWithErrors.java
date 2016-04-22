@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.ColumnAggregationWithErrorsSumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -73,7 +73,8 @@ implements Coprocessor, CoprocessorService  {
   }
 
   @Override
-  public void sum(RpcController controller, SumRequest request, RpcCallback<SumResponse> done) {
+  public void sum(RpcController controller, ColumnAggregationWithErrorsSumRequest request, 
+      RpcCallback<ColumnAggregationWithErrorsSumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
@@ -120,6 +121,6 @@ implements Coprocessor, CoprocessorService  {
         }
       }
     }
-    done.run(SumResponse.newBuilder().setSum(sumResult).build());
+    done.run(ColumnAggregationWithErrorsSumResponse.newBuilder().setSum(sumResult).build());
   }
 }
