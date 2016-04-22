@@ -101,7 +101,7 @@ public interface MasterServices extends Server {
    * @return Master's instance of {@link MasterQuotaManager}
    */
   MasterQuotaManager getMasterQuotaManager();
-  
+
   /**
    * @return Master's instance of {@link RegionNormalizer}
    */
@@ -288,6 +288,11 @@ public interface MasterServices extends Server {
   ) throws IOException;
 
   /**
+   * @return true if master is the active one
+   */
+  boolean isActiveMaster();
+
+  /**
    * @return true if master is initialized
    */
   boolean isInitialized();
@@ -297,7 +302,7 @@ public interface MasterServices extends Server {
    * @param procId ID of the procedure
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
       throws IOException;

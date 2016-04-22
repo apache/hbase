@@ -47,9 +47,9 @@ public class MasterProcedureEnv {
 
   @InterfaceAudience.Private
   public static class WALStoreLeaseRecovery implements WALProcedureStore.LeaseRecovery {
-    private final HMaster master;
+    private final MasterServices master;
 
-    public WALStoreLeaseRecovery(final HMaster master) {
+    public WALStoreLeaseRecovery(final MasterServices master) {
       this.master = master;
     }
 
@@ -70,9 +70,9 @@ public class MasterProcedureEnv {
   @InterfaceAudience.Private
   public static class MasterProcedureStoreListener
       implements ProcedureStore.ProcedureStoreListener {
-    private final HMaster master;
+    private final MasterServices master;
 
-    public MasterProcedureStoreListener(final HMaster master) {
+    public MasterProcedureStoreListener(final MasterServices master) {
       this.master = master;
     }
 
@@ -83,7 +83,7 @@ public class MasterProcedureEnv {
 
     @Override
     public void abortProcess() {
-      master.abort("The Procedure Store lost the lease");
+      master.abort("The Procedure Store lost the lease", null);
     }
   }
 

@@ -430,7 +430,7 @@ public class ServerManager {
     }
     // remove dead server with same hostname and port of newly checking in rs after master
     // initialization.See HBASE-5916 for more information.
-    if ((this.services == null || ((HMaster) this.services).isInitialized())
+    if ((this.services == null || this.services.isInitialized())
         && this.deadservers.cleanPreviousInstance(serverName)) {
       // This server has now become alive after we marked it as dead.
       // We removed it's previous entry from the dead list to reflect it.

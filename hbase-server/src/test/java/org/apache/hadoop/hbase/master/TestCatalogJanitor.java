@@ -64,8 +64,6 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -220,7 +218,7 @@ public class TestCatalogJanitor {
   /**
    * Mock MasterServices for tests below.
    */
-  class MockMasterServices implements MasterServices {
+  class MockMasterServices extends MockNoopMasterServices {
     private final MasterFileSystem mfs;
     private final AssignmentManager asm;
 
@@ -230,48 +228,8 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void checkTableModifiable(TableName tableName) throws IOException {
-      //no-op
-    }
-
-    @Override
-    public long createTable(
-        final HTableDescriptor desc,
-        final byte[][] splitKeys,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      // no-op
-      return -1;
-    }
-
-    @Override
-    public SnapshotManager getSnapshotManager() {
-      return null;
-    }
-
-    @Override
-    public MasterProcedureManagerHost getMasterProcedureManagerHost() {
-      return null;
-    }
-
-    @Override
     public AssignmentManager getAssignmentManager() {
       return this.asm;
-    }
-
-    @Override
-    public ExecutorService getExecutorService() {
-      return null;
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public RegionNormalizer getRegionNormalizer() {
-      return null;
     }
 
     @Override
@@ -280,75 +238,8 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public MasterCoprocessorHost getMasterCoprocessorHost() {
-      return null;
-    }
-
-    @Override
-    public MasterQuotaManager getMasterQuotaManager() {
-      return null;
-    }
-
-    @Override
-    public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
-      return null;
-    }
-
-    @Override
-    public ServerManager getServerManager() {
-      return null;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return null;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
     public Configuration getConfiguration() {
       return mfs.conf;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return null;
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      //no-op
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    private boolean stopped = false;
-
-    @Override
-    public void stop(String why) {
-      stopped = true;
-    }
-
-    @Override
-    public boolean isStopped() {
-      return stopped;
     }
 
     @Override
@@ -406,142 +297,6 @@ public class TestCatalogJanitor {
         public void setCacheOff() throws IOException {
         }
       };
-    }
-
-    @Override
-    public boolean isServerCrashProcessingEnabled() {
-      return true;
-    }
-
-    @Override
-    public boolean registerService(Service instance) {
-      return false;
-    }
-
-    @Override
-    public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
-        throws IOException {
-      return false;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public List<ProcedureInfo> listProcedures() throws IOException {
-      return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-      return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-      return null;
-    }
-
-    @Override
-    public long deleteTable(
-        final TableName tableName,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      return -1;
-    }
-    public LoadBalancer getLoadBalancer() {
-      return null;
-    }
-
-    @Override
-    public long truncateTable(
-        final TableName tableName,
-        final boolean preserveSplits,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      return -1;
-    }
-
-
-    @Override
-    public long modifyTable(
-        final TableName tableName,
-        final HTableDescriptor descriptor,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public long enableTable(
-        final TableName tableName,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public long disableTable(
-        TableName tableName,
-        final long nonceGroup,
-        final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public long addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor,
-        final long nonceGroup, final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public long modifyColumn(final TableName tableName, final HColumnDescriptor descriptor,
-        final long nonceGroup, final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public long deleteColumn(final TableName tableName, final byte[] columnName,
-        final long nonceGroup, final long nonce) throws IOException {
-      return -1;
-    }
-
-    @Override
-    public TableLockManager getTableLockManager() {
-      return null;
-    }
-
-    @Override
-    public TableStateManager getTableStateManager() {
-      return null;
-    }
-
-    @Override
-    public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
-        boolean forcible, User user) throws IOException {
-    }
-
-    @Override
-    public boolean isInitialized() {
-      return false;
-    }
-
-    @Override
-    public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
-      return 0;
-    }
-
-    @Override
-    public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
-      return 0;
-    }
-
-    @Override
-    public ClusterSchema getClusterSchema() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
-      return null;
     }
   }
 
