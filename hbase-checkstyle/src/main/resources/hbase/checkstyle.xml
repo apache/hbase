@@ -67,6 +67,7 @@
     http://checkstyle.sourceforge.net/config_imports.html -->
     <module name="AvoidStarImport"/>
     <module name="ImportOrder">
+      <property name="option" value="top" />
       <property name="ordered" value="true"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
