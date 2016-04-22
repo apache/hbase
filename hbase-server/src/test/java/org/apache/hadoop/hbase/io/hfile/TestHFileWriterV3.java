@@ -159,7 +159,7 @@ public class TestHFileWriterV3 {
     writer.appendMetaBlock("CAPITAL_OF_FRANCE", new Text("Paris"));
 
     writer.close();
-    
+
 
     FSDataInputStream fsdis = fs.open(hfilePath);
 
@@ -192,12 +192,12 @@ public class TestHFileWriterV3 {
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
-    
+
     if (findMidKey) {
       byte[] midkey = dataBlockIndexReader.midkey();
       assertNotNull("Midkey should not be null", midkey);
     }
-    
+
     // Meta index.
     metaBlockIndexReader.readRootIndex(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
@@ -219,7 +219,7 @@ public class TestHFileWriterV3 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false)
         .unpack(context, blockReader);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuffer buf = block.getBufferWithoutHeader();
@@ -241,7 +241,7 @@ public class TestHFileWriterV3 {
           tagValue = new byte[tagLen];
           buf.get(tagValue);
         }
-      
+
         if (includeMemstoreTS) {
           ByteArrayInputStream byte_input = new ByteArrayInputStream(buf.array(), buf.arrayOffset()
               + buf.position(), buf.remaining());
@@ -278,13 +278,14 @@ public class TestHFileWriterV3 {
     while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false)
         .unpack(context, blockReader);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuffer buf = block.getBufferWithoutHeader();
       if (Writables.getWritable(buf.array(), buf.arrayOffset(), buf.limit(), t) == null) {
-        throw new IOException("Failed to deserialize block " + this + " into a " + t.getClass().getSimpleName());
+        throw new IOException("Failed to deserialize block " + this +
+            " into a " + t.getClass().getSimpleName());
       }
       Text expectedText =
           (metaCounter == 0 ? new Text("Paris") : metaCounter == 1 ? new Text(

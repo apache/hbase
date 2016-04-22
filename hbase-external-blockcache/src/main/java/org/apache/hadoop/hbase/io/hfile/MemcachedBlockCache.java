@@ -255,7 +255,7 @@ public class MemcachedBlockCache implements BlockCache {
     public HFileBlock decode(CachedData d) {
       try {
         ByteBuffer buf = ByteBuffer.wrap(d.getData());
-        return (HFileBlock) HFileBlock.blockDeserializer.deserialize(buf, true);
+        return (HFileBlock) HFileBlock.BLOCK_DESERIALIZER.deserialize(buf, true);
       } catch (IOException e) {
         LOG.warn("Error deserializing data from memcached",e);
       }

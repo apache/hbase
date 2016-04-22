@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.security.Key;
 import java.security.KeyException;
 
@@ -277,11 +278,15 @@ public class HFileReaderV3 extends HFileReaderV2 {
       int lastKeyValueSize = -1;
       KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
       do {
-        blockBuffer.mark();
-        klen = blockBuffer.getInt();
-        vlen = blockBuffer.getInt();
-        if (klen < 0 || vlen < 0 || klen > blockBuffer.limit()
-            || vlen > blockBuffer.limit()) {
+        try {
+          blockBuffer.mark();
+          klen = blockBuffer.getInt();
+          vlen = blockBuffer.getInt();
+        } catch (BufferUnderflowException bufe) {
+          LOG.error("this.blockBuffer=" + this.blockBuffer, bufe);
+          throw bufe;
+        }
+        if (klen < 0 || vlen < 0 || klen > blockBuffer.limit() || vlen > blockBuffer.limit()) {
           throw new IllegalStateException("Invalid klen " + klen + " or vlen "
               + vlen + ". Block offset: "
               + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "

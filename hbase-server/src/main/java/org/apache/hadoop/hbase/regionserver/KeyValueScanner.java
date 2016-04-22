@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -74,6 +75,7 @@ public interface KeyValueScanner {
    * The default implementation for this would be to return 0. A file having
    * lower sequence id will be considered to be the older one.
    */
+  // TODO: Implement SequenceId Interface instead.
   long getSequenceID();
 
   /**

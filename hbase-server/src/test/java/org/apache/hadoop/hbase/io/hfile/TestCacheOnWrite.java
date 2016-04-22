@@ -259,20 +259,15 @@ public class TestCacheOnWrite {
     assertTrue(testDescription, scanner.seekTo());
 
     long offset = 0;
-    HFileBlock prevBlock = null;
     EnumMap<BlockType, Integer> blockCountByType =
         new EnumMap<BlockType, Integer>(BlockType.class);
 
     DataBlockEncoding encodingInCache = NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      long onDiskSize = -1;
-      if (prevBlock != null) {
-         onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
-      }
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
-      HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
-        false, true, null, encodingInCache);
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null,
+          encodingInCache);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset);
       HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
@@ -303,7 +298,6 @@ public class TestCacheOnWrite {
         assertEquals(
           block.getUncompressedSizeWithoutHeader(), fromCache.getUncompressedSizeWithoutHeader());
       }
-      prevBlock = block;
       offset += block.getOnDiskSizeWithHeader();
       BlockType bt = block.getBlockType();
       Integer count = blockCountByType.get(bt);
@@ -399,7 +393,7 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    Region region = TEST_UTIL.createTestRegion(table, 
+    Region region = TEST_UTIL.createTestRegion(table,
         new HColumnDescriptor(cf)
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
@@ -410,7 +404,7 @@ public class TestCacheOnWrite {
     long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {
       for (int iRow = 0; iRow < 500; ++iRow) {
-        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 
+        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" +
             iRow;
         Put p = new Put(Bytes.toBytes(rowStr));
         ++rowIdx;

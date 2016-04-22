@@ -18,12 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
-
 import java.io.DataInput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -65,8 +59,13 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -1212,7 +1211,7 @@ public class StoreFile {
     }
 
     /**
-     * Warning: Do not write further code which depends on this call. Instead
+     * @deprecated Do not write further code which depends on this call. Instead
      * use getStoreFileScanner() which uses the StoreFileScanner class/interface
      * which is the preferred way to scan a store with higher level concepts.
      *
@@ -1226,7 +1225,7 @@ public class StoreFile {
     }
 
     /**
-     * Warning: Do not write further code which depends on this call. Instead
+     * @deprecated Do not write further code which depends on this call. Instead
      * use getStoreFileScanner() which uses the StoreFileScanner class/interface
      * which is the preferred way to scan a store with higher level concepts.
      *

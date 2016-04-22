@@ -201,10 +201,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
               if (Thread.interrupted()) {
                 break;
               }
-              long onDiskSize = -1;
-              if (prevBlock != null) {
-                onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
-              }
+              // Perhaps we got our block from cache? Unlikely as this may be, if it happens, then
+              // the internal-to-hfileblock thread local which holds the overread that gets the
+              // next header, will not have happened...so, pass in the onDiskSize gotten from the
+              // cached block. This 'optimization' triggers extremely rarely I'd say.
+              long onDiskSize = prevBlock != null? prevBlock.getNextBlockOnDiskSize(): -1;
               HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false,
                 null, null);
               prevBlock = block;
@@ -370,7 +371,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
-          blockSize, -1, true).unpack(hfileContext, fsBlockReader);
+          blockSize, true).unpack(hfileContext, fsBlockReader);
 
       // Cache the block
       if (cacheBlock) {
@@ -450,7 +451,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
         }
         // Load block from filesystem.
-        HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, -1,
+        HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize,
             pread);
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
@@ -729,7 +730,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // it might turn out to be a non-data block.
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
-            curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
+            curBlock.getNextBlockOnDiskSize(), cacheBlocks, pread,
             isCompaction, true, null, getEffectiveDataBlockEncoding());
       } while (!curBlock.getBlockType().isData());
 

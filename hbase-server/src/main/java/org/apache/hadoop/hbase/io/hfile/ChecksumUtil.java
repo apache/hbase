@@ -91,7 +91,7 @@ public class ChecksumUtil {
 
     // If this is an older version of the block that does not have
     // checksums, then return false indicating that checksum verification
-    // did not succeed. Actually, this methiod should never be called
+    // did not succeed. Actually, this method should never be called
     // when the minorVersion is 0, thus this is a defensive check for a
     // cannot-happen case. Since this is a cannot-happen case, it is
     // better to return false to indicate a checksum validation failure.
@@ -141,8 +141,7 @@ public class ChecksumUtil {
    * @return The number of bytes needed to store the checksum values
    */
   static long numBytes(long datasize, int bytesPerChecksum) {
-    return numChunks(datasize, bytesPerChecksum) *
-                     HFileBlock.CHECKSUM_SIZE;
+    return numChunks(datasize, bytesPerChecksum) * HFileBlock.CHECKSUM_SIZE;
   }
 
   /**
