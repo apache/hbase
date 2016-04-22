@@ -166,6 +166,8 @@
                       </imports>
                       <source>
                         <directory>${basedir}/src/main/protobuf</directory>
+                        <!-- Unfortunately, Hadoop plugin does not support *.proto.
+                             We have to individually list every proto file here -->
                         <includes>
                           <include>AccessControl.proto</include>
                           <include>Admin.proto</include>
@@ -178,8 +180,8 @@
                           <include>Comparator.proto</include>
                           <include>Encryption.proto</include>
                           <include>ErrorHandling.proto</include>
-                          <include>Filter.proto</include>
                           <include>FS.proto</include>
+                          <include>Filter.proto</include>
                           <include>HBase.proto</include>
                           <include>HFile.proto</include>
                           <include>LoadBalancer.proto</include>
@@ -189,11 +191,12 @@
                           <include>MultiRowMutation.proto</include>
                           <include>Procedure.proto</include>
                           <include>Quota.proto</include>
+                          <include>RPC.proto</include>
                           <include>RegionNormalizer.proto</include>
                           <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>
-                          <include>RPC.proto</include>
                           <include>SecureBulkLoad.proto</include>
+                          <include>Snapshot.proto</include>
                           <include>Tracing.proto</include>
                           <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>
