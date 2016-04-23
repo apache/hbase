@@ -16,20 +16,20 @@
  * limitations under the License.
  *
  */
+#pragma once
 
-#include <gtest/gtest.h>
-#include <string>
-#include <folly/Logging.h>
-
-#include "utils/user-util.h"
-
-using namespace std;
-using namespace hbase;
-
-TEST(TestUserUtil, TestGetSomething) {
-  UserUtil u_util;
-  string name = u_util.user_name();
-
-  // TODO shell out to whoami to check this.
-  ASSERT_GT(name.length(), 0);
+namespace google {
+namespace protobuf {
+class Message;
 }
+}
+namespace folly {
+class IOBuf;
+}
+
+namespace hbase {
+class ZkDeserializer {
+public:
+  bool parse(folly::IOBuf *buf, google::protobuf::Message *out);
+};
+} // namespace hbase

@@ -18,8 +18,8 @@
  */
 #pragma once
 
-#include <wangle/service/Service.h>
 #include <folly/io/IOBufQueue.h>
+#include <wangle/service/Service.h>
 
 #include "connection/request.h"
 #include "connection/response.h"

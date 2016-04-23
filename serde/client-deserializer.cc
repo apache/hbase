@@ -19,10 +19,10 @@
 
 #include "serde/client-deserializer.h"
 
-#include <google/protobuf/message.h>
+#include <folly/Logging.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
-#include <folly/Logging.h>
+#include <google/protobuf/message.h>
 
 using namespace hbase;
 

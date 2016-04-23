@@ -21,8 +21,8 @@
 
 #include <folly/Logging.h>
 #include <folly/Random.h>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 
 #include <string>
@@ -36,5 +36,5 @@ using namespace hbase::pb;
 namespace hbase {
 
 Client::Client(string quorum_spec)
-    : location_cache(quorum_spec, wangle::getCPUExecutor()) {}
+    : location_cache_(quorum_spec, wangle::getCPUExecutor()) {}
 }

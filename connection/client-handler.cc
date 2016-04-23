@@ -19,15 +19,15 @@
 
 #include "connection/client-handler.h"
 
-#include <glog/logging.h>
 #include <folly/Likely.h>
+#include <glog/logging.h>
 
 #include <string>
 
 #include "connection/request.h"
 #include "connection/response.h"
-#include "if/RPC.pb.h"
 #include "if/Client.pb.h"
+#include "if/RPC.pb.h"
 
 using namespace hbase;
 using namespace folly;
@@ -60,6 +60,9 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   }
 }
 
+
+// TODO(eclark): Figure out how to handle the
+// network errors that are going to come.
 Future<Unit> ClientHandler::write(Context *ctx, Request r) {
   // Keep track of if we have sent the header.
   if (UNLIKELY(need_send_header_)) {
