@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  */
-#include <gtest/gtest.h>
 #include <folly/Memory.h>
+#include <gtest/gtest.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 
 #include "location-cache.h"

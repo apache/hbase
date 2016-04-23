@@ -22,9 +22,9 @@
 
 #include <string>
 
-#include "serde/client-serializer.h"
 #include "if/HBase.pb.h"
 #include "if/RPC.pb.h"
+#include "serde/client-serializer.h"
 
 using namespace hbase;
 using namespace hbase::pb;

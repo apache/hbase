@@ -17,12 +17,12 @@
  *
  */
 
-#include <gtest/gtest.h>
 #include <folly/io/IOBuf.h>
+#include <gtest/gtest.h>
 
+#include "if/Client.pb.h"
 #include "serde/client-deserializer.h"
 #include "serde/client-serializer.h"
-#include "if/Client.pb.h"
 
 using namespace hbase;
 using folly::IOBuf;

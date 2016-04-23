@@ -22,8 +22,8 @@
 
 #include <string>
 
-#include "serde/client-serializer.h"
 #include "serde/client-deserializer.h"
+#include "serde/client-serializer.h"
 
 // Forward decs.
 namespace hbase {

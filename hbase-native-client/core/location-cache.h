@@ -18,10 +18,10 @@
  */
 #pragma once
 
-#include <zookeeper/zookeeper.h>
+#include <folly/Executor.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
-#include <folly/Executor.h>
+#include <zookeeper/zookeeper.h>
 
 #include <memory>
 #include <mutex>

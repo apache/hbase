@@ -18,9 +18,9 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <folly/io/IOBuf.h>
 #include <string>
-#include <cstdint>
 
 // Forward
 namespace google {

@@ -19,12 +19,11 @@ FROM pjameson/buck-folly-watchman
 
 ARG CC=/usr/bin/gcc-5
 ARG CXX=/usr/bin/g++-5
-ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
-ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O3 -pthread"
+ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
+ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
 
-RUN apt-get install -y clang-format-3.7 vim maven inetutils-ping python-pip && \
+RUN apt-get install -y vim maven inetutils-ping python-pip && \
       pip install yapf && \
-      ln -sf /usr/bin/clang-format-3.7 /usr/bin/clang-format && \
       apt-get -qq clean && \
       apt-get -y -qq autoremove && \
       rm -rf /var/lib/{apt,dpkg,cache,log}/ && \

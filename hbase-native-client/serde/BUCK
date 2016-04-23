@@ -19,10 +19,12 @@ cxx_library(name="serde",
             exported_headers=[
                 "client-serializer.h",
                 "client-deserializer.h",
+                "zk-deserializer.h",
             ],
             srcs=[
                 "client-serializer.cc",
                 "client-deserializer.cc",
+                "zk-deserializer.cc",
             ],
             deps=[
                 "//if:if",
@@ -47,6 +49,14 @@ cxx_test(name="client-serializer-test",
 cxx_test(name="client-deserializer-test",
          srcs=[
              "client-deserializer-test.cc",
+         ],
+         deps=[
+             ":serde",
+             "//if:if",
+         ], )
+cxx_test(name="zk-deserializer-test",
+         srcs=[
+             "zk-deserializer-test.cc",
          ],
          deps=[
              ":serde",

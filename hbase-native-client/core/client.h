@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <folly/io/IOBuf.h>
 #include <folly/futures/Future.h>
+#include <folly/io/IOBuf.h>
 
 #include <string>
 
@@ -36,7 +36,7 @@ public:
   folly::Future<GetResult> get(const GetRequest &get_request);
 
 private:
-  LocationCache location_cache;
+  LocationCache location_cache_;
 };
 
 } // namespace hbase

@@ -37,6 +37,14 @@ public:
 
 private:
   std::unordered_map<uint32_t, folly::Promise<Response>> requests_;
+  // Start at some number way above what could
+  // be there for un-initialized call id counters.
+  //
+  // This makes it easier to make sure that the're are
+  // no access to un-initialized variables.
+  //
+  // uint32_t has a max of 4Billion so 10 more or less is
+  // not a big deal.
   uint32_t current_call_id_ = 10;
 };
 } // namespace hbase

@@ -16,11 +16,13 @@
  * limitations under the License.
  *
  */
-#include "location-cache.h"
+#include "core/location-cache.h"
 
 #include <folly/Logging.h>
+#include <folly/io/IOBuf.h>
 
 #include "if/ZooKeeper.pb.h"
+#include "serde/zk-deserializer.h"
 
 using namespace std;
 using namespace folly;
@@ -28,7 +30,7 @@ using namespace hbase::pb;
 using namespace hbase;
 
 // TODO(eclark): make this configurable on client creation
-static const char META_LOCATION[] = "/hbase/meta-region-server";
+static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
 
 LocationCache::LocationCache(string quorum_spec,
                              shared_ptr<folly::Executor> executor)
@@ -66,45 +68,25 @@ void LocationCache::RefreshMetaLocation() {
 }
 
 ServerName LocationCache::ReadMetaLocation() {
-  char contents[4096];
+  auto buf = IOBuf::create(4096);
+  ZkDeserializer derser;
+
   // This needs to be int rather than size_t as that's what ZK expects.
-  int len = sizeof(contents);
+  int len = buf->capacity();
   // TODO(elliott): handle disconnects/reconntion as needed.
-  int zk_result = zoo_get(this->zk_, META_LOCATION, 0, contents, &len, nullptr);
+  int zk_result =
+      zoo_get(this->zk_, META_ZNODE_NAME, 0,
+              reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
+  LOG(ERROR) << "len = " << len;
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
     throw runtime_error("Error getting meta location");
   }
-  // There should be a magic number for recoverable zk
-  if (static_cast<uint8_t>(contents[0]) != 255) {
-    LOG(ERROR) << "Magic number not in ZK znode data expected 255 got ="
-               << unsigned(static_cast<uint8_t>(contents[0]));
-    throw runtime_error("Magic number not in znode data");
-  }
-  // pos will keep track of skipped bytes.
-  int pos = 1;
-  // How long is the id?
-  int id_len = 0;
-  for (int i = 0; i < 4; ++i) {
-    id_len = id_len << 8;
-    id_len = id_len | static_cast<uint8_t>(contents[pos]);
-    ++pos;
-  }
-  // Skip the id
-  pos += id_len;
-  // Then all protobuf's for HBase are prefixed with a magic string.
-  // PBUF, so we skip that.
-  // TODO(eclark): check to make sure that the magic string is correct
-  // though I am not sure that will get us much.
-  pos += 4;
+  buf->append(len);
 
   MetaRegionServer mrs;
-  // Try to decode the protobuf.
-  // If there's an error bail out.
-  if (mrs.ParseFromArray(contents + pos, len - pos) == false) {
-    LOG(ERROR) << "Error parsing Protobuf Message";
-    throw runtime_error("Error parsing protobuf");
+  if (derser.parse(buf.get(), &mrs) == false) {
+    LOG(ERROR) << "Unable to decode";
   }
-
   return mrs.server();
 }
