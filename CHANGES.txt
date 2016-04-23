@@ -1,5 +1,61 @@
 HBase Change Log
 
+Release 0.98.19 - 4/29/2016
+
+** Sub-task
+    * [HBASE-12148] - Remove TimeRangeTracker as point of contention when many threads writing a Store
+    * [HBASE-12511] - namespace permissions - add support from table creation privilege in a namespace 'C'
+    * [HBASE-15368] - Add pluggable window support
+    * [HBASE-15386] - PREFETCH_BLOCKS_ON_OPEN in HColumnDescriptor is ignored
+    * [HBASE-15389] - Write out multiple files when compaction
+    * [HBASE-15400] - Use DateTieredCompactor for Date Tiered Compaction
+    * [HBASE-15412] - Add average region size metric
+    * [HBASE-15460] - Fix infer issues in hbase-common
+    * [HBASE-15479] - No more garbage or beware of autoboxing
+    * [HBASE-15527] - Refactor Compactor related classes
+    * [HBASE-15640] - L1 cache doesn't give fair warning that it is showing partial stats only when it hits limit
+    * [HBASE-15661] - Hook up JvmPauseMonitor metrics in Master
+    * [HBASE-15662] - Hook up JvmPauseMonitor to REST server
+    * [HBASE-15663] - Hook up JvmPauseMonitor to ThriftServer
+    * [HBASE-15665] - Support using different StoreFileComparators for different CompactionPolicies
+
+** Bug
+    * [HBASE-11830] - TestReplicationThrottler.testThrottling failed on virtual boxes
+    * [HBASE-12663] - unify getTableDescriptors() and listTableDescriptorsByNamespace()
+    * [HBASE-12674] - Add permission check to getNamespaceDescriptor()
+    * [HBASE-13700] - Allow Thrift2 HSHA server to have configurable threads
+    * [HBASE-14809] - Grant / revoke Namespace admin permission to group 
+    * [HBASE-15234] - ReplicationLogCleaner can abort due to transient ZK issues
+    * [HBASE-15405] - Synchronize final results logging single thread in PE, fix wrong defaults in help message
+    * [HBASE-15548] - SyncTable: sourceHashDir is supposed to be optional but won't work without 
+    * [HBASE-15582] - SnapshotManifestV1 too verbose when there are no regions
+    * [HBASE-15587] - FSTableDescriptors.getDescriptor() logs stack trace erronously
+    * [HBASE-15621] - Suppress Hbase SnapshotHFile cleaner error  messages when a snaphot is going on
+    * [HBASE-15622] - Superusers does not consider the keytab credentials
+    * [HBASE-15627] -  Miss space and closing quote in AccessController#checkSystemOrSuperUser
+    * [HBASE-15637] - TSHA Thrift-2 server should allow limiting call queue size
+    * [HBASE-15650] - Remove TimeRangeTracker as point of contention when many threads reading a StoreFile
+    * [HBASE-15664] - Use Long.MAX_VALUE instead of HConstants.FOREVER in CompactionPolicy
+    * [HBASE-15672] - hadoop.hbase.security.visibility.TestVisibilityLabelsWithDeletes fails
+    * [HBASE-15673] - [PE tool] Fix latency metrics for multiGet
+
+** Improvement
+    * [HBASE-14983] - Create metrics for per block type hit/miss ratios
+    * [HBASE-15191] - CopyTable and VerifyReplication - Option to specify batch size, versions
+    * [HBASE-15212] - RRCServer should enforce max request size 
+    * [HBASE-15475] - Allow TimestampsFilter to provide a seek hint
+    * [HBASE-15569] - Make Bytes.toStringBinary faster
+    * [HBASE-15614] - Report metrics from JvmPauseMonitor
+    * [HBASE-15647] - Backport HBASE-15507 to 0.98
+
+** Task
+    * [HBASE-14870] - Backport namespace permissions to 98 branch
+    * [HBASE-15629] - Backport HBASE-14703 to 0.98+
+
+** Test
+    * [HBASE-15679] - Assertion on wrong variable in TestReplicationThrottler#testThrottling
+
+
 Release 0.98.18 - 3/25/2016
 
 ** Sub-task
