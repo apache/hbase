@@ -32,29 +32,79 @@
 <module name="Checker">
   <module name="FileTabCharacter"/>
   <module name="TreeWalker">
-    <module name="AvoidStarImport"/>
-    <module name="RedundantImport"/>
-    <module name="UnusedImports"/>
-    <module name="LineLength">
-      <property name="max" value="100"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-    </module>
-    <module name="MethodLength"/>
-    <module name="MethodParamPad"/>
-    <module name="ParenPad"/>
-    <module name="EmptyStatement"/>
+
+    <!-- Annotations Checks
+    http://checkstyle.sourceforge.net/config_annotation.html -->
+    <module name="MissingDeprecated"/>
+
+    <!-- Block Checks
+    http://checkstyle.sourceforge.net/config_blocks.html -->
     <module name="EmptyBlock"/>
+    <module name="LeftCurly"/>
+    <module name="NeedBraces"/>
+
+    <!-- Class Design Checks
+    http://checkstyle.sourceforge.net/config_design.html -->
+    <module name="FinalClass"/>
+    <module name="HideUtilityClassConstructor"/>
+    <module name="InterfaceIsType"/>
+    <module name="VisibilityModifier">
+      <property name="packageAllowed" value="true"/>
+      <property name="protectedAllowed" value="true"/>
+    </module>
+
+    <!-- Coding Checks
+    http://checkstyle.sourceforge.net/config_coding.html -->
+    <module name="ArrayTypeStyle"/>
+    <module name="EmptyStatement"/>
     <module name="EqualsHashCode"/>
     <module name="IllegalInstantiation"/>
     <module name="InnerAssignment"/>
     <module name="MissingSwitchDefault"/>
-    <module name="FinalClass"/>
-    <module name="HideUtilityClassConstructor"/>
-    <module name="InterfaceIsType"/>
-    <module name="VisibilityModifier"/>
-    <module name="ArrayTypeStyle"/>
-    <module name="UpperEll"/>
     <module name="NoFinalizer"/>
-    <module name="MissingDeprecated"/>
+
+    <!-- Import Checks
+    http://checkstyle.sourceforge.net/config_imports.html -->
+    <module name="AvoidStarImport"/>
+    <module name="ImportOrder">
+      <property name="option" value="top" />
+      <property name="ordered" value="true"/>
+      <property name="sortStaticImportsAlphabetically" value="true"/>
+    </module>
+    <module name="RedundantImport"/>
+    <module name="UnusedImports">
+      <property name="processJavadoc" value="true"/>
+    </module>
+
+    <!-- Javadoc Checks
+    http://checkstyle.sourceforge.net/config_javadoc.html -->
+    <module name="JavadocTagContinuationIndentation">
+      <property name="offset" value="2"/>
+    </module>
+    <module name="NonEmptyAtclauseDescription"/>
+
+    <!-- Miscellaneous Checks
+    http://checkstyle.sourceforge.net/config_misc.html -->
+    <module name="UpperEll"/>
+    <module name="Indentation">
+      <property name="basicOffset" value="2"/>
+      <property name="caseIndent" value="2"/>
+      <property name="throwsIndent" value="2"/>
+      <property name="arrayInitIndent" value="2"/>
+      <property name="lineWrappingIndentation" value="2"/>
+    </module>
+
+    <!-- Size Violation Checks
+    http://checkstyle.sourceforge.net/config_sizes.html -->
+    <module name="LineLength">
+      <property name="max" value="100"/>
+      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
+    </module>
+    <module name="MethodLength"/>
+
+    <!-- Whitespace Checks
+    http://checkstyle.sourceforge.net/config_whitespace.html -->
+    <module name="MethodParamPad"/>
+    <module name="ParenPad"/>
   </module>
 </module>
