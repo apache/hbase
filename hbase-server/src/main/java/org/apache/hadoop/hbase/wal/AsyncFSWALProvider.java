@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.google.common.base.Throwables;
+
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -71,15 +73,15 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
       boolean overwritable, EventLoop eventLoop) throws IOException {
     // Configuration already does caching for the Class lookup.
-    Class<? extends AsyncWriter> logWriterClass =
-        conf.getClass("hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class,
-          AsyncWriter.class);
+    Class<? extends AsyncWriter> logWriterClass = conf.getClass(
+      "hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
       AsyncWriter writer = logWriterClass.getConstructor(EventLoop.class).newInstance(eventLoop);
       writer.init(fs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {
       LOG.debug("Error instantiating log writer.", e);
+      Throwables.propagateIfPossible(e, IOException.class);
       throw new IOException("cannot get log writer", e);
     }
   }

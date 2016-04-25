@@ -775,10 +775,12 @@ public abstract class AbstractFSWAL<W> implements WAL {
   protected SyncFuture getSyncFuture(final long sequence, Span span) {
     SyncFuture syncFuture = this.syncFuturesByHandler.get(Thread.currentThread());
     if (syncFuture == null) {
-      syncFuture = new SyncFuture();
+      syncFuture = new SyncFuture(sequence, span);
       this.syncFuturesByHandler.put(Thread.currentThread(), syncFuture);
+    } else {
+      syncFuture.reset(sequence, span);
     }
-    return syncFuture.reset(sequence, span);
+    return syncFuture;
   }
 
   protected void requestLogRoll(boolean tooFewReplicas) {

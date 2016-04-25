@@ -46,7 +46,7 @@ class SyncFuture {
   // Implementation notes: I tried using a cyclicbarrier in here for handler and sync threads
   // to coordinate on but it did not give any obvious advantage and some issues with order in which
   // events happen.
-  private static final long NOT_DONE = 0;
+  private static final long NOT_DONE = -1L;
 
   /**
    * The transaction id of this operation, monotonically increases.
@@ -55,16 +55,14 @@ class SyncFuture {
 
   /**
    * The transaction id that was set in here when we were marked done. Should be equal or > txnId.
-   * Put this data member into the NOT_DONE state while this class is in use. But for the first
-   * position on construction, let it be -1 so we can immediately call {@link #reset(long, Span)}
-   * below and it will work.
+   * Put this data member into the NOT_DONE state while this class is in use.
    */
-  private long doneTxid = -1;
+  private long doneTxid;
 
   /**
    * If error, the associated throwable. Set when the future is 'done'.
    */
-  private Throwable throwable = null;
+  private Throwable throwable;
 
   private Thread t;
 
@@ -73,34 +71,30 @@ class SyncFuture {
    */
   private Span span;
 
-  /**
-   * Call this method to clear old usage and get it ready for new deploy. Call this method even if
-   * it is being used for the first time.
-   * @param txnId the new transaction id
-   * @return this
-   */
-  synchronized SyncFuture reset(final long txnId) {
-    return reset(txnId, null);
+  SyncFuture(long txid, Span span) {
+    this.t = Thread.currentThread();
+    this.txid = txid;
+    this.span = span;
+    this.doneTxid = NOT_DONE;
   }
 
   /**
-   * Call this method to clear old usage and get it ready for new deploy. Call this method even if
-   * it is being used for the first time.
-   * @param sequence sequenceId from this Future's position in the RingBuffer
-   * @param span curren span, detached from caller. Don't forget to attach it when resuming after a
+   * Call this method to clear old usage and get it ready for new deploy.
+   * @param txid the new transaction id
+   * @param span current span, detached from caller. Don't forget to attach it when resuming after a
    *          call to {@link #get()}.
    * @return this
    */
-  synchronized SyncFuture reset(final long txnId, Span span) {
+  synchronized SyncFuture reset(final long txid, Span span) {
     if (t != null && t != Thread.currentThread()) {
       throw new IllegalStateException();
     }
     t = Thread.currentThread();
     if (!isDone()) {
-      throw new IllegalStateException("" + txnId + " " + Thread.currentThread());
+      throw new IllegalStateException("" + txid + " " + Thread.currentThread());
     }
     this.doneTxid = NOT_DONE;
-    this.txid = txnId;
+    this.txid = txid;
     this.span = span;
     return this;
   }
@@ -156,11 +150,11 @@ class SyncFuture {
     return true;
   }
 
-  public boolean cancel(boolean mayInterruptIfRunning) {
+  boolean cancel(boolean mayInterruptIfRunning) {
     throw new UnsupportedOperationException();
   }
 
-  public synchronized long get() throws InterruptedException, ExecutionException {
+  synchronized long get() throws InterruptedException, ExecutionException {
     while (!isDone()) {
       wait(1000);
     }
