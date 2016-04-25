@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.HConstants.REGION_SERVER_HANDLER_COUNT;
-import static org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.shouldRetryCreate;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.shouldRetryCreate;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -37,8 +40,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,8 +49,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
-import org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutput;
-import org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.NameNodeException;
+import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.NameNodeException;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
@@ -209,7 +210,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       .newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
           .setNameFormat("Close-WAL-Writer-%d").build());
 
-  private volatile FanOutOneBlockAsyncDFSOutput hdfsOut;
+  private volatile AsyncFSOutput fsOut;
 
   private final Deque<FSWALEntry> waitingAppendEntries = new ArrayDeque<FSWALEntry>();
 
@@ -663,7 +664,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     final AsyncWriter oldWriter = this.writer;
     this.writer = nextWriter;
     if (nextWriter != null && nextWriter instanceof AsyncProtobufLogWriter) {
-      this.hdfsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
+      this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
     }
     this.fileLengthAtLastSync = 0L;
     boolean scheduleTask;
@@ -721,7 +722,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   DatanodeInfo[] getPipeline() {
-    FanOutOneBlockAsyncDFSOutput output = this.hdfsOut;
+    AsyncFSOutput output = this.fsOut;
     return output != null ? output.getPipeline() : new DatanodeInfo[0];
   }
 

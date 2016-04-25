@@ -15,18 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.io.asyncfs;
 
 import static io.netty.handler.timeout.IdleState.READER_IDLE;
 import static io.netty.handler.timeout.IdleState.WRITER_IDLE;
-import static org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.HEART_BEAT_SEQNO;
-import static org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.completeFile;
-import static org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.endFileLease;
-import static org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.HEART_BEAT_SEQNO;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.completeFile;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.endFileLease;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+
+import com.google.common.base.Supplier;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -38,7 +42,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayDeque;
@@ -51,12 +54,12 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Supplier;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -96,7 +99,7 @@ import org.apache.hadoop.util.DataChecksum;
  * </ol>
  */
 @InterfaceAudience.Private
-public class FanOutOneBlockAsyncDFSOutput implements Closeable {
+public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final Configuration conf;
 
@@ -126,11 +129,11 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
 
   private static final class Callback {
 
-    public final Promise<Void> promise;
+    private final Promise<Void> promise;
 
-    public final long ackedLength;
+    private final long ackedLength;
 
-    public final Set<Channel> unfinishedReplicas;
+    private final Set<Channel> unfinishedReplicas;
 
     public Callback(Promise<Void> promise, long ackedLength, Collection<Channel> replicas) {
       this.promise = promise;
@@ -211,95 +214,98 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
     }
   }
 
-  private void setupReceiver(final int timeoutMs) {
-    SimpleChannelInboundHandler<PipelineAckProto> ackHandler = new SimpleChannelInboundHandler<PipelineAckProto>() {
+  @Sharable
+  private final class AckHandler extends SimpleChannelInboundHandler<PipelineAckProto> {
 
-      @Override
-      public boolean isSharable() {
-        return true;
-      }
+    private final int timeoutMs;
 
-      @Override
-      protected void channelRead0(final ChannelHandlerContext ctx, PipelineAckProto ack)
-          throws Exception {
-        final Status reply = getStatus(ack);
-        if (reply != Status.SUCCESS) {
-          failed(ctx.channel(), new Supplier<Throwable>() {
+    public AckHandler(int timeoutMs) {
+      this.timeoutMs = timeoutMs;
+    }
 
-            @Override
-            public Throwable get() {
-              return new IOException("Bad response " + reply + " for block "
-                  + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress());
-            }
-          });
-          return;
-        }
-        if (PipelineAck.isRestartOOBStatus(reply)) {
-          failed(ctx.channel(), new Supplier<Throwable>() {
-
-            @Override
-            public Throwable get() {
-              return new IOException("Restart response " + reply + " for block "
-                  + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress());
-            }
-          });
-          return;
-        }
-        if (ack.getSeqno() == HEART_BEAT_SEQNO) {
-          return;
-        }
-        completed(ctx.channel());
-      }
-
-      @Override
-      public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+    @Override
+    protected void channelRead0(final ChannelHandlerContext ctx, PipelineAckProto ack)
+        throws Exception {
+      final Status reply = getStatus(ack);
+      if (reply != Status.SUCCESS) {
         failed(ctx.channel(), new Supplier<Throwable>() {
 
           @Override
           public Throwable get() {
-            return new IOException("Connection to " + ctx.channel().remoteAddress() + " closed");
+            return new IOException("Bad response " + reply + " for block " + locatedBlock.getBlock()
+                + " from datanode " + ctx.channel().remoteAddress());
           }
         });
+        return;
       }
-
-      @Override
-      public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause)
-          throws Exception {
+      if (PipelineAck.isRestartOOBStatus(reply)) {
         failed(ctx.channel(), new Supplier<Throwable>() {
 
           @Override
           public Throwable get() {
-            return cause;
+            return new IOException("Restart response " + reply + " for block "
+                + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress());
           }
         });
+        return;
       }
+      if (ack.getSeqno() == HEART_BEAT_SEQNO) {
+        return;
+      }
+      completed(ctx.channel());
+    }
 
-      @Override
-      public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof IdleStateEvent) {
-          IdleStateEvent e = (IdleStateEvent) evt;
-          if (e.state() == READER_IDLE) {
-            failed(ctx.channel(), new Supplier<Throwable>() {
+    @Override
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+      failed(ctx.channel(), new Supplier<Throwable>() {
 
-              @Override
-              public Throwable get() {
-                return new IOException("Timeout(" + timeoutMs + "ms) waiting for response");
-              }
-            });
-          } else if (e.state() == WRITER_IDLE) {
-            PacketHeader heartbeat = new PacketHeader(4, 0, HEART_BEAT_SEQNO, false, 0, false);
-            int len = heartbeat.getSerializedSize();
-            ByteBuf buf = alloc.buffer(len);
-            heartbeat.putInBuffer(buf.nioBuffer(0, len));
-            buf.writerIndex(len);
-            ctx.channel().writeAndFlush(buf);
-          }
-          return;
+        @Override
+        public Throwable get() {
+          return new IOException("Connection to " + ctx.channel().remoteAddress() + " closed");
         }
-        super.userEventTriggered(ctx, evt);
-      }
+      });
+    }
 
-    };
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause)
+        throws Exception {
+      failed(ctx.channel(), new Supplier<Throwable>() {
+
+        @Override
+        public Throwable get() {
+          return cause;
+        }
+      });
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+      if (evt instanceof IdleStateEvent) {
+        IdleStateEvent e = (IdleStateEvent) evt;
+        if (e.state() == READER_IDLE) {
+          failed(ctx.channel(), new Supplier<Throwable>() {
+
+            @Override
+            public Throwable get() {
+              return new IOException("Timeout(" + timeoutMs + "ms) waiting for response");
+            }
+          });
+        } else if (e.state() == WRITER_IDLE) {
+          PacketHeader heartbeat = new PacketHeader(4, 0, HEART_BEAT_SEQNO, false, 0, false);
+          int len = heartbeat.getSerializedSize();
+          ByteBuf buf = alloc.buffer(len);
+          heartbeat.putInBuffer(buf.nioBuffer(0, len));
+          buf.writerIndex(len);
+          ctx.channel().writeAndFlush(buf);
+        }
+        return;
+      }
+      super.userEventTriggered(ctx, evt);
+    }
+  }
+
+  private void setupReceiver(int timeoutMs) {
+    AckHandler ackHandler = new AckHandler(timeoutMs);
     for (Channel ch : datanodeList) {
       ch.pipeline().addLast(
         new IdleStateHandler(timeoutMs, timeoutMs / 2, 0, TimeUnit.MILLISECONDS),
@@ -331,18 +337,12 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
     setupReceiver(conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, HdfsServerConstants.READ_TIMEOUT));
   }
 
-  /**
-   * Just call write(b, 0, b.length).
-   * @see #write(byte[], int, int)
-   */
+  @Override
   public void write(byte[] b) {
     write(b, 0, b.length);
   }
 
-  /**
-   * Copy the data into the buffer. Note that you need to call
-   * {@link #flush(Object, CompletionHandler, boolean)} to flush the buffer manually.
-   */
+  @Override
   public void write(final byte[] b, final int off, final int len) {
     if (eventLoop.inEventLoop()) {
       buf.ensureWritable(len).writeBytes(b, off, len);
@@ -357,9 +357,7 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
     }
   }
 
-  /**
-   * Return the current size of buffered data.
-   */
+  @Override
   public int buffered() {
     if (eventLoop.inEventLoop()) {
       return buf.readableBytes();
@@ -374,6 +372,7 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
     }
   }
 
+  @Override
   public DatanodeInfo[] getPipeline() {
     return locatedBlock.getLocations();
   }
@@ -491,6 +490,7 @@ public class FanOutOneBlockAsyncDFSOutput implements Closeable {
   /**
    * The close method when error occurred. Now we just call recoverFileLease.
    */
+  @Override
   public void recoverAndClose(CancelableProgressable reporter) throws IOException {
     assert !eventLoop.inEventLoop();
     for (Channel ch : datanodeList) {
