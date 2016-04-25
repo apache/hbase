@@ -247,6 +247,22 @@ public class TestSimpleRpcScheduler {
   }
 
   @Test
+  public void testScanQueueWithZeroScanRatio() throws Exception {
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0f);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(RequestHeader.class), any(Message.class),
+      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+
+    RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 2, 1, 1, priority,
+                                                    HConstants.QOS_THRESHOLD);
+    assertNotEquals(scheduler, null);
+  }
+
+  @Test
   public void testScanQueues() throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
