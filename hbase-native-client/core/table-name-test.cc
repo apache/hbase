@@ -16,19 +16,35 @@
  * limitations under the License.
  *
  */
-#include "core/table-name.h"
 
 #include <folly/Conv.h>
+#include <gtest/gtest.h>
+
+#include <string>
+
+#include "core/table-name.h"
 
 using namespace hbase;
 
-TableName::TableName(std::string table_name)
-    : name_space_("default"), table_(table_name) {}
-TableName::TableName(std::string name_space, std::string table_name)
-    : name_space_(name_space), table_(table_name) {}
-bool TableName::is_default_name_space() const {
-  return name_space_.length() == 0 || name_space_ == "default";
+TEST(TestTableName, TestToStringNoDefault) {
+  TableName tn{"TestTableName"};
+  std::string result = folly::to<std::string>(tn);
+  ASSERT_EQ(result.find("default"), std::string::npos);
+  ASSERT_EQ("TestTableName", result);
 }
-bool TableName::operator==(const TableName &other) const {
-  return name_space_ == other.name_space_ && table_ == other.table_;
+TEST(TestTableName, TestToStringIncludeNS) {
+  TableName tn{"hbase", "acl"};
+  std::string result = folly::to<std::string>(tn);
+  ASSERT_EQ(result.find("hbase"), 0);
+  ASSERT_EQ("hbase:acl", result);
+}
+TEST(TestTableName, TestIsDefault) {
+  TableName default_t1{"in_default"};
+  ASSERT_TRUE(default_t1.is_default_name_space());
+
+  TableName default_t2{"default", "in_also"};
+  ASSERT_TRUE(default_t2.is_default_name_space());
+
+  TableName non_default{"testing", "hmm"};
+  ASSERT_FALSE(non_default.is_default_name_space());
 }

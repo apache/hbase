@@ -16,19 +16,16 @@
  * limitations under the License.
  *
  */
-#include "core/table-name.h"
+
+#include "core/meta-utils.h"
 
 #include <folly/Conv.h>
 
+#include "core/table-name.h"
+
 using namespace hbase;
 
-TableName::TableName(std::string table_name)
-    : name_space_("default"), table_(table_name) {}
-TableName::TableName(std::string name_space, std::string table_name)
-    : name_space_(name_space), table_(table_name) {}
-bool TableName::is_default_name_space() const {
-  return name_space_.length() == 0 || name_space_ == "default";
-}
-bool TableName::operator==(const TableName &other) const {
-  return name_space_ == other.name_space_ && table_ == other.table_;
+std::string MetaUtil::region_lookup_rowkey(const TableName &tn,
+                                           const std::string &row) {
+  return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
 }

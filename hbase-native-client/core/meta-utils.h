@@ -16,19 +16,15 @@
  * limitations under the License.
  *
  */
-#include "core/table-name.h"
+#pragma once
 
-#include <folly/Conv.h>
+#include <string>
 
-using namespace hbase;
+namespace hbase {
+class TableName;
 
-TableName::TableName(std::string table_name)
-    : name_space_("default"), table_(table_name) {}
-TableName::TableName(std::string name_space, std::string table_name)
-    : name_space_(name_space), table_(table_name) {}
-bool TableName::is_default_name_space() const {
-  return name_space_.length() == 0 || name_space_ == "default";
-}
-bool TableName::operator==(const TableName &other) const {
-  return name_space_ == other.name_space_ && table_ == other.table_;
-}
+class MetaUtil {
+public:
+  std::string region_lookup_rowkey(const TableName &tn, const std::string &row);
+};
+} // namespace hbase

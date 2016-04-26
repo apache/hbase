@@ -69,10 +69,12 @@ int main(int argc, char *argv[]) {
   msg->mutable_region()->set_type(
       RegionSpecifier_RegionSpecifierType::
           RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
+
   // What row.
   msg->mutable_get()->set_row(FLAGS_row);
+
   // Send it.
-  r.set_msg(std::move(msg));
+  r.set_msg(msg);
   auto resp = (*conn)(r).get(milliseconds(5000));
 
   auto get_resp = std::static_pointer_cast<GetResponse>(resp.response());

@@ -60,7 +60,6 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   }
 }
 
-
 // TODO(eclark): Figure out how to handle the
 // network errors that are going to come.
 Future<Unit> ClientHandler::write(Context *ctx, Request r) {
