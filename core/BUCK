@@ -16,44 +16,49 @@
 # limitations under the License.
 
 # This is the main library.
-cxx_library(name="core",
-            exported_headers=[
-                "client.h",
-                "connection.h",
-                "get-request.h",
-                "get-result.h",
-                "hbase_macros.h",
-                "location-cache.h",
-                "table-name.h",
-            ],
-            srcs=[
-                "client.cc",
-                "get-request.cc",
-                "get-result.cc",
-                "location-cache.cc",
-                "table-name.cc",
-            ],
-            deps=[
-                "//connection:connection",
-                "//if:if",
-                "//serde:serde",
-                "//third-party:folly",
-                "//third-party:wangle",
-                "//third-party:zookeeper_mt",
-            ],
-            visibility=[
-                'PUBLIC',
-            ], )
-
+cxx_library(
+    name="core",
+    exported_headers=[
+        "client.h",
+        "connection.h",
+        "get-request.h",
+        "get-result.h",
+        "hbase_macros.h",
+        "location-cache.h",
+        "table-name.h",
+        # TODO: move this out of exported
+        # Once meta lookup works
+        "meta-utils.h",
+    ],
+    srcs=[
+        "client.cc",
+        "get-request.cc",
+        "get-result.cc",
+        "location-cache.cc",
+        "meta-utils.cc",
+        "table-name.cc",
+    ],
+    deps=[
+        "//connection:connection",
+        "//if:if",
+        "//serde:serde",
+        "//third-party:folly",
+        "//third-party:wangle",
+        "//third-party:zookeeper_mt",
+    ],
+    visibility=[
+        'PUBLIC',
+    ], )
 cxx_test(name="location-cache-test",
          srcs=[
              "test-env.cc",
              "location-cache-test.cc",
          ],
-         deps=[
-             ":core",
-         ],
+         deps=[":core", ],
          run_test_separately=True, )
+cxx_test(name="table-name-test",
+         srcs=["table-name-test.cc", ],
+         deps=[":core", ], )
 cxx_binary(name="simple-client",
            srcs=["simple-client.cc", ],
            deps=[":core", "//connection:connection"], )
