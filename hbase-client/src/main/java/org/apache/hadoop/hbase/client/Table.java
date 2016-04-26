@@ -595,4 +595,35 @@ public interface Table extends Closeable {
    */
   boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
+
+  /**
+   * Set timeout (millisecond) of each operation in this Table instance, will override the value
+   * of hbase.client.operation.timeout in configuration.
+   * Operation timeout is a top-level restriction that makes sure a blocking method will not be
+   * blocked more than this. In each operation, if rpc request fails because of timeout or
+   * other reason, it will retry until success or throw a RetriesExhaustedException. But if the
+   * total time being blocking reach the operation timeout before retries exhausted, it will break
+   * early and throw SocketTimeoutException.
+   * @param operationTimeout the total timeout of each operation in millisecond.
+   */
+  public void setOperationTimeout(int operationTimeout);
+
+  /**
+   * Get timeout (millisecond) of each operation for in Table instance.
+   */
+  public int getOperationTimeout();
+
+  /**
+   * Set timeout (millisecond) of each rpc request in operations of this Table instance, will
+   * override the value of hbase.rpc.timeout in configuration.
+   * If a rpc request waiting too long, it will stop waiting and send a new request to retry until
+   * retries exhausted or operation timeout reached.
+   * @param rpcTimeout the timeout of each rpc request in millisecond.
+   */
+  public void setRpcTimeout(int rpcTimeout);
+
+  /**
+   * Get timeout (millisecond) of each rpc request in this Table instance.
+   */
+  public int getRpcTimeout();
 }

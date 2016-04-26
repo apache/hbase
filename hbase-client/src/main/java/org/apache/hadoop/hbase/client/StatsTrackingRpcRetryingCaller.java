@@ -39,7 +39,7 @@ public class StatsTrackingRpcRetryingCaller<T> extends RpcRetryingCaller<T> {
   public StatsTrackingRpcRetryingCaller(long pause, int retries,
       RetryingCallerInterceptor interceptor, int startLogErrorsCnt,
       ServerStatisticTracker stats) {
-    super(pause, retries, interceptor, startLogErrorsCnt);
+    super(pause, retries, interceptor, startLogErrorsCnt, 0);
     this.stats = stats;
   }
 
