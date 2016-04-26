@@ -272,10 +272,10 @@ public final class HConstants {
   /** Parameter name for HBase client IPC pool size */
   public static final String HBASE_CLIENT_IPC_POOL_SIZE = "hbase.client.ipc.pool.size";
 
-  /** Parameter name for HBase client operation timeout, which overrides RPC timeout */
+  /** Parameter name for HBase client operation timeout. */
   public static final String HBASE_CLIENT_OPERATION_TIMEOUT = "hbase.client.operation.timeout";
 
-  /** Parameter name for HBase client operation timeout, which overrides RPC timeout */
+  /** Parameter name for HBase client operation timeout. */
   public static final String HBASE_CLIENT_META_OPERATION_TIMEOUT =
     "hbase.client.meta.operation.timeout";
 
