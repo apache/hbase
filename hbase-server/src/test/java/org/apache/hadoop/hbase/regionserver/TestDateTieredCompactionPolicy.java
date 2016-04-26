@@ -50,7 +50,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     this.conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.2F);
 
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 20);
-    conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 10);
+    conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 5);
   }
 
   /**
