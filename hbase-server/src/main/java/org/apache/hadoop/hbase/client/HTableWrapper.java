@@ -365,4 +365,20 @@ public class HTableWrapper implements HTableInterface {
       CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
     return table.checkAndMutate(row, family, qualifier, compareOp, value, rm);
   }
+
+  @Override public void setOperationTimeout(int operationTimeout) {
+    table.setOperationTimeout(operationTimeout);
+  }
+
+  @Override public int getOperationTimeout() {
+    return table.getOperationTimeout();
+  }
+
+  @Override public void setRpcTimeout(int rpcTimeout) {
+    table.setRpcTimeout(rpcTimeout);
+  }
+
+  @Override public int getRpcTimeout() {
+    return table.getRpcTimeout();
+  }
 }

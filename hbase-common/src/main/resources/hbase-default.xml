@@ -844,9 +844,18 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.rpc.timeout</name>
     <value>60000</value>
-    <description>This is for the RPC layer to define how long HBase client applications
+    <description>This is for the RPC layer to define how long (millisecond) HBase client applications
         take for a remote call to time out. It uses pings to check connections
         but will eventually throw a TimeoutException.</description>
+  </property>
+  <property>
+    <name>hbase.client.operation.timeout</name>
+    <value>1200000</value>
+    <description>Operation timeout is a top-level restriction (millisecond) that makes sure a
+        blocking operation in Table will not be blocked more than this. In each operation, if rpc
+        request fails because of timeout or other reason, it will retry until success or throw
+        RetriesExhaustedException. But if the total time being blocking reach the operation timeout
+        before retries exhausted, it will break early and throw SocketTimeoutException.</description>
   </property>
   <property>
     <name>hbase.cells.scanned.per.heartbeat.check</name>

@@ -857,4 +857,20 @@ public class RemoteHTable implements Table {
       CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
     throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
+
+  @Override public void setOperationTimeout(int operationTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public int getOperationTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public void setRpcTimeout(int rpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public int getRpcTimeout() {
+    throw new UnsupportedOperationException();
+  }
 }
