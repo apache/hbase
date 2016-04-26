@@ -116,7 +116,7 @@ extends RetriesExhaustedException {
     for(String addr : uniqAddr) {
       addrs.append(addr).append(", ");
     }
-    return s;
+    return addrs.toString();
   }
 
   public String getExhaustiveDescription() {
