@@ -19,6 +19,7 @@
 
 require 'shell'
 require 'shell/formatter'
+require 'stringio'
 require 'hbase'
 require 'hbase/hbase'
 require 'hbase/table'
@@ -295,10 +296,24 @@ module Hbase
 
     define_test "alter should support more than one alteration in one call" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.alter(@test_name, true, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' }, 'MAX_FILESIZE' => 12345678)
+      alterOutput = capture_stdout { admin.alter(@test_name, true, { NAME => 'z' },
+        { METHOD => 'delete', NAME => 'y' }, 'MAX_FILESIZE' => 12345678) }
       admin.enable(@test_name)
+      assert_equal(1, /Updating all regions/.match(alterOutput).size,
+        "HBASE-15641 - Should only perform one table modification per alter.")
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@test_name))
+    end
+
+    def capture_stdout
+      begin
+        old_stdout = $stdout
+        $stdout = StringIO.new('','w')
+        yield
+        $stdout.string
+      ensure
+        $stdout = old_stdout
+      end
     end
 
     define_test 'alter should support shortcut DELETE alter specs' do
