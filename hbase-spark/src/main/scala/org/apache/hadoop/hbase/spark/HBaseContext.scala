@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.io.compress.Compression
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
-import org.apache.hadoop.hbase.io.hfile.{CacheConfig, HFileContextBuilder, HFileWriterImpl}
+import org.apache.hadoop.hbase.io.hfile.{HFile, CacheConfig, HFileContextBuilder, HFileWriterImpl}
 import org.apache.hadoop.hbase.regionserver.{HStore, StoreFile, StoreFileWriter, BloomType}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.mapred.JobConf
@@ -886,6 +886,11 @@ class HBaseContext(@transient sc: SparkContext,
       .withChecksumType(HStore.getChecksumType(conf))
       .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
       .withBlockSize(familyOptions.blockSize)
+
+    if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+      contextBuilder.withIncludesTags(true)
+    }
+
     contextBuilder.withDataBlockEncoding(DataBlockEncoding.
       valueOf(familyOptions.dataBlockEncoding))
     val hFileContext = contextBuilder.build()

@@ -301,6 +301,11 @@ public class HFileOutputFormat2
                                     .withChecksumType(HStore.getChecksumType(conf))
                                     .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                     .withBlockSize(blockSize);
+
+        if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+          contextBuilder.withIncludesTags(true);
+        }
+
         contextBuilder.withDataBlockEncoding(encoding);
         HFileContext hFileContext = contextBuilder.build();
                                     
