@@ -112,6 +112,9 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     throws IOException {
     long mcTime = getNextMajorCompactTime(filesToCompact);
     if (filesToCompact == null || mcTime == 0) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("filesToCompact: " + filesToCompact + " mcTime: " + mcTime);
+      }
       return false;
     }
 
@@ -119,6 +122,10 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
     long now = EnvironmentEdgeManager.currentTime();
     if (lowTimestamp <= 0L || lowTimestamp >= (now - mcTime)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("lowTimestamp: " + lowTimestamp + " lowTimestamp: " + lowTimestamp + " now: " +
+            now + " mcTime: " + mcTime); 
+      }
       return false;
     }
 
