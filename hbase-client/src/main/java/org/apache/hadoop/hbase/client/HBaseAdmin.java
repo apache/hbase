@@ -214,6 +214,7 @@ public class HBaseAdmin implements Admin {
   private boolean cleanupConnectionOnClose = false; // close the connection in close()
   private boolean closed = false;
   private int operationTimeout;
+  private int rpcTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
@@ -273,6 +274,8 @@ public class HBaseAdmin implements Admin {
         "hbase.client.retries.longer.multiplier", 10);
     this.operationTimeout = this.conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.rpcTimeout = this.conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.syncWaitTimeout = this.conf.getInt(
       "hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
 
@@ -543,12 +546,12 @@ public class HBaseAdmin implements Admin {
   public HTableDescriptor getTableDescriptor(final TableName tableName)
   throws TableNotFoundException, IOException {
      return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
-       operationTimeout);
+       operationTimeout, rpcTimeout);
   }
 
   static HTableDescriptor getTableDescriptor(final TableName tableName, HConnection connection,
       RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
-         int operationTimeout) throws TableNotFoundException, IOException {
+         int operationTimeout, int rpcTimeout) throws TableNotFoundException, IOException {
 
       if (tableName == null) return null;
       HTableDescriptor htd = executeCallable(new MasterCallable<HTableDescriptor>(connection) {
@@ -566,7 +569,7 @@ public class HBaseAdmin implements Admin {
           }
           return null;
         }
-      }, rpcCallerFactory, operationTimeout);
+      }, rpcCallerFactory, operationTimeout, rpcTimeout);
       if (htd != null) {
         return htd;
       }
@@ -4373,12 +4376,13 @@ public class HBaseAdmin implements Admin {
   }
 
   private <V> V executeCallable(MasterCallable<V> callable) throws IOException {
-    return executeCallable(callable, rpcCallerFactory, operationTimeout);
+    return executeCallable(callable, rpcCallerFactory, operationTimeout, rpcTimeout);
   }
 
   private static <V> V executeCallable(MasterCallable<V> callable,
-             RpcRetryingCallerFactory rpcCallerFactory, int operationTimeout) throws IOException {
-    RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
+             RpcRetryingCallerFactory rpcCallerFactory, int operationTimeout, int rpcTimeout)
+      throws IOException {
+    RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller(rpcTimeout);
     try {
       return caller.callWithRetries(callable, operationTimeout);
     } finally {
