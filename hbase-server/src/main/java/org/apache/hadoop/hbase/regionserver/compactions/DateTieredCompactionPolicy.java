@@ -46,16 +46,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 /**
  * HBASE-15181 This is a simple implementation of date-based tiered compaction similar to
  * Cassandra's for the following benefits:
-<<<<<<< HEAD
- * 1. Improve date-range-based scan by structuring store files in date-based tiered layout.
- * 2. Reduce compaction overhead.
- * 3. Improve TTL efficiency.
- * Perfect fit for the use cases that: 
- * 1. has mostly date-based data write and scan and a focus on the most recent data.
- * Out-of-order writes are handled gracefully. Time range overlapping among store files is
- * tolerated and the performance impact is minimized. Configuration can be set at hbase-site
- * or overridden at per-table or per-column-family level by hbase shell. Design spec is at
-=======
  * <ol>
  * <li>Improve date-range-based scan by structuring store files in date-based tiered layout.</li>
  * <li>Reduce compaction overhead.</li>
@@ -68,7 +58,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * Out-of-order writes are handled gracefully. Time range overlapping among store files is tolerated
  * and the performance impact is minimized. Configuration can be set at hbase-site or overridden at
  * per-table or per-column-family level by hbase shell. Design spec is at
->>>>>>> 3f749fd... HBASE-15368 Add pluggable window support
  * https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8/
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -121,13 +110,20 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   public boolean shouldPerformMajorCompaction(final Collection<StoreFile> filesToCompact) throws IOException {
     long mcTime = getNextMajorCompactTime(filesToCompact);
     if (filesToCompact == null || mcTime == 0) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("filesToCompact: " + filesToCompact + " mcTime: " + mcTime);
+      }
       return false;
     }
     
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    if (lowTimestamp <= 0l || lowTimestamp >= (now - mcTime)) {
+    if (lowTimestamp <= 0L || lowTimestamp >= (now - mcTime)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("lowTimestamp: " + lowTimestamp + " lowTimestamp: " + lowTimestamp + " now: " +
+            now + " mcTime: " + mcTime); 
+      }
       return false;
     }
     
