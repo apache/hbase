@@ -53,7 +53,6 @@ docker build -t hbase_native .
 
 # After the image is built run the thing
 docker run -p 16010:16010/tcp \
-           -e "JAVA_HOME=/usr/lib/jvm/java-8-oracle" \
            -v ${BASE_DIR}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
            -it hbase_native  /bin/bash
