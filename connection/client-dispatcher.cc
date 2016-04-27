@@ -35,16 +35,16 @@ void ClientDispatcher::read(Context *ctx, Response in) {
   p.setValue(in);
 }
 
-Future<Response> ClientDispatcher::operator()(Request arg) {
+Future<Response> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
   auto call_id = ++current_call_id_;
 
-  arg.set_call_id(call_id);
+  arg->set_call_id(call_id);
   auto &p = requests_[call_id];
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
     this->requests_.erase(call_id);
   });
-  this->pipeline_->write(arg);
+  this->pipeline_->write(std::move(arg));
 
   return f;
 }

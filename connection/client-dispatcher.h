@@ -27,11 +27,11 @@
 
 namespace hbase {
 class ClientDispatcher
-    : public wangle::ClientDispatcherBase<SerializePipeline, Request,
-                                          Response> {
+    : public wangle::ClientDispatcherBase<SerializePipeline,
+                                          std::unique_ptr<Request>, Response> {
 public:
   void read(Context *ctx, Response in) override;
-  folly::Future<Response> operator()(Request arg) override;
+  folly::Future<Response> operator()(std::unique_ptr<Request> arg) override;
   folly::Future<folly::Unit> close(Context *ctx) override;
   folly::Future<folly::Unit> close() override;
 

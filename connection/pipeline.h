@@ -26,7 +26,8 @@
 #include "utils/user-util.h"
 
 namespace hbase {
-using SerializePipeline = wangle::Pipeline<folly::IOBufQueue &, Request>;
+using SerializePipeline =
+    wangle::Pipeline<folly::IOBufQueue &, std::unique_ptr<Request>>;
 
 class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
 public:

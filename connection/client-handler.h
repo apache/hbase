@@ -30,20 +30,30 @@ namespace hbase {
 class Request;
 class Response;
 }
+namespace google {
+namespace protobuf {
+class Message;
+}
+}
 
 namespace hbase {
-class ClientHandler
-    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, Response, Request,
-                             std::unique_ptr<folly::IOBuf>> {
+class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
+                                             Response, std::unique_ptr<Request>,
+                                             std::unique_ptr<folly::IOBuf>> {
 public:
   ClientHandler(std::string user_name);
   void read(Context *ctx, std::unique_ptr<folly::IOBuf> msg) override;
-  folly::Future<folly::Unit> write(Context *ctx, Request r) override;
+  folly::Future<folly::Unit> write(Context *ctx,
+                                   std::unique_ptr<Request> r) override;
 
 private:
   bool need_send_header_ = true;
   std::string user_name_;
   ClientSerializer ser_;
   ClientDeserializer deser_;
+
+  // in flight requests
+  std::unordered_map<uint32_t, std::shared_ptr<google::protobuf::Message>>
+      resp_msgs_;
 };
 } // namespace hbase

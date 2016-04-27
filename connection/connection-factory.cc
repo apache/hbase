@@ -45,14 +45,14 @@ ConnectionFactory::ConnectionFactory() {
   bootstrap_.pipelineFactory(std::make_shared<RpcPipelineFactory>());
 }
 
-std::shared_ptr<Service<Request, Response>>
+std::shared_ptr<Service<std::unique_ptr<Request>, Response>>
 ConnectionFactory::make_connection(std::string host, int port) {
   // Connect to a given server
   // Then when connected create a ClientDispactcher.
   auto pipeline = bootstrap_.connect(SocketAddress(host, port, true)).get();
   auto dispatcher = std::make_shared<ClientDispatcher>();
   dispatcher->setPipeline(pipeline);
-  auto service =
-      std::make_shared<CloseOnReleaseFilter<Request, Response>>(dispatcher);
+  auto service = std::make_shared<
+      CloseOnReleaseFilter<std::unique_ptr<Request>, Response>>(dispatcher);
   return service;
 }
