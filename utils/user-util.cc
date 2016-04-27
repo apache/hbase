@@ -19,10 +19,10 @@
 
 #include "utils/user-util.h"
 
-#include <pwd.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <folly/Logging.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 using namespace hbase;
 using namespace std;

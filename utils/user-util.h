@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <memory>
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 namespace hbase {

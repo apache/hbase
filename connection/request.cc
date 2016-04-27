@@ -30,16 +30,16 @@ Request::Request(std::shared_ptr<google::protobuf::Message> req,
 
 std::unique_ptr<Request> Request::get() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::GetRequest>(),
-                                  std::make_shared<hbase::pb::GetResponse>(),
-                                  "Get");
+                                   std::make_shared<hbase::pb::GetResponse>(),
+                                   "Get");
 }
 std::unique_ptr<Request> Request::mutate() {
-  return std::make_unique<Request>(std::make_shared<hbase::pb::MutateRequest>(),
-                                  std::make_shared<hbase::pb::MutateResponse>(),
-                                  "Mutate");
+  return std::make_unique<Request>(
+      std::make_shared<hbase::pb::MutateRequest>(),
+      std::make_shared<hbase::pb::MutateResponse>(), "Mutate");
 }
 std::unique_ptr<Request> Request::scan() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::ScanRequest>(),
-                                  std::make_shared<hbase::pb::ScanResponse>(),
-                                  "Scan");
+                                   std::make_shared<hbase::pb::ScanResponse>(),
+                                   "Scan");
 }
