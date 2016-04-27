@@ -31,7 +31,7 @@ namespace hbase {
 class ConnectionFactory {
 public:
   ConnectionFactory();
-  std::shared_ptr<wangle::Service<Request, Response>>
+  std::shared_ptr<wangle::Service<std::unique_ptr<Request>, Response>>
   make_connection(std::string host, int port);
 
 private:

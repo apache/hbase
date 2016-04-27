@@ -32,6 +32,7 @@ cxx_library(name="connection",
                 "client-handler.cc",
                 "connection-factory.cc",
                 "pipeline.cc",
+                "request.cc",
             ],
             deps=[
                 "//if:if",

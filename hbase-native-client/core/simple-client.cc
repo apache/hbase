@@ -58,24 +58,23 @@ int main(int argc, char *argv[]) {
   auto conn = cf.make_connection(result.host_name(), result.port());
 
   // Send the request
-  Request r;
+  auto r = Request::get();
 
   // This is a get request so make that
-  auto msg = make_shared<hbase::pb::GetRequest>();
+  auto req_msg = static_pointer_cast<hbase::pb::GetRequest>(r->req_msg());
 
   // Set what region
-  msg->mutable_region()->set_value(FLAGS_region);
+  req_msg->mutable_region()->set_value(FLAGS_region);
   // It's always this.
-  msg->mutable_region()->set_type(
+  req_msg->mutable_region()->set_type(
       RegionSpecifier_RegionSpecifierType::
           RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
 
   // What row.
-  msg->mutable_get()->set_row(FLAGS_row);
+  req_msg->mutable_get()->set_row(FLAGS_row);
 
   // Send it.
-  r.set_msg(msg);
-  auto resp = (*conn)(r).get(milliseconds(5000));
+  auto resp = (*conn)(std::move(r)).get(milliseconds(5000));
 
   auto get_resp = std::static_pointer_cast<GetResponse>(resp.response());
   cout << "GetResponse has_result = " << get_resp->has_result() << '\n';
