@@ -17,9 +17,9 @@
  *
  */
 
+#include <folly/Logging.h>
 #include <gtest/gtest.h>
 #include <string>
-#include <folly/Logging.h>
 
 #include "utils/user-util.h"
 

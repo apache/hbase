@@ -23,18 +23,18 @@ cxx_library(name="utils",
                 "user-util.cc",
             ],
             deps=[
-              '//third-party:folly',
+                '//third-party:folly',
             ],
             visibility=[
                 'PUBLIC',
             ],
             tests=[
-              ":user-util-test"
-            ],)
+                ":user-util-test"
+            ], )
 cxx_test(name="user-util-test",
          srcs=[
              "user-util-test.cc",
          ],
          deps=[
              ":utils",
-         ],)
+         ], )
