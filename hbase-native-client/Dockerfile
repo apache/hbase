@@ -15,12 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM pjameson/buck-folly-watchman
+FROM pjameson/buck-folly-watchman:20160425
 
 ARG CC=/usr/bin/gcc-5
 ARG CXX=/usr/bin/g++-5
 ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
 ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
+
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
 
 RUN apt-get install -y vim maven inetutils-ping python-pip && \
       pip install yapf && \
