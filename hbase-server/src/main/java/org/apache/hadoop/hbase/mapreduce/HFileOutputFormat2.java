@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -294,6 +295,11 @@ public class HFileOutputFormat2
                                     .withChecksumType(HStore.getChecksumType(conf))
                                     .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
                                     .withBlockSize(blockSize);
+
+        if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+          contextBuilder.withIncludesTags(true);
+        }
+
         contextBuilder.withDataBlockEncoding(encoding);
         HFileContext hFileContext = contextBuilder.build();
                                     

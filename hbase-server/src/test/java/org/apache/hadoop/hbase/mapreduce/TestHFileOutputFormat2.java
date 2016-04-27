@@ -26,12 +26,17 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.logging.Log;
@@ -55,6 +60,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -67,6 +74,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -233,7 +241,7 @@ public class TestHFileOutputFormat2  {
     TaskAttemptContext context = null;
     Path dir =
       util.getDataTestDir("test_TIMERANGE_present");
-    LOG.info("Timerange dir writing to dir: "+ dir);
+    LOG.info("Timerange dir writing to dir: " + dir);
     try {
       // build a record writer using HFileOutputFormat2
       Job job = new Job(conf);
@@ -327,6 +335,74 @@ public class TestHFileOutputFormat2  {
     assertTrue(job.waitForCompletion(false));
     FileStatus [] files = fs.listStatus(testDir);
     assertTrue(files.length > 0);
+  }
+
+  /**
+   * Test that {@link HFileOutputFormat2} RecordWriter writes tags such as ttl into
+   * hfile.
+   */
+  @Test
+  public void test_WritingTagData()
+      throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    final String HFILE_FORMAT_VERSION_CONF_KEY = "hfile.format.version";
+    conf.setInt(HFILE_FORMAT_VERSION_CONF_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+    RecordWriter<ImmutableBytesWritable, Cell> writer = null;
+    TaskAttemptContext context = null;
+    Path dir =
+        util.getDataTestDir("WritingTagData");
+    try {
+      Job job = new Job(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = createTestTaskAttemptContext(job);
+      HFileOutputFormat2 hof = new HFileOutputFormat2();
+      writer = hof.getRecordWriter(context);
+      final byte [] b = Bytes.toBytes("b");
+
+      KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b, new Tag[] {
+          new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(978670)) });
+      writer.write(new ImmutableBytesWritable(), kv);
+      writer.close(context);
+      writer = null;
+      FileSystem fs = dir.getFileSystem(conf);
+      for (FileStatus keyFileStatus: listFiles(fs, dir)) {
+        HFile.Reader reader = HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf),
+            conf);
+        HFileScanner scanner = reader.getScanner(false, false, false);
+        scanner.seekTo();
+        Cell cell = scanner.getKeyValue();
+
+        Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(),
+            cell.getTagsOffset(), cell.getTagsLengthUnsigned());
+        assertTrue(tagsIterator.hasNext());
+        assertTrue(tagsIterator.next().getType() == TagType.TTL_TAG_TYPE);
+      }
+    } finally {
+      if (writer != null && context != null) writer.close(context);
+      dir.getFileSystem(conf).delete(dir, true);
+    }
+  }
+
+  private List<FileStatus> listFiles(FileSystem fs, Path dir) throws IOException {
+    List<FileStatus> list = new ArrayList<FileStatus>();
+    Stack<Path> stack = new Stack<Path>();
+    stack.push(dir);
+    while (!stack.isEmpty()) {
+      Path p = stack.pop();
+      FileStatus stat = fs.getFileStatus(p);
+      if (stat.isDir()) {
+        for (FileStatus s: fs.listStatus(p)) {
+          if (s.isDir()) {
+            stack.push(s.getPath());
+          } else {
+            list.add(s);
+          }
+        }
+      } else {
+        list.add(stat);
+      }
+    }
+    return list;
   }
 
   @Test
