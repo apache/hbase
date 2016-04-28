@@ -87,7 +87,7 @@ public class FuzzyRowFilter extends FilterBase {
                 .getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
-      // update mask ( 0 -> -1 (0xff), 1 -> 0)
+      // update mask ( 0 -> -1 (0xff), 1 -> 2)
       p.setSecond(preprocessMask(p.getSecond()));
       preprocessSearchKey(p);
     }
@@ -104,12 +104,14 @@ public class FuzzyRowFilter extends FilterBase {
     byte[] mask = p.getSecond();
     for (int i = 0; i < mask.length; i++) {
       // set non-fixed part of a search key to 0.
-      if (mask[i] == 0) key[i] = 0;
+      if (mask[i] == 2) {
+        key[i] = 0;
+      }
     }
   }
 
   /**
-   * We need to preprocess mask array, as since we treat 0's as unfixed positions and -1 (0xff) as
+   * We need to preprocess mask array, as since we treat 2's as unfixed positions and -1 (0xff) as
    * fixed positions
    * @param mask
    * @return mask array
@@ -124,7 +126,7 @@ public class FuzzyRowFilter extends FilterBase {
       if (mask[i] == 0) {
         mask[i] = -1; // 0 -> -1
       } else if (mask[i] == 1) {
-        mask[i] = 0;// 1 -> 0
+        mask[i] = 2;// 1 -> 2
       }
     }
     return mask;
@@ -132,7 +134,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   private boolean isPreprocessedMask(byte[] mask) {
     for (int i = 0; i < mask.length; i++) {
-      if (mask[i] != -1 && mask[i] != 0) {
+      if (mask[i] != -1 && mask[i] != 2) {
         return false;
       }
     }
@@ -146,6 +148,10 @@ public class FuzzyRowFilter extends FilterBase {
     for (int i = startIndex; i < size + startIndex; i++) {
       final int index = i % size;
       Pair<byte[], byte[]> fuzzyData = fuzzyKeysData.get(index);
+      // This shift is idempotent - always end up with 0 and -1 as mask values.
+      for (int j = 0; j < fuzzyData.getSecond().length; j++) {
+        fuzzyData.getSecond()[j] >>= 2;
+      }
       SatisfiesCode satisfiesCode =
           satisfies(isReversed(), c.getRowArray(), c.getRowOffset(), c.getRowLength(),
             fuzzyData.getFirst(), fuzzyData.getSecond());
