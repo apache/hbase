@@ -5248,6 +5248,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLockContext.cleanUp();
         throw new IOException("Timed out waiting for lock for row: " + rowKey);
       }
+      rowLockContext.setThreadName(Thread.currentThread().getName());
       return result;
     } catch (InterruptedException ie) {
       LOG.warn("Thread interrupted waiting for lock on row: " + rowKey);
@@ -5275,6 +5276,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  public ConcurrentHashMap<HashedBytes, RowLockContext> getLockedRows() {
+    return lockedRows;
+  }
+
   @VisibleForTesting
   class RowLockContext {
     private final HashedBytes row;
@@ -5282,6 +5287,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     final AtomicBoolean usable = new AtomicBoolean(true);
     final AtomicInteger count = new AtomicInteger(0);
     final Object lock = new Object();
+    private String threadName;
 
     RowLockContext(HashedBytes row) {
       this.row = row;
@@ -5320,12 +5326,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
+    public void setThreadName(String threadName) {
+      this.threadName = threadName;
+    }
+
     @Override
     public String toString() {
       return "RowLockContext{" +
           "row=" + row +
           ", readWriteLock=" + readWriteLock +
           ", count=" + count +
+          ", threadName=" + threadName +
           '}';
     }
   }
