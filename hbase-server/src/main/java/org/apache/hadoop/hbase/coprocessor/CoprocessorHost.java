@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -201,6 +202,25 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public E load(Path path, String className, int priority,
       Configuration conf) throws IOException {
+    String[] includedClassPrefixes = null;
+    if (conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY) != null){
+      String prefixes = conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY);
+      includedClassPrefixes = prefixes.split(";");
+    }
+    return load(path, className, priority, conf, includedClassPrefixes);
+  }
+
+  /**
+   * Load a coprocessor implementation into the host
+   * @param path path to implementation jar
+   * @param className the main class name
+   * @param priority chaining priority
+   * @param conf configuration for coprocessor
+   * @param includedClassPrefixes class name prefixes to include
+   * @throws java.io.IOException Exception
+   */
+  public E load(Path path, String className, int priority,
+      Configuration conf, String[] includedClassPrefixes) throws IOException {
     Class<?> implClass = null;
     LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
@@ -216,7 +236,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       cl = CoprocessorClassLoader.getClassLoader(
         path, getClass().getClassLoader(), pathPrefix, conf);
       try {
-        implClass = cl.loadClass(className);
+        implClass = ((CoprocessorClassLoader)cl).loadClass(className, includedClassPrefixes);
       } catch (ClassNotFoundException e) {
         throw new IOException("Cannot load external coprocessor class " + className, e);
       }
