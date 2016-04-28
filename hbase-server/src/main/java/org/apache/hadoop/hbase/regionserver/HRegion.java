@@ -250,7 +250,6 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
   // Members
   //////////////////////////////////////////////////////////////////////////////
-
   // map from a locked row to the context for that lock including:
   // - CountDownLatch for threads waiting on that row
   // - the thread that owns the lock (allow reentrancy)
@@ -6616,6 +6615,15 @@ public class HRegion implements HeapSize { // , Writable{
         latch.countDown();
       }
     }
+
+    @Override
+    public String toString() {
+     return "RowLockContext{" +
+         "row=" + row +
+         ", count=" + lockCount +
+         ", threadName=" + thread.getName() +
+         '}';
+    }
   }
 
   /**
@@ -6660,4 +6668,9 @@ public class HRegion implements HeapSize { // , Writable{
   public void updatesUnlock() throws InterruptedIOException {
     updatesLock.readLock().unlock();
   }
+
+  public ConcurrentHashMap<HashedBytes, RowLockContext> getLockedRows() {
+    return lockedRows;
+  }
+
 }

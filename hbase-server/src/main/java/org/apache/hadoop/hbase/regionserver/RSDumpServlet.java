@@ -72,7 +72,11 @@ public class RSDumpServlet extends StateDumpServlet {
     out.println("\n\nTasks:");
     out.println(LINE);
     TaskMonitor.get().dumpAsText(out);
-    
+
+    out.println("\n\nRowLocks:");
+    out.println(LINE);
+    dumpRowLock(hrs, out);
+
     out.println("\n\nExecutors:");
     out.println(LINE);
     dumpExecutors(hrs.getExecutorService(), out);
@@ -119,6 +123,21 @@ public class RSDumpServlet extends StateDumpServlet {
     out.println("\nFlush Queue summary: "
         + hrs.cacheFlusher.toString());
     out.println(hrs.cacheFlusher.dumpQueue());
+  }
+
+  public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {
+    StringBuilder sb = new StringBuilder();
+    for (HRegion hRegion : hrs.getOnlineRegionsLocalContext()) {
+      if (hRegion.getLockedRows().size() > 0) {
+        for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
+          sb.setLength(0);
+          sb.append(hRegion.getTableDesc().getTableName()).append(",")
+            .append(hRegion.getRegionInfo().getEncodedName()).append(",");
+          sb.append(rowLockContext.toString());
+          out.println(sb.toString());
+        }
+      }
+    }
   }
   
 }
