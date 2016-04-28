@@ -3874,6 +3874,9 @@ public class TestHRegion {
 
         if (i != 0 && i % compactInterval == 0) {
           region.compact(true);
+          for (Store store : region.getStores()) {
+            store.closeAndArchiveCompactedFiles();
+          }
         }
 
         if (i != 0 && i % flushInterval == 0) {
@@ -4040,19 +4043,15 @@ public class TestHRegion {
 
       // Add a thread that flushes as fast as possible
       ctx.addThread(new RepeatingTestThread(ctx) {
-        private int flushesSinceCompact = 0;
-        private final int maxFlushesSinceCompact = 20;
 
         @Override
         public void doAnAction() throws Exception {
-          if (region.flush(true).isCompactionNeeded()) {
-            ++flushesSinceCompact;
-          }
+          region.flush(true);
           // Compact regularly to avoid creating too many files and exceeding
           // the ulimit.
-          if (flushesSinceCompact == maxFlushesSinceCompact) {
-            region.compact(false);
-            flushesSinceCompact = 0;
+          region.compact(false);
+          for (Store store : region.getStores()) {
+            store.closeAndArchiveCompactedFiles();
           }
         }
       });
