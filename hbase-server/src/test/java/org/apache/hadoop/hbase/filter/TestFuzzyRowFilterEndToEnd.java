@@ -109,7 +109,48 @@ public class TestFuzzyRowFilterEndToEnd {
     // Nothing to do.
   }
 
-  @Test  
+  // HBASE-15676 Test that fuzzy info of all fixed bits (0s) finds matching row.
+  @Test
+  public void testAllFixedBits() throws IOException {
+    String cf = "f";
+    String cq = "q";
+    String table = "testAllFixedBits";
+
+    HTable ht =
+        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+    // Load data
+    String[] rows = new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
+        "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
+        "\\x9B\\x00\\x044e\\x9B\\x02\\xBB", "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
+        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", };
+
+    for (int i = 0; i < rows.length; i++) {
+      Put p = new Put(Bytes.toBytesBinary(rows[i]));
+      p.add(cf.getBytes(), cq.getBytes(), "value".getBytes());
+      ht.put(p);
+    }
+
+    TEST_UTIL.flush();
+
+    List<Pair<byte[], byte[]>> data = new ArrayList<Pair<byte[], byte[]>>();
+    byte[] fuzzyKey = Bytes.toBytesBinary("\\x9B\\x00\\x044e");
+    byte[] mask = new byte[] { 0, 0, 0, 0, 0 };
+    data.add(new Pair<byte[], byte[]>(fuzzyKey, mask));
+    FuzzyRowFilter filter = new FuzzyRowFilter(data);
+
+    Scan scan = new Scan();
+    scan.setFilter(filter);
+
+    ResultScanner scanner = ht.getScanner(scan);
+    int total = 0;
+    while (scanner.next() != null) {
+      total++;
+    }
+    assertEquals(2, total);
+    TEST_UTIL.deleteTable(TableName.valueOf(table));
+  }
+
+  @Test
   public void testHBASE14782() throws IOException
   {
     String cf = "f";
