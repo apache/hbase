@@ -268,7 +268,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   //////////////////////////////////////////////////////////////////////////////
   // Members
   //////////////////////////////////////////////////////////////////////////////
-
   // map from a locked row to the context for that lock including:
   // - CountDownLatch for threads waiting on that row
   // - the thread that owns the lock (allow reentrancy)
@@ -3862,6 +3861,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     return this.stores.get(column);
   }
 
+  public ConcurrentHashMap<HashedBytes, RowLockContext> getLockedRows() {
+    return lockedRows;
+  }
+
   /**
    * Return HStore instance. Does not do any copy: as the number of store is limited, we
    *  iterate on the list.
@@ -6774,6 +6777,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         latch.countDown();
       }
     }
+
+    @Override
+    public String toString() {
+      return "RowLockContext{" +
+        "row=" + row +
+        ", count=" + lockCount +
+        ", threadName=" + thread.getName() +
+        '}';
+    }
+
   }
 
   /**
@@ -6867,4 +6880,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   public RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
   }
+
+
 }
