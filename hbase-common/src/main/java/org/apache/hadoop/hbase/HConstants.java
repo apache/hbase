@@ -908,6 +908,8 @@ public final class HConstants {
   public static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
       "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
+  public static final String CP_HTD_ATTR_INCLUSION_KEY =
+      "hbase.coprocessor.classloader.included.classes";
 
   /** The delay when re-trying a socket operation in a loop (HBASE-4712) */
   public static final int SOCKET_RETRY_WAIT_MS = 200;
