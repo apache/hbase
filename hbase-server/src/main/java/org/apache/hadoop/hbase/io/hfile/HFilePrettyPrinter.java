@@ -370,7 +370,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           List<Tag> tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
               cell.getTagsLength());
           for (Tag tag : tags) {
-            System.out.print(String.format(" T[%d]: %s", i++, TagUtil.getValueAsString(tag)));
+            System.out.print(String.format(" T[%d]: %s", i++, tag.toString()));
           }
         }
         System.out.println();

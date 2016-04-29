@@ -1184,7 +1184,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (tags != null) {
       List<String> tagsString = new ArrayList<String>();
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" + TagUtil.getValueAsString(t));
+        tagsString.add(t.toString());
       }
       stringMap.put("tag", tagsString);
     }
