@@ -115,6 +115,11 @@ class AsyncProcess {
   public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
 
   /**
+   * Configuration to decide whether to log details for batch error
+   */
+  public static final String LOG_DETAILS_FOR_BATCH_ERROR = "hbase.client.log.batcherrors.details";
+
+  /**
    * The context used to wait for results from one submit call.
    * 1) If AsyncProcess is set to track errors globally, and not per call (for HTable puts),
    *    then errors and failed operations in this object will reflect global errors.
@@ -223,6 +228,8 @@ class AsyncProcess {
   protected int serverTrackerTimeout;
   protected int timeout;
   protected long primaryCallTimeoutMicroseconds;
+  /** Whether to log details for batch errors */
+  private final boolean logBatchErrorDetails;
   // End configuration settings.
 
   protected static class BatchErrors {
@@ -244,9 +251,12 @@ class AsyncProcess {
       return !throwables.isEmpty();
     }
 
-    private synchronized RetriesExhaustedWithDetailsException makeException() {
-      return new RetriesExhaustedWithDetailsException(
-          new ArrayList<Throwable>(throwables),
+    private synchronized RetriesExhaustedWithDetailsException makeException(boolean logDetails) {
+      if (logDetails) {
+        LOG.error("Exception occurred! Exception details: " + throwables + ";\nActions: "
+            + actions);
+      }
+      return new RetriesExhaustedWithDetailsException(new ArrayList<Throwable>(throwables),
           new ArrayList<Row>(actions), new ArrayList<String>(addresses));
     }
 
@@ -319,6 +329,7 @@ class AsyncProcess {
 
     this.rpcCallerFactory = rpcCaller;
     this.rpcFactory = rpcFactory;
+    this.logBatchErrorDetails = conf.getBoolean(LOG_DETAILS_FOR_BATCH_ERROR, false);
   }
 
   /**
@@ -1690,7 +1701,7 @@ class AsyncProcess {
 
     @Override
     public RetriesExhaustedWithDetailsException getErrors() {
-      return errors.makeException();
+      return errors.makeException(logBatchErrorDetails);
     }
 
     @Override
@@ -1810,7 +1821,7 @@ class AsyncProcess {
     if (failedRows != null) {
       failedRows.addAll(globalErrors.actions);
     }
-    RetriesExhaustedWithDetailsException result = globalErrors.makeException();
+    RetriesExhaustedWithDetailsException result = globalErrors.makeException(logBatchErrorDetails);
     globalErrors.clear();
     return result;
   }
