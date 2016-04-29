@@ -43,6 +43,7 @@
         <include>org.apache.hbase:hbase-procedure</include>
         <include>org.apache.hbase:hbase-protocol</include>
         <include>org.apache.hbase:hbase-rest</include>
+        <include>org.apache.hbase:hbase-rsgroup</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shell</include>
         <include>org.apache.hbase:hbase-spark</include>
