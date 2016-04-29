@@ -606,13 +606,11 @@ public interface Table extends Closeable {
    * early and throw SocketTimeoutException.
    * @param operationTimeout the total timeout of each operation in millisecond.
    */
-  @InterfaceAudience.Private
   public void setOperationTimeout(int operationTimeout);
 
   /**
    * Get timeout (millisecond) of each operation for in Table instance.
    */
-  @InterfaceAudience.Private
   public int getOperationTimeout();
 
   /**
@@ -622,12 +620,10 @@ public interface Table extends Closeable {
    * retries exhausted or operation timeout reached.
    * @param rpcTimeout the timeout of each rpc request in millisecond.
    */
-  @InterfaceAudience.Private
   public void setRpcTimeout(int rpcTimeout);
 
   /**
    * Get timeout (millisecond) of each rpc request in this Table instance.
    */
-  @InterfaceAudience.Private
   public int getRpcTimeout();
 }
