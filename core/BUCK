@@ -21,8 +21,6 @@ cxx_library(
     exported_headers=[
         "client.h",
         "connection.h",
-        "get-request.h",
-        "get-result.h",
         "hbase_macros.h",
         "location-cache.h",
         "table-name.h",
@@ -32,8 +30,6 @@ cxx_library(
     ],
     srcs=[
         "client.cc",
-        "get-request.cc",
-        "get-result.cc",
         "location-cache.cc",
         "meta-utils.cc",
         "table-name.cc",

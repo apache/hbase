@@ -18,9 +18,11 @@
  */
 #pragma once
 
+#include <wangle/service/Service.h>
+
 #include "connection/request.h"
 #include "connection/response.h"
 
 namespace hbase {
-using HBaseService = wangle::Service<Request, Response>;
+using HBaseService = wangle::Service<std::unique_ptr<Request>, Response>;
 } // namespace hbase

@@ -45,8 +45,8 @@ ConnectionFactory::ConnectionFactory() {
   bootstrap_.pipelineFactory(std::make_shared<RpcPipelineFactory>());
 }
 
-std::shared_ptr<Service<std::unique_ptr<Request>, Response>>
-ConnectionFactory::make_connection(std::string host, int port) {
+std::shared_ptr<HBaseService>
+ConnectionFactory::make_connection(const std::string &host, int port) {
   // Connect to a given server
   // Then when connected create a ClientDispactcher.
   auto pipeline = bootstrap_.connect(SocketAddress(host, port, true)).get();

@@ -77,7 +77,6 @@ ServerName LocationCache::ReadMetaLocation() {
   int zk_result =
       zoo_get(this->zk_, META_ZNODE_NAME, 0,
               reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
-  LOG(ERROR) << "len = " << len;
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
     throw runtime_error("Error getting meta location");
