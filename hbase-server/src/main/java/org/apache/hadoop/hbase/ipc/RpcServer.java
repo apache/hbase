@@ -1877,9 +1877,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
-        InetSocketAddress address = getListenerAddress();
         setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
-            "Call queue is full on " + (address != null ? address : "(channel closed)") +
+            "Call queue is full on " + server.getServerName() +
                 ", is hbase.ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
@@ -1943,9 +1942,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
-        InetSocketAddress address = getListenerAddress();
         setupResponse(responseBuffer, call, CALL_QUEUE_TOO_BIG_EXCEPTION,
-            "Call queue is full on " + (address != null ? address : "(channel closed)") +
+            "Call queue is full on " + server.getServerName() +
                 ", too many items queued ?");
         responder.doRespond(call);
       }
