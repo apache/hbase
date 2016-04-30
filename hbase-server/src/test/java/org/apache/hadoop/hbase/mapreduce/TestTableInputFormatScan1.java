@@ -127,48 +127,45 @@ public class TestTableInputFormatScan1 extends TestTableInputFormatScanBase {
   @Test
   public void testGetSplitsPoint() throws IOException, InterruptedException,
   ClassNotFoundException {
-    // Test Case 1: "aaabcdef" and "aaaff", split point is "aaad".
     byte[] start1 = { 'a', 'a', 'a', 'b', 'c', 'd', 'e', 'f' };
     byte[] end1 = { 'a', 'a', 'a', 'f', 'f' };
-    byte[] splitPoint1 = { 'a', 'a', 'a', 'd' };
+    byte[] splitPoint1 = { 'a', 'a', 'a', 'd', 'd', -78, 50, -77  };
     testGetSplitKey(start1, end1, splitPoint1, true);
 
-    // Test Case 2: "111000" and "1125790", split point is "111b".
     byte[] start2 = { '1', '1', '1', '0', '0', '0' };
     byte[] end2 = { '1', '1', '2', '5', '7', '9', '0' };
-    byte[] splitPoint2 = { '1', '1', '1', 'b' };
+    byte[] splitPoint2 = { '1', '1', '1',  -78, -77, -76, -104 };
     testGetSplitKey(start2, end2, splitPoint2, true);
 
-    // Test Case 3: "aaaaaa" and "aab", split point is "aaap".
     byte[] start3 = { 'a', 'a', 'a', 'a', 'a', 'a' };
     byte[] end3 = { 'a', 'a', 'b' };
-    byte[] splitPoint3 = { 'a', 'a', 'a', 'p' };
+    byte[] splitPoint3 = { 'a', 'a', 'a', -80, -80, -80 };
     testGetSplitKey(start3, end3, splitPoint3, true);
 
-    // Test Case 4: "aaa" and "aaaz", split point is "aaaM".
     byte[] start4 = { 'a', 'a', 'a' };
     byte[] end4 = { 'a', 'a', 'a', 'z' };
-    byte[] splitPoint4 = { 'a', 'a', 'a', 'M' };
+    byte[] splitPoint4 = { 'a', 'a', 'a', '=' };
     testGetSplitKey(start4, end4, splitPoint4, true);
 
-    // Test Case 5: "aaa" and "aaba", split point is "aaap".
     byte[] start5 = { 'a', 'a', 'a' };
     byte[] end5 = { 'a', 'a', 'b', 'a' };
-    byte[] splitPoint5 = { 'a', 'a', 'a', 'p' };
+    byte[] splitPoint5 = { 'a', 'a', 'a', -80 };
     testGetSplitKey(start5, end5, splitPoint5, true);
 
     // Test Case 6: empty key and "hhhqqqwww", split point is "h"
     byte[] start6 = {};
     byte[] end6 = { 'h', 'h', 'h', 'q', 'q', 'q', 'w', 'w' };
-    byte[] splitPoint6 = { 'h' };
-    testGetSplitKey(start6, end6, splitPoint6, true);
+    byte[] splitPointText6 = { 'h' };
+    byte[] splitPointBinary6 = { 104 };
+    testGetSplitKey(start6, end6, splitPointText6, true);
+    testGetSplitKey(start6, end6, splitPointBinary6, false);
 
     // Test Case 7: "ffffaaa" and empty key, split point depends on the mode we choose(text key or
     // binary key).
     byte[] start7 = { 'f', 'f', 'f', 'f', 'a', 'a', 'a' };
     byte[] end7 = {};
     byte[] splitPointText7 = { 'f', '~', '~', '~', '~', '~', '~'  };
-    byte[] splitPointBinary7 = { 'f', 127, 127, 127, 127, 127, 127  };
+    byte[] splitPointBinary7 = { 'f', -1, -1, -1, -1, -1, -1  };
     testGetSplitKey(start7, end7, splitPointText7, true);
     testGetSplitKey(start7, end7, splitPointBinary7, false);
 
@@ -184,7 +181,21 @@ public class TestTableInputFormatScan1 extends TestTableInputFormatScanBase {
     // Test Case 9: Binary Key example
     byte[] start9 = { 13, -19, 126, 127 };
     byte[] end9 = { 13, -19, 127, 0 };
-    byte[] splitPoint9 = { 13, -19, 127, -64 };
+    byte[] splitPoint9 = { 13, -19, 126, -65 };
     testGetSplitKey(start9, end9, splitPoint9, false);
+
+    // Test Case 10: Binary key split when the start key is an unsigned byte and the end byte is a
+    // signed byte
+    byte[] start10 = { 'x' };
+    byte[] end10 = { -128 };
+    byte[] splitPoint10 = { '|' };
+    testGetSplitKey(start10, end10, splitPoint10, false);
+
+    // Test Case 11: Binary key split when the start key is an signed byte and the end byte is a
+    // signed byte
+    byte[] start11 = { -100 };
+    byte[] end11 = { -90 };
+    byte[] splitPoint11 = { -95 };
+    testGetSplitKey(start11, end11, splitPoint11, false);
   }
 }
