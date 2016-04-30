@@ -210,12 +210,6 @@ public class AsyncRpcChannel {
     ch.pipeline().addLast("frameDecoder",
       new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
     ch.pipeline().addLast(new AsyncServerResponseHandler(this));
-    ch.closeFuture().addListener(new GenericFutureListener<ChannelFuture>() {
-      @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
-        close(null);
-      }
-    });
     try {
       writeChannelHeader(ch).addListener(new GenericFutureListener<ChannelFuture>() {
         @Override

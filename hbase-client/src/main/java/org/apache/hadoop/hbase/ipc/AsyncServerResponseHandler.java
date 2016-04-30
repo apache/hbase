@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -103,6 +105,11 @@ public class AsyncServerResponseHandler extends SimpleChannelInboundHandler<Byte
     channel.close(cause);
   }
 
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    channel.close(new IOException("connection closed"));
+  }
+
   /**
    * @param e Proto exception
    * @return RemoteException made from passed <code>e</code>
@@ -116,5 +123,4 @@ public class AsyncServerResponseHandler extends SimpleChannelInboundHandler<Byte
             e.getPort(), doNotRetry)
         : new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry);
   }
-
 }
