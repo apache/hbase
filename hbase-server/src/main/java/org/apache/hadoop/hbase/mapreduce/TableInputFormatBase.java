@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -391,6 +392,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     int count = 0;
     while (count < list.size()) {
       TableSplit ts = (TableSplit)list.get(count);
+      TableName tableName = ts.getTable();
       String regionLocation = ts.getRegionLocation();
       String encodedRegionName = ts.getEncodedRegionName();
       long regionSize = ts.getLength();
@@ -398,14 +400,19 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         // if the current region size is large than the data skew threshold,
         // split the region into two MapReduce input splits.
         byte[] splitKey = getSplitKey(ts.getStartRow(), ts.getEndRow(), isTextKey);
-         //Set the size of child TableSplit as 1/2 of the region size. The exact size of the
-         // MapReduce input splits is not far off.
-        TableSplit t1 = new TableSplit(table.getName(), scan, ts.getStartRow(), splitKey,
-                regionLocation, encodedRegionName, regionSize / 2);
-        TableSplit t2 = new TableSplit(table.getName(), scan, splitKey, ts.getEndRow(),
-                regionLocation, encodedRegionName, regionSize - regionSize / 2);
-        resultList.add(t1);
-        resultList.add(t2);
+        if (Arrays.equals(ts.getEndRow(), splitKey)) {
+          // Not splitting since the end key is the same as the split key
+          resultList.add(ts);
+        } else {
+          //Set the size of child TableSplit as 1/2 of the region size. The exact size of the
+          // MapReduce input splits is not far off.
+          TableSplit t1 = new TableSplit(tableName, scan, ts.getStartRow(), splitKey,
+              regionLocation, regionSize / 2);
+          TableSplit t2 = new TableSplit(tableName, scan, splitKey, ts.getEndRow(), regionLocation,
+              regionSize - regionSize / 2);
+          resultList.add(t1);
+          resultList.add(t2);
+        }
         count++;
       } else if (regionSize >= average) {
         // if the region size between average size and data skew threshold size,
@@ -441,11 +448,40 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * select a split point in the region. The selection of the split point is based on an uniform
    * distribution assumption for the keys in a region.
    * Here are some examples:
-   * startKey: aaabcdefg  endKey: aaafff    split point: aaad
-   * startKey: 111000  endKey: 1125790    split point: 111b
-   * startKey: 1110  endKey: 1120    split point: 111_
-   * startKey: binary key { 13, -19, 126, 127 }, endKey: binary key { 13, -19, 127, 0 },
-   * split point: binary key { 13, -19, 127, -64 }
+   *
+   * <table>
+   *   <tr>
+   *     <th>start key</th>
+   *     <th>end key</th>
+   *     <th>is text</th>
+   *     <th>split point</th>
+   *   </tr>
+   *   <tr>
+   *     <td>'a', 'a', 'a', 'b', 'c', 'd', 'e', 'f', 'g'</td>
+   *     <td>'a', 'a', 'a', 'f', 'f', 'f'</td>
+   *     <td>true</td>
+   *     <td>'a', 'a', 'a', 'd', 'd', -78, 50, -77, 51</td>
+   *   </tr>
+   *   <tr>
+   *     <td>'1', '1', '1', '0', '0', '0'</td>
+   *     <td>'1', '1', '2', '5', '7', '9', '0'</td>
+   *     <td>true</td>
+   *     <td>'1', '1', '1', -78, -77, -76, -104</td>
+   *   </tr>
+   *   <tr>
+   *     <td>'1', '1', '1', '0'</td>
+   *     <td>'1', '1', '2', '0'</td>
+   *     <td>true</td>
+   *     <td>'1', '1', '1', -80</td>
+   *   </tr>
+   *   <tr>
+   *     <td>13, -19, 126, 127</td>
+   *     <td>13, -19, 127, 0</td>
+   *     <td>false</td>
+   *     <td>13, -19, 126, -65</td>
+   *   </tr>
+   * </table>
+   *
    * Set this function as "public static", make it easier for test.
    *
    * @param start Start key of the region
@@ -463,8 +499,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       upperLimitByte = '~';
       lowerLimitByte = ' ';
     } else {
-      upperLimitByte = Byte.MAX_VALUE;
-      lowerLimitByte = Byte.MIN_VALUE;
+      upperLimitByte = -1;
+      lowerLimitByte = 0;
     }
     // For special case
     // Example 1 : startkey=null, endkey="hhhqqqwww", splitKey="h"
@@ -483,52 +519,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
       return result;
     }
-    // A list to store bytes in split key
-    List resultBytesList = new ArrayList();
-    int maxLength = start.length > end.length ? start.length : end.length;
-    for (int i = 0; i < maxLength; i++) {
-      //calculate the midpoint byte between the first difference
-      //for example: "11ae" and "11chw", the midpoint is "11b"
-      //another example: "11ae" and "11bhw", the first different byte is 'a' and 'b',
-      // there is no midpoint between 'a' and 'b', so we need to check the next byte.
-      if (start[i] == end[i]) {
-        resultBytesList.add(start[i]);
-        //For special case like: startKey="aaa", endKey="aaaz", splitKey="aaaM"
-        if (i + 1 == start.length) {
-          resultBytesList.add((byte) ((lowerLimitByte + end[i + 1]) / 2));
-          break;
-        }
-      } else {
-        //if the two bytes differ by 1, like ['a','b'], We need to check the next byte to find
-        // the midpoint.
-        if ((int)end[i] - (int)start[i] == 1) {
-          //get next byte after the first difference
-          byte startNextByte = (i + 1 < start.length) ? start[i + 1] : lowerLimitByte;
-          byte endNextByte = (i + 1 < end.length) ? end[i + 1] : lowerLimitByte;
-          int byteRange = (upperLimitByte - startNextByte) + (endNextByte - lowerLimitByte) + 1;
-          int halfRange = byteRange / 2;
-          if ((int)startNextByte + halfRange > (int)upperLimitByte) {
-            resultBytesList.add(end[i]);
-            resultBytesList.add((byte) (startNextByte + halfRange - upperLimitByte +
-                    lowerLimitByte));
-          } else {
-            resultBytesList.add(start[i]);
-            resultBytesList.add((byte) (startNextByte + halfRange));
-          }
-        } else {
-          //calculate the midpoint key by the fist different byte (normal case),
-          // like "11ae" and "11chw", the midpoint is "11b"
-          resultBytesList.add((byte) ((start[i] + end[i]) / 2));
-        }
-        break;
-      }
-    }
-    //transform the List of bytes to byte[]
-    byte result[] = new byte[resultBytesList.size()];
-    for (int k = 0; k < resultBytesList.size(); k++) {
-      result[k] = (byte) resultBytesList.get(k);
-    }
-    return result;
+    return Bytes.split(start, end, false, 1)[1];
   }
 
   /**
