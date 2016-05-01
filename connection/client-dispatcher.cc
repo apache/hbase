@@ -22,6 +22,8 @@ using namespace folly;
 using namespace hbase;
 using namespace wangle;
 
+ClientDispatcher::ClientDispatcher() : requests_(), current_call_id_(9) {}
+
 void ClientDispatcher::read(Context *ctx, Response in) {
   auto call_id = in.call_id();
   auto search = requests_.find(call_id);

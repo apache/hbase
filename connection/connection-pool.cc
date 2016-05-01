@@ -35,14 +35,14 @@ class RemoveServiceFilter
 
 public:
   RemoveServiceFilter(std::shared_ptr<HBaseService> service, ServerName sn,
-                      ConnectionPool *cp)
+                      ConnectionPool &cp)
       : ServiceFilter<unique_ptr<Request>, Response>(service), sn_(sn),
         cp_(cp) {}
 
   folly::Future<folly::Unit> close() override {
     if (!released.exchange(true)) {
       return this->service_->close().then(
-          [this]() { this->cp_->close(this->sn_); });
+          [this]() { this->cp_.close(this->sn_); });
     } else {
       return folly::makeFuture();
     }
@@ -57,12 +57,14 @@ public:
 private:
   std::atomic<bool> released{false};
   hbase::pb::ServerName sn_;
-  ConnectionPool *cp_;
+  ConnectionPool &cp_;
 };
 
-ConnectionPool::ConnectionPool() : cf_(std::make_shared<ConnectionFactory>()) {}
+ConnectionPool::ConnectionPool()
+    : cf_(std::make_shared<ConnectionFactory>()), connections_(), map_mutex_() {
+}
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
-    : cf_(cf) {}
+    : cf_(cf), connections_(), map_mutex_() {}
 
 std::shared_ptr<HBaseService> ConnectionPool::get(const ServerName &sn) {
   SharedMutexWritePriority::UpgradeHolder holder(map_mutex_);
@@ -70,7 +72,7 @@ std::shared_ptr<HBaseService> ConnectionPool::get(const ServerName &sn) {
   if (found == connections_.end() || found->second == nullptr) {
     SharedMutexWritePriority::WriteHolder holder(std::move(holder));
     auto new_con = cf_->make_connection(sn.host_name(), sn.port());
-    auto wrapped = std::make_shared<RemoveServiceFilter>(new_con, sn, this);
+    auto wrapped = std::make_shared<RemoveServiceFilter>(new_con, sn, *this);
     connections_[sn] = wrapped;
     return new_con;
   }

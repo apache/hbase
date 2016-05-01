@@ -25,12 +25,13 @@ cxx_library(name="utils",
             deps=[
                 '//third-party:folly',
             ],
+            tests=[
+                ":user-util-test"
+            ],
             visibility=[
                 'PUBLIC',
             ],
-            tests=[
-                ":user-util-test"
-            ], )
+            compiler_flags=['-Weffc++'], )
 cxx_test(name="user-util-test",
          srcs=[
              "user-util-test.cc",

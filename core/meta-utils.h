@@ -20,11 +20,16 @@
 
 #include <string>
 
+#include "connection/Request.h"
+#include "core/table-name.h"
+
 namespace hbase {
-class TableName;
 
 class MetaUtil {
 public:
-  std::string region_lookup_rowkey(const TableName &tn, const std::string &row);
+  std::string region_lookup_rowkey(const hbase::pb::TableName &tn,
+                                   const std::string &row) const;
+  std::unique_ptr<Request> make_meta_request(const hbase::pb::TableName tn,
+                                             const std::string &row) const;
 };
 } // namespace hbase

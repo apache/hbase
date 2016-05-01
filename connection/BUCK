@@ -43,6 +43,7 @@ cxx_library(name="connection",
                 "//third-party:folly",
                 "//third-party:wangle",
             ],
+            compiler_flags=['-Weffc++'],
             visibility=['//core/...', ], )
 cxx_test(name="connection-pool-test",
          srcs=["connection-pool-test.cc", ],

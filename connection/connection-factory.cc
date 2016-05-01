@@ -40,7 +40,7 @@ using namespace folly;
 using namespace hbase;
 using namespace wangle;
 
-ConnectionFactory::ConnectionFactory() {
+ConnectionFactory::ConnectionFactory() : bootstrap_() {
   bootstrap_.group(std::make_shared<wangle::IOThreadPoolExecutor>(1));
   bootstrap_.pipelineFactory(std::make_shared<RpcPipelineFactory>());
 }

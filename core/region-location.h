@@ -16,19 +16,30 @@
  * limitations under the License.
  *
  */
-#include "core/table-name.h"
+#pragma once
 
-#include <folly/Conv.h>
+#include <memory>
 
-using namespace hbase;
+#include "connection/service.h"
+#include "if/HBase.pb.h"
 
-TableName::TableName(std::string table_name)
-    : name_space_("default"), table_(table_name) {}
-TableName::TableName(std::string name_space, std::string table_name)
-    : name_space_(name_space), table_(table_name) {}
-bool TableName::is_default_name_space() const {
-  return name_space_.length() == 0 || name_space_ == "default";
-}
-bool TableName::operator==(const TableName &other) const {
-  return name_space_ == other.name_space_ && table_ == other.table_;
-}
+
+namespace hbase {
+
+class RegionLocation {
+public:
+  RegionLocation(hbase::pb::RegionInfo ri, hbase::pb::ServerName sn,
+                 std::shared_ptr<HBaseService> service)
+      : ri_(ri), sn_(sn), service_(service) {}
+
+  const hbase::pb::RegionInfo& region_info() { return ri_; }
+  const hbase::pb::ServerName& server_name() { return sn_; }
+  std::shared_ptr<HBaseService> service() { return service_; }
+
+private:
+  hbase::pb::RegionInfo ri_;
+  hbase::pb::ServerName sn_;
+  std::shared_ptr<HBaseService> service_;
+};
+
+} // namespace hbase

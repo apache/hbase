@@ -30,6 +30,7 @@ class ClientDispatcher
     : public wangle::ClientDispatcherBase<SerializePipeline,
                                           std::unique_ptr<Request>, Response> {
 public:
+  ClientDispatcher();
   void read(Context *ctx, Response in) override;
   folly::Future<Response> operator()(std::unique_ptr<Request> arg) override;
   folly::Future<folly::Unit> close(Context *ctx) override;
@@ -45,6 +46,6 @@ private:
   //
   // uint32_t has a max of 4Billion so 10 more or less is
   // not a big deal.
-  uint32_t current_call_id_ = 10;
+  uint32_t current_call_id_;
 };
 } // namespace hbase
