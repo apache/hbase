@@ -42,7 +42,7 @@ import com.google.protobuf.RpcController;
  * @see org.apache.hadoop.hbase.client.HBaseAdmin#coprocessorService()
  */
 @InterfaceAudience.Private
-public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
+public class MasterCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private static final Log LOG = LogFactory.getLog(MasterCoprocessorRpcChannel.class);
 
   private final ClusterConnection connection;

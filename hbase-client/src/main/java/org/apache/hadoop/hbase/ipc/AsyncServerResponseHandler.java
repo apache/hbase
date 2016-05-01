@@ -37,13 +37,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
  */
 @InterfaceAudience.Private
 public class AsyncServerResponseHandler extends SimpleChannelInboundHandler<ByteBuf> {
-  private final AsyncRpcChannel channel;
+  private final AsyncRpcChannelImpl channel;
 
   /**
    * Constructor
    * @param channel on which this response handler operates
    */
-  public AsyncServerResponseHandler(AsyncRpcChannel channel) {
+  public AsyncServerResponseHandler(AsyncRpcChannelImpl channel) {
     this.channel = channel;
   }
 

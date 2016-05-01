@@ -118,12 +118,11 @@ class FastFailInterceptorContext extends
     tries = 0;
   }
 
-  public FastFailInterceptorContext prepare(RetryingCallable<?> callable) {
+  public FastFailInterceptorContext prepare(RetryingCallableBase callable) {
     return prepare(callable, 0);
   }
 
-  public FastFailInterceptorContext prepare(RetryingCallable<?> callable,
-      int tries) {
+  public FastFailInterceptorContext prepare(RetryingCallableBase callable, int tries) {
     if (callable instanceof RegionServerCallable) {
       RegionServerCallable<?> retryingCallable = (RegionServerCallable<?>) callable;
       server = retryingCallable.getLocation().getServerName();

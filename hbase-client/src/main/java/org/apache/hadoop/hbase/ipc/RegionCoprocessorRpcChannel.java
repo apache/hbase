@@ -45,7 +45,7 @@ import com.google.protobuf.RpcController;
  * @see org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])
  */
 @InterfaceAudience.Private
-public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
+public class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private static final Log LOG = LogFactory.getLog(RegionCoprocessorRpcChannel.class);
 
   private final ClusterConnection connection;
@@ -57,6 +57,12 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
 
+  /**
+   * Constructor
+   * @param conn connection to use
+   * @param table to connect to
+   * @param row to locate region with
+   */
   public RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row) {
     this.connection = conn;
     this.table = table;
@@ -114,6 +120,10 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
     return response;
   }
 
+  /**
+   * Get last region this RpcChannel communicated with
+   * @return region name as byte array
+   */
   public byte[] getLastRegion() {
     return lastRegion;
   }

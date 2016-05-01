@@ -388,11 +388,11 @@ public class AsyncRpcClient extends AbstractRpcClient {
       }
       rpcChannel = connections.get(hashCode);
       if (rpcChannel != null && !rpcChannel.isAlive()) {
-        LOG.debug("Removing dead channel from server="+rpcChannel.address.toString());
+        LOG.debug("Removing dead channel from server="+rpcChannel.getAddress().toString());
         connections.remove(hashCode);
       }
       if (rpcChannel == null) {
-        rpcChannel = new AsyncRpcChannel(this.bootstrap, this, ticket, serviceName, location);
+        rpcChannel = new AsyncRpcChannelImpl(this.bootstrap, this, ticket, serviceName, location);
         connections.put(hashCode, rpcChannel);
       }
     }
@@ -415,8 +415,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
     synchronized (connections) {
       for (AsyncRpcChannel rpcChannel : connections.values()) {
         if (rpcChannel.isAlive() &&
-            rpcChannel.address.getPort() == sn.getPort() &&
-            rpcChannel.address.getHostName().contentEquals(sn.getHostname())) {
+            rpcChannel.getAddress().getPort() == sn.getPort() &&
+            rpcChannel.getAddress().getHostName().contentEquals(sn.getHostname())) {
           LOG.info("The server on " + sn.toString() +
               " is dead - stopping the connection " + rpcChannel.toString());
           rpcChannel.close(null);
