@@ -29,29 +29,29 @@ import java.io.IOException;
  * Interface for RpcClient implementations so ConnectionManager can handle it.
  */
 @InterfaceAudience.Private public interface RpcClient extends Closeable {
-  public final static String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
-  public final static int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
-  public final static String IDLE_TIME = "hbase.ipc.client.connection.minIdleTimeBeforeClose";
-  public static final String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY =
+  String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
+  int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
+  String IDLE_TIME = "hbase.ipc.client.connection.minIdleTimeBeforeClose";
+  String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY =
       "hbase.ipc.client.fallback-to-simple-auth-allowed";
-  public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
-  public static final String SPECIFIC_WRITE_THREAD = "hbase.ipc.client.specificThreadForWriting";
-  public static final String DEFAULT_CODEC_CLASS = "hbase.client.default.rpc.codec";
+  boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
+  String SPECIFIC_WRITE_THREAD = "hbase.ipc.client.specificThreadForWriting";
+  String DEFAULT_CODEC_CLASS = "hbase.client.default.rpc.codec";
 
-  public final static String SOCKET_TIMEOUT_CONNECT = "hbase.ipc.client.socket.timeout.connect";
+  String SOCKET_TIMEOUT_CONNECT = "hbase.ipc.client.socket.timeout.connect";
   /**
    * How long we wait when we wait for an answer. It's not the operation time, it's the time
    * we wait when we start to receive an answer, when the remote write starts to send the data.
    */
-  public final static String SOCKET_TIMEOUT_READ = "hbase.ipc.client.socket.timeout.read";
-  public final static String SOCKET_TIMEOUT_WRITE = "hbase.ipc.client.socket.timeout.write";
-  public final static int DEFAULT_SOCKET_TIMEOUT_CONNECT = 10000; // 10 seconds
-  public final static int DEFAULT_SOCKET_TIMEOUT_READ = 20000; // 20 seconds
-  public final static int DEFAULT_SOCKET_TIMEOUT_WRITE = 60000; // 60 seconds
+  String SOCKET_TIMEOUT_READ = "hbase.ipc.client.socket.timeout.read";
+  String SOCKET_TIMEOUT_WRITE = "hbase.ipc.client.socket.timeout.write";
+  int DEFAULT_SOCKET_TIMEOUT_CONNECT = 10000; // 10 seconds
+  int DEFAULT_SOCKET_TIMEOUT_READ = 20000; // 20 seconds
+  int DEFAULT_SOCKET_TIMEOUT_WRITE = 60000; // 60 seconds
 
   // Used by the server, for compatibility with old clients.
   // The client in 0.99+ does not ping the server.
-  final static int PING_CALL_ID = -1;
+  int PING_CALL_ID = -1;
 
   /**
    * Creates a "channel" that can be used by a blocking protobuf service.  Useful setting up
@@ -64,8 +64,8 @@ import java.io.IOException;
    * @return A blocking rpc channel that goes via this rpc client instance.
    * @throws IOException when channel could not be created
    */
-  public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user,
-      int rpcTimeout) throws IOException;
+  BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout)
+      throws IOException;
 
   /**
    * Interrupt the connections to the given server. This should be called if the server
@@ -76,13 +76,14 @@ import java.io.IOException;
    * safe exception.
    * @param sn server location to cancel connections of
    */
-  public void cancelConnections(ServerName sn);
+  void cancelConnections(ServerName sn);
 
   /**
    * Stop all threads related to this client.  No further calls may be made
    * using this client.
    */
-  @Override public void close();
+  @Override
+  void close();
 
   /**
    * @return true when this client uses a {@link org.apache.hadoop.hbase.codec.Codec} and so

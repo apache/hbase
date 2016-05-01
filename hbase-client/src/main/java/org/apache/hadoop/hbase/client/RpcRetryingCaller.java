@@ -43,7 +43,7 @@ public interface RpcRetryingCaller<T> {
 
   /**
    * Call the server once only.
-   * {@link RetryingCallable} has a strange shape so we can do retrys.  Use this invocation if you
+   * {@link RetryingCallable} has a strange shape so we can do retries.  Use this invocation if you
    * want to do a single call only (A call to {@link RetryingCallable#call(int)} will not likely
    * succeed).
    * @return an object of type T

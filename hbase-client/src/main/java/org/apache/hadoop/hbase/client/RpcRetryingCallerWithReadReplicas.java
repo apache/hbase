@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.client;
 
 
@@ -297,11 +294,7 @@ public class RpcRetryingCallerWithReadReplicas {
       } else {
         rl = cConnection.locateRegion(tableName, row, useCache, true, replicaId);
       }
-    } catch (DoNotRetryIOException e) {
-      throw e;
-    } catch (RetriesExhaustedException e) {
-      throw e;
-    } catch (InterruptedIOException e) {
+    } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
       throw new RetriesExhaustedException("Can't get the location", e);

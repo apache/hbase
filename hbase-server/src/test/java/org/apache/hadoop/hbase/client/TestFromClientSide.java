@@ -5430,7 +5430,7 @@ public class TestFromClientSide {
       table.put(put);
     }
 
-    // nomal scan
+    // normal scan
     ResultScanner scanner = table.getScanner(new Scan());
     int count = 0;
     for (Result r : scanner) {
