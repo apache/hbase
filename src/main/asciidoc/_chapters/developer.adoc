@@ -708,6 +708,8 @@ In the _version directory_ run the following commands:
 ----
 
 $ for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done
+$ for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done
+$ for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
 $ cd ..
 # Presuming our 'version directory' is named 0.96.0RC0, now copy it up to people.apache.org.
