@@ -21,33 +21,30 @@
 #include <memory>
 #include <string>
 
+#include "if/HBase.pb.h"
 #include <folly/Conv.h>
 
 namespace hbase {
-
-// This is the core class of a HBase client.
-class TableName {
-public:
-  explicit TableName(std::string table_name);
-  explicit TableName(std::string name_space, std::string table_name);
-
-  std::string name_space() const { return name_space_; };
-  std::string table() const { return table_; };
-  bool is_default_name_space() const;
-  bool operator==(const TableName &other) const;
-
-private:
-  std::string name_space_;
-  std::string table_;
-};
+namespace pb {
 
 // Provide folly::to<std::string>(TableName);
 template <class String> void toAppend(const TableName &in, String *result) {
-  if (in.is_default_name_space()) {
-    folly::toAppend(in.table(), result);
+  if (!in.has_namespace_() || in.namespace_() == "default") {
+    folly::toAppend(in.qualifier(), result);
   } else {
-    folly::toAppend(in.name_space(), ':', in.table(), result);
+    folly::toAppend(in.namespace_(), ':', in.qualifier(), result);
   }
 }
 
+} // namespace pb
+
+class TableNameUtil {
+public:
+  static ::hbase::pb::TableName create(std::string table_name) {
+    ::hbase::pb::TableName tn;
+    tn.set_namespace_("default");
+    tn.set_qualifier(table_name);
+    return tn;
+  }
+};
 } // namespace hbase

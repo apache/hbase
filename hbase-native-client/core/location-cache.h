@@ -27,9 +27,19 @@
 #include <mutex>
 #include <string>
 
-#include "if/HBase.pb.h"
+#include "connection/connection-pool.h"
+#include "core/meta-utils.h"
+#include "core/table-name.h"
+#include "core/region-location.h"
 
 namespace hbase {
+
+class Request;
+class Response;
+namespace pb {
+class ServerName;
+}
+
 class LocationCache {
 public:
   explicit LocationCache(std::string quorum_spec,
@@ -38,6 +48,9 @@ public:
   // Meta Related Methods.
   // These are only public until testing is complete
   folly::Future<hbase::pb::ServerName> LocateMeta();
+  folly::Future<RegionLocation> locateFromMeta(const hbase::pb::TableName &tn,
+                                               const std::string &row);
+  RegionLocation parse_response(const Response &resp);
   void InvalidateMeta();
 
 private:
@@ -48,7 +61,11 @@ private:
   std::shared_ptr<folly::Executor> executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::mutex meta_lock_;
+  ConnectionPool cp_;
+  MetaUtil meta_util_;
 
+
+  // TODO: migrate this to a smart pointer with a deleter.
   zhandle_t *zk_;
 };
 } // namespace hbase

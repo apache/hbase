@@ -31,6 +31,7 @@ using SerializePipeline =
 
 class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
 public:
+  RpcPipelineFactory();
   SerializePipeline::Ptr
   newPipeline(std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
 

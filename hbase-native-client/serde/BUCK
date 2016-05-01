@@ -34,6 +34,7 @@ cxx_library(name="serde",
                 ":client-serializer-test",
                 ":client-deserializer-test",
             ],
+            compiler_flags=['-Weffc++'],
             visibility=[
                 'PUBLIC',
             ], )

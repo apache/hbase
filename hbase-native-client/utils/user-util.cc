@@ -27,6 +27,8 @@
 using namespace hbase;
 using namespace std;
 
+UserUtil::UserUtil() : init_{false}, user_name_{"drwho"}, m_() {}
+
 string UserUtil::user_name() {
   if (!init_) {
     compute_user_name();

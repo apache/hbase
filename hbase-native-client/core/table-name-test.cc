@@ -25,26 +25,30 @@
 #include "core/table-name.h"
 
 using namespace hbase;
+using hbase::pb::TableName;
 
 TEST(TestTableName, TestToStringNoDefault) {
-  TableName tn{"TestTableName"};
+  TableName tn;
+  tn.set_qualifier("TestTableName");
   std::string result = folly::to<std::string>(tn);
   ASSERT_EQ(result.find("default"), std::string::npos);
   ASSERT_EQ("TestTableName", result);
 }
+
+TEST(TestTableName, TestToStringNoDefaltWhenSet) {
+  TableName tn;
+  tn.set_namespace_("default");
+  tn.set_qualifier("TestTableName");
+  std::string result = folly::to<std::string>(tn);
+  ASSERT_EQ(result.find("default"), std::string::npos);
+  ASSERT_EQ("TestTableName", result);
+}
+
 TEST(TestTableName, TestToStringIncludeNS) {
-  TableName tn{"hbase", "acl"};
+  TableName tn;
+  tn.set_namespace_("hbase");
+  tn.set_qualifier("acl");
   std::string result = folly::to<std::string>(tn);
   ASSERT_EQ(result.find("hbase"), 0);
   ASSERT_EQ("hbase:acl", result);
-}
-TEST(TestTableName, TestIsDefault) {
-  TableName default_t1{"in_default"};
-  ASSERT_TRUE(default_t1.is_default_name_space());
-
-  TableName default_t2{"default", "in_also"};
-  ASSERT_TRUE(default_t2.is_default_name_space());
-
-  TableName non_default{"testing", "hmm"};
-  ASSERT_FALSE(non_default.is_default_name_space());
 }

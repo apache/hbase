@@ -47,7 +47,7 @@ public:
                                    std::unique_ptr<Request> r) override;
 
 private:
-  bool need_send_header_ = true;
+  bool need_send_header_;
   std::string user_name_;
   ClientSerializer ser_;
   ClientDeserializer deser_;

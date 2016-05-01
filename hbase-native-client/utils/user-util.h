@@ -26,11 +26,12 @@
 namespace hbase {
 class UserUtil {
 public:
+  UserUtil();
   std::string user_name();
 
 private:
   void compute_user_name();
-  std::atomic<bool> init_{false};
+  std::atomic<bool> init_;
   std::string user_name_;
   std::mutex m_;
 };

@@ -22,6 +22,7 @@ cxx_library(
         "client.h",
         "connection.h",
         "hbase_macros.h",
+        "region-location.h",
         "location-cache.h",
         "table-name.h",
         # TODO: move this out of exported
@@ -32,7 +33,6 @@ cxx_library(
         "client.cc",
         "location-cache.cc",
         "meta-utils.cc",
-        "table-name.cc",
     ],
     deps=[
         "//connection:connection",
@@ -42,6 +42,7 @@ cxx_library(
         "//third-party:wangle",
         "//third-party:zookeeper_mt",
     ],
+    compiler_flags=['-Weffc++'],
     visibility=[
         'PUBLIC',
     ], )

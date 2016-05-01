@@ -21,11 +21,61 @@
 
 #include <folly/Conv.h>
 
+#include "connection/request.h"
+#include "connection/response.h"
 #include "core/table-name.h"
+#include "if/Client.pb.h"
 
-using namespace hbase;
+using hbase::pb::TableName;
+using hbase::MetaUtil;
+using hbase::Request;
+using hbase::Response;
+using hbase::pb::ScanRequest;
+using hbase::pb::RegionSpecifier_RegionSpecifierType;
+
+static const std::string META_REGION = "1588230740";
 
 std::string MetaUtil::region_lookup_rowkey(const TableName &tn,
-                                           const std::string &row) {
+                                           const std::string &row) const {
   return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
+}
+
+std::unique_ptr<Request>
+MetaUtil::make_meta_request(const TableName tn, const std::string &row) const {
+  auto request = Request::scan();
+  auto msg = std::static_pointer_cast<ScanRequest>(request->req_msg());
+
+  msg->set_number_of_rows(1);
+  msg->set_close_scanner(true);
+
+  // Set the region this scan goes to
+  auto region = msg->mutable_region();
+  region->set_value(META_REGION);
+  region->set_type(RegionSpecifier_RegionSpecifierType::
+                       RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
+
+  auto scan = msg->mutable_scan();
+  // We don't care about before, just now.
+  scan->set_max_versions(1);
+  // Meta should be cached at all times.
+  scan->set_cache_blocks(true);
+  // We only want one row right now.
+  //
+  // TODO(eclark): Figure out if we should get more.
+  scan->set_caching(1);
+  // Close the scan after we have data.
+  scan->set_small(true);
+  // We know where to start but not where to end.
+  scan->set_reversed(true);
+  // Give me everything or nothing.
+  scan->set_allow_partial_results(false);
+
+  // Set the columns that we need
+  auto info_col = scan->add_column();
+  info_col->set_family("info");
+  info_col->add_qualifier("server");
+  info_col->add_qualifier("regioninfo");
+
+  scan->set_start_row(region_lookup_rowkey(tn, row));
+  return request;
 }

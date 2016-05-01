@@ -34,8 +34,11 @@ using namespace folly;
 using namespace wangle;
 using hbase::pb::ResponseHeader;
 using hbase::pb::GetResponse;
+using google::protobuf::Message;
 
-ClientHandler::ClientHandler(std::string user_name) : user_name_(user_name) {}
+ClientHandler::ClientHandler(std::string user_name)
+    : user_name_(user_name), need_send_header_(true), ser_(), deser_(),
+      resp_msgs_() {}
 
 void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {

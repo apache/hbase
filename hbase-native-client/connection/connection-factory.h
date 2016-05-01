@@ -31,6 +31,7 @@ namespace hbase {
 class ConnectionFactory {
 public:
   ConnectionFactory();
+  virtual ~ConnectionFactory() = default;
 
   virtual std::shared_ptr<HBaseService> make_connection(const std::string &host,
                                                         int port);

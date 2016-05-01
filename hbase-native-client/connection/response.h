@@ -31,10 +31,12 @@ namespace hbase {
 
 class Response {
 public:
-  Response() : call_id_(0) {}
+  Response() : call_id_(0), response_(nullptr) {}
   uint32_t call_id() { return call_id_; }
   void set_call_id(uint32_t call_id) { call_id_ = call_id; }
-  std::shared_ptr<google::protobuf::Message> response() { return response_; }
+  std::shared_ptr<google::protobuf::Message> response() const {
+    return response_;
+  }
   void set_response(std::shared_ptr<google::protobuf::Message> response) {
     response_ = std::move(response);
   }

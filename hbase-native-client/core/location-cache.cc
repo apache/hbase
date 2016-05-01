@@ -21,20 +21,31 @@
 #include <folly/Logging.h>
 #include <folly/io/IOBuf.h>
 
+#include "connection/response.h"
+#include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
 #include "serde/zk-deserializer.h"
 
 using namespace std;
 using namespace folly;
-using namespace hbase::pb;
-using namespace hbase;
+
+using hbase::Response;
+using hbase::LocationCache;
+using hbase::RegionLocation;
+using hbase::HBaseService;
+using hbase::pb::ScanResponse;
+using hbase::pb::TableName;
+using hbase::pb::ServerName;
+using hbase::pb::MetaRegionServer;
+using hbase::pb::RegionInfo;
 
 // TODO(eclark): make this configurable on client creation
 static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
 
 LocationCache::LocationCache(string quorum_spec,
                              shared_ptr<folly::Executor> executor)
-    : quorum_spec_(quorum_spec), executor_(executor), meta_promise_(nullptr) {
+    : quorum_spec_(quorum_spec), executor_(executor), meta_promise_(nullptr),
+      meta_lock_(), cp_(), meta_util_() {
   zk_ = zookeeper_init(quorum_spec.c_str(), nullptr, 1000, 0, 0, 0);
 }
 
@@ -88,4 +99,24 @@ ServerName LocationCache::ReadMetaLocation() {
     LOG(ERROR) << "Unable to decode";
   }
   return mrs.server();
+}
+
+Future<RegionLocation> LocationCache::locateFromMeta(const TableName &tn,
+                                                     const string &row) {
+  return this->LocateMeta()
+      .then([&](ServerName sn) { return this->cp_.get(sn); })
+      .then([&](std::shared_ptr<HBaseService> service) {
+        return (*service)(std::move(meta_util_.make_meta_request(tn, row)));
+      })
+      .then([&](Response resp) {
+        // take the protobuf response and make it into
+        // a region location.
+        return this->parse_response(std::move(resp));
+      });
+}
+
+RegionLocation LocationCache::parse_response(const Response &resp) {
+  auto resp_msg = static_pointer_cast<ScanResponse>(resp.response());
+  LOG(ERROR) << "resp_msg = " << resp_msg->DebugString();
+  return RegionLocation{RegionInfo{}, ServerName{}, nullptr};
 }
