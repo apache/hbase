@@ -23,17 +23,21 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
+/**
+ * Returned to the clients when their request was discarded due to server being overloaded.
+ * Clients should retry upon receiving it.
+ */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class CallQueueTooBigException extends IOException {
-  public CallQueueTooBigException() {
+public class CallDroppedException extends IOException {
+  public CallDroppedException() {
     super();
   }
 
   // Absence of this constructor prevents proper unwrapping of
   // remote exception on the client side
-  public CallQueueTooBigException(String message) {
+  public CallDroppedException(String message) {
     super(message);
   }
 }

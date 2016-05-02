@@ -28,6 +28,7 @@ import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
@@ -61,7 +62,8 @@ public final class ClientExceptionsUtil {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
         || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
-        || cur instanceof CallQueueTooBigException || cur instanceof NotServingRegionException);
+        || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
+        || cur instanceof NotServingRegionException);
   }
 
 
@@ -116,6 +118,17 @@ public final class ClientExceptionsUtil {
   public static boolean isCallQueueTooBigException(Throwable t) {
     t = findException(t);
     return (t instanceof CallQueueTooBigException);
+  }
+
+  /**
+   * Checks if the exception is CallDroppedException (maybe wrapped
+   * into some RemoteException).
+   * @param t exception to check
+   * @return true if it's a CQTBE, false otherwise
+   */
+  public static boolean isCallDroppedException(Throwable t) {
+    t = findException(t);
+    return (t instanceof CallDroppedException);
   }
 
   /**

@@ -25,7 +25,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -55,16 +54,6 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   // metrics (shared across all queues)
   private AtomicLong numGeneralCallsDropped;
   private AtomicLong numLifoModeSwitches;
-
-  /**
-   * Lock held by take ops, all other locks are inside queue impl.
-   *
-   * NOTE: We want to have this lock so that in case when there're lot of already expired
-   * calls in the call queue a handler thread calling take() can just grab lock once and
-   * then fast-forward through the expired calls to the first non-expired without having
-   * to contend for locks on every element in underlying queue.
-   */
-  private final ReentrantLock lock = new ReentrantLock();
 
   // Both are in milliseconds
   private volatile int codelTargetDelay;
@@ -120,25 +109,20 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
    */
   @Override
   public CallRunner take() throws InterruptedException {
-    final ReentrantLock lock = this.lock;
-    lock.lock();
-    try {
-      CallRunner cr;
-      while(true) {
-        if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
-          numLifoModeSwitches.incrementAndGet();
-          cr = queue.takeLast();
-        } else {
-          cr = queue.takeFirst();
-        }
-        if (needToDrop(cr)) {
-          numGeneralCallsDropped.incrementAndGet();
-        } else {
-          return cr;
-        }
+    CallRunner cr;
+    while(true) {
+      if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
+        numLifoModeSwitches.incrementAndGet();
+        cr = queue.takeLast();
+      } else {
+        cr = queue.takeFirst();
       }
-    } finally {
-      lock.unlock();
+      if (needToDrop(cr)) {
+        numGeneralCallsDropped.incrementAndGet();
+        cr.drop();
+      } else {
+        return cr;
+      }
     }
   }
 
