@@ -51,7 +51,7 @@ def add_dynamic_libs(names=[]):
     return rules
 
 
-system_libs = ["unwind", "lzma", "event", ]
+system_libs = ["lzma", "event", ]
 local_libs = [
     "double-conversion",
     "boost_regex",
@@ -65,7 +65,7 @@ local_libs = [
     "glog",
     "protobuf",
 ]
-dynamic_libs = ["stdc++", "pthread", "ssl", "crypto", "dl", "atomic", ]
+dynamic_libs = ["stdc++", "pthread", "ssl", "crypto", "dl", "atomic", "unwind"]
 dynamic_rules = add_dynamic_libs(dynamic_libs)
 tp_dep_rules =  add_system_libs(system_libs,) \
   + add_system_libs(local_libs, lib_dir = "/usr/local/lib") \
