@@ -85,11 +85,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
         ? rpcControllerFactory.newController() : controller;
 
     final ClientProtos.CoprocessorServiceCall call =
-        ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(ByteStringer.wrap(row))
-            .setServiceName(method.getService().getFullName())
-            .setMethodName(method.getName())
-            .setRequest(request.toByteString()).build();
+        CoprocessorRpcUtils.buildServiceCall(row, method, request);
     RegionServerCallable<CoprocessorServiceResponse> callable =
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
       @Override
