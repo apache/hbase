@@ -101,11 +101,13 @@ public class HFileSystem extends FilterFileSystem {
     if (useHBaseChecksum && !(fs instanceof LocalFileSystem)) {
       conf = new Configuration(conf);
       conf.setBoolean("dfs.client.read.shortcircuit.skip.checksum", true);
-      this.noChecksumFs = newInstanceFileSystem(conf);
+      this.noChecksumFs = maybeWrapFileSystem(newInstanceFileSystem(conf), conf);
       this.noChecksumFs.setVerifyChecksum(false);
     } else {
-      this.noChecksumFs = fs;
+      this.noChecksumFs = maybeWrapFileSystem(fs, conf);
     }
+
+    this.fs = maybeWrapFileSystem(this.fs, conf);
   }
 
   /**
@@ -189,6 +191,27 @@ public class HFileSystem extends FilterFileSystem {
     }
 
     return fs;
+  }
+
+  /**
+   * Returns an instance of Filesystem wrapped into the class specified in
+   * hbase.fs.wrapper property, if one is set in the configuration, returns
+   * unmodified FS instance passed in as an argument otherwise.
+   * @param base Filesystem instance to wrap
+   * @param conf Configuration
+   * @return wrapped instance of FS, or the same instance if no wrapping configured.
+   */
+  private FileSystem maybeWrapFileSystem(FileSystem base, Configuration conf) {
+    try {
+      Class<?> clazz = conf.getClass("hbase.fs.wrapper", null);
+      if (clazz != null) {
+        return (FileSystem) clazz.getConstructor(FileSystem.class, Configuration.class)
+          .newInstance(base, conf);
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to wrap filesystem: " + e);
+    }
+    return base;
   }
 
   public static boolean addLocationsOrderInterceptor(Configuration conf) throws IOException {
