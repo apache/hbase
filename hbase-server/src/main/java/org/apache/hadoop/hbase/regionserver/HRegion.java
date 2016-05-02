@@ -123,6 +123,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -7428,18 +7429,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * No stacking of instances is allowed for a single service name
      */
     Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
-    if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
-      LOG.error("Coprocessor service " + serviceDesc.getFullName() +
+    String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
+    if (coprocessorServiceHandlers.containsKey(serviceName)) {
+      LOG.error("Coprocessor service " + serviceName +
               " already registered, rejecting request from " + instance
       );
       return false;
     }
 
-    coprocessorServiceHandlers.put(serviceDesc.getFullName(), instance);
+    coprocessorServiceHandlers.put(serviceName, instance);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Registered coprocessor service: region=" +
           Bytes.toStringBinary(getRegionInfo().getRegionName()) +
-          " service=" + serviceDesc.getFullName());
+          " service=" + serviceName);
     }
     return true;
   }

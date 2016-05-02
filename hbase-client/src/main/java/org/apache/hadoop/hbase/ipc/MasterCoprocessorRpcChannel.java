@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
@@ -61,11 +60,7 @@ public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
     }
 
     final ClientProtos.CoprocessorServiceCall call =
-        ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(ByteStringer.wrap(HConstants.EMPTY_BYTE_ARRAY))
-            .setServiceName(method.getService().getFullName())
-            .setMethodName(method.getName())
-            .setRequest(request.toByteString()).build();
+        CoprocessorRpcUtils.buildServiceCall(HConstants.EMPTY_BYTE_ARRAY, method, request);
 
     // TODO: Are we retrying here? Does not seem so. We should use RetryingRpcCaller
     CoprocessorServiceResponse result = ProtobufUtil.execService(controller,

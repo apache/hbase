@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.Descriptors;
@@ -83,11 +82,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
         ? rpcControllerFactory.newController() : controller;
 
     final ClientProtos.CoprocessorServiceCall call =
-        ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(ByteStringer.wrap(row))
-            .setServiceName(method.getService().getFullName())
-            .setMethodName(method.getName())
-            .setRequest(request.toByteString()).build();
+        CoprocessorRpcUtils.buildServiceCall(row, method, request);
     RegionServerCallable<CoprocessorServiceResponse> callable =
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
       @Override
