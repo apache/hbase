@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.OffheapKeyValue;
-import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -121,7 +120,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertFalse(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // do the scan again and verify. This time it should be from the lru cache
@@ -129,7 +127,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertFalse(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
@@ -161,7 +158,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertFalse(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
@@ -171,7 +167,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertTrue(actual.get(i) instanceof OffheapKeyValue);
-        assertTrue(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
@@ -204,7 +199,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertFalse(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
@@ -215,7 +209,7 @@ public class TestScannerFromBucketCache {
       scan.addFamily(fam1);
       scan.setMaxVersions(10);
       actual = new ArrayList<Cell>();
-      InternalScanner scanner = region.getScanner(scan, false);
+      InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
@@ -226,7 +220,6 @@ public class TestScannerFromBucketCache {
           // the MBB is copied to form a single cell
           assertTrue(actual.get(i) instanceof OffheapKeyValue);
         }
-        assertTrue(actual.get(i) instanceof ShareableMemory);
       }
 
     } catch (InterruptedException e) {
@@ -258,7 +251,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertFalse(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // do the scan again and verify. This time it should be from the bucket cache in onheap mode
@@ -266,7 +258,6 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof OffheapKeyValue);
-        assertTrue(actual.get(i) instanceof ShareableMemory);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
@@ -336,7 +327,7 @@ public class TestScannerFromBucketCache {
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<Cell>();
-    InternalScanner scanner = region.getScanner(scan, false);
+    InternalScanner scanner = region.getScanner(scan);
 
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);

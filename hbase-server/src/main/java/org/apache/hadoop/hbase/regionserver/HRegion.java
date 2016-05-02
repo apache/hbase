@@ -35,7 +35,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -90,7 +89,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
@@ -2586,22 +2584,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public RegionScanner getScanner(Scan scan) throws IOException {
-   return getScanner(scan, true);
+   return getScanner(scan, null);
   }
 
   @Override
   public RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
       throws IOException {
-    return getScanner(scan, additionalScanners, true);
-  }
-
-  public RegionScanner getScanner(Scan scan, boolean copyCellsFromSharedMem) throws IOException {
-    RegionScanner scanner = getScanner(scan, null, copyCellsFromSharedMem);
-    return scanner;
-  }
-
-  protected RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
-      boolean copyCellsFromSharedMem) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
       // Verify families are all valid
@@ -2615,21 +2603,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           checkFamily(family);
         }
       }
-      return instantiateRegionScanner(scan, additionalScanners, copyCellsFromSharedMem);
+      return instantiateRegionScanner(scan, additionalScanners);
     } finally {
       closeRegionOperation(Operation.SCAN);
     }
   }
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
-      List<KeyValueScanner> additionalScanners, boolean copyCellsFromSharedMem) throws IOException {
+      List<KeyValueScanner> additionalScanners) throws IOException {
     if (scan.isReversed()) {
       if (scan.getFilter() != null) {
         scan.getFilter().setReversed(true);
       }
-      return new ReversedRegionScannerImpl(scan, additionalScanners, this, copyCellsFromSharedMem);
+      return new ReversedRegionScannerImpl(scan, additionalScanners, this);
     }
-    return new RegionScannerImpl(scan, additionalScanners, this, copyCellsFromSharedMem);
+    return new RegionScannerImpl(scan, additionalScanners, this);
   }
 
   @Override
@@ -5493,7 +5481,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final byte[] stopRow;
     protected final HRegion region;
     protected final CellComparator comparator;
-    protected boolean copyCellsFromSharedMem = false;
 
     private final long readPt;
     private final long maxResultSize;
@@ -5505,12 +5492,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return region.getRegionInfo();
     }
 
-    public void setCopyCellsFromSharedMem(boolean copyCells) {
-      this.copyCellsFromSharedMem = copyCells;
-    }
-
-    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
-        boolean copyCellsFromSharedMem)
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
         throws IOException {
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
@@ -5569,7 +5551,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           joinedScanners.add(scanner);
         }
       }
-      this.copyCellsFromSharedMem = copyCellsFromSharedMem;
       initializeKVHeap(scanners, joinedScanners, region);
     }
 
@@ -5646,47 +5627,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throw new UnknownScannerException("Scanner was closed");
       }
       boolean moreValues = false;
-      try {
-        if (outResults.isEmpty()) {
-          // Usually outResults is empty. This is true when next is called
-          // to handle scan or get operation.
-          moreValues = nextInternal(outResults, scannerContext);
-        } else {
-          List<Cell> tmpList = new ArrayList<Cell>();
-          moreValues = nextInternal(tmpList, scannerContext);
-          outResults.addAll(tmpList);
-        }
+      if (outResults.isEmpty()) {
+        // Usually outResults is empty. This is true when next is called
+        // to handle scan or get operation.
+        moreValues = nextInternal(outResults, scannerContext);
+      } else {
+        List<Cell> tmpList = new ArrayList<Cell>();
+        moreValues = nextInternal(tmpList, scannerContext);
+        outResults.addAll(tmpList);
+      }
 
-        // If the size limit was reached it means a partial Result is being
-        // returned. Returning a
-        // partial Result means that we should not reset the filters; filters
-        // should only be reset in
-        // between rows
-        if (!scannerContext.midRowResultFormed()) resetFilters();
+      // If the size limit was reached it means a partial Result is being
+      // returned. Returning a
+      // partial Result means that we should not reset the filters; filters
+      // should only be reset in
+      // between rows
+      if (!scannerContext.midRowResultFormed())
+        resetFilters();
 
-        if (isFilterDoneInternal()) {
-          moreValues = false;
-        }
-
-        // If copyCellsFromSharedMem = true, then we need to copy the cells. Otherwise
-        // it is a call coming from the RsRpcServices.scan().
-        if (copyCellsFromSharedMem && !outResults.isEmpty()) {
-          // Do the copy of the results here.
-          ListIterator<Cell> listItr = outResults.listIterator();
-          Cell cell = null;
-          while (listItr.hasNext()) {
-            cell = listItr.next();
-            if (cell instanceof ShareableMemory) {
-              listItr.set(((ShareableMemory) cell).cloneToCell());
-            }
-          }
-        }
-      } finally {
-        if (copyCellsFromSharedMem) {
-          // In case of copyCellsFromSharedMem==true (where the CPs wrap a scanner) we return
-          // the blocks then and there (for wrapped CPs)
-          this.shipped();
-        }
+      if (isFilterDoneInternal()) {
+        moreValues = false;
       }
       return moreValues;
     }

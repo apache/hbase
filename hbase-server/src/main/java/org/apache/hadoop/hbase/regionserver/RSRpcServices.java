@@ -2182,7 +2182,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     RegionScanner scanner = null;
     try {
-      scanner = region.getScanner(scan, false);
+      scanner = region.getScanner(scan);
       scanner.next(results);
     } finally {
       if (scanner != null) {
@@ -2531,7 +2531,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean moreResults = true;
       boolean closeScanner = false;
       boolean isSmallScan = false;
-      RegionScanner actualRegionScanner = null;
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       if (request.hasCloseScanner()) {
         closeScanner = request.getCloseScanner();
@@ -2576,20 +2575,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           scanner = region.getCoprocessorHost().preScannerOpen(scan);
         }
         if (scanner == null) {
-          scanner = ((HRegion)region).getScanner(scan, false);
+          scanner = region.getScanner(scan);
         }
-        actualRegionScanner =  scanner;
         if (region.getCoprocessorHost() != null) {
           scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
-        }
-        if (actualRegionScanner != scanner) {
-          // It means the RegionScanner has been wrapped
-          if (actualRegionScanner instanceof RegionScannerImpl) {
-            // Copy the results when nextRaw is called from the CP so that
-            // CP can have a cloned version of the results without bothering
-            // about the eviction. Ugly, yes!!!
-            ((RegionScannerImpl) actualRegionScanner).setCopyCellsFromSharedMem(true);
-          }
         }
         scannerId = this.scannerIdGen.incrementAndGet();
         scannerName = String.valueOf(scannerId);

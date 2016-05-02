@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.OffheapKeyValue;
-import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -944,48 +943,23 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // TODO : reduce the varieties of KV here. Check if based on a boolean
         // we can handle the 'no tags' case.
         if (currTagsLen > 0) {
-          if (this.curBlock.usesSharedMemory()) {
-            ret = new ShareableMemoryKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-              + blockBuffer.position(), getCellBufSize(), seqId);
-          } else {
-            ret = new SizeCachedKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-                    + blockBuffer.position(), cellBufSize, seqId);
-          }
+          ret = new SizeCachedKeyValue(blockBuffer.array(),
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
         } else {
-          if (this.curBlock.usesSharedMemory()) {
-            ret = new ShareableMemoryNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-                    + blockBuffer.position(), getCellBufSize(), seqId);
-          } else {
-            ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-                    + blockBuffer.position(), cellBufSize, seqId);
-          }
+          ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(),
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
         }
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
         if (buf.isDirect()) {
-          if (this.curBlock.usesSharedMemory()) {
-            ret = new ShareableMemoryOffheapKeyValue(buf, buf.position(), cellBufSize,
-                currTagsLen > 0, seqId);
-          } else {
-            ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0, seqId);
-          }
+          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0, seqId);
         } else {
-          if (this.curBlock.usesSharedMemory()) {
-            if (currTagsLen > 0) {
-              ret = new ShareableMemoryKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                  cellBufSize, seqId);
-            } else {
-              ret = new ShareableMemoryNoTagsKeyValue(buf.array(),
-                  buf.arrayOffset() + buf.position(), cellBufSize, seqId);
-            }
+          if (currTagsLen > 0) {
+            ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
+                cellBufSize, seqId);
           } else {
-            if (currTagsLen > 0) {
-              ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                  cellBufSize, seqId);
-            } else {
-              ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                  cellBufSize, seqId);
-            }
+            ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
+                cellBufSize, seqId);
           }
         }
       }
@@ -1010,47 +984,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         byte[] key = new byte[currKeyLen];
         ByteBufferUtils.copyFromBufferToArray(key, keyBuf, keyPair.getSecond(), 0, currKeyLen);
         return new KeyValue.KeyOnlyKeyValue(key, 0, currKeyLen);
-      }
-    }
-
-    private static class ShareableMemoryKeyValue extends SizeCachedKeyValue implements
-        ShareableMemory {
-      public ShareableMemoryKeyValue(byte[] bytes, int offset, int length, long seqId) {
-        super(bytes, offset, length, seqId);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
-        return new SizeCachedKeyValue(copy, 0, copy.length, getSequenceId());
-      }
-    }
-
-    private static class ShareableMemoryNoTagsKeyValue extends SizeCachedNoTagsKeyValue implements
-        ShareableMemory {
-      public ShareableMemoryNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId) {
-        super(bytes, offset, length, seqId);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
-        return new SizeCachedNoTagsKeyValue(copy, 0, copy.length, getSequenceId());
-      }
-    }
-
-    private static class ShareableMemoryOffheapKeyValue extends OffheapKeyValue implements
-        ShareableMemory {
-      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length,
-          boolean hasTags, long seqId) {
-        super(buf, offset, length, hasTags, seqId);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = new byte[this.length];
-        ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
-        return new SizeCachedKeyValue(copy, 0, copy.length, getSequenceId());
       }
     }
 

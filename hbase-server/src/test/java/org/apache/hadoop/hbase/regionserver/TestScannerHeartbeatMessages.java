@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,7 +77,6 @@ import com.google.protobuf.ServiceException;
  */
 @Category(MediumTests.class)
 public class TestScannerHeartbeatMessages {
-  private static final Log LOG = LogFactory.getLog(TestScannerHeartbeatMessages.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -487,14 +484,14 @@ public class TestScannerHeartbeatMessages {
     // Instantiate the custom heartbeat region scanners
     @Override
     protected RegionScanner instantiateRegionScanner(Scan scan,
-        List<KeyValueScanner> additionalScanners, boolean copyCells) throws IOException {
+        List<KeyValueScanner> additionalScanners) throws IOException {
       if (scan.isReversed()) {
         if (scan.getFilter() != null) {
           scan.getFilter().setReversed(true);
         }
-        return new HeartbeatReversedRegionScanner(scan, additionalScanners, this, copyCells);
+        return new HeartbeatReversedRegionScanner(scan, additionalScanners, this);
       }
-      return new HeartbeatRegionScanner(scan, additionalScanners, this, copyCells);
+      return new HeartbeatRegionScanner(scan, additionalScanners, this);
     }
   }
 
@@ -504,8 +501,8 @@ public class TestScannerHeartbeatMessages {
    */
   private static class HeartbeatReversedRegionScanner extends ReversedRegionScannerImpl {
     HeartbeatReversedRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners,
-        HRegion region, boolean copyCells) throws IOException {
-      super(scan, additionalScanners, region, copyCells);
+        HRegion region) throws IOException {
+      super(scan, additionalScanners, region);
     }
 
     @Override
@@ -531,9 +528,9 @@ public class TestScannerHeartbeatMessages {
    * column family cells
    */
   private static class HeartbeatRegionScanner extends RegionScannerImpl {
-    HeartbeatRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
-        boolean copyCells) throws IOException {
-      region.super(scan, additionalScanners, region, copyCells);
+    HeartbeatRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
+        throws IOException {
+      region.super(scan, additionalScanners, region);
     }
 
     @Override
