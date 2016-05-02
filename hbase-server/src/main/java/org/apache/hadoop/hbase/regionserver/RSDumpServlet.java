@@ -105,8 +105,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
   public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {
     StringBuilder sb = new StringBuilder();
-    for (Region region : hrs.getOnlineRegionsLocalContext()) {
-      HRegion hRegion = (HRegion)region;
+    for (HRegion hRegion : hrs.getOnlineRegionsLocalContext()) {
       if (hRegion.getLockedRows().size() > 0) {
         for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
           sb.setLength(0);
