@@ -21,6 +21,7 @@ import java.nio.channels.ClosedChannelException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -44,6 +45,9 @@ import com.google.protobuf.Message;
 @InterfaceStability.Evolving
 public class CallRunner {
   private static final Log LOG = LogFactory.getLog(CallRunner.class);
+
+  private static final CallDroppedException CALL_DROPPED_EXCEPTION
+    = new CallDroppedException();
 
   private Call call;
   private RpcServerInterface rpcServer;
@@ -154,6 +158,40 @@ public class CallRunner {
     } catch (Exception e) {
       RpcServer.LOG.warn(Thread.currentThread().getName()
           + ": caught: " + StringUtils.stringifyException(e));
+    } finally {
+      if (!sucessful) {
+        this.rpcServer.addCallSize(call.getSize() * -1);
+      }
+      cleanup();
+    }
+  }
+
+  /**
+   * When we want to drop this call because of server is overloaded.
+   */
+  public void drop() {
+    try {
+      if (!call.connection.channel.isOpen()) {
+        if (RpcServer.LOG.isDebugEnabled()) {
+          RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
+        }
+        return;
+      }
+
+      // Set the response
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      call.setResponse(null, null, CALL_DROPPED_EXCEPTION, "Call dropped, server "
+        + (address != null ? address : "(channel closed)") + " is overloaded, please retry.");
+      call.sendResponseIfReady();
+    } catch (ClosedChannelException cce) {
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
+        "this means that the server " + (address != null ? address : "(channel closed)") +
+        " was processing a request but the client went away. The error message was: " +
+        cce.getMessage());
+    } catch (Exception e) {
+      RpcServer.LOG.warn(Thread.currentThread().getName()
+        + ": caught: " + StringUtils.stringifyException(e));
     } finally {
       if (!sucessful) {
         this.rpcServer.addCallSize(call.getSize() * -1);

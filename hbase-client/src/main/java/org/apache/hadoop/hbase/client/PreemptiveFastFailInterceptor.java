@@ -175,7 +175,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     boolean isLocalException = !(t2 instanceof RemoteException);
 
     if ((isLocalException && ClientExceptionsUtil.isConnectionException(t2)) ||
-         ClientExceptionsUtil.isCallQueueTooBigException(t2)) {
+         ClientExceptionsUtil.isCallQueueTooBigException(t2) ||
+         ClientExceptionsUtil.isCallDroppedException(t2)) {
       couldNotCommunicateWithServer.setValue(true);
       guaranteedClientSideOnly.setValue(!(t2 instanceof CallTimeoutException));
       handleFailureToServer(serverName, t2);
