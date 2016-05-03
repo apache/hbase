@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -1125,9 +1126,13 @@ public final class Canary implements Tool {
       // monitor one region on every region server
       for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
-        // random select a region
-        HRegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
-        tasks.add(new RegionServerTask(this.connection, serverName, region, getSink()));
+        if (entry.getValue().isEmpty()) {
+          LOG.error(String.format("Regionserver not serving any regions - %s", serverName));
+        } else {
+          // random select a region
+          HRegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
+          tasks.add(new RegionServerTask(this.connection, serverName, region, getSink()));
+        }
       }
       try {
         for (Future<Void> future : this.executor.invokeAll(tasks)) {
@@ -1177,6 +1182,13 @@ public final class Canary implements Tool {
           table.close();
         }
 
+        //get any live regionservers not serving any regions
+        for (ServerName rs : this.admin.getClusterStatus().getServers()) {
+          String rsName = rs.getHostname();
+          if (!rsAndRMap.containsKey(rsName)) {
+            rsAndRMap.put(rsName, Collections.<HRegionInfo>emptyList());
+          }
+        }
       } catch (IOException e) {
         String msg = "Get HTables info failed";
         LOG.error(msg, e);
