@@ -22,7 +22,7 @@
 
 #include <string>
 
-#include "core/table-name.h"
+#include "serde/table-name.h"
 
 using namespace hbase;
 using hbase::pb::TableName;

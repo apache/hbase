@@ -19,26 +19,40 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
-#include "connection/service.h"
-#include "if/HBase.pb.h"
+// Forward
+namespace folly {
+class IOBuf;
+}
+namespace google {
+namespace protobuf {
+class Message;
+}
+}
 
 namespace hbase {
-
-class RegionLocation {
+class RpcSerde {
 public:
-  RegionLocation(hbase::pb::RegionInfo ri, hbase::pb::ServerName sn,
-                 std::shared_ptr<HBaseService> service)
-      : ri_(ri), sn_(sn), service_(service) {}
+  RpcSerde();
+  virtual ~RpcSerde();
+  int ParseDelimited(const folly::IOBuf *buf, google::protobuf::Message *msg);
+  std::unique_ptr<folly::IOBuf> Preamble();
+  std::unique_ptr<folly::IOBuf> Header(const std::string &user);
+  std::unique_ptr<folly::IOBuf> Request(const uint32_t call_id,
+                                        const std::string &method,
+                                        const google::protobuf::Message *msg);
+  std::unique_ptr<folly::IOBuf>
+  SerializeDelimited(const google::protobuf::Message &msg);
 
-  const hbase::pb::RegionInfo &region_info() { return ri_; }
-  const hbase::pb::ServerName &server_name() { return sn_; }
-  std::shared_ptr<HBaseService> service() { return service_; }
+  std::unique_ptr<folly::IOBuf>
+  SerializeMessage(const google::protobuf::Message &msg);
+
+  std::unique_ptr<folly::IOBuf>
+  PrependLength(std::unique_ptr<folly::IOBuf> msg);
 
 private:
-  hbase::pb::RegionInfo ri_;
-  hbase::pb::ServerName sn_;
-  std::shared_ptr<HBaseService> service_;
+  /* data */
+  uint8_t auth_type_;
 };
-
-} // namespace hbase
+}

@@ -17,7 +17,7 @@
  *
  */
 
-#include "serde/zk-deserializer.h"
+#include "serde/zk.h"
 
 #include <folly/Logging.h>
 #include <folly/io/Cursor.h>
@@ -41,7 +41,7 @@ TEST(TestZkDesializer, TestThrowNoMagicNum) {
   buf->append(100);
   RWPrivateCursor c{buf.get()};
   c.write<uint8_t>(99);
-  ASSERT_THROW(deser.parse(buf.get(), &mrs), runtime_error);
+  ASSERT_THROW(deser.Parse(buf.get(), &mrs), runtime_error);
 }
 
 // Test if the protobuf is in a format that we can't decode
@@ -78,7 +78,7 @@ TEST(TestZkDesializer, TestBadProtoThrow) {
 
   // Create the protobuf
   MetaRegionServer out;
-  ASSERT_THROW(deser.parse(buf.get(), &out), runtime_error);
+  ASSERT_THROW(deser.Parse(buf.get(), &out), runtime_error);
 }
 
 // Test to make sure the whole thing works.
@@ -118,6 +118,6 @@ TEST(TestZkDesializer, TestNoThrow) {
 
   // Create the protobuf
   MetaRegionServer out;
-  ASSERT_TRUE(deser.parse(buf.get(), &out));
+  ASSERT_TRUE(deser.Parse(buf.get(), &out));
   ASSERT_EQ(mrs.server().host_name(), out.server().host_name());
 }

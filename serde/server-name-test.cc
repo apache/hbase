@@ -16,35 +16,17 @@
  * limitations under the License.
  *
  */
-#pragma once
 
-#include <memory>
+#include "serde/server-name.h"
+
+#include <gtest/gtest.h>
 #include <string>
 
-#include "if/HBase.pb.h"
-#include <folly/Conv.h>
+using hbase::pb::ServerName;
 
-namespace hbase {
-namespace pb {
+TEST(TestServerName, TestMakeServerName) {
+  auto sn = folly::to<ServerName>("test:123");
 
-// Provide folly::to<std::string>(TableName);
-template <class String> void toAppend(const TableName &in, String *result) {
-  if (!in.has_namespace_() || in.namespace_() == "default") {
-    folly::toAppend(in.qualifier(), result);
-  } else {
-    folly::toAppend(in.namespace_(), ':', in.qualifier(), result);
-  }
+  ASSERT_EQ("test", sn.host_name());
+  ASSERT_EQ(123, sn.port());
 }
-
-} // namespace pb
-
-class TableNameUtil {
-public:
-  static ::hbase::pb::TableName create(std::string table_name) {
-    ::hbase::pb::TableName tn;
-    tn.set_namespace_("default");
-    tn.set_qualifier(table_name);
-    return tn;
-  }
-};
-} // namespace hbase

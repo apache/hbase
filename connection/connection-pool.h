@@ -27,13 +27,13 @@
 #include "if/HBase.pb.h"
 
 namespace hbase {
-struct MyServerNameEquals {
+struct ServerNameEquals {
   bool operator()(const hbase::pb::ServerName &lhs,
                   const hbase::pb::ServerName &rhs) const {
     return lhs.host_name() == rhs.host_name() && lhs.port() == rhs.port();
   }
 };
-struct MyServerNameHash {
+struct ServerNameHash {
   std::size_t operator()(hbase::pb::ServerName const &s) const {
     std::size_t h1 = std::hash<std::string>()(s.host_name());
     std::size_t h2 = std::hash<uint32_t>()(s.port());
@@ -46,12 +46,12 @@ public:
   ConnectionPool();
   explicit ConnectionPool(std::shared_ptr<ConnectionFactory> cf);
   std::shared_ptr<HBaseService> get(const hbase::pb::ServerName &sn);
-  void close(hbase::pb::ServerName sn);
+  void close(const hbase::pb::ServerName &sn);
 
 private:
   std::shared_ptr<ConnectionFactory> cf_;
   std::unordered_map<hbase::pb::ServerName, std::shared_ptr<HBaseService>,
-                     MyServerNameHash, MyServerNameEquals>
+                     ServerNameHash, ServerNameEquals>
       connections_;
   folly::SharedMutexWritePriority map_mutex_;
 };

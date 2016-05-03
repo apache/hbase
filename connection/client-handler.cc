@@ -37,8 +37,7 @@ using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
 ClientHandler::ClientHandler(std::string user_name)
-    : user_name_(user_name), need_send_header_(true), ser_(), deser_(),
-      resp_msgs_() {}
+    : user_name_(user_name), need_send_header_(true), serde_(), resp_msgs_() {}
 
 void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
@@ -46,7 +45,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
     Response received;
     ResponseHeader header;
 
-    int used_bytes = deser_.parse_delimited(buf.get(), &header);
+    int used_bytes = serde_.ParseDelimited(buf.get(), &header);
     LOG(INFO) << "Read ResponseHeader size=" << used_bytes
               << " call_id=" << header.call_id()
               << " has_exception=" << header.has_exception();
@@ -70,7 +69,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
     // data left on the wire.
     if (header.has_exception() == false) {
       buf->trimStart(used_bytes);
-      used_bytes = deser_.parse_delimited(buf.get(), resp_msg.get());
+      used_bytes = serde_.ParseDelimited(buf.get(), resp_msg.get());
       // Make sure that bytes were parsed.
       CHECK(used_bytes == buf->length());
       received.set_response(resp_msg);
@@ -91,13 +90,13 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
     // and one for the request.
     //
     // That doesn't seem like too bad, but who knows.
-    auto pre = ser_.preamble();
-    auto header = ser_.header(user_name_);
+    auto pre = serde_.Preamble();
+    auto header = serde_.Header(user_name_);
     pre->appendChain(std::move(header));
     ctx->fireWrite(std::move(pre));
   }
 
   resp_msgs_[r->call_id()] = r->resp_msg();
   return ctx->fireWrite(
-      ser_.request(r->call_id(), r->method(), r->req_msg().get()));
+      serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
 }

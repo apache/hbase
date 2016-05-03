@@ -17,49 +17,47 @@
 
 cxx_library(name="serde",
             exported_headers=[
-                "client-serializer.h",
-                "client-deserializer.h",
-                "zk-deserializer.h",
+                "region-info.h",
+                "rpc.h",
+                "server-name.h",
+                "table-name.h",
+                "zk.h",
             ],
             srcs=[
-                "client-serializer.cc",
-                "client-deserializer.cc",
-                "zk-deserializer.cc",
+                "rpc.cc",
+                "zk.cc",
             ],
             deps=[
                 "//if:if",
                 "//third-party:folly",
             ],
             tests=[
-                ":client-serializer-test",
                 ":client-deserializer-test",
+                ":client-serializer-test",
+                ":server-name-test",
+                ":table-name-test",
+                ":zk-deserializer-test",
+                ":region-info-deserializer-test",
             ],
             compiler_flags=['-Weffc++'],
             visibility=[
                 'PUBLIC',
             ], )
-
+cxx_test(name="table-name-test",
+         srcs=["table-name-test.cc", ],
+         deps=[":serde", ], )
+cxx_test(name="server-name-test",
+         srcs=["server-name-test.cc", ],
+         deps=[":serde", ], )
 cxx_test(name="client-serializer-test",
-         srcs=[
-             "client-serializer-test.cc",
-         ],
-         deps=[
-             ":serde",
-             "//if:if",
-         ], )
+         srcs=["client-serializer-test.cc", ],
+         deps=[":serde", ], )
 cxx_test(name="client-deserializer-test",
-         srcs=[
-             "client-deserializer-test.cc",
-         ],
-         deps=[
-             ":serde",
-             "//if:if",
-         ], )
+         srcs=["client-deserializer-test.cc", ],
+         deps=[":serde", ], )
 cxx_test(name="zk-deserializer-test",
-         srcs=[
-             "zk-deserializer-test.cc",
-         ],
-         deps=[
-             ":serde",
-             "//if:if",
-         ], )
+         srcs=["zk-deserializer-test.cc", ],
+         deps=[":serde", ], )
+cxx_test(name="region-info-deserializer-test",
+         srcs=["region-info-deserializer-test.cc", ],
+         deps=[":serde", ], )

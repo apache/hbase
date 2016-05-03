@@ -16,40 +16,26 @@
  * limitations under the License.
  *
  */
+
 #pragma once
 
-#include <cstdint>
-#include <folly/io/IOBuf.h>
-#include <string>
+#include "if/HBase.pb.h"
 
-// Forward
-namespace google {
-namespace protobuf {
-class Message;
-}
-}
-namespace hbase {
-class Request;
-}
+#include <folly/Conv.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace hbase {
-class ClientSerializer {
-public:
-  ClientSerializer();
-  std::unique_ptr<folly::IOBuf> preamble();
-  std::unique_ptr<folly::IOBuf> header(const std::string &user);
-  std::unique_ptr<folly::IOBuf> request(const uint32_t call_id,
-                                        const std::string &method,
-                                        const google::protobuf::Message *msg);
-  std::unique_ptr<folly::IOBuf>
-  serialize_delimited(const google::protobuf::Message &msg);
+namespace pb {
+template <class String> void parseTo(String in, RegionInfo& out) {
+  // TODO(eclark): there has to be something better.
+  std::string s = folly::to<std::string>(in);
 
-  std::unique_ptr<folly::IOBuf>
-  serialize_message(const google::protobuf::Message &msg);
-
-  std::unique_ptr<folly::IOBuf>
-  prepend_length(std::unique_ptr<folly::IOBuf> msg);
-
-  uint8_t auth_type_;
-};
+  if (!boost::starts_with(s, "PBUF") ) {
+    throw std::runtime_error("Region Info field doesn't contain preamble");
+  }
+  if (!out.ParseFromArray(s.data() + 4, s.size() - 4)) {
+    throw std::runtime_error("Bad protobuf for RegionInfo");
+  }
+}
+} // namespace pb
 } // namespace hbase

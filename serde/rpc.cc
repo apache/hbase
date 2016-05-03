@@ -16,12 +16,15 @@
  * limitations under the License.
  *
  */
-#include "serde/client-serializer.h"
 
+#include "serde/rpc.h"
+
+#include <folly/Logging.h>
 #include <folly/Logging.h>
 #include <folly/io/Cursor.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <google/protobuf/message.h>
 
 #include "if/HBase.pb.h"
 #include "if/RPC.pb.h"
@@ -31,7 +34,10 @@ using namespace hbase;
 using folly::IOBuf;
 using folly::io::RWPrivateCursor;
 using google::protobuf::Message;
+using google::protobuf::Message;
+using google::protobuf::io::ArrayInputStream;
 using google::protobuf::io::ArrayOutputStream;
+using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::CodedOutputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
 using std::string;
@@ -42,9 +48,46 @@ static const std::string INTERFACE = "ClientService";
 static const uint8_t RPC_VERSION = 0;
 static const uint8_t DEFAULT_AUTH_TYPE = 80;
 
-ClientSerializer::ClientSerializer() : auth_type_(DEFAULT_AUTH_TYPE) {}
+int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
+  if (buf == nullptr || msg == nullptr) {
+    return -2;
+  }
 
-unique_ptr<IOBuf> ClientSerializer::preamble() {
+  DCHECK(!buf->isChained());
+
+  ArrayInputStream ais{buf->data(), static_cast<int>(buf->length())};
+  CodedInputStream coded_stream{&ais};
+
+  uint32_t msg_size;
+
+  // Try and read the varint.
+  if (coded_stream.ReadVarint32(&msg_size) == false) {
+    FB_LOG_EVERY_MS(ERROR, 1000) << "Unable to read a var uint32_t";
+    return -3;
+  }
+
+  coded_stream.PushLimit(msg_size);
+  // Parse the message.
+  if (msg->MergeFromCodedStream(&coded_stream) == false) {
+    FB_LOG_EVERY_MS(ERROR, 1000)
+        << "Unable to read a protobuf message from data.";
+    return -4;
+  }
+
+  // Make sure all the data was consumed.
+  if (coded_stream.ConsumedEntireMessage() == false) {
+    FB_LOG_EVERY_MS(ERROR, 1000)
+        << "Orphaned data left after reading protobuf message";
+    return -5;
+  }
+
+  return coded_stream.CurrentPosition();
+}
+
+RpcSerde::RpcSerde() : auth_type_(DEFAULT_AUTH_TYPE) {}
+RpcSerde::~RpcSerde() {}
+
+unique_ptr<IOBuf> RpcSerde::Preamble() {
   auto magic = IOBuf::copyBuffer(PREAMBLE, 0, 2);
   magic->append(2);
   RWPrivateCursor c(magic.get());
@@ -56,7 +99,7 @@ unique_ptr<IOBuf> ClientSerializer::preamble() {
   return magic;
 }
 
-unique_ptr<IOBuf> ClientSerializer::header(const string &user) {
+unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
   pb::ConnectionHeader h;
 
   // TODO(eclark): Make this not a total lie.
@@ -68,26 +111,25 @@ unique_ptr<IOBuf> ClientSerializer::header(const string &user) {
   // It worked for a while with the java client; until it
   // didn't.
   h.set_service_name(INTERFACE);
-  return prepend_length(serialize_message(h));
+  return PrependLength(SerializeMessage(h));
 }
 
-unique_ptr<IOBuf> ClientSerializer::request(const uint32_t call_id,
-                                            const string &method,
-                                            const Message *msg) {
+unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id,
+                                    const string &method, const Message *msg) {
   pb::RequestHeader rq;
   rq.set_method_name(method);
   rq.set_call_id(call_id);
   rq.set_request_param(msg != nullptr);
-  auto ser_header = serialize_delimited(rq);
+  auto ser_header = SerializeDelimited(rq);
   if (msg != nullptr) {
-    auto ser_req = serialize_delimited(*msg);
+    auto ser_req = SerializeDelimited(*msg);
     ser_header->appendChain(std::move(ser_req));
   }
 
-  return prepend_length(std::move(ser_header));
+  return PrependLength(std::move(ser_header));
 }
 
-unique_ptr<IOBuf> ClientSerializer::prepend_length(unique_ptr<IOBuf> msg) {
+unique_ptr<IOBuf> RpcSerde::PrependLength(unique_ptr<IOBuf> msg) {
   // Java ints are 4 long. So create a buffer that large
   auto len_buf = IOBuf::create(4);
   // Then make those bytes visible.
@@ -105,7 +147,7 @@ unique_ptr<IOBuf> ClientSerializer::prepend_length(unique_ptr<IOBuf> msg) {
   return len_buf;
 }
 
-unique_ptr<IOBuf> ClientSerializer::serialize_delimited(const Message &msg) {
+unique_ptr<IOBuf> RpcSerde::SerializeDelimited(const Message &msg) {
   // Get the buffer size needed for just the message.
   int msg_size = msg.ByteSize();
   int buf_size = CodedOutputStream::VarintSize32(msg_size) + msg_size;
@@ -133,7 +175,7 @@ unique_ptr<IOBuf> ClientSerializer::serialize_delimited(const Message &msg) {
   return buf;
 }
 // TODO(eclark): Make this 1 copy.
-unique_ptr<IOBuf> ClientSerializer::serialize_message(const Message &msg) {
+unique_ptr<IOBuf> RpcSerde::SerializeMessage(const Message &msg) {
   auto buf = IOBuf::copyBuffer(msg.SerializeAsString());
   return buf;
 }

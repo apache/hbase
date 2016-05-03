@@ -24,7 +24,6 @@ cxx_library(
         "hbase_macros.h",
         "region-location.h",
         "location-cache.h",
-        "table-name.h",
         # TODO: move this out of exported
         # Once meta lookup works
         "meta-utils.h",
@@ -53,9 +52,6 @@ cxx_test(name="location-cache-test",
          ],
          deps=[":core", ],
          run_test_separately=True, )
-cxx_test(name="table-name-test",
-         srcs=["table-name-test.cc", ],
-         deps=[":core", ], )
 cxx_binary(name="simple-client",
            srcs=["simple-client.cc", ],
            deps=[":core", "//connection:connection"], )
