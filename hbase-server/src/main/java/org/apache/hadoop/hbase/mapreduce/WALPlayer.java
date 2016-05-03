@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
@@ -257,6 +258,12 @@ public class WALPlayer extends Configured implements Tool {
       TableMapReduceUtil.initCredentials(job);
       // No reducers.
       job.setNumReduceTasks(0);
+    }
+    String codecCls = WALCellCodec.getWALCellCodecClass(conf);
+    try {
+      TableMapReduceUtil.addDependencyJars(conf, Class.forName(codecCls));
+    } catch (Exception e) {
+      throw new IOException("Cannot determine wal codec class " + codecCls, e);
     }
     return job;
   }

@@ -78,7 +78,7 @@ public class WALCellCodec implements Codec {
     this.compression = compression;
   }
 
-  static String getWALCellCodecClass(Configuration conf) {
+  public static String getWALCellCodecClass(Configuration conf) {
     return conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
   }
   
