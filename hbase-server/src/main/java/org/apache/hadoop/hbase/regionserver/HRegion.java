@@ -3104,7 +3104,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // get the next one.
         RowLock rowLock = null;
         try {
-          rowLock = getRowLock(mutation.getRow(), true);
+          rowLock = getRowLockInternal(mutation.getRow(), true);
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
             + Bytes.toStringBinary(mutation.getRow()), ioe);
@@ -3455,9 +3455,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Get get = new Get(row);
       checkFamily(family);
       get.addColumn(family, qualifier);
-
+      checkRow(row, "checkAndMutate");
       // Lock row - note that doBatchMutate will relock this row if called
-      RowLock rowLock = getRowLock(get.getRow());
+      RowLock rowLock = getRowLockInternal(get.getRow(), false);
       // wait for all previous transactions to complete (with lock held)
       mvcc.await();
       try {
@@ -3565,9 +3565,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Get get = new Get(row);
       checkFamily(family);
       get.addColumn(family, qualifier);
-
+      checkRow(row, "checkAndRowMutate");
       // Lock row - note that doBatchMutate will relock this row if called
-      RowLock rowLock = getRowLock(get.getRow());
+      RowLock rowLock = getRowLockInternal(get.getRow(), false);
       // wait for all previous transactions to complete (with lock held)
       mvcc.await();
       try {
@@ -5202,6 +5202,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public RowLock getRowLock(byte[] row, boolean readLock) throws IOException {
     // Make sure the row is inside of this region before getting the lock for it.
     checkRow(row, "row lock");
+    return getRowLockInternal(row, readLock);
+  }
+
+  protected RowLock getRowLockInternal(byte[] row, boolean readLock) throws IOException {
     // create an object to use a a key in the row lock map
     HashedBytes rowKey = new HashedBytes(row);
 
@@ -7022,7 +7026,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (byte[] row : rowsToLock) {
         // Attempt to lock all involved rows, throw if any lock times out
         // use a writer lock for mixed reads and writes
-        acquiredRowLocks.add(getRowLock(row));
+        acquiredRowLocks.add(getRowLockInternal(row, false));
       }
       // 3. Region lock
       lock(this.updatesLock.readLock(), acquiredRowLocks.size() == 0 ? 1 : acquiredRowLocks.size());
@@ -7259,7 +7263,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALKey walKey = null;
     boolean doRollBackMemstore = false;
     try {
-      rowLock = getRowLock(row);
+      rowLock = getRowLockInternal(row, false);
       assert rowLock != null;
       try {
         lock(this.updatesLock.readLock());
@@ -7549,7 +7553,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // changing it. These latter increments by zero are NOT added to the WAL.
     List<Cell> allKVs = new ArrayList<Cell>(increment.size());
     Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
-    RowLock rowLock = getRowLock(increment.getRow());
+    RowLock rowLock = getRowLockInternal(increment.getRow(), false);
     try {
       lock(this.updatesLock.readLock());
       try {
@@ -7645,7 +7649,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     List<Cell> memstoreCells = new ArrayList<Cell>();
     Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
     try {
-      rowLock = getRowLock(increment.getRow());
+      rowLock = getRowLockInternal(increment.getRow(), false);
       long txid = 0;
       try {
         lock(this.updatesLock.readLock());
