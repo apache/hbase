@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.FastLongHistogram;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -40,6 +41,20 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   protected final String desc;
 
   protected final Counter counter = new Counter(0);
+
+  private boolean metricsInfoStringInited = false;
+  private String NUM_OPS_METRIC;
+  private String MIN_METRIC;
+  private String MAX_METRIC;
+  private String MEAN_METRIC;
+  private String MEDIAN_METRIC;
+  private String TWENTY_FIFTH_PERCENTILE_METRIC;
+  private String SEVENTY_FIFTH_PERCENTILE_METRIC;
+  private String NINETIETH_PERCENTILE_METRIC;
+  private String NINETY_FIFTH_PERCENTILE_METRIC;
+  private String NINETY_EIGHTH_PERCENTILE_METRIC;
+  private String NINETY_NINETH_PERCENTILE_METRIC;
+  private String NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC;
 
   public MutableHistogram(MetricsInfo info) {
     this(info.name(), info.description());
@@ -72,29 +87,47 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
 
   protected void updateSnapshotMetrics(MetricsRecordBuilder metricsRecordBuilder,
                                        FastLongHistogram histo) {
-    metricsRecordBuilder.addCounter(Interns.info(name + NUM_OPS_METRIC_NAME, desc), counter.get());
-    metricsRecordBuilder.addGauge(Interns.info(name + MIN_METRIC_NAME, desc), histo.getMin());
-    metricsRecordBuilder.addGauge(Interns.info(name + MAX_METRIC_NAME, desc), histo.getMax());
-    metricsRecordBuilder.addGauge(Interns.info(name + MEAN_METRIC_NAME, desc), histo.getMean());
+    if (!metricsInfoStringInited) {
+      NUM_OPS_METRIC = name + NUM_OPS_METRIC_NAME;
+      MIN_METRIC = name + MIN_METRIC_NAME;
+      MAX_METRIC = name + MAX_METRIC_NAME;
+      MEAN_METRIC = name + MEAN_METRIC_NAME;
+      MEDIAN_METRIC = name + MEDIAN_METRIC_NAME;
+      TWENTY_FIFTH_PERCENTILE_METRIC = name + TWENTY_FIFTH_PERCENTILE_METRIC_NAME;
+      SEVENTY_FIFTH_PERCENTILE_METRIC = name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME;
+      NINETIETH_PERCENTILE_METRIC = name + NINETIETH_PERCENTILE_METRIC_NAME;
+      NINETY_FIFTH_PERCENTILE_METRIC = name + NINETY_FIFTH_PERCENTILE_METRIC_NAME;
+      NINETY_EIGHTH_PERCENTILE_METRIC = name + NINETY_EIGHTH_PERCENTILE_METRIC_NAME;
+      NINETY_NINETH_PERCENTILE_METRIC = name + NINETY_NINETH_PERCENTILE_METRIC_NAME;
+      NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC = name +
+          NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME;
+
+      metricsInfoStringInited = true;
+    }
+
+    metricsRecordBuilder.addCounter(Interns.info(NUM_OPS_METRIC, desc), counter.get());
+    metricsRecordBuilder.addGauge(Interns.info(MIN_METRIC, desc), histo.getMin());
+    metricsRecordBuilder.addGauge(Interns.info(MAX_METRIC, desc), histo.getMax());
+    metricsRecordBuilder.addGauge(Interns.info(MEAN_METRIC, desc), histo.getMean());
 
     long[] percentiles = histo.getQuantiles();
 
-    metricsRecordBuilder.addGauge(Interns.info(name + TWENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(TWENTY_FIFTH_PERCENTILE_METRIC, desc),
         percentiles[0]);
-    metricsRecordBuilder.addGauge(Interns.info(name + MEDIAN_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(MEDIAN_METRIC, desc),
         percentiles[1]);
-    metricsRecordBuilder.addGauge(Interns.info(name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(SEVENTY_FIFTH_PERCENTILE_METRIC, desc),
         percentiles[2]);
-    metricsRecordBuilder.addGauge(Interns.info(name + NINETIETH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(NINETIETH_PERCENTILE_METRIC, desc),
         percentiles[3]);
-    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_FIFTH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(NINETY_FIFTH_PERCENTILE_METRIC, desc),
         percentiles[4]);
-    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_EIGHTH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(NINETY_EIGHTH_PERCENTILE_METRIC, desc),
         percentiles[5]);
-    metricsRecordBuilder.addGauge(Interns.info(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, desc),
+    metricsRecordBuilder.addGauge(Interns.info(NINETY_NINETH_PERCENTILE_METRIC, desc),
         percentiles[6]);
     metricsRecordBuilder.addGauge(
-        Interns.info(name + NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME, desc),
+        Interns.info(NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC, desc),
         percentiles[7]);
   }
 }
