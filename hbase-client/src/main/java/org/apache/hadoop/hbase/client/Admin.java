@@ -1030,6 +1030,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   AdminProtos.GetRegionInfoResponse.CompactionState getCompactionStateForRegion(
     final byte[] regionName) throws IOException;
 
@@ -1109,6 +1110,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Deprecated
   void snapshot(final String snapshotName,
       final TableName tableName,
       HBaseProtos.SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
@@ -1132,6 +1134,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot failed to be taken
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Deprecated
   void snapshot(HBaseProtos.SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
@@ -1145,6 +1148,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Deprecated
   MasterProtos.SnapshotResponse takeSnapshotAsync(HBaseProtos.SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException;
 
@@ -1164,6 +1168,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.snapshot.UnknownSnapshotException if the requested snapshot is
    * unknown
    */
+  @Deprecated
   boolean isSnapshotFinished(final HBaseProtos.SnapshotDescription snapshot)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException;
 
@@ -1303,6 +1308,7 @@ public interface Admin extends Abortable, Closeable {
    * @return a list of snapshot descriptors for completed snapshots
    * @throws IOException if a network error occurs
    */
+  @Deprecated
   List<HBaseProtos.SnapshotDescription> listSnapshots() throws IOException;
 
   /**
@@ -1312,6 +1318,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   List<HBaseProtos.SnapshotDescription> listSnapshots(String regex) throws IOException;
 
   /**
@@ -1321,6 +1328,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   List<HBaseProtos.SnapshotDescription> listSnapshots(Pattern pattern) throws IOException;
 
   /**
@@ -1331,6 +1339,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of completed SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   List<HBaseProtos.SnapshotDescription> listTableSnapshots(String tableNameRegex,
       String snapshotNameRegex) throws IOException;
 
@@ -1342,6 +1351,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of completed SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   List<HBaseProtos.SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
       Pattern snapshotNamePattern) throws IOException;
 
