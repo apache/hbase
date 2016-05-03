@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import java.util.Arrays;
@@ -66,10 +68,10 @@ public class CreateSnapshot extends AbstractHBaseTool {
             admin = connection.getAdmin();
             HBaseProtos.SnapshotDescription.Type type = HBaseProtos.SnapshotDescription.Type.FLUSH;
             if (snapshotType != null) {
-                type = HBaseProtos.SnapshotDescription.Type.valueOf(snapshotName.toUpperCase());
+                type = ProtobufUtil.createProtosSnapShotDescType(snapshotName);
             }
-
-            admin.snapshot(snapshotName, TableName.valueOf(tableName), type);
+            admin.snapshot(new SnapshotDescription(snapshotName, tableName,
+              ProtobufUtil.createSnapshotType(type)));
         } catch (Exception e) {
             return -1;
         } finally {

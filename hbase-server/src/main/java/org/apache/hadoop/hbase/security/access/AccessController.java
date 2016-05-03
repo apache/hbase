@@ -60,12 +60,12 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Query;
@@ -1262,14 +1262,14 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+      final boolean newValue, final MasterSwitchType switchType) throws IOException {
     requirePermission("setSplitOrMergeEnabled", Action.ADMIN);
     return false;
   }
 
   @Override
   public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+      final boolean newValue, final MasterSwitchType switchType) throws IOException {
   }
 
   @Override

@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.CompactType;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -68,7 +70,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -356,7 +357,7 @@ public class TestMobCompactor {
       countFiles(tableName, false, family2));
 
     // do the major mob compaction, it will force all files to compaction
-    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
+    admin.majorCompact(tableName, hcd1.getName(), CompactType.MOB);
 
     waitUntilMobCompactionFinished(tableName);
     assertEquals("After compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
@@ -399,7 +400,7 @@ public class TestMobCompactor {
     Cell cell = result.getColumnLatestCell(hcd1.getName(), Bytes.toBytes(qf1));
     assertEquals("Before compaction: mob value of k0", newValue0,
       Bytes.toString(CellUtil.cloneValue(cell)));
-    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
+    admin.majorCompact(tableName, hcd1.getName(), CompactType.MOB);
     waitUntilMobCompactionFinished(tableName);
     // read the latest cell of key0, the cell seqId in bulk loaded file is not reset in the
     // scanner. The cell that has "new" value is still visible.
@@ -449,7 +450,7 @@ public class TestMobCompactor {
     loadData(admin, bufMut, tableName, new Put[] { put1 }); // now two mob files
     admin.majorCompact(tableName);
     waitUntilCompactionFinished(tableName);
-    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
+    admin.majorCompact(tableName, hcd1.getName(), CompactType.MOB);
     waitUntilMobCompactionFinished(tableName);
     // read the latest cell of key1.
     Get get = new Get(key1);
@@ -475,12 +476,12 @@ public class TestMobCompactor {
   private void waitUntilMobCompactionFinished(TableName tableName) throws IOException,
     InterruptedException {
     long finished = EnvironmentEdgeManager.currentTime() + 60000;
-    CompactionState state = admin.getCompactionState(tableName, Admin.CompactType.MOB);
+    CompactionState state = admin.getCompactionState(tableName, CompactType.MOB);
     while (EnvironmentEdgeManager.currentTime() < finished) {
       if (state == CompactionState.NONE) {
         break;
       }
-      state = admin.getCompactionState(tableName, Admin.CompactType.MOB);
+      state = admin.getCompactionState(tableName, CompactType.MOB);
       Thread.sleep(10);
     }
     assertEquals(CompactionState.NONE, state);

@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -691,7 +692,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (shouldDisableSplitAndMerge()) {
       admin.releaseSplitOrMergeLockAndRollback();
       oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false, false,
-        Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
+        MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
     }
 
     try {

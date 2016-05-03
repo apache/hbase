@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -141,18 +140,17 @@ public class TestSnapshotFromAdmin {
     Mockito.when(mockConnection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
     Mockito.when(mockConnection.getRpcControllerFactory()).thenReturn(controllerFactory);
     Admin admin = new HBaseAdmin(mockConnection);
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     // check that invalid snapshot names fail
-    failSnapshotStart(admin, builder.setName(HConstants.SNAPSHOT_DIR_NAME).build());
-    failSnapshotStart(admin, builder.setName("-snapshot").build());
-    failSnapshotStart(admin, builder.setName("snapshot fails").build());
-    failSnapshotStart(admin, builder.setName("snap$hot").build());
-    failSnapshotStart(admin, builder.setName("snap:hot").build());
+    failSnapshotStart(admin, new SnapshotDescription(HConstants.SNAPSHOT_DIR_NAME));
+    failSnapshotStart(admin, new SnapshotDescription("-snapshot"));
+    failSnapshotStart(admin, new SnapshotDescription("snapshot fails"));
+    failSnapshotStart(admin, new SnapshotDescription("snap$hot"));
+    failSnapshotStart(admin, new SnapshotDescription("snap:hot"));
     // check the table name also get verified
-    failSnapshotStart(admin, builder.setName("snapshot").setTable(".table").build());
-    failSnapshotStart(admin, builder.setName("snapshot").setTable("-table").build());
-    failSnapshotStart(admin, builder.setName("snapshot").setTable("table fails").build());
-    failSnapshotStart(admin, builder.setName("snapshot").setTable("tab%le").build());
+    failSnapshotStart(admin, new SnapshotDescription("snapshot", ".table"));
+    failSnapshotStart(admin, new SnapshotDescription("snapshot", "-table"));
+    failSnapshotStart(admin, new SnapshotDescription("snapshot", "table fails"));
+    failSnapshotStart(admin, new SnapshotDescription("snapshot", "tab%le"));
 
     // mock the master connection
     MasterKeepAliveConnection master = Mockito.mock(MasterKeepAliveConnection.class);
@@ -167,10 +165,11 @@ public class TestSnapshotFromAdmin {
           Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
 
       // make sure that we can use valid names
-    admin.snapshot(builder.setName("snapshot").setTable("table").build());
+    admin.snapshot(new SnapshotDescription("snapshot", "table"));
   }
 
-  private void failSnapshotStart(Admin admin, SnapshotDescription snapshot) throws IOException {
+  private void failSnapshotStart(Admin admin, SnapshotDescription snapshot)
+      throws IOException {
     try {
       admin.snapshot(snapshot);
       fail("Snapshot should not have succeed with name:" + snapshot.getName());

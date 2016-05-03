@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -59,7 +61,7 @@ public class TestCloneSnapshotProcedure {
   private static long nonceGroup = HConstants.NO_NONCE;
   private static long nonce = HConstants.NO_NONCE;
 
-  private static SnapshotDescription snapshot = null;
+  private static HBaseProtos.SnapshotDescription snapshot = null;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -99,7 +101,7 @@ public class TestCloneSnapshotProcedure {
     assertTrue("expected executor to be running", procExec.isRunning());
   }
 
-  private SnapshotDescription getSnapshot() throws Exception {
+  private HBaseProtos.SnapshotDescription getSnapshot() throws Exception {
     if (snapshot == null) {
       final TableName snapshotTableName = TableName.valueOf("testCloneSnapshot");
       long tid = System.currentTimeMillis();
@@ -116,7 +118,7 @@ public class TestCloneSnapshotProcedure {
       admin.enableTable(snapshotTableName);
 
       List<SnapshotDescription> snapshotList = admin.listSnapshots();
-      snapshot = snapshotList.get(0);
+      snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotList.get(0));
     }
     return snapshot;
   }

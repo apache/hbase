@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -80,7 +80,7 @@ public class SplitOrMergeTracker {
     mergeStateTracker.start();
   }
 
-  public boolean isSplitOrMergeEnabled(Admin.MasterSwitchType switchType) {
+  public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
     switch (switchType) {
       case SPLIT:
         return splitStateTracker.isSwitchEnabled();
@@ -92,7 +92,7 @@ public class SplitOrMergeTracker {
     return false;
   }
 
-  public void setSplitOrMergeEnabled(boolean enabled, Admin.MasterSwitchType switchType)
+  public void setSplitOrMergeEnabled(boolean enabled, MasterSwitchType switchType)
     throws KeeperException {
     switch (switchType) {
       case SPLIT:
@@ -164,8 +164,8 @@ public class SplitOrMergeTracker {
   }
 
   private void saveOriginalState() throws KeeperException {
-    boolean splitEnabled = isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    boolean mergeEnabled = isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
+    boolean splitEnabled = isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
+    boolean mergeEnabled = isSplitOrMergeEnabled(MasterSwitchType.MERGE);
     String splitOrMergeStates = ZKUtil.joinZNode(watcher.getSwitchLockZNode(),
       SplitOrMergeTracker.STATE);
     ZooKeeperProtos.SplitAndMergeState.Builder builder

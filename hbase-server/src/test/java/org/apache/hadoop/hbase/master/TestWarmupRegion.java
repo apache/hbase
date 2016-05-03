@@ -31,7 +31,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -106,7 +107,7 @@ public class TestWarmupRegion {
       @Override
       public boolean evaluate() throws IOException {
         return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
-            AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+            CompactionState.NONE;
       }
     });
 

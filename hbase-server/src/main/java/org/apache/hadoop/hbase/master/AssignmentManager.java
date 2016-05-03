@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2364,7 +2364,7 @@ public class AssignmentManager {
     }
 
     if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
-            Admin.MasterSwitchType.SPLIT)) {
+            MasterSwitchType.SPLIT)) {
       return "split switch is off!";
     }
 
@@ -2527,7 +2527,7 @@ public class AssignmentManager {
     }
 
     if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
-            Admin.MasterSwitchType.MERGE)) {
+            MasterSwitchType.MERGE)) {
       return "merge switch is off!";
     }
     // Just return in case of retrying

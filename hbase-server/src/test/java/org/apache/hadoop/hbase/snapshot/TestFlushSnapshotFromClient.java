@@ -44,7 +44,9 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -147,18 +149,20 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, TABLE_NAME, SnapshotDescription.Type.FLUSH);
+    admin.snapshot(snapshotString, TABLE_NAME,
+      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL,
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
   }
 
    /**
@@ -181,18 +185,20 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, TABLE_NAME, SnapshotDescription.Type.SKIPFLUSH);
+    admin.snapshot(snapshotString, TABLE_NAME,
+      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH));
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-        snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL,
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -234,7 +240,8 @@ public class TestFlushSnapshotFromClient {
     LOG.debug("FS state after snapshot:");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
-    SnapshotTestingUtils.confirmSnapshotValid(UTIL, snapshots.get(0), TABLE_NAME, TEST_FAM);
+    SnapshotTestingUtils.confirmSnapshotValid(UTIL,
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
   }
 
   @Test
@@ -258,7 +265,8 @@ public class TestFlushSnapshotFromClient {
 
     // snapshot the non-existant table
     try {
-      admin.snapshot("fail", tableName, SnapshotDescription.Type.FLUSH);
+      admin.snapshot("fail", tableName,
+        ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
       fail("Snapshot succeeded even though there is not table.");
     } catch (SnapshotCreationException e) {
       LOG.info("Correctly failed to snapshot a non-existant table:" + e.getMessage());
@@ -267,13 +275,14 @@ public class TestFlushSnapshotFromClient {
 
   @Test
   public void testAsyncFlushSnapshot() throws Exception {
-    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("asyncSnapshot")
-        .setTable(TABLE_NAME.getNameAsString())
-        .setType(SnapshotDescription.Type.FLUSH)
-        .build();
+    HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
+        .setName("asyncSnapshot").setTable(TABLE_NAME.getNameAsString())
+        .setType(HBaseProtos.SnapshotDescription.Type.FLUSH).build();
 
     // take the snapshot async
-    admin.takeSnapshotAsync(snapshot);
+    admin.takeSnapshotAsync(
+      new SnapshotDescription("asyncSnapshot", TABLE_NAME.getNameAsString(),
+        ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH)));
 
     // constantly loop, looking for the snapshot to complete
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -295,7 +304,8 @@ public class TestFlushSnapshotFromClient {
 
     // Take a snapshot
     String snapshotBeforeMergeName = "snapshotBeforeMerge";
-    admin.snapshot(snapshotBeforeMergeName, TABLE_NAME, SnapshotDescription.Type.FLUSH);
+    admin.snapshot(snapshotBeforeMergeName, TABLE_NAME,
+      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
 
     // Clone the table
     TableName cloneBeforeMergeName = TableName.valueOf("cloneBeforeMerge");
@@ -364,7 +374,7 @@ public class TestFlushSnapshotFromClient {
     // Take a snapshot
     String snapshotName = "snapshotAfterMerge";
     SnapshotTestingUtils.snapshot(admin, snapshotName, TABLE_NAME.getNameAsString(),
-      SnapshotDescription.Type.FLUSH, 3);
+      HBaseProtos.SnapshotDescription.Type.FLUSH, 3);
 
     // Clone the table
     TableName cloneName = TableName.valueOf("cloneMerge");
@@ -425,14 +435,16 @@ public class TestFlushSnapshotFromClient {
       @Override
       public void run() {
         try {
-          LOG.info("Submitting snapshot request: " + ClientSnapshotDescriptionUtils.toString(ss));
+          LOG.info("Submitting snapshot request: " + ClientSnapshotDescriptionUtils
+              .toString(ProtobufUtil.createHBaseProtosSnapshotDesc(ss)));
           admin.takeSnapshotAsync(ss);
         } catch (Exception e) {
           LOG.info("Exception during snapshot request: " + ClientSnapshotDescriptionUtils.toString(
-              ss)
+            ProtobufUtil.createHBaseProtosSnapshotDesc(ss))
               + ".  This is ok, we expect some", e);
         }
-        LOG.info("Submitted snapshot request: " + ClientSnapshotDescriptionUtils.toString(ss));
+        LOG.info("Submitted snapshot request: " + ClientSnapshotDescriptionUtils
+            .toString(ProtobufUtil.createHBaseProtosSnapshotDesc(ss)));
         toBeSubmitted.countDown();
       }
     };
@@ -440,11 +452,15 @@ public class TestFlushSnapshotFromClient {
     // build descriptions
     SnapshotDescription[] descs = new SnapshotDescription[ssNum];
     for (int i = 0; i < ssNum; i++) {
-      SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-      builder.setTable(((i % 2) == 0 ? TABLE_NAME : TABLE2_NAME).getNameAsString());
-      builder.setName("ss"+i);
-      builder.setType(SnapshotDescription.Type.FLUSH);
-      descs[i] = builder.build();
+      HBaseProtos.SnapshotDescription.Builder builder =
+          HBaseProtos.SnapshotDescription.newBuilder();
+      if(i %2 ==0) {
+        descs[i] = new SnapshotDescription("ss" + i, TABLE_NAME.getNameAsString(),
+          ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+      } else {
+        descs[i] = new SnapshotDescription("ss" + i, TABLE2_NAME.getNameAsString(),
+          ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+      }
     }
 
     // kick each off its own thread

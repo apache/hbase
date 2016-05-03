@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -807,7 +807,7 @@ public interface MasterObserver extends Coprocessor {
    * @param switchType type of switch
    */
   boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException;
+      final boolean newValue, final MasterSwitchType switchType) throws IOException;
 
   /**
    * Called after setting split / merge switch
@@ -816,7 +816,7 @@ public interface MasterObserver extends Coprocessor {
    * @param switchType type of switch
    */
   void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException;
+      final boolean newValue, final MasterSwitchType switchType) throws IOException;
 
   /**
    * Called prior to modifying the flag used to enable/disable region balancing.

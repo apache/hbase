@@ -21,9 +21,9 @@
   import="java.util.Date"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.Admin"
+  import="org.apache.hadoop.hbase.client.SnapshotDescription"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
-  import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.HBaseConfiguration" %>

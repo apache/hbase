@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -450,7 +450,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   @Override
   public boolean preSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                            boolean newValue,
-                                           Admin.MasterSwitchType switchType)
+                                           MasterSwitchType switchType)
       throws IOException {
     return false;
   }
@@ -458,7 +458,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   @Override
   public void postSetSplitOrMergeEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                          boolean newValue,
-                                         Admin.MasterSwitchType switchType)
+                                         MasterSwitchType switchType)
       throws IOException {
 
   }

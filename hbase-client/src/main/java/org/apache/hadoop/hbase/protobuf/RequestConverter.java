@@ -31,12 +31,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Action;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
@@ -1701,11 +1701,11 @@ public final class RequestConverter {
   /**
    * Creates a protocol buffer IsSplitOrMergeEnabledRequest
    *
-   * @param switchType see {@link org.apache.hadoop.hbase.client.Admin.MasterSwitchType}
+   * @param switchType see {@link org.apache.hadoop.hbase.client.MasterSwitchType}
    * @return a IsSplitOrMergeEnabledRequest
    */
   public static IsSplitOrMergeEnabledRequest buildIsSplitOrMergeEnabledRequest(
-    Admin.MasterSwitchType switchType) {
+    MasterSwitchType switchType) {
     IsSplitOrMergeEnabledRequest.Builder builder = IsSplitOrMergeEnabledRequest.newBuilder();
     builder.setSwitchType(convert(switchType));
     return builder.build();
@@ -1723,23 +1723,23 @@ public final class RequestConverter {
    *
    * @param enabled switch is enabled or not
    * @param synchronous set switch sync?
-   * @param switchTypes see {@link org.apache.hadoop.hbase.client.Admin.MasterSwitchType}, it is
+   * @param switchTypes see {@link org.apache.hadoop.hbase.client.MasterSwitchType}, it is
    *                    a list.
    * @return a SetSplitOrMergeEnabledRequest
    */
   public static SetSplitOrMergeEnabledRequest buildSetSplitOrMergeEnabledRequest(boolean enabled,
-    boolean synchronous, boolean skipLock, Admin.MasterSwitchType... switchTypes) {
+    boolean synchronous, boolean skipLock, MasterSwitchType... switchTypes) {
     SetSplitOrMergeEnabledRequest.Builder builder = SetSplitOrMergeEnabledRequest.newBuilder();
     builder.setEnabled(enabled);
     builder.setSynchronous(synchronous);
     builder.setSkipLock(skipLock);
-    for (Admin.MasterSwitchType switchType : switchTypes) {
+    for (MasterSwitchType switchType : switchTypes) {
       builder.addSwitchTypes(convert(switchType));
     }
     return builder.build();
   }
 
-  private static MasterProtos.MasterSwitchType convert(Admin.MasterSwitchType switchType) {
+  private static MasterProtos.MasterSwitchType convert(MasterSwitchType switchType) {
     switch (switchType) {
       case SPLIT:
         return MasterProtos.MasterSwitchType.SPLIT;

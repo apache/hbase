@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -1500,8 +1500,8 @@ public class MasterRpcServices extends RSRpcServices
       if (!master.getSplitOrMergeTracker().lock(skipLock)) {
         throw new DoNotRetryIOException("can't set splitOrMerge switch due to lock");
       }
-      for (MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
-        Admin.MasterSwitchType switchType = convert(masterSwitchType);
+      for (MasterProtos.MasterSwitchType masterSwitchType : request.getSwitchTypesList()) {
+        MasterSwitchType switchType = convert(masterSwitchType);
         boolean oldValue = master.isSplitOrMergeEnabled(switchType);
         response.addPrevValue(oldValue);
         boolean bypass = false;
@@ -1619,12 +1619,12 @@ public class MasterRpcServices extends RSRpcServices
     return response.build();
   }
 
-  private Admin.MasterSwitchType convert(MasterSwitchType switchType) {
+  private MasterSwitchType convert(MasterProtos.MasterSwitchType switchType) {
     switch (switchType) {
       case SPLIT:
-        return Admin.MasterSwitchType.SPLIT;
+        return MasterSwitchType.SPLIT;
       case MERGE:
-        return Admin.MasterSwitchType.MERGE;
+        return MasterSwitchType.MERGE;
       default:
         break;
     }

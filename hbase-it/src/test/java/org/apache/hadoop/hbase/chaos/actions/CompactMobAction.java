@@ -22,6 +22,7 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.CompactType;
 
 /**
  * Action that queues a table compaction.
@@ -56,9 +57,9 @@ public class CompactMobAction extends Action {
     LOG.info("Performing action: Compact mob of table " + tableName + ", major=" + major);
     try {
       if (major) {
-        admin.majorCompact(tableName, Admin.CompactType.MOB);
+        admin.majorCompact(tableName, CompactType.MOB);
       } else {
-        admin.compact(tableName, Admin.CompactType.MOB);
+        admin.compact(tableName, CompactType.MOB);
       }
     } catch (Exception ex) {
       LOG.warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());

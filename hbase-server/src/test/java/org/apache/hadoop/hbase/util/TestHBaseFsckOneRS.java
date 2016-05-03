@@ -33,12 +33,12 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -1856,9 +1856,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
   @Test
   public void testSplitOrMergeStatWhenHBCKAbort() throws Exception {
     admin.setSplitOrMergeEnabled(true, false, true,
-      Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
-    boolean oldSplit = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    boolean oldMerge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
+      MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
+    boolean oldSplit = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
+    boolean oldMerge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
 
     assertTrue(oldSplit);
     assertTrue(oldMerge);
@@ -1880,8 +1880,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     spiedHbck.onlineHbck();
     spiedHbck.close();
 
-    boolean split = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    boolean merge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
+    boolean split = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
+    boolean merge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
     assertFalse(split);
     assertFalse(merge);
 
@@ -1892,8 +1892,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     hbck.onlineHbck();
     hbck.close();
 
-    split = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    merge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
+    split = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
+    merge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
 
     assertTrue(split);
     assertTrue(merge);

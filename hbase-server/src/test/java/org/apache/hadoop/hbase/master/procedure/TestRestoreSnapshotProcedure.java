@@ -35,7 +35,9 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -73,7 +75,7 @@ public class TestRestoreSnapshotProcedure {
   private static long nonceGroup = HConstants.NO_NONCE;
   private static long nonce = HConstants.NO_NONCE;
 
-  private SnapshotDescription snapshot = null;
+  private HBaseProtos.SnapshotDescription snapshot = null;
   private HTableDescriptor snapshotHTD = null;
 
   private static void setupConf(Configuration conf) {
@@ -141,7 +143,7 @@ public class TestRestoreSnapshotProcedure {
     admin.snapshot(snapshotName, snapshotTableName);
 
     List<SnapshotDescription> snapshotList = admin.listSnapshots();
-    snapshot = snapshotList.get(0);
+    snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotList.get(0));
 
     // modify the table
     HColumnDescriptor columnFamilyDescriptor3 = new HColumnDescriptor(CF3);

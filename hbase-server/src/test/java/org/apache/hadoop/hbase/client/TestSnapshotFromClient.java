@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
@@ -212,18 +212,13 @@ public class TestSnapshotFromClient {
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
 
-    SnapshotDescription desc = SnapshotDescription.newBuilder()
-      .setType(SnapshotDescription.Type.DISABLED)
-      .setTable(STRING_TABLE_NAME)
-      .setName(SNAPSHOT_NAME)
-      .setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION)
-      .build();
-    admin.snapshot(desc);
+    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, STRING_TABLE_NAME,
+        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION));
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
@@ -231,9 +226,9 @@ public class TestSnapshotFromClient {
     LOG.debug("FS state after snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-      admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
+      rootDir, admin, fs);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -292,8 +287,8 @@ public class TestSnapshotFromClient {
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
@@ -304,8 +299,9 @@ public class TestSnapshotFromClient {
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();
-    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, nonEmptyCfs, emptyCfs,
-      rootDir, admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, nonEmptyCfs,
+      emptyCfs, rootDir, admin, fs);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -375,7 +371,8 @@ public class TestSnapshotFromClient {
       admin.snapshot(Bytes.toBytes(table2Snapshot1), TABLE_NAME);
       LOG.debug(table2Snapshot1 + " completed.");
 
-      List<SnapshotDescription> listTableSnapshots = admin.listTableSnapshots("test.*", "Table1.*");
+      List<SnapshotDescription> listTableSnapshots =
+          admin.listTableSnapshots("test.*", "Table1.*");
       List<String> listTableSnapshotNames = new ArrayList<String>();
       assertEquals(2, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {

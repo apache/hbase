@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -47,7 +48,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -126,14 +128,15 @@ public final class SnapshotInfo extends Configured implements Tool {
     private AtomicLong hfilesMobSize = new AtomicLong();
     private AtomicLong logSize = new AtomicLong();
 
-    private final SnapshotDescription snapshot;
+    private final HBaseProtos.SnapshotDescription snapshot;
     private final TableName snapshotTable;
     private final Configuration conf;
     private final FileSystem fs;
 
-    SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotDescription snapshot)
+    SnapshotStats(final Configuration conf, final FileSystem fs,
+        final SnapshotDescription snapshot)
     {
-      this.snapshot = snapshot;
+      this.snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
       this.snapshotTable = TableName.valueOf(snapshot.getTable());
       this.conf = conf;
       this.fs = fs;
@@ -141,7 +144,9 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return the snapshot descriptor */
     public SnapshotDescription getSnapshotDescription() {
-      return this.snapshot;
+      return new SnapshotDescription(this.snapshot.getName(), this.snapshot.getTable(),
+          ProtobufUtil.createSnapshotType(this.snapshot.getType()), this.snapshot.getOwner(),
+          this.snapshot.getCreationTime(), this.snapshot.getVersion());
     }
 
     /** @return true if the snapshot is corrupted */
@@ -371,7 +376,8 @@ public final class SnapshotInfo extends Configured implements Tool {
       return false;
     }
 
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    HBaseProtos.SnapshotDescription snapshotDesc =
+        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     snapshotManifest = SnapshotManifest.open(getConf(), fs, snapshotDir, snapshotDesc);
     return true;
   }
@@ -380,7 +386,7 @@ public final class SnapshotInfo extends Configured implements Tool {
    * Dump the {@link SnapshotDescription}
    */
   private void printInfo() {
-    SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
+    HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     System.out.println("Snapshot Info");
     System.out.println("----------------------------------------");
@@ -413,9 +419,12 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
+    final HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     final String table = snapshotDesc.getTable();
-    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, snapshotDesc);
+    SnapshotDescription desc = new SnapshotDescription(snapshotDesc.getName(),
+        snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
+        snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, desc);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(getConf(), fs, snapshotManifest,
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
@@ -492,10 +501,11 @@ public final class SnapshotInfo extends Configured implements Tool {
    */
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotDescription snapshot) throws IOException {
+    HBaseProtos.SnapshotDescription snapshotDesc = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
     final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
       new SnapshotReferenceUtil.SnapshotVisitor() {
@@ -525,7 +535,11 @@ public final class SnapshotInfo extends Configured implements Tool {
     List<SnapshotDescription> snapshotLists =
       new ArrayList<SnapshotDescription>(snapshots.length);
     for (FileStatus snapshotDirStat: snapshots) {
-      snapshotLists.add(SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath()));
+      HBaseProtos.SnapshotDescription snapshotDesc =
+          SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());
+      snapshotLists.add(new SnapshotDescription(snapshotDesc.getName(),
+          snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
+          snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion()));
     }
     return snapshotLists;
   }

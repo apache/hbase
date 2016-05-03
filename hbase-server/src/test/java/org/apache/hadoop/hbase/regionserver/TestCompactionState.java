@@ -31,9 +31,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -164,7 +164,7 @@ public class TestCompactionState {
       // otherwise, the compaction should have already been done
       if (expectedState != state) {
         for (Region region: regions) {
-          state = region.getCompactionState();
+          state = CompactionState.valueOf(region.getCompactionState().toString());
           assertEquals(CompactionState.NONE, state);
         }
       } else {

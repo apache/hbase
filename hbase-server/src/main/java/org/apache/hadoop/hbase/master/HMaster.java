@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2821,10 +2821,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * Queries the state of the {@link SplitOrMergeTracker}. If it is not initialized,
    * false is returned. If switchType is illegal, false will return.
-   * @param switchType see {@link org.apache.hadoop.hbase.client.Admin.MasterSwitchType}
+   * @param switchType see {@link org.apache.hadoop.hbase.client.MasterSwitchType}
    * @return The state of the switch
    */
-  public boolean isSplitOrMergeEnabled(Admin.MasterSwitchType switchType) {
+  public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
     if (null == splitOrMergeTracker) {
       return false;
     }

@@ -41,9 +41,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -1153,7 +1150,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    */
-  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(final TableName tableName)
+  CompactionState getCompactionState(final TableName tableName)
     throws IOException;
 
   /**
@@ -1164,7 +1161,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    */
-  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionStateForRegion(
+  CompactionState getCompactionStateForRegion(
     final byte[] regionName) throws IOException;
 
   /**
@@ -1244,7 +1241,7 @@ public interface Admin extends Abortable, Closeable {
    */
   void snapshot(final String snapshotName,
       final TableName tableName,
-      HBaseProtos.SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
+      SnapshotType type) throws IOException, SnapshotCreationException,
       IllegalArgumentException;
 
   /**
@@ -1265,7 +1262,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot failed to be taken
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
-  void snapshot(HBaseProtos.SnapshotDescription snapshot)
+  void snapshot(SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
@@ -1273,12 +1270,11 @@ public interface Admin extends Abortable, Closeable {
    * single snapshot should be taken at a time, or results may be undefined.
    *
    * @param snapshot snapshot to take
-   * @return response from the server indicating the max time to wait for the snapshot
    * @throws IOException if the snapshot did not succeed or we lose contact with the master.
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
-  MasterProtos.SnapshotResponse takeSnapshotAsync(HBaseProtos.SnapshotDescription snapshot)
+  void takeSnapshotAsync(SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException;
 
   /**
@@ -1297,7 +1293,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.snapshot.UnknownSnapshotException if the requested snapshot is
    * unknown
    */
-  boolean isSnapshotFinished(final HBaseProtos.SnapshotDescription snapshot)
+  boolean isSnapshotFinished(final SnapshotDescription snapshot)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException;
 
   /**
@@ -1470,7 +1466,7 @@ public interface Admin extends Abortable, Closeable {
    * @return a list of snapshot descriptors for completed snapshots
    * @throws IOException if a network error occurs
    */
-  List<HBaseProtos.SnapshotDescription> listSnapshots() throws IOException;
+  List<SnapshotDescription> listSnapshots() throws IOException;
 
   /**
    * List all the completed snapshots matching the given regular expression.
@@ -1479,7 +1475,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
-  List<HBaseProtos.SnapshotDescription> listSnapshots(String regex) throws IOException;
+  List<SnapshotDescription> listSnapshots(String regex) throws IOException;
 
   /**
    * List all the completed snapshots matching the given pattern.
@@ -1488,7 +1484,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
-  List<HBaseProtos.SnapshotDescription> listSnapshots(Pattern pattern) throws IOException;
+  List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException;
 
   /**
    * List all the completed snapshots matching the given table name regular expression and snapshot
@@ -1498,7 +1494,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of completed SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
-  List<HBaseProtos.SnapshotDescription> listTableSnapshots(String tableNameRegex,
+  List<SnapshotDescription> listTableSnapshots(String tableNameRegex,
       String snapshotNameRegex) throws IOException;
 
   /**
@@ -1509,7 +1505,7 @@ public interface Admin extends Abortable, Closeable {
    * @return - returns a List of completed SnapshotDescription
    * @throws IOException if a remote or network exception occurs
    */
-  List<HBaseProtos.SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
+  List<SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
       Pattern snapshotNamePattern) throws IOException;
 
   /**
@@ -1651,7 +1647,7 @@ public interface Admin extends Abortable, Closeable {
    * Compact a table. Asynchronous operation.
    *
    * @param tableName table to compact
-   * @param compactType {@link org.apache.hadoop.hbase.client.Admin.CompactType}
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException
    * @throws InterruptedException
    */
@@ -1663,7 +1659,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName table to compact
    * @param columnFamily column family within a table
-   * @param compactType {@link org.apache.hadoop.hbase.client.Admin.CompactType}
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException if not a mob column family or if a remote or network exception occurs
    * @throws InterruptedException
    */
@@ -1674,7 +1670,7 @@ public interface Admin extends Abortable, Closeable {
    * Major compact a table. Asynchronous operation.
    *
    * @param tableName table to compact
-   * @param compactType {@link org.apache.hadoop.hbase.client.Admin.CompactType}
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException
    * @throws InterruptedException
    */
@@ -1686,7 +1682,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName table to compact
    * @param columnFamily column family within a table
-   * @param compactType {@link org.apache.hadoop.hbase.client.Admin.CompactType}
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException if not a mob column family or if a remote or network exception occurs
    * @throws InterruptedException
    */
@@ -1697,11 +1693,11 @@ public interface Admin extends Abortable, Closeable {
    * Get the current compaction state of a table. It could be in a compaction, or none.
    *
    * @param tableName table to examine
-   * @param compactType {@link org.apache.hadoop.hbase.client.Admin.CompactType}
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    */
-  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(final TableName tableName,
+  CompactionState getCompactionState(final TableName tableName,
     CompactType compactType) throws IOException;
 
   /**
@@ -1741,27 +1737,4 @@ public interface Admin extends Abortable, Closeable {
    *  and rollback the switch state to be original state before you change switch
    * */
   void releaseSplitOrMergeLockAndRollback() throws IOException;
-
-  /**
-   * Currently, there are only two compact types:
-   * {@code NORMAL} means do store files compaction;
-   * {@code MOB} means do mob files compaction.
-   * */
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
-  public enum CompactType {
-
-    NORMAL    (0),
-    MOB       (1);
-
-    CompactType(int value) {}
-  }
-  
-  @InterfaceAudience.Public
-  @InterfaceStability.Evolving
-  public enum MasterSwitchType {
-    SPLIT,
-    MERGE
-  }
-
 }

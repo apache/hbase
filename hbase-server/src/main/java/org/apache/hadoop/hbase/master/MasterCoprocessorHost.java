@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -779,7 +779,7 @@ public class MasterCoprocessorHost
   }
 
   public boolean preSetSplitOrMergeEnabled(final boolean newValue,
-      final Admin.MasterSwitchType switchType) throws IOException {
+      final MasterSwitchType switchType) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -790,7 +790,7 @@ public class MasterCoprocessorHost
   }
 
   public void postSetSplitOrMergeEnabled(final boolean newValue,
-      final Admin.MasterSwitchType switchType) throws IOException {
+      final MasterSwitchType switchType) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)

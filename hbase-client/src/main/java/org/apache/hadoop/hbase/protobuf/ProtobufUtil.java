@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -67,6 +68,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -3396,5 +3399,77 @@ public final class ProtobufUtil {
       htd.setConfiguration(a.getName(), a.getValue());
     }
     return htd;
+  }
+
+  /**
+   * Creates {@link CompactionState} from
+   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
+   * state
+   * @param state the protobuf CompactionState
+   * @return CompactionState
+   */
+  public static CompactionState createCompactionState(GetRegionInfoResponse.CompactionState state) {
+    return CompactionState.valueOf(state.toString());
+  }
+
+  /**
+   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * from {@link SnapshotType}
+   * @param type the SnapshotDescription type
+   * @return the protobuf SnapshotDescription type
+   */
+  public static HBaseProtos.SnapshotDescription.Type
+      createProtosSnapShotDescType(SnapshotType type) {
+    return HBaseProtos.SnapshotDescription.Type.valueOf(type.name());
+  }
+
+  /**
+   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * from the type of SnapshotDescription string
+   * @param snapshotDesc string representing the snapshot description type
+   * @return the protobuf SnapshotDescription type
+   */
+  public static HBaseProtos.SnapshotDescription.Type
+      createProtosSnapShotDescType(String snapshotDesc) {
+    return HBaseProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase());
+  }
+
+  /**
+   * Creates {@link SnapshotType} from the type of
+   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * @param type the snapshot description type
+   * @return the protobuf SnapshotDescription type
+   */
+  public static SnapshotType createSnapshotType(HBaseProtos.SnapshotDescription.Type type) {
+    return SnapshotType.valueOf(type.toString());
+  }
+
+  /**
+   * Convert from {@link SnapshotDescription} to
+   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * @param snapshotDesc the POJO SnapshotDescription
+   * @return the protobuf SnapshotDescription
+   */
+  public static HBaseProtos.SnapshotDescription
+      createHBaseProtosSnapshotDesc(SnapshotDescription snapshotDesc) {
+    HBaseProtos.SnapshotDescription.Builder builder = HBaseProtos.SnapshotDescription.newBuilder();
+    if (snapshotDesc.getTable() != null) {
+      builder.setTable(snapshotDesc.getTable());
+    }
+    if (snapshotDesc.getName() != null) {
+      builder.setName(snapshotDesc.getName());
+    }
+    if (snapshotDesc.getOwner() != null) {
+      builder.setOwner(snapshotDesc.getOwner());
+    }
+    if (snapshotDesc.getCreationTime() != -1L) {
+      builder.setCreationTime(snapshotDesc.getCreationTime());
+    }
+    if (snapshotDesc.getVersion() != -1) {
+      builder.setVersion(snapshotDesc.getVersion());
+    }
+    builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
+    HBaseProtos.SnapshotDescription snapshot = builder.build();
+    return snapshot;
   }
 }

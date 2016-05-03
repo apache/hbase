@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -827,13 +827,13 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   @Override
   public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+      final boolean newValue, final MasterSwitchType switchType) throws IOException {
     return false;
   }
 
   @Override
   public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+      final boolean newValue, final MasterSwitchType switchType) throws IOException {
   }
 
   @Override

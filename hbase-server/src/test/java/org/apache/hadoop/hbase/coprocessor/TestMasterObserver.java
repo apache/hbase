@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -348,13 +349,13 @@ public class TestMasterObserver {
 
     @Override
     public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+        final boolean newValue, final MasterSwitchType switchType) throws IOException {
       return false;
     }
 
     @Override
     public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
+        final boolean newValue, final MasterSwitchType switchType) throws IOException {
     }
 
     @Override
