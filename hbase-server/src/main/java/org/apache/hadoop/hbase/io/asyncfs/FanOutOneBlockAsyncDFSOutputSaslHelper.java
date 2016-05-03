@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static io.netty.handler.timeout.IdleState.READER_IDLE;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -107,9 +108,13 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static final String MECHANISM = "DIGEST-MD5";
   private static final int SASL_TRANSFER_MAGIC_NUMBER = 0xDEADBEEF;
   private static final String NAME_DELIMITER = " ";
-  private static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
+
+  @VisibleForTesting
+  static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
       "dfs.encrypt.data.transfer.cipher.suites";
-  private static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
+
+  @VisibleForTesting
+  static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
 
   private interface SaslAdaptor {
 
@@ -184,11 +189,11 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           CREATE_DECRYPTOR = cryptoCodecClass.getMethod("createDecryptor");
 
           Class<?> encryptorClass = Class.forName("org.apache.hadoop.crypto.Encryptor");
-          INIT_ENCRYPTOR = encryptorClass.getMethod("init");
+          INIT_ENCRYPTOR = encryptorClass.getMethod("init", byte[].class, byte[].class);
           ENCRYPT = encryptorClass.getMethod("encrypt", ByteBuffer.class, ByteBuffer.class);
 
           Class<?> decryptorClass = Class.forName("org.apache.hadoop.crypto.Decryptor");
-          INIT_DECRYPTOR = decryptorClass.getMethod("init");
+          INIT_DECRYPTOR = decryptorClass.getMethod("init", byte[].class, byte[].class);
           DECRYPT = decryptorClass.getMethod("decrypt", ByteBuffer.class, ByteBuffer.class);
         } catch (NoSuchMethodException | ClassNotFoundException e) {
           throw new Error(e);
@@ -879,7 +884,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       ByteBuffer inBuffer = inBuf.nioBuffer();
       ByteBuf outBuf = ctx.alloc().directBuffer(inBuf.readableBytes());
-      ByteBuffer outBuffer = outBuf.nioBuffer();
+      ByteBuffer outBuffer = outBuf.nioBuffer(0, inBuf.readableBytes());
       codec.decrypt(inBuffer, outBuffer);
       outBuf.writerIndex(inBuf.readableBytes());
       if (release) {
@@ -920,7 +925,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         release = true;
       }
       ByteBuffer inBuffer = inBuf.nioBuffer();
-      ByteBuffer outBuffer = out.nioBuffer();
+      ByteBuffer outBuffer = out.nioBuffer(0, inBuf.readableBytes());
       codec.encrypt(inBuffer, outBuffer);
       out.writerIndex(inBuf.readableBytes());
       if (release) {

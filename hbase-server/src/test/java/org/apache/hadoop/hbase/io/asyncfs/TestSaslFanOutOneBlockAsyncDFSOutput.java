@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.AES_CTR_NOPADDING;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
@@ -47,8 +49,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -95,12 +95,17 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   @Parameter(1)
   public String encryptionAlgorithm;
 
-  @Parameters(name = "{index}: protection={0}, encryption={1}")
+  @Parameter(2)
+  public String cipherSuite;
+
+  @Parameters(name = "{index}: protection={0}, encryption={1}, cipherSuite={2}")
   public static Iterable<Object[]> data() {
     List<Object[]> params = new ArrayList<>();
     for (String protection : Arrays.asList("authentication", "integrity", "privacy")) {
       for (String encryptionAlgorithm : Arrays.asList("", "3des", "rc4")) {
-        params.add(new Object[] { protection, encryptionAlgorithm });
+        for (String cipherSuite : Arrays.asList("", AES_CTR_NOPADDING)) {
+          params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite });
+        }
       }
     }
     return params;
@@ -129,8 +134,6 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Logger.getLogger("org.apache.hadoop.hdfs.StateChange").setLevel(Level.DEBUG);
-    Logger.getLogger("BlockStateChange").setLevel(Level.DEBUG);
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
     Properties conf = MiniKdc.createConf();
@@ -161,13 +164,22 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set("dfs.data.transfer.protection", protection);
-    if (StringUtils.isBlank(encryptionAlgorithm)) {
+    if (StringUtils.isBlank(encryptionAlgorithm) && StringUtils.isBlank(cipherSuite)) {
       TEST_UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, false);
-      TEST_UTIL.getConfiguration().unset(DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
     } else {
       TEST_UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
+    }
+    if (StringUtils.isBlank(encryptionAlgorithm)) {
+      TEST_UTIL.getConfiguration().unset(DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
+    } else {
       TEST_UTIL.getConfiguration().set(DFS_DATA_ENCRYPTION_ALGORITHM_KEY, encryptionAlgorithm);
     }
+    if (StringUtils.isBlank(cipherSuite)) {
+      TEST_UTIL.getConfiguration().unset(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
+    } else {
+      TEST_UTIL.getConfiguration().set(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuite);
+    }
+
     TEST_UTIL.startMiniDFSCluster(3);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
   }
