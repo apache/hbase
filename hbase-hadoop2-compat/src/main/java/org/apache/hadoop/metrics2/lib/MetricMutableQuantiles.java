@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import static org.apache.hadoop.metrics2.lib.Interns.info;
+import static org.apache.hadoop.hbase.metrics.Interns.info;
 
 import java.io.IOException;
 import java.util.Map;
