@@ -44,6 +44,7 @@ Future<Response> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
   auto &p = requests_[call_id];
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
+    LOG(ERROR) << "e = " << call_id;
     this->requests_.erase(call_id);
   });
   this->pipeline_->write(std::move(arg));

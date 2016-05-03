@@ -27,9 +27,9 @@
 
 #include "connection/connection-pool.h"
 #include "core/client.h"
-#include "core/table-name.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
+#include "serde/table-name.h"
 
 using namespace folly;
 using namespace std;
@@ -39,7 +39,7 @@ using hbase::Request;
 using hbase::HBaseService;
 using hbase::LocationCache;
 using hbase::ConnectionPool;
-using hbase::TableNameUtil;
+using hbase::pb::TableName;
 using hbase::pb::ServerName;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;
 using hbase::pb::GetRequest;
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   auto cpu_ex = wangle::getCPUExecutor();
   LocationCache cache{FLAGS_zookeeper, cpu_ex};
   auto result =
-      cache.locateFromMeta(TableNameUtil::create(FLAGS_table), FLAGS_row)
+      cache.LocateFromMeta(folly::to<TableName>(FLAGS_table), FLAGS_row)
           .get(milliseconds(5000));
 
   return 0;

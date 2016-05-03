@@ -17,7 +17,7 @@
  *
  */
 
-#include "serde/zk-deserializer.h"
+#include "serde/zk.h"
 
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -31,7 +31,7 @@ using google::protobuf::Message;
 
 static const std::string MAGIC_STRING = "PBUF";
 
-bool ZkDeserializer::parse(IOBuf *buf, Message *out) {
+bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
 
   // The format is like this
   // 1 byte of magic number. 255

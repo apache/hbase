@@ -18,19 +18,37 @@
  */
 #pragma once
 
-#include <folly/io/IOBuf.h>
+#include <memory>
+#include <string>
 
-// Forward
-namespace google {
-namespace protobuf {
-class Message;
-}
-}
+#include "if/HBase.pb.h"
+#include <folly/Conv.h>
+#include <folly/String.h>
 
 namespace hbase {
-class ClientDeserializer {
-public:
-  int parse_delimited(const folly::IOBuf *buf, google::protobuf::Message *msg);
-};
+namespace pb {
 
+// Provide folly::to<std::string>(TableName);
+template <class String> void toAppend(const TableName &in, String *result) {
+  if (!in.has_namespace_() || in.namespace_() == "default") {
+    folly::toAppend(in.qualifier(), result);
+  } else {
+    folly::toAppend(in.namespace_(), ':', in.qualifier(), result);
+  }
+}
+
+template <class String> void parseTo(String in, TableName &out) {
+  std::vector<std::string> v;
+  folly::split(":", in, v);
+
+  if (v.size() == 1) {
+    out.set_namespace_("default");
+    out.set_qualifier(v[0]);
+  } else {
+    out.set_namespace_(v[0]);
+    out.set_qualifier(v[1]);
+  }
+}
+
+} // namespace pb
 } // namespace hbase

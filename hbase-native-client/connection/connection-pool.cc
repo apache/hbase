@@ -25,40 +25,9 @@ using std::mutex;
 using std::unique_ptr;
 using std::shared_ptr;
 using hbase::pb::ServerName;
-using wangle::ServiceFilter;
 using folly::SharedMutexWritePriority;
 
 namespace hbase {
-
-class RemoveServiceFilter
-    : public ServiceFilter<unique_ptr<Request>, Response> {
-
-public:
-  RemoveServiceFilter(std::shared_ptr<HBaseService> service, ServerName sn,
-                      ConnectionPool &cp)
-      : ServiceFilter<unique_ptr<Request>, Response>(service), sn_(sn),
-        cp_(cp) {}
-
-  folly::Future<folly::Unit> close() override {
-    if (!released.exchange(true)) {
-      return this->service_->close().then(
-          [this]() { this->cp_.close(this->sn_); });
-    } else {
-      return folly::makeFuture();
-    }
-  }
-
-  virtual bool isAvailable() override { return service_->isAvailable(); }
-
-  folly::Future<Response> operator()(unique_ptr<Request> req) override {
-    return (*this->service_)(std::move(req));
-  }
-
-private:
-  std::atomic<bool> released{false};
-  hbase::pb::ServerName sn_;
-  ConnectionPool &cp_;
-};
 
 ConnectionPool::ConnectionPool()
     : cf_(std::make_shared<ConnectionFactory>()), connections_(), map_mutex_() {
@@ -72,13 +41,12 @@ std::shared_ptr<HBaseService> ConnectionPool::get(const ServerName &sn) {
   if (found == connections_.end() || found->second == nullptr) {
     SharedMutexWritePriority::WriteHolder holder(std::move(holder));
     auto new_con = cf_->make_connection(sn.host_name(), sn.port());
-    auto wrapped = std::make_shared<RemoveServiceFilter>(new_con, sn, *this);
-    connections_[sn] = wrapped;
+    connections_[sn] = new_con;
     return new_con;
   }
   return found->second;
 }
-void ConnectionPool::close(ServerName sn) {
+void ConnectionPool::close(const ServerName &sn) {
   SharedMutexWritePriority::WriteHolder holder(map_mutex_);
 
   auto found = connections_.find(sn);

@@ -23,25 +23,26 @@
 
 #include "connection/request.h"
 #include "connection/response.h"
-#include "core/table-name.h"
 #include "if/Client.pb.h"
+#include "serde/table-name.h"
 
 using hbase::pb::TableName;
 using hbase::MetaUtil;
 using hbase::Request;
 using hbase::Response;
 using hbase::pb::ScanRequest;
+using hbase::pb::ServerName;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;
 
 static const std::string META_REGION = "1588230740";
 
-std::string MetaUtil::region_lookup_rowkey(const TableName &tn,
+std::string MetaUtil::RegionLookupRowkey(const TableName &tn,
                                            const std::string &row) const {
   return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
 }
 
 std::unique_ptr<Request>
-MetaUtil::make_meta_request(const TableName tn, const std::string &row) const {
+MetaUtil::MetaRequest(const TableName tn, const std::string &row) const {
   auto request = Request::scan();
   auto msg = std::static_pointer_cast<ScanRequest>(request->req_msg());
 
@@ -76,6 +77,6 @@ MetaUtil::make_meta_request(const TableName tn, const std::string &row) const {
   info_col->add_qualifier("server");
   info_col->add_qualifier("regioninfo");
 
-  scan->set_start_row(region_lookup_rowkey(tn, row));
+  scan->set_start_row(RegionLookupRowkey(tn, row));
   return request;
 }

@@ -16,19 +16,39 @@
  * limitations under the License.
  *
  */
-#include <folly/Memory.h>
+
+#include "serde/region-info.h"
+
 #include <gtest/gtest.h>
-#include <wangle/concurrent/GlobalExecutor.h>
 
-#include "location-cache.h"
-using namespace hbase;
+#include <string>
 
-TEST(LocationCacheTest, TestGetMetaNodeContents) {
-  // TODO(elliott): need to make a test utility for this.
-  LocationCache cache{"localhost:2181", wangle::getCPUExecutor()};
-  auto f = cache.LocateMeta();
-  auto result = f.get();
-  ASSERT_FALSE(f.hasException());
-  ASSERT_TRUE(result.has_port());
-  ASSERT_TRUE(result.has_host_name());
+#include "if/HBase.pb.h"
+#include "serde/table-name.h"
+
+using std::string;
+using hbase::pb::RegionInfo;
+using hbase::pb::TableName;
+
+TEST(TestRegionInfoDesializer, TestDeserialize) {
+  string ns{"test_ns"};
+  string tn{"table_name"};
+  string start_row{"AAAAAA"};
+  string stop_row{"BBBBBBBBBBBB"};
+  uint64_t region_id = 2345678;
+
+  RegionInfo ri_out;
+  ri_out.set_region_id(region_id);
+  ri_out.mutable_table_name()->set_namespace_(ns);
+  ri_out.mutable_table_name()->set_qualifier(tn);
+  ri_out.set_start_key(start_row);
+  ri_out.set_end_key(stop_row);
+
+
+  string header{"PBUF"};
+  string ser = header + ri_out.SerializeAsString();
+
+  auto out = folly::to<RegionInfo>(ser);
+
+  EXPECT_EQ(region_id, out.region_id());
 }

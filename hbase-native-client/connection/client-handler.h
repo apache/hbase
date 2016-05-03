@@ -22,8 +22,7 @@
 
 #include <string>
 
-#include "serde/client-deserializer.h"
-#include "serde/client-serializer.h"
+#include "serde/rpc.h"
 
 // Forward decs.
 namespace hbase {
@@ -49,8 +48,7 @@ public:
 private:
   bool need_send_header_;
   std::string user_name_;
-  ClientSerializer ser_;
-  ClientDeserializer deser_;
+  RpcSerde serde_;
 
   // in flight requests
   std::unordered_map<uint32_t, std::shared_ptr<google::protobuf::Message>>

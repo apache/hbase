@@ -24,16 +24,16 @@
 
 #include "if/HBase.pb.h"
 #include "if/RPC.pb.h"
-#include "serde/client-serializer.h"
+#include "serde/rpc.h"
 
 using namespace hbase;
 using namespace hbase::pb;
 using namespace folly;
 using namespace folly::io;
 
-TEST(ClientSerializerTest, PreambleIncludesHBas) {
-  ClientSerializer ser;
-  auto buf = ser.preamble();
+TEST(RpcSerdeTest, PreambleIncludesHBas) {
+  RpcSerde ser;
+  auto buf = ser.Preamble();
   const char *p = reinterpret_cast<const char *>(buf->data());
   // Take the first for chars and make sure they are the
   // magic string
@@ -42,16 +42,16 @@ TEST(ClientSerializerTest, PreambleIncludesHBas) {
   EXPECT_EQ(6, buf->computeChainDataLength());
 }
 
-TEST(ClientSerializerTest, PreambleIncludesVersion) {
-  ClientSerializer ser;
-  auto buf = ser.preamble();
+TEST(RpcSerdeTest, PreambleIncludesVersion) {
+  RpcSerde ser;
+  auto buf = ser.Preamble();
   EXPECT_EQ(0, static_cast<const uint8_t *>(buf->data())[4]);
   EXPECT_EQ(80, static_cast<const uint8_t *>(buf->data())[5]);
 }
 
-TEST(ClientSerializerTest, TestHeaderLengthPrefixed) {
-  ClientSerializer ser;
-  auto header = ser.header("elliott");
+TEST(RpcSerdeTest, TestHeaderLengthPrefixed) {
+  RpcSerde ser;
+  auto header = ser.Header("elliott");
 
   // The header should be prefixed by 4 bytes of length.
   EXPECT_EQ(4, header->length());
@@ -64,9 +64,9 @@ TEST(ClientSerializerTest, TestHeaderLengthPrefixed) {
   EXPECT_EQ(prefixed_len, header->next()->length());
 }
 
-TEST(ClientSerializerTest, TestHeaderDecode) {
-  ClientSerializer ser;
-  auto buf = ser.header("elliott");
+TEST(RpcSerdeTest, TestHeaderDecode) {
+  RpcSerde ser;
+  auto buf = ser.Header("elliott");
   auto header_buf = buf->next();
   ConnectionHeader h;
 

@@ -30,6 +30,6 @@ class IOBuf;
 namespace hbase {
 class ZkDeserializer {
 public:
-  bool parse(folly::IOBuf *buf, google::protobuf::Message *out);
+  bool Parse(folly::IOBuf *buf, google::protobuf::Message *out);
 };
 } // namespace hbase

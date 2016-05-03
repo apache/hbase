@@ -16,13 +16,12 @@
  * limitations under the License.
  *
  */
+#include "serde/rpc.h"
 
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 
 #include "if/Client.pb.h"
-#include "serde/client-deserializer.h"
-#include "serde/client-serializer.h"
 
 using namespace hbase;
 using folly::IOBuf;
@@ -30,23 +29,23 @@ using hbase::pb::GetRequest;
 using hbase::pb::RegionSpecifier;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;
 
-TEST(TestClientDeserializer, TestReturnFalseOnNullPtr) {
-  ClientDeserializer deser;
-  ASSERT_LT(deser.parse_delimited(nullptr, nullptr), 0);
+TEST(TestRpcSerde, TestReturnFalseOnNullPtr) {
+  RpcSerde deser;
+  ASSERT_LT(deser.ParseDelimited(nullptr, nullptr), 0);
 }
 
-TEST(TestClientDeserializer, TestReturnFalseOnBadInput) {
-  ClientDeserializer deser;
+TEST(TestRpcSerde, TestReturnFalseOnBadInput) {
+  RpcSerde deser;
   auto buf = IOBuf::copyBuffer("test");
   GetRequest gr;
 
-  ASSERT_LT(deser.parse_delimited(buf.get(), &gr), 0);
+  ASSERT_LT(deser.ParseDelimited(buf.get(), &gr), 0);
 }
 
-TEST(TestClientDeserializer, TestGoodGetRequestFullRoundTrip) {
+TEST(TestRpcSerde, TestGoodGetRequestFullRoundTrip) {
   GetRequest in;
-  ClientSerializer ser;
-  ClientDeserializer deser;
+  RpcSerde ser;
+  RpcSerde deser;
 
   // fill up the GetRequest.
   in.mutable_region()->set_value("test_region_id");
@@ -56,11 +55,11 @@ TEST(TestClientDeserializer, TestGoodGetRequestFullRoundTrip) {
   in.mutable_get()->set_row("test_row");
 
   // Create the buffer
-  auto buf = ser.serialize_delimited(in);
+  auto buf = ser.SerializeDelimited(in);
 
   GetRequest out;
 
-  int used_bytes = deser.parse_delimited(buf.get(), &out);
+  int used_bytes = deser.ParseDelimited(buf.get(), &out);
 
   ASSERT_GT(used_bytes, 0);
   ASSERT_EQ(used_bytes, buf->length());

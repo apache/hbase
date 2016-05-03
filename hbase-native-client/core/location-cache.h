@@ -29,8 +29,8 @@
 
 #include "connection/connection-pool.h"
 #include "core/meta-utils.h"
-#include "core/table-name.h"
 #include "core/region-location.h"
+#include "serde/table-name.h"
 
 namespace hbase {
 
@@ -48,14 +48,14 @@ public:
   // Meta Related Methods.
   // These are only public until testing is complete
   folly::Future<hbase::pb::ServerName> LocateMeta();
-  folly::Future<RegionLocation> locateFromMeta(const hbase::pb::TableName &tn,
+  folly::Future<std::shared_ptr<RegionLocation>> LocateFromMeta(const hbase::pb::TableName &tn,
                                                const std::string &row);
-  RegionLocation parse_response(const Response &resp);
   void InvalidateMeta();
 
 private:
   void RefreshMetaLocation();
   hbase::pb::ServerName ReadMetaLocation();
+  std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
 
   std::string quorum_spec_;
   std::shared_ptr<folly::Executor> executor_;
@@ -63,7 +63,6 @@ private:
   std::mutex meta_lock_;
   ConnectionPool cp_;
   MetaUtil meta_util_;
-
 
   // TODO: migrate this to a smart pointer with a deleter.
   zhandle_t *zk_;
