@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -1106,7 +1107,9 @@ public final class Canary implements Tool {
         String serverName = entry.getKey();
         AtomicLong successes = new AtomicLong(0);
         successMap.put(serverName, successes);
-        if (this.allRegions) {
+        if (entry.getValue().isEmpty()) {
+          LOG.error(String.format("Regionserver not serving any regions - %s", serverName));
+        } else if (this.allRegions) {
           for (HRegionInfo region : entry.getValue()) {
             tasks.add(new RegionServerTask(this.connection,
                 serverName,
@@ -1182,6 +1185,13 @@ public final class Canary implements Tool {
           table.close();
         }
 
+        //get any live regionservers not serving any regions
+        for (ServerName rs : this.admin.getClusterStatus().getServers()) {
+          String rsName = rs.getHostname();
+          if (!rsAndRMap.containsKey(rsName)) {
+            rsAndRMap.put(rsName, Collections.<HRegionInfo>emptyList());
+          }
+        }
       } catch (IOException e) {
         String msg = "Get HTables info failed";
         LOG.error(msg, e);
