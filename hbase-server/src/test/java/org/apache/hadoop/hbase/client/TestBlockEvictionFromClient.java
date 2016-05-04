@@ -200,7 +200,7 @@ public class TestBlockEvictionFromClient {
       // Create three sets of scan
       ScanThread[] scanThreads = initiateScan(table, false);
       Thread.sleep(100);
-      checkForBlockEviction(cache, false, false, false);
+      checkForBlockEviction(cache, false, false);
       for (ScanThread thread : scanThreads) {
         thread.join();
       }
@@ -284,16 +284,16 @@ public class TestBlockEvictionFromClient {
       ScanThread[] scanThreads = initiateScan(table, false);
       // Create three sets of gets
       GetThread[] getThreads = initiateGet(table, false, false);
-      checkForBlockEviction(cache, false, false, false);
+      checkForBlockEviction(cache, false, false);
       CustomInnerRegionObserver.waitForGets.set(false);
-      checkForBlockEviction(cache, false, false, false);
+      checkForBlockEviction(cache, false, false);
       for (GetThread thread : getThreads) {
         thread.join();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
       // giving some time for the block to be decremented
-      checkForBlockEviction(cache, true, false, false);
+      checkForBlockEviction(cache, true, false);
       getLatch.countDown();
       for (ScanThread thread : scanThreads) {
         thread.join();
@@ -302,7 +302,7 @@ public class TestBlockEvictionFromClient {
       // Check with either true or false
       CustomInnerRegionObserver.waitForGets.set(false);
       // The scan should also have released the blocks by now
-      checkForBlockEviction(cache, true, true, false);
+      checkForBlockEviction(cache, true, true);
     } finally {
       if (table != null) {
         table.close();
@@ -360,7 +360,7 @@ public class TestBlockEvictionFromClient {
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
       // giving some time for the block to be decremented
-      checkForBlockEviction(cache, true, false, false);
+      checkForBlockEviction(cache, true, false);
       getLatch.countDown();
       System.out.println("Gets should have returned the bloks");
     } finally {
@@ -450,7 +450,7 @@ public class TestBlockEvictionFromClient {
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
       // giving some time for the block to be decremented
-      checkForBlockEviction(cache, true, false, false);
+      checkForBlockEviction(cache, true, false);
       getLatch.countDown();
       System.out.println("Gets should have returned the bloks");
     } finally {
@@ -545,7 +545,7 @@ public class TestBlockEvictionFromClient {
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
       // giving some time for the block to be decremented
-      checkForBlockEviction(cache, true, false, false);
+      checkForBlockEviction(cache, true, false);
       getLatch.countDown();
       System.out.println("Gets should have returned the bloks");
     } finally {
@@ -766,7 +766,7 @@ public class TestBlockEvictionFromClient {
         thread.join();
       }
       // giving some time for the block to be decremented
-      checkForBlockEviction(cache, true, false, false);
+      checkForBlockEviction(cache, true, false);
     } finally {
       if (table != null) {
         table.close();
@@ -830,7 +830,7 @@ public class TestBlockEvictionFromClient {
       // giving some time for the block to be decremented
       Thread.sleep(100);
       CustomInnerRegionObserver.waitForGets.set(false);
-      checkForBlockEviction(cache, false, false, true);
+      checkForBlockEviction(cache, false, false);
       // countdown the latch
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
@@ -1274,8 +1274,8 @@ public class TestBlockEvictionFromClient {
     return multiGetThreads;
   }
 
-  private void checkForBlockEviction(BlockCache cache, boolean getClosed, boolean expectOnlyZero,
-      boolean wrappedCp) throws InterruptedException {
+  private void checkForBlockEviction(BlockCache cache, boolean getClosed, boolean expectOnlyZero)
+      throws InterruptedException {
     int counter = NO_OF_THREADS;
     if (CustomInnerRegionObserver.waitForGets.get()) {
       // Because only one row is selected, it has only 2 blocks
@@ -1325,7 +1325,7 @@ public class TestBlockEvictionFromClient {
           assertTrue(refCount == 0);
         }
         if (refCount != 0) {
-          if (getLatch == null || wrappedCp) {
+          if (getLatch == null) {
             assertEquals(refCount, CustomInnerRegionObserver.countOfNext.get());
           } else {
             assertEquals(refCount, CustomInnerRegionObserver.countOfNext.get() + (NO_OF_THREADS));
