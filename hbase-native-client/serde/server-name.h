@@ -12,7 +12,9 @@ template <class String> void parseTo(String in, ServerName &out) {
   std::string s = folly::to<std::string>(in);
 
   auto delim = s.rfind(":");
-  DCHECK(delim != std::string::npos);
+  if (delim == std::string::npos) {
+    throw std::runtime_error("Couldn't parse server name");
+  }
   out.set_host_name(s.substr(0, delim));
   // Now keep everything after the : (delim + 1) to the end.
   out.set_port(folly::to<int>(s.substr(delim + 1)));

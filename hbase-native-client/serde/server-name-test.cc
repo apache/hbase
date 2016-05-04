@@ -30,3 +30,21 @@ TEST(TestServerName, TestMakeServerName) {
   ASSERT_EQ("test", sn.host_name());
   ASSERT_EQ(123, sn.port());
 }
+
+TEST(TestServerName, TestIps) {
+  auto sn = folly::to<ServerName>("127.0.0.1:999");
+  ASSERT_EQ("127.0.0.1", sn.host_name());
+  ASSERT_EQ(999, sn.port());
+}
+
+TEST(TestServerName, TestThrow) {
+  ASSERT_ANY_THROW(folly::to<ServerName>("Ther's no colon here"));
+}
+
+TEST(TestServerName, TestIPV6) {
+  auto sn = folly::to<ServerName>("[::::1]:123");
+
+  ASSERT_EQ("[::::1]", sn.host_name());
+  ASSERT_EQ(123, sn.port());
+
+}
