@@ -52,7 +52,7 @@
   </property>
   <property>
     <name>hbase.regionserver.metahandler.count</name>
-    <value>5</value>
+    <value>6</value>
   </property>
   <property>
       <name>hbase.ipc.server.read.threadpool.size</name>
