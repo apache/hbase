@@ -1,6 +1,5 @@
 /**
  *
-
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -213,7 +212,7 @@ public class TestDistributedLogSplitting {
     startCluster(NUM_RS);
 
     final int NUM_LOG_LINES = 1000;
-    final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
+    final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
@@ -680,7 +679,7 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = master.getZooKeeper();
     Table ht = installTable(zkw, "table", "family", 40);
     try {
-      final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
+      final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
 
       Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
       HRegionInfo region = null;
@@ -929,7 +928,7 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     try {
-      final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
+      final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
 
       Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
       HRegionInfo region = null;
@@ -1004,7 +1003,7 @@ public class TestDistributedLogSplitting {
     LOG.info("testWorkerAbort");
     startCluster(3);
     final int NUM_LOG_LINES = 10000;
-    final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
+    final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     final List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
@@ -1123,7 +1122,7 @@ public class TestDistributedLogSplitting {
   public void testDelayedDeleteOnFailure() throws Exception {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
-    final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
+    final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path logDir = new Path(FSUtils.getRootDir(conf), "x");
     fs.mkdirs(logDir);
@@ -1204,10 +1203,10 @@ public class TestDistributedLogSplitting {
     LOG.info("#regions = " + regions.size());
     Set<HRegionInfo> tmpRegions = new HashSet<HRegionInfo>();
     tmpRegions.add(HRegionInfo.FIRST_META_REGIONINFO);
-    master.getMasterFileSystem().prepareLogReplay(hrs.getServerName(), tmpRegions);
+    master.getMasterWalManager().prepareLogReplay(hrs.getServerName(), tmpRegions);
     Set<HRegionInfo> userRegionSet = new HashSet<HRegionInfo>();
     userRegionSet.addAll(regions);
-    master.getMasterFileSystem().prepareLogReplay(hrs.getServerName(), userRegionSet);
+    master.getMasterWalManager().prepareLogReplay(hrs.getServerName(), userRegionSet);
     boolean isMetaRegionInRecovery = false;
     List<String> recoveringRegions =
         zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);
@@ -1219,7 +1218,7 @@ public class TestDistributedLogSplitting {
     }
     assertTrue(isMetaRegionInRecovery);
 
-    master.getMasterFileSystem().splitMetaLog(hrs.getServerName());
+    master.getMasterWalManager().splitMetaLog(hrs.getServerName());
 
     isMetaRegionInRecovery = false;
     recoveringRegions =

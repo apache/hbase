@@ -75,8 +75,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>SplitLogManager monitors the tasks that it creates using the
  * timeoutMonitor thread. If a task's progress is slow then
  * {@link SplitLogManagerCoordination#checkTasks} will take away the
- * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker} 
- * and the task will be up for grabs again. When the task is done then it is 
+ * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
+ * and the task will be up for grabs again. When the task is done then it is
  * deleted by SplitLogManager.
  *
  * <p>Clients call {@link #splitLogDistributed(Path)} to split a region server's
@@ -273,7 +273,7 @@ public class SplitLogManager {
     }
     waitForSplittingCompletion(batch, status);
     // remove recovering regions
-    if (filter == MasterFileSystem.META_FILTER /* reference comparison */) {
+    if (filter == MasterWalManager.META_FILTER /* reference comparison */) {
       // we split meta regions and user regions separately therefore logfiles are either all for
       // meta or user regions but won't for both( we could have mixed situations in tests)
       isMetaRecovery = true;
@@ -411,7 +411,7 @@ public class SplitLogManager {
     for (ServerName tmpServerName : serverNames) {
       recoveredServerNameSet.add(tmpServerName.getServerName());
     }
-   
+
     this.recoveringRegionLock.lock();
     try {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())

@@ -73,6 +73,11 @@ public interface MasterServices extends Server {
   MasterFileSystem getMasterFileSystem();
 
   /**
+   * @return Master's WALs {@link MasterWalManager} utility class.
+   */
+  MasterWalManager getMasterWalManager();
+
+  /**
    * @return Master's {@link ServerManager} instance.
    */
   ServerManager getServerManager();

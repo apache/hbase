@@ -753,7 +753,7 @@ public class ServerManager {
     }
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
       region, favoredNodes,
-      (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
+      (RecoveryMode.LOG_REPLAY == this.services.getMasterWalManager().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -781,7 +781,7 @@ public class ServerManager {
     }
 
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, regionOpenInfos,
-      (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
+      (RecoveryMode.LOG_REPLAY == this.services.getMasterWalManager().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningStateList(response);

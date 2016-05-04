@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.MasterWalManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
@@ -320,10 +320,10 @@ implements ServerProcedureInterface {
    * @throws IOException
    */
   private void start(final MasterProcedureEnv env) throws IOException {
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     // Set recovery mode late. This is what the old ServerShutdownHandler used do.
-    mfs.setLogRecoveryMode();
-    this.distributedLogReplay = mfs.getLogRecoveryMode() == RecoveryMode.LOG_REPLAY;
+    mwm.setLogRecoveryMode();
+    this.distributedLogReplay = mwm.getLogRecoveryMode() == RecoveryMode.LOG_REPLAY;
   }
 
   /**
@@ -335,7 +335,7 @@ implements ServerProcedureInterface {
   private boolean processMeta(final MasterProcedureEnv env)
   throws IOException {
     if (LOG.isDebugEnabled()) LOG.debug("Processing hbase:meta that was on " + this.serverName);
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     HRegionInfo metaHRI = HRegionInfo.FIRST_META_REGIONINFO;
     if (this.shouldSplitWal) {
@@ -343,7 +343,7 @@ implements ServerProcedureInterface {
         prepareLogReplay(env, META_REGION_SET);
       } else {
         // TODO: Matteo. We BLOCK here but most important thing to be doing at this moment.
-        mfs.splitMetaLog(serverName);
+        mwm.splitMetaLog(serverName);
         am.getRegionStates().logSplit(metaHRI);
       }
     }
@@ -360,7 +360,7 @@ implements ServerProcedureInterface {
           processed = false;
         } else {
           // TODO: Matteo. We BLOCK here but most important thing to be doing at this moment.
-          mfs.splitMetaLog(serverName);
+          mwm.splitMetaLog(serverName);
         }
       }
     }
@@ -394,9 +394,9 @@ implements ServerProcedureInterface {
       LOG.debug("Mark " + size(this.regionsOnCrashedServer) + " regions-in-recovery from " +
         this.serverName);
     }
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
-    mfs.prepareLogReplay(this.serverName, regions);
+    mwm.prepareLogReplay(this.serverName, regions);
     am.getRegionStates().logSplit(this.serverName);
   }
 
@@ -405,10 +405,10 @@ implements ServerProcedureInterface {
       LOG.debug("Splitting logs from " + serverName + "; region count=" +
         size(this.regionsOnCrashedServer));
     }
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     // TODO: For Matteo. Below BLOCKs!!!! Redo so can relinquish executor while it is running.
-    mfs.splitLog(this.serverName);
+    mwm.splitLog(this.serverName);
     am.getRegionStates().logSplit(this.serverName);
   }
 

@@ -270,6 +270,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   final MetricsMaster metricsMaster;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
+  private MasterWalManager walManager;
 
   // server manager to deal with region server info
   volatile ServerManager serverManager;
@@ -656,7 +657,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = new MasterFileSystem(this, this);
+    this.fileSystemManager = new MasterFileSystem(this);
+    this.walManager = new MasterWalManager(this);
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
@@ -715,7 +717,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP
     Set<ServerName> previouslyFailedServers =
-      this.fileSystemManager.getFailedServersFromLogFolders();
+      this.walManager.getFailedServersFromLogFolders();
 
     // log splitting for hbase:meta server
     ServerName oldMetaServerLocation = metaTableLocator.getMetaRegionLocation(this.getZooKeeper());
@@ -946,11 +948,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     // TODO: should we prevent from using state manager before meta was initialized?
     // tableStateManager.start();
 
-    if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
+    if ((RecoveryMode.LOG_REPLAY == this.getMasterWalManager().getLogRecoveryMode())
         && (!previouslyFailedMetaRSs.isEmpty())) {
       // replay WAL edits mode need new hbase:meta RS is assigned firstly
       status.setStatus("replaying log for Meta Region");
-      this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
+      this.walManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
     this.assignmentManager.setEnabledTable(TableName.META_TABLE_NAME);
@@ -985,14 +987,14 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
-    if (RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode()) {
+    if (RecoveryMode.LOG_REPLAY == this.getMasterWalManager().getLogRecoveryMode()) {
       // In log replay mode, we mark hbase:meta region as recovering in ZK
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       regions.add(HRegionInfo.FIRST_META_REGIONINFO);
-      this.fileSystemManager.prepareLogReplay(currentMetaServer, regions);
+      this.walManager.prepareLogReplay(currentMetaServer, regions);
     } else {
       // In recovered.edits mode: create recovered edits file for hbase:meta server
-      this.fileSystemManager.splitMetaLog(currentMetaServer);
+      this.walManager.splitMetaLog(currentMetaServer);
     }
   }
 
@@ -1046,6 +1048,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
+  public MasterWalManager getMasterWalManager() {
+    return this.walManager;
+  }
+
+  @Override
   public TableStateManager getTableStateManager() {
     return tableStateManager;
   }
@@ -1082,8 +1089,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
    this.logCleaner =
       new LogCleaner(cleanerInterval,
-         this, conf, getMasterFileSystem().getFileSystem(),
-         getMasterFileSystem().getOldLogDir());
+         this, conf, getMasterWalManager().getFileSystem(),
+         getMasterWalManager().getOldLogDir());
     getChoreService().scheduleChore(logCleaner);
 
    //start the hfile archive cleaner thread
@@ -1132,6 +1139,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
     if (this.assignmentManager != null) this.assignmentManager.stop();
+    if (this.walManager != null) this.walManager.stop();
     if (this.fileSystemManager != null) this.fileSystemManager.stop();
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
   }

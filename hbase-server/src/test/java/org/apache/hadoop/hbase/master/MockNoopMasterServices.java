@@ -98,6 +98,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public MasterWalManager getMasterWalManager() {
+    return null;
+  }
+
+  @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return null;
   }
