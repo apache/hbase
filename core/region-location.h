@@ -27,15 +27,19 @@ namespace hbase {
 
 class RegionLocation {
 public:
-  RegionLocation(hbase::pb::RegionInfo ri, hbase::pb::ServerName sn,
+  RegionLocation(std::string region_name, hbase::pb::RegionInfo ri,
+                 hbase::pb::ServerName sn,
                  std::shared_ptr<HBaseService> service)
-      : ri_(ri), sn_(sn), service_(service) {}
+      : region_name_(region_name), ri_(ri), sn_(sn), service_(service) {}
 
   const hbase::pb::RegionInfo &region_info() { return ri_; }
   const hbase::pb::ServerName &server_name() { return sn_; }
+  const std::string &region_name() { return region_name_; }
   std::shared_ptr<HBaseService> service() { return service_; }
+  void set_service(std::shared_ptr<HBaseService> s) { service_ = s; }
 
 private:
+  std::string region_name_;
   hbase::pb::RegionInfo ri_;
   hbase::pb::ServerName sn_;
   std::shared_ptr<HBaseService> service_;

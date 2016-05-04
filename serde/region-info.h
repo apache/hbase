@@ -21,16 +21,16 @@
 
 #include "if/HBase.pb.h"
 
-#include <folly/Conv.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <folly/Conv.h>
 
 namespace hbase {
 namespace pb {
-template <class String> void parseTo(String in, RegionInfo& out) {
+template <class String> void parseTo(String in, RegionInfo &out) {
   // TODO(eclark): there has to be something better.
   std::string s = folly::to<std::string>(in);
 
-  if (!boost::starts_with(s, "PBUF") ) {
+  if (!boost::starts_with(s, "PBUF")) {
     throw std::runtime_error("Region Info field doesn't contain preamble");
   }
   if (!out.ParseFromArray(s.data() + 4, s.size() - 4)) {

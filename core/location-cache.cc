@@ -25,8 +25,8 @@
 #include "connection/response.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
-#include "serde/server-name.h"
 #include "serde/region-info.h"
+#include "serde/server-name.h"
 #include "serde/zk.h"
 
 using namespace std;
@@ -109,17 +109,22 @@ ServerName LocationCache::ReadMetaLocation() {
 
 Future<std::shared_ptr<RegionLocation>>
 LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
-  auto exc = wangle::getIOExecutor();
+  auto exec = wangle::getCPUExecutor();
   return this->LocateMeta()
-      .then([&](ServerName sn) { return this->cp_.get(sn); })
-      .via(exc.get()) // Need to handle all rpc's on the IOExecutor.
+      .via(exec.get())
+      .then([ exec = exec, this ](ServerName sn) { return this->cp_.get(sn); })
       .then([&](std::shared_ptr<HBaseService> service) {
         return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
       })
-      .then([&](Response resp) {
+      .then([this](Response resp) {
         // take the protobuf response and make it into
         // a region location.
         return this->CreateLocation(std::move(resp));
+      })
+      .then([ exec = exec, this ](std::shared_ptr<RegionLocation> rl) {
+        // Now fill out the connection.
+        rl->set_service(cp_.get(rl->server_name()));
+        return rl;
       });
 }
 
@@ -162,16 +167,12 @@ private:
 };
 
 std::shared_ptr<RegionLocation>
-LocationCache::CreateLocation(const Response &resp){
+LocationCache::CreateLocation(const Response &resp) {
   auto resp_msg = static_pointer_cast<ScanResponse>(resp.response());
   auto &results = resp_msg->results().Get(0);
   auto &cells = results.cell();
-  LOG(ERROR) << "resp_msg = " << resp_msg->DebugString();
   auto ri = folly::to<RegionInfo>(cells.Get(0).value());
   auto sn = folly::to<ServerName>(cells.Get(1).value());
-
-  LOG(ERROR) << "RegionInfo = " << ri.DebugString();
-  LOG(ERROR) << "ServerName = " << sn.DebugString();
-  auto wrapped = make_shared<RemoveServiceFilter>(cp_.get(sn), sn, this->cp_);
-  return std::make_shared<RegionLocation>(std::move(ri), std::move(sn), wrapped);
+  return std::make_shared<RegionLocation>(cells.Get(0).row(), std::move(ri), sn,
+                                          nullptr);
 }

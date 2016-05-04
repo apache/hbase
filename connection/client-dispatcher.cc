@@ -22,10 +22,11 @@ using namespace folly;
 using namespace hbase;
 using namespace wangle;
 
-ClientDispatcher::ClientDispatcher() : requests_(), current_call_id_(9) {}
+ClientDispatcher::ClientDispatcher() : requests_(5000), current_call_id_(9) {}
 
 void ClientDispatcher::read(Context *ctx, Response in) {
   auto call_id = in.call_id();
+
   auto search = requests_.find(call_id);
   CHECK(search != requests_.end());
   auto p = std::move(search->second);
@@ -38,10 +39,10 @@ void ClientDispatcher::read(Context *ctx, Response in) {
 }
 
 Future<Response> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
-  auto call_id = ++current_call_id_;
-
+  auto call_id = current_call_id_++;
   arg->set_call_id(call_id);
-  auto &p = requests_[call_id];
+  requests_.insert(call_id, Promise<Response>{});
+  auto &p = requests_.find(call_id)->second;
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
     LOG(ERROR) << "e = " << call_id;

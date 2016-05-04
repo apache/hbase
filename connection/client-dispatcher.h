@@ -19,7 +19,11 @@
 
 #pragma once
 
+#include <folly/AtomicHashMap.h>
+#include <folly/Logging.h>
 #include <wangle/service/ClientDispatcher.h>
+
+#include <atomic>
 
 #include "connection/pipeline.h"
 #include "connection/request.h"
@@ -31,13 +35,16 @@ class ClientDispatcher
                                           std::unique_ptr<Request>, Response> {
 public:
   ClientDispatcher();
+  ~ClientDispatcher() {
+    LOG(ERROR) << "Killing ClientDispatcher call_id = " << current_call_id_;
+  }
   void read(Context *ctx, Response in) override;
   folly::Future<Response> operator()(std::unique_ptr<Request> arg) override;
   folly::Future<folly::Unit> close(Context *ctx) override;
   folly::Future<folly::Unit> close() override;
 
 private:
-  std::unordered_map<uint32_t, folly::Promise<Response>> requests_;
+  folly::AtomicHashMap<uint32_t, folly::Promise<Response>> requests_;
   // Start at some number way above what could
   // be there for un-initialized call id counters.
   //
@@ -46,6 +53,6 @@ private:
   //
   // uint32_t has a max of 4Billion so 10 more or less is
   // not a big deal.
-  uint32_t current_call_id_;
+  std::atomic<uint32_t> current_call_id_;
 };
 } // namespace hbase

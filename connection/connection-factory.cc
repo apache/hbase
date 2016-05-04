@@ -19,40 +19,36 @@
 
 #include "connection/connection-factory.h"
 
-#include <folly/futures/Future.h>
-#include <wangle/bootstrap/ClientBootstrap.h>
-#include <wangle/channel/AsyncSocketHandler.h>
-#include <wangle/channel/EventBaseHandler.h>
-#include <wangle/channel/OutputBufferingHandler.h>
-#include <wangle/service/ClientDispatcher.h>
-#include <wangle/service/CloseOnReleaseFilter.h>
-#include <wangle/service/ExpiringFilter.h>
-
-#include <string>
+#include <wangle/concurrent/GlobalExecutor.h>
 
 #include "connection/client-dispatcher.h"
 #include "connection/pipeline.h"
-#include "connection/request.h"
-#include "connection/response.h"
 #include "connection/service.h"
 
 using namespace folly;
 using namespace hbase;
-using namespace wangle;
 
-ConnectionFactory::ConnectionFactory() : bootstrap_() {
-  bootstrap_.group(std::make_shared<wangle::IOThreadPoolExecutor>(1));
-  bootstrap_.pipelineFactory(std::make_shared<RpcPipelineFactory>());
+ConnectionFactory::ConnectionFactory()
+    : io_pool_(std::static_pointer_cast<wangle::IOThreadPoolExecutor>(
+          wangle::getIOExecutor())),
+      pipeline_factory_(std::make_shared<RpcPipelineFactory>()) {}
+
+std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
+ConnectionFactory::MakeBootstrap() {
+  auto client = std::make_shared<wangle::ClientBootstrap<SerializePipeline>>();
+  client->group(io_pool_);
+  client->pipelineFactory(pipeline_factory_);
+
+  return client;
 }
-
-std::shared_ptr<HBaseService>
-ConnectionFactory::make_connection(const std::string &host, int port) {
-  // Connect to a given server
-  // Then when connected create a ClientDispactcher.
-  auto pipeline = bootstrap_.connect(SocketAddress(host, port, true)).get();
+std::shared_ptr<HBaseService> ConnectionFactory::Connect(
+    std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
+    const std::string &hostname, int port) {
+  // Yes this will block however it makes dealing with connection pool soooooo
+  // much nicer.
+  // TODO see about using shared promise for this.
+  auto pipeline = client->connect(SocketAddress(hostname, port, true)).get();
   auto dispatcher = std::make_shared<ClientDispatcher>();
   dispatcher->setPipeline(pipeline);
-  auto service = std::make_shared<
-      CloseOnReleaseFilter<std::unique_ptr<Request>, Response>>(dispatcher);
-  return service;
+  return dispatcher;
 }

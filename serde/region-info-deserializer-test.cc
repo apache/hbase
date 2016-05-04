@@ -44,7 +44,6 @@ TEST(TestRegionInfoDesializer, TestDeserialize) {
   ri_out.set_start_key(start_row);
   ri_out.set_end_key(stop_row);
 
-
   string header{"PBUF"};
   string ser = header + ri_out.SerializeAsString();
 

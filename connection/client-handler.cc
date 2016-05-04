@@ -37,7 +37,10 @@ using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
 ClientHandler::ClientHandler(std::string user_name)
-    : user_name_(user_name), need_send_header_(true), serde_(), resp_msgs_() {}
+    : user_name_(user_name), need_send_header_(true), serde_(),
+      resp_msgs_(
+          make_unique<folly::AtomicHashMap<
+              uint32_t, std::shared_ptr<google::protobuf::Message>>>(5000)) {}
 
 void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
@@ -51,14 +54,14 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
               << " has_exception=" << header.has_exception();
 
     // Get the response protobuf from the map
-    auto search = resp_msgs_.find(header.call_id());
+    auto search = resp_msgs_->find(header.call_id());
     // It's an error if it's not there.
-    CHECK(search != resp_msgs_.end());
+    CHECK(search != resp_msgs_->end());
     auto resp_msg = search->second;
     CHECK(resp_msg != nullptr);
 
     // Make sure we don't leak the protobuf
-    resp_msgs_.erase(search);
+    resp_msgs_->erase(header.call_id());
 
     // set the call_id.
     // This will be used to by the dispatcher to match up
@@ -96,7 +99,7 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
     ctx->fireWrite(std::move(pre));
   }
 
-  resp_msgs_[r->call_id()] = r->resp_msg();
+  resp_msgs_->insert(r->call_id(), r->resp_msg());
   return ctx->fireWrite(
       serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
 }
