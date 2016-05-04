@@ -37,12 +37,12 @@ using hbase::pb::RegionSpecifier_RegionSpecifierType;
 static const std::string META_REGION = "1588230740";
 
 std::string MetaUtil::RegionLookupRowkey(const TableName &tn,
-                                           const std::string &row) const {
+                                         const std::string &row) const {
   return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
 }
 
-std::unique_ptr<Request>
-MetaUtil::MetaRequest(const TableName tn, const std::string &row) const {
+std::unique_ptr<Request> MetaUtil::MetaRequest(const TableName tn,
+                                               const std::string &row) const {
   auto request = Request::scan();
   auto msg = std::static_pointer_cast<ScanRequest>(request->req_msg());
 

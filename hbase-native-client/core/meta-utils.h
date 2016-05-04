@@ -29,8 +29,8 @@ namespace hbase {
 class MetaUtil {
 public:
   std::string RegionLookupRowkey(const hbase::pb::TableName &tn,
-                                   const std::string &row) const;
+                                 const std::string &row) const;
   std::unique_ptr<Request> MetaRequest(const hbase::pb::TableName tn,
-                                             const std::string &row) const;
+                                       const std::string &row) const;
 };
 } // namespace hbase

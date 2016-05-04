@@ -19,6 +19,7 @@
 
 #include "connection/connection-pool.h"
 
+#include <folly/SocketAddress.h>
 #include <wangle/service/Service.h>
 
 using std::mutex;
@@ -26,28 +27,46 @@ using std::unique_ptr;
 using std::shared_ptr;
 using hbase::pb::ServerName;
 using folly::SharedMutexWritePriority;
+using folly::SocketAddress;
 
 namespace hbase {
 
 ConnectionPool::ConnectionPool()
-    : cf_(std::make_shared<ConnectionFactory>()), connections_(), map_mutex_() {
-}
+    : cf_(std::make_shared<ConnectionFactory>()), clients_(), connections_(),
+      map_mutex_() {}
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
-    : cf_(cf), connections_(), map_mutex_() {}
+    : cf_(cf), clients_(), connections_(), map_mutex_() {}
+
+ConnectionPool::~ConnectionPool() {
+  SharedMutexWritePriority::WriteHolder holder(map_mutex_);
+  for (auto &item : connections_) {
+    auto &con = item.second;
+    con->close();
+  }
+  connections_.clear();
+  clients_.clear();
+}
 
 std::shared_ptr<HBaseService> ConnectionPool::get(const ServerName &sn) {
+  // Create a read lock.
   SharedMutexWritePriority::UpgradeHolder holder(map_mutex_);
+
   auto found = connections_.find(sn);
   if (found == connections_.end() || found->second == nullptr) {
+    // Move the upgradable lock into the write lock if the connection
+    // hasn't been found.
     SharedMutexWritePriority::WriteHolder holder(std::move(holder));
-    auto new_con = cf_->make_connection(sn.host_name(), sn.port());
-    connections_[sn] = new_con;
-    return new_con;
+    auto client = cf_->MakeBootstrap();
+    auto dispatcher = cf_->Connect(client, sn.host_name(), sn.port());
+    clients_.insert(std::make_pair(sn, client));
+    connections_.insert(std::make_pair(sn, dispatcher));
+    return dispatcher;
   }
   return found->second;
 }
+
 void ConnectionPool::close(const ServerName &sn) {
-  SharedMutexWritePriority::WriteHolder holder(map_mutex_);
+  SharedMutexWritePriority::WriteHolder holder{map_mutex_};
 
   auto found = connections_.find(sn);
   if (found == connections_.end() || found->second == nullptr) {

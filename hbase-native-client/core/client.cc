@@ -33,8 +33,4 @@ using namespace folly;
 using namespace std;
 using namespace hbase::pb;
 
-namespace hbase {
-
-Client::Client(string quorum_spec)
-    : location_cache_(quorum_spec, wangle::getCPUExecutor()) {}
-}
+namespace hbase {}

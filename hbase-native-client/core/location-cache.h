@@ -48,9 +48,10 @@ public:
   // Meta Related Methods.
   // These are only public until testing is complete
   folly::Future<hbase::pb::ServerName> LocateMeta();
-  folly::Future<std::shared_ptr<RegionLocation>> LocateFromMeta(const hbase::pb::TableName &tn,
-                                               const std::string &row);
+  folly::Future<std::shared_ptr<RegionLocation>>
+  LocateFromMeta(const hbase::pb::TableName &tn, const std::string &row);
   void InvalidateMeta();
+  ConnectionPool cp_;
 
 private:
   void RefreshMetaLocation();
@@ -61,7 +62,6 @@ private:
   std::shared_ptr<folly::Executor> executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::mutex meta_lock_;
-  ConnectionPool cp_;
   MetaUtil meta_util_;
 
   // TODO: migrate this to a smart pointer with a deleter.

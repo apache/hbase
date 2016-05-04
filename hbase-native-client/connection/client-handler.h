@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <folly/AtomicHashMap.h>
 #include <wangle/channel/Handler.h>
 
 #include <string>
@@ -51,7 +52,8 @@ private:
   RpcSerde serde_;
 
   // in flight requests
-  std::unordered_map<uint32_t, std::shared_ptr<google::protobuf::Message>>
+  std::unique_ptr<folly::AtomicHashMap<
+      uint32_t, std::shared_ptr<google::protobuf::Message>>>
       resp_msgs_;
 };
 } // namespace hbase

@@ -33,10 +33,15 @@ public:
   ConnectionFactory();
   virtual ~ConnectionFactory() = default;
 
-  virtual std::shared_ptr<HBaseService> make_connection(const std::string &host,
-                                                        int port);
+  virtual std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
+  MakeBootstrap();
+
+  virtual std::shared_ptr<HBaseService>
+  Connect(std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
+          const std::string &hostname, int port);
 
 private:
-  wangle::ClientBootstrap<SerializePipeline> bootstrap_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
+  std::shared_ptr<RpcPipelineFactory> pipeline_factory_;
 };
 } // namespace hbase
