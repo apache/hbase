@@ -292,7 +292,7 @@ public class DeleteNamespaceProcedure
   }
 
   /**
-   * remove from Zookeeper.
+   * remove from ZooKeeper.
    * @param env MasterProcedureEnv
    * @param namespaceName name of the namespace in string format
    * @throws IOException
@@ -304,7 +304,7 @@ public class DeleteNamespaceProcedure
   }
 
   /**
-   * undo the remove from Zookeeper
+   * undo the remove from ZooKeeper
    * @param env MasterProcedureEnv
    * @throws IOException
    */

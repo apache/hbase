@@ -75,7 +75,7 @@
         <div class="container-fluid content">
             <div class="row inner_header">
                 <div class="page-header">
-                    <h1>Zookeeper Dump</h1>
+                    <h1>ZooKeeper Dump</h1>
                 </div>
             </div>
             <div class="row">

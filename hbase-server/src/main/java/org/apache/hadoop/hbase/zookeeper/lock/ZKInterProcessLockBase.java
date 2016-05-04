@@ -111,7 +111,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     private ZNodeComparator() {
     }
 
-    /** Parses sequenceId from the znode name. Zookeeper documentation
+    /** Parses sequenceId from the znode name. ZooKeeper documentation
      * states: The sequence number is always fixed length of 10 digits, 0 padded
      */
     public static long getChildSequenceId(String childZNode) {

@@ -326,7 +326,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String SERVER_NAME_NAME = "serverName";
   String CLUSTER_ID_NAME = "clusterId";
   String RS_START_TIME_DESC = "RegionServer Start Time";
-  String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
+  String ZOOKEEPER_QUORUM_DESC = "ZooKeeper Quorum";
   String SERVER_NAME_DESC = "Server Name";
   String CLUSTER_ID_DESC = "Cluster Id";
   String UPDATES_BLOCKED_TIME = "updatesBlockedTime";

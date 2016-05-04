@@ -298,7 +298,7 @@ public class CreateNamespaceProcedure
   }
 
   /**
-   * Update Zookeeper.
+   * Update ZooKeeper.
    * @param env MasterProcedureEnv
    * @param nsDescriptor NamespaceDescriptor
    * @throws IOException
@@ -310,7 +310,7 @@ public class CreateNamespaceProcedure
   }
 
   /**
-   * rollback Zookeeper update.
+   * rollback ZooKeeper update.
    * @param env MasterProcedureEnv
    * @throws IOException
    */

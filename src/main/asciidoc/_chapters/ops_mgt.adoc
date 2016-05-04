@@ -57,7 +57,7 @@ Some commands take arguments. Pass no args or -h for usage.
   upgrade         Upgrade hbase
   master          Run an HBase HMaster node
   regionserver    Run an HBase HRegionServer node
-  zookeeper       Run a Zookeeper server
+  zookeeper       Run a ZooKeeper server
   rest            Run an HBase REST server
   thrift          Run the HBase Thrift server
   thrift2         Run the HBase Thrift2 server

@@ -130,7 +130,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
           } catch (KeeperException ke) {
             LOG.error("Error reading data from zookeeper", ke);
             // only option is to abort
-            watcher.abort("Zookeeper error obtaining acl node children", ke);
+            watcher.abort("ZooKeeper error obtaining acl node children", ke);
           }
         }
       });
@@ -170,7 +170,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
           } catch (KeeperException ke) {
             LOG.error("Error reading data from zookeeper for node " + entry, ke);
             // only option is to abort
-            watcher.abort("Zookeeper error getting data for node " + entry, ke);
+            watcher.abort("ZooKeeper error getting data for node " + entry, ke);
           } catch (IOException ioe) {
             LOG.error("Error reading permissions writables", ioe);
           }
@@ -196,7 +196,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
         }
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for path "+path, ke);
-        watcher.abort("Zookeeper error get node children for path "+path, ke);
+        watcher.abort("ZooKeeper error get node children for path "+path, ke);
       }
       executor.submit(new Runnable() {
         // allows subsequent nodeChildrenChanged event to preempt current processing of

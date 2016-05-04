@@ -172,7 +172,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
             <td>When ZooKeeper client version was compiled</td>
         </tr>
         <tr>
-            <td>Zookeeper Quorum</td>
+            <td>ZooKeeper Quorum</td>
             <td><% regionServer.getZooKeeper().getQuorum() %></td>
             <td>Addresses of all registered ZK servers</td>
         </tr>

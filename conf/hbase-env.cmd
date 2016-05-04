@@ -83,5 +83,5 @@ set HBASE_REGIONSERVER_OPTS=%HBASE_REGIONSERVER_OPTS% "-XX:PermSize=128m" "-XX:M
 @rem otherwise arrive faster than the master can service them.
 @rem set HBASE_SLAVE_SLEEP=0.1
 
-@rem Tell HBase whether it should manage it's own instance of Zookeeper or not.
+@rem Tell HBase whether it should manage it's own instance of ZooKeeper or not.
 @rem set HBASE_MANAGES_ZK=true

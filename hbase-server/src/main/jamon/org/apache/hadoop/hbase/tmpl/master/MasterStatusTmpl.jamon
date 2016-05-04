@@ -273,13 +273,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>When ZooKeeper client version was compiled</td>
                 </tr>
                 <tr>
-                    <td>Zookeeper Quorum</td>
+                    <td>ZooKeeper Quorum</td>
                     <%escape #n>
                     <td> <% formatZKString() %> </td>
                     <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
                 </tr>
                 <tr>
-                    <td>Zookeeper Base Path</td>
+                    <td>ZooKeeper Base Path</td>
                     <td> <% master.getZooKeeper().getBaseZNode() %></td>
                     <td>Root node of this cluster in ZK.</td>
                 </tr>

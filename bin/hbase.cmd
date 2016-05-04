@@ -423,7 +423,7 @@ goto :eof
   echo   zkcli           Run the ZooKeeper shell
   echo   master          Run an HBase HMaster node
   echo   regionserver    Run an HBase HRegionServer node
-  echo   zookeeper       Run a Zookeeper server
+  echo   zookeeper       Run a ZooKeeper server
   echo   rest            Run an HBase REST server
   echo   thrift          Run the HBase Thrift server
   echo   thrift2         Run the HBase Thrift2 server

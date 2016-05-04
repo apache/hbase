@@ -37,9 +37,9 @@ public interface MetricsRegionServerWrapper {
   String getClusterId();
 
   /**
-   * Get the Zookeeper Quorum Info
+   * Get the ZooKeeper Quorum Info
    *
-   * @return Zookeeper Quorum Info
+   * @return ZooKeeper Quorum Info
    */
   String getZookeeperQuorum();
 

@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 
 /**
- * This tests whether ServerSocketChannel works over ipv6, which Zookeeper
+ * This tests whether ServerSocketChannel works over ipv6, which ZooKeeper
  * depends on. On Windows Oracle JDK 6, creating a ServerSocketChannel throws
  * java.net.SocketException: Address family not supported by protocol family
  * exception. It is a known JVM bug, seems to be only resolved for JDK7:

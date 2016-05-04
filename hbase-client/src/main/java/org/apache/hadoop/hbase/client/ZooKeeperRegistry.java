@@ -104,9 +104,9 @@ class ZooKeeperRegistry implements Registry {
         LOG.info("ClusterId read in ZooKeeper is null");
       }
     } catch (KeeperException e) {
-      LOG.warn("Can't retrieve clusterId from Zookeeper", e);
+      LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
     } catch (IOException e) {
-      LOG.warn("Can't retrieve clusterId from Zookeeper", e);
+      LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
     } finally {
       if (zkw != null) zkw.close();
     }

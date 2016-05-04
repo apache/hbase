@@ -113,7 +113,7 @@ public class TestZooKeeperACL {
 
   /**
    * Create a node and check its ACL. When authentication is enabled on 
-   * Zookeeper, all nodes (except /hbase/root-region-server, /hbase/master
+   * ZooKeeper, all nodes (except /hbase/root-region-server, /hbase/master
    * and /hbase/hbaseid) should be created so that only the hbase server user
    * (master or region server user) that created them can access them, and
    * this user should have all permissions on this node. For
@@ -138,7 +138,7 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on Zookeeper, /hbase/root-region-server
+   * When authentication is enabled on ZooKeeper, /hbase/root-region-server
    * should be created with 2 ACLs: one specifies that the hbase user has
    * full access to the node; the other, that it is world-readable.
    */
@@ -175,7 +175,7 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on Zookeeper, /hbase/master should be
+   * When authentication is enabled on ZooKeeper, /hbase/master should be
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */
@@ -211,7 +211,7 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on Zookeeper, /hbase/hbaseid should be
+   * When authentication is enabled on ZooKeeper, /hbase/hbaseid should be
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */

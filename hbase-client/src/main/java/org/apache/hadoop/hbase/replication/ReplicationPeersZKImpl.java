@@ -48,7 +48,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
- * This class provides an implementation of the ReplicationPeers interface using Zookeeper. The
+ * This class provides an implementation of the ReplicationPeers interface using ZooKeeper. The
  * peers znode contains a list of all peer replication clusters and the current replication state of
  * those clusters. It has one child peer znode for each peer cluster. The peer znode is named with
  * the cluster id provided by the user in the HBase shell. The value of the peer znode contains the

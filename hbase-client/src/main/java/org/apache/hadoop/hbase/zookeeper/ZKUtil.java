@@ -922,7 +922,7 @@ public class ZKUtil {
         }
         if (!groups.isEmpty()) {
           LOG.warn("Znode ACL setting for group " + groups
-              + " is skipped, Zookeeper doesn't support this feature presently.");
+              + " is skipped, ZooKeeper doesn't support this feature presently.");
         }
       }
       // Certain znodes are accessed directly by the client,
@@ -1392,7 +1392,7 @@ public class ZKUtil {
     }
     List<ZKUtilOp> ops = new ArrayList<ZKUtil.ZKUtilOp>();
     for (String eachRoot : pathRoots) {
-      // Zookeeper Watches are one time triggers; When children of parent nodes are deleted
+      // ZooKeeper Watches are one time triggers; When children of parent nodes are deleted
       // recursively, must set another watch, get notified of delete node
       List<String> children = listChildrenBFSAndWatchThem(zkw, eachRoot);
       // Delete the leaves first and eventually get rid of the root

@@ -135,7 +135,7 @@ public class SweepJob {
    * The running of the sweep tool on the same column family are mutually exclusive.
    * The HBase major compaction and running of the sweep tool on the same column family
    * are mutually exclusive.
-   * The synchronization is done by the Zookeeper.
+   * The synchronization is done by the ZooKeeper.
    * So in the beginning of the running, we need to make sure only this sweep tool is the only one
    * that is currently running in this column family, and in this column family there're no major
    * compaction in progress.

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * This class is a Zookeeper implementation of the ReplicationTracker interface. This class is
+ * This class is a ZooKeeper implementation of the ReplicationTracker interface. This class is
  * responsible for handling replication events that are defined in the ReplicationListener
  * interface.
  */

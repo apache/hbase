@@ -252,7 +252,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       String tmp = conf.get("hbase.it.clustermanager.zookeeper.conf.dir",
           System.getenv("ZOOCFGDIR"));
       if (zookeeperHome == null) {
-        throw new IOException("Zookeeper home configuration parameter i.e. " +
+        throw new IOException("ZooKeeper home configuration parameter i.e. " +
           "'hbase.it.clustermanager.zookeeper.home' is not configured properly.");
       }
       if (tmp != null) {

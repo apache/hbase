@@ -130,9 +130,9 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * Try to create a Zookeeper connection. Turns any exception encountered into a
+   * Try to create a ZooKeeper connection. Turns any exception encountered into a
    * KeeperException.OperationTimeoutException so it can retried.
-   * @return The created Zookeeper connection object
+   * @return The created ZooKeeper connection object
    * @throws KeeperException
    */
   protected synchronized ZooKeeper checkZk() throws KeeperException {
@@ -153,7 +153,7 @@ public class RecoverableZooKeeper {
       LOG.info("Closing dead ZooKeeper connection, session" +
         " was: 0x"+Long.toHexString(zk.getSessionId()));
       zk.close();
-      // reset the Zookeeper connection
+      // reset the ZooKeeper connection
       zk = null;
     }
     checkZk();

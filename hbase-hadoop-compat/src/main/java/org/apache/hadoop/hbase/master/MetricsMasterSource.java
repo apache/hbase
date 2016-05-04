@@ -68,7 +68,7 @@ public interface MetricsMasterSource extends BaseSource {
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
   String DEAD_REGION_SERVERS_DESC = "Names of dead RegionServers";
   String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
-  String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
+  String ZOOKEEPER_QUORUM_DESC = "ZooKeeper Quorum";
   String SERVER_NAME_DESC = "Server Name";
   String CLUSTER_ID_DESC = "Cluster Id";
   String IS_ACTIVE_MASTER_DESC = "Is Active Master";

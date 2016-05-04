@@ -62,14 +62,14 @@ public final class HelloHBase {
     /**
      * ConnectionFactory#createConnection() automatically looks for
      * hbase-site.xml (HBase configuration parameters) on the system's
-     * CLASSPATH, to enable creation of Connection to HBase via Zookeeper.
+     * CLASSPATH, to enable creation of Connection to HBase via ZooKeeper.
      */
     try (Connection connection = ConnectionFactory.createConnection();
             Admin admin = connection.getAdmin()) {
 
       admin.getClusterStatus(); // assure connection successfully established
       System.out.println("\n*** Hello HBase! -- Connection has been "
-              + "established via Zookeeper!!\n");
+              + "established via ZooKeeper!!\n");
 
       createNamespaceAndTable(admin);
 

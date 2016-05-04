@@ -197,7 +197,7 @@ public class ZNodeClearer {
       LOG.warn("Can't read the content of the znode file", e);
       return false;
     } catch (KeeperException e) {
-      LOG.warn("Zookeeper exception deleting znode", e);
+      LOG.warn("ZooKeeper exception deleting znode", e);
       return false;
     } finally {
       zkw.close();

@@ -131,20 +131,20 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void startZkNode(String hostname, int port) throws IOException {
-    LOG.info("Starting Zookeeper node on: " + hostname);
+    LOG.info("Starting ZooKeeper node on: " + hostname);
     clusterManager.start(ServiceType.ZOOKEEPER_SERVER, hostname, port);
   }
 
   @Override
   public void killZkNode(ServerName serverName) throws IOException {
-    LOG.info("Aborting Zookeeper node on: " + serverName.getServerName());
+    LOG.info("Aborting ZooKeeper node on: " + serverName.getServerName());
     clusterManager.kill(ServiceType.ZOOKEEPER_SERVER,
       serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void stopZkNode(ServerName serverName) throws IOException {
-    LOG.info("Stopping Zookeeper node: " + serverName.getServerName());
+    LOG.info("Stopping ZooKeeper node: " + serverName.getServerName());
     clusterManager.stop(ServiceType.ZOOKEEPER_SERVER,
       serverName.getHostname(), serverName.getPort());
   }

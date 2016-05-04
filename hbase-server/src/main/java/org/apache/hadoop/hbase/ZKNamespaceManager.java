@@ -156,7 +156,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
         refreshNodes(nodes);
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for path "+path, ke);
-        watcher.abort("Zookeeper error get node children for path "+path, ke);
+        watcher.abort("ZooKeeper error get node children for path "+path, ke);
       } catch (IOException e) {
         LOG.error("Error deserializing namespace child from: "+path, e);
         watcher.abort("Error deserializing namespace child from: " + path, e);

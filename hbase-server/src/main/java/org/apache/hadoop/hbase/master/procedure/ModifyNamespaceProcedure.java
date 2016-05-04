@@ -251,7 +251,7 @@ public class ModifyNamespaceProcedure
   }
 
   /**
-   * Update Zookeeper.
+   * Update ZooKeeper.
    * @param env MasterProcedureEnv
    * @throws IOException
    */
@@ -260,7 +260,7 @@ public class ModifyNamespaceProcedure
   }
 
   /**
-   * Update Zookeeper during undo.
+   * Update ZooKeeper during undo.
    * @param env MasterProcedureEnv
    * @throws IOException
    */

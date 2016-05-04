@@ -104,7 +104,7 @@ public class FilterTestingCluster {
     } catch (MasterNotRunningException e) {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {
-      assertNull("Cannot connect to Zookeeper", e);
+      assertNull("Cannot connect to ZooKeeper", e);
     } catch (IOException e) {
       assertNull("IOException", e);
     }

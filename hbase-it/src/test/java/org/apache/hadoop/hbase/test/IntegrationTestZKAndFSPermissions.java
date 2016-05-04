@@ -53,7 +53,7 @@ import org.junit.experimental.categories.Category;
 /**
  * An integration test which checks that the znodes in zookeeper and data in the FileSystem
  * are protected for secure HBase deployments.
- * This test is intended to be run on clusters with kerberos authorization for HBase and Zookeeper.
+ * This test is intended to be run on clusters with kerberos authorization for HBase and ZooKeeper.
  *
  * If hbase.security.authentication is not set to kerberos, the test does not run unless -f is
  * specified which bypasses the check. It is recommended to always run with -f on secure clusters

@@ -288,7 +288,7 @@ $
 === Intermediate - Pseudo-Distributed Local Install
 
 After working your way through <<quickstart,quickstart>>, you can re-configure HBase to run in pseudo-distributed mode.
-Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and Zookeeper) runs as a separate process.
+Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process.
 By default, unless you configure the `hbase.rootdir` property as described in <<quickstart,quickstart>>, your data is still stored in _/tmp/_.
 In this walk-through, we store your data in HDFS instead, assuming you have HDFS available.
 You can skip the HDFS configuration to continue storing your data in the local filesystem.
@@ -429,7 +429,7 @@ You can stop HBase the same way as in the <<quickstart,quickstart>> procedure, u
 
 In reality, you need a fully-distributed configuration to fully test HBase and to use it in real-world scenarios.
 In a distributed configuration, the cluster contains multiple nodes, each of which runs one or more HBase daemon.
-These include primary and backup Master instances, multiple Zookeeper nodes, and multiple RegionServer nodes.
+These include primary and backup Master instances, multiple ZooKeeper nodes, and multiple RegionServer nodes.
 
 This advanced quickstart adds two more nodes to your cluster.
 The architecture will be as follows:

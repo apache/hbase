@@ -95,7 +95,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
       } catch (KeeperException ke) {
         LOG.error("Error setting watcher on node " + path, ke);
         // only option is to abort
-        watcher.abort("Zookeeper error obtaining label node children", ke);
+        watcher.abort("ZooKeeper error obtaining label node children", ke);
       }
     }
   }
@@ -119,7 +119,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for node " + path, ke);
         // only option is to abort
-        watcher.abort("Zookeeper error getting data for node " + path, ke);
+        watcher.abort("ZooKeeper error getting data for node " + path, ke);
       }
     }
   }

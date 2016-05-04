@@ -146,7 +146,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
             ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT) / 3);
   }
 
-  /* Support functions for Zookeeper async callback */
+  /* Support functions for ZooKeeper async callback */
 
   void getDataSetWatchFailure(String path) {
     synchronized (grabTaskLock) {

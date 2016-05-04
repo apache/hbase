@@ -107,7 +107,7 @@ public class AuthenticationTokenSecretManager
       // try to become leader
       this.leaderElector.start();
     } catch (KeeperException ke) {
-      LOG.error("Zookeeper initialization failed", ke);
+      LOG.error("ZooKeeper initialization failed", ke);
     }
   }
 
@@ -145,9 +145,9 @@ public class AuthenticationTokenSecretManager
     AuthenticationKey masterKey = allKeys.get(identifier.getKeyId());
     if(masterKey == null) {
       if(zkWatcher.getWatcher().isAborted()) {
-        LOG.error("ZookeeperWatcher is abort");
+        LOG.error("ZooKeeperWatcher is abort");
         throw new InvalidToken("Token keys could not be sync from zookeeper"
-            + " because of ZookeeperWatcher abort");
+            + " because of ZooKeeperWatcher abort");
       }
       synchronized (this) {
         if (!leaderElector.isAlive() || leaderElector.isStopped()) {

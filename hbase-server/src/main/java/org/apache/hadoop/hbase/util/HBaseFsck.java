@@ -1741,7 +1741,7 @@ public class HBaseFsck extends Configured implements Closeable {
         HConstants.EMPTY_START_ROW, false, false);
     if (rl == null) {
       errors.reportError(ERROR_CODE.NULL_META_REGION,
-          "META region was not found in Zookeeper");
+          "META region was not found in ZooKeeper");
       return false;
     }
     for (HRegionLocation metaLocation : rl.getRegionLocations()) {

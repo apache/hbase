@@ -169,7 +169,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
         new Abortable() {
           @Override
           public void abort(String why, Throwable e) {
-            throw new RuntimeException("Fatal Zookeeper tracker error, why=", e);
+            throw new RuntimeException("Fatal ZooKeeper tracker error, why=", e);
           }
           @Override
           public boolean isAborted() {
