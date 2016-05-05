@@ -46,13 +46,25 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
     String idStr = Bytes.toString(identifier);
     String groupName = groupNameCache.get(idStr);
     if (null == groupName) {
-      groupName = groupNames[counter.getAndIncrement() % groupNames.length];
+      groupName = groupNames[getAndIncrAtomicInteger(counter, groupNames.length)];
       String extantName = groupNameCache.putIfAbsent(idStr, groupName);
       if (extantName != null) {
         return extantName;
       }
     }
     return groupName;
+  }
+
+  // Non-blocking incrementing & resetting of AtomicInteger.
+  private int getAndIncrAtomicInteger(AtomicInteger atomicInt, int reset) {
+    for (;;) {
+      int current = atomicInt.get();
+      int next = (current + 1);
+      if (next == reset) {
+        next = 0;
+      }
+      if (atomicInt.compareAndSet(current, next)) return current;
+    }
   }
 
   @Override
