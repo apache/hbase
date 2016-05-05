@@ -29,6 +29,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +44,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TestGenerateDelegationToken;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -63,7 +65,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-@Category({ MiscTests.class, MediumTests.class })
+@Category({ MiscTests.class, LargeTests.class })
 public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -74,8 +76,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static int READ_TIMEOUT_MS = 200000;
 
-  private static final File KEYTAB_FILE = new File(
-      TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE =
+      new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
 
@@ -86,6 +88,11 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   private static String PRINCIPAL;
 
   private static String HTTP_PRINCIPAL;
+
+  private static String TEST_KEY_NAME = "test_key";
+
+  private static boolean TEST_TRANSPARENT_ENCRYPTION = true;
+
   @Rule
   public TestName name = new TestName();
 
@@ -98,13 +105,20 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   @Parameter(2)
   public String cipherSuite;
 
-  @Parameters(name = "{index}: protection={0}, encryption={1}, cipherSuite={2}")
+  @Parameter(3)
+  public boolean useTransparentEncryption;
+
+  @Parameters(
+      name = "{index}: protection={0}, encryption={1}, cipherSuite={2}, transparent_enc={3}")
   public static Iterable<Object[]> data() {
     List<Object[]> params = new ArrayList<>();
     for (String protection : Arrays.asList("authentication", "integrity", "privacy")) {
       for (String encryptionAlgorithm : Arrays.asList("", "3des", "rc4")) {
         for (String cipherSuite : Arrays.asList("", AES_CTR_NOPADDING)) {
-          params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite });
+          for (boolean useTransparentEncryption : Arrays.asList(false, true)) {
+            params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite,
+                useTransparentEncryption });
+          }
         }
       }
     }
@@ -132,6 +146,35 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     conf.setBoolean("ignore.secure.ports.for.testing", true);
   }
 
+  private static void setUpKeyProvider(Configuration conf) throws Exception {
+    Class<?> keyProviderFactoryClass;
+    try {
+      keyProviderFactoryClass = Class.forName("org.apache.hadoop.crypto.key.KeyProviderFactory");
+    } catch (ClassNotFoundException e) {
+      // should be hadoop 2.5-, give up
+      TEST_TRANSPARENT_ENCRYPTION = false;
+      return;
+    }
+
+    URI keyProviderUri =
+        new URI("jceks://file" + TEST_UTIL.getDataTestDir("test.jks").toUri().toString());
+    conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
+    Method getKeyProviderMethod =
+        keyProviderFactoryClass.getMethod("get", URI.class, Configuration.class);
+    Object keyProvider = getKeyProviderMethod.invoke(null, keyProviderUri, conf);
+    Class<?> keyProviderClass = Class.forName("org.apache.hadoop.crypto.key.KeyProvider");
+    Class<?> keyProviderOptionsClass =
+        Class.forName("org.apache.hadoop.crypto.key.KeyProvider$Options");
+    Method createKeyMethod =
+        keyProviderClass.getMethod("createKey", String.class, keyProviderOptionsClass);
+    Object options = keyProviderOptionsClass.getConstructor(Configuration.class).newInstance(conf);
+    createKeyMethod.invoke(keyProvider, TEST_KEY_NAME, options);
+    Method flushMethod = keyProviderClass.getMethod("flush");
+    flushMethod.invoke(keyProvider);
+    Method closeMethod = keyProviderClass.getMethod("close");
+    closeMethod.invoke(keyProvider);
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
@@ -144,6 +187,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     PRINCIPAL = USERNAME + "/" + HOST;
     HTTP_PRINCIPAL = "HTTP/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
+
+    setUpKeyProvider(TEST_UTIL.getConfiguration());
     setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
@@ -159,6 +204,17 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     if (KDC != null) {
       KDC.stop();
     }
+  }
+
+  private Path testDirOnTestFs;
+
+  private void createEncryptionZone() throws Exception {
+    if (!TEST_TRANSPARENT_ENCRYPTION) {
+      return;
+    }
+    Method method =
+        DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
+    method.invoke(FS, testDirOnTestFs, TEST_KEY_NAME);
   }
 
   @Before
@@ -182,6 +238,11 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
     TEST_UTIL.startMiniDFSCluster(3);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
+    testDirOnTestFs = new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
+    FS.mkdirs(testDirOnTestFs);
+    if (useTransparentEncryption) {
+      createEncryptionZone();
+    }
   }
 
   @After
@@ -190,7 +251,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   }
 
   private Path getTestFile() {
-    return new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
+    return new Path(testDirOnTestFs, "test");
   }
 
   @Test

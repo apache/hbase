@@ -21,6 +21,7 @@ import static io.netty.handler.timeout.IdleState.READER_IDLE;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -79,6 +80,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
@@ -111,7 +113,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   @VisibleForTesting
   static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
-      "dfs.encrypt.data.transfer.cipher.suites";
+    "dfs.encrypt.data.transfer.cipher.suites";
 
   @VisibleForTesting
   static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
@@ -129,7 +131,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static final SaslAdaptor SASL_ADAPTOR;
 
-  private interface CipherHelper {
+  private interface CipherOptionHelper {
 
     List<Object> getCipherOptions(Configuration conf) throws IOException;
 
@@ -150,9 +152,19 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     byte[] getOutIv(Object cipherOption);
   }
 
-  private static final CipherHelper CIPHER_HELPER;
+  private static final CipherOptionHelper CIPHER_OPTION_HELPER;
 
-  private static final class CryptoCodec {
+  private interface TransparentCryptoHelper {
+
+    Object getFileEncryptionInfo(HdfsFileStatus stat);
+
+    CryptoCodec createCryptoCodec(Configuration conf, Object feInfo, DFSClient client)
+        throws IOException;
+  }
+
+  private static final TransparentCryptoHelper TRANSPARENT_CRYPTO_HELPER;
+
+  static final class CryptoCodec {
 
     private static final Method CREATE_CODEC;
 
@@ -215,18 +227,29 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private final Object decryptor;
 
     public CryptoCodec(Configuration conf, Object cipherOption) {
-      Object codec;
       try {
-        codec = CREATE_CODEC.invoke(null, conf, CIPHER_HELPER.getCipherSuite(cipherOption));
+        Object codec = CREATE_CODEC.invoke(null, conf,
+          CIPHER_OPTION_HELPER.getCipherSuite(cipherOption));
         encryptor = CREATE_ENCRYPTOR.invoke(codec);
-        byte[] encKey = CIPHER_HELPER.getInKey(cipherOption);
-        byte[] encIv = CIPHER_HELPER.getInIv(cipherOption);
+        byte[] encKey = CIPHER_OPTION_HELPER.getInKey(cipherOption);
+        byte[] encIv = CIPHER_OPTION_HELPER.getInIv(cipherOption);
         INIT_ENCRYPTOR.invoke(encryptor, encKey, Arrays.copyOf(encIv, encIv.length));
 
         decryptor = CREATE_DECRYPTOR.invoke(codec);
-        byte[] decKey = CIPHER_HELPER.getOutKey(cipherOption);
-        byte[] decIv = CIPHER_HELPER.getOutIv(cipherOption);
+        byte[] decKey = CIPHER_OPTION_HELPER.getOutKey(cipherOption);
+        byte[] decIv = CIPHER_OPTION_HELPER.getOutIv(cipherOption);
         INIT_DECRYPTOR.invoke(decryptor, decKey, Arrays.copyOf(decIv, decIv.length));
+      } catch (IllegalAccessException | InvocationTargetException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public CryptoCodec(Configuration conf, Object cipherSuite, byte[] encKey, byte[] encIv) {
+      try {
+        Object codec = CREATE_CODEC.invoke(null, conf, cipherSuite);
+        encryptor = CREATE_ENCRYPTOR.invoke(codec);
+        INIT_ENCRYPTOR.invoke(encryptor, encKey, encIv);
+        decryptor = null;
       } catch (IllegalAccessException | InvocationTargetException e) {
         throw new RuntimeException(e);
       }
@@ -251,17 +274,17 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static SaslAdaptor createSaslAdaptor27(Class<?> saslDataTransferClientClass)
       throws NoSuchFieldException, NoSuchMethodException {
-    final Field saslPropsResolverField =
-        saslDataTransferClientClass.getDeclaredField("saslPropsResolver");
+    final Field saslPropsResolverField = saslDataTransferClientClass
+        .getDeclaredField("saslPropsResolver");
     saslPropsResolverField.setAccessible(true);
-    final Field trustedChannelResolverField =
-        saslDataTransferClientClass.getDeclaredField("trustedChannelResolver");
+    final Field trustedChannelResolverField = saslDataTransferClientClass
+        .getDeclaredField("trustedChannelResolver");
     trustedChannelResolverField.setAccessible(true);
-    final Field fallbackToSimpleAuthField =
-        saslDataTransferClientClass.getDeclaredField("fallbackToSimpleAuth");
+    final Field fallbackToSimpleAuthField = saslDataTransferClientClass
+        .getDeclaredField("fallbackToSimpleAuth");
     fallbackToSimpleAuthField.setAccessible(true);
-    final Method getSaslDataTransferClientMethod =
-        DFSClient.class.getMethod("getSaslDataTransferClient");
+    final Method getSaslDataTransferClientMethod = DFSClient.class
+        .getMethod("getSaslDataTransferClient");
     final Method newDataEncryptionKeyMethod = DFSClient.class.getMethod("newDataEncryptionKey");
     return new SaslAdaptor() {
 
@@ -288,8 +311,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       @Override
       public AtomicBoolean getFallbackToSimpleAuth(DFSClient client) {
         try {
-          return (AtomicBoolean) fallbackToSimpleAuthField.get(getSaslDataTransferClientMethod
-              .invoke(client));
+          return (AtomicBoolean) fallbackToSimpleAuthField
+              .get(getSaslDataTransferClientMethod.invoke(client));
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
@@ -308,8 +331,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static SaslAdaptor createSaslAdaptor25() {
     try {
-      final Field trustedChannelResolverField =
-          DFSClient.class.getDeclaredField("trustedChannelResolver");
+      final Field trustedChannelResolverField = DFSClient.class
+          .getDeclaredField("trustedChannelResolver");
       trustedChannelResolverField.setAccessible(true);
       final Method getDataEncryptionKeyMethod = DFSClient.class.getMethod("getDataEncryptionKey");
       return new SaslAdaptor() {
@@ -351,8 +374,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static SaslAdaptor createSaslAdaptor() {
     Class<?> saslDataTransferClientClass = null;
     try {
-      saslDataTransferClientClass =
-          Class.forName("org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient");
+      saslDataTransferClientClass = Class
+          .forName("org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient");
     } catch (ClassNotFoundException e) {
       LOG.warn("No SaslDataTransferClient class found, should be hadoop 2.5-");
     }
@@ -364,8 +387,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
   }
 
-  private static CipherHelper createCipherHelper25() {
-    return new CipherHelper() {
+  private static CipherOptionHelper createCipherHelper25() {
+    return new CipherOptionHelper() {
 
       @Override
       public byte[] getOutKey(Object cipherOption) {
@@ -410,18 +433,17 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static CipherHelper createCipherHelper27(Class<?> cipherOptionClass)
+  private static CipherOptionHelper createCipherHelper27(Class<?> cipherOptionClass)
       throws ClassNotFoundException, NoSuchMethodException {
     @SuppressWarnings("rawtypes")
-    Class<? extends Enum> cipherSuiteClass =
-        Class.forName("org.apache.hadoop.crypto.CipherSuite").asSubclass(Enum.class);
+    Class<? extends Enum> cipherSuiteClass = Class.forName("org.apache.hadoop.crypto.CipherSuite")
+        .asSubclass(Enum.class);
     @SuppressWarnings("unchecked")
     final Enum<?> aesCipherSuite = Enum.valueOf(cipherSuiteClass, "AES_CTR_NOPADDING");
-    final Constructor<?> cipherOptionConstructor =
-        cipherOptionClass.getConstructor(cipherSuiteClass);
-    final Constructor<?> cipherOptionWithKeyAndIvConstructor =
-        cipherOptionClass.getConstructor(cipherSuiteClass, byte[].class, byte[].class,
-          byte[].class, byte[].class);
+    final Constructor<?> cipherOptionConstructor = cipherOptionClass
+        .getConstructor(cipherSuiteClass);
+    final Constructor<?> cipherOptionWithKeyAndIvConstructor = cipherOptionClass
+        .getConstructor(cipherSuiteClass, byte[].class, byte[].class, byte[].class, byte[].class);
 
     final Method getCipherSuiteMethod = cipherOptionClass.getMethod("getCipherSuite");
     final Method getInKeyMethod = cipherOptionClass.getMethod("getInKey");
@@ -429,16 +451,15 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     final Method getOutKeyMethod = cipherOptionClass.getMethod("getOutKey");
     final Method getOutIvMethod = cipherOptionClass.getMethod("getOutIv");
 
-    final Method convertCipherOptionsMethod =
-        PBHelper.class.getMethod("convertCipherOptions", List.class);
-    final Method convertCipherOptionProtosMethod =
-        PBHelper.class.getMethod("convertCipherOptionProtos", List.class);
-    final Method addAllCipherOptionMethod =
-        DataTransferEncryptorMessageProto.Builder.class.getMethod("addAllCipherOption",
-          Iterable.class);
-    final Method getCipherOptionListMethod =
-        DataTransferEncryptorMessageProto.class.getMethod("getCipherOptionList");
-    return new CipherHelper() {
+    final Method convertCipherOptionsMethod = PBHelper.class.getMethod("convertCipherOptions",
+      List.class);
+    final Method convertCipherOptionProtosMethod = PBHelper.class
+        .getMethod("convertCipherOptionProtos", List.class);
+    final Method addAllCipherOptionMethod = DataTransferEncryptorMessageProto.Builder.class
+        .getMethod("addAllCipherOption", Iterable.class);
+    final Method getCipherOptionListMethod = DataTransferEncryptorMessageProto.class
+        .getMethod("getCipherOptionList");
+    return new CipherOptionHelper() {
 
       @Override
       public byte[] getOutKey(Object cipherOption) {
@@ -532,9 +553,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           boolean isNegotiatedQopPrivacy, SaslClient saslClient) throws IOException {
         List<Object> cipherOptions;
         try {
-          cipherOptions =
-              (List<Object>) convertCipherOptionProtosMethod.invoke(null,
-                getCipherOptionListMethod.invoke(proto));
+          cipherOptions = (List<Object>) convertCipherOptionProtosMethod.invoke(null,
+            getCipherOptionListMethod.invoke(proto));
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
@@ -557,7 +577,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static CipherHelper createCipherHelper() {
+  private static CipherOptionHelper createCipherHelper() {
     Class<?> cipherOptionClass;
     try {
       cipherOptionClass = Class.forName("org.apache.hadoop.crypto.CipherOption");
@@ -572,9 +592,79 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
   }
 
+  private static TransparentCryptoHelper createTransparentCryptoHelper25() {
+    return new TransparentCryptoHelper() {
+
+      @Override
+      public Object getFileEncryptionInfo(HdfsFileStatus stat) {
+        return null;
+      }
+
+      @Override
+      public CryptoCodec createCryptoCodec(Configuration conf, Object feInfo, DFSClient client) {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  private static TransparentCryptoHelper createTransparentCryptoHelper27(Class<?> feInfoClass)
+      throws NoSuchMethodException, ClassNotFoundException {
+    final Method getFileEncryptionInfoMethod = HdfsFileStatus.class
+        .getMethod("getFileEncryptionInfo");
+    final Method decryptEncryptedDataEncryptionKeyMethod = DFSClient.class
+        .getDeclaredMethod("decryptEncryptedDataEncryptionKey", feInfoClass);
+    decryptEncryptedDataEncryptionKeyMethod.setAccessible(true);
+    final Method getCipherSuiteMethod = feInfoClass.getMethod("getCipherSuite");
+    Class<?> keyVersionClass = Class.forName("org.apache.hadoop.crypto.key.KeyProvider$KeyVersion");
+    final Method getMaterialMethod = keyVersionClass.getMethod("getMaterial");
+    final Method getIVMethod = feInfoClass.getMethod("getIV");
+    return new TransparentCryptoHelper() {
+
+      @Override
+      public Object getFileEncryptionInfo(HdfsFileStatus stat) {
+        try {
+          return getFileEncryptionInfoMethod.invoke(stat);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public CryptoCodec createCryptoCodec(Configuration conf, Object feInfo, DFSClient client)
+          throws IOException {
+        try {
+          Object decrypted = decryptEncryptedDataEncryptionKeyMethod.invoke(client, feInfo);
+          return new CryptoCodec(conf, getCipherSuiteMethod.invoke(feInfo),
+              (byte[]) getMaterialMethod.invoke(decrypted), (byte[]) getIVMethod.invoke(feInfo));
+        } catch (InvocationTargetException e) {
+          Throwables.propagateIfPossible(e.getTargetException(), IOException.class);
+          throw new RuntimeException(e.getTargetException());
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
+
+  private static TransparentCryptoHelper createTransparentCryptoHelper() {
+    Class<?> feInfoClass;
+    try {
+      feInfoClass = Class.forName("org.apache.hadoop.fs.FileEncryptionInfo");
+    } catch (ClassNotFoundException e) {
+      LOG.warn("No FileEncryptionInfo class found, should be hadoop 2.5-");
+      return createTransparentCryptoHelper25();
+    }
+    try {
+      return createTransparentCryptoHelper27(feInfoClass);
+    } catch (NoSuchMethodException | ClassNotFoundException e) {
+      throw new Error(e);
+    }
+  }
+
   static {
     SASL_ADAPTOR = createSaslAdaptor();
-    CIPHER_HELPER = createCipherHelper();
+    CIPHER_OPTION_HELPER = createCipherHelper();
+    TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
   }
 
   /**
@@ -643,9 +733,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         Map<String, String> saslProps, int timeoutMs, Promise<Void> promise) throws SaslException {
       this.conf = conf;
       this.saslProps = saslProps;
-      this.saslClient =
-          Sasl.createSaslClient(new String[] { MECHANISM }, username, PROTOCOL, SERVER_NAME,
-            saslProps, new SaslClientCallbackHandler(username, password));
+      this.saslClient = Sasl.createSaslClient(new String[] { MECHANISM }, username, PROTOCOL,
+        SERVER_NAME, saslProps, new SaslClientCallbackHandler(username, password));
       this.timeoutMs = timeoutMs;
       this.promise = promise;
     }
@@ -656,14 +745,14 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
     private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload, List<Object> options)
         throws IOException {
-      DataTransferEncryptorMessageProto.Builder builder =
-          DataTransferEncryptorMessageProto.newBuilder();
+      DataTransferEncryptorMessageProto.Builder builder = DataTransferEncryptorMessageProto
+          .newBuilder();
       builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
       if (payload != null) {
         builder.setPayload(ByteString.copyFrom(payload));
       }
       if (options != null) {
-        CIPHER_HELPER.addCipherOptions(builder, options);
+        CIPHER_OPTION_HELPER.addCipherOptions(builder, options);
       }
       DataTransferEncryptorMessageProto proto = builder.build();
       int size = proto.getSerializedSize();
@@ -704,8 +793,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     private boolean requestedQopContainsPrivacy() {
-      Set<String> requestedQop =
-          ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
+      Set<String> requestedQop = ImmutableSet
+          .copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
       return requestedQop.contains("auth-conf");
     }
 
@@ -713,15 +802,16 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       if (!saslClient.isComplete()) {
         throw new IOException("Failed to complete SASL handshake");
       }
-      Set<String> requestedQop =
-          ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
+      Set<String> requestedQop = ImmutableSet
+          .copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
       String negotiatedQop = getNegotiatedQop();
-      LOG.debug("Verifying QOP, requested QOP = " + requestedQop + ", negotiated QOP = "
-          + negotiatedQop);
+      LOG.debug(
+        "Verifying QOP, requested QOP = " + requestedQop + ", negotiated QOP = " + negotiatedQop);
       if (!requestedQop.contains(negotiatedQop)) {
         throw new IOException(String.format("SASL handshake completed, but "
             + "channel does not have acceptable quality of protection, "
-            + "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
+            + "requested = %s, negotiated = %s",
+          requestedQop, negotiatedQop));
       }
     }
 
@@ -741,7 +831,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           case 1: {
             List<Object> cipherOptions = null;
             if (requestedQopContainsPrivacy()) {
-              cipherOptions = CIPHER_HELPER.getCipherOptions(conf);
+              cipherOptions = CIPHER_OPTION_HELPER.getCipherOptions(conf);
             }
             sendSaslMessage(ctx, response, cipherOptions);
             ctx.flush();
@@ -752,7 +842,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
             assert response == null;
             checkSaslComplete();
             Object cipherOption =
-                CIPHER_HELPER.getCipherOption(proto, isNegotiatedQopPrivacy(), saslClient);
+                CIPHER_OPTION_HELPER.getCipherOption(proto, isNegotiatedQopPrivacy(), saslClient);
             ChannelPipeline p = ctx.pipeline();
             while (p.first() != null) {
               p.removeFirst();
@@ -762,8 +852,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
               p.addLast(new EncryptHandler(codec), new DecryptHandler(codec));
             } else {
               if (useWrap()) {
-                p.addLast(new SaslWrapHandler(saslClient), new LengthFieldBasedFrameDecoder(
-                    Integer.MAX_VALUE, 0, 4), new SaslUnwrapHandler(saslClient));
+                p.addLast(new SaslWrapHandler(saslClient),
+                  new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4),
+                  new SaslUnwrapHandler(saslClient));
               }
             }
             promise.trySuccess(null);
@@ -992,8 +1083,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
     if (encryptionKey != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("SASL client doing encrypted handshake for addr = " + addr + ", datanodeId = "
-            + dnInfo);
+        LOG.debug(
+          "SASL client doing encrypted handshake for addr = " + addr + ", datanodeId = " + dnInfo);
       }
       doSaslNegotiation(conf, channel, timeoutMs, getUserNameFromEncryptionKey(encryptionKey),
         encryptionKeyToPassword(encryptionKey.encryptionKey),
@@ -1018,8 +1109,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       saslPromise.trySuccess(null);
     } else if (saslPropsResolver != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("SASL client doing general handshake for addr = " + addr + ", datanodeId = "
-            + dnInfo);
+        LOG.debug(
+          "SASL client doing general handshake for addr = " + addr + ", datanodeId = " + dnInfo);
       }
       doSaslNegotiation(conf, channel, timeoutMs, buildUsername(accessToken),
         buildClientPassword(accessToken), saslPropsResolver.getClientProperties(addr), saslPromise);
@@ -1035,4 +1126,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
   }
 
+  static CryptoCodec createCryptoCodec(Configuration conf, HdfsFileStatus stat, DFSClient client)
+      throws IOException {
+    Object feInfo = TRANSPARENT_CRYPTO_HELPER.getFileEncryptionInfo(stat);
+    if (feInfo == null) {
+      return null;
+    }
+    return TRANSPARENT_CRYPTO_HELPER.createCryptoCodec(conf, feInfo, client);
+  }
 }

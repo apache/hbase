@@ -43,6 +43,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -58,6 +59,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.CryptoCodec;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -118,6 +120,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private final long fileId;
 
   private final LocatedBlock locatedBlock;
+
+  private final CryptoCodec cryptoCodec;
 
   private final EventLoop eventLoop;
 
@@ -317,8 +321,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf, FSUtils fsUtils, DistributedFileSystem dfs,
       DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
-      LocatedBlock locatedBlock, EventLoop eventLoop, List<Channel> datanodeList,
-      DataChecksum summer, ByteBufAllocator alloc) {
+      LocatedBlock locatedBlock, CryptoCodec cryptoCodec, EventLoop eventLoop,
+      List<Channel> datanodeList, DataChecksum summer, ByteBufAllocator alloc) {
     this.conf = conf;
     this.fsUtils = fsUtils;
     this.dfs = dfs;
@@ -328,6 +332,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.clientName = clientName;
     this.src = src;
     this.locatedBlock = locatedBlock;
+    this.cryptoCodec = cryptoCodec;
     this.eventLoop = eventLoop;
     this.datanodeList = datanodeList;
     this.summer = summer;
@@ -342,16 +347,27 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     write(b, 0, b.length);
   }
 
+  private void write0(byte[] b, final int off, final int len) {
+    buf.ensureWritable(len);
+    if (cryptoCodec == null) {
+      buf.writeBytes(b, off, len);
+    } else {
+      ByteBuffer inBuffer = ByteBuffer.wrap(b, off, len);
+      cryptoCodec.encrypt(inBuffer, buf.nioBuffer(buf.writerIndex(), len));
+      buf.writerIndex(buf.writerIndex() + len);
+    }
+  }
+
   @Override
   public void write(final byte[] b, final int off, final int len) {
     if (eventLoop.inEventLoop()) {
-      buf.ensureWritable(len).writeBytes(b, off, len);
+      write0(b, off, len);
     } else {
       eventLoop.submit(new Runnable() {
 
         @Override
         public void run() {
-          buf.ensureWritable(len).writeBytes(b, off, len);
+          write0(b, off, len);
         }
       }).syncUninterruptibly();
     }
