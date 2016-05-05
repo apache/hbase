@@ -73,7 +73,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private String quorum;
 
   // zookeeper connection
-  private RecoverableZooKeeper recoverableZooKeeper;
+  private final RecoverableZooKeeper recoverableZooKeeper;
 
   // abortable in case of zk failure
   protected Abortable abortable;
@@ -130,8 +130,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   private final Configuration conf;
 
-  private final Exception constructorCaller;
-
   /* A pattern that matches a Kerberos name, borrowed from Hadoop's KerberosName */
   private static final Pattern NAME_PATTERN = Pattern.compile("([^/@]*)(/([^/@]*))?@([^/@]*)");
 
@@ -162,13 +160,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       Abortable abortable, boolean canCreateBaseZNode)
   throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
-    // Capture a stack trace now.  Will print it out later if problem so we can
-    // distingush amongst the myriad ZKWs.
-    try {
-      throw new Exception("ZKW CONSTRUCTOR STACK TRACE FOR DEBUGGING");
-    } catch (Exception e) {
-      this.constructorCaller = e;
-    }
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     this.prefix = identifier;
     // Identifier will get the sessionid appended later below down when we
@@ -176,7 +167,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     this.identifier = identifier + "0x0";
     this.abortable = abortable;
     setNodeNames(conf);
-    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, identifier);
+    PendingWatcher pendingWatcher = new PendingWatcher();
+    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
+    pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
       createBaseZNodes();
     }
@@ -650,27 +643,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private void connectionEvent(WatchedEvent event) {
     switch(event.getState()) {
       case SyncConnected:
-        // Now, this callback can be invoked before the this.zookeeper is set.
-        // Wait a little while.
-        long finished = System.currentTimeMillis() +
-          this.conf.getLong("hbase.zookeeper.watcher.sync.connected.wait", 2000);
-        while (System.currentTimeMillis() < finished) {
-          try {
-            Thread.sleep(1);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while sleeping");
-            throw new RuntimeException("Interrupted while waiting for" +
-                " recoverableZooKeeper is set");
-          }
-          if (this.recoverableZooKeeper != null) break;
-        }
-
-        if (this.recoverableZooKeeper == null) {
-          LOG.error("ZK is null on connection event -- see stack trace " +
-            "for the stack trace when constructor was called on this zkw",
-            this.constructorCaller);
-          throw new NullPointerException("ZK is null");
-        }
         this.identifier = this.prefix + "-0x" +
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
@@ -759,9 +731,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   @Override
   public void close() {
     try {
-      if (recoverableZooKeeper != null) {
-        recoverableZooKeeper.close();
-      }
+      recoverableZooKeeper.close();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
