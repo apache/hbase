@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-#Building HBase native client
+# Building HBase native client
 
 The HBase native client build using buck and produces a linux library.
 
@@ -58,6 +58,20 @@ buck build //core:simple-client
 ```
 
 That will build the library, then build and test everything, then build
-the simple-client binary. Buck will find all modules used, and compile 
+the simple-client binary. Buck will find all modules used, and compile
 them in parallel, caching the results. Output from buck is in the buck-out
 foulder. Generated binaries are in buck-out/gen logs are in buck-out/logs
+
+
+# Make
+
+If learning buck isn't your thing there is a Makefile wrapper for your
+convenience.
+
+```
+make help
+make check
+make clean
+make all
+make build
+```

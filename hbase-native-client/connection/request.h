@@ -25,30 +25,42 @@
 #include <string>
 
 namespace hbase {
+
+/**
+ * Main request class.
+ * This holds the request object and the un-filled in approriatley typed
+ * response object.
+ */
 class Request {
 public:
+  /** Create a request object for a get */
   static std::unique_ptr<Request> get();
+  /** Create a request object for a mutate */
   static std::unique_ptr<Request> mutate();
+  /** Create a request object for a scan */
   static std::unique_ptr<Request> scan();
 
+  /**
+   * This should be private. Do not use this.
+   *
+   *
+   * Constructor that's public for make_unique. This sets all the messages and
+   * method name.
+   */
   Request(std::shared_ptr<google::protobuf::Message> req,
           std::shared_ptr<google::protobuf::Message> resp, std::string method);
 
+  /** Get the call id. */
   uint32_t call_id() { return call_id_; }
+  /** Set the call id. This should only be set once. */
   void set_call_id(uint32_t call_id) { call_id_ = call_id; }
-
+  /** Get the backing request protobuf message. */
   std::shared_ptr<google::protobuf::Message> req_msg() { return req_msg_; }
+  /** Get the backing response protobuf message. */
   std::shared_ptr<google::protobuf::Message> resp_msg() { return resp_msg_; }
-
-  void set_req_msg(std::shared_ptr<google::protobuf::Message> msg) {
-    req_msg_ = msg;
-  }
-  void set_resp_msg(std::shared_ptr<google::protobuf::Message> msg) {
-    resp_msg_ = msg;
-  }
-
+  /** Get the method name. This is used to the the receiving rpc server what
+   * method type to decode. */
   std::string method() { return method_; }
-  void set_method(std::string method) { method_ = method; }
 
 private:
   uint32_t call_id_;

@@ -28,8 +28,20 @@
 #include "if/Cell.pb.h"
 
 namespace hbase {
+
+/**
+ * Client.
+ *
+ * This is the class that provides access to an HBase cluster.
+ * It is thread safe and does connection pooling. Current recommendations are to have only one Client per cluster around.
+ */
 class Client {
 public:
+
+  /**
+   * Create a new client.
+   * @param quorum_spec Where to connect to get Zookeeper bootstrap information.
+   */
   explicit Client(std::string quorum_spec);
 
 private:

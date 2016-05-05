@@ -26,10 +26,22 @@
 
 namespace hbase {
 
+/**
+ * @brief Utility for meta operations.
+ */
 class MetaUtil {
 public:
+  /**
+   * Given a table and a row give the row key from which to start a scan to find
+   * region locations.
+   */
   std::string RegionLookupRowkey(const hbase::pb::TableName &tn,
                                  const std::string &row) const;
+
+  /**
+   * Given a row we're trying to access create a request to look up the
+   * location.
+   */
   std::unique_ptr<Request> MetaRequest(const hbase::pb::TableName tn,
                                        const std::string &row) const;
 };

@@ -85,7 +85,6 @@ int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
 }
 
 RpcSerde::RpcSerde() : auth_type_(DEFAULT_AUTH_TYPE) {}
-RpcSerde::~RpcSerde() {}
 
 unique_ptr<IOBuf> RpcSerde::Preamble() {
   auto magic = IOBuf::copyBuffer(PREAMBLE, 0, 2);
