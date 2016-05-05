@@ -21,6 +21,8 @@
 #include <folly/AtomicHashMap.h>
 #include <wangle/channel/Handler.h>
 
+#include <atomic>
+#include <mutex>
 #include <string>
 
 #include "serde/rpc.h"
@@ -29,6 +31,7 @@
 namespace hbase {
 class Request;
 class Response;
+class HeaderInfo;
 }
 namespace google {
 namespace protobuf {
@@ -37,6 +40,7 @@ class Message;
 }
 
 namespace hbase {
+
 class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
                                              Response, std::unique_ptr<Request>,
                                              std::unique_ptr<folly::IOBuf>> {
@@ -47,7 +51,7 @@ public:
                                    std::unique_ptr<Request> r) override;
 
 private:
-  bool need_send_header_;
+  std::unique_ptr<HeaderInfo> header_info_;
   std::string user_name_;
   RpcSerde serde_;
 
@@ -55,5 +59,18 @@ private:
   std::unique_ptr<folly::AtomicHashMap<
       uint32_t, std::shared_ptr<google::protobuf::Message>>>
       resp_msgs_;
+};
+
+/**
+ * Class to contain the info about if the connection header and preamble has
+ * been sent.
+ *
+ * We use a serperate class here so that ClientHandler is relocatable.
+ */
+class HeaderInfo {
+public:
+  HeaderInfo() : need_(true), mutex_() {}
+  std::atomic<bool> need_;
+  std::mutex mutex_;
 };
 } // namespace hbase
