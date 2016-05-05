@@ -37,7 +37,7 @@ using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
 ClientHandler::ClientHandler(std::string user_name)
-    : user_name_(user_name), need_send_header_(true), serde_(),
+    : user_name_(user_name), serde_(), header_info_(),
       resp_msgs_(
           make_unique<folly::AtomicHashMap<
               uint32_t, std::shared_ptr<google::protobuf::Message>>>(5000)) {}
@@ -81,22 +81,27 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   }
 }
 
-// TODO(eclark): Figure out how to handle the
-// network errors that are going to come.
 Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // Keep track of if we have sent the header.
-  if (UNLIKELY(need_send_header_)) {
-    need_send_header_ = false;
+  //
+  // even though the bool is atomic we can load it lazily here.
+  if (UNLIKELY(header_info_->need_.load(std::memory_order_relaxed))) {
 
-    // Should we be sending just one fireWrite?
-    // Right now we're sending one for the header
-    // and one for the request.
+    // Grab the lock.
+    // We need to make sure that no one gets past here without there being a
+    // hearder sent.
+    std::lock_guard<std::mutex> lock(header_info_->mutex_);
+
+    // Now see if we are the first thread to get through.
     //
-    // That doesn't seem like too bad, but who knows.
-    auto pre = serde_.Preamble();
-    auto header = serde_.Header(user_name_);
-    pre->appendChain(std::move(header));
-    ctx->fireWrite(std::move(pre));
+    // If this is the first thread to get through then the
+    // need_send_header will have been true before this.
+    if (header_info_->need_.exchange(false)) {
+      auto pre = serde_.Preamble();
+      auto header = serde_.Header(user_name_);
+      pre->appendChain(std::move(header));
+      ctx->fireWrite(std::move(pre));
+    }
   }
 
   resp_msgs_->insert(r->call_id(), r->resp_msg());
