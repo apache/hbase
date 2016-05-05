@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -80,10 +81,15 @@ import com.google.protobuf.ServiceException;
 /**
  * Utilities class for snapshots
  */
-public class SnapshotTestingUtils {
+@InterfaceAudience.Private
+public final class SnapshotTestingUtils {
 
   private static final Log LOG = LogFactory.getLog(SnapshotTestingUtils.class);
   private static byte[] KEYS = Bytes.toBytes("0123456789");
+
+  private SnapshotTestingUtils() {
+    // private constructor for utility class
+  }
 
   /**
    * Assert that we don't have any snapshots lists
