@@ -126,54 +126,70 @@ implements Configurable {
       }
     } else {
       try {
-        scan = new Scan();
-
-        if (conf.get(SCAN_ROW_START) != null) {
-          scan.setStartRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_START)));
-        }
-
-        if (conf.get(SCAN_ROW_STOP) != null) {
-          scan.setStopRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_STOP)));
-        }
-
-        if (conf.get(SCAN_COLUMNS) != null) {
-          addColumns(scan, conf.get(SCAN_COLUMNS));
-        }
-
-        if (conf.get(SCAN_COLUMN_FAMILY) != null) {
-          scan.addFamily(Bytes.toBytes(conf.get(SCAN_COLUMN_FAMILY)));
-        }
-
-        if (conf.get(SCAN_TIMESTAMP) != null) {
-          scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
-        }
-
-        if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {
-          scan.setTimeRange(
-              Long.parseLong(conf.get(SCAN_TIMERANGE_START)),
-              Long.parseLong(conf.get(SCAN_TIMERANGE_END)));
-        }
-
-        if (conf.get(SCAN_MAXVERSIONS) != null) {
-          scan.setMaxVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
-        }
-
-        if (conf.get(SCAN_CACHEDROWS) != null) {
-          scan.setCaching(Integer.parseInt(conf.get(SCAN_CACHEDROWS)));
-        }
-
-        if (conf.get(SCAN_BATCHSIZE) != null) {
-          scan.setBatch(Integer.parseInt(conf.get(SCAN_BATCHSIZE)));
-        }
-
-        // false by default, full table scans generate too much BC churn
-        scan.setCacheBlocks((conf.getBoolean(SCAN_CACHEBLOCKS, false)));
+        scan = createScanFromConfiguration(conf);
       } catch (Exception e) {
           LOG.error(StringUtils.stringifyException(e));
       }
     }
 
     setScan(scan);
+  }
+
+  /**
+   * Sets up a {@link Scan} instance, applying settings from the configuration property
+   * constants defined in {@code TableInputFormat}.  This allows specifying things such as:
+   * <ul>
+   *   <li>start and stop rows</li>
+   *   <li>column qualifiers or families</li>
+   *   <li>timestamps or timerange</li>
+   *   <li>scanner caching and batch size</li>
+   * </ul>
+   */
+  public static Scan createScanFromConfiguration(Configuration conf) throws IOException {
+    Scan scan = new Scan();
+
+    if (conf.get(SCAN_ROW_START) != null) {
+      scan.setStartRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_START)));
+    }
+
+    if (conf.get(SCAN_ROW_STOP) != null) {
+      scan.setStopRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_STOP)));
+    }
+
+    if (conf.get(SCAN_COLUMNS) != null) {
+      addColumns(scan, conf.get(SCAN_COLUMNS));
+    }
+
+    if (conf.get(SCAN_COLUMN_FAMILY) != null) {
+      scan.addFamily(Bytes.toBytes(conf.get(SCAN_COLUMN_FAMILY)));
+    }
+
+    if (conf.get(SCAN_TIMESTAMP) != null) {
+      scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
+    }
+
+    if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {
+      scan.setTimeRange(
+          Long.parseLong(conf.get(SCAN_TIMERANGE_START)),
+          Long.parseLong(conf.get(SCAN_TIMERANGE_END)));
+    }
+
+    if (conf.get(SCAN_MAXVERSIONS) != null) {
+      scan.setMaxVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
+    }
+
+    if (conf.get(SCAN_CACHEDROWS) != null) {
+      scan.setCaching(Integer.parseInt(conf.get(SCAN_CACHEDROWS)));
+    }
+
+    if (conf.get(SCAN_BATCHSIZE) != null) {
+      scan.setBatch(Integer.parseInt(conf.get(SCAN_BATCHSIZE)));
+    }
+
+    // false by default, full table scans generate too much BC churn
+    scan.setCacheBlocks((conf.getBoolean(SCAN_CACHEBLOCKS, false)));
+
+    return scan;
   }
 
   @Override
