@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
@@ -71,7 +72,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * {@link #completeSnapshot}, and writing the
  * {@link SnapshotDescription} to the working snapshot directory.
  */
-public class SnapshotDescriptionUtils {
+@InterfaceAudience.Private
+public final class SnapshotDescriptionUtils {
 
   /**
    * Filter that only accepts completed snapshot directories
