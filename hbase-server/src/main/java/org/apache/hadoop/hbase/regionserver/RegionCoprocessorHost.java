@@ -1282,13 +1282,13 @@ public class RegionCoprocessorHost
    *    Store, Scan, NavigableSet, KeyValueScanner)}
    */
   public KeyValueScanner preStoreScannerOpen(final Store store, final Scan scan,
-      final NavigableSet<byte[]> targetCols) throws IOException {
+      final NavigableSet<byte[]> targetCols, final long readPt) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<KeyValueScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.preStoreScannerOpen(ctx, store, scan, targetCols, getResult()));
+        setResult(oserver.preStoreScannerOpen(ctx, store, scan, targetCols, getResult(), readPt));
       }
     });
   }

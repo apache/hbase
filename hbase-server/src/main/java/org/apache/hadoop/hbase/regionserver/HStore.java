@@ -1868,7 +1868,7 @@ public class HStore implements Store {
     try {
       KeyValueScanner scanner = null;
       if (this.getCoprocessorHost() != null) {
-        scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+        scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols, readPt);
       }
       scanner = createScanner(scan, targetCols, readPt, scanner);
       return scanner;

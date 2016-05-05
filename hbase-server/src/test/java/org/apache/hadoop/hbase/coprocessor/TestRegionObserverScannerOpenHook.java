@@ -105,11 +105,10 @@ public class TestRegionObserverScannerOpenHook {
   public static class NoDataFromScan extends BaseRegionObserver {
     @Override
     public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s)
+        Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
         throws IOException {
       scan.setFilter(new NoDataFilter());
-      return new StoreScanner(store, store.getScanInfo(), scan, targetCols,
-        ((HStore)store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
+      return new StoreScanner(store, store.getScanInfo(), scan, targetCols, readPt);
     }
   }
 

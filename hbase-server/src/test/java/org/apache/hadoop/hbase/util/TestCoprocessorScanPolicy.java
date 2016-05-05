@@ -285,7 +285,7 @@ public class TestCoprocessorScanPolicy {
     @Override
     public KeyValueScanner preStoreScannerOpen(
         final ObserverContext<RegionCoprocessorEnvironment> c, Store store, final Scan scan,
-        final NavigableSet<byte[]> targetCols, KeyValueScanner s) throws IOException {
+        final NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt) throws IOException {
       TableName tn = store.getTableName();
       if (!tn.isSystemTable()) {
         Long newTtl = ttls.get(store.getTableName());
@@ -297,8 +297,7 @@ public class TestCoprocessorScanPolicy {
             newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
             oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-        return new StoreScanner(store, scanInfo, scan, targetCols,
-            ((HStore) store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
+        return new StoreScanner(store, scanInfo, scan, targetCols, readPt);
       } else {
         return s;
       }
