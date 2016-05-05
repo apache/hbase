@@ -128,15 +128,24 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
       });
 }
 
+/**
+ * Filter to remove a service from the location cache and the connection cache on errors
+ * or on cloase.
+ */
 class RemoveServiceFilter
     : public ServiceFilter<std::unique_ptr<Request>, Response> {
 
 public:
+
+  /** Create a new filter. */
   RemoveServiceFilter(std::shared_ptr<HBaseService> service, ServerName sn,
                       ConnectionPool &cp)
       : ServiceFilter<unique_ptr<Request>, Response>(service), sn_(sn),
         cp_(cp) {}
 
+  /**
+   * Close will remove the connection from all caches.
+   */
   folly::Future<folly::Unit> close() override {
     if (!released.exchange(true)) {
       return this->service_->close().then([this]() {
@@ -148,10 +157,13 @@ public:
     }
   }
 
+
+  /** Has this been closed */
   virtual bool isAvailable() override {
     return !released && service_->isAvailable();
   }
 
+  /** Send the message. */
   folly::Future<Response> operator()(unique_ptr<Request> req) override {
     // TODO(eclark): add in an on error handler that will
     // remove the region location from the cache if needed.
@@ -168,7 +180,7 @@ private:
 
 std::shared_ptr<RegionLocation>
 LocationCache::CreateLocation(const Response &resp) {
-  auto resp_msg = static_pointer_cast<ScanResponse>(resp.response());
+  auto resp_msg = static_pointer_cast<ScanResponse>(resp.resp_msg());
   auto &results = resp_msg->results().Get(0);
   auto &cells = results.cell();
   auto ri = folly::to<RegionInfo>(cells.Get(0).value());

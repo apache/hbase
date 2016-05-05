@@ -28,14 +28,32 @@
 #include "connection/service.h"
 
 namespace hbase {
+
+/**
+ * Class to create a ClientBootstrap and turn it into a connected
+ * pipeline.
+ */
 class ConnectionFactory {
 public:
+  /**
+   * Constructor.
+   * There should only be one ConnectionFactory per client.
+   */
   ConnectionFactory();
+  /** Default Desctructor */
   virtual ~ConnectionFactory() = default;
 
+  /**
+   * Create a BootStrap from which a connection can be made.
+   */
   virtual std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
   MakeBootstrap();
 
+  /**
+   * Connect a ClientBootstrap to a server and return the pipeline.
+   *
+   * This is mostly visible so that mocks can override socket connections.
+   */
   virtual std::shared_ptr<HBaseService>
   Connect(std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
           const std::string &hostname, int port);

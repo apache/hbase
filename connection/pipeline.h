@@ -26,12 +26,30 @@
 #include "utils/user-util.h"
 
 namespace hbase {
+
+/** Pipeline to turn IOBuf into requests */
 using SerializePipeline =
     wangle::Pipeline<folly::IOBufQueue &, std::unique_ptr<Request>>;
 
+/**
+ * Factory to create new pipelines for HBase RPC's.
+ */
 class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
 public:
+  /**
+   * Constructor. This will create user util.
+   */
   RpcPipelineFactory();
+
+  /**
+   * Create a new pipeline.
+   * The pipeline will be:
+   *
+   * - Async Socke Handler
+   * - Event Base Handler
+   * - Length Field Based Frame Decoder
+   * - Client Handler
+   */
   SerializePipeline::Ptr
   newPipeline(std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
 

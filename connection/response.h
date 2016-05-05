@@ -29,20 +29,41 @@ class Message;
 
 namespace hbase {
 
+/**
+ * @brief Class representing a rpc response
+ *
+ * This is the class sent to a service.
+ */
 class Response {
 public:
-  Response() : call_id_(0), response_(nullptr) {}
+  /**
+   * Constructor.
+   * Initinalizes the call id to 0. 0 should never be a valid call id.
+   */
+  Response() : call_id_(0), resp_msg_(nullptr) {}
+
+  /** Get the call_id */
   uint32_t call_id() { return call_id_; }
+
+  /** Set the call_id */
   void set_call_id(uint32_t call_id) { call_id_ = call_id; }
-  std::shared_ptr<google::protobuf::Message> response() const {
-    return response_;
+
+  /**
+   * Get the response message.
+   * The caller is reponsible for knowing the type. In practice the call id is
+   * used to figure out the type.
+   */
+  std::shared_ptr<google::protobuf::Message> resp_msg() const {
+    return resp_msg_;
   }
-  void set_response(std::shared_ptr<google::protobuf::Message> response) {
-    response_ = std::move(response);
+
+  /** Set the response message. */
+  void set_resp_msg(std::shared_ptr<google::protobuf::Message> response) {
+    resp_msg_ = std::move(response);
   }
 
 private:
   uint32_t call_id_;
-  std::shared_ptr<google::protobuf::Message> response_;
+  std::shared_ptr<google::protobuf::Message> resp_msg_;
 };
 } // namespace hbase

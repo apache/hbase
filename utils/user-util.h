@@ -24,12 +24,30 @@
 #include <mutex>
 
 namespace hbase {
+
+/**
+ * @brief Class to help with user/group information.
+ *
+ * This class will get the current user, and information about them. It caches
+ * the user information after the first invocation.
+ */
 class UserUtil {
 public:
+  /**
+   * Constructor.
+   */
   UserUtil();
+
+  /**
+   * Get the username of the user owning this process. This is thread safe and
+   * lockless for every invocation other than the first one.
+   */
   std::string user_name();
 
 private:
+  /**
+   * Compute the username. This will block.
+   */
   void compute_user_name();
   std::atomic<bool> init_;
   std::string user_name_;

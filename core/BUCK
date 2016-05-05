@@ -20,7 +20,6 @@ cxx_library(
     name="core",
     exported_headers=[
         "client.h",
-        "connection.h",
         "hbase_macros.h",
         "region-location.h",
         "location-cache.h",

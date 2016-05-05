@@ -26,10 +26,10 @@ using std::mutex;
 using std::unique_ptr;
 using std::shared_ptr;
 using hbase::pb::ServerName;
+using hbase::ConnectionPool;
+using hbase::HBaseService;
 using folly::SharedMutexWritePriority;
 using folly::SocketAddress;
-
-namespace hbase {
 
 ConnectionPool::ConnectionPool()
     : cf_(std::make_shared<ConnectionFactory>()), clients_(), connections_(),
@@ -74,5 +74,4 @@ void ConnectionPool::close(const ServerName &sn) {
   }
   auto service = found->second;
   connections_.erase(found);
-}
 }

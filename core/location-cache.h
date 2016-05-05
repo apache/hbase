@@ -33,25 +33,48 @@
 #include "serde/table-name.h"
 
 namespace hbase {
-
+// Forward
 class Request;
 class Response;
 namespace pb {
 class ServerName;
 }
 
+/**
+ * Class that can look up and cache locations.
+ */
 class LocationCache {
 public:
-  explicit LocationCache(std::string quorum_spec,
-                         std::shared_ptr<folly::Executor> executor);
+  /**
+   * Constructor.
+   * @param quorum_spec Where to connect for Zookeeper.
+   * @param executor The cpu executor to run on.
+   */
+  LocationCache(std::string quorum_spec,
+                std::shared_ptr<folly::Executor> executor);
+  /**
+   * Destructor.
+   * This will clean up the zookeeper connections.
+   */
   ~LocationCache();
-  // Meta Related Methods.
-  // These are only public until testing is complete
+
+  /**
+   * Where is meta hosted.
+   *
+   * TODO: This should be a RegionLocation.
+   */
   folly::Future<hbase::pb::ServerName> LocateMeta();
+
+  /**
+   * Go read meta and find out where a region is located.
+   */
   folly::Future<std::shared_ptr<RegionLocation>>
   LocateFromMeta(const hbase::pb::TableName &tn, const std::string &row);
+
+  /**
+   * Remove the cached location of meta.
+   */
   void InvalidateMeta();
-  ConnectionPool cp_;
 
 private:
   void RefreshMetaLocation();
@@ -63,6 +86,7 @@ private:
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::mutex meta_lock_;
   MetaUtil meta_util_;
+  ConnectionPool cp_;
 
   // TODO: migrate this to a smart pointer with a deleter.
   zhandle_t *zk_;

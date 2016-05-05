@@ -28,8 +28,22 @@ class IOBuf;
 }
 
 namespace hbase {
+
+/** @brief A class to convert data from ZooKeeper to other formats.
+ *
+ * This class will convert data to and from Zookeeper into protobuf objects.
+ *
+ */
 class ZkDeserializer {
 public:
+  /**
+   * Merge the data from a buffer into a given message.
+   *
+   * @param buf Naked pointer to iobuf containing data read from zookeeper.
+   * @param out Naked pointer into which the data will be merged. The message
+   * should be the correct type.
+   * @return returns true if the parsing was successful.
+   */
   bool Parse(folly::IOBuf *buf, google::protobuf::Message *out);
 };
 } // namespace hbase

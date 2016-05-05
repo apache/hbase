@@ -41,17 +41,38 @@ class Message;
 
 namespace hbase {
 
+/**
+ * wangle::Handler implementation to convert hbase::Request to IOBuf and
+ * convert IOBuf to hbase::Response.
+ *
+ * This class deals with sending the connection header and preamble
+ * on first request.
+ */
 class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
                                              Response, std::unique_ptr<Request>,
                                              std::unique_ptr<folly::IOBuf>> {
 public:
+  /**
+   * Create the handler
+   * @param user_name the user name of the user running this process.
+   */
   ClientHandler(std::string user_name);
+
+  /**
+   * Get bytes from the wire.
+   * This should be the full message as the length field decoder should be
+   * in the pipeline before this.
+   */
   void read(Context *ctx, std::unique_ptr<folly::IOBuf> msg) override;
+
+  /**
+   * Write the data down the wire.
+   */
   folly::Future<folly::Unit> write(Context *ctx,
                                    std::unique_ptr<Request> r) override;
 
 private:
-  std::unique_ptr<HeaderInfo> header_info_;
+  std::unique_ptr<std::once_flag> once_flag_;
   std::string user_name_;
   RpcSerde serde_;
 
@@ -59,18 +80,5 @@ private:
   std::unique_ptr<folly::AtomicHashMap<
       uint32_t, std::shared_ptr<google::protobuf::Message>>>
       resp_msgs_;
-};
-
-/**
- * Class to contain the info about if the connection header and preamble has
- * been sent.
- *
- * We use a serperate class here so that ClientHandler is relocatable.
- */
-class HeaderInfo {
-public:
-  HeaderInfo() : need_(true), mutex_() {}
-  std::atomic<bool> need_;
-  std::mutex mutex_;
 };
 } // namespace hbase

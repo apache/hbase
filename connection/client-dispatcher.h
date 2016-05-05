@@ -30,17 +30,22 @@
 #include "connection/response.h"
 
 namespace hbase {
+/**
+ * Dispatcher that assigns a call_id and then routes the response back to the future.
+ */
 class ClientDispatcher
     : public wangle::ClientDispatcherBase<SerializePipeline,
                                           std::unique_ptr<Request>, Response> {
 public:
+  /** Create a new ClientDispatcher */
   ClientDispatcher();
-  ~ClientDispatcher() {
-    LOG(ERROR) << "Killing ClientDispatcher call_id = " << current_call_id_;
-  }
+  /** Read a response off the pipeline. */
   void read(Context *ctx, Response in) override;
+  /** Take a request as a call and send it down the pipeline. */
   folly::Future<Response> operator()(std::unique_ptr<Request> arg) override;
+  /** Close the dispatcher and the associated pipeline. */
   folly::Future<folly::Unit> close(Context *ctx) override;
+  /** Close the dispatcher and the associated pipeline. */
   folly::Future<folly::Unit> close() override;
 
 private:
