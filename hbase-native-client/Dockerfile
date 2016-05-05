@@ -24,7 +24,7 @@ ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -p
 
 ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
 
-RUN apt-get install -y vim maven inetutils-ping python-pip && \
+RUN apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz && \
       pip install yapf && \
       apt-get -qq clean && \
       apt-get -y -qq autoremove && \

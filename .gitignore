@@ -16,3 +16,4 @@ hbase-*/test
 *.ipr
 patchprocess/
 dependency-reduced-pom.xml
+docs/
