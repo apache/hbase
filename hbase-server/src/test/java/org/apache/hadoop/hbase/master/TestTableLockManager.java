@@ -104,18 +104,19 @@ public class TestTableLockManager {
 
   public static class TestLockTimeoutExceptionMasterObserver extends BaseMasterObserver {
     @Override
-    public void preDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void preDeleteColumnFamilyAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName, byte[] columnFamily) throws IOException {
       deleteColumn.countDown();
     }
     @Override
-    public void postDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void postCompletedDeleteColumnFamilyAction(
+        ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName, byte[] columnFamily) throws IOException {
       Threads.sleep(10000);
     }
 
     @Override
-    public void preAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void preAddColumnFamilyAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       fail("Add column should have timeouted out for acquiring the table lock");
     }
@@ -169,14 +170,15 @@ public class TestTableLockManager {
 
   public static class TestAlterAndDisableMasterObserver extends BaseMasterObserver {
     @Override
-    public void preAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void preAddColumnFamilyAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       LOG.debug("addColumn called");
       addColumn.countDown();
     }
 
     @Override
-    public void postAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void postCompletedAddColumnFamilyAction(
+        ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       Threads.sleep(6000);
       try {

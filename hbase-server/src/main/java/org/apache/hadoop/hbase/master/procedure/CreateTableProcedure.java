@@ -311,7 +311,7 @@ public class CreateTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.preCreateTableHandler(hTableDescriptor, regions);
+          cpHost.preCreateTableAction(hTableDescriptor, regions);
           return null;
         }
       });
@@ -327,7 +327,7 @@ public class CreateTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.postCreateTableHandler(hTableDescriptor, regions);
+          cpHost.postCompletedCreateTableAction(hTableDescriptor, regions);
           return null;
         }
       });

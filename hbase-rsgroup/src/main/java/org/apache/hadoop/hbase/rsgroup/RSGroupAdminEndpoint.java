@@ -310,6 +310,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                               HRegionInfo[] regions) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                     HTableDescriptor desc,
@@ -317,9 +318,24 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HTableDescriptor desc,
+      final HRegionInfo[] regions) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                      HTableDescriptor desc,
                                      HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
+  public void postCompletedCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HTableDescriptor desc,
+      final HRegionInfo[] regions) throws IOException {
   }
 
   @Override
@@ -327,14 +343,28 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                              TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                     TableName tableName) throws IOException {
   }
 
   @Override
+  public void preDeleteTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postCompletedDeleteTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
   }
 
   @Override
@@ -347,14 +377,28 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                                 TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                       TableName tableName) throws IOException {
   }
 
   @Override
+  public void preTruncateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                        TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postCompletedTruncateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
   }
 
   @Override
@@ -369,6 +413,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                               HTableDescriptor htd) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                     TableName tableName,
@@ -376,9 +421,24 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preModifyTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HTableDescriptor htd) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                      TableName tableName,
                                      HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void postCompletedModifyTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HTableDescriptor htd) throws IOException {
   }
 
   @Override
@@ -405,6 +465,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                                   HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                   TableName tableName,
@@ -412,11 +473,13 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void preAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                        TableName tableName,
-                                        HColumnDescriptor columnFamily) throws IOException {
+  public void preAddColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                    TableName tableName,
@@ -424,9 +487,10 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void postAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                         TableName tableName,
-                                         HColumnDescriptor columnFamily) throws IOException {
+  public void postCompletedAddColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Override
@@ -453,6 +517,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   }
 
+  @Deprecated
   @Override
   public void preModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName
       tableName, HColumnDescriptor columnFamily) throws IOException {
@@ -460,12 +525,15 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void preModifyColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                           TableName tableName, HColumnDescriptor columnFamily)
+  public void preModifyColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily)
       throws IOException {
 
   }
 
+  @Deprecated
   @Override
   public void postModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                       TableName tableName, HColumnDescriptor columnFamily) throws
@@ -474,8 +542,10 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void postModifyColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                            TableName tableName, HColumnDescriptor columnFamily)
+  public void postCompletedModifyColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily)
       throws IOException {
 
   }
@@ -504,6 +574,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   }
 
+  @Deprecated
   @Override
   public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName
       tableName, byte[] columnFamily) throws IOException {
@@ -511,12 +582,15 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void preDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                           TableName tableName, byte[] columnFamily) throws
+  public void preDeleteColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final byte[] columnFamily) throws
       IOException {
 
   }
 
+  @Deprecated
   @Override
   public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                       TableName tableName, byte[] columnFamily) throws IOException {
@@ -524,8 +598,10 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void postDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                            TableName tableName, byte[] columnFamily) throws
+  public void postCompletedDeleteColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final byte[] columnFamily) throws
       IOException {
 
   }
@@ -542,6 +618,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   }
 
+  @Deprecated
   @Override
   public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName
       tableName) throws IOException {
@@ -549,8 +626,23 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preEnableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+
+  }
+
+  @Deprecated
+  @Override
   public void postEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName
       tableName) throws IOException {
+
+  }
+
+  @Override
+  public void postCompletedEnableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
 
   }
 
@@ -566,6 +658,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   }
 
+  @Deprecated
   @Override
   public void preDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName
       tableName) throws IOException {
@@ -573,8 +666,23 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preDisableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+
+  }
+
+  @Deprecated
+  @Override
   public void postDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                       TableName tableName) throws IOException {
+
+  }
+
+  @Override
+  public void postCompletedDisableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
 
   }
 

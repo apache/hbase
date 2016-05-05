@@ -269,7 +269,7 @@ public class DeleteTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.preDeleteTableHandler(tableName);
+          cpHost.preDeleteTableAction(tableName);
           return null;
         }
       });
@@ -287,7 +287,7 @@ public class DeleteTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.postDeleteTableHandler(tableName);
+          cpHost.postCompletedDeleteTableAction(tableName);
           return null;
         }
       });

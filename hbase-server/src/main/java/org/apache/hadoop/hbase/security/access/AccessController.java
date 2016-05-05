@@ -1005,8 +1005,10 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment> c,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  public void postCompletedCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HTableDescriptor desc,
+      final HRegionInfo[] regions) throws IOException {
     // When AC is used, it should be configured as the 1st CP.
     // In Master, the table operations like create, are handled by a Thread pool but the max size
     // for this pool is 1. So if multiple CPs create tables on startup, these creations will happen

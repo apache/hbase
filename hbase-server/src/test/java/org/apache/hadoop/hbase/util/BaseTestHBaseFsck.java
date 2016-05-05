@@ -608,19 +608,23 @@ public class BaseTestHBaseFsck {
     volatile CountDownLatch tableDeletionLatch = null;
 
     @Override
-    public void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-      // the AccessController test, some times calls only and directly the postCreateTableHandler()
+    public void postCompletedCreateTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HTableDescriptor desc,
+        final HRegionInfo[] regions) throws IOException {
+      // the AccessController test, some times calls only and directly the
+      // postCompletedCreateTableAction()
       if (tableCreationLatch != null) {
         tableCreationLatch.countDown();
       }
     }
 
     @Override
-    public void postDeleteTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                       TableName tableName)
-    throws IOException {
-      // the AccessController test, some times calls only and directly the postDeleteTableHandler()
+    public void postCompletedDeleteTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName) throws IOException {
+      // the AccessController test, some times calls only and directly the
+      // postCompletedDeleteTableAction()
       if (tableDeletionLatch != null) {
         tableDeletionLatch.countDown();
       }

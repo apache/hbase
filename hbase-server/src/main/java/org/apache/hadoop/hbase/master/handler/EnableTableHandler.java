@@ -135,11 +135,11 @@ public class EnableTableHandler extends EventHandler {
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
           .getMasterCoprocessorHost();
       if (cpHost != null) {
-        cpHost.preEnableTableHandler(this.tableName);
+        cpHost.preEnableTableAction(this.tableName);
       }
       handleEnableTable();
       if (cpHost != null) {
-        cpHost.postEnableTableHandler(this.tableName);
+        cpHost.postCompletedEnableTableAction(this.tableName);
       }
     } catch (IOException | InterruptedException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);

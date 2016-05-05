@@ -67,6 +67,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       HRegionInfo regionA, HRegionInfo regionB) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preCreateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -74,9 +75,24 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HTableDescriptor desc,
+      final HRegionInfo[] regions) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postCreateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
+  public void postCompletedCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HTableDescriptor desc,
+      final HRegionInfo[] regions) throws IOException {
   }
 
   @Override
@@ -89,6 +105,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preDeleteTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
@@ -96,8 +113,21 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preDeleteTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException{
+  }
+
+  @Deprecated
+  @Override
   public void postDeleteTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postCompletedDeleteTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
       throws IOException {
   }
 
@@ -111,6 +141,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preTruncateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
@@ -118,8 +149,21 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preTruncateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postTruncateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postCompletedTruncateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
       throws IOException {
   }
 
@@ -128,16 +172,32 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       TableName tableName, HTableDescriptor htd) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void postModifyTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HTableDescriptor htd) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preModifyTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void preModifyTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void postCompletedModifyTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HTableDescriptor htd) throws IOException {
   }
 
   @Override
@@ -225,9 +285,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void preAddColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor columnFamily) throws IOException {
+  public void preAddColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Deprecated
@@ -238,9 +299,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void postAddColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor columnFamily) throws IOException {
+  public void postCompletedAddColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Deprecated
@@ -273,9 +335,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void preModifyColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor columnFamily) throws IOException {
+  public void preModifyColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Deprecated
@@ -286,9 +349,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void postModifyColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor columnFamily) throws IOException {
+  public void postCompletedModifyColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Deprecated
@@ -321,9 +385,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void preDeleteColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      byte[] columnFamily) throws IOException {
+  public void preDeleteColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final byte[] columnFamily) throws IOException {
   }
 
   @Deprecated
@@ -334,9 +399,10 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void postDeleteColumnFamilyHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      byte[] columnFamily) throws IOException {
+  public void postCompletedDeleteColumnFamilyAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName,
+      final byte[] columnFamily) throws IOException {
   }
 
 
@@ -350,6 +416,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preEnableTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
@@ -357,8 +424,20 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preEnableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException {
+  }
+  @Deprecated
+  @Override
   public void postEnableTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postCompletedEnableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
       throws IOException {
   }
 
@@ -372,6 +451,7 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
       TableName tableName) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preDisableTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
@@ -379,8 +459,21 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preDisableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postDisableTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postCompletedDisableTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
       throws IOException {
   }
 

@@ -383,10 +383,10 @@ public class AddColumnFamilyProcedure
         public Void run() throws Exception {
           switch (state) {
           case ADD_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preAddColumnHandler(tableName, cfDescriptor);
+            cpHost.preAddColumnFamilyAction(tableName, cfDescriptor);
             break;
           case ADD_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postAddColumnHandler(tableName, cfDescriptor);
+            cpHost.postCompletedAddColumnFamilyAction(tableName, cfDescriptor);
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);

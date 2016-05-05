@@ -240,24 +240,26 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
+  public void preCreateTableAction(final HTableDescriptor htd, final HRegionInfo[] regions)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preCreateTableHandler(ctx, htd, regions);
+        oserver.preCreateTableAction(ctx, htd, regions);
       }
     });
   }
 
-  public void postCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
-      throws IOException {
+  public void postCompletedCreateTableAction(
+      final HTableDescriptor htd, final HRegionInfo[] regions) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postCreateTableHandler(ctx, htd, regions);
+        oserver.postCompletedCreateTableAction(ctx, htd, regions);
       }
     });
   }
@@ -282,22 +284,24 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDeleteTableHandler(final TableName tableName) throws IOException {
+  public void preDeleteTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preDeleteTableHandler(ctx, tableName);
+        oserver.preDeleteTableAction(ctx, tableName);
       }
     });
   }
 
-  public void postDeleteTableHandler(final TableName tableName) throws IOException {
+  public void postCompletedDeleteTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postDeleteTableHandler(ctx, tableName);
+        oserver.postCompletedDeleteTableAction(ctx, tableName);
       }
     });
   }
@@ -322,22 +326,24 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preTruncateTableHandler(final TableName tableName) throws IOException {
+  public void preTruncateTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preTruncateTableHandler(ctx, tableName);
+        oserver.preTruncateTableAction(ctx, tableName);
       }
     });
   }
 
-  public void postTruncateTableHandler(final TableName tableName) throws IOException {
+  public void postCompletedTruncateTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postTruncateTableHandler(ctx, tableName);
+        oserver.postCompletedTruncateTableAction(ctx, tableName);
       }
     });
   }
@@ -364,24 +370,26 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
+  public void preModifyTableAction(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preModifyTableHandler(ctx, tableName, htd);
+        oserver.preModifyTableAction(ctx, tableName, htd);
       }
     });
   }
 
-  public void postModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
+  public void postCompletedModifyTableAction(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postModifyTableHandler(ctx, tableName, htd);
+        oserver.postCompletedModifyTableAction(ctx, tableName, htd);
       }
     });
   }
@@ -410,27 +418,30 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preAddColumnHandler(final TableName tableName,
-                                     final HColumnDescriptor columnFamily)
+  public boolean preAddColumnFamilyAction(
+      final TableName tableName,
+      final HColumnDescriptor columnFamily)
       throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preAddColumnHandler(ctx, tableName, columnFamily);
-        oserver.preAddColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.preAddColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
 
-  public void postAddColumnHandler(final TableName tableName, final HColumnDescriptor columnFamily)
+  public void postCompletedAddColumnFamilyAction(
+      final TableName tableName,
+      final HColumnDescriptor columnFamily)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postAddColumnHandler(ctx, tableName, columnFamily);
-        oserver.postAddColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.postCompletedAddColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
@@ -459,26 +470,28 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preModifyColumnHandler(final TableName tableName,
+  public boolean preModifyColumnFamilyAction(
+      final TableName tableName,
       final HColumnDescriptor columnFamily) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preModifyColumnHandler(ctx, tableName, columnFamily);
-        oserver.preModifyColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.preModifyColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
 
-  public void postModifyColumnHandler(final TableName tableName,
+  public void postCompletedModifyColumnFamilyAction(
+      final TableName tableName,
       final HColumnDescriptor columnFamily) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postModifyColumnHandler(ctx, tableName, columnFamily);
-        oserver.postModifyColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.postCompletedModifyColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
@@ -507,26 +520,28 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preDeleteColumnHandler(final TableName tableName, final byte[] columnFamily)
+  public boolean preDeleteColumnFamilyAction(
+      final TableName tableName,
+      final byte[] columnFamily)
       throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preDeleteColumnHandler(ctx, tableName, columnFamily);
-        oserver.preDeleteColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.preDeleteColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
 
-  public void postDeleteColumnHandler(final TableName tableName, final byte[] columnFamily)
-      throws IOException {
+  public void postCompletedDeleteColumnFamilyAction(
+      final TableName tableName, final byte[] columnFamily) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postDeleteColumnHandler(ctx, tableName, columnFamily);
-        oserver.postDeleteColumnFamilyHandler(ctx, tableName, columnFamily);
+        oserver.postCompletedDeleteColumnFamilyAction(ctx, tableName, columnFamily);
       }
     });
   }
@@ -551,22 +566,24 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preEnableTableHandler(final TableName tableName) throws IOException {
+  public void preEnableTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preEnableTableHandler(ctx, tableName);
+        oserver.preEnableTableAction(ctx, tableName);
       }
     });
   }
 
-  public void postEnableTableHandler(final TableName tableName) throws IOException {
+  public void postCompletedEnableTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postEnableTableHandler(ctx, tableName);
+        oserver.postCompletedEnableTableAction(ctx, tableName);
       }
     });
   }
@@ -591,22 +608,24 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDisableTableHandler(final TableName tableName) throws IOException {
+  public void preDisableTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.preDisableTableHandler(ctx, tableName);
+        oserver.preDisableTableAction(ctx, tableName);
       }
     });
   }
 
-  public void postDisableTableHandler(final TableName tableName) throws IOException {
+  public void postCompletedDisableTableAction(final TableName tableName) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postDisableTableHandler(ctx, tableName);
+        oserver.postCompletedDisableTableAction(ctx, tableName);
       }
     });
   }

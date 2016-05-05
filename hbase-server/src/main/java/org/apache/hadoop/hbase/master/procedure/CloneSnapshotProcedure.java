@@ -376,7 +376,7 @@ public class CloneSnapshotProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.preCreateTableHandler(hTableDescriptor, null);
+          cpHost.preCreateTableAction(hTableDescriptor, null);
           return null;
         }
       });
@@ -398,7 +398,7 @@ public class CloneSnapshotProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.postCreateTableHandler(hTableDescriptor, regions);
+          cpHost.postCompletedCreateTableAction(hTableDescriptor, regions);
           return null;
         }
       });

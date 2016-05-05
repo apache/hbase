@@ -364,10 +364,10 @@ public class ModifyColumnFamilyProcedure
         public Void run() throws Exception {
           switch (state) {
           case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preModifyColumnHandler(tableName, cfDescriptor);
+            cpHost.preModifyColumnFamilyAction(tableName, cfDescriptor);
             break;
           case MODIFY_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postModifyColumnHandler(tableName, cfDescriptor);
+            cpHost.postCompletedModifyColumnFamilyAction(tableName, cfDescriptor);
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);

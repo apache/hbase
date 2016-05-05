@@ -566,10 +566,10 @@ public class EnableTableProcedure
         public Void run() throws Exception {
           switch (state) {
           case ENABLE_TABLE_PRE_OPERATION:
-            cpHost.preEnableTableHandler(getTableName());
+            cpHost.preEnableTableAction(getTableName());
             break;
           case ENABLE_TABLE_POST_OPERATION:
-            cpHost.postEnableTableHandler(getTableName());
+            cpHost.postCompletedEnableTableAction(getTableName());
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);

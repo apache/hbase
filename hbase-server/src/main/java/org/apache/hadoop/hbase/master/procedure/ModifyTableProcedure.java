@@ -477,10 +477,10 @@ public class ModifyTableProcedure
         public Void run() throws Exception {
           switch (state) {
           case MODIFY_TABLE_PRE_OPERATION:
-            cpHost.preModifyTableHandler(getTableName(), modifiedHTableDescriptor);
+            cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor);
             break;
           case MODIFY_TABLE_POST_OPERATION:
-            cpHost.postModifyTableHandler(getTableName(), modifiedHTableDescriptor);
+            cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor);
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);

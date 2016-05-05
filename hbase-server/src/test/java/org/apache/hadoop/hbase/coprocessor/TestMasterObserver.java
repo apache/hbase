@@ -152,24 +152,24 @@ public class TestMasterObserver {
     private boolean postRestoreSnapshotCalled;
     private boolean preDeleteSnapshotCalled;
     private boolean postDeleteSnapshotCalled;
-    private boolean preCreateTableHandlerCalled;
-    private boolean postCreateTableHandlerCalled;
-    private boolean preDeleteTableHandlerCalled;
-    private boolean postDeleteTableHandlerCalled;
-    private boolean preTruncateTableHandlerCalled;
-    private boolean postTruncateTableHandlerCalled;
-    private boolean preAddColumnHandlerCalled;
-    private boolean postAddColumnHandlerCalled;
-    private boolean preModifyColumnHandlerCalled;
-    private boolean postModifyColumnHandlerCalled;
-    private boolean preDeleteColumnHandlerCalled;
-    private boolean postDeleteColumnHandlerCalled;
-    private boolean preEnableTableHandlerCalled;
-    private boolean postEnableTableHandlerCalled;
-    private boolean preDisableTableHandlerCalled;
-    private boolean postDisableTableHandlerCalled;
-    private boolean preModifyTableHandlerCalled;
-    private boolean postModifyTableHandlerCalled;
+    private boolean preCreateTableActionCalled;
+    private boolean postCompletedCreateTableActionCalled;
+    private boolean preDeleteTableActionCalled;
+    private boolean postCompletedDeleteTableActionCalled;
+    private boolean preTruncateTableActionCalled;
+    private boolean postCompletedTruncateTableActionCalled;
+    private boolean preAddColumnFamilyActionCalled;
+    private boolean postCompletedAddColumnFamilyActionCalled;
+    private boolean preModifyColumnFamilyActionCalled;
+    private boolean postCompletedModifyColumnFamilyActionCalled;
+    private boolean preDeleteColumnFamilyActionCalled;
+    private boolean postCompletedDeleteColumnFamilyActionCalled;
+    private boolean preEnableTableActionCalled;
+    private boolean postCompletedEnableTableActionCalled;
+    private boolean preDisableTableActionCalled;
+    private boolean postCompletedDisableTableActionCalled;
+    private boolean preModifyTableActionCalled;
+    private boolean postCompletedModifyTableActionCalled;
     private boolean preGetTableDescriptorsCalled;
     private boolean postGetTableDescriptorsCalled;
     private boolean postGetTableNamesCalled;
@@ -236,24 +236,24 @@ public class TestMasterObserver {
       postRestoreSnapshotCalled = false;
       preDeleteSnapshotCalled = false;
       postDeleteSnapshotCalled = false;
-      preCreateTableHandlerCalled = false;
-      postCreateTableHandlerCalled = false;
-      preDeleteTableHandlerCalled = false;
-      postDeleteTableHandlerCalled = false;
-      preTruncateTableHandlerCalled = false;
-      postTruncateTableHandlerCalled = false;
-      preModifyTableHandlerCalled = false;
-      postModifyTableHandlerCalled = false;
-      preAddColumnHandlerCalled = false;
-      postAddColumnHandlerCalled = false;
-      preModifyColumnHandlerCalled = false;
-      postModifyColumnHandlerCalled = false;
-      preDeleteColumnHandlerCalled = false;
-      postDeleteColumnHandlerCalled = false;
-      preEnableTableHandlerCalled = false;
-      postEnableTableHandlerCalled = false;
-      preDisableTableHandlerCalled = false;
-      postDisableTableHandlerCalled = false;
+      preCreateTableActionCalled = false;
+      postCompletedCreateTableActionCalled = false;
+      preDeleteTableActionCalled = false;
+      postCompletedDeleteTableActionCalled = false;
+      preTruncateTableActionCalled = false;
+      postCompletedTruncateTableActionCalled = false;
+      preModifyTableActionCalled = false;
+      postCompletedModifyTableActionCalled = false;
+      preAddColumnFamilyActionCalled = false;
+      postCompletedAddColumnFamilyActionCalled = false;
+      preModifyColumnFamilyActionCalled = false;
+      postCompletedModifyColumnFamilyActionCalled = false;
+      preDeleteColumnFamilyActionCalled = false;
+      postCompletedDeleteColumnFamilyActionCalled = false;
+      preEnableTableActionCalled = false;
+      postCompletedEnableTableActionCalled = false;
+      preDisableTableActionCalled = false;
+      postCompletedDisableTableActionCalled = false;
       preGetTableDescriptorsCalled = false;
       postGetTableDescriptorsCalled = false;
       postGetTableNamesCalled = false;
@@ -962,109 +962,169 @@ public class TestMasterObserver {
       return preDeleteSnapshotCalled && postDeleteSnapshotCalled;
     }
 
+    @Deprecated
     @Override
     public void preCreateTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+    }
+
+    @Override
+    public void preCreateTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> env,
+        final HTableDescriptor desc,
+        final HRegionInfo[] regions) throws IOException {
       if (bypass) {
         env.bypass();
       }
-      preCreateTableHandlerCalled = true;
+      preCreateTableActionCalled = true;
     }
 
+    @Deprecated
     @Override
     public void postCreateTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> ctx,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-      postCreateTableHandlerCalled = true;
+    }
+
+    @Override
+    public void postCompletedCreateTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HTableDescriptor desc,
+        final HRegionInfo[] regions) throws IOException {
+      postCompletedCreateTableActionCalled = true;
       tableCreationLatch.countDown();
     }
 
-    public boolean wasPreCreateTableHandlerCalled(){
-      return preCreateTableHandlerCalled;
+    public boolean wasPreCreateTableActionCalled(){
+      return preCreateTableActionCalled;
     }
-    public boolean wasCreateTableHandlerCalled() {
-      return preCreateTableHandlerCalled && postCreateTableHandlerCalled;
-    }
-
-    public boolean wasCreateTableHandlerCalledOnly() {
-      return preCreateTableHandlerCalled && !postCreateTableHandlerCalled;
+    public boolean wasCreateTableActionCalled() {
+      return preCreateTableActionCalled && postCompletedCreateTableActionCalled;
     }
 
+    public boolean wasCreateTableActionCalledOnly() {
+      return preCreateTableActionCalled && !postCompletedCreateTableActionCalled;
+    }
+
+    @Deprecated
     @Override
     public void preDeleteTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
-      if (bypass) {
-        env.bypass();
-      }
-      preDeleteTableHandlerCalled = true;
     }
 
+    @Deprecated
     @Override
     public void postDeleteTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
-      postDeleteTableHandlerCalled = true;
+    }
+
+    @Override
+    public void preDeleteTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> env, final TableName tableName)
+        throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preDeleteTableActionCalled = true;
+    }
+
+    @Override
+    public void postCompletedDeleteTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      postCompletedDeleteTableActionCalled = true;
       tableDeletionLatch.countDown();
     }
 
-    public boolean wasDeleteTableHandlerCalled() {
-      return preDeleteTableHandlerCalled && postDeleteTableHandlerCalled;
+    public boolean wasDeleteTableActionCalled() {
+      return preDeleteTableActionCalled && postCompletedDeleteTableActionCalled;
     }
 
-    public boolean wasDeleteTableHandlerCalledOnly() {
-      return preDeleteTableHandlerCalled && !postDeleteTableHandlerCalled;
+    public boolean wasDeleteTableActionCalledOnly() {
+      return preDeleteTableActionCalled && !postCompletedDeleteTableActionCalled;
     }
 
+    @Deprecated
     @Override
     public void preTruncateTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
-      if (bypass) {
-        env.bypass();
-      }
-      preTruncateTableHandlerCalled = true;
     }
 
+    @Deprecated
     @Override
     public void postTruncateTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
-      postTruncateTableHandlerCalled = true;
     }
 
-    public boolean wasTruncateTableHandlerCalled() {
-      return preTruncateTableHandlerCalled && postTruncateTableHandlerCalled;
+    @Override
+    public void preTruncateTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> env, final TableName tableName)
+        throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preTruncateTableActionCalled = true;
     }
 
-    public boolean wasTruncateTableHandlerCalledOnly() {
-      return preTruncateTableHandlerCalled && !postTruncateTableHandlerCalled;
+    @Override
+    public void postCompletedTruncateTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      postCompletedTruncateTableActionCalled = true;
     }
 
+    public boolean wasTruncateTableActionCalled() {
+      return preTruncateTableActionCalled && postCompletedTruncateTableActionCalled;
+    }
+
+    public boolean wasTruncateTableActionCalledOnly() {
+      return preTruncateTableActionCalled && !postCompletedTruncateTableActionCalled;
+    }
+
+    @Deprecated
     @Override
     public void preModifyTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HTableDescriptor htd) throws IOException {
-      if (bypass) {
-        env.bypass();
-      }
-      preModifyTableHandlerCalled = true;
     }
 
+    @Deprecated
     @Override
     public void postModifyTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HTableDescriptor htd) throws IOException {
-      postModifyTableHandlerCalled = true;
     }
 
-    public boolean wasModifyTableHandlerCalled() {
-      return preModifyColumnHandlerCalled && postModifyColumnHandlerCalled;
+    @Override
+    public void preModifyTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> env,
+        final TableName tableName,
+        final HTableDescriptor htd) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preModifyTableActionCalled = true;
     }
 
-    public boolean wasModifyTableHandlerCalledOnly() {
-      return preModifyColumnHandlerCalled && !postModifyColumnHandlerCalled;
+    @Override
+    public void postCompletedModifyTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> env,
+        final TableName tableName,
+        final HTableDescriptor htd) throws IOException {
+      postCompletedModifyTableActionCalled = true;
+    }
+
+    public boolean wasModifyTableActionCalled() {
+      return preModifyColumnFamilyActionCalled && postCompletedModifyColumnFamilyActionCalled;
+    }
+
+    public boolean wasModifyTableActionCalledOnly() {
+      return preModifyColumnFamilyActionCalled && !postCompletedModifyColumnFamilyActionCalled;
     }
 
     @Deprecated
@@ -1075,13 +1135,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preAddColumnFamilyHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        HColumnDescriptor columnFamily) throws IOException {
+    public void preAddColumnFamilyAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName,
+        final HColumnDescriptor columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
-      preAddColumnHandlerCalled = true;
+      preAddColumnFamilyActionCalled = true;
     }
 
     @Deprecated
@@ -1092,18 +1153,19 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postAddColumnFamilyHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        HColumnDescriptor columnFamily) throws IOException {
-      postAddColumnHandlerCalled = true;
+    public void postCompletedAddColumnFamilyAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName,
+        final HColumnDescriptor columnFamily) throws IOException {
+      postCompletedAddColumnFamilyActionCalled = true;
     }
 
-    public boolean wasAddColumnHandlerCalled() {
-      return preAddColumnHandlerCalled && postAddColumnHandlerCalled;
+    public boolean wasAddColumnFamilyActionCalled() {
+      return preAddColumnFamilyActionCalled && postCompletedAddColumnFamilyActionCalled;
     }
 
-    public boolean preAddColumnHandlerCalledOnly() {
-      return preAddColumnHandlerCalled && !postAddColumnHandlerCalled;
+    public boolean preAddColumnFamilyActionCalledOnly() {
+      return preAddColumnFamilyActionCalled && !postCompletedAddColumnFamilyActionCalled;
     }
 
     @Deprecated
@@ -1114,13 +1176,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preModifyColumnFamilyHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        HColumnDescriptor columnFamily) throws IOException {
+    public void preModifyColumnFamilyAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName,
+        final HColumnDescriptor columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
-      preModifyColumnHandlerCalled = true;
+      preModifyColumnFamilyActionCalled = true;
     }
 
     @Deprecated
@@ -1131,18 +1194,18 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postModifyColumnFamilyHandler(
+    public void postCompletedModifyColumnFamilyAction(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
         HColumnDescriptor columnFamily) throws IOException {
-      postModifyColumnHandlerCalled = true;
+      postCompletedModifyColumnFamilyActionCalled = true;
     }
 
-    public boolean wasModifyColumnHandlerCalled() {
-      return preModifyColumnHandlerCalled && postModifyColumnHandlerCalled;
+    public boolean wasModifyColumnFamilyActionCalled() {
+      return preModifyColumnFamilyActionCalled && postCompletedModifyColumnFamilyActionCalled;
     }
 
-    public boolean preModifyColumnHandlerCalledOnly() {
-      return preModifyColumnHandlerCalled && !postModifyColumnHandlerCalled;
+    public boolean preModifyColumnFamilyActionCalledOnly() {
+      return preModifyColumnFamilyActionCalled && !postCompletedModifyColumnFamilyActionCalled;
     }
 
     @Deprecated
@@ -1153,13 +1216,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preDeleteColumnFamilyHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        byte[] columnFamily) throws IOException {
+    public void preDeleteColumnFamilyAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName,
+        final byte[] columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
-      preDeleteColumnHandlerCalled = true;
+      preDeleteColumnFamilyActionCalled = true;
     }
 
     @Deprecated
@@ -1170,68 +1234,95 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postDeleteColumnFamilyHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        byte[] columnFamily) throws IOException {
-      postDeleteColumnHandlerCalled = true;
+    public void postCompletedDeleteColumnFamilyAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName,
+        final byte[] columnFamily) throws IOException {
+      postCompletedDeleteColumnFamilyActionCalled = true;
     }
 
-    public boolean wasDeleteColumnHandlerCalled() {
-      return preDeleteColumnHandlerCalled && postDeleteColumnHandlerCalled;
+    public boolean wasDeleteColumnFamilyActionCalled() {
+      return preDeleteColumnFamilyActionCalled && postCompletedDeleteColumnFamilyActionCalled;
     }
 
-    public boolean preDeleteColumnHandlerCalledOnly() {
-      return preDeleteColumnHandlerCalled && !postDeleteColumnHandlerCalled;
+    public boolean preDeleteColumnFamilyActionCalledOnly() {
+      return preDeleteColumnFamilyActionCalled && !postCompletedDeleteColumnFamilyActionCalled;
     }
 
+    @Deprecated
     @Override
     public void preEnableTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
-      if (bypass) {
-        env.bypass();
-      }
-      preEnableTableHandlerCalled = true;
     }
 
+    @Deprecated
     @Override
     public void postEnableTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
-      postEnableTableHandlerCalled = true;
     }
 
-    public boolean wasEnableTableHandlerCalled() {
-      return preEnableTableHandlerCalled && postEnableTableHandlerCalled;
+    @Override
+    public void preEnableTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      if (bypass) {
+        ctx.bypass();
+      }
+      preEnableTableActionCalled = true;
     }
 
-    public boolean preEnableTableHandlerCalledOnly() {
-      return preEnableTableHandlerCalled && !postEnableTableHandlerCalled;
+    @Override
+    public void postCompletedEnableTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      postCompletedEnableTableActionCalled = true;
+    }
+
+    public boolean wasEnableTableActionCalled() {
+      return preEnableTableActionCalled && postCompletedEnableTableActionCalled;
+    }
+
+    public boolean preEnableTableActionCalledOnly() {
+      return preEnableTableActionCalled && !postCompletedEnableTableActionCalled;
     }
 
     @Override
     public void preDisableTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
-      if (bypass) {
-        env.bypass();
-      }
-      preDisableTableHandlerCalled = true;
     }
 
     @Override
     public void postDisableTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
-      postDisableTableHandlerCalled = true;
     }
 
-    public boolean wasDisableTableHandlerCalled() {
-      return preDisableTableHandlerCalled && postDisableTableHandlerCalled;
+    @Override
+    public void preDisableTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      if (bypass) {
+        ctx.bypass();
+      }
+      preDisableTableActionCalled = true;
     }
 
-    public boolean preDisableTableHandlerCalledOnly() {
-      return preDisableTableHandlerCalled && !postDisableTableHandlerCalled;
+    @Override
+    public void postCompletedDisableTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+        throws IOException {
+      postCompletedDisableTableActionCalled = true;
+    }
+
+    public boolean wasDisableTableActionCalled() {
+      return preDisableTableActionCalled && postCompletedDisableTableActionCalled;
+    }
+
+    public boolean preDisableTableActionCalledOnly() {
+      return preDisableTableActionCalled && !postCompletedDisableTableActionCalled;
     }
 
     @Override
@@ -1445,9 +1536,9 @@ public class TestMasterObserver {
       assertTrue("Test table should be created", cp.wasCreateTableCalled());
       tableCreationLatch.await();
       assertTrue("Table pre create handler called.", cp
-        .wasPreCreateTableHandlerCalled());
+        .wasPreCreateTableActionCalled());
       assertTrue("Table create handler should be called.",
-        cp.wasCreateTableHandlerCalled());
+        cp.wasCreateTableActionCalled());
 
       RegionLocator regionLocator = connection.getRegionLocator(htd.getTableName());
       List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
@@ -1464,7 +1555,7 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should have been called on table disable",
         cp.wasDisableTableCalled());
       assertTrue("Disable table handler should be called.",
-        cp.wasDisableTableHandlerCalled());
+        cp.wasDisableTableActionCalled());
 
       // enable
       assertFalse(cp.wasEnableTableCalled());
@@ -1474,7 +1565,7 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should have been called on table enable",
         cp.wasEnableTableCalled());
       assertTrue("Enable table handler should be called.",
-        cp.wasEnableTableHandlerCalled());
+        cp.wasEnableTableActionCalled());
 
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
@@ -1511,7 +1602,7 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should have been called on table delete",
         cp.wasDeleteTableCalled());
       assertTrue("Delete table handler should be called.",
-        cp.wasDeleteTableHandlerCalled());
+        cp.wasDeleteTableActionCalled());
 
       // turn off bypass, run the tests again
       cp.enableBypass(false);
@@ -1521,19 +1612,19 @@ public class TestMasterObserver {
       assertTrue("Test table should be created", cp.wasCreateTableCalled());
       tableCreationLatch.await();
       assertTrue("Table pre create handler called.", cp
-        .wasPreCreateTableHandlerCalled());
+        .wasPreCreateTableActionCalled());
       assertTrue("Table create handler should be called.",
-        cp.wasCreateTableHandlerCalled());
+        cp.wasCreateTableActionCalled());
 
       // disable
       assertFalse(cp.wasDisableTableCalled());
-      assertFalse(cp.wasDisableTableHandlerCalled());
+      assertFalse(cp.wasDisableTableActionCalled());
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
       assertTrue("Coprocessor should have been called on table disable",
         cp.wasDisableTableCalled());
       assertTrue("Disable table handler should be called.",
-        cp.wasDisableTableHandlerCalled());
+        cp.wasDisableTableActionCalled());
 
       // modify table
       htd.setMaxFileSize(512 * 1024 * 1024);
@@ -1545,7 +1636,7 @@ public class TestMasterObserver {
       assertTrue("New column family should have been added to test table",
         cp.wasAddColumnCalled());
       assertTrue("Add column handler should be called.",
-        cp.wasAddColumnHandlerCalled());
+        cp.wasAddColumnFamilyActionCalled());
 
       // modify a column family
       HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
@@ -1554,17 +1645,17 @@ public class TestMasterObserver {
       assertTrue("Second column family should be modified",
         cp.wasModifyColumnCalled());
       assertTrue("Modify table handler should be called.",
-        cp.wasModifyColumnHandlerCalled());
+        cp.wasModifyColumnFamilyActionCalled());
 
       // enable
       assertFalse(cp.wasEnableTableCalled());
-      assertFalse(cp.wasEnableTableHandlerCalled());
+      assertFalse(cp.wasEnableTableActionCalled());
       admin.enableTable(tableName);
       assertTrue(admin.isTableEnabled(tableName));
       assertTrue("Coprocessor should have been called on table enable",
         cp.wasEnableTableCalled());
       assertTrue("Enable table handler should be called.",
-        cp.wasEnableTableHandlerCalled());
+        cp.wasEnableTableActionCalled());
 
       // disable again
       admin.disableTable(tableName);
@@ -1573,7 +1664,7 @@ public class TestMasterObserver {
       // delete column
       assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
       assertFalse("Delete table column handler should not be called.",
-        cp.wasDeleteColumnHandlerCalled());
+        cp.wasDeleteColumnFamilyActionCalled());
       admin.deleteColumnFamily(tableName, TEST_FAMILY2);
       HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
       assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
@@ -1581,19 +1672,19 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should have been called on column delete",
         cp.wasDeleteColumnCalled());
       assertTrue("Delete table column handler should be called.",
-        cp.wasDeleteColumnHandlerCalled());
+        cp.wasDeleteColumnFamilyActionCalled());
 
       // delete table
       assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
       assertFalse("Delete table handler should not be called.",
-        cp.wasDeleteTableHandlerCalled());
+        cp.wasDeleteTableActionCalled());
       deleteTable(admin, tableName);
       assertFalse("Test table should have been deleted",
         admin.tableExists(tableName));
       assertTrue("Coprocessor should have been called on table delete",
         cp.wasDeleteTableCalled());
       assertTrue("Delete table handler should be called.",
-        cp.wasDeleteTableHandlerCalled());
+        cp.wasDeleteTableActionCalled());
     }
   }
 

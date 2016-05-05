@@ -513,7 +513,7 @@ public class TestNamespaceAuditor {
     byte[] columnFamily = Bytes.toBytes("info");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
     tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    MasterSyncObserver.throwExceptionInPreCreateTableHandler = true;
+    MasterSyncObserver.throwExceptionInPreCreateTableAction = true;
     try {
       try {
         ADMIN.createTable(tableDescOne);
@@ -527,7 +527,7 @@ public class TestNamespaceAuditor {
       assertEquals("First table creation failed in namespace so number of tables in namespace "
           + "should be 0.", 0, nstate.getTables().size());
 
-      MasterSyncObserver.throwExceptionInPreCreateTableHandler = false;
+      MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       try {
         ADMIN.createTable(tableDescOne);
       } catch (Exception e) {
@@ -539,7 +539,7 @@ public class TestNamespaceAuditor {
       assertEquals("First table was created successfully so table size in namespace should "
           + "be one now.", 1, nstate.getTables().size());
     } finally {
-      MasterSyncObserver.throwExceptionInPreCreateTableHandler = false;
+      MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       if (ADMIN.tableExists(tableOne)) {
         ADMIN.disableTable(tableOne);
         deleteTable(tableOne);
@@ -660,7 +660,7 @@ public class TestNamespaceAuditor {
 
   public static class MasterSyncObserver extends BaseMasterObserver {
     volatile CountDownLatch tableDeletionLatch;
-    static boolean throwExceptionInPreCreateTableHandler;
+    static boolean throwExceptionInPreCreateTableAction;
 
     @Override
     public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -669,16 +669,16 @@ public class TestNamespaceAuditor {
     }
 
     @Override
-    public void postDeleteTableHandler(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
-        throws IOException {
+    public void postCompletedDeleteTableAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName) throws IOException {
       tableDeletionLatch.countDown();
     }
 
     @Override
-    public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    public void preCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-      if (throwExceptionInPreCreateTableHandler) {
+      if (throwExceptionInPreCreateTableAction) {
         throw new IOException("Throw exception as it is demanded.");
       }
     }

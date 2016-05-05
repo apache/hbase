@@ -264,7 +264,7 @@ public class TruncateTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.preTruncateTableHandler(tableName);
+          cpHost.preTruncateTableAction(tableName);
           return null;
         }
       });
@@ -280,7 +280,7 @@ public class TruncateTableProcedure
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          cpHost.postTruncateTableHandler(tableName);
+          cpHost.postCompletedTruncateTableAction(tableName);
           return null;
         }
       });

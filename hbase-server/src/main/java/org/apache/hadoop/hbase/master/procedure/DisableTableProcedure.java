@@ -464,10 +464,10 @@ public class DisableTableProcedure
         public Void run() throws Exception {
           switch (state) {
           case DISABLE_TABLE_PRE_OPERATION:
-            cpHost.preDisableTableHandler(tableName);
+            cpHost.preDisableTableAction(tableName);
             break;
           case DISABLE_TABLE_POST_OPERATION:
-            cpHost.postDisableTableHandler(tableName);
+            cpHost.postCompletedDisableTableAction(tableName);
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);

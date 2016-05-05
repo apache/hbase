@@ -408,10 +408,10 @@ public class DeleteColumnFamilyProcedure
         public Void run() throws Exception {
           switch (state) {
           case DELETE_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preDeleteColumnHandler(tableName, familyName);
+            cpHost.preDeleteColumnFamilyAction(tableName, familyName);
             break;
           case DELETE_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postDeleteColumnHandler(tableName, familyName);
+            cpHost.postCompletedDeleteColumnFamilyAction(tableName, familyName);
             break;
           default:
             throw new UnsupportedOperationException(this + " unhandled state=" + state);
