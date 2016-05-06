@@ -45,6 +45,7 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
    * @param msg reason why the snapshot failed
    * @param desc description of the snapshot that is being failed
    */
+  @Deprecated
   public HBaseSnapshotException(String msg, SnapshotDescription desc) {
     super(msg);
     this.description = desc;
@@ -56,6 +57,7 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
    * @param cause root cause of the failure
    * @param desc description of the snapshot that is being failed
    */
+  @Deprecated
   public HBaseSnapshotException(String msg, Throwable cause, SnapshotDescription desc) {
     super(msg, cause);
     this.description = desc;
@@ -71,6 +73,7 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
     super(message, e);
   }
 
+  @Deprecated
   public SnapshotDescription getSnapshotDescription() {
     return this.description;
   }
