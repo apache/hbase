@@ -5404,6 +5404,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       BulkLoadListener bulkLoadListener) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
+    Map<String, Long> storeFilesSizes = new HashMap<String, Long>();
     Preconditions.checkNotNull(familyPaths);
     // we need writeLock for multi-family bulk load
     startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
@@ -5486,6 +5487,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           Path commitedStoreFile = store.bulkLoadHFile(finalPath, seqId);
 
+          // Note the size of the store file
+          try {
+            FileSystem fs = commitedStoreFile.getFileSystem(baseConf);
+            storeFilesSizes.put(commitedStoreFile.getName(), fs.getFileStatus(commitedStoreFile)
+                .getLen());
+          } catch (IOException e) {
+            LOG.warn("Failed to find the size of hfile " + commitedStoreFile);
+            storeFilesSizes.put(commitedStoreFile.getName(), 0L);
+          }
+
           if(storeFiles.containsKey(familyName)) {
             storeFiles.get(familyName).add(commitedStoreFile);
           } else {
@@ -5520,9 +5531,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (wal != null && !storeFiles.isEmpty()) {
         // write a bulk load event when not all hfiles are loaded
         try {
-          WALProtos.BulkLoadDescriptor loadDescriptor = ProtobufUtil.toBulkLoadDescriptor(
-              this.getRegionInfo().getTable(),
-              ByteStringer.wrap(this.getRegionInfo().getEncodedNameAsBytes()), storeFiles, seqId);
+          WALProtos.BulkLoadDescriptor loadDescriptor =
+              ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
+                ByteStringer.wrap(this.getRegionInfo().getEncodedNameAsBytes()), storeFiles,
+                storeFilesSizes, seqId);
           WALUtil.writeBulkLoadMarkerAndSync(wal, this.htableDescriptor, getRegionInfo(),
               loadDescriptor, mvcc);
         } catch (IOException ioe) {
