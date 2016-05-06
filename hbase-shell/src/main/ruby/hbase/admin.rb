@@ -24,7 +24,6 @@ java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
-java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -68,9 +67,9 @@ module Hbase
       end
       compact_type = nil
       if type == "NORMAL"
-        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::NORMAL
+        compact_type = org.apache.hadoop.hbase.client.CompactType::NORMAL
       elsif type == "MOB"
-        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::MOB
+        compact_type = org.apache.hadoop.hbase.client.CompactType::MOB
       else
         raise ArgumentError, "only NORMAL or MOB accepted for type!"
       end
@@ -96,9 +95,9 @@ module Hbase
       end
       compact_type = nil
       if type == "NORMAL"
-        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::NORMAL
+        compact_type = org.apache.hadoop.hbase.client.CompactType::NORMAL
       elsif type == "MOB"
-        compact_type = org.apache.hadoop.hbase.client.Admin::CompactType::MOB
+        compact_type = org.apache.hadoop.hbase.client.CompactType::MOB
       else
         raise ArgumentError, "only NORMAL or MOB accepted for type!"
       end
@@ -955,7 +954,7 @@ module Hbase
          args.each do |arg|
             if arg[SKIP_FLUSH] == true
               @admin.snapshot(snapshot_name, table_name,
-                              SnapshotDescription::Type::SKIPFLUSH)
+                              org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH)
             else
                @admin.snapshot(snapshot_name, table_name)
             end
