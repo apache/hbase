@@ -78,46 +78,35 @@ public class ChecksumUtil {
   }
 
   /**
-   * Validates that the data in the specified HFileBlock matches the
-   * checksum.  Generates the checksum for the data and
-   * then validate that it matches the value stored in the header.
-   * If there is a checksum mismatch, then return false. Otherwise
-   * return true.
-   * The header is extracted from the specified HFileBlock while the
-   * data-to-be-verified is extracted from 'data'.
+   * Validates that the data in the specified HFileBlock matches the checksum. Generates the
+   * checksums for the data and then validate that it matches those stored in the end of the data.
+   * @param buffer Contains the data in following order: HFileBlock header, data, checksums.
+   * @param pathName Path of the HFile to which the {@code data} belongs. Only used for logging.
+   * @param offset offset of the data being validated. Only used for logging.
+   * @param hdrSize Size of the block header in {@code data}. Only used for logging.
+   * @return True if checksum matches, else false.
    */
-  static boolean validateBlockChecksum(String pathName, long offset, HFileBlock block,
-    byte[] data, int hdrSize) throws IOException {
-
-    // If this is an older version of the block that does not have
-    // checksums, then return false indicating that checksum verification
-    // did not succeed. Actually, this method should never be called
-    // when the minorVersion is 0, thus this is a defensive check for a
-    // cannot-happen case. Since this is a cannot-happen case, it is
-    // better to return false to indicate a checksum validation failure.
-    if (!block.getHFileContext().isUseHBaseChecksum()) {
-      return false;
-    }
-
-    // Get a checksum object based on the type of checksum that is
-    // set in the HFileBlock header. A ChecksumType.NULL indicates that
-    // the caller is not interested in validating checksums, so we
-    // always return true.
-    ChecksumType cktype = ChecksumType.codeToType(block.getChecksumType());
+  static boolean validateChecksum(ByteBuffer buffer, String pathName, long offset, int hdrSize)
+      throws IOException {
+    // A ChecksumType.NULL indicates that the caller is not interested in validating checksums,
+    // so we always return true.
+    ChecksumType cktype =
+        ChecksumType.codeToType(buffer.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));
     if (cktype == ChecksumType.NULL) {
       return true; // No checksum validations needed for this block.
     }
 
     // read in the stored value of the checksum size from the header.
-    int bytesPerChecksum = block.getBytesPerChecksum();
+    int bytesPerChecksum = buffer.getInt(HFileBlock.Header.BYTES_PER_CHECKSUM_INDEX);
 
     DataChecksum dataChecksum = DataChecksum.newDataChecksum(
         cktype.getDataChecksumType(), bytesPerChecksum);
     assert dataChecksum != null;
-    int sizeWithHeader =  block.getOnDiskDataSizeWithHeader();
+    int onDiskDataSizeWithHeader =
+        buffer.getInt(HFileBlock.Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
     if (LOG.isTraceEnabled()) {
-      LOG.info("dataLength=" + data.length
-          + ", sizeWithHeader=" + sizeWithHeader
+      LOG.info("dataLength=" + buffer.capacity()
+          + ", sizeWithHeader=" + onDiskDataSizeWithHeader
           + ", checksumType=" + cktype.getName()
           + ", file=" + pathName
           + ", offset=" + offset
@@ -125,8 +114,10 @@ public class ChecksumUtil {
           + ", bytesPerChecksum=" + bytesPerChecksum);
     }
     try {
-      dataChecksum.verifyChunkedSums(ByteBuffer.wrap(data, 0, sizeWithHeader),
-          ByteBuffer.wrap(data, sizeWithHeader, data.length - sizeWithHeader), pathName, 0);
+      ByteBuffer data = (ByteBuffer) buffer.duplicate().position(0).limit(onDiskDataSizeWithHeader);
+      ByteBuffer checksums = (ByteBuffer) buffer.duplicate().position(onDiskDataSizeWithHeader)
+          .limit(buffer.capacity());
+      dataChecksum.verifyChunkedSums(data, checksums, pathName, 0);
     } catch (ChecksumException e) {
       return false;
     }
