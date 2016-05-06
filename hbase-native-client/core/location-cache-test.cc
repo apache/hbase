@@ -18,14 +18,15 @@
  */
 #include <folly/Memory.h>
 #include <gtest/gtest.h>
-#include <wangle/concurrent/GlobalExecutor.h>
 
 #include "location-cache.h"
 using namespace hbase;
 
 TEST(LocationCacheTest, TestGetMetaNodeContents) {
   // TODO(elliott): need to make a test utility for this.
-  LocationCache cache{"localhost:2181", wangle::getCPUExecutor()};
+  auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
+  auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
+  LocationCache cache{"localhost:2181", cpu, io};
   auto f = cache.LocateMeta();
   auto result = f.get();
   ASSERT_FALSE(f.hasException());

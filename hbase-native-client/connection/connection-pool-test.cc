@@ -34,6 +34,7 @@ using ::testing::_;
 
 class MockConnectionFactory : public ConnectionFactory {
 public:
+  MockConnectionFactory() : ConnectionFactory(nullptr) {}
   MOCK_METHOD0(MakeBootstrap,
                std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
   MOCK_METHOD3(Connect,

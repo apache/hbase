@@ -20,7 +20,8 @@
 
 #include <folly/Logging.h>
 #include <folly/io/IOBuf.h>
-#include <wangle/concurrent/GlobalExecutor.h>
+#include <wangle/concurrent/CPUThreadPoolExecutor.h>
+#include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include "connection/response.h"
 #include "if/Client.pb.h"
@@ -48,10 +49,13 @@ using hbase::pb::RegionInfo;
 // TODO(eclark): make this configurable on client creation
 static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
 
-LocationCache::LocationCache(string quorum_spec,
-                             shared_ptr<folly::Executor> executor)
-    : quorum_spec_(quorum_spec), executor_(executor), meta_promise_(nullptr),
-      meta_lock_(), cp_(), meta_util_(), zk_(nullptr) {
+LocationCache::LocationCache(
+    std::string quorum_spec,
+    std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
+    std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
+    : quorum_spec_(quorum_spec), cpu_executor_(cpu_executor),
+      meta_promise_(nullptr), meta_lock_(), cp_(io_executor), meta_util_(),
+      zk_(nullptr) {
   zk_ = zookeeper_init(quorum_spec.c_str(), nullptr, 1000, 0, 0, 0);
 }
 
@@ -79,7 +83,7 @@ void LocationCache::InvalidateMeta() {
 /// MUST hold the meta_lock_
 void LocationCache::RefreshMetaLocation() {
   meta_promise_ = make_unique<SharedPromise<ServerName>>();
-  executor_->add([&] {
+  cpu_executor_->add([&] {
     meta_promise_->setWith([&] { return this->ReadMetaLocation(); });
   });
 }
@@ -109,10 +113,9 @@ ServerName LocationCache::ReadMetaLocation() {
 
 Future<std::shared_ptr<RegionLocation>>
 LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
-  auto exec = wangle::getCPUExecutor();
   return this->LocateMeta()
-      .via(exec.get())
-      .then([ exec = exec, this ](ServerName sn) { return this->cp_.get(sn); })
+      .via(cpu_executor_.get())
+      .then([this](ServerName sn) { return this->cp_.get(sn); })
       .then([&](std::shared_ptr<HBaseService> service) {
         return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
       })
@@ -121,7 +124,7 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
         // a region location.
         return this->CreateLocation(std::move(resp));
       })
-      .then([ exec = exec, this ](std::shared_ptr<RegionLocation> rl) {
+      .then([this](std::shared_ptr<RegionLocation> rl) {
         // Now fill out the connection.
         rl->set_service(cp_.get(rl->server_name()));
         return rl;
@@ -129,14 +132,14 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
 }
 
 /**
- * Filter to remove a service from the location cache and the connection cache on errors
+ * Filter to remove a service from the location cache and the connection cache
+ * on errors
  * or on cloase.
  */
 class RemoveServiceFilter
     : public ServiceFilter<std::unique_ptr<Request>, Response> {
 
 public:
-
   /** Create a new filter. */
   RemoveServiceFilter(std::shared_ptr<HBaseService> service, ServerName sn,
                       ConnectionPool &cp)
@@ -156,7 +159,6 @@ public:
       return folly::makeFuture();
     }
   }
-
 
   /** Has this been closed */
   virtual bool isAvailable() override {

@@ -61,7 +61,7 @@ struct ServerNameHash {
 class ConnectionPool {
 public:
   /** Create connection pool wit default connection factory */
-  ConnectionPool();
+  ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
 
   /**
    * Desctructor.

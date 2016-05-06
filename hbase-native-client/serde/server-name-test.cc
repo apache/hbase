@@ -46,5 +46,4 @@ TEST(TestServerName, TestIPV6) {
 
   ASSERT_EQ("[::::1]", sn.host_name());
   ASSERT_EQ(123, sn.port());
-
 }

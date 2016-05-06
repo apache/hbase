@@ -31,7 +31,8 @@
 
 namespace hbase {
 /**
- * Dispatcher that assigns a call_id and then routes the response back to the future.
+ * Dispatcher that assigns a call_id and then routes the response back to the
+ * future.
  */
 class ClientDispatcher
     : public wangle::ClientDispatcherBase<SerializePipeline,

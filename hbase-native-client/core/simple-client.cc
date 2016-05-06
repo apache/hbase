@@ -22,7 +22,7 @@
 #include <folly/futures/Future.h>
 #include <gflags/gflags.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
-#include <wangle/concurrent/GlobalExecutor.h>
+#include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include <atomic>
 #include <chrono>
@@ -89,12 +89,10 @@ int main(int argc, char *argv[]) {
   // Set up thread pools.
   auto cpu_pool =
       std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
-  wangle::setCPUExecutor(cpu_pool);
   auto io_pool = std::make_shared<wangle::IOThreadPoolExecutor>(5);
-  wangle::setIOExecutor(io_pool);
 
   // Create the cache.
-  LocationCache cache{FLAGS_zookeeper, cpu_pool};
+  LocationCache cache{FLAGS_zookeeper, cpu_pool, io_pool};
 
   auto row = FLAGS_row;
   auto tn = folly::to<TableName>(FLAGS_table);
@@ -105,7 +103,7 @@ int main(int argc, char *argv[]) {
   auto num_puts = FLAGS_columns;
 
   auto results = std::vector<Future<Response>>{};
-  uint64_t col{0};
+  auto col = uint64_t{0};
   for (; col < num_puts; col++) {
     results.push_back(folly::makeFuture(col)
                           .via(cpu_pool.get())
