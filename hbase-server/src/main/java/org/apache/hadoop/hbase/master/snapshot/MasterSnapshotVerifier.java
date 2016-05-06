@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -125,8 +126,9 @@ public final class MasterSnapshotVerifier {
   private void verifySnapshotDescription(Path snapshotDir) throws CorruptedSnapshotException {
     SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     if (!this.snapshot.equals(found)) {
-      throw new CorruptedSnapshotException("Snapshot read (" + found
-          + ") doesn't equal snapshot we ran (" + snapshot + ").", snapshot);
+      throw new CorruptedSnapshotException(
+          "Snapshot read (" + found + ") doesn't equal snapshot we ran (" + snapshot + ").",
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -137,12 +139,14 @@ public final class MasterSnapshotVerifier {
   private void verifyTableInfo(final SnapshotManifest manifest) throws IOException {
     HTableDescriptor htd = manifest.getTableDescriptor();
     if (htd == null) {
-      throw new CorruptedSnapshotException("Missing Table Descriptor", snapshot);
+      throw new CorruptedSnapshotException("Missing Table Descriptor",
+        ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     if (!htd.getNameAsString().equals(snapshot.getTable())) {
-      throw new CorruptedSnapshotException("Invalid Table Descriptor. Expected "
-        + snapshot.getTable() + " name, got " + htd.getNameAsString(), snapshot);
+      throw new CorruptedSnapshotException(
+          "Invalid Table Descriptor. Expected " + snapshot.getTable() + " name, got "
+              + htd.getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -216,7 +220,7 @@ public final class MasterSnapshotVerifier {
     if (!region.equals(manifestRegionInfo)) {
       String msg = "Manifest region info " + manifestRegionInfo +
                    "doesn't match expected region:" + region;
-      throw new CorruptedSnapshotException(msg, snapshot);
+      throw new CorruptedSnapshotException(msg, ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 }

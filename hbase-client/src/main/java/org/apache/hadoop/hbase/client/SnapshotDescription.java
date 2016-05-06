@@ -81,4 +81,12 @@ public class SnapshotDescription {
   public int getVersion() {
     return this.version;
   }
+
+  @Override
+  public String toString() {
+    return "SnapshotDescription: name = " + ((name != null) ? name : null) + "/table = "
+        + ((table != null) ? table : null) + " /owner = " + ((owner != null) ? owner : null)
+        + (creationTime != -1 ? ("/creationtime = " + creationTime) : "")
+        + (version != -1 ? ("/version = " + version) : "");
+  }
 }

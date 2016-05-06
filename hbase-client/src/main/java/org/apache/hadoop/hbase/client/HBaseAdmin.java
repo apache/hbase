@@ -2333,7 +2333,7 @@ public class HBaseAdmin implements Admin {
     }
     if (!done.getDone()) {
       throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
-          + "' wasn't completed in expectedTime:" + max + " ms", snapshot);
+          + "' wasn't completed in expectedTime:" + max + " ms", snapshotDesc);
     }
   }
 

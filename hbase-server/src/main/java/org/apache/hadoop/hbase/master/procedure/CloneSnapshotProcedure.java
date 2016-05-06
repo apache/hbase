@@ -455,7 +455,8 @@ public class CloneSnapshotProcedure
           String msg = "clone snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
             " failed because " + e.getMessage();
           LOG.error(msg, e);
-          IOException rse = new RestoreSnapshotException(msg, e, snapshot);
+          IOException rse = new RestoreSnapshotException(msg, e,
+              ProtobufUtil.createSnapshotDesc(snapshot));
 
           // these handlers aren't futures so we need to register the error here.
           monitorException.receive(new ForeignException("Master CloneSnapshotProcedure", rse));

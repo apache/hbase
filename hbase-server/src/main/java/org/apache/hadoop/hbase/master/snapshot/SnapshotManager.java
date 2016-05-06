@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -275,7 +276,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public void deleteSnapshot(SnapshotDescription snapshot) throws SnapshotDoesNotExistException, IOException {
     // check to see if it is completed
     if (!isSnapshotCompleted(snapshot)) {
-      throw new SnapshotDoesNotExistException(snapshot);
+      throw new SnapshotDoesNotExistException(ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     String snapshotName = snapshot.getName();
@@ -357,7 +358,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         status = expected.getName() + " not found in proclist " + coordinator.getProcedureNames();
       }
       throw new HBaseSnapshotException("Snapshot " + ssString +  " had an error.  " + status, e,
-          expected);
+        ProtobufUtil.createSnapshotDesc(expected));
     }
 
     // check to see if we are done
@@ -426,7 +427,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           + " because we are already running another snapshot "
           + (handler != null ? ("on the same table " +
               ClientSnapshotDescriptionUtils.toString(handler.getSnapshot()))
-              : "with the same name"), snapshot);
+              : "with the same name"), ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     // make sure we aren't running a restore on the same table
@@ -443,14 +444,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
       // recreate the working directory for the snapshot
       if (!fs.mkdirs(workingDir)) {
-        throw new SnapshotCreationException("Couldn't create working directory (" + workingDir
-            + ") for snapshot" , snapshot);
+        throw new SnapshotCreationException(
+            "Couldn't create working directory (" + workingDir + ") for snapshot",
+            ProtobufUtil.createSnapshotDesc(snapshot));
       }
     } catch (HBaseSnapshotException e) {
       throw e;
     } catch (IOException e) {
       throw new SnapshotCreationException(
-          "Exception while checking to see if snapshot could be started.", e, snapshot);
+          "Exception while checking to see if snapshot could be started.", e,
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -516,7 +519,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
             ClientSnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
-      throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
+      throw new SnapshotCreationException("Could not build snapshot handler", e,
+        ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -530,8 +534,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public void takeSnapshot(SnapshotDescription snapshot) throws IOException {
     // check to see if we already completed the snapshot
     if (isSnapshotCompleted(snapshot)) {
-      throw new SnapshotExistsException("Snapshot '" + snapshot.getName()
-          + "' already stored on the filesystem.", snapshot);
+      throw new SnapshotExistsException(
+          "Snapshot '" + snapshot.getName() + "' already stored on the filesystem.",
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     LOG.debug("No existing snapshot, attempting snapshot...");
@@ -547,14 +552,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     } catch (FileNotFoundException e) {
       String msg = "Table:" + snapshot.getTable() + " info doesn't exist!";
       LOG.error(msg);
-      throw new SnapshotCreationException(msg, e, snapshot);
+      throw new SnapshotCreationException(msg, e, ProtobufUtil.createSnapshotDesc(snapshot));
     } catch (IOException e) {
-      throw new SnapshotCreationException("Error while geting table description for table "
-          + snapshot.getTable(), e, snapshot);
+      throw new SnapshotCreationException(
+          "Error while geting table description for table " + snapshot.getTable(), e,
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
     if (desc == null) {
-      throw new SnapshotCreationException("Table '" + snapshot.getTable()
-          + "' doesn't exist, can't take snapshot.", snapshot);
+      throw new SnapshotCreationException(
+          "Table '" + snapshot.getTable() + "' doesn't exist, can't take snapshot.",
+          ProtobufUtil.createSnapshotDesc(snapshot));
     }
     SnapshotDescription.Builder builder = snapshot.toBuilder();
     // if not specified, set the snapshot format
@@ -593,7 +600,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           + "', isn't open or closed, we don't know what to do!");
       TablePartiallyOpenException tpoe = new TablePartiallyOpenException(snapshot.getTable()
           + " isn't fully open.");
-      throw new SnapshotCreationException("Table is not entirely open or closed", tpoe, snapshot);
+      throw new SnapshotCreationException("Table is not entirely open or closed", tpoe,
+        ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     // call post coproc hook
@@ -750,7 +758,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // check if the snapshot exists
     if (!fs.exists(snapshotDir)) {
       LOG.error("A Snapshot named '" + reqSnapshot.getName() + "' does not exist.");
-      throw new SnapshotDoesNotExistException(reqSnapshot);
+      throw new SnapshotDoesNotExistException(
+        ProtobufUtil.createSnapshotDesc(reqSnapshot));
     }
 
     // Get snapshot info from file system. The reqSnapshot is a "fake" snapshotInfo with

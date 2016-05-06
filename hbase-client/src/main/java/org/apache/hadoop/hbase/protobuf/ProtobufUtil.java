@@ -3472,4 +3472,18 @@ public final class ProtobufUtil {
     HBaseProtos.SnapshotDescription snapshot = builder.build();
     return snapshot;
   }
+
+  /**
+   * Convert from
+   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
+   * {@link SnapshotDescription}
+   * @param snapshotDesc the protobuf SnapshotDescription
+   * @return the POJO SnapshotDescription
+   */
+  public static SnapshotDescription
+      createSnapshotDesc(HBaseProtos.SnapshotDescription snapshotDesc) {
+    return new SnapshotDescription(snapshotDesc.getName(), snapshotDesc.getTable(),
+        createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
+        snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+  }
 }

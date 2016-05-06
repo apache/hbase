@@ -158,7 +158,8 @@ public final class SnapshotManifest {
       case SnapshotManifestV2.DESCRIPTOR_VERSION:
         return new SnapshotManifestV2.ManifestBuilder(conf, fs, workingDir);
       default:
-        throw new CorruptedSnapshotException("Invalid Snapshot version: "+ desc.getVersion(), desc);
+      throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
+        ProtobufUtil.createSnapshotDesc(desc));
     }
   }
 
@@ -391,7 +392,8 @@ public final class SnapshotManifest {
         break;
       }
       default:
-        throw new CorruptedSnapshotException("Invalid Snapshot version: "+ desc.getVersion(), desc);
+      throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
+        ProtobufUtil.createSnapshotDesc(desc));
     }
   }
 

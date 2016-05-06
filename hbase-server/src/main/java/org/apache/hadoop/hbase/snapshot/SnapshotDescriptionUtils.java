@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.security.User;
@@ -333,8 +334,9 @@ public final class SnapshotDescriptionUtils {
     LOG.debug("Snapshot is done, just moving the snapshot from " + workingDir + " to "
         + finishedDir);
     if (!fs.rename(workingDir, finishedDir)) {
-      throw new SnapshotCreationException("Failed to move working directory(" + workingDir
-          + ") to completed directory(" + finishedDir + ").", snapshot);
+      throw new SnapshotCreationException(
+          "Failed to move working directory(" + workingDir + ") to completed directory("
+              + finishedDir + ").", ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 

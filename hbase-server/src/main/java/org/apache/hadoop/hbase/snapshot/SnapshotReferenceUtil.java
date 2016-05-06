@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -209,7 +210,8 @@ public final class SnapshotReferenceUtil {
         throw new InterruptedIOException(e.getMessage());
       } catch (ExecutionException e) {
         if (e.getCause() instanceof CorruptedSnapshotException) {
-          throw new CorruptedSnapshotException(e.getCause().getMessage(), snapshotDesc);
+          throw new CorruptedSnapshotException(e.getCause().getMessage(),
+            ProtobufUtil.createSnapshotDesc(snapshotDesc));
         } else {
           IOException ex = new IOException();
           ex.initCause(e.getCause());
@@ -248,8 +250,9 @@ public final class SnapshotReferenceUtil {
       String refRegion = refPath.getParent().getParent().getName();
       refPath = HFileLink.createPath(table, refRegion, family, refPath.getName());
       if (!HFileLink.buildFromHFileLinkPattern(conf, refPath).exists(fs)) {
-        throw new CorruptedSnapshotException("Missing parent hfile for: " + fileName +
-          " path=" + refPath, snapshot);
+        throw new CorruptedSnapshotException(
+            "Missing parent hfile for: " + fileName + " path=" + refPath,
+            ProtobufUtil.createSnapshotDesc(snapshot));
       }
 
       if (storeFile.hasReference()) {
@@ -285,14 +288,16 @@ public final class SnapshotReferenceUtil {
         String msg = "hfile: " + fileName + " size does not match with the expected one. " +
           " found=" + fstat.getLen() + " expected=" + storeFile.getFileSize();
         LOG.error(msg);
-        throw new CorruptedSnapshotException(msg, snapshot);
+        throw new CorruptedSnapshotException(msg,
+          ProtobufUtil.createSnapshotDesc(snapshot));
       }
     } catch (FileNotFoundException e) {
       String msg = "Can't find hfile: " + fileName + " in the real (" +
           link.getOriginPath() + ") or archive (" + link.getArchivePath()
           + ") directory for the primary table.";
       LOG.error(msg);
-      throw new CorruptedSnapshotException(msg, snapshot);
+      throw new CorruptedSnapshotException(msg,
+        ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
