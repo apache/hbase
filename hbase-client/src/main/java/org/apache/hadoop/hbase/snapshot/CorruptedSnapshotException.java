@@ -43,6 +43,7 @@ public class CorruptedSnapshotException extends HBaseSnapshotException {
    * @param message full description of the failure
    * @param snapshot snapshot that was expected
    */
+  @Deprecated
   public CorruptedSnapshotException(String message, SnapshotDescription snapshot) {
     super(message, snapshot);
   }

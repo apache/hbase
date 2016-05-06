@@ -29,10 +29,12 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RestoreSnapshotException extends HBaseSnapshotException {
+  @Deprecated
   public RestoreSnapshotException(String msg, SnapshotDescription desc) {
     super(msg, desc);
   }
 
+  @Deprecated
   public RestoreSnapshotException(String msg, Throwable cause, SnapshotDescription desc) {
     super(msg, cause, desc);
   }

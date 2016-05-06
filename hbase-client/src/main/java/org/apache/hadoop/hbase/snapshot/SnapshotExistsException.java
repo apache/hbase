@@ -37,6 +37,7 @@ public class SnapshotExistsException extends HBaseSnapshotException {
    * @param msg full description of the failure
    * @param desc snapshot that was attempted
    */
+  @Deprecated
   public SnapshotExistsException(String msg, SnapshotDescription desc) {
     super(msg, desc);
   }

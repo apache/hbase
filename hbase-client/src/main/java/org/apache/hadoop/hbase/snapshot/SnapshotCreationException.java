@@ -53,6 +53,7 @@ public class SnapshotCreationException extends HBaseSnapshotException {
    * @param cause root cause of the failure
    * @param desc description of the snapshot attempted
    */
+  @Deprecated
   public SnapshotCreationException(String msg, Throwable cause, SnapshotDescription desc) {
     super(msg, cause, desc);
   }

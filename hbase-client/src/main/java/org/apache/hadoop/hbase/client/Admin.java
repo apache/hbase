@@ -1526,6 +1526,7 @@ public interface Admin extends Abortable, Closeable {
    * */
   void releaseSplitOrMergeLockAndRollback() throws IOException;
 
+  @Deprecated
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public enum MasterSwitchType {
