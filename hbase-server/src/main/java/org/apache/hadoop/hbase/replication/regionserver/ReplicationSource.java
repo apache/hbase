@@ -712,6 +712,7 @@ public class ReplicationSource extends Thread
             currentNbOperations += countDistinctRowKeys(edit);
             entries.add(entry);
             currentSize += entry.getEdit().heapSize();
+            currentSize += calculateTotalSizeOfStoreFiles(edit);
           } else {
             metrics.incrLogEditsFiltered();
           }
@@ -738,6 +739,35 @@ public class ReplicationSource extends Thread
       return seenEntries == 0 && processEndOfFile();
     }
 
+    /**
+     * Calculate the total size of all the store files
+     * @param edit edit to count row keys from
+     * @return the total size of the store files
+     */
+    private int calculateTotalSizeOfStoreFiles(WALEdit edit) {
+      List<Cell> cells = edit.getCells();
+      int totalStoreFilesSize = 0;
+
+      int totalCells = edit.size();
+      for (int i = 0; i < totalCells; i++) {
+        if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
+          try {
+            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
+            List<StoreDescriptor> stores = bld.getStoresList();
+            int totalStores = stores.size();
+            for (int j = 0; j < totalStores; j++) {
+              totalStoreFilesSize += stores.get(j).getStoreFileSize();
+            }
+          } catch (IOException e) {
+            LOG.error("Failed to deserialize bulk load entry from wal edit. "
+                + "Size of HFiles part of cell will not be considered in replication "
+                + "request size calculation.", e);
+          }
+        }
+      }
+      return totalStoreFilesSize;
+    }
+
     private void cleanUpHFileRefs(WALEdit edit) throws IOException {
       String peerId = peerClusterZnode;
       if (peerId.contains("-")) {
@@ -746,12 +776,14 @@ public class ReplicationSource extends Thread
         peerId = peerClusterZnode.split("-")[0];
       }
       List<Cell> cells = edit.getCells();
-      for (int i = 0; i < cells.size(); i++) {
+      int totalCells = cells.size();
+      for (int i = 0; i < totalCells; i++) {
         Cell cell = cells.get(i);
         if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
           BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
           List<StoreDescriptor> stores = bld.getStoresList();
-          for (int j = 0; j < stores.size(); j++) {
+          int totalStores = stores.size();
+          for (int j = 0; j < totalStores; j++) {
             List<String> storeFileList = stores.get(j).getStoreFileList();
             manager.cleanUpHFileRefs(peerId, storeFileList);
             metrics.decrSizeOfHFileRefsQueue(storeFileList.size());
@@ -934,18 +966,20 @@ public class ReplicationSource extends Thread
       int totalHFileEntries = 0;
       Cell lastCell = cells.get(0);
 
-      for (int i = 0; i < edit.size(); i++) {
+      int totalCells = edit.size();
+      for (int i = 0; i < totalCells; i++) {
         // Count HFiles to be replicated
         if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
           try {
             BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
             List<StoreDescriptor> stores = bld.getStoresList();
-            for (int j = 0; j < stores.size(); j++) {
+            int totalStores = stores.size();
+            for (int j = 0; j < totalStores; j++) {
               totalHFileEntries += stores.get(j).getStoreFileList().size();
             }
           } catch (IOException e) {
             LOG.error("Failed to deserialize bulk load entry from wal edit. "
-                + "This its hfiles count will not be added into metric.");
+                + "Then its hfiles count will not be added into metric.");
           }
         }
 
