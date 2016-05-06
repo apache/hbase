@@ -107,9 +107,9 @@ public class TestChecksum {
       ChecksumType cktype = itr.next();
       Path path = new Path(TEST_UTIL.getDataTestDir(), "checksum" + cktype.getName());
       FSDataOutputStream os = fs.create(path);
-      HFileContext meta = new HFileContextBuilder().
-          withChecksumType(cktype).
-          build();
+      HFileContext meta = new HFileContextBuilder()
+          .withChecksumType(cktype)
+          .build();
       HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
       DataOutputStream dos = hbw.startWriting(BlockType.DATA);
       for (int i = 0; i < 1000; ++i) {
@@ -188,7 +188,7 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new FSReaderImplTest(is, totalSize, fs, path, meta);
+        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(is, totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, pread);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
@@ -230,7 +230,7 @@ public class TestChecksum {
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new FSReaderImplTest(is, totalSize, newfs, path, meta);
+        hbr = new CorruptedFSReaderImpl(is, totalSize, newfs, path, meta);
         b = hbr.readBlockData(0, -1, pread);
         is.close();
         b.sanityCheck();
@@ -339,20 +339,56 @@ public class TestChecksum {
   }
 
   /**
-   * A class that introduces hbase-checksum failures while
-   * reading  data from hfiles. This should trigger the hdfs level
-   * checksum validations.
+   * This class is to test checksum behavior when data is corrupted. It mimics the following
+   * behavior:
+   *  - When fs checksum is disabled, hbase may get corrupted data from hdfs. If verifyChecksum
+   *  is true, it means hbase checksum is on and fs checksum is off, so we corrupt the data.
+   *  - When fs checksum is enabled, hdfs will get a different copy from another node, and will
+   *    always return correct data. So we don't corrupt the data when verifyChecksum for hbase is
+   *    off.
    */
-  static private class FSReaderImplTest extends HFileBlock.FSReaderImpl {
-    public FSReaderImplTest(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
+  static private class CorruptedFSReaderImpl extends HFileBlock.FSReaderImpl {
+    /**
+     * If set to true, corrupt reads using readAtOffset(...).
+     */
+    boolean corruptDataStream = false;
+
+    public CorruptedFSReaderImpl(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
         Path path, HFileContext meta) throws IOException {
       super(istream, fileSize, (HFileSystem) fs, path, meta);
     }
 
     @Override
-    protected boolean validateBlockChecksum(HFileBlock block, long offset,
-      byte[] data, int hdrSize) throws IOException {
-      return false;  // checksum validation failure
+    protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
+        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum) throws IOException {
+      if (verifyChecksum) {
+        corruptDataStream = true;
+      }
+      HFileBlock b = super.readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
+          verifyChecksum);
+      corruptDataStream = false;
+      return b;
+    }
+
+    @Override
+    protected int readAtOffset(FSDataInputStream istream, byte [] dest, int destOffset, int size,
+        boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
+      int returnValue = super.readAtOffset(istream, dest, destOffset, size, peekIntoNextBlock,
+          fileOffset, pread);
+      if (!corruptDataStream) {
+        return returnValue;
+      }
+      // Corrupt 3rd character of block magic of next block's header.
+      if (peekIntoNextBlock) {
+        dest[destOffset + size + 3] = 0b00000000;
+      }
+      // We might be reading this block's header too, corrupt it.
+      dest[destOffset + 1] = 0b00000000;
+      // Corrupt non header data
+      if (size > hdrSize) {
+        dest[destOffset + hdrSize + 1] = 0b00000000;
+      }
+      return returnValue;
     }
   }
 }
