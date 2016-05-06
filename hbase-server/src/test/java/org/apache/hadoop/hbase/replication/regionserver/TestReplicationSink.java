@@ -286,6 +286,7 @@ public class TestReplicationSink {
     }
     List<Integer> numberList = new ArrayList<>(numbers);
     Collections.sort(numberList);
+    Map<String, Long> storeFilesSize = new HashMap<String, Long>(1);
 
     // 2. Create 25 hfiles
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -296,6 +297,7 @@ public class TestReplicationSink {
       HFileTestUtil.createHFile(conf, fs, hfilePath, FAM_NAME1, FAM_NAME1,
         Bytes.toBytes(numbersItr.next()), Bytes.toBytes(numbersItr.next()), numRows);
       p.add(hfilePath);
+      storeFilesSize.put(hfilePath.getName(), fs.getFileStatus(hfilePath).getLen());
     }
 
     // 3. Create a BulkLoadDescriptor and a WALEdit
@@ -309,7 +311,7 @@ public class TestReplicationSink {
       HRegionInfo regionInfo = l.getAllRegionLocations().get(0).getRegionInfo();
       loadDescriptor =
           ProtobufUtil.toBulkLoadDescriptor(TABLE_NAME1,
-            ByteStringer.wrap(regionInfo.getEncodedNameAsBytes()), storeFiles, 1);
+            ByteStringer.wrap(regionInfo.getEncodedNameAsBytes()), storeFiles, storeFilesSize, 1);
       edit = WALEdit.createBulkLoadEvent(regionInfo, loadDescriptor);
     }
     List<WALEntry> entries = new ArrayList<WALEntry>(1);

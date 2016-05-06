@@ -3128,13 +3128,16 @@ public final class ProtobufUtil {
    * @param tableName         The tableName into which the bulk load is being imported into.
    * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
    * @param storeFiles        A set of store files of a column family are bulk loaded.
+   * @param storeFilesSize  Map of store files and their lengths
    * @param bulkloadSeqId     sequence ID (by a force flush) used to create bulk load hfile
    *                          name
    * @return The WAL log marker for bulk loads.
    */
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
-      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles, long bulkloadSeqId) {
-    BulkLoadDescriptor.Builder desc = BulkLoadDescriptor.newBuilder()
+      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
+      Map<String, Long> storeFilesSize, long bulkloadSeqId) {
+    BulkLoadDescriptor.Builder desc =
+        BulkLoadDescriptor.newBuilder()
         .setTableName(ProtobufUtil.toProtoTableName(tableName))
         .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
 
@@ -3143,7 +3146,10 @@ public final class ProtobufUtil {
           .setFamilyName(ByteStringer.wrap(entry.getKey()))
           .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
       for (Path path : entry.getValue()) {
-        builder.addStoreFile(path.getName());
+        String name = path.getName();
+        builder.addStoreFile(name);
+        Long size = storeFilesSize.get(name) == null ? (Long) 0L : storeFilesSize.get(name);
+        builder.setStoreFileSize(size);
       }
       desc.addStores(builder);
     }

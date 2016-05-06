@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -464,17 +465,33 @@ public class TestReplicationSourceManager {
   private WALEdit getBulkLoadWALEdit() {
     // 1. Create store files for the families
     Map<byte[], List<Path>> storeFiles = new HashMap<>(1);
+    Map<String, Long> storeFilesSize = new HashMap<>(1);
     List<Path> p = new ArrayList<>(1);
-    p.add(new Path(Bytes.toString(f1)));
+    Path hfilePath1 = new Path(Bytes.toString(f1));
+    p.add(hfilePath1);
+    try {
+      storeFilesSize.put(hfilePath1.getName(), fs.getFileStatus(hfilePath1).getLen());
+    } catch (IOException e) {
+      LOG.debug("Failed to calculate the size of hfile " + hfilePath1);
+      storeFilesSize.put(hfilePath1.getName(), 0L);
+    }
     storeFiles.put(f1, p);
 
     p = new ArrayList<>(1);
-    p.add(new Path(Bytes.toString(f2)));
+    Path hfilePath2 = new Path(Bytes.toString(f2));
+    p.add(hfilePath2);
+    try {
+      storeFilesSize.put(hfilePath2.getName(), fs.getFileStatus(hfilePath2).getLen());
+    } catch (IOException e) {
+      LOG.debug("Failed to calculate the size of hfile " + hfilePath2);
+      storeFilesSize.put(hfilePath2.getName(), 0L);
+    }
     storeFiles.put(f2, p);
 
     // 2. Create bulk load descriptor
-    BulkLoadDescriptor desc = ProtobufUtil.toBulkLoadDescriptor(hri.getTable(),
-      ByteStringer.wrap(hri.getEncodedNameAsBytes()), storeFiles, 1);
+    BulkLoadDescriptor desc =
+        ProtobufUtil.toBulkLoadDescriptor(hri.getTable(),
+          ByteStringer.wrap(hri.getEncodedNameAsBytes()), storeFiles, storeFilesSize, 1);
 
     // 3. create bulk load wal edit event
     WALEdit logEdit = WALEdit.createBulkLoadEvent(hri, desc);
