@@ -39,7 +39,7 @@ public:
    * Constructor.
    * There should only be one ConnectionFactory per client.
    */
-  ConnectionFactory();
+  ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
   /** Default Desctructor */
   virtual ~ConnectionFactory() = default;
 

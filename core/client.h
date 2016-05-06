@@ -21,6 +21,8 @@
 
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
+#include <wangle/concurrent/CPUThreadPoolExecutor.h>
+#include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include <string>
 
@@ -33,19 +35,22 @@ namespace hbase {
  * Client.
  *
  * This is the class that provides access to an HBase cluster.
- * It is thread safe and does connection pooling. Current recommendations are to have only one Client per cluster around.
+ * It is thread safe and does connection pooling. Current recommendations are to
+ * have only one Client per cluster around.
  */
 class Client {
 public:
-
   /**
    * Create a new client.
    * @param quorum_spec Where to connect to get Zookeeper bootstrap information.
    */
   explicit Client(std::string quorum_spec);
+  ~Client();
 
 private:
   LocationCache location_cache_;
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
 };
 
 } // namespace hbase

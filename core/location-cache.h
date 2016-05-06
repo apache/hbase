@@ -21,6 +21,8 @@
 #include <folly/Executor.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
+#include <wangle/concurrent/CPUThreadPoolExecutor.h>
+#include <wangle/concurrent/IOThreadPoolExecutor.h>
 #include <zookeeper/zookeeper.h>
 
 #include <memory>
@@ -51,7 +53,8 @@ public:
    * @param executor The cpu executor to run on.
    */
   LocationCache(std::string quorum_spec,
-                std::shared_ptr<folly::Executor> executor);
+                std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_exector,
+                std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
   /**
    * Destructor.
    * This will clean up the zookeeper connections.
@@ -81,8 +84,9 @@ private:
   hbase::pb::ServerName ReadMetaLocation();
   std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
 
+  /* data */
   std::string quorum_spec_;
-  std::shared_ptr<folly::Executor> executor_;
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::mutex meta_lock_;
   MetaUtil meta_util_;

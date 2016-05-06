@@ -19,8 +19,6 @@
 
 #include "connection/connection-factory.h"
 
-#include <wangle/concurrent/GlobalExecutor.h>
-
 #include "connection/client-dispatcher.h"
 #include "connection/pipeline.h"
 #include "connection/service.h"
@@ -28,9 +26,9 @@
 using namespace folly;
 using namespace hbase;
 
-ConnectionFactory::ConnectionFactory()
-    : io_pool_(std::static_pointer_cast<wangle::IOThreadPoolExecutor>(
-          wangle::getIOExecutor())),
+ConnectionFactory::ConnectionFactory(
+    std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool)
+    : io_pool_(io_pool),
       pipeline_factory_(std::make_shared<RpcPipelineFactory>()) {}
 
 std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
