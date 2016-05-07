@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.RpcCallback;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import com.google.protobuf.RpcCallback;
 
 /**
  * Simple {@link RpcCallback} implementation providing a

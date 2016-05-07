@@ -34,7 +34,7 @@ public final class CoprocessorRpcUtils {
    * We assume that all HBase protobuf services share a common package name
    * (defined in the .proto files).
    */
-  private static String hbaseServicePackage;
+  private static final String hbaseServicePackage;
   static {
     Descriptors.ServiceDescriptor clientService = ClientProtos.ClientService.getDescriptor();
     hbaseServicePackage = clientService.getFullName()

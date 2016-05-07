@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-
-import java.io.IOException;
 
 /**
  * Client-side call timeout

@@ -17,22 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
+import java.util.Iterator;
+import java.util.LinkedList;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-
-import java.net.InetSocketAddress;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  * A class to manage a list of servers that failed recently.
  */
 @InterfaceAudience.Private
 public class FailedServers {
-  private final LinkedList<Pair<Long, String>> failedServers = new
-      LinkedList<Pair<Long, String>>();
+  private final LinkedList<Pair<Long, String>> failedServers = new LinkedList<>();
   private final int recheckServersTimeout;
 
   public FailedServers(Configuration conf) {
@@ -45,7 +44,7 @@ public class FailedServers {
    */
   public synchronized void addToFailedServers(InetSocketAddress address) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
-    failedServers.addFirst(new Pair<Long, String>(expiry, address.toString()));
+    failedServers.addFirst(new Pair<>(expiry, address.toString()));
   }
 
   /**

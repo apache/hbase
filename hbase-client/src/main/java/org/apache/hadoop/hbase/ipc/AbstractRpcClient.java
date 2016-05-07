@@ -141,7 +141,9 @@ public abstract class AbstractRpcClient implements RpcClient {
     // For NO CODEC, "hbase.client.rpc.codec" must be configured with empty string AND
     // "hbase.client.default.rpc.codec" also -- because default is to do cell block encoding.
     String className = conf.get(HConstants.RPC_CODEC_CONF_KEY, getDefaultCodec(this.conf));
-    if (className == null || className.length() == 0) return null;
+    if (className == null || className.length() == 0) {
+      return null;
+    }
     try {
       return (Codec)Class.forName(className).newInstance();
     } catch (Exception e) {
@@ -161,9 +163,11 @@ public abstract class AbstractRpcClient implements RpcClient {
    */
   private static CompressionCodec getCompressor(final Configuration conf) {
     String className = conf.get("hbase.client.rpc.compressor", null);
-    if (className == null || className.isEmpty()) return null;
+    if (className == null || className.isEmpty()) {
+      return null;
+    }
     try {
-        return (CompressionCodec)Class.forName(className).newInstance();
+      return (CompressionCodec)Class.forName(className).newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting compressor " + className, e);
     }
@@ -252,8 +256,8 @@ public abstract class AbstractRpcClient implements RpcClient {
    *               will be a
    *               new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
-   * @throws InterruptedException
-   * @throws java.io.IOException
+   * @throws InterruptedException if call is interrupted
+   * @throws java.io.IOException if transport failed
    */
   protected abstract Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,

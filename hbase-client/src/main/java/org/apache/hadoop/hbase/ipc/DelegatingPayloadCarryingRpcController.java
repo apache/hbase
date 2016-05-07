@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DelegatingPayloadCarryingRpcController extends PayloadCarryingRpcController {
-  private PayloadCarryingRpcController delegate;
+  private final PayloadCarryingRpcController delegate;
 
   public DelegatingPayloadCarryingRpcController(PayloadCarryingRpcController delegate) {
     this.delegate = delegate;

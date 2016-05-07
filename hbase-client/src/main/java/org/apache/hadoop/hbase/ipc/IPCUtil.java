@@ -17,21 +17,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.DataInput;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
@@ -44,10 +45,6 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-
-import com.google.common.base.Preconditions;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
 
 /**
  * Utility to help ipc'ing.
@@ -83,13 +80,13 @@ public class IPCUtil {
   /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
    * <code>compressor</code>.
-   * @param codec
-   * @param compressor
-   * @param cellScanner
+   * @param codec to use for encoding
+   * @param compressor to use for encoding
+   * @param cellScanner to encode
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
-   * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
-   * flipped and is ready for reading.  Use limit to find total size.
-   * @throws IOException
+   *   passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
+   *   flipped and is ready for reading.  Use limit to find total size.
+   * @throws IOException if encoding the cells fail
    */
   @SuppressWarnings("resource")
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
@@ -101,26 +98,30 @@ public class IPCUtil {
   /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
    * <code>compressor</code>.
-   * @param codec
-   * @param compressor
-   * @param cellScanner
+   * @param codec to use for encoding
+   * @param compressor to use for encoding
+   * @param cellScanner to encode
    * @param pool Pool of ByteBuffers to make use of. Can be null and then we'll allocate
-   * our own ByteBuffer.
+   *   our own ByteBuffer.
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
-   * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
-   * flipped and is ready for reading.  Use limit to find total size. If <code>pool</code> was not
-   * null, then this returned ByteBuffer came from there and should be returned to the pool when
-   * done.
-   * @throws IOException
+   *   passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
+   *   flipped and is ready for reading.  Use limit to find total size. If <code>pool</code> was not
+   *   null, then this returned ByteBuffer came from there and should be returned to the pool when
+   *   done.
+   * @throws IOException if encoding the cells fail
    */
   @SuppressWarnings("resource")
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
     final CellScanner cellScanner, final BoundedByteBufferPool pool)
   throws IOException {
-    if (cellScanner == null) return null;
-    if (codec == null) throw new CellScannerButNoCodecException();
+    if (cellScanner == null) {
+      return null;
+    }
+    if (codec == null) {
+      throw new CellScannerButNoCodecException();
+    }
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
-    ByteBufferOutputStream baos = null;
+    ByteBufferOutputStream baos;
     if (pool != null) {
       ByteBuffer bb = pool.getBuffer();
       bufferSize = bb.capacity();
@@ -137,15 +138,17 @@ public class IPCUtil {
       }
       baos = new ByteBufferOutputStream(bufferSize);
     }
-    OutputStream os = baos;
     Compressor poolCompressor = null;
-    try {
+    try (OutputStream os = baos) {
+      OutputStream os2Compress = os;
       if (compressor != null) {
-        if (compressor instanceof Configurable) ((Configurable)compressor).setConf(this.conf);
+        if (compressor instanceof Configurable) {
+          ((Configurable) compressor).setConf(this.conf);
+        }
         poolCompressor = CodecPool.getCompressor(compressor);
-        os = compressor.createOutputStream(os, poolCompressor);
+        os2Compress = compressor.createOutputStream(os, poolCompressor);
       }
-      Codec.Encoder encoder = codec.getEncoder(os);
+      Codec.Encoder encoder = codec.getEncoder(os2Compress);
       int count = 0;
       while (cellScanner.advance()) {
         encoder.write(cellScanner.current());
@@ -154,12 +157,15 @@ public class IPCUtil {
       encoder.flush();
       // If no cells, don't mess around.  Just return null (could be a bunch of existence checking
       // gets or something -- stuff that does not return a cell).
-      if (count == 0) return null;
+      if (count == 0) {
+        return null;
+      }
     } catch (BufferOverflowException e) {
       throw new DoNotRetryIOException(e);
     } finally {
-      os.close();
-      if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
+      if (poolCompressor != null) {
+        CodecPool.returnCompressor(poolCompressor);
+      }
     }
     if (LOG.isTraceEnabled()) {
       if (bufferSize < baos.size()) {
@@ -171,10 +177,10 @@ public class IPCUtil {
   }
 
   /**
-   * @param codec
-   * @param cellBlock
+   * @param codec to use for cellblock
+   * @param cellBlock to encode
    * @return CellScanner to work against the content of <code>cellBlock</code>
-   * @throws IOException
+   * @throws IOException if encoding fails
    */
   public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
       final byte[] cellBlock) throws IOException {
@@ -191,12 +197,12 @@ public class IPCUtil {
   }
 
   /**
-   * @param codec
+   * @param codec to use for cellblock
    * @param cellBlock ByteBuffer containing the cells written by the Codec. The buffer should be
-   * position()'ed at the start of the cell block and limit()'ed at the end.
+   *   position()'ed at the start of the cell block and limit()'ed at the end.
    * @return CellScanner to work against the content of <code>cellBlock</code>.
-   * All cells created out of the CellScanner will share the same ByteBuffer being passed.
-   * @throws IOException
+   *   All cells created out of the CellScanner will share the same ByteBuffer being passed.
+   * @throws IOException if cell encoding fails
    */
   public CellScanner createCellScannerReusingBuffers(final Codec codec,
       final CompressionCodec compressor, ByteBuffer cellBlock) throws IOException {
@@ -212,11 +218,13 @@ public class IPCUtil {
   private ByteBuffer decompress(CompressionCodec compressor, ByteBuffer cellBlock)
       throws IOException {
     // GZIPCodec fails w/ NPE if no configuration.
-    if (compressor instanceof Configurable) ((Configurable) compressor).setConf(this.conf);
+    if (compressor instanceof Configurable) {
+      ((Configurable) compressor).setConf(this.conf);
+    }
     Decompressor poolDecompressor = CodecPool.getDecompressor(compressor);
     CompressionInputStream cis = compressor.createInputStream(new ByteBufferInputStream(cellBlock),
         poolDecompressor);
-    ByteBufferOutputStream bbos = null;
+    ByteBufferOutputStream bbos;
     try {
       // TODO: This is ugly. The buffer will be resized on us if we guess wrong.
       // TODO: Reuse buffers.
@@ -232,33 +240,13 @@ public class IPCUtil {
   }
 
   /**
-   * @param m Message to serialize delimited; i.e. w/ a vint of its size preceeding its
-   * serialization.
-   * @return The passed in Message serialized with delimiter.  Return null if <code>m</code> is null
-   * @throws IOException
-   */
-  public static ByteBuffer getDelimitedMessageAsByteBuffer(final Message m) throws IOException {
-    if (m == null) return null;
-    int serializedSize = m.getSerializedSize();
-    int vintSize = CodedOutputStream.computeRawVarint32Size(serializedSize);
-    byte [] buffer = new byte[serializedSize + vintSize];
-    // Passing in a byte array saves COS creating a buffer which it does when using streams.
-    CodedOutputStream cos = CodedOutputStream.newInstance(buffer);
-    // This will write out the vint preamble and the message serialized.
-    cos.writeMessageNoTag(m);
-    cos.flush();
-    cos.checkNoSpaceLeft();
-    return ByteBuffer.wrap(buffer);
-  }
-
-  /**
    * Write out header, param, and cell block if there is one.
-   * @param dos
-   * @param header
-   * @param param
-   * @param cellBlock
+   * @param dos Stream to write into
+   * @param header to write
+   * @param param to write
+   * @param cellBlock to write
    * @return Total number of bytes written.
-   * @throws IOException
+   * @throws IOException if write action fails
    */
   public static int write(final OutputStream dos, final Message header, final Message param,
       final ByteBuffer cellBlock)
@@ -267,7 +255,9 @@ public class IPCUtil {
     // swoop.  This is dictated by how the server is currently written.  Server needs to change
     // if we are to be able to write without the length prefixing.
     int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(header, param);
-    if (cellBlock != null) totalSize += cellBlock.remaining();
+    if (cellBlock != null) {
+      totalSize += cellBlock.remaining();
+    }
     return write(dos, header, param, cellBlock, totalSize);
   }
 
@@ -278,27 +268,14 @@ public class IPCUtil {
     dos.write(Bytes.toBytes(totalSize));
     // This allocates a buffer that is the size of the message internally.
     header.writeDelimitedTo(dos);
-    if (param != null) param.writeDelimitedTo(dos);
-    if (cellBlock != null) dos.write(cellBlock.array(), 0, cellBlock.remaining());
+    if (param != null) {
+      param.writeDelimitedTo(dos);
+    }
+    if (cellBlock != null) {
+      dos.write(cellBlock.array(), 0, cellBlock.remaining());
+    }
     dos.flush();
     return totalSize;
-  }
-
-  /**
-   * Read in chunks of 8K (HBASE-7239)
-   * @param in
-   * @param dest
-   * @param offset
-   * @param len
-   * @throws IOException
-   */
-  public static void readChunked(final DataInput in, byte[] dest, int offset, int len)
-      throws IOException {
-    int maxRead = 8192;
-
-    for (; offset < len; offset += maxRead) {
-      in.readFully(dest, offset, Math.min(len - offset, maxRead));
-    }
   }
 
   /**
@@ -307,7 +284,9 @@ public class IPCUtil {
   public static int getTotalSizeWhenWrittenDelimited(Message ... messages) {
     int totalSize = 0;
     for (Message m: messages) {
-      if (m == null) continue;
+      if (m == null) {
+        continue;
+      }
       totalSize += m.getSerializedSize();
       totalSize += CodedOutputStream.computeRawVarint32Size(m.getSerializedSize());
     }

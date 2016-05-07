@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
 
 /**
  * Used for server-side protobuf RPC service invocations.  This handler allows
@@ -55,7 +55,7 @@ public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within
    * {@link com.google.protobuf.Service#callMethod(
-   *   Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)},
+   *   Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)}
    * if any.
    */
   // TODO: it would be good widen this to just Throwable, but IOException is what we allow now

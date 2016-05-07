@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.Message.Builder;
+import com.google.protobuf.RpcCallback;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -96,12 +100,6 @@ import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
-import com.google.protobuf.RpcCallback;
-
 /**
  * Does RPC against a cluster.  Manages connections per regionserver in the cluster.
  * <p>See HBaseServer
@@ -160,25 +158,25 @@ public class RpcClientImpl extends AbstractRpcClient {
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
   protected class Connection extends Thread {
-    private ConnectionHeader header;              // connection header
+    private final ConnectionHeader header;              // connection header
     protected ConnectionId remoteId;
     protected Socket socket = null;                 // connected socket
     protected DataInputStream in;
     protected DataOutputStream out;
-    private Object outLock = new Object();
-    private InetSocketAddress server;             // server ip:port
+    private final Object outLock = new Object();
+    private final InetSocketAddress server;             // server ip:port
     private String serverPrincipal;  // server's krb5 principal name
     private AuthMethod authMethod; // authentication method
     private boolean useSasl;
     private Token<? extends TokenIdentifier> token;
     private HBaseSaslRpcClient saslRpcClient;
-    private int reloginMaxBackoff; // max pause before relogin on sasl failure
+    private final int reloginMaxBackoff; // max pause before relogin on sasl failure
     private final Codec codec;
     private final CompressionCodec compressor;
 
     // currently active calls
     protected final ConcurrentSkipListMap<Integer, Call> calls =
-      new ConcurrentSkipListMap<Integer, Call>();
+      new ConcurrentSkipListMap<>();
 
     protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();
     protected final CallSender callSender;
@@ -228,7 +226,7 @@ public class RpcClientImpl extends AbstractRpcClient {
 
       CallSender(String name, Configuration conf) {
         int queueSize = conf.getInt("hbase.ipc.client.write.queueSize", 1000);
-        callsToWrite = new ArrayBlockingQueue<CallFuture>(queueSize);
+        callsToWrite = new ArrayBlockingQueue<>(queueSize);
         setDaemon(true);
         setName(name + " - writer");
       }
@@ -438,21 +436,27 @@ public class RpcClientImpl extends AbstractRpcClient {
           socket.getOutputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
+        if (LOG.isTraceEnabled()){
+          LOG.trace("ignored", ignored);
+        }
       }
       try {
         if (socket.getInputStream() != null) {
           socket.getInputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
+        if (LOG.isTraceEnabled()){
+          LOG.trace("ignored", ignored);
+        }
       }
       try {
         if (socket.getChannel() != null) {
           socket.getChannel().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
+        if (LOG.isTraceEnabled()){
+          LOG.trace("ignored", ignored);
+        }
       }
       try {
         socket.close();
@@ -665,8 +669,8 @@ public class RpcClientImpl extends AbstractRpcClient {
               return null;
             } else {
               String msg = "Couldn't setup connection for " +
-              UserGroupInformation.getLoginUser().getUserName() +
-              " to " + serverPrincipal;
+                UserGroupInformation.getLoginUser().getUserName() +
+                " to " + serverPrincipal;
               LOG.warn(msg);
               throw (IOException) new IOException(msg).initCause(ex);
             }
@@ -735,7 +739,9 @@ public class RpcClientImpl extends AbstractRpcClient {
               }
             }
             boolean continueSasl;
-            if (ticket == null) throw new FatalConnectionException("ticket/user is null");
+            if (ticket == null){
+              throw new FatalConnectionException("ticket/user is null");
+            }
             try {
               continueSasl = ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
                 @Override
@@ -868,11 +874,8 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
 
     protected void tracedWriteRequest(Call call, int priority, Span span) throws IOException {
-      TraceScope ts = Trace.continueSpan(span);
-      try {
+      try (TraceScope ignored = Trace.continueSpan(span)) {
         writeRequest(call, priority, span);
-      } finally {
-        ts.close();
       }
     }
 
@@ -903,7 +906,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       if (priority != PayloadCarryingRpcController.PRIORITY_UNSET) {
         builder.setPriority(priority);
       }
-      RequestHeader header = builder.build();
+      RequestHeader requestHeader = builder.build();
 
       setupIOstreams();
 
@@ -913,13 +916,15 @@ public class RpcClientImpl extends AbstractRpcClient {
       checkIsOpen();
       IOException writeException = null;
       synchronized (this.outLock) {
-        if (Thread.interrupted()) throw new InterruptedIOException();
+        if (Thread.interrupted()){
+          throw new InterruptedIOException();
+        }
 
         calls.put(call.id, call); // We put first as we don't want the connection to become idle.
         checkIsOpen(); // Now we're checking that it didn't became idle in between.
 
         try {
-          call.callStats.setRequestSizeBytes(IPCUtil.write(this.out, header, call.param,
+          call.callStats.setRequestSizeBytes(IPCUtil.write(this.out, requestHeader, call.param,
               cellBlock));
         } catch (IOException e) {
           // We set the value inside the synchronized block, this way the next in line
@@ -941,7 +946,9 @@ public class RpcClientImpl extends AbstractRpcClient {
       doNotify();
 
       // Now that we notified, we can rethrow the exception if any. Otherwise we're good.
-      if (writeException != null) throw writeException;
+      if (writeException != null){
+        throw writeException;
+      }
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
@@ -956,7 +963,9 @@ public class RpcClientImpl extends AbstractRpcClient {
      * Because only one receiver, so no synchronization on in.
      */
     protected void readResponse() {
-      if (shouldCloseConnection.get()) return;
+      if (shouldCloseConnection.get()){
+        return;
+      }
       Call call = null;
       boolean expectedCall = false;
       try {
@@ -1015,12 +1024,16 @@ public class RpcClientImpl extends AbstractRpcClient {
               EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         }
       } catch (IOException e) {
-        if (expectedCall) call.setException(e);
+        if (expectedCall){
+          call.setException(e);
+        }
         if (e instanceof SocketTimeoutException) {
           // Clean up open calls but don't treat this as a fatal condition,
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
-          if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
+          if (LOG.isTraceEnabled()){
+            LOG.trace("ignored", e);
+          }
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
@@ -1054,7 +1067,9 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
 
     protected synchronized boolean markClosed(IOException e) {
-      if (e == null) throw new NullPointerException();
+      if (e == null){
+        throw new NullPointerException();
+      }
 
       boolean ret = shouldCloseConnection.compareAndSet(false, true);
       if (ret) {
@@ -1124,7 +1139,7 @@ public class RpcClientImpl extends AbstractRpcClient {
     super(conf, clusterId, localAddr, metrics);
 
     this.socketFactory = factory;
-    this.connections = new PoolMap<ConnectionId, Connection>(getPoolType(conf), getPoolSize(conf));
+    this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
     this.failedServers = new FailedServers(conf);
   }
 
@@ -1156,8 +1171,12 @@ public class RpcClientImpl extends AbstractRpcClient {
    * using this client. */
   @Override
   public void close() {
-    if (LOG.isDebugEnabled()) LOG.debug("Stopping rpc client");
-    if (!running.compareAndSet(true, false)) return;
+    if (LOG.isDebugEnabled()){
+      LOG.debug("Stopping rpc client");
+    }
+    if (!running.compareAndSet(true, false)){
+      return;
+    }
 
     Set<Connection> connsToClose = null;
     // wake up all connections
@@ -1172,7 +1191,7 @@ public class RpcClientImpl extends AbstractRpcClient {
         // at all (if CallSender has a cancelled Call it can happen). See HBASE-13851
         if (!conn.isAlive()) {
           if (connsToClose == null) {
-            connsToClose = new HashSet<Connection>();
+            connsToClose = new HashSet<>();
           }
           connsToClose.add(conn);
         }
@@ -1207,8 +1226,8 @@ public class RpcClientImpl extends AbstractRpcClient {
    *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
    *          new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
-   * @throws InterruptedException
-   * @throws IOException
+   * @throws InterruptedException if the call is interupted
+   * @throws IOException if something fails on the connection
    */
   @Override
   protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
@@ -1228,17 +1247,17 @@ public class RpcClientImpl extends AbstractRpcClient {
     final CallFuture cts;
     if (connection.callSender != null) {
       cts = connection.callSender.sendCall(call, pcrc.getPriority(), Trace.currentSpan());
-        pcrc.notifyOnCancel(new RpcCallback<Object>() {
-          @Override
-          public void run(Object parameter) {
-            connection.callSender.remove(cts);
-          }
-        });
-        if (pcrc.isCanceled()) {
-          // To finish if the call was cancelled before we set the notification (race condition)
-          call.callComplete();
-          return new Pair<Message, CellScanner>(call.response, call.cells);
+      pcrc.notifyOnCancel(new RpcCallback<Object>() {
+        @Override
+        public void run(Object parameter) {
+          connection.callSender.remove(cts);
         }
+      });
+      if (pcrc.isCanceled()) {
+        // To finish if the call was cancelled before we set the notification (race condition)
+        call.callComplete();
+        return new Pair<>(call.response, call.cells);
+      }
     } else {
       cts = null;
       connection.tracedWriteRequest(call, pcrc.getPriority(), Trace.currentSpan());
@@ -1246,7 +1265,9 @@ public class RpcClientImpl extends AbstractRpcClient {
 
     while (!call.done) {
       if (call.checkAndSetTimeout()) {
-        if (cts != null) connection.callSender.remove(cts);
+        if (cts != null){
+          connection.callSender.remove(cts);
+        }
         break;
       }
       if (connection.shouldCloseConnection.get()) {
@@ -1255,12 +1276,16 @@ public class RpcClientImpl extends AbstractRpcClient {
       }
       try {
         synchronized (call) {
-          if (call.done) break;
+          if (call.done){
+            break;
+          }
           call.wait(Math.min(call.remainingTime(), 1000) + 1);
         }
       } catch (InterruptedException e) {
         call.setException(new InterruptedIOException());
-        if (cts != null) connection.callSender.remove(cts);
+        if (cts != null) {
+          connection.callSender.remove(cts);
+        }
         throw e;
       }
     }
@@ -1274,7 +1299,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       throw wrapException(addr, call.error);
     }
 
-    return new Pair<Message, CellScanner>(call.response, call.cells);
+    return new Pair<>(call.response, call.cells);
   }
 
 
@@ -1303,12 +1328,14 @@ public class RpcClientImpl extends AbstractRpcClient {
   }
 
   /**
-   *  Get a connection from the pool, or create a new one and add it to the
+   * Get a connection from the pool, or create a new one and add it to the
    * pool. Connections to a given host/port are reused.
    */
   protected Connection getConnection(User ticket, Call call, InetSocketAddress addr)
   throws IOException {
-    if (!running.get()) throw new StoppedRpcClientException();
+    if (!running.get()){
+      throw new StoppedRpcClientException();
+    }
     Connection connection;
     ConnectionId remoteId =
       new ConnectionId(ticket, call.md.getService().getName(), addr);

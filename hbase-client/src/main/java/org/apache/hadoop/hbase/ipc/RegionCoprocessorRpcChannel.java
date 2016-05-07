@@ -15,8 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
+
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 import java.io.IOException;
 
@@ -31,10 +34,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -52,10 +51,10 @@ public class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private final TableName table;
   private final byte[] row;
   private byte[] lastRegion;
-  private int operationTimeout;
+  private final int operationTimeout;
 
-  private RpcRetryingCallerFactory rpcCallerFactory;
-  private RpcControllerFactory rpcControllerFactory;
+  private final RpcRetryingCallerFactory rpcCallerFactory;
+  private final RpcControllerFactory rpcControllerFactory;
 
   /**
    * Constructor
@@ -105,7 +104,7 @@ public class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     };
     CoprocessorServiceResponse result = rpcCallerFactory.<CoprocessorServiceResponse> newCaller()
         .callWithRetries(callable, operationTimeout);
-    Message response = null;
+    Message response;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();
       ProtobufUtil.mergeFrom(builder, result.getValue().getValue());

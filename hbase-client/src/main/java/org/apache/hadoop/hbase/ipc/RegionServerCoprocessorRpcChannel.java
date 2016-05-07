@@ -11,28 +11,29 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint
  * {@link com.google.protobuf.Service}s against a given region server. An instance of this class may
- * be obtained by calling {@link org.apache.hadoop.hbase.client.HBaseAdmin#coprocessorService(ServerName)},
- * but should normally only be used in creating a new {@link com.google.protobuf.Service} stub to
- * call the endpoint methods.
+ * be obtained by calling {@link org.apache.hadoop.hbase.client.HBaseAdmin#
+ * coprocessorService(ServerName)}, but should normally only be used in creating a new
+ * {@link com.google.protobuf.Service} stub to call the endpoint methods.
  * @see org.apache.hadoop.hbase.client.HBaseAdmin#coprocessorService(ServerName)
  */
 @InterfaceAudience.Private
@@ -59,7 +60,7 @@ public class RegionServerCoprocessorRpcChannel extends SyncCoprocessorRpcChannel
     // TODO: Are we retrying here? Does not seem so. We should use RetryingRpcCaller
     CoprocessorServiceResponse result =
         ProtobufUtil.execRegionServerService(controller, connection.getClient(serverName), call);
-    Message response = null;
+    Message response;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();
       ProtobufUtil.mergeFrom(builder, result.getValue().getValue());

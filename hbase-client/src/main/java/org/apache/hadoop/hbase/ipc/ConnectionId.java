@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
-
-import java.net.InetSocketAddress;
 
 /**
  * This class holds the address and the user ticket, etc. The client connections
@@ -58,14 +58,14 @@ public class ConnectionId {
 
   @Override
   public boolean equals(Object obj) {
-   if (obj instanceof ConnectionId) {
-     ConnectionId id = (ConnectionId) obj;
-     return address.equals(id.address) &&
+    if (obj instanceof ConnectionId) {
+      ConnectionId id = (ConnectionId) obj;
+      return address.equals(id.address) &&
             ((ticket != null && ticket.equals(id.ticket)) ||
              (ticket == id.ticket)) &&
              this.serviceName == id.serviceName;
-   }
-   return false;
+    }
+    return false;
   }
 
   @Override  // simply use the default Object#hashcode() ?

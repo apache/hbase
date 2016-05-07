@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.net.SocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-
-import java.net.SocketAddress;
 
 /**
  * Factory to create a {@link org.apache.hadoop.hbase.ipc.RpcClient}
@@ -74,7 +75,7 @@ public final class RpcClientFactory {
     return ReflectionUtils.instantiateWithCustomCtor(
         rpcClientClass,
         new Class[] { Configuration.class, String.class, SocketAddress.class,
-            MetricsConnection.class },
+          MetricsConnection.class },
         new Object[] { conf, clusterId, localAddr, metrics }
     );
   }

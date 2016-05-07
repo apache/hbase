@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
 
 @InterfaceAudience.Private
 public class TimeLimitedRpcController implements RpcController {
@@ -35,10 +35,10 @@ public class TimeLimitedRpcController implements RpcController {
   protected volatile Integer callTimeout;
   protected volatile boolean cancelled = false;
   protected final AtomicReference<RpcCallback<Object>> cancellationCb =
-      new AtomicReference<RpcCallback<Object>>(null);
+      new AtomicReference<>(null);
 
   protected final AtomicReference<RpcCallback<IOException>> failureCb =
-      new AtomicReference<RpcCallback<IOException>>(null);
+      new AtomicReference<>(null);
 
   private IOException exception;
 
