@@ -260,7 +260,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   LoadBalancerTracker loadBalancerTracker;
 
   // Tracker for split and merge state
-  SplitOrMergeTracker splitOrMergeTracker;
+  private SplitOrMergeTracker splitOrMergeTracker;
 
   // Tracker for region normalizer state
   private RegionNormalizerTracker regionNormalizerTracker;
@@ -274,10 +274,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   private MasterWalManager walManager;
 
   // server manager to deal with region server info
-  volatile ServerManager serverManager;
+  private volatile ServerManager serverManager;
 
   // manager of assignment nodes in zookeeper
-  AssignmentManager assignmentManager;
+  private AssignmentManager assignmentManager;
 
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
@@ -299,7 +299,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private final ProcedureEvent serverCrashProcessingEnabled =
     new ProcedureEvent("server crash processing");
 
-  LoadBalancer balancer;
+  private LoadBalancer balancer;
   private RegionNormalizer normalizer;
   private BalancerChore balancerChore;
   private RegionNormalizerChore normalizerChore;

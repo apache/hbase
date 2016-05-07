@@ -160,7 +160,7 @@ public class TestRegionPlacement {
 
     // Check when a RS stops, the regions get assigned to their secondary/tertiary
     killRandomServerAndVerifyAssignment();
-    
+
     // also verify that the AssignmentVerificationReport has the correct information
     reports = rp.verifyRegionPlacement(false);
     report = reports.get(0);
@@ -179,7 +179,7 @@ public class TestRegionPlacement {
     RegionPlacementMaintainer.printAssignmentPlan(currentPlan);
   }
 
-  private void killRandomServerAndVerifyAssignment() 
+  private void killRandomServerAndVerifyAssignment()
       throws IOException, InterruptedException, KeeperException {
     ServerName serverToKill = null;
     int killIndex = 0;
@@ -216,15 +216,15 @@ public class TestRegionPlacement {
             entry.getValue()[1] + " " + entry.getValue()[2]);
       }
     }
-    int orig = TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.getNumRegionsOpened();
+    int orig = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getNumRegionsOpened();
     TEST_UTIL.getHBaseCluster().stopRegionServer(serverToKill);
     TEST_UTIL.getHBaseCluster().waitForRegionServerToStop(serverToKill, 60000);
-    int curr = TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.getNumRegionsOpened();
+    int curr = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getNumRegionsOpened();
     while (curr - orig < regionsToVerify.size()) {
       LOG.debug("Waiting for " + regionsToVerify.size() + " to come online " +
           " Current #regions " + curr + " Original #regions " + orig);
       Thread.sleep(200);
-      curr = TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.getNumRegionsOpened();
+      curr = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getNumRegionsOpened();
     }
     // now verify
     for (Map.Entry<HRegionInfo, Pair<ServerName, ServerName>> entry : regionsToVerify.entrySet()) {
@@ -369,7 +369,7 @@ public class TestRegionPlacement {
       throws InterruptedException, IOException {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
-    int lastRegionOpenedCount = m.assignmentManager.getNumRegionsOpened();
+    int lastRegionOpenedCount = m.getAssignmentManager().getNumRegionsOpened();
     // get the assignments start to execute
     m.balance();
 
@@ -378,7 +378,7 @@ public class TestRegionPlacement {
     int attempt = 0;
     int currentRegionOpened, regionMovement;
     do {
-      currentRegionOpened = m.assignmentManager.getNumRegionsOpened();
+      currentRegionOpened = m.getAssignmentManager().getNumRegionsOpened();
       regionMovement= currentRegionOpened - lastRegionOpenedCount;
       LOG.debug("There are " + regionMovement + "/" + expected +
           " regions moved after " + attempt + " attempts");

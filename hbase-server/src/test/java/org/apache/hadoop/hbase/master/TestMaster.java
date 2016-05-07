@@ -101,7 +101,7 @@ public class TestMaster {
     LOG.info("Splitting table");
     TEST_UTIL.getHBaseAdmin().split(TABLENAME);
     LOG.info("Waiting for split result to be about to open");
-    RegionStates regionStates = m.assignmentManager.getRegionStates();
+    RegionStates regionStates = m.getAssignmentManager().getRegionStates();
     while (regionStates.getRegionsOfTable(TABLENAME).size() <= 1) {
       Thread.sleep(100);
     }

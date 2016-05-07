@@ -277,7 +277,7 @@ public class TestMasterNoCluster {
       InterruptedException, KeeperException, CoordinatedStateException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
-        serverManager.recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);
+        getServerManager().recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);
 
         List<ServerName> onlineServers = new ArrayList<ServerName>();
         onlineServers.add(deadServer);
@@ -310,7 +310,7 @@ public class TestMasterNoCluster {
       LOG.info("Master is initialized");
 
       assertFalse("The dead server should not be pulled in",
-        master.serverManager.isServerOnline(deadServer));
+        master.getServerManager().isServerOnline(deadServer));
     } finally {
       master.stopMaster();
       master.join();

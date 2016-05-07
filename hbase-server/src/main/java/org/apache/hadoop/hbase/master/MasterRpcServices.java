@@ -165,7 +165,7 @@ public class MasterRpcServices extends RSRpcServices
       }
       try {
         if (mode == BalanceSwitchMode.SYNC) {
-          synchronized (master.balancer) {
+          synchronized (master.getLoadBalancer()) {
             master.loadBalancerTracker.setBalancerOn(newValue);
           }
         } else {
@@ -232,7 +232,8 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
     byte[] encodedRegionName = request.getRegionName().toByteArray();
-    RegionStoreSequenceIds ids = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
+    RegionStoreSequenceIds ids = master.getServerManager()
+      .getLastFlushedSequenceId(encodedRegionName);
     return ResponseConverter.buildGetLastFlushedSequenceIdResponse(ids);
   }
 
@@ -243,8 +244,8 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
-      ServerLoad oldLoad = master.serverManager.getLoad(serverName);
-      master.serverManager.regionServerReport(serverName, new ServerLoad(sl));
+      ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
+      master.getServerManager().regionServerReport(serverName, new ServerLoad(sl));
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
@@ -266,7 +267,7 @@ public class MasterRpcServices extends RSRpcServices
         request.getPort(), request.getServerStartCode());
       // if regionserver passed hostname to use,
       // then use it instead of doing a reverse DNS lookup
-      ServerName rs = master.serverManager.regionServerStartup(request, ia);
+      ServerName rs = master.getServerManager().regionServerStartup(request, ia);
 
       // Send back some config info
       RegionServerStartupResponse.Builder resp = createConfigurationSubset();
@@ -326,7 +327,7 @@ public class MasterRpcServices extends RSRpcServices
         LOG.warn("assignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      RegionStates regionStates = master.assignmentManager.getRegionStates();
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       HRegionInfo regionInfo = regionStates.getRegionInfo(regionName);
       if (regionInfo == null) throw new UnknownRegionException(Bytes.toString(regionName));
       if (master.cpHost != null) {
@@ -336,7 +337,7 @@ public class MasterRpcServices extends RSRpcServices
       }
       LOG.info(master.getClientIdAuditPrefix()
         + " assign " + regionInfo.getRegionNameAsString());
-      master.assignmentManager.assign(regionInfo, true);
+      master.getAssignmentManager().assign(regionInfo, true);
       if (master.cpHost != null) {
         master.cpHost.postAssign(regionInfo);
       }
@@ -503,7 +504,7 @@ public class MasterRpcServices extends RSRpcServices
         + request.getRegionA().getType() + ", region_b="
         + request.getRegionB().getType());
     }
-    RegionStates regionStates = master.assignmentManager.getRegionStates();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     RegionState regionStateA = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionA));
     RegionState regionStateB = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionB));
     if (regionStateA == null || regionStateB == null) {
@@ -767,7 +768,7 @@ public class MasterRpcServices extends RSRpcServices
 
     try {
       master.checkInitialized();
-      Pair<Integer,Integer> pair = master.assignmentManager.getReopenStatus(tableName);
+      Pair<Integer,Integer> pair = master.getAssignmentManager().getReopenStatus(tableName);
       GetSchemaAlterStatusResponse.Builder ret = GetSchemaAlterStatusResponse.newBuilder();
       ret.setYetToUpdateRegions(pair.getFirst());
       ret.setTotalRegions(pair.getSecond());
@@ -1155,7 +1156,7 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preRegionOffline(hri);
       }
       LOG.info(master.getClientIdAuditPrefix() + " offline " + hri.getRegionNameAsString());
-      master.assignmentManager.regionOffline(hri);
+      master.getAssignmentManager().regionOffline(hri);
       if (master.cpHost != null) {
         master.cpHost.postRegionOffline(hri);
       }
@@ -1301,7 +1302,7 @@ public class MasterRpcServices extends RSRpcServices
       }
       LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
           + " in current location if it is online and reassign.force=" + force);
-      master.assignmentManager.unassign(hri);
+      master.getAssignmentManager().unassign(hri);
       if (master.cpHost != null) {
         master.cpHost.postUnassign(hri, force);
       }
@@ -1320,16 +1321,16 @@ public class MasterRpcServices extends RSRpcServices
       RegionStateTransition rt = req.getTransition(0);
       TableName tableName = ProtobufUtil.toTableName(
         rt.getRegionInfo(0).getTableName());
-      RegionStates regionStates = master.assignmentManager.getRegionStates();
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       if (!(TableName.META_TABLE_NAME.equals(tableName)
           && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
-            && !master.assignmentManager.isFailoverCleanupDone()) {
+            && !master.getAssignmentManager().isFailoverCleanupDone()) {
         // Meta region is assigned before master finishes the
         // failover cleanup. So no need this check for it
         throw new PleaseHoldException("Master is rebuilding user regions");
       }
       ServerName sn = ProtobufUtil.toServerName(req.getServer());
-      String error = master.assignmentManager.onRegionTransition(sn, rt);
+      String error = master.getAssignmentManager().onRegionTransition(sn, rt);
       ReportRegionStateTransitionResponse.Builder rrtr =
         ReportRegionStateTransitionResponse.newBuilder();
       if (error != null) {

@@ -234,7 +234,7 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       master = TEST_UTIL.getHBaseCluster().getMaster();
-      Set<ServerName> onlineServers = master.serverManager.getOnlineServers().keySet();
+      Set<ServerName> onlineServers = master.getServerManager().getOnlineServers().keySet();
       assertFalse("There should be some servers online", onlineServers.isEmpty());
 
       // Use the first server as the destination server
@@ -243,7 +243,7 @@ public class TestAssignmentManagerOnCluster {
       // Created faked dead server that is still online in master
       deadServer = ServerName.valueOf(destServer.getHostname(),
           destServer.getPort(), destServer.getStartcode() - 100L);
-      master.serverManager.recordNewServerWithLock(deadServer, ServerLoad.EMPTY_SERVERLOAD);
+      master.getServerManager().recordNewServerWithLock(deadServer, ServerLoad.EMPTY_SERVERLOAD);
 
       final AssignmentManager am = master.getAssignmentManager();
       RegionPlan plan = new RegionPlan(hri, null, deadServer);
@@ -260,7 +260,7 @@ public class TestAssignmentManagerOnCluster {
     assertFalse("Region should be assigned", am.getRegionStates().isRegionInTransition(hri));
     } finally {
       if (deadServer != null) {
-        master.serverManager.expireServer(deadServer);
+        master.getServerManager().expireServer(deadServer);
       }
 
       TEST_UTIL.deleteTable(table);
@@ -1337,7 +1337,7 @@ public class TestAssignmentManagerOnCluster {
     public void enableSSH(boolean enabled) {
       this.enabled.set(enabled);
       if (enabled) {
-        serverManager.processQueuedDeadServers();
+        getServerManager().processQueuedDeadServers();
       }
     }
   }
