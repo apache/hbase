@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -30,9 +36,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -52,20 +55,15 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
+import org.apache.hadoop.hbase.client.ResponseFutureListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.Threads;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
 
 /**
  * Netty client for the requests and responses
@@ -242,7 +240,18 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-    Promise<Message> promise = connection.callMethod(md, pcrc, param, returnType, callStats);
+    final Future<Message> promise = connection.callMethod(md, param, pcrc.cellScanner(), returnType,
+        getMessageConverterWithRpcController(pcrc), null, pcrc.getCallTimeout(), pcrc.getPriority(),
+        callStats);
+
+    pcrc.notifyOnCancel(new RpcCallback<Object>() {
+      @Override
+      public void run(Object parameter) {
+        // Will automatically fail the promise with CancellationException
+        promise.cancel(true);
+      }
+    });
+
     long timeout = pcrc.hasCallTimeout() ? pcrc.getCallTimeout() : 0;
     try {
       Message response = timeout > 0 ? promise.get(timeout, TimeUnit.MILLISECONDS) : promise.get();
@@ -259,6 +268,18 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
   }
 
+  private MessageConverter<Message, Message> getMessageConverterWithRpcController(
+      final PayloadCarryingRpcController pcrc) {
+    return new
+      MessageConverter<Message, Message>() {
+        @Override
+        public Message convert(Message msg, CellScanner cellScanner) {
+          pcrc.setCellScanner(cellScanner);
+          return msg;
+        }
+      };
+  }
+
   /**
    * Call method async
    */
@@ -269,42 +290,46 @@ public class AsyncRpcClient extends AbstractRpcClient {
     try {
       connection = createRpcChannel(md.getService().getName(), addr, ticket);
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
-      GenericFutureListener<Future<Message>> listener =
-          new GenericFutureListener<Future<Message>>() {
-            @Override
-            public void operationComplete(Future<Message> future) throws Exception {
-              cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
-              if (metrics != null) {
-                metrics.updateRpc(md, param, cs);
+
+      ResponseFutureListener<Message> listener =
+        new ResponseFutureListener<Message>() {
+          @Override
+          public void operationComplete(Future<Message> future) throws Exception {
+            cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
+            if (metrics != null) {
+              metrics.updateRpc(md, param, cs);
+            }
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Call: " + md.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
+            }
+            if (!future.isSuccess()) {
+              Throwable cause = future.cause();
+              if (cause instanceof IOException) {
+                pcrc.setFailed((IOException) cause);
+              } else {
+                pcrc.setFailed(new IOException(cause));
               }
-              if (LOG.isTraceEnabled()) {
-                LOG.trace("Call: " + md.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
-              }
-              if (!future.isSuccess()) {
-                Throwable cause = future.cause();
+            } else {
+              try {
+                done.run(future.get());
+              } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
                 if (cause instanceof IOException) {
                   pcrc.setFailed((IOException) cause);
                 } else {
                   pcrc.setFailed(new IOException(cause));
                 }
-              } else {
-                try {
-                  done.run(future.get());
-                } catch (ExecutionException e) {
-                  Throwable cause = e.getCause();
-                  if (cause instanceof IOException) {
-                    pcrc.setFailed((IOException) cause);
-                  } else {
-                    pcrc.setFailed(new IOException(cause));
-                  }
-                } catch (InterruptedException e) {
-                  pcrc.setFailed(new IOException(e));
-                }
+              } catch (InterruptedException e) {
+                pcrc.setFailed(new IOException(e));
               }
             }
-          };
+          }
+        };
       cs.setStartTime(EnvironmentEdgeManager.currentTime());
-      connection.callMethod(md, pcrc, param, returnType, cs).addListener(listener);
+      connection.callMethod(md, param, pcrc.cellScanner(), returnType,
+          getMessageConverterWithRpcController(pcrc), null,
+          pcrc.getCallTimeout(), pcrc.getPriority(), cs)
+          .addListener(listener);
     } catch (StoppedRpcClientException|FailedServerException e) {
       pcrc.setFailed(e);
     }

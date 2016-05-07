@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
@@ -32,7 +30,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -51,8 +48,10 @@ import javax.security.sasl.SaslException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -291,36 +290,25 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
   /**
    * Calls method on channel
    * @param method to call
-   * @param controller to run call with
    * @param request to send
+   * @param cellScanner with cells to send
    * @param responsePrototype to construct response with
+   * @param rpcTimeout timeout for request
+   * @param priority for request
+   * @return Promise for the response Message
    */
-  public Promise<Message> callMethod(final Descriptors.MethodDescriptor method,
-      final PayloadCarryingRpcController controller, final Message request,
-      final Message responsePrototype, MetricsConnection.CallStats callStats) {
-    final AsyncCall call = new AsyncCall(channel.eventLoop(), client.callIdCnt.getAndIncrement(),
-        method, request, controller, responsePrototype, callStats);
-    controller.notifyOnCancel(new RpcCallback<Object>() {
-      @Override
-      public void run(Object parameter) {
-        // TODO: do not need to call AsyncCall.setFailed?
-        synchronized (pendingCalls) {
-          pendingCalls.remove(call.id);
-        }
-      }
-    });
-    // TODO: this should be handled by PayloadCarryingRpcController.
-    if (controller.isCanceled()) {
-      // To finish if the call was cancelled before we set the notification (race condition)
-      call.cancel(true);
-      return call;
-    }
-
+  public <R extends Message, O> Future<O> callMethod(
+      final Descriptors.MethodDescriptor method,
+      final Message request,final CellScanner cellScanner,
+      R responsePrototype, MessageConverter<R, O> messageConverter, IOExceptionConverter
+      exceptionConverter, long rpcTimeout, int priority, MetricsConnection.CallStats callStats) {
+    final AsyncCall<R, O> call = new AsyncCall<>(this, client.callIdCnt.getAndIncrement(),
+        method, request, cellScanner, responsePrototype, messageConverter, exceptionConverter,
+        rpcTimeout, priority, callStats);
     synchronized (pendingCalls) {
       if (closed) {
-        Promise<Message> promise = channel.eventLoop().newPromise();
-        promise.setFailure(new ConnectException());
-        return promise;
+        call.setFailure(new ConnectException());
+        return call;
       }
       pendingCalls.put(call.id, call);
       // Add timeout for cleanup if none is present
@@ -398,7 +386,7 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
             .setParentId(s.getSpanId()).setTraceId(s.getTraceId()));
       }
 
-      ByteBuffer cellBlock = client.buildCellBlock(call.controller.cellScanner());
+      ByteBuffer cellBlock = client.buildCellBlock(call.cellScanner());
       if (cellBlock != null) {
         final RPCProtos.CellBlockMeta.Builder cellBlockBuilder = RPCProtos.CellBlockMeta
             .newBuilder();
@@ -406,8 +394,8 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
         requestHeaderBuilder.setCellBlockMeta(cellBlockBuilder.build());
       }
       // Only pass priority if there one. Let zero be same as no priority.
-      if (call.controller.getPriority() != PayloadCarryingRpcController.PRIORITY_UNSET) {
-        requestHeaderBuilder.setPriority(call.controller.getPriority());
+      if (call.getPriority() != PayloadCarryingRpcController.PRIORITY_UNSET) {
+        requestHeaderBuilder.setPriority(call.getPriority());
       }
 
       RPCProtos.RequestHeader rh = requestHeaderBuilder.build();

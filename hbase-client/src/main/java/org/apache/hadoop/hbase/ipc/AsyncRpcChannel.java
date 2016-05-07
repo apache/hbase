@@ -21,11 +21,12 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 
 /**
@@ -37,13 +38,23 @@ public interface AsyncRpcChannel {
   /**
    * Calls method on channel
    * @param method to call
-   * @param controller to run call with
    * @param request to send
+   * @param cellScanner with cells to send
    * @param responsePrototype to construct response with
+   * @param messageConverter for the messages to expected result
+   * @param exceptionConverter for converting exceptions
+   * @param rpcTimeout timeout for request
+   * @param priority for request
+   * @param callStats collects stats of the call
+   * @return Promise for the response Message
    */
-  Promise<Message> callMethod(final Descriptors.MethodDescriptor method,
-      final PayloadCarryingRpcController controller, final Message request,
-      final Message responsePrototype, MetricsConnection.CallStats callStats);
+
+  <R extends Message, O> Future<O> callMethod(
+      final Descriptors.MethodDescriptor method,
+      final Message request,final CellScanner cellScanner,
+      R responsePrototype, MessageConverter<R, O> messageConverter, IOExceptionConverter
+      exceptionConverter, long rpcTimeout, int priority, MetricsConnection.CallStats callStats);
+
 
   /**
    * Get the EventLoop on which this channel operated
