@@ -249,7 +249,7 @@ public class TestAdmin1 {
 
     this.admin.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
+        .getMaster().getTableStateManager().isTableState(
             ht.getName(), TableState.State.DISABLED));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
 
@@ -277,7 +277,7 @@ public class TestAdmin1 {
     assertTrue(ok);
     this.admin.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
+        .getMaster().getTableStateManager().isTableState(
             ht.getName(), TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
 
@@ -365,7 +365,7 @@ public class TestAdmin1 {
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.",
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getTableStateManager()
+        TEST_UTIL.getHBaseCluster().getMaster().getTableStateManager()
             .isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }

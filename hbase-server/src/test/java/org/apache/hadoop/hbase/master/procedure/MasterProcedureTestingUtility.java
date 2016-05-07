@@ -182,13 +182,13 @@ public class MasterProcedureTestingUtility {
 
   public static void validateTableIsEnabled(final HMaster master, final TableName tableName)
       throws IOException {
-    TableStateManager tsm = master.getAssignmentManager().getTableStateManager();
+    TableStateManager tsm = master.getTableStateManager();
     assertTrue(tsm.getTableState(tableName).equals(TableState.State.ENABLED));
   }
 
   public static void validateTableIsDisabled(final HMaster master, final TableName tableName)
       throws IOException {
-    TableStateManager tsm = master.getAssignmentManager().getTableStateManager();
+    TableStateManager tsm = master.getTableStateManager();
     assertTrue(tsm.getTableState(tableName).equals(TableState.State.DISABLED));
   }
 

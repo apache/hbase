@@ -319,7 +319,7 @@ public class ModifyColumnFamilyProcedure
    */
   private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
     // This operation only run when the table is enabled.
-    if (!env.getMasterServices().getAssignmentManager().getTableStateManager()
+    if (!env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
       return;
     }

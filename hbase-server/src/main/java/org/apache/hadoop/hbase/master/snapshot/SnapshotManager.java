@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -582,15 +581,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // if the table is enabled, then have the RS run actually the snapshot work
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
-    AssignmentManager assignmentMgr = master.getAssignmentManager();
-    if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
+    if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.ENABLED)) {
       LOG.debug("Table enabled, starting distributed snapshot.");
       snapshotEnabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
-    else if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
+    else if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.DISABLED)) {
       LOG.debug("Table is disabled, running snapshot entirely on master.");
       snapshotDisabledTable(snapshot);

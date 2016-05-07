@@ -298,7 +298,7 @@ public class ModifyTableProcedure
     this.unmodifiedHTableDescriptor =
         env.getMasterServices().getTableDescriptors().get(getTableName());
 
-    if (env.getMasterServices().getAssignmentManager().getTableStateManager()
+    if (env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
       // We only execute this procedure with table online if online schema change config is set.
       if (!MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
@@ -437,7 +437,7 @@ public class ModifyTableProcedure
    */
   private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
     // This operation only run when the table is enabled.
-    if (!env.getMasterServices().getAssignmentManager().getTableStateManager()
+    if (!env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
       return;
     }

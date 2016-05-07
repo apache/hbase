@@ -450,7 +450,7 @@ public class CreateTableProcedure
     ModifyRegionUtils.assignRegions(assignmentManager, regions);
 
     // Enable table
-    assignmentManager.getTableStateManager()
+    env.getMasterServices().getTableStateManager()
       .setTableState(tableName, TableState.State.ENABLED);
   }
 

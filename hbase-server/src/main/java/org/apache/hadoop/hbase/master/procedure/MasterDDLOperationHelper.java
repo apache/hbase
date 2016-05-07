@@ -77,7 +77,7 @@ public final class MasterDDLOperationHelper {
     }
 
     // We only execute this procedure with table online if online schema change config is set.
-    if (!env.getMasterServices().getAssignmentManager().getTableStateManager()
+    if (!env.getMasterServices().getTableStateManager()
         .isTableState(tableName, TableState.State.DISABLED)
         && !MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
       throw new TableNotDisabledException(tableName);

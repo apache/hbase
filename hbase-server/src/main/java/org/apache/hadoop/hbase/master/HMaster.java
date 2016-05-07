@@ -944,10 +944,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       assigned++;
     }
 
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID)
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+      // TODO: should we prevent from using state manager before meta was initialized?
+      // tableStateManager.start();
       getTableStateManager().setTableState(TableName.META_TABLE_NAME, TableState.State.ENABLED);
-    // TODO: should we prevent from using state manager before meta was initialized?
-    // tableStateManager.start();
+    }
 
     if ((RecoveryMode.LOG_REPLAY == this.getMasterWalManager().getLogRecoveryMode())
         && (!previouslyFailedMetaRSs.isEmpty())) {
@@ -2096,8 +2097,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
-    if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, TableState.State.DISABLED)) {
+    if (!getTableStateManager().isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }

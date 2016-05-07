@@ -95,8 +95,8 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.hbaseCluster.waitOnMaster(activeMaster);
     cluster.waitForActiveAndReadyMaster();
 
-    assertTrue("The table should not be in enabled state", cluster.getMaster()
-        .getAssignmentManager().getTableStateManager().isTableState(
+    assertTrue("The table should not be in enabled state",
+        cluster.getMaster().getTableStateManager().isTableState(
         TableName.valueOf("tableRestart"), TableState.State.DISABLED,
         TableState.State.DISABLING));
     log("Enabling table\n");
@@ -111,8 +111,8 @@ public class TestMasterRestartAfterDisablingTable {
     assertEquals("The assigned regions were not onlined after master"
         + " switch except for the catalog and namespace tables.",
           6, regions.size());
-    assertTrue("The table should be in enabled state", cluster.getMaster()
-        .getAssignmentManager().getTableStateManager()
+    assertTrue("The table should be in enabled state",
+        cluster.getMaster().getTableStateManager()
         .isTableState(TableName.valueOf("tableRestart"), TableState.State.ENABLED));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();

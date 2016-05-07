@@ -402,7 +402,7 @@ public class DeleteTableProcedure
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
-    AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    final AssignmentManager am = env.getMasterServices().getAssignmentManager();
 
     // Clean up regions of the table in RegionStates.
     LOG.debug("Removing '" + tableName + "' from region states.");
@@ -410,7 +410,7 @@ public class DeleteTableProcedure
 
     // If entry for this table states, remove it.
     LOG.debug("Marking '" + tableName + "' as deleted.");
-    am.getTableStateManager().setDeletedTable(tableName);
+    env.getMasterServices().getTableStateManager().setDeletedTable(tableName);
   }
 
   protected static void deleteTableDescriptorCache(final MasterProcedureEnv env,

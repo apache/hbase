@@ -289,8 +289,7 @@ public class DisableTableProcedure
       // the state to DISABLING from ENABLED. The implementation was done before table lock
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
-      TableStateManager tsm =
-        env.getMasterServices().getAssignmentManager().getTableStateManager();
+      TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState.State state = tsm.getTableState(tableName);
       if(!state.equals(TableState.State.ENABLED)){
         LOG.info("Table " + tableName + " isn't enabled;is "+state.name()+"; skipping disable");
@@ -327,7 +326,7 @@ public class DisableTableProcedure
       final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
-    env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
+    env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.DISABLING);
   }
@@ -418,7 +417,7 @@ public class DisableTableProcedure
       final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Flip the table to disabled
-    env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
+    env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.DISABLED);
     LOG.info("Disabled table, " + tableName + ", is completed.");

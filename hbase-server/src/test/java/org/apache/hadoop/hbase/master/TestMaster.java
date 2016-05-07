@@ -84,8 +84,7 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
 
     try (Table ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
-      assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
-        TableState.State.ENABLED));
+      assertTrue(m.getTableStateManager().isTableState(TABLENAME, TableState.State.ENABLED));
       TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     }
 

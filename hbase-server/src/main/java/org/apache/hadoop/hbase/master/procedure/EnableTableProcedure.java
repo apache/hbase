@@ -310,7 +310,7 @@ public class EnableTableProcedure
       // the state to ENABLING from DISABLED. The implementation was done before table lock
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
-      TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
+      TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState.State state = tsm.getTableState(tableName);
       if(!state.equals(TableState.State.DISABLED)){
         LOG.info("Table " + tableName + " isn't disabled;is "+state.name()+"; skipping enable");
@@ -349,7 +349,7 @@ public class EnableTableProcedure
       final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
     LOG.info("Attempting to enable the table " + tableName);
-    env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
+    env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.ENABLING);
   }
@@ -494,7 +494,7 @@ public class EnableTableProcedure
       final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Flip the table to Enabled
-    env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
+    env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.ENABLED);
     LOG.info("Table '" + tableName + "' was successfully enabled.");
