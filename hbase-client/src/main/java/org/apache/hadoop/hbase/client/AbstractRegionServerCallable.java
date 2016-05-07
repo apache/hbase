@@ -15,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -42,10 +39,14 @@ import org.apache.hadoop.hbase.util.Bytes;
  * @param <T> the class that the ServerCallable handles
  */
 @InterfaceAudience.Private
-abstract class AbstractRegionServerCallable<T> implements RetryingCallableBase {
+abstract class AbstractRegionServerCallable<T> implements RetryingCallable<T> {
+  // Public because used outside of this package over in ipc.
+  private static final Log LOG = LogFactory.getLog(AbstractRegionServerCallable.class);
+
   protected final Connection connection;
   protected final TableName tableName;
   protected final byte[] row;
+
   protected HRegionLocation location;
 
   protected final static int MIN_WAIT_DEAD_SERVER = 10000;
@@ -86,22 +87,9 @@ abstract class AbstractRegionServerCallable<T> implements RetryingCallableBase {
 
   @Override
   public void throwable(Throwable t, boolean retrying) {
-    if (t instanceof SocketTimeoutException ||
-        t instanceof ConnectException ||
-        t instanceof RetriesExhaustedException ||
-        (location != null && getConnection().isDeadServer(location.getServerName()))) {
-      // if thrown these exceptions, we clear all the cache entries that
-      // map to that slow/dead server; otherwise, let cache miss and ask
-      // hbase:meta again to find the new location
-      if (this.location != null) {
-        getConnection().clearCaches(location.getServerName());
-      }
-    } else if (t instanceof RegionMovedException) {
-      getConnection().updateCachedLocations(tableName, row, t, location);
-    } else if (t instanceof NotServingRegionException && !retrying) {
-      // Purge cache entries for this specific region from hbase:meta cache
-      // since we don't call connect(true) when number of retries is 1.
-      getConnection().deleteCachedRegionLocation(location);
+    if (location != null) {
+      getConnection().updateCachedLocations(tableName, location.getRegionInfo().getRegionName(),
+          row, t, location.getServerName());
     }
   }
 
@@ -134,13 +122,19 @@ abstract class AbstractRegionServerCallable<T> implements RetryingCallableBase {
   /**
    * Prepare for connection to the server hosting region with row from tablename.  Does lookup
    * to find region location and hosting server.
-   * @param reload Set this to true if connection should re-find the region
+   * @param reload Set to true to re-check the table state
    * @throws IOException e
    */
   @Override
   public void prepare(final boolean reload) throws IOException {
+    // check table state if this is a retry
+    if (reload &&
+        !tableName.equals(TableName.META_TABLE_NAME) &&
+        getConnection().isTableDisabled(tableName)) {
+      throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
+    }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-      this.location = regionLocator.getRegionLocation(row, reload);
+      this.location = regionLocator.getRegionLocation(row);
     }
     if (this.location == null) {
       throw new IOException("Failed to find location, tableName=" + tableName +
