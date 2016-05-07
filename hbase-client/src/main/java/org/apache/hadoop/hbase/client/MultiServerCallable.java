@@ -137,9 +137,8 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
   private boolean isCellBlock() {
     // This is not exact -- the configuration could have changed on us after connection was set up
     // but it will do for now.
-    HConnection connection = getConnection();
-    if (!(connection instanceof ClusterConnection)) return true; // Default is to do cellblocks.
-    return ((ClusterConnection) connection).hasCellBlockSupport();
+    ClusterConnection conn = getConnection();
+    return conn.hasCellBlockSupport();
   }
 
   @Override
