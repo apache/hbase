@@ -271,6 +271,27 @@ public abstract class AbstractRpcClient implements RpcClient {
   }
 
   /**
+   * Configure a payload carrying controller
+   * @param controller to configure
+   * @param channelOperationTimeout timeout for operation
+   * @return configured payload controller
+   */
+  static PayloadCarryingRpcController configurePayloadCarryingRpcController(
+      RpcController controller, int channelOperationTimeout) {
+    PayloadCarryingRpcController pcrc;
+    if (controller != null && controller instanceof PayloadCarryingRpcController) {
+      pcrc = (PayloadCarryingRpcController) controller;
+      if (!pcrc.hasCallTimeout()) {
+        pcrc.setCallTimeout(channelOperationTimeout);
+      }
+    } else {
+      pcrc = new PayloadCarryingRpcController();
+      pcrc.setCallTimeout(channelOperationTimeout);
+    }
+    return pcrc;
+  }
+
+  /**
    * Takes an Exception and the address we were trying to connect to and return an IOException with
    * the input exception as the cause. The new exception provides the stack trace of the place where
    * the exception is thrown and some extra diagnostics information. If the exception is
@@ -321,16 +342,9 @@ public abstract class AbstractRpcClient implements RpcClient {
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType) throws ServiceException {
-      PayloadCarryingRpcController pcrc;
-      if (controller != null && controller instanceof PayloadCarryingRpcController) {
-        pcrc = (PayloadCarryingRpcController) controller;
-        if (!pcrc.hasCallTimeout()) {
-          pcrc.setCallTimeout(channelOperationTimeout);
-        }
-      } else {
-        pcrc = new PayloadCarryingRpcController();
-        pcrc.setCallTimeout(channelOperationTimeout);
-      }
+      PayloadCarryingRpcController pcrc = configurePayloadCarryingRpcController(
+          controller,
+          channelOperationTimeout);
 
       return this.rpcClient.callBlockingMethod(md, pcrc, param, returnType, this.ticket, this.isa);
     }

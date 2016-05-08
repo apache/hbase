@@ -27,7 +27,6 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Future;
-import org.apache.hadoop.hbase.client.MetricsConnection;
 
 /**
  * Interface for Async Rpc Channels
@@ -45,15 +44,13 @@ public interface AsyncRpcChannel {
    * @param exceptionConverter for converting exceptions
    * @param rpcTimeout timeout for request
    * @param priority for request
-   * @param callStats collects stats of the call
    * @return Promise for the response Message
    */
-
   <R extends Message, O> Future<O> callMethod(
       final Descriptors.MethodDescriptor method,
-      final Message request,final CellScanner cellScanner,
-      R responsePrototype, MessageConverter<R, O> messageConverter, IOExceptionConverter
-      exceptionConverter, long rpcTimeout, int priority, MetricsConnection.CallStats callStats);
+      final Message request, final CellScanner cellScanner,
+      R responsePrototype, MessageConverter<R, O> messageConverter,
+      IOExceptionConverter exceptionConverter, long rpcTimeout, int priority);
 
 
   /**

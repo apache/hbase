@@ -22,6 +22,9 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -51,7 +54,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.net.SocketFactory;
 import javax.security.sasl.SaslException;
 
@@ -63,6 +65,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
@@ -118,9 +121,7 @@ public class RpcClientImpl extends AbstractRpcClient {
   protected final SocketFactory socketFactory;           // how to create sockets
 
   protected final static Map<AuthenticationProtos.TokenIdentifier.Kind,
-      TokenSelector<? extends TokenIdentifier>> tokenHandlers =
-      new HashMap<AuthenticationProtos.TokenIdentifier.Kind,
-        TokenSelector<? extends TokenIdentifier>>();
+      TokenSelector<? extends TokenIdentifier>> tokenHandlers = new HashMap<>();
   static {
     tokenHandlers.put(AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN,
         new AuthenticationTokenSelector());
@@ -1217,7 +1218,13 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
   }
 
-  /** Make a call, passing <code>param</code>, to the IPC server running at
+  @Override
+  public EventExecutor getEventExecutor() {
+    return AsyncRpcClient.getGlobalEventLoopGroup(this.conf).getFirst().next();
+  }
+
+  /**
+   * Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
    * with the <code>ticket</code> credentials, returning the value.
    * Throws exceptions if there are network problems or if the remote code
@@ -1226,7 +1233,7 @@ public class RpcClientImpl extends AbstractRpcClient {
    *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
    *          new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
-   * @throws InterruptedException if the call is interupted
+   * @throws InterruptedException if the call is interrupted
    * @throws IOException if something fails on the connection
    */
   @Override
@@ -1237,10 +1244,35 @@ public class RpcClientImpl extends AbstractRpcClient {
     if (pcrc == null) {
       pcrc = new PayloadCarryingRpcController();
     }
+
+    Call call = this.call(md, param, returnType, pcrc, ticket, addr, callStats);
+
+    return new Pair<>(call.response, call.cells);
+  }
+
+
+  /**
+   * Make a call, passing <code>param</code>, to the IPC server running at
+   * <code>address</code> which is servicing the <code>protocol</code> protocol,
+   * with the <code>ticket</code> credentials, returning the value.
+   * Throws exceptions if there are network problems or if the remote code
+   * threw an exception.
+   * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
+   *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
+   *          new Connection each time.
+   * @return A Call
+   * @throws InterruptedException if the call is interrupted
+   * @throws IOException if something fails on the connection
+   */
+  private <R extends Message> Call call(MethodDescriptor method, Message request,
+      R responsePrototype, PayloadCarryingRpcController pcrc, User ticket,
+      InetSocketAddress addr, MetricsConnection.CallStats callStats)
+      throws IOException, InterruptedException {
+
     CellScanner cells = pcrc.cellScanner();
 
-    final Call call = new Call(this.callIdCnt.getAndIncrement(), md, param, cells, returnType,
-        pcrc.getCallTimeout(), MetricsConnection.newCallStats());
+    final Call call = new Call(callIdCnt.getAndIncrement(), method, request, cells,
+        responsePrototype, pcrc.getCallTimeout(), callStats);
 
     final Connection connection = getConnection(ticket, call, addr);
 
@@ -1256,7 +1288,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       if (pcrc.isCanceled()) {
         // To finish if the call was cancelled before we set the notification (race condition)
         call.callComplete();
-        return new Pair<>(call.response, call.cells);
+        return call;
       }
     } else {
       cts = null;
@@ -1299,9 +1331,19 @@ public class RpcClientImpl extends AbstractRpcClient {
       throw wrapException(addr, call.error);
     }
 
-    return new Pair<>(call.response, call.cells);
+    return call;
   }
 
+  @Override
+  public org.apache.hadoop.hbase.ipc.AsyncRpcChannel createRpcChannel(String serviceName,
+      ServerName sn, User user) throws StoppedRpcClientException, FailedServerException {
+    return new AsyncRpcChannel(sn, user);
+  }
+
+  @Override
+  public RpcChannel createProtobufRpcChannel(ServerName sn, User user, int rpcTimeout) {
+    return new RpcChannelImplementation(sn, user, rpcTimeout);
+  }
 
   /**
    * Interrupt the connections to the given ip:port server. This should be called if the server
@@ -1348,5 +1390,144 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
 
     return connection;
+  }
+
+  /**
+   * Simulated async call
+   */
+  private class RpcChannelImplementation implements RpcChannel {
+    private final InetSocketAddress isa;
+    private final User ticket;
+    private final int channelOperationTimeout;
+    private final EventExecutor executor;
+
+    /**
+     * @param channelOperationTimeout - the default timeout when no timeout is given
+     */
+    protected RpcChannelImplementation(
+        final ServerName sn, final User ticket, int channelOperationTimeout) {
+      this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
+      this.ticket = ticket;
+      this.channelOperationTimeout = channelOperationTimeout;
+
+      this.executor = RpcClientImpl.this.getEventExecutor();
+    }
+
+    @Override
+    public void callMethod(final MethodDescriptor method, RpcController controller,
+        final Message request, final Message responsePrototype, final RpcCallback<Message> done) {
+      final PayloadCarryingRpcController pcrc = configurePayloadCarryingRpcController(
+          controller,
+          channelOperationTimeout);
+
+      executor.execute(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
+            cs.setStartTime(EnvironmentEdgeManager.currentTime());
+            Call call = call(method, request, responsePrototype, pcrc, ticket, isa, cs);
+            cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
+            if (metrics != null) {
+              metrics.updateRpc(method, request, cs);
+            }
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Call: " + method.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
+            }
+
+            done.run(call.response);
+          } catch (IOException e) {
+            pcrc.setFailed(e);
+          } catch (InterruptedException e) {
+            pcrc.startCancel();
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Wraps the call in an async channel.
+   */
+  private class AsyncRpcChannel implements org.apache.hadoop.hbase.ipc.AsyncRpcChannel {
+    private final EventExecutor executor;
+    private final InetSocketAddress isa;
+
+    private final User ticket;
+
+    /**
+     * Constructor
+     * @param sn servername to connect to
+     * @param user to connect with
+     */
+    public AsyncRpcChannel(ServerName sn, User user) {
+      this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
+      this.executor = RpcClientImpl.this.getEventExecutor();
+      this.ticket = user;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <R extends Message, O> Future<O> callMethod(final MethodDescriptor method,
+        final Message request, CellScanner cellScanner, final R responsePrototype,
+        final MessageConverter<R, O> messageConverter,
+        final IOExceptionConverter exceptionConverter, long rpcTimeout, int priority) {
+      final PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController(cellScanner);
+      pcrc.setPriority(priority);
+      pcrc.setCallTimeout((int) rpcTimeout);
+
+      final Promise<O> promise = new Promise<>(executor);
+
+      executor.execute(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
+            cs.setStartTime(EnvironmentEdgeManager.currentTime());
+            Call call = call(method, request, responsePrototype, pcrc, ticket, isa, cs);
+            cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
+            if (metrics != null) {
+              metrics.updateRpc(method, request, cs);
+            }
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Call: " + method.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
+            }
+
+            promise.setSuccess(
+                messageConverter.convert((R) call.response, call.cells)
+            );
+          } catch (InterruptedException e) {
+            promise.cancel(true);
+          } catch (IOException e) {
+            if(exceptionConverter != null) {
+              e = exceptionConverter.convert(e);
+            }
+            promise.setFailure(e);
+          }
+        }
+      });
+
+      return promise;
+    }
+
+    @Override
+    public EventExecutor getEventExecutor() {
+      return this.executor;
+    }
+
+    @Override
+    public void close(Throwable cause) {
+      this.executor.shutdownGracefully();
+    }
+
+    @Override
+    public boolean isAlive() {
+      return !this.executor.isShuttingDown() && !this.executor.isShutdown();
+    }
+
+    @Override
+    public InetSocketAddress getAddress() {
+      return isa;
+    }
   }
 }

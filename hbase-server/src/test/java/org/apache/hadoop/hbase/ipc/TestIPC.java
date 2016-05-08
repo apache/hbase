@@ -22,6 +22,8 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Descriptors.MethodDescriptor;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -58,9 +60,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors.MethodDescriptor;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestIPC extends AbstractTestIPC {
@@ -129,7 +128,7 @@ public class TestIPC extends AbstractTestIPC {
         throw new IOException("Listener channel is closed");
       }
       for (int i = 0; i < cycles; i++) {
-        List<CellScannable> cells = new ArrayList<CellScannable>();
+        List<CellScannable> cells = new ArrayList<>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
         ClientProtos.RegionAction.Builder builder =
             RequestConverter.buildNoDataRegionAction(HConstants.EMPTY_BYTE_ARRAY, rm, cells,

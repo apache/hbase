@@ -30,7 +30,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 import io.netty.util.concurrent.GenericFutureListener;
-
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Future;
-import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
@@ -297,14 +295,16 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
    * @param priority for request
    * @return Promise for the response Message
    */
+  @Override
   public <R extends Message, O> Future<O> callMethod(
       final Descriptors.MethodDescriptor method,
       final Message request,final CellScanner cellScanner,
       R responsePrototype, MessageConverter<R, O> messageConverter, IOExceptionConverter
-      exceptionConverter, long rpcTimeout, int priority, MetricsConnection.CallStats callStats) {
+      exceptionConverter, long rpcTimeout, int priority) {
     final AsyncCall<R, O> call = new AsyncCall<>(this, client.callIdCnt.getAndIncrement(),
         method, request, cellScanner, responsePrototype, messageConverter, exceptionConverter,
-        rpcTimeout, priority, callStats);
+        rpcTimeout, priority, client.metrics);
+
     synchronized (pendingCalls) {
       if (closed) {
         call.setFailure(new ConnectException());

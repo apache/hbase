@@ -51,14 +51,15 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
   final Message responseDefaultType;
 
   private final MessageConverter<M,T> messageConverter;
-  final long startTime;
-  final long rpcTimeout;
   private final IOExceptionConverter exceptionConverter;
+
+  final long rpcTimeout;
 
   // For only the request
   private final CellScanner cellScanner;
   private final int priority;
 
+  final MetricsConnection clientMetrics;
   final MetricsConnection.CallStats callStats;
 
   /**
@@ -71,13 +72,15 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
    * @param cellScanner         cellScanner containing cells to send as request
    * @param responseDefaultType the default response type
    * @param messageConverter    converts the messages to what is the expected output
+   * @param exceptionConverter  converts exceptions to expected format. Can be null
    * @param rpcTimeout          timeout for this call in ms
    * @param priority            for this request
+   * @param metrics             MetricsConnection to which the metrics are stored for this request
    */
   public AsyncCall(AsyncRpcChannelImpl channel, int connectId, Descriptors.MethodDescriptor
         md, Message param, CellScanner cellScanner, M responseDefaultType, MessageConverter<M, T>
         messageConverter, IOExceptionConverter exceptionConverter, long rpcTimeout, int priority,
-      MetricsConnection.CallStats callStats) {
+      MetricsConnection metrics) {
     super(channel.getEventExecutor());
     this.channel = channel;
 
@@ -90,13 +93,15 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
     this.messageConverter = messageConverter;
     this.exceptionConverter = exceptionConverter;
 
-    this.startTime = EnvironmentEdgeManager.currentTime();
     this.rpcTimeout = rpcTimeout;
 
     this.priority = priority;
     this.cellScanner = cellScanner;
 
-    this.callStats = callStats;
+    this.callStats = MetricsConnection.newCallStats();
+    callStats.setStartTime(EnvironmentEdgeManager.currentTime());
+
+    this.clientMetrics = metrics;
   }
 
   /**
@@ -105,7 +110,7 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
    * @return start time for the call
    */
   public long getStartTime() {
-    return this.startTime;
+    return this.callStats.getStartTime();
   }
 
   @Override
@@ -122,9 +127,14 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
    * @param cellBlockScanner to set
    */
   public void setSuccess(M value, CellScanner cellBlockScanner) {
+    callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - callStats.getStartTime());
+
     if (LOG.isTraceEnabled()) {
-      long callTime = EnvironmentEdgeManager.currentTime() - startTime;
-      LOG.trace("Call: " + method.getName() + ", callTime: " + callTime + "ms");
+      LOG.trace("Call: " + method.getName() + ", callTime: " + callStats.getCallTimeMs() + "ms");
+    }
+
+    if (clientMetrics != null) {
+      clientMetrics.updateRpc(method, param, callStats);
     }
 
     try {

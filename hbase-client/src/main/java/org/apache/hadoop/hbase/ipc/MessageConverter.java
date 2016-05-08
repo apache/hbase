@@ -41,7 +41,7 @@ public interface MessageConverter<M,O> {
   MessageConverter<Message,Message> NO_CONVERTER = new MessageConverter<Message, Message>() {
     @Override
     public Message convert(Message msg, CellScanner cellScanner) throws IOException {
-      return null;
+      return msg;
     }
   };
 }

@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.BlockingRpcChannel;
-
+import com.google.protobuf.RpcChannel;
+import io.netty.util.concurrent.EventExecutor;
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -69,6 +70,30 @@ import org.apache.hadoop.hbase.security.User;
       throws IOException;
 
   /**
+   * Create or fetch AsyncRpcChannel
+   * @param serviceName to connect to
+   * @param sn ServerName of the channel to create
+   * @param user for the service
+   * @return An async RPC channel fitting given parameters
+   * @throws FailedServerException if server failed
+   * @throws StoppedRpcClientException if the RPC client has stopped
+   */
+  AsyncRpcChannel createRpcChannel(String serviceName, ServerName sn, User user)
+      throws StoppedRpcClientException, FailedServerException;
+
+  /**
+   * Creates a "channel" that can be used by a protobuf service.  Useful setting up
+   * protobuf stubs.
+   *
+   * @param sn server name describing location of server
+   * @param user which is to use the connection
+   * @param rpcTimeout default rpc operation timeout
+   *
+   * @return A rpc channel that goes via this rpc client instance.
+   */
+  RpcChannel createProtobufRpcChannel(final ServerName sn, final User user, int rpcTimeout);
+
+  /**
    * Interrupt the connections to the given server. This should be called if the server
    * is known as actually dead. This will not prevent current operation to be retried, and,
    * depending on their own behavior, they may retry on the same server. This can be a feature,
@@ -91,4 +116,10 @@ import org.apache.hadoop.hbase.security.User;
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
+
+  /**
+   * Get an event loop to operate on
+   * @return EventLoop
+   */
+  EventExecutor getEventExecutor();
 }
