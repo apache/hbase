@@ -139,16 +139,16 @@ public class IPCUtil {
       baos = new ByteBufferOutputStream(bufferSize);
     }
     Compressor poolCompressor = null;
-    try (OutputStream os = baos) {
-      OutputStream os2Compress = os;
+    OutputStream os = baos;
+    try  {
       if (compressor != null) {
         if (compressor instanceof Configurable) {
           ((Configurable) compressor).setConf(this.conf);
         }
         poolCompressor = CodecPool.getCompressor(compressor);
-        os2Compress = compressor.createOutputStream(os, poolCompressor);
+        os = compressor.createOutputStream(os, poolCompressor);
       }
-      Codec.Encoder encoder = codec.getEncoder(os2Compress);
+      Codec.Encoder encoder = codec.getEncoder(os);
       int count = 0;
       while (cellScanner.advance()) {
         encoder.write(cellScanner.current());
@@ -163,6 +163,8 @@ public class IPCUtil {
     } catch (BufferOverflowException e) {
       throw new DoNotRetryIOException(e);
     } finally {
+      os.close();
+
       if (poolCompressor != null) {
         CodecPool.returnCompressor(poolCompressor);
       }
