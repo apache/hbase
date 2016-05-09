@@ -24,7 +24,10 @@ public interface MetricsReplicationSourceSource {
   public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
   public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
 
+  @Deprecated
+  /** @deprecated Use SOURCE_SHIPPED_BYTES instead */
   public static final String SOURCE_SHIPPED_KBS = "source.shippedKBs";
+  public static final String SOURCE_SHIPPED_BYTES = "source.shippedBytes";
   public static final String SOURCE_SHIPPED_OPS = "source.shippedOps";
 
   public static final String SOURCE_LOG_READ_IN_BYTES = "source.logReadInBytes";
@@ -41,7 +44,7 @@ public interface MetricsReplicationSourceSource {
   void incrLogEditsFiltered(long size);
   void incrBatchesShipped(int batches);
   void incrOpsShipped(long ops);
-  void incrShippedKBs(long size);
+  void incrShippedBytes(long size);
   void incrLogReadInBytes(long size);
   void incrLogReadInEdits(long size);
   void clear();

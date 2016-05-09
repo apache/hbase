@@ -1059,7 +1059,7 @@ public class ReplicationSource extends Thread
           totalReplicatedEdits.addAndGet(entries.size());
           totalReplicatedOperations.addAndGet(currentNbOperations);
           // FIXME check relationship between wal group and overall
-          metrics.shipBatch(currentNbOperations, currentSize / 1024, currentNbHFiles);
+          metrics.shipBatch(currentNbOperations, currentSize, currentNbHFiles);
           metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),
             walGroupId);
           if (LOG.isTraceEnabled()) {
