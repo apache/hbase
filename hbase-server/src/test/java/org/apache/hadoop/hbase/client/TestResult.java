@@ -244,12 +244,6 @@ public class TestResult extends TestCase {
       LOG.debug("As expected: " + ex.getMessage());
     }
     try {
-      emptyResult.addResults(new RegionLoadStats(0, 0, 0));
-      fail("UnsupportedOperationException should have been thrown!");
-    } catch (UnsupportedOperationException ex) {
-      LOG.debug("As expected: " + ex.getMessage());
-    }
-    try {
       emptyResult.setExists(true);
       fail("UnsupportedOperationException should have been thrown!");
     } catch (UnsupportedOperationException ex) {

@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -332,7 +333,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
       @Override
       protected void encode(ChannelHandlerContext channelHandlerContext,
                             ClusterStatus clusterStatus, List<Object> objects) {
-        ClusterStatusProtos.ClusterStatus csp = clusterStatus.convert();
+        ClusterStatusProtos.ClusterStatus csp = ProtobufUtil.convert(clusterStatus);
         objects.add(new DatagramPacket(Unpooled.wrappedBuffer(csp.toByteArray()), isa));
       }
     }
