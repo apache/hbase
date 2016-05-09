@@ -46,10 +46,10 @@ cxx_library(
     ], )
 cxx_test(name="location-cache-test",
          srcs=[
-             "test-env.cc",
              "location-cache-test.cc",
          ],
-         deps=[":core", ],
+         deps=[":core",
+               "//test-util:test-util", ],
          run_test_separately=True, )
 cxx_binary(name="simple-client",
            srcs=["simple-client.cc", ],

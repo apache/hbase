@@ -16,30 +16,36 @@
  * limitations under the License.
  *
  */
+#pragma once
 
-#include <gtest/gtest.h>
+#include <folly/experimental/TestUtil.h>
+#include <folly/Random.h>
 
-namespace {
+#include <cstdlib>
+#include <string>
 
-class NativeClientTestEnv : public ::testing::Environment {
+namespace hbase {
+/**
+ * @brief Class to deal with a local instance cluster for testing.
+ */
+class TestUtil {
 public:
-  void SetUp() override {
-    // start local HBase cluster to be reused by all tests
-    auto result = system("bin/start-local-hbase.sh");
-    ASSERT_EQ(0, result);
-  }
 
-  void TearDown() override {
-    // shutdown local HBase cluster
-    auto result = system("bin/stop-local-hbase.sh");
-    ASSERT_EQ(0, result);
-  }
+  /**
+   * Creating a TestUtil will spin up a cluster.
+   */
+  TestUtil();
+  /**
+   * Destroying a TestUtil will spin down a cluster.
+   */
+  ~TestUtil();
+  /**
+   * Run a command in the hbase shell.
+   */
+  void RunShellCmd(const std::string& command);
+  static std::string RandString();
+
+private:
+  folly::test::TemporaryDirectory temp_dir_;
 };
-
-} // anonymous
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(new NativeClientTestEnv());
-  return RUN_ALL_TESTS();
-}
+} // namespace hbase
