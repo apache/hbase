@@ -29,7 +29,6 @@ Release Notes - HBase - Version 1.1.5 05/08/2016
     * [HBASE-15670] - Add missing Snapshot.proto to the maven profile for compiling protobuf
     * [HBASE-15674] - HRegionLocator#getAllRegionLocations should put the results in cache
     * [HBASE-15676] - FuzzyRowFilter fails and matches all the rows in the table if the mask consists of all 0s
-    * [HBASE-15693] - Reconsider the ImportOrder rule of checkstyle
     * [HBASE-15738] - Ensure artifacts in project dist area include required md5 file
     * [HBASE-15742] - Reduce allocation of objects in metrics
     * [HBASE-15755] - SnapshotDescriptionUtils and SnapshotTestingUtils do not have any Interface audience marked
