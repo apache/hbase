@@ -30,6 +30,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter logEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
+  private final MutableFastCounter shippedBytesCounter;
+  @Deprecated
   private final MutableFastCounter shippedKBsCounter;
   private final MutableFastCounter logReadInBytesCounter;
   private final MutableFastCounter shippedHFilesCounter;
@@ -47,6 +49,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     shippedOpsCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_OPS, 0L);
 
     shippedKBsCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_KBS, 0L);
+
+    shippedBytesCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_BYTES, 0L);
 
     logReadInBytesCounter = rms.getMetricsRegistry().getCounter(SOURCE_LOG_READ_IN_BYTES, 0L);
 
@@ -88,8 +92,25 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedKBs(long size) {
-    shippedKBsCounter.incr(size);
+  @Override public void incrShippedBytes(long size) {
+    shippedBytesCounter.incr(size);
+    // obtained value maybe smaller than 1024. We should make sure that KB count
+    // eventually picks up even from multiple smaller updates.
+    incrementKBsCounter(shippedBytesCounter, shippedKBsCounter);
+  }
+
+  static void incrementKBsCounter(MutableFastCounter bytesCounter, MutableFastCounter kbsCounter) {
+    // Following code should be thread-safe.
+    long delta = 0;
+    while(true) {
+      long bytes = bytesCounter.value();
+      delta = (bytes / 1024) - kbsCounter.value();
+      if (delta > 0) {
+        kbsCounter.incr(delta);
+      } else {
+        break;
+      }
+    }
   }
 
   @Override public void incrLogReadInBytes(long size) {

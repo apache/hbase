@@ -136,15 +136,15 @@ public class MetricsSource {
    *
    * @param batchSize the size of the batch that was shipped to sinks.
    */
-  public void shipBatch(long batchSize, int sizeInKB) {
+  public void shipBatch(long batchSize, int sizeInBytes) {
     singleSourceSource.incrBatchesShipped(1);
     globalSourceSource.incrBatchesShipped(1);
 
     singleSourceSource.incrOpsShipped(batchSize);
     globalSourceSource.incrOpsShipped(batchSize);
 
-    singleSourceSource.incrShippedKBs(sizeInKB);
-    globalSourceSource.incrShippedKBs(sizeInKB);
+    singleSourceSource.incrShippedBytes(sizeInBytes);
+    globalSourceSource.incrShippedBytes(sizeInBytes);
   }
 
   /**
@@ -153,8 +153,8 @@ public class MetricsSource {
    * @param batchSize the size of the batch that was shipped to sinks.
    * @param hfiles total number of hfiles shipped to sinks.
    */
-  public void shipBatch(long batchSize, int sizeInKB, long hfiles) {
-    shipBatch(batchSize, sizeInKB);
+  public void shipBatch(long batchSize, int sizeInBytes, long hfiles) {
+    shipBatch(batchSize, sizeInBytes);
     singleSourceSource.incrHFilesShipped(hfiles);
     globalSourceSource.incrHFilesShipped(hfiles);
   }
