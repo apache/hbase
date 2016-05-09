@@ -162,6 +162,7 @@ public class ProcedureInfo implements Cloneable {
   }
 
   @InterfaceAudience.Private
+  @Deprecated
   public ForeignExceptionMessage getForeignExceptionMessage() {
     return exception;
   }
@@ -221,6 +222,7 @@ public class ProcedureInfo implements Cloneable {
    * instance.
    */
   @InterfaceAudience.Private
+  @Deprecated
   public static ProcedureProtos.Procedure convertToProcedureProto(
       final ProcedureInfo procInfo) {
     ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder();
@@ -256,6 +258,7 @@ public class ProcedureInfo implements Cloneable {
    * instance.
    */
   @InterfaceAudience.Private
+  @Deprecated
   public static ProcedureInfo convert(final ProcedureProtos.Procedure procProto) {
     NonceKey nonceKey = null;
     if (procProto.getNonce() != HConstants.NO_NONCE) {

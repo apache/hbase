@@ -366,6 +366,7 @@ public class ClusterStatus extends VersionedWritable {
     *
     * @return the protobuf ClusterStatus
     */
+  @Deprecated
   public ClusterStatusProtos.ClusterStatus convert() {
     ClusterStatusProtos.ClusterStatus.Builder builder =
         ClusterStatusProtos.ClusterStatus.newBuilder();
@@ -432,6 +433,7 @@ public class ClusterStatus extends VersionedWritable {
    * @param proto the protobuf ClusterStatus
    * @return the converted ClusterStatus
    */
+  @Deprecated
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
