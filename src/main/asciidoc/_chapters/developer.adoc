@@ -1077,6 +1077,75 @@ As most as possible, tests should use the default settings for the cluster.
 When they don't, they should document it.
 This will allow to share the cluster later.
 
+[[hbase.tests.example.code]]
+==== Tests Skeleton Code
+
+Here is a test skeleton code with Categorization and a Category-based timeout Rule to copy and paste and use as basis for test contribution.
+[source,java]
+----
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase;
+
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
+
+/**
+ * Skeleton HBase test
+ */
+// NOTICE: See how we've 'categorized' this test. All hbase unit tests need to be categorized as
+// either 'small', 'medium', or 'large'. See http://hbase.apache.org/book.html#hbase.tests
+// for more on these categories.
+@Category(SmallTests.class)
+public class TestExample {
+  // Handy test rule that allows you subsequently get at the name of the current method. See
+  // down in 'test()' where we use it in the 'fail' message.
+  @Rule public TestName testName = new TestName();
+
+  // Rather than put a @Test (timeout=.... on each test so for sure the test times out, instead
+  // just the CategoryBasedTimeout... It will apply to each test in this test set, the timeout
+  // that goes w/ the particular test categorization.
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+        withLookingForStuckThread(true).build();
+
+  @Before
+  public void setUp() throws Exception {
+  }
+
+  @After
+  public void tearDown() throws Exception {
+  }
+
+  @Test
+  public void test() {
+    fail(testName.getMethodName() + " is not yet implemented");
+  }
+}
+----
+
 [[integration.tests]]
 === Integration Tests
 

@@ -126,7 +126,7 @@ http://example.com:8000/<table>/schema
 .Table Deletion
 To delete a table, use a `DELETE` request with the `/schema` endpoint:
 ----
-http://example.com:8000<table>/schema
+http://example.com:8000/<table>/schema
 ----
 
 .Table Regions
@@ -142,7 +142,7 @@ http://example.com:8000/<table>/regions
 To get a single cell value, use a URL scheme like the following:
 
 ----
-http://example.com:8000<table>/<row>/<column>:<qualifier>/<timestamp>/content:raw
+http://example.com:8000/<table>/<row>/<column>:<qualifier>/<timestamp>/content:raw
 ----
 
 The column qualifier and timestamp are optional. Without them, the whole row will
@@ -154,7 +154,7 @@ To get multiple single values, specify multiple column:qualifier tuples and/or a
 and end-timestamp. You can also limit the number of versions.
 
 ----
-http://example.com:8000<table>/<row>/<column>:<qualifier>?v=<num-versions>
+http://example.com:8000/<table>/<row>/<column>:<qualifier>?v=<num-versions>
 ----
 
 .Globbing Rows
@@ -162,7 +162,7 @@ To scan a series of rows, you can use a `*` glob
 character on the <row> value to glob together multiple rows.
 
 ----
-http://example.com:8000urls/https|ad.doubleclick.net|*
+http://example.com:8000/urls/https|ad.doubleclick.net|*
 ----
 
 ==== Puts
@@ -173,8 +173,8 @@ For Puts, `PUT` and `POST` are equivalent.
 The column qualifier and the timestamp are optional.
 
 ----
-http://example.com:8000put/<table>/<row>/<column>:<qualifier>/<timestamp>
-http://example.com:8000test/testrow/test:testcolumn
+http://example.com:8000/put/<table>/<row>/<column>:<qualifier>/<timestamp>
+http://example.com:8000/test/testrow/test:testcolumn
 ----
 
 .Put Multiple Values
@@ -195,7 +195,7 @@ success (201) or failure (anything else), and on successful scanner creation, th
 URI is returned which should be used to address the scanner.
 
 ----
-http://example.com:8000<table>/scanner
+http://example.com:8000/<table>/scanner
 ----
 
 .Scanner Get Next
@@ -203,14 +203,14 @@ To get the next batch of cells found by the scanner, use the `/scanner/<scanner-
 endpoint, using the URI returned by the scanner creation endpoint. If the scanner
 is exhausted, HTTP status `204` is returned.
 ----
-http://example.com:8000<table>/scanner/<scanner-id>
+http://example.com:8000/<table>/scanner/<scanner-id>
 ----
 
 .Scanner Deletion
 To delete resources associated with a scanner, send a HTTP `DELETE` request to the
 `/scanner/<scanner-id>` endpoint.
 ----
-http://example.com:8000<table>/scanner/<scanner-id>
+http://example.com:8000/<table>/scanner/<scanner-id>
 ----
 
 [[xml_schema]]
