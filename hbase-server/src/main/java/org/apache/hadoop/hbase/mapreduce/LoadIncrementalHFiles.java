@@ -373,10 +373,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
        */
       boolean validateHFile = getConf().getBoolean("hbase.loadincremental.validate.hfile", true);
       if(!validateHFile) {
-	LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
-	    "are not correct. If you fail to read data from your table after using this " +
-	    "option, consider removing the files and bulkload again without this option. " +
-	    "See HBASE-13985");
+        LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
+          "are not correct. If you fail to read data from your table after using this " +
+          "option, consider removing the files and bulkload again without this option. " +
+          "See HBASE-13985");
       }
       discoverLoadQueue(queue, hfofDir, validateHFile);
       // check whether there is invalid family name in HFiles to be bulkloaded
@@ -1035,7 +1035,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         throw new TableNotFoundException(errorMsg);
       }
     }
-
+    if (hbAdmin != null) {
+      hbAdmin.close();
+    }
     Path hfofDir = new Path(dirPath);
 
     try (Connection connection = ConnectionFactory.createConnection(getConf());
