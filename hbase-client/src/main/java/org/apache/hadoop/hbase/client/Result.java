@@ -1001,6 +1001,7 @@ public class Result implements CellScannable, CellScanner {
    * @param loadStats statistics about the current region from which this was returned
    */
   @InterfaceAudience.Private
+  @Deprecated
   public void setStatistics(ClientProtos.RegionLoadStats loadStats) {
     this.stats = loadStats;
   }
@@ -1009,6 +1010,7 @@ public class Result implements CellScannable, CellScanner {
    * @return the associated statistics about the region from which this was returned. Can be
    * <tt>null</tt> if stats are disabled.
    */
+  @Deprecated
   public ClientProtos.RegionLoadStats getStats() {
     return stats;
   }
