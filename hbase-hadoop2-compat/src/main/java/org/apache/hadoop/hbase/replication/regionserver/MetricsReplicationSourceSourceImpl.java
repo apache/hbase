@@ -30,7 +30,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logEditsFilteredKey;
   private final String shippedBatchesKey;
   private final String shippedOpsKey;
+  @Deprecated
   private final String shippedKBsKey;
+  private final String shippedBytesKey;
   private final String logReadInBytesKey;
   private final String shippedHFilesKey;
   private final String sizeOfHFileRefsQueueKey;
@@ -42,6 +44,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter shippedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
   private final MutableFastCounter shippedKBsCounter;
+  private final MutableFastCounter shippedBytesCounter;
   private final MutableFastCounter logReadInBytesCounter;
   private final MutableFastCounter shippedHFilesCounter;
   private final MutableGaugeLong sizeOfHFileRefsQueueGauge;
@@ -64,6 +67,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     shippedKBsKey = "source." + this.id + ".shippedKBs";
     shippedKBsCounter = rms.getMetricsRegistry().getCounter(shippedKBsKey, 0L);
+
+    shippedBytesKey = "source." + this.id + ".shippedBytes";
+    shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);
 
     logReadInBytesKey = "source." + this.id + ".logReadInBytes";
     logReadInBytesCounter = rms.getMetricsRegistry().getCounter(logReadInBytesKey, 0L);
@@ -109,8 +115,10 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedKBs(long size) {
-    shippedKBsCounter.incr(size);
+  @Override public void incrShippedBytes(long size) {
+    shippedBytesCounter.incr(size);
+    MetricsReplicationGlobalSourceSource
+      .incrementKBsCounter(shippedBytesCounter, shippedKBsCounter);
   }
 
   @Override public void incrLogReadInBytes(long size) {
@@ -125,6 +133,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(shippedBatchesKey);
     rms.removeMetric(shippedOpsKey);
     rms.removeMetric(shippedKBsKey);
+    rms.removeMetric(shippedBytesKey);
 
     rms.removeMetric(logReadInBytesKey);
     rms.removeMetric(logReadInEditsKey);
