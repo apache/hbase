@@ -1,5 +1,74 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.1.5 05/08/2016
+
+** Sub-task
+    * [HBASE-15479] - No more garbage or beware of autoboxing
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-13627] - Terminating RS results in redundant CLOSE RPC
+    * [HBASE-15234] - ReplicationLogCleaner can abort due to transient ZK issues
+    * [HBASE-15295] - MutateTableAccess.multiMutate() does not get high priority causing a deadlock
+    * [HBASE-15325] - ResultScanner allowing partial result will miss the rest of the row if the region is moved between two rpc requests
+    * [HBASE-15433] - SnapshotManager#restoreSnapshot not update table and region count quota correctly when encountering exception
+    * [HBASE-15485] - Filter.reset() should not be called between batches
+    * [HBASE-15582] - SnapshotManifestV1 too verbose when there are no regions
+    * [HBASE-15587] - FSTableDescriptors.getDescriptor() logs stack trace erronously
+    * [HBASE-15613] - TestNamespaceCommand times out
+    * [HBASE-15621] - Suppress Hbase SnapshotHFile cleaner error  messages when a snaphot is going on
+    * [HBASE-15622] - Superusers does not consider the keytab credentials
+    * [HBASE-15627] -  Miss space and closing quote in AccessController#checkSystemOrSuperUser
+    * [HBASE-15636] - hard coded wait time out value in HBaseTestingUtility#waitUntilAllRegionsAssigned might cause test failure
+    * [HBASE-15645] - hbase.rpc.timeout is not used in operations of HTable
+    * [HBASE-15670] - Add missing Snapshot.proto to the maven profile for compiling protobuf
+    * [HBASE-15674] - HRegionLocator#getAllRegionLocations should put the results in cache
+    * [HBASE-15676] - FuzzyRowFilter fails and matches all the rows in the table if the mask consists of all 0s
+    * [HBASE-15693] - Reconsider the ImportOrder rule of checkstyle
+    * [HBASE-15738] - Ensure artifacts in project dist area include required md5 file
+    * [HBASE-15742] - Reduce allocation of objects in metrics
+    * [HBASE-15755] - SnapshotDescriptionUtils and SnapshotTestingUtils do not have any Interface audience marked
+
+
+
+
+
+
+** Improvement
+    * [HBASE-15478] - add comments to FSHLog explaining why syncRunnerIndex won't overflow
+    * [HBASE-15720] - Print row locks at the debug dump page
+
+
+
+** New Feature
+    * [HBASE-15592] - Print Procedure WAL content
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-15183] - Correct discrepancies in CHANGES.txt on branch-1.1
+
+
+
+
+
+
 
 Release Notes - HBase - Version 1.1.4 03/16/2016
 
