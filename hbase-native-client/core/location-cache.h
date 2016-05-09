@@ -50,7 +50,9 @@ public:
   /**
    * Constructor.
    * @param quorum_spec Where to connect for Zookeeper.
-   * @param executor The cpu executor to run on.
+   * @param cpu_executor executor used to run non network IO based
+   * continuations.
+   * @param io_executor executor used to talk to the network
    */
   LocationCache(std::string quorum_spec,
                 std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_exector,
@@ -70,6 +72,12 @@ public:
 
   /**
    * Go read meta and find out where a region is located.
+   *
+   * @param tn Table name of the table to look up. This object must live until
+   * after the future is returned
+   *
+   * @param row of the table to look up. This object must live until after the
+   * future is returned
    */
   folly::Future<std::shared_ptr<RegionLocation>>
   LocateFromMeta(const hbase::pb::TableName &tn, const std::string &row);

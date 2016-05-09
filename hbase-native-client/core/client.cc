@@ -22,6 +22,7 @@
 #include <glog/logging.h>
 
 #include <string>
+#include <unistd.h>
 
 using namespace folly;
 using namespace std;

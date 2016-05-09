@@ -16,14 +16,22 @@
  * limitations under the License.
  *
  */
+#include "core/location-cache.h"
+
 #include <folly/Memory.h>
 #include <gtest/gtest.h>
 
-#include "location-cache.h"
+#include <chrono>
+
+#include "if/HBase.pb.h"
+#include "serde/table-name.h"
+#include "test-util/test-util.h"
 using namespace hbase;
+using namespace std::chrono;
 
 TEST(LocationCacheTest, TestGetMetaNodeContents) {
-  // TODO(elliott): need to make a test utility for this.
+  TestUtil test_util{};
+
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   LocationCache cache{"localhost:2181", cpu, io};
@@ -32,4 +40,21 @@ TEST(LocationCacheTest, TestGetMetaNodeContents) {
   ASSERT_FALSE(f.hasException());
   ASSERT_TRUE(result.has_port());
   ASSERT_TRUE(result.has_host_name());
+}
+
+TEST(LocationCacheTest, TestGetRegionLocation) {
+  TestUtil test_util{};
+  auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
+  auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
+  LocationCache cache{"localhost:2181", cpu, io};
+
+  // If there is no table this should throw an exception
+  auto tn = folly::to<hbase::pb::TableName>("t");
+  auto row = "test";
+  ASSERT_ANY_THROW(cache.LocateFromMeta(tn, row).get(milliseconds(1000)));
+  test_util.RunShellCmd("create 't', 'd'");
+  auto loc = cache.LocateFromMeta(tn, row).get(milliseconds(1000));
+  ASSERT_TRUE(loc != nullptr);
+  cpu->stop();
+  io->stop();
 }

@@ -116,13 +116,21 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) { return this->cp_.get(sn); })
-      .then([&](std::shared_ptr<HBaseService> service) {
+    .then([tn, row, this](std::shared_ptr<HBaseService> service) {
         return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
       })
       .then([this](Response resp) {
         // take the protobuf response and make it into
         // a region location.
         return this->CreateLocation(std::move(resp));
+      })
+      .then([tn, this](std::shared_ptr<RegionLocation> rl) {
+        // Make sure that the correct location was found.
+        if (rl->region_info().table_name().namespace_() != tn.namespace_() ||
+            rl->region_info().table_name().qualifier() != tn.qualifier()) {
+          throw std::runtime_error("Doesn't look like table exists.");
+        }
+        return rl;
       })
       .then([this](std::shared_ptr<RegionLocation> rl) {
         // Now fill out the connection.
