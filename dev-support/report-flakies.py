@@ -99,7 +99,8 @@ for job_url in jobs_list:
     bad_tests = set()
     for build in build_id_to_results:
         for test in build_id_to_results[build]:
-            if build_id_to_results[build][test] == "REGRESSION":
+            if (build_id_to_results[build][test] == "REGRESSION"
+                or build_id_to_results[build][test] == "FAILED"):
                 bad_tests.add(test)
                 global_bad_tests.add(test)
 
@@ -123,7 +124,7 @@ for job_url in jobs_list:
             print "{:>100}  {:6}  {:10}  {:2.0f}%".format(bad_test, fail, total, fail*100.0/total)
     else:
         print "No flaky tests founds."
-        if len(builds_ids) == len(build_ids_without_result):
+        if len(build_ids) == len(build_ids_without_result):
             print "None of the analyzed builds have test result."
 
     print "Builds analyzed: " + str(build_ids)
@@ -131,16 +132,21 @@ for job_url in jobs_list:
     print ""
 
 if args.mvn:
-    includes = ""
-    excludes = ""
+    # There might be multiple tests failing within each TestCase, avoid duplication of TestCase names.
+    test_cases = set()
     for test in global_bad_tests:
         test = re.sub(".*\.", "", test)  # Remove package name prefix.
         test = re.sub("#.*", "", test)  # Remove individual unittest's name
-        includes += test + ","
-        excludes += "**/" + test + ".java,"
+        test_cases.add(test)
+
+    includes = ",".join(test_cases)
     with open("./includes", "w") as inc_file:
         inc_file.write(includes)
         inc_file.close()
+
+    excludes = ""
+    for test_case in test_cases:
+        excludes += "**/" + test_case + ".java,"
     with open("./excludes", "w") as exc_file:
         exc_file.write(excludes)
         exc_file.close()
