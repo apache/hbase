@@ -30,6 +30,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MetricMutableCounterLong logEditsFilteredCounter;
   private final MetricMutableCounterLong shippedBatchesCounter;
   private final MetricMutableCounterLong shippedOpsCounter;
+  private final MetricMutableCounterLong shippedBytesCounter;
+  @Deprecated
   private final MetricMutableCounterLong shippedKBsCounter;
   private final MetricMutableCounterLong logReadInBytesCounter;
 
@@ -44,6 +46,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     shippedOpsCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_SHIPPED_OPS, 0L);
 
     shippedKBsCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_SHIPPED_KBS, 0L);
+
+    shippedBytesCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_SHIPPED_BYTES, 0L);
 
     logReadInBytesCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_LOG_READ_IN_BYTES, 0L);
 
@@ -85,8 +89,19 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedKBs(long size) {
-    shippedKBsCounter.incr(size);
+  @Override public void incrShippedBytes(long size) {
+    incrementKBsCounter(size, shippedBytesCounter, shippedKBsCounter);
+  }
+
+  static void incrementKBsCounter(long size, MetricMutableCounterLong bytesCounter,
+      MetricMutableCounterLong kbsCounter) {
+    // Not as smart as the implementation for Hadoop 2 metrics but we care
+    // little about Hadoop 1 at this point
+    bytesCounter.incr(size);
+    long delta = size / 1024;
+    if (delta > 0) {
+      kbsCounter.incr(delta);
+    }
   }
 
   @Override public void incrLogReadInBytes(long size) {

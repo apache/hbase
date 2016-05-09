@@ -31,7 +31,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logEditsFilteredKey;
   private final String shippedBatchesKey;
   private final String shippedOpsKey;
+  @Deprecated
   private final String shippedKBsKey;
+  private final String shippedBytesKey;
   private final String logReadInBytesKey;
 
   private final MetricMutableGaugeLong ageOfLastShippedOpGauge;
@@ -42,6 +44,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MetricMutableCounterLong shippedBatchesCounter;
   private final MetricMutableCounterLong shippedOpsCounter;
   private final MetricMutableCounterLong shippedKBsCounter;
+  private final MetricMutableCounterLong shippedBytesCounter;
   private final MetricMutableCounterLong logReadInBytesCounter;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
@@ -62,6 +65,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     shippedKBsKey = "source." + this.id + ".shippedKBs";
     shippedKBsCounter = rms.getMetricsRegistry().getLongCounter(shippedKBsKey, 0L);
+
+    shippedBytesKey = "source." + this.id + ".shippedBytes";
+    shippedBytesCounter = rms.getMetricsRegistry().getLongCounter(shippedBytesKey, 0L);
 
     logReadInBytesKey = "source." + this.id + ".logReadInBytes";
     logReadInBytesCounter = rms.getMetricsRegistry().getLongCounter(logReadInBytesKey, 0L);
@@ -106,8 +112,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedKBs(long size) {
-    shippedKBsCounter.incr(size);
+  @Override public void incrShippedBytes(long size) {
+    MetricsReplicationGlobalSourceSource
+      .incrementKBsCounter(size, shippedBytesCounter, shippedKBsCounter);
   }
 
   @Override public void incrLogReadInBytes(long size) {

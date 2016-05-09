@@ -141,15 +141,15 @@ public class MetricsSource {
    *
    * @param batchSize the size of the batch that was shipped to sinks.
    */
-  public void shipBatch(long batchSize, int sizeInKB) {
+  public void shipBatch(long batchSize, int sizeInBytes) {
     singleSourceSource.incrBatchesShipped(1);
     globalSourceSource.incrBatchesShipped(1);
 
     singleSourceSource.incrOpsShipped(batchSize);
     globalSourceSource.incrOpsShipped(batchSize);
 
-    singleSourceSource.incrShippedKBs(sizeInKB);
-    globalSourceSource.incrShippedKBs(sizeInKB);
+    singleSourceSource.incrShippedBytes(sizeInBytes);
+    globalSourceSource.incrShippedBytes(sizeInBytes);
   }
 
   /** increase the byte number read by source from log file */

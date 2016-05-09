@@ -725,7 +725,7 @@ public class ReplicationSource extends Thread
         }
         this.totalReplicatedEdits += entries.size();
         this.totalReplicatedOperations += currentNbOperations;
-        this.metrics.shipBatch(this.currentNbOperations, this.currentSize/1024);
+        this.metrics.shipBatch(currentNbOperations, currentSize);
         this.metrics.setAgeOfLastShippedOp(entries.get(entries.size()-1).getKey().getWriteTime());
         if (LOG.isTraceEnabled()) {
           LOG.trace("Replicated " + this.totalReplicatedEdits + " entries in total, or "
