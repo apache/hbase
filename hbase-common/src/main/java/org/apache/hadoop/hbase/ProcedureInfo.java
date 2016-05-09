@@ -22,11 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -44,7 +40,7 @@ public class ProcedureInfo implements Cloneable {
   private final ProcedureState procState;
   private final long parentId;
   private final NonceKey nonceKey;
-  private final ForeignExceptionMessage exception;
+  private final ProcedureUtil.ForeignExceptionMsg exception;
   private final long lastUpdate;
   private final long startTime;
   private final byte[] result;
@@ -59,7 +55,7 @@ public class ProcedureInfo implements Cloneable {
       final ProcedureState procState,
       final long parentId,
       final NonceKey nonceKey,
-      final ForeignExceptionMessage exception,
+      final ProcedureUtil.ForeignExceptionMsg exception,
       final long lastUpdate,
       final long startTime,
       final byte[] result) {
@@ -156,24 +152,24 @@ public class ProcedureInfo implements Cloneable {
 
   public IOException getException() {
     if (isFailed()) {
-      return ForeignExceptionUtil.toIOException(exception);
+      return ForeignExceptionUtil.toIOException(exception.getForeignExchangeMessage());
     }
     return null;
   }
 
   @InterfaceAudience.Private
-  public ForeignExceptionMessage getForeignExceptionMessage() {
+  public ProcedureUtil.ForeignExceptionMsg getForeignExceptionMessage() {
     return exception;
   }
 
   public String getExceptionCause() {
     assert isFailed();
-    return exception.getGenericException().getClassName();
+    return exception.getForeignExchangeMessage().getGenericException().getClassName();
   }
 
   public String getExceptionMessage() {
     assert isFailed();
-    return exception.getGenericException().getMessage();
+    return exception.getForeignExchangeMessage().getGenericException().getMessage();
   }
 
   public String getExceptionFullMessage() {
@@ -217,65 +213,6 @@ public class ProcedureInfo implements Cloneable {
   }
 
   /**
-   * @return Convert the current {@link ProcedureInfo} into a Protocol Buffers Procedure
-   * instance.
-   */
-  @InterfaceAudience.Private
-  public static ProcedureProtos.Procedure convertToProcedureProto(
-      final ProcedureInfo procInfo) {
-    ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder();
-
-    builder.setClassName(procInfo.getProcName());
-    builder.setProcId(procInfo.getProcId());
-    builder.setStartTime(procInfo.getStartTime());
-    builder.setState(procInfo.getProcState());
-    builder.setLastUpdate(procInfo.getLastUpdate());
-
-    if (procInfo.hasParentId()) {
-      builder.setParentId(procInfo.getParentId());
-    }
-
-    if (procInfo.getProcOwner() != null) {
-       builder.setOwner(procInfo.getProcOwner());
-    }
-
-    if (procInfo.isFailed()) {
-        builder.setException(procInfo.getForeignExceptionMessage());
-    }
-
-    if (procInfo.hasResultData()) {
-      builder.setResult(ByteStringer.wrap(procInfo.getResult()));
-    }
-
-    return builder.build();
-  }
-
-  /**
-   * Helper to convert the protobuf object.
-   * @return Convert the current Protocol Buffers Procedure to {@link ProcedureInfo}
-   * instance.
-   */
-  @InterfaceAudience.Private
-  public static ProcedureInfo convert(final ProcedureProtos.Procedure procProto) {
-    NonceKey nonceKey = null;
-    if (procProto.getNonce() != HConstants.NO_NONCE) {
-      nonceKey = new NonceKey(procProto.getNonceGroup(), procProto.getNonce());
-    }
-
-    return new ProcedureInfo(
-      procProto.getProcId(),
-      procProto.getClassName(),
-      procProto.getOwner(),
-      procProto.getState(),
-      procProto.hasParentId() ? procProto.getParentId() : -1,
-      nonceKey,
-      procProto.hasException() ? procProto.getException() : null,
-      procProto.getLastUpdate(),
-      procProto.getStartTime(),
-      procProto.hasResult() ? procProto.getResult().toByteArray() : null);
-  }
-
-  /**
    * Check if the user is this procedure's owner
    * @param procInfo the procedure to check
    * @param user the user
@@ -293,4 +230,5 @@ public class ProcedureInfo implements Cloneable {
     }
     return procOwner.equals(user.getShortName());
   }
+
 }

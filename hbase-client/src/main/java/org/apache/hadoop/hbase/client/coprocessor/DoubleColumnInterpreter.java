@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * TestDoubleColumnInterpreter methods for its sample usage.
  * Its methods handle null arguments gracefully. 
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double, 
       EmptyMsg, DoubleMsg, DoubleMsg>{

@@ -111,7 +111,7 @@ public class Result implements CellScannable, CellScanner {
    * Index for where we are when Result is acting as a {@link CellScanner}.
    */
   private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
-  private ClientProtos.RegionLoadStats stats;
+  private RegionLoadStats stats;
 
   private final boolean readonly;
 
@@ -909,25 +909,11 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Add load information about the region to the information about the result
-   * @param loadStats statistics about the current region from which this was returned
-   * @deprecated use {@link #setStatistics(ClientProtos.RegionLoadStats)} instead
-   * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT
-   * (which is supposed to be immutable).
-   */
-  @InterfaceAudience.Private
-  @Deprecated
-  public void addResults(ClientProtos.RegionLoadStats loadStats) {
-    checkReadonly();
-    this.stats = loadStats;
-  }
-
-  /**
    * Set load information about the region to the information about the result
    * @param loadStats statistics about the current region from which this was returned
    */
   @InterfaceAudience.Private
-  public void setStatistics(ClientProtos.RegionLoadStats loadStats) {
+  public void setStatistics(RegionLoadStats loadStats) {
     this.stats = loadStats;
   }
 
@@ -935,7 +921,7 @@ public class Result implements CellScannable, CellScanner {
    * @return the associated statistics about the region from which this was returned. Can be
    * <tt>null</tt> if stats are disabled.
    */
-  public ClientProtos.RegionLoadStats getStats() {
+  public RegionLoadStats getStats() {
     return stats;
   }
 

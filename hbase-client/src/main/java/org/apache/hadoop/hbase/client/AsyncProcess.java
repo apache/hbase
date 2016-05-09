@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1718,10 +1719,11 @@ class AsyncProcess {
     for (Map.Entry<byte[], MultiResponse.RegionResult> regionStats : results.entrySet()) {
       byte[] regionName = regionStats.getKey();
       ClientProtos.RegionLoadStats stat = regionStats.getValue().getStat();
+      RegionLoadStats regionLoadstats = ProtobufUtil.createRegionLoadStats(stat);
       ResultStatsUtil.updateStats(AsyncProcess.this.connection.getStatisticsTracker(), server,
-          regionName, stat);
+          regionName, regionLoadstats);
       ResultStatsUtil.updateStats(AsyncProcess.this.connection.getConnectionMetrics(),
-          server, regionName, stat);
+          server, regionName, regionLoadstats);
     }
   }
 

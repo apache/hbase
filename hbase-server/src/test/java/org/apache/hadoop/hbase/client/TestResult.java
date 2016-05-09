@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -245,7 +244,7 @@ public class TestResult extends TestCase {
       LOG.debug("As expected: " + ex.getMessage());
     }
     try {
-      emptyResult.addResults(ClientProtos.RegionLoadStats.getDefaultInstance());
+      emptyResult.addResults(new RegionLoadStats(0, 0, 0));
       fail("UnsupportedOperationException should have been thrown!");
     } catch (UnsupportedOperationException ex) {
       LOG.debug("As expected: " + ex.getMessage());

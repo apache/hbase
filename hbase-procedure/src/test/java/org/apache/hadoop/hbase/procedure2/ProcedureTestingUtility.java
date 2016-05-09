@@ -175,9 +175,12 @@ public class ProcedureTestingUtility {
   }
 
   public static void assertProcNotFailed(final ProcedureInfo result) {
-    ForeignExceptionMessage exception = result.getForeignExceptionMessage();
-    String msg = exception != null ? result.getExceptionFullMessage() : "no exception found";
-    assertFalse(msg, result.isFailed());
+    if (result.getForeignExceptionMessage() != null) {
+      ForeignExceptionMessage exception =
+          result.getForeignExceptionMessage().getForeignExchangeMessage();
+      String msg = exception != null ? result.getExceptionFullMessage() : "no exception found";
+      assertFalse(msg, result.isFailed());
+    }
   }
 
   public static void assertIsAbortException(final ProcedureInfo result) {
@@ -204,7 +207,8 @@ public class ProcedureTestingUtility {
 
   public static Throwable getExceptionCause(final ProcedureInfo procInfo) {
     assert procInfo.getForeignExceptionMessage() != null;
-    return RemoteProcedureException.fromProto(procInfo.getForeignExceptionMessage()).getCause();
+    return RemoteProcedureException
+        .fromProto(procInfo.getForeignExceptionMessage().getForeignExchangeMessage()).getCause();
   }
 
   public static class TestProcedure extends Procedure<Void> {

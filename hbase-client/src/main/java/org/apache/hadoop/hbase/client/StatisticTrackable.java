@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 
 /**
  * Parent interface for an object to get updates about per-region statistics.
@@ -28,6 +27,5 @@ public interface StatisticTrackable {
   /**
    *  Update stats per region.
    * */
-  void updateRegionStats(ServerName server, byte[] region, ClientProtos.RegionLoadStats
-    stats);
+  void updateRegionStats(ServerName server, byte[] region, RegionLoadStats stats);
 }

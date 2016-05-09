@@ -28,7 +28,6 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.RatioGauge;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
@@ -156,7 +155,7 @@ public class MetricsConnection implements StatisticTrackable {
           HEAP_BASE + this.name));
     }
 
-    public void update(ClientProtos.RegionLoadStats regionStatistics) {
+    public void update(RegionLoadStats regionStatistics) {
       this.memstoreLoadHist.update(regionStatistics.getMemstoreLoad());
       this.heapOccupancyHist.update(regionStatistics.getHeapOccupancy());
     }
@@ -200,7 +199,7 @@ public class MetricsConnection implements StatisticTrackable {
       return;
     }
     Result result = (Result) r;
-    ClientProtos.RegionLoadStats stats = result.getStats();
+    RegionLoadStats stats = result.getStats();
     if (stats == null) {
       return;
     }
@@ -209,7 +208,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   @Override
   public void updateRegionStats(ServerName serverName, byte[] regionName,
-    ClientProtos.RegionLoadStats stats) {
+    RegionLoadStats stats) {
     String name = serverName.getServerName() + "," + Bytes.toStringBinary(regionName);
     ConcurrentMap<byte[], RegionStats> rsStats = null;
     if (serverStats.containsKey(serverName)) {

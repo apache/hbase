@@ -81,7 +81,7 @@ public class ClusterId {
   /**
    * @return A pb instance to represent this instance.
    */
-  ClusterIdProtos.ClusterId convert() {
+  public ClusterIdProtos.ClusterId convert() {
     ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
     return builder.setClusterId(this.id).build();
   }
@@ -90,7 +90,7 @@ public class ClusterId {
    * @param cid
    * @return A {@link ClusterId} made from the passed in <code>cid</code>
    */
-  static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
+  public static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
     return new ClusterId(cid.getClusterId());
   }
 

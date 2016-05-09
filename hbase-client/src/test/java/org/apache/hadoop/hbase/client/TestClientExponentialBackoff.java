@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -157,7 +158,7 @@ public class TestClientExponentialBackoff {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
         .setMemstoreLoad
             (load).build();
-    stats.update(regionname, stat);
+    stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
 
   private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy,
@@ -167,6 +168,6 @@ public class TestClientExponentialBackoff {
         .setHeapOccupancy(heapOccupancy)
         .setCompactionPressure(compactionPressure)
             .build();
-    stats.update(regionname, stat);
+    stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
 }

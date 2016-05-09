@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.ProcedureUtil;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -707,7 +708,7 @@ public class MasterRpcServices extends RSRpcServices
     GetClusterStatusResponse.Builder response = GetClusterStatusResponse.newBuilder();
     try {
       master.checkInitialized();
-      response.setClusterStatus(master.getClusterStatus().convert());
+      response.setClusterStatus(ProtobufUtil.convert(master.getClusterStatus()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -958,7 +959,7 @@ public class MasterRpcServices extends RSRpcServices
         builder.setStartTime(result.getStartTime());
         builder.setLastUpdate(result.getLastUpdate());
         if (result.isFailed()) {
-          builder.setException(result.getForeignExceptionMessage());
+          builder.setException(result.getForeignExceptionMessage().getForeignExchangeMessage());
         }
         if (result.hasResultData()) {
           builder.setResult(ByteStringer.wrap(result.getResult()));
@@ -1018,7 +1019,7 @@ public class MasterRpcServices extends RSRpcServices
       ListProceduresResponse.Builder response =
           ListProceduresResponse.newBuilder();
       for(ProcedureInfo p: master.listProcedures()) {
-        response.addProcedure(ProcedureInfo.convertToProcedureProto(p));
+        response.addProcedure(ProcedureUtil.convertToProcedureProto(p));
       }
       return response.build();
     } catch (IOException e) {

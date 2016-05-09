@@ -29,6 +29,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.ProcedureUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -688,18 +689,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   @InterfaceAudience.Private
   public static ProcedureInfo createProcedureInfo(final Procedure proc, final NonceKey nonceKey) {
     RemoteProcedureException exception = proc.hasException() ? proc.getException() : null;
-    return new ProcedureInfo(
-      proc.getProcId(),
-      proc.toStringClass(),
-      proc.getOwner(),
-      proc.getState(),
-      proc.hasParent() ? proc.getParentProcId() : -1,
-      nonceKey,
-      exception != null ?
-          RemoteProcedureException.toProto(exception.getSource(), exception.getCause()) : null,
-      proc.getLastUpdate(),
-      proc.getStartTime(),
-      proc.getResult());
+    return new ProcedureInfo(proc.getProcId(), proc.toStringClass(), proc.getOwner(),
+        ProcedureUtil.convertToProcedureState(proc.getState()),
+        proc.hasParent() ? proc.getParentProcId() : -1, nonceKey,
+        exception != null
+            ? new ProcedureUtil.ForeignExceptionMsg(
+                RemoteProcedureException.toProto(exception.getSource(), exception.getCause()))
+            : null,
+        proc.getLastUpdate(), proc.getStartTime(), proc.getResult());
   }
 
   /**

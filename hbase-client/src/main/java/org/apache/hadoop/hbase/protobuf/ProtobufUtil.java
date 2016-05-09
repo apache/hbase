@@ -44,6 +44,8 @@ import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -66,6 +69,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -77,6 +81,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -113,7 +118,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Del
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -3491,5 +3499,125 @@ public final class ProtobufUtil {
     return new SnapshotDescription(snapshotDesc.getName(), snapshotDesc.getTable(),
         createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
         snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+  }
+
+  /**
+   * Convert a protobuf ClusterStatus to a ClusterStatus
+   *
+   * @param proto the protobuf ClusterStatus
+   * @return the converted ClusterStatus
+   */
+  public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
+
+    Map<ServerName, ServerLoad> servers = null;
+    servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
+    for (LiveServerInfo lsi : proto.getLiveServersList()) {
+      servers.put(ProtobufUtil.toServerName(
+          lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
+    }
+
+    Collection<ServerName> deadServers = null;
+    deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
+    for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
+      deadServers.add(ProtobufUtil.toServerName(sn));
+    }
+
+    Collection<ServerName> backupMasters = null;
+    backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
+    for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
+      backupMasters.add(ProtobufUtil.toServerName(sn));
+    }
+
+    Map<String, RegionState> rit = null;
+    rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
+    for (RegionInTransition region : proto.getRegionsInTransitionList()) {
+      String key = new String(region.getSpec().getValue().toByteArray());
+      RegionState value = RegionState.convert(region.getRegionState());
+      rit.put(key, value);
+    }
+
+    String[] masterCoprocessors = null;
+    final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
+    masterCoprocessors = new String[numMasterCoprocessors];
+    for (int i = 0; i < numMasterCoprocessors; i++) {
+      masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
+    }
+
+    return new ClusterStatus(proto.getHbaseVersion().getVersion(),
+      ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
+      ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,
+      proto.getBalancerOn());
+  }
+
+  /**
+   * Convert a ClusterStatus to a protobuf ClusterStatus
+   *
+   * @return the protobuf ClusterStatus
+   */
+  public static ClusterStatusProtos.ClusterStatus convert(ClusterStatus status) {
+    ClusterStatusProtos.ClusterStatus.Builder builder =
+        ClusterStatusProtos.ClusterStatus.newBuilder();
+    builder
+        .setHbaseVersion(HBaseVersionFileContent.newBuilder().setVersion(status.getHBaseVersion()));
+
+    if (status.getServers() != null) {
+      for (ServerName serverName : status.getServers()) {
+        LiveServerInfo.Builder lsi =
+            LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(serverName));
+        status.getLoad(serverName);
+        lsi.setServerLoad(status.getLoad(serverName).obtainServerLoadPB());
+        builder.addLiveServers(lsi.build());
+      }
+    }
+
+    if (status.getDeadServerNames() != null) {
+      for (ServerName deadServer : status.getDeadServerNames()) {
+        builder.addDeadServers(ProtobufUtil.toServerName(deadServer));
+      }
+    }
+
+    if (status.getRegionsInTransition() != null) {
+      for (Map.Entry<String, RegionState> rit : status.getRegionsInTransition().entrySet()) {
+        ClusterStatusProtos.RegionState rs = rit.getValue().convert();
+        RegionSpecifier.Builder spec =
+            RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
+        spec.setValue(ByteStringer.wrap(Bytes.toBytes(rit.getKey())));
+
+        RegionInTransition pbRIT =
+            RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
+        builder.addRegionsInTransition(pbRIT);
+      }
+    }
+
+    if (status.getClusterId() != null) {
+      builder.setClusterId(new ClusterId(status.getClusterId()).convert());
+    }
+
+    if (status.getMasterCoprocessors() != null) {
+      for (String coprocessor : status.getMasterCoprocessors()) {
+        builder.addMasterCoprocessors(HBaseProtos.Coprocessor.newBuilder().setName(coprocessor));
+      }
+    }
+
+    if (status.getMaster() != null) {
+      builder.setMaster(ProtobufUtil.toServerName(status.getMaster()));
+    }
+
+    if (status.getBackupMasters() != null) {
+      for (ServerName backup : status.getBackupMasters()) {
+        builder.addBackupMasters(ProtobufUtil.toServerName(backup));
+      }
+    }
+
+    if (status.getBalancerOn() != null) {
+      builder.setBalancerOn(status.getBalancerOn());
+    }
+
+    return builder.build();
+  }
+
+  public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
+    return new RegionLoadStats(stats.getMemstoreLoad(), stats.getHeapOccupancy(),
+        stats.getCompactionPressure());
   }
 }

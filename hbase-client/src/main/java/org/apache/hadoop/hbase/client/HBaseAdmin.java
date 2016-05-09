@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.ProcedureUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -1847,7 +1848,7 @@ public class HBaseAdmin implements Admin {
         PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setCallTimeout(callTimeout);
         GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
-        return ClusterStatus.convert(master.getClusterStatus(controller, req).getClusterStatus());
+        return ProtobufUtil.convert(master.getClusterStatus(controller, req).getClusterStatus());
       }
     });
   }
@@ -2013,7 +2014,7 @@ public class HBaseAdmin implements Admin {
               controller, ListProceduresRequest.newBuilder().build()).getProcedureList();
             ProcedureInfo[] procInfoList = new ProcedureInfo[procList.size()];
             for (int i = 0; i < procList.size(); i++) {
-              procInfoList[i] = ProcedureInfo.convert(procList.get(i));
+              procInfoList[i] = ProcedureUtil.convert(procList.get(i));
             }
             return procInfoList;
           }

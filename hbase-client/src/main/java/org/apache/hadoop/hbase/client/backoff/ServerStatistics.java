@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client.backoff;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.Map;
@@ -39,7 +39,7 @@ public class ServerStatistics {
    * @param region
    * @param currentStats
    */
-  public void update(byte[] region, ClientProtos.RegionLoadStats currentStats) {
+  public void update(byte[] region, RegionLoadStats currentStats) {
     RegionStatistics regionStat = this.stats.get(region);
     if(regionStat == null){
       regionStat = new RegionStatistics();
@@ -59,7 +59,7 @@ public class ServerStatistics {
     private int heapOccupancy = 0;
     private int compactionPressure = 0;
 
-    public void update(ClientProtos.RegionLoadStats currentStats) {
+    public void update(RegionLoadStats currentStats) {
       this.memstoreLoad = currentStats.getMemstoreLoad();
       this.heapOccupancy = currentStats.getHeapOccupancy();
       this.compactionPressure = currentStats.getCompactionPressure();

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.ProcedureUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -288,7 +289,7 @@ public class ProcedureWALFormatReader {
     }
 
     public ProcedureInfo convertToInfo() {
-      return ProcedureInfo.convert(proto);
+      return ProcedureUtil.convert(proto);
     }
 
     @Override

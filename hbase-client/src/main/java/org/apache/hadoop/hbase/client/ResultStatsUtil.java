@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 
 /**
  * A {@link Result} with some statistics about the server/region status
@@ -50,7 +49,7 @@ public final class ResultStatsUtil {
     }
     Result result = (Result) r;
     // early exit if there are no stats to collect
-    ClientProtos.RegionLoadStats stats = result.getStats();
+    RegionLoadStats stats = result.getStats();
     if(stats == null){
       return r;
     }
@@ -60,7 +59,7 @@ public final class ResultStatsUtil {
   }
 
   public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
-    ClientProtos.RegionLoadStats stats) {
+    RegionLoadStats stats) {
     if (regionName != null && stats != null && tracker != null) {
       tracker.updateRegionStats(server, regionName, stats);
     }

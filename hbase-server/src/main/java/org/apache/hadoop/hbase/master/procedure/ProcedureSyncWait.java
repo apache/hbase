@@ -83,7 +83,7 @@ public final class ProcedureSyncWait {
       if (result.isFailed()) {
         // If the procedure fails, we should always have an exception captured. Throw it.
         throw RemoteProcedureException.fromProto(
-          result.getForeignExceptionMessage()).unwrapRemoteException();
+          result.getForeignExceptionMessage().getForeignExchangeMessage()).unwrapRemoteException();
       }
       return result.getResult();
     } else {

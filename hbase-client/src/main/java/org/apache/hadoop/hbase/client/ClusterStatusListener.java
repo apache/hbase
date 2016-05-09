@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -257,7 +258,7 @@ class ClusterStatusListener implements Closeable {
         ByteBufInputStream bis = new ByteBufInputStream(dp.content());
         try {
           ClusterStatusProtos.ClusterStatus csp = ClusterStatusProtos.ClusterStatus.parseFrom(bis);
-          ClusterStatus ncs = ClusterStatus.convert(csp);
+          ClusterStatus ncs = ProtobufUtil.convert(csp);
           receive(ncs);
         } finally {
           bis.close();
