@@ -23,8 +23,12 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -122,6 +126,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     private AtomicInteger logsCount = new AtomicInteger();
     private AtomicLong hfileArchiveSize = new AtomicLong();
     private AtomicLong hfileSize = new AtomicLong();
+    private AtomicLong nonSharedHfilesArchiveSize = new AtomicLong();
     private AtomicLong logSize = new AtomicLong();
 
     private final SnapshotDescription snapshot;
@@ -194,6 +199,15 @@ public final class SnapshotInfo extends Configured implements Tool {
       return hfileArchiveSize.get();
     }
 
+    /** @return the total size of the store files in the archive which is not shared
+     *    with other snapshots and tables.
+     *    This is only calculated when getSnapshotStats(Configuration, SnapshotDescription, Map)
+     *    is called with a non-null Map
+     */
+    public long getNonSharedArchivedStoreFilesSize() {
+      return nonSharedHfilesArchiveSize.get();
+    }
+
     /** @return the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
       return ((float)hfileSize.get() / (hfileSize.get() + hfileArchiveSize.get())) * 100;
@@ -204,15 +218,46 @@ public final class SnapshotInfo extends Configured implements Tool {
       return logSize.get();
     }
 
+    /** Check if for a give file in archive, if there are other snapshots/tables still
+     * reference it.
+     * @param filePath file path in archive
+     * @param snapshotFilesMap a map for store files in snapshots about how many snapshots refer
+     *                         to it.
+     * @return true or false
+     */
+    private boolean isArchivedFileStillReferenced(final Path filePath,
+        final Map<Path, Integer> snapshotFilesMap) {
+
+      Integer c = snapshotFilesMap.get(filePath);
+
+      // Check if there are other snapshots or table from clone_snapshot() (via back-reference)
+      // still reference to it.
+      if ((c != null) && (c == 1)) {
+        Path parentDir = filePath.getParent();
+        Path backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
+        try {
+          if (FSUtils.listStatus(fs, backRefDir) == null) {
+            return false;
+          }
+        } catch (IOException e) {
+          // For the purpose of this function, IOException is ignored and treated as
+          // the file is still being referenced.
+        }
+      }
+      return true;
+    }
+
     /**
      * Add the specified store file to the stats
      * @param region region encoded Name
      * @param family family name
      * @param storeFile store file name
+     * @param filesMap store files map for all snapshots, it may be null
      * @return the store file information
      */
     FileInfo addStoreFile(final HRegionInfo region, final String family,
-        final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+        final SnapshotRegionManifest.StoreFile storeFile,
+        final Map<Path, Integer> filesMap) throws IOException {
       HFileLink link = HFileLink.build(conf, snapshotTable, region.getEncodedName(),
               family, storeFile.getName());
       boolean isCorrupted = false;
@@ -223,6 +268,13 @@ public final class SnapshotInfo extends Configured implements Tool {
           size = fs.getFileStatus(link.getArchivePath()).getLen();
           hfileArchiveSize.addAndGet(size);
           hfileArchiveCount.incrementAndGet();
+
+          // If store file is not shared with other snapshots and tables,
+          // increase nonSharedHfilesArchiveSize
+          if ((filesMap != null) &&
+              !isArchivedFileStillReferenced(link.getArchivePath(), filesMap)) {
+            nonSharedHfilesArchiveSize.addAndGet(size);
+          }
         } else {
           size = link.getFileStatus(fs).getLen();
           hfileSize.addAndGet(size);
@@ -400,22 +452,21 @@ public final class SnapshotInfo extends Configured implements Tool {
     final String table = snapshotDesc.getTable();
     final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, snapshotDesc);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(getConf(), fs, snapshotManifest,
-      new SnapshotReferenceUtil.SnapshotVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (storeFile.hasReference()) return;
+        "SnapshotInfo", new SnapshotReferenceUtil.SnapshotVisitor() {
+          @Override public void storeFile(final HRegionInfo regionInfo, final String family,
+              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            if (storeFile.hasReference()) return;
 
-          SnapshotStats.FileInfo info = stats.addStoreFile(regionInfo, family, storeFile);
-          if (showFiles) {
-            String state = info.getStateToString();
-            System.out.printf("%8s %s/%s/%s/%s %s%n",
-              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
-              table, regionInfo.getEncodedName(), family, storeFile.getName(),
-              state == null ? "" : "(" + state + ")");
+            SnapshotStats.FileInfo info = stats.addStoreFile(regionInfo, family, storeFile, null);
+            if (showFiles) {
+              String state = info.getStateToString();
+              System.out.printf("%8s %s/%s/%s/%s %s%n",
+                  (info.isMissing() ? "-" : fileSizeToString(info.getSize())), table,
+                  regionInfo.getEncodedName(), family, storeFile.getName(),
+                  state == null ? "" : "(" + state + ")");
+            }
           }
-        }
-    });
+        });
 
     // Dump the stats
     System.out.println();
@@ -471,21 +522,33 @@ public final class SnapshotInfo extends Configured implements Tool {
    */
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotDescription snapshot) throws IOException {
+    return getSnapshotStats(conf, snapshot, null);
+  }
+
+  /**
+   * Returns the snapshot stats
+   * @param conf the {@link Configuration} to use
+   * @param snapshot  {@link SnapshotDescription} to get stats from
+   * @param filesMap {@link Map} store files map for all snapshots, it may be null
+   * @return the snapshot stats
+   */
+  public static SnapshotStats getSnapshotStats(final Configuration conf,
+      final SnapshotDescription snapshot,
+      final Map<Path, Integer> filesMap) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
     final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
-      new SnapshotReferenceUtil.SnapshotVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (!storeFile.hasReference()) {
-            stats.addStoreFile(regionInfo, family, storeFile);
-          }
-        }
-    });
+        "SnapshotsStatsAggregation", new SnapshotReferenceUtil.SnapshotVisitor() {
+          @Override
+          public void storeFile(final HRegionInfo regionInfo, final String family,
+              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            if (!storeFile.hasReference()) {
+              stats.addStoreFile(regionInfo, family, storeFile, filesMap);
+            }
+          }});
     return stats;
   }
 
@@ -507,6 +570,95 @@ public final class SnapshotInfo extends Configured implements Tool {
       snapshotLists.add(SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath()));
     }
     return snapshotLists;
+  }
+
+  /**
+   * Gets the store files map for snapshot
+   * @param conf the {@link Configuration} to use
+   * @param snapshot {@link SnapshotDescription} to get stats from
+   * @param exec the {@link ExecutorService} to use
+   * @param filesMap {@link Map} the map to put the mapping entries
+   * @param uniqueHFilesArchiveSize {@link AtomicLong} the accumulated store file size in archive
+   * @param uniqueHFilesSize {@link AtomicLong} the accumulated store file size shared
+   * @return the snapshot stats
+   */
+  private static void getSnapshotFilesMap(final Configuration conf,
+      final SnapshotDescription snapshot, final ExecutorService exec,
+      final ConcurrentHashMap<Path, Integer> filesMap,
+      final AtomicLong uniqueHFilesArchiveSize, final AtomicLong uniqueHFilesSize)
+      throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    final FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
+
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
+    SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest, exec,
+        new SnapshotReferenceUtil.SnapshotVisitor() {
+          @Override public void storeFile(final HRegionInfo regionInfo, final String family,
+              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            if (!storeFile.hasReference()) {
+              HFileLink link = HFileLink
+                  .build(conf, TableName.valueOf(snapshot.getTable()), regionInfo.getEncodedName(),
+                      family, storeFile.getName());
+              long size;
+              Integer count;
+              Path p;
+              AtomicLong al;
+              int c = 0;
+
+              if (fs.exists(link.getArchivePath())) {
+                p = link.getArchivePath();
+                al = uniqueHFilesArchiveSize;
+                size = fs.getFileStatus(p).getLen();
+              } else {
+                p = link.getOriginPath();
+                al = uniqueHFilesSize;
+                size = link.getFileStatus(fs).getLen();
+              }
+
+              // If it has been counted, do not double count
+              count = filesMap.get(p);
+              if (count != null) {
+                c = count.intValue();
+              } else {
+                al.addAndGet(size);
+              }
+
+              filesMap.put(p, ++c);
+            }
+          }
+        });
+  }
+
+  /**
+   * Returns the map of store files based on path for all snapshots
+   * @param conf the {@link Configuration} to use
+   * @param uniqueHFilesArchiveSize pass out the size for store files in archive
+   * @param uniqueHFilesSize pass out the size for store files shared
+   * @return the map of store files
+   */
+  public static Map<Path, Integer> getSnapshotsFilesMap(final Configuration conf,
+      AtomicLong uniqueHFilesArchiveSize, AtomicLong uniqueHFilesSize) throws IOException {
+    List<SnapshotDescription> snapshotList = getSnapshotList(conf);
+
+    if (snapshotList.size() == 0) {
+      return Collections.emptyMap();
+    }
+
+    ConcurrentHashMap<Path, Integer> fileMap = new ConcurrentHashMap<>();
+
+    ExecutorService exec = SnapshotManifest.createExecutor(conf, "SnapshotsFilesMapping");
+
+    try {
+      for (final SnapshotDescription snapshot : snapshotList) {
+        getSnapshotFilesMap(conf, snapshot, exec, fileMap, uniqueHFilesArchiveSize,
+            uniqueHFilesSize);
+      }
+    } finally {
+      exec.shutdown();
+    }
+
+    return fileMap;
   }
 
   /**
