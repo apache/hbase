@@ -46,7 +46,6 @@ Examples:
 
   hbase> close_region 'REGIONNAME'
   hbase> close_region 'REGIONNAME', 'SERVER_NAME'
-  hbase> close_region 'ENCODED_REGIONNAME'
   hbase> close_region 'ENCODED_REGIONNAME', 'SERVER_NAME'
 EOF
       end

@@ -238,6 +238,35 @@ module Hbase
     end
   end
 
+  # Simple administration methods tests
+  class AdminRegionTest < Test::Unit::TestCase
+    include TestHelpers
+    def setup
+      setup_hbase
+      # Create test table if it does not exist
+      @test_name = "hbase_shell_tests_table"
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test "close_region should allow encoded & non-encoded region names" do
+      region = admin.locate_region(@test_name, '')
+      serverName = region.getServerName().getServerName()
+      regionName = region.getRegionInfo().getRegionNameAsString()
+      encodedRegionName = region.getRegionInfo().getEncodedName()
+
+      # Close region with just region name.
+      admin.close_region(regionName, nil)
+      # Close region with region name and server.
+      admin.close_region(regionName, serverName)
+      admin.close_region(encodedRegionName, serverName)
+    end
+  end
+
  # Simple administration methods tests
   class AdminAlterTableTest < Test::Unit::TestCase
     include TestHelpers

@@ -433,8 +433,10 @@ module Hbase
     # If server name is nil, we presume region_name is full region name (HRegionInfo.getRegionName).
     # If server name is not nil, we presume it is the region's encoded name (HRegionInfo.getEncodedName)
     def close_region(region_name, server)
-      if (server == nil || !closeEncodedRegion?(region_name, server))
-      	@admin.closeRegion(region_name, server)
+      if (region_name.end_with? ".")
+        @admin.closeRegion(region_name, server)
+      else
+        closeEncodedRegion?(region_name, server)
       end
     end
 
