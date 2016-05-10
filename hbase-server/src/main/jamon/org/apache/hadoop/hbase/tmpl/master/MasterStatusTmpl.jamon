@@ -477,7 +477,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% new Date(snapshotDesc.getCreationTime()) %></td>
     </tr>
     </%for>
-    <p><% snapshots.size() %> snapshot(s) in set.</p>
+    <p><% snapshots.size() %> snapshot(s) in set. [<a href="/snapshotsStats.jsp">Snapshot Storefile stats</a>]</p>
 </table>
 </%if>
 </%def>

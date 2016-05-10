@@ -169,7 +169,7 @@ public final class SnapshotReferenceUtil {
       final SnapshotManifest manifest) throws IOException {
     final SnapshotDescription snapshotDesc = manifest.getSnapshotDescription();
     final Path snapshotDir = manifest.getSnapshotDir();
-    concurrentVisitReferencedFiles(conf, fs, manifest, new StoreFileVisitor() {
+    concurrentVisitReferencedFiles(conf, fs, manifest, "VerifySnapshot", new StoreFileVisitor() {
       @Override
       public void storeFile(final HRegionInfo regionInfo, final String family,
           final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
@@ -179,7 +179,28 @@ public final class SnapshotReferenceUtil {
   }
 
   public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
-      final SnapshotManifest manifest, final StoreFileVisitor visitor) throws IOException {
+      final SnapshotManifest manifest, final String desc, final StoreFileVisitor visitor)
+      throws IOException {
+
+    final Path snapshotDir = manifest.getSnapshotDir();
+    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+    if (regionManifests == null || regionManifests.size() == 0) {
+      LOG.debug("No manifest files present: " + snapshotDir);
+      return;
+    }
+
+    ExecutorService exec = SnapshotManifest.createExecutor(conf, desc);
+
+    try {
+      concurrentVisitReferencedFiles(conf, fs, manifest, exec, visitor);
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
+      final SnapshotManifest manifest, final ExecutorService exec, final StoreFileVisitor visitor)
+      throws IOException {
     final SnapshotDescription snapshotDesc = manifest.getSnapshotDescription();
     final Path snapshotDir = manifest.getSnapshotDir();
 
@@ -189,37 +210,32 @@ public final class SnapshotReferenceUtil {
       return;
     }
 
-    ExecutorService exec = SnapshotManifest.createExecutor(conf, "VerifySnapshot");
     final ExecutorCompletionService<Void> completionService =
       new ExecutorCompletionService<Void>(exec);
+
+    for (final SnapshotRegionManifest regionManifest : regionManifests) {
+      completionService.submit(new Callable<Void>() {
+        @Override public Void call() throws IOException {
+          visitRegionStoreFiles(regionManifest, visitor);
+          return null;
+        }
+      });
+    }
     try {
-      for (final SnapshotRegionManifest regionManifest: regionManifests) {
-        completionService.submit(new Callable<Void>() {
-          @Override
-          public Void call() throws IOException {
-            visitRegionStoreFiles(regionManifest, visitor);
-            return null;
-          }
-        });
+      for (int i = 0; i < regionManifests.size(); ++i) {
+        completionService.take().get();
       }
-      try {
-        for (int i = 0; i < regionManifests.size(); ++i) {
-          completionService.take().get();
-        }
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException(e.getMessage());
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof CorruptedSnapshotException) {
-          throw new CorruptedSnapshotException(e.getCause().getMessage(),
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof CorruptedSnapshotException) {
+        throw new CorruptedSnapshotException(e.getCause().getMessage(),
             ProtobufUtil.createSnapshotDesc(snapshotDesc));
-        } else {
-          IOException ex = new IOException();
-          ex.initCause(e.getCause());
-          throw ex;
-        }
+      } else {
+        IOException ex = new IOException();
+        ex.initCause(e.getCause());
+        throw ex;
       }
-    } finally {
-      exec.shutdown();
     }
   }
 
