@@ -2370,9 +2370,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (request.hasScannerId()) {
         rsh = scanners.get(scannerName);
         if (rsh == null) {
-          LOG.info("Client tried to access missing scanner " + scannerName);
+          LOG.warn("Client tried to access missing scanner " + scannerName);
           throw new UnknownScannerException(
-            "Name: " + scannerName + ", already closed?");
+            "Unknown scanner '" + scannerName + "'. This can happen due to any of the following "
+                + "reasons: a) Scanner id given is wrong, b) Scanner lease expired because of "
+                + "long wait between consecutive client checkins, c) Server may be closing down, "
+                + "d) RegionServer restart during upgrade.\nIf the issue is due to reason (b), a "
+                + "possible fix would be increasing the value of"
+                + "'hbase.client.scanner.timeout.period' configuration.");
         }
         scanner = rsh.s;
         HRegionInfo hri = scanner.getRegionInfo();
