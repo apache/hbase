@@ -32,7 +32,7 @@ public class TestSecureAsyncWALReplay extends TestAsyncWALReplay {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TestWALReplay.TEST_UTIL.getConfiguration();
+    Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,

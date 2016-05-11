@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.junit.experimental.categories.Category;
@@ -33,7 +33,7 @@ public class TestProtobufLog extends AbstractTestProtobufLog<WALProvider.Writer>
 
   @Override
   protected Writer createWriter(Path path) throws IOException {
-    return DefaultWALProvider.createWriter(TEST_UTIL.getConfiguration(), fs, path, false);
+    return FSHLogProvider.createWriter(TEST_UTIL.getConfiguration(), fs, path, false);
   }
 
   @Override

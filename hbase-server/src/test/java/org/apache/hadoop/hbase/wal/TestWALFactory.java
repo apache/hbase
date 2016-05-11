@@ -138,6 +138,8 @@ public class TestWALFactory {
         "dfs.client.block.recovery.retries", 1);
     TEST_UTIL.getConfiguration().setInt(
       "hbase.ipc.client.connection.maxidletime", 500);
+    TEST_UTIL.getConfiguration().setInt("hbase.lease.recovery.timeout", 10000);
+    TEST_UTIL.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
         SampleRegionWALObserver.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);
@@ -169,7 +171,7 @@ public class TestWALFactory {
     final byte [] rowName = tableName.getName();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final Path logdir = new Path(hbaseDir,
-        DefaultWALProvider.getWALDirectoryName(currentTest.getMethodName()));
+      AbstractFSWALProvider.getWALDirectoryName(currentTest.getMethodName()));
     Path oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
@@ -273,7 +275,7 @@ public class TestWALFactory {
       // gives you EOFE.
       wal.sync();
       // Open a Reader.
-      Path walPath = DefaultWALProvider.getCurrentFileName(wal);
+      Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
       reader = wals.createReader(fs, walPath);
       int count = 0;
       WAL.Entry entry = new WAL.Entry();
@@ -397,7 +399,7 @@ public class TestWALFactory {
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
      int namenodePort = cluster.getNameNodePort();
-    final Path walPath = DefaultWALProvider.getCurrentFileName(wal);
+    final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
 
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
@@ -533,7 +535,7 @@ public class TestWALFactory {
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(info.getEncodedNameAsBytes());
       log.shutdown();
-      Path filename = DefaultWALProvider.getCurrentFileName(log);
+      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
       // Now open a reader on the log and assert append worked.
       reader = wals.createReader(fs, filename);
       // Above we added all columns on a single row so we only read one
@@ -596,7 +598,7 @@ public class TestWALFactory {
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.shutdown();
-      Path filename = DefaultWALProvider.getCurrentFileName(log);
+      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
       // Now open a reader on the log and assert append worked.
       reader = wals.createReader(fs, filename);
       WAL.Entry entry = reader.next();

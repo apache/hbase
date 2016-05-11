@@ -732,8 +732,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return e.getClassName().endsWith("RetryStartFileException");
   }
 
-  static void completeFile(DFSClient client, ClientProtocol namenode, String src,
-      String clientName, ExtendedBlock block, long fileId) {
+  static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
+      ExtendedBlock block, long fileId) {
     for (int retry = 0;; retry++) {
       try {
         if (namenode.complete(src, clientName, block, fileId)) {
@@ -742,9 +742,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         } else {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);
         }
-      } catch (LeaseExpiredException e) {
-        LOG.warn("lease for file " + src + " is expired, give up", e);
-        return;
+      } catch (RemoteException e) {
+        IOException ioe = e.unwrapRemoteException();
+        if (ioe instanceof LeaseExpiredException) {
+          LOG.warn("lease for file " + src + " is expired, give up", e);
+          return;
+        } else {
+          LOG.warn("complete file " + src + " failed, retry = " + retry, e);
+        }
       } catch (Exception e) {
         LOG.warn("complete file " + src + " failed, retry = " + retry, e);
       }

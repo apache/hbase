@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 
+import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,14 +32,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
-
-import com.google.common.collect.Sets;
-
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
- * A WAL Entry for {@link FSHLog} implementation.  Immutable.
+ * A WAL Entry for {@link AbstractFSWAL} implementation.  Immutable.
  * A subclass of {@link Entry} that carries extra info across the ring buffer such as
  * region sequence id (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit

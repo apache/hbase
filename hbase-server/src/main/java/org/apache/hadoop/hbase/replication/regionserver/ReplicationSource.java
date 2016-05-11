@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Service;
+
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -64,13 +68,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
-
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.Service;
 
 /**
  * Class that handles the source of a replication stream.
@@ -198,7 +198,7 @@ public class ReplicationSource extends Thread
 
   @Override
   public void enqueueLog(Path log) {
-    String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(log.getName());
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log.getName());
     PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
     if (queue == null) {
       queue = new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
@@ -839,12 +839,10 @@ public class ReplicationSource extends Thread
             final Path rootDir = FSUtils.getRootDir(conf);
             for (String curDeadServerName : deadRegionServers) {
               final Path deadRsDirectory = new Path(rootDir,
-                  DefaultWALProvider.getWALDirectoryName(curDeadServerName));
-              Path[] locs = new Path[] {
-                  new Path(deadRsDirectory, currentPath.getName()),
-                  new Path(deadRsDirectory.suffix(DefaultWALProvider.SPLITTING_EXT),
-                                            currentPath.getName()),
-              };
+                AbstractFSWALProvider.getWALDirectoryName(curDeadServerName));
+              Path[] locs = new Path[] { new Path(deadRsDirectory, currentPath.getName()),
+                new Path(deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT),
+                  currentPath.getName()) };
               for (Path possibleLogLocation : locs) {
                 LOG.info("Possible location " + possibleLogLocation.toUri().toString());
                 if (manager.getFs().exists(possibleLogLocation)) {

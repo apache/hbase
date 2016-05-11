@@ -74,8 +74,8 @@ public class WALFactory {
    * Maps between configuration names for providers and implementation classes.
    */
   static enum Providers {
-    defaultProvider(DefaultWALProvider.class),
-    filesystem(DefaultWALProvider.class),
+    defaultProvider(FSHLogProvider.class),
+    filesystem(FSHLogProvider.class),
     multiwal(RegionGroupingProvider.class),
     asyncfs(AsyncFSWALProvider.class);
 
@@ -101,7 +101,7 @@ public class WALFactory {
   /**
    * Configuration-specified WAL Reader used when a custom reader is requested
    */
-  private final Class<? extends DefaultWALProvider.Reader> logReaderClass;
+  private final Class<? extends AbstractFSWALProvider.Reader> logReaderClass;
 
   /**
    * How long to attempt opening in-recovery wals
@@ -118,7 +118,7 @@ public class WALFactory {
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
     /* TODO Both of these are probably specific to the fs wal provider */
     logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
-        DefaultWALProvider.Reader.class);
+      AbstractFSWALProvider.Reader.class);
     this.conf = conf;
     // end required early initialization
 
@@ -127,14 +127,15 @@ public class WALFactory {
     factoryId = SINGLETON_ID;
   }
 
-  Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
+  @VisibleForTesting
+  public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       return Providers.valueOf(conf.get(key, defaultValue)).clazz;
     } catch (IllegalArgumentException exception) {
       // Fall back to them specifying a class name
       // Note that the passed default class shouldn't actually be used, since the above only fails
       // when there is a config value present.
-      return conf.getClass(key, DefaultWALProvider.class, WALProvider.class);
+      return conf.getClass(key, Providers.defaultProvider.clazz, WALProvider.class);
     }
   }
 
@@ -180,7 +181,7 @@ public class WALFactory {
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
     /* TODO Both of these are probably specific to the fs wal provider */
     logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
-        DefaultWALProvider.Reader.class);
+      AbstractFSWALProvider.Reader.class);
     this.conf = conf;
     this.factoryId = factoryId;
     // end required early initialization
@@ -248,7 +249,7 @@ public class WALFactory {
     if (null == metaProvider) {
       final WALProvider temp = getProvider(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER,
           Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-          DefaultWALProvider.META_WAL_PROVIDER_ID);
+          AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       if (this.metaProvider.compareAndSet(null, temp)) {
         metaProvider = temp;
       } else {
@@ -279,7 +280,7 @@ public class WALFactory {
   public Reader createReader(final FileSystem fs, final Path path,
       CancelableProgressable reporter, boolean allowCustom)
       throws IOException {
-    Class<? extends DefaultWALProvider.Reader> lrClass =
+    Class<? extends AbstractFSWALProvider.Reader> lrClass =
         allowCustom ? logReaderClass : ProtobufLogReader.class;
 
     try {
@@ -294,7 +295,7 @@ public class WALFactory {
         try {
           if (lrClass != ProtobufLogReader.class) {
             // User is overriding the WAL reader, let them.
-            DefaultWALProvider.Reader reader = lrClass.newInstance();
+            AbstractFSWALProvider.Reader reader = lrClass.newInstance();
             reader.init(fs, path, conf, null);
             return reader;
           } else {
@@ -306,7 +307,7 @@ public class WALFactory {
             byte[] magic = new byte[ProtobufLogReader.PB_WAL_MAGIC.length];
             boolean isPbWal = (stream.read(magic) == magic.length)
                 && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
-            DefaultWALProvider.Reader reader =
+            AbstractFSWALProvider.Reader reader =
                 isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
             reader.init(fs, path, conf, stream);
             return reader;
@@ -366,7 +367,7 @@ public class WALFactory {
    * @throws IOException
    */
   public Writer createWALWriter(final FileSystem fs, final Path path) throws IOException {
-    return DefaultWALProvider.createWriter(conf, fs, path, false);
+    return FSHLogProvider.createWriter(conf, fs, path, false);
   }
 
   /**
@@ -376,7 +377,7 @@ public class WALFactory {
   @VisibleForTesting
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
       throws IOException {
-    return DefaultWALProvider.createWriter(conf, fs, path, true);
+    return FSHLogProvider.createWriter(conf, fs, path, true);
   }
 
   // These static methods are currently used where it's impractical to
@@ -444,7 +445,7 @@ public class WALFactory {
   static Writer createRecoveredEditsWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {
-    return DefaultWALProvider.createWriter(configuration, fs, path, true);
+    return FSHLogProvider.createWriter(configuration, fs, path, true);
   }
 
   /**
@@ -455,7 +456,7 @@ public class WALFactory {
   public static Writer createWALWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {
-    return DefaultWALProvider.createWriter(configuration, fs, path, false);
+    return FSHLogProvider.createWriter(configuration, fs, path, false);
   }
 
   public final WALProvider getWALProvider() {

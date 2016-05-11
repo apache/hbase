@@ -21,18 +21,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestAsyncWALReplayCompressed extends TestWALReplay {
+public class TestAsyncWALReplayCompressed extends TestAsyncWALReplay {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TestWALReplay.TEST_UTIL.getConfiguration();
-    conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
+    Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestWALReplay.setUpBeforeClass();
+    TestAsyncWALReplay.setUpBeforeClass();
   }
 }

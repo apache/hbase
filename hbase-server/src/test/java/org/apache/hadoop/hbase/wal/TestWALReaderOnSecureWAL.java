@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
@@ -120,7 +121,7 @@ public class TestWALReaderOnSecureWAL {
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       wal.sync();
-      final Path walPath = DefaultWALProvider.getCurrentFileName(wal);
+      final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
       wal.shutdown();
       
       return walPath;
@@ -129,7 +130,7 @@ public class TestWALReaderOnSecureWAL {
       conf.set(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, clsName);
     }
   }
-  
+
   @Test()
   public void testWALReaderOnSecureWAL() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -137,6 +138,8 @@ public class TestWALReaderOnSecureWAL {
       WAL.Reader.class);
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
       WALProvider.Writer.class);
+    conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
+      WALProvider.AsyncWriter.class);
     conf.setBoolean(WAL_ENCRYPTION, true);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final WALFactory wals = new WALFactory(conf, null, currentTest.getMethodName());
@@ -157,7 +160,7 @@ public class TestWALReaderOnSecureWAL {
     } catch (IOException ioe) {
       // expected IOE
     }
-    
+
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
     RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
@@ -174,7 +177,7 @@ public class TestWALReaderOnSecureWAL {
     }
     wals.close();
   }
-  
+
   @Test()
   public void testSecureWALReaderOnWAL() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -202,7 +205,7 @@ public class TestWALReaderOnSecureWAL {
     } catch (IOException ioe) {
       assertFalse(true);
     }
-    
+
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
     RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);

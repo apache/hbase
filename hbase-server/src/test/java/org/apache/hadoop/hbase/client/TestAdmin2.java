@@ -58,7 +58,8 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -543,14 +544,14 @@ public class TestAdmin2 {
     byte[] value = Bytes.toBytes(v.toString());
     HRegionServer regionServer = startAndWriteData(TableName.valueOf("TestLogRolling"), value);
     LOG.info("after writing there are "
-        + DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
+        + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
     for (Region r : regionServer.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName());
-    int count = DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
+    int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
     LOG.info("after flushing all regions and rolling logs there are " +
         count + " log files");
     assertTrue(("actual count: " + count), count <= 2);

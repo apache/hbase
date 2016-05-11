@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -251,7 +251,7 @@ public class TestDurability {
   }
 
   private void verifyWALCount(WALFactory wals, WAL log, int expected) throws Exception {
-    Path walPath = DefaultWALProvider.getCurrentFileName(log);
+    Path walPath = AbstractFSWALProvider.getCurrentFileName(log);
     WAL.Reader reader = wals.createReader(FS, walPath);
     int count = 0;
     WAL.Entry entry = new WAL.Entry();

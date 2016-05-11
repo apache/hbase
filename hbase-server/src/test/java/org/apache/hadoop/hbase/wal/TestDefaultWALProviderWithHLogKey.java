@@ -28,7 +28,7 @@ import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 
 @Category({RegionServerTests.class, LargeTests.class})
-public class TestDefaultWALProviderWithHLogKey extends TestDefaultWALProvider {
+public class TestDefaultWALProviderWithHLogKey extends TestFSHLogProvider {
   @Override
   WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp,
       final NavigableMap<byte[], Integer> scopes) {

@@ -141,7 +141,7 @@ public class TestSecureWAL {
           System.currentTimeMillis(), scopes), kvs, true);
     }
     wal.sync();
-    final Path walPath = DefaultWALProvider.getCurrentFileName(wal);
+    final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
     wals.shutdown();
 
     // Insure edits are not plaintext

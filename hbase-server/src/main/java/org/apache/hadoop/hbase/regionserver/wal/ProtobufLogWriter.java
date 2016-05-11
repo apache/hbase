@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
  */
 @InterfaceAudience.Private
 public class ProtobufLogWriter extends AbstractProtobufLogWriter
-    implements DefaultWALProvider.Writer {
+    implements FSHLogProvider.Writer {
 
   private static final Log LOG = LogFactory.getLog(ProtobufLogWriter.class);
 

@@ -27,13 +27,13 @@ import org.junit.experimental.categories.Category;
 /**
  * Enables compression and runs the TestWALReplay tests.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALReplayCompressed extends TestWALReplay {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TestWALReplay.setUpBeforeClass();
-    Configuration conf = TestWALReplay.TEST_UTIL.getConfiguration();
+    Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    TestWALReplay.setUpBeforeClass();
   }
 }

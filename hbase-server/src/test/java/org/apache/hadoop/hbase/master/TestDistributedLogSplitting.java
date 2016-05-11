@@ -100,7 +100,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -240,7 +241,7 @@ public class TestDistributedLogSplitting {
         }
         if (foundRs) break;
       }
-      final Path logDir = new Path(rootdir, DefaultWALProvider.getWALDirectoryName(hrs
+      final Path logDir = new Path(rootdir, AbstractFSWALProvider.getWALDirectoryName(hrs
           .getServerName().toString()));
 
       LOG.info("#regions = " + regions.size());
@@ -1010,7 +1011,7 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = findRSToKill(false, "table");
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        DefaultWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
+      AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
     Table t = installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);

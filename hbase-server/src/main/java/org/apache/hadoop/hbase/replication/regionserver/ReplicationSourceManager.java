@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,9 +63,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 
 /**
  * This class is responsible to manage all the replication
@@ -197,7 +197,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param queueRecovered Whether this is a recovered queue
    */
   public void cleanOldLogs(String key, String id, boolean queueRecovered) {
-    String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(key);
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(key);
     if (queueRecovered) {
       SortedSet<String> wals = walsByIdRecoveredQueues.get(id).get(logPrefix);
       if (wals != null && !wals.first().equals(key)) {
@@ -277,7 +277,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         if (this.latestPaths.size() > 0) {
           for (Path logPath : latestPaths) {
             String name = logPath.getName();
-            String walPrefix = DefaultWALProvider.getWALPrefixFromWALName(name);
+            String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(name);
             SortedSet<String> logs = new TreeSet<String>();
             logs.add(name);
             walsByGroup.put(walPrefix, logs);
@@ -358,7 +358,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   void preLogRoll(Path newLog) throws IOException {
     recordLog(newLog);
     String logName = newLog.getName();
-    String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(logName);
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
     synchronized (latestPaths) {
       Iterator<Path> iterator = latestPaths.iterator();
       while (iterator.hasNext()) {
@@ -380,7 +380,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   private void recordLog(Path logPath) throws IOException {
     String logName = logPath.getName();
-    String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(logName);
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
     // update replication queues on ZK
     synchronized (replicationPeers) {// synchronize on replicationPeers to avoid adding source for
                                      // the to-be-removed peer
@@ -674,7 +674,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           Map<String, SortedSet<String>> walsByGroup = new HashMap<String, SortedSet<String>>();
           walsByIdRecoveredQueues.put(peerId, walsByGroup);
           for (String wal : walsSet) {
-            String walPrefix = DefaultWALProvider.getWALPrefixFromWALName(wal);
+            String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
             SortedSet<String> wals = walsByGroup.get(walPrefix);
             if (wals == null) {
               wals = new TreeSet<String>();

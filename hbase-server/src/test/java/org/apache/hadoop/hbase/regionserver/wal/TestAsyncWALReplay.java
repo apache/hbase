@@ -17,20 +17,45 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestAsyncWALReplay extends TestWALReplay {
+public class TestAsyncWALReplay extends AbstractTestWALReplay {
+
+  private static EventLoopGroup GROUP;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TestWALReplay.TEST_UTIL.getConfiguration();
+    GROUP = new NioEventLoopGroup();
+    Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
-    TestWALReplay.setUpBeforeClass();
+    AbstractTestWALReplay.setUpBeforeClass();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    AbstractTestWALReplay.tearDownAfterClass();
+    GROUP.shutdownGracefully();
+  }
+
+  @Override
+  protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
+    return new AsyncFSWAL(FileSystem.get(c), hbaseRootDir, logName,
+        HConstants.HREGION_OLDLOGDIR_NAME, c, null, true, null, null, GROUP.next());
   }
 }

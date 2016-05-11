@@ -48,12 +48,12 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -436,7 +436,7 @@ public class TestPerColumnFamilyFlush {
   }
 
   private int getNumRolledLogFiles(Region region) {
-    return ((FSHLog)getWAL(region)).getNumRolledLogFiles();
+    return AbstractFSWALProvider.getNumRolledLogFiles(getWAL(region));
   }
 
   /**

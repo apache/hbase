@@ -359,7 +359,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         if (verify) {
           LOG.info("verifying written log entries.");
           Path dir = new Path(FSUtils.getRootDir(getConf()),
-              DefaultWALProvider.getWALDirectoryName("wals"));
+            AbstractFSWALProvider.getWALDirectoryName("wals"));
           long editCount = 0;
           FileStatus [] fsss = fs.listStatus(dir);
           if (fsss.length == 0) throw new IllegalStateException("No WAL found");
@@ -513,7 +513,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             // We used to do explicit call to rollWriter but changed it to a request
             // to avoid dead lock (there are less threads going on in this class than
             // in the regionserver -- regionserver does not have the issue).
-            DefaultWALProvider.requestLogRoll(wal);
+            AbstractFSWALProvider.requestLogRoll(wal);
           }
         }
 

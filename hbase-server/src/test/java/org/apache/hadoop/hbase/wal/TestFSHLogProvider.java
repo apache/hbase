@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,12 +61,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-// imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestDefaultWALProvider {
-  private static final Log LOG = LogFactory.getLog(TestDefaultWALProvider.class);
+public class TestFSHLogProvider {
+  private static final Log LOG = LogFactory.getLog(TestFSHLogProvider.class);
 
   protected static Configuration conf;
   protected static FileSystem fs;
@@ -124,28 +123,28 @@ public class TestDefaultWALProvider {
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
     String hl = FSUtils.getRootDir(conf) + "/" +
-        DefaultWALProvider.getWALDirectoryName(sn.toString());
+        AbstractFSWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, null));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, null));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
         FSUtils.getRootDir(conf).toUri().toString()));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, ""));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, hl));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, hl + "qdf"));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, "sfqf" + hl + "qdf"));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, ""));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl + "qdf"));
+    assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, "sfqf" + hl + "qdf"));
 
     final String wals = "/WALs/";
-    ServerName parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
+    ServerName parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
       FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "/localhost%2C32984%2C1343316388997.1343316390417");
     assertEquals("standard",  sn, parsed);
 
-    parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf, hl + "/qdf");
+    parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl + "/qdf");
     assertEquals("subdir", sn, parsed);
 
-    parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
+    parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
       FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
@@ -206,7 +205,7 @@ public class TestDefaultWALProvider {
       scopes2.put(fam, 0);
     }
     final Configuration localConf = new Configuration(conf);
-    localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
+    localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
     final AtomicLong sequenceId = new AtomicLong(1);
     try {
@@ -221,12 +220,12 @@ public class TestDefaultWALProvider {
       // Before HBASE-3198 it used to delete it
       addEdits(log, hri, htd, 1, scopes1);
       log.rollWriter();
-      assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(log));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(log));
 
       // See if there's anything wrong with more than 1 edit
       addEdits(log, hri, htd, 2, scopes1);
       log.rollWriter();
-      assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(log));
+      assertEquals(2, FSHLogProvider.getNumRolledLogFiles(log));
 
       // Now mix edits from 2 regions, still no flushing
       addEdits(log, hri, htd, 1, scopes1);
@@ -234,7 +233,7 @@ public class TestDefaultWALProvider {
       addEdits(log, hri, htd, 1, scopes1);
       addEdits(log, hri2, htd2, 1, scopes2);
       log.rollWriter();
-      assertEquals(3, DefaultWALProvider.getNumRolledLogFiles(log));
+      assertEquals(3, AbstractFSWALProvider.getNumRolledLogFiles(log));
 
       // Flush the first region, we expect to see the first two files getting
       // archived. We need to append something or writer won't be rolled.
@@ -242,7 +241,7 @@ public class TestDefaultWALProvider {
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.rollWriter();
-      assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(log));
+      assertEquals(2, AbstractFSWALProvider.getNumRolledLogFiles(log));
 
       // Flush the second region, which removes all the remaining output files
       // since the oldest was completely flushed and the two others only contain
@@ -251,7 +250,7 @@ public class TestDefaultWALProvider {
       log.startCacheFlush(hri2.getEncodedNameAsBytes(), htd2.getFamiliesKeys());
       log.completeCacheFlush(hri2.getEncodedNameAsBytes());
       log.rollWriter();
-      assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(log));
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(log));
     } finally {
       if (wals != null) {
         wals.close();
@@ -289,11 +288,11 @@ public class TestDefaultWALProvider {
       scopes2.put(fam, 0);
     }
     final Configuration localConf = new Configuration(conf);
-    localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
+    localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
     try {
       final WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
-      assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       HRegionInfo hri1 =
           new HRegionInfo(table1.getTableName(), HConstants.EMPTY_START_ROW,
               HConstants.EMPTY_END_ROW);
@@ -308,26 +307,26 @@ public class TestDefaultWALProvider {
       addEdits(wal, hri1, table1, 1, scopes1);
       wal.rollWriter();
       // assert that the wal is rolled
-      assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // add edits in the second wal file, and roll writer.
       addEdits(wal, hri1, table1, 1, scopes1);
       wal.rollWriter();
       // assert that the wal is rolled
-      assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(2, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // add a waledit to table1, and flush the region.
       addEdits(wal, hri1, table1, 3, scopes1);
       flushRegion(wal, hri1.getEncodedNameAsBytes(), table1.getFamiliesKeys());
       // roll log; all old logs should be archived.
       wal.rollWriter();
-      assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // add an edit to table2, and roll writer
       addEdits(wal, hri2, table2, 1, scopes2);
       wal.rollWriter();
-      assertEquals(1, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // add edits for table1, and roll writer
       addEdits(wal, hri1, table1, 2, scopes1);
       wal.rollWriter();
-      assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(2, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // add edits for table2, and flush hri1.
       addEdits(wal, hri2, table2, 2, scopes2);
       flushRegion(wal, hri1.getEncodedNameAsBytes(), table2.getFamiliesKeys());
@@ -337,12 +336,12 @@ public class TestDefaultWALProvider {
       // log3: region2 (unflushed)
       // roll the writer; log2 should be archived.
       wal.rollWriter();
-      assertEquals(2, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(2, AbstractFSWALProvider.getNumRolledLogFiles(wal));
       // flush region2, and all logs should be archived.
       addEdits(wal, hri2, table2, 2, scopes2);
       flushRegion(wal, hri2.getEncodedNameAsBytes(), table2.getFamiliesKeys());
       wal.rollWriter();
-      assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(wal));
     } finally {
       if (wals != null) {
         wals.close();
@@ -370,7 +369,7 @@ public class TestDefaultWALProvider {
   @Test
   public void setMembershipDedups() throws IOException {
     final Configuration localConf = new Configuration(conf);
-    localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
+    localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
     try {
       final Set<WAL> seen = new HashSet<WAL>(1);

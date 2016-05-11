@@ -45,7 +45,8 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -184,7 +185,7 @@ public abstract class AbstractTestLogRolling  {
     HRegionInfo region =
         server.getOnlineRegions(TableName.valueOf(tableName)).get(0).getRegionInfo();
     final WAL log = server.getWAL(region);
-    LOG.info("after writing there are " + DefaultWALProvider.getNumRolledLogFiles(log) +
+    LOG.info("after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) +
         " log files");
 
       // flush all regions
@@ -195,7 +196,7 @@ public abstract class AbstractTestLogRolling  {
       // Now roll the log
       log.rollWriter();
 
-    int count = DefaultWALProvider.getNumRolledLogFiles(log);
+    int count = AbstractFSWALProvider.getNumRolledLogFiles(log);
     LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
       assertTrue(("actual count: " + count), count <= 2);
   }
@@ -226,34 +227,6 @@ public abstract class AbstractTestLogRolling  {
     LOG.info("Validated row " + row);
   }
 
-  void batchWriteAndWait(Table table, final FSHLog log, int start, boolean expect, int timeout)
-      throws IOException {
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(Bytes.toBytes("row"
-          + String.format("%1$04d", (start + i))));
-      put.addColumn(HConstants.CATALOG_FAMILY, null, value);
-      table.put(put);
-    }
-    Put tmpPut = new Put(Bytes.toBytes("tmprow"));
-    tmpPut.addColumn(HConstants.CATALOG_FAMILY, null, value);
-    long startTime = System.currentTimeMillis();
-    long remaining = timeout;
-    while (remaining > 0) {
-      if (log.isLowReplicationRollEnabled() == expect) {
-        break;
-      } else {
-        // Trigger calling FSHlog#checkLowReplication()
-        table.put(tmpPut);
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e) {
-          // continue
-        }
-        remaining = timeout - (System.currentTimeMillis() - startTime);
-      }
-    }
-  }
-
   /**
    * Tests that logs are deleted when some region has a compaction
    * record in WAL and no other records. See HBASE-8597.
@@ -282,13 +255,13 @@ public abstract class AbstractTestLogRolling  {
       }
       doPut(table, 3); // don't flush yet, or compaction might trigger before we roll WAL
       assertEquals("Should have no WAL after initial writes", 0,
-          DefaultWALProvider.getNumRolledLogFiles(log));
+        AbstractFSWALProvider.getNumRolledLogFiles(log));
       assertEquals(2, s.getStorefilesCount());
 
       // Roll the log and compact table, to have compaction record in the 2nd WAL.
       log.rollWriter();
       assertEquals("Should have WAL; one table is not flushed", 1,
-          DefaultWALProvider.getNumRolledLogFiles(log));
+        AbstractFSWALProvider.getNumRolledLogFiles(log));
       admin.flush(table.getName());
       region.compact(false);
       // Wait for compaction in case if flush triggered it before us.
@@ -302,14 +275,14 @@ public abstract class AbstractTestLogRolling  {
       doPut(table, 0); // Now 2nd WAL will have both compaction and put record for table.
       log.rollWriter(); // 1st WAL deleted, 2nd not deleted yet.
       assertEquals("Should have WAL; one table is not flushed", 1,
-          DefaultWALProvider.getNumRolledLogFiles(log));
+        AbstractFSWALProvider.getNumRolledLogFiles(log));
 
       // Flush table to make latest WAL obsolete; write another record, and roll again.
       admin.flush(table.getName());
       doPut(table, 1);
       log.rollWriter(); // Now 2nd WAL is deleted and 3rd is added.
       assertEquals("Should have 1 WALs at the end", 1,
-          DefaultWALProvider.getNumRolledLogFiles(log));
+        AbstractFSWALProvider.getNumRolledLogFiles(log));
     } finally {
       if (t != null) t.close();
       if (table != null) table.close();

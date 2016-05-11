@@ -35,6 +35,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -84,7 +87,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -96,9 +99,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
 
 /**
  * Tests of HRegion methods for replaying flush, compaction, region open, etc events for secondary
@@ -304,7 +304,7 @@ public class TestHRegionReplayEvents {
 
   WAL.Reader createWALReaderForPrimary() throws FileNotFoundException, IOException {
     return WALFactory.createReader(TEST_UTIL.getTestFileSystem(),
-      DefaultWALProvider.getCurrentFileName(walPrimary),
+      AbstractFSWALProvider.getCurrentFileName(walPrimary),
       TEST_UTIL.getConfiguration());
   }
 

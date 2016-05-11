@@ -21,12 +21,12 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 
 /**
  * This Chore, every time it runs, will attempt to delete the WALs in the old logs folder. The WAL
@@ -51,6 +51,6 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
   @Override
   protected boolean validate(Path file) {
-    return DefaultWALProvider.validateWALFilename(file.getName());
+    return AbstractFSWALProvider.validateWALFilename(file.getName());
   }
 }

@@ -25,12 +25,12 @@ import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestAsyncLogRollPeriod extends TestLogRollPeriod {
+public class TestAsyncLogRollPeriod extends AbstractTestLogRollPeriod {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TestLogRollPeriod.TEST_UTIL.getConfiguration();
+    Configuration conf = AbstractTestLogRollPeriod.TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
-    TestLogRollPeriod.setUpBeforeClass();
+    AbstractTestLogRollPeriod.setUpBeforeClass();
   }
 }

@@ -18,36 +18,34 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.DEFAULT_PROVIDER_ID;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-
-import static org.apache.hadoop.hbase.wal.DefaultWALProvider.DEFAULT_PROVIDER_ID;
-import static org.apache.hadoop.hbase.wal.DefaultWALProvider.META_WAL_PROVIDER_ID;
-import static org.apache.hadoop.hbase.wal.DefaultWALProvider.WAL_FILE_NAME_DELIMITER;
-
-
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our
  * normal interactions with HDFS.
  *
  * This implementation picks a directory in HDFS based on the same mechanisms as the 
- * {@link DefaultWALProvider}. Users can configure how much interaction
+ * {@link FSHLogProvider}. Users can configure how much interaction
  * we have with HDFS with the configuration property "hbase.wal.iotestprovider.operations".
  * The value should be a comma separated list of allowed operations:
  * <ul>
@@ -102,9 +100,9 @@ public class IOTestProvider implements WALProvider {
     }
     final String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
     log = new IOTestWAL(FileSystem.get(conf), FSUtils.getRootDir(conf),
-        DefaultWALProvider.getWALDirectoryName(factory.factoryId),
-        HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
-        true, logPrefix, META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+        AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
+        HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
+        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override
@@ -150,7 +148,7 @@ public class IOTestProvider implements WALProvider {
      *        it will be URL encoded before being used.
      *        If prefix is null, "wal" will be used
      * @param suffix will be url encoded. null is treated as empty. non-empty must start with
-     *        {@link DefaultWALProvider#WAL_FILE_NAME_DELIMITER}
+     *        {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
      * @throws IOException
      */
     public IOTestWAL(final FileSystem fs, final Path rootDir, final String logDir,

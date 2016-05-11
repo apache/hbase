@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DefaultWALProvider extends AbstractFSWALProvider<FSHLog> {
+public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
-  private static final Log LOG = LogFactory.getLog(DefaultWALProvider.class);
+  private static final Log LOG = LogFactory.getLog(FSHLogProvider.class);
 
   // Only public so classes back in regionserver.wal can access
   public interface Writer extends WALProvider.Writer {

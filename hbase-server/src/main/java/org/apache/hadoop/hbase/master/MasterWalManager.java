@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 
 /**
@@ -57,14 +57,14 @@ public class MasterWalManager {
   final static PathFilter META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
-      return DefaultWALProvider.isMetaFile(p);
+      return AbstractFSWALProvider.isMetaFile(p);
     }
   };
 
   final static PathFilter NON_META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
-      return !DefaultWALProvider.isMetaFile(p);
+      return !AbstractFSWALProvider.isMetaFile(p);
     }
   };
 
@@ -186,7 +186,7 @@ public class MasterWalManager {
             // Empty log folder. No recovery needed
             continue;
           }
-          final ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(
+          final ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(
               status.getPath());
           if (null == serverName) {
             LOG.warn("Log folder " + status.getPath() + " doesn't look like its name includes a " +
@@ -261,8 +261,8 @@ public class MasterWalManager {
     try {
       for (ServerName serverName : serverNames) {
         Path logDir = new Path(this.rootDir,
-            DefaultWALProvider.getWALDirectoryName(serverName.toString()));
-        Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
+          AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+        Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
         // Rename the directory so a rogue RS doesn't create more WALs
         if (fs.exists(logDir)) {
           if (!this.fs.rename(logDir, splitDir)) {

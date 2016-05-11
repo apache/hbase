@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandle
 import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -418,7 +418,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       // pick meta wal firstly
       int offset = (int) (Math.random() * paths.size());
       for (int i = 0; i < paths.size(); i++) {
-        if (DefaultWALProvider.isMetaFile(paths.get(i))) {
+        if (AbstractFSWALProvider.isMetaFile(paths.get(i))) {
           offset = i;
           break;
         }

@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -715,7 +715,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           }
           // decode the file name
           t = ZKSplitLog.getFileName(t);
-          ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(new Path(t));
+          ServerName serverName = AbstractFSWALProvider
+              .getServerNameFromWALDirectoryName(new Path(t));
           if (serverName != null) {
             knownFailedServers.add(serverName.getServerName());
           } else {

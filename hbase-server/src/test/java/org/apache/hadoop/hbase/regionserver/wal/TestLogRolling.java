@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -50,7 +52,8 @@ import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -82,7 +85,35 @@ public class TestLogRolling extends AbstractTestLogRolling {
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
     AbstractTestLogRolling.setUpBeforeClass();
+  }
+
+  void batchWriteAndWait(Table table, final FSHLog log, int start, boolean expect, int timeout)
+      throws IOException {
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", (start + i))));
+      put.addColumn(HConstants.CATALOG_FAMILY, null, value);
+      table.put(put);
+    }
+    Put tmpPut = new Put(Bytes.toBytes("tmprow"));
+    tmpPut.addColumn(HConstants.CATALOG_FAMILY, null, value);
+    long startTime = System.currentTimeMillis();
+    long remaining = timeout;
+    while (remaining > 0) {
+      if (log.isLowReplicationRollEnabled() == expect) {
+        break;
+      } else {
+        // Trigger calling FSHlog#checkLowReplication()
+        table.put(tmpPut);
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          // continue
+        }
+        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+    }
   }
 
   /**
@@ -148,12 +179,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     long curTime = System.currentTimeMillis();
     LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
-    long oldFilenum = DefaultWALProvider.extractFileNumFromWAL(log);
+    long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
     assertTrue("Log should have a timestamp older than now",
       curTime > oldFilenum && oldFilenum != -1);
 
     assertTrue("The log shouldn't have rolled yet",
-      oldFilenum == DefaultWALProvider.extractFileNumFromWAL(log));
+      oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
     final DatanodeInfo[] pipeline = log.getPipeline();
     assertTrue(pipeline.length == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
@@ -163,7 +194,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     // this write should succeed, but trigger a log roll
     writeData(table, 2);
-    long newFilenum = DefaultWALProvider.extractFileNumFromWAL(log);
+    long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
 
     assertTrue("Missing datanode should've triggered a log roll",
       newFilenum > oldFilenum && newFilenum > curTime);
@@ -174,7 +205,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
     assertTrue("The log should not roll again.",
-      DefaultWALProvider.extractFileNumFromWAL(log) == newFilenum);
+      AbstractFSWALProvider.extractFileNumFromWAL(log) == newFilenum);
     // kill another datanode in the pipeline, so the replicas will be lower than
     // the configured value 2.
     assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
@@ -224,7 +255,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       final List<Path> paths = new ArrayList<Path>();
       final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
 
-      paths.add(DefaultWALProvider.getCurrentFileName(log));
+      paths.add(AbstractFSWALProvider.getCurrentFileName(log));
       log.registerWALActionsListener(new WALActionsListener.Base() {
 
         @Override
@@ -246,13 +277,13 @@ public class TestLogRolling extends AbstractTestLogRolling {
       writeData(table, 1002);
 
       long curTime = System.currentTimeMillis();
-      LOG.info("log.getCurrentFileName()): " + DefaultWALProvider.getCurrentFileName(log));
-      long oldFilenum = DefaultWALProvider.extractFileNumFromWAL(log);
+      LOG.info("log.getCurrentFileName()): " + AbstractFSWALProvider.getCurrentFileName(log));
+      long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
       assertTrue("Log should have a timestamp older than now",
         curTime > oldFilenum && oldFilenum != -1);
 
       assertTrue("The log shouldn't have rolled yet",
-        oldFilenum == DefaultWALProvider.extractFileNumFromWAL(log));
+        oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
 
       // roll all datanodes in the pipeline
       dfsCluster.restartDataNodes();
@@ -263,7 +294,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // this write should succeed, but trigger a log roll
       writeData(table, 1003);
-      long newFilenum = DefaultWALProvider.extractFileNumFromWAL(log);
+      long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
 
       assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);

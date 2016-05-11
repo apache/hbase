@@ -878,6 +878,12 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
   }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + " " + walFilePrefix + ":" + walFileSuffix + "(num "
+        + filenum + ")";
+  }
+
   /**
    * NOTE: This append, at a time that is usually after this call returns, starts an mvcc
    * transaction by calling 'begin' wherein which we assign this update a sequenceid. At assignment
