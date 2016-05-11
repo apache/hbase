@@ -48,9 +48,9 @@ public:
   ~Client();
 
 private:
-  LocationCache location_cache_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
+  LocationCache location_cache_;
 };
 
 } // namespace hbase

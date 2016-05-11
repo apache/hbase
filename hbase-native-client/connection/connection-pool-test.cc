@@ -79,9 +79,9 @@ TEST(TestConnectionPool, TestOnlyCreateOnce) {
   sn.set_host_name(hostname);
   sn.set_port(port);
 
-  auto result = cp.get(sn);
+  auto result = cp.Get(sn);
   ASSERT_TRUE(result != nullptr);
-  result = cp.get(sn);
+  result = cp.Get(sn);
 }
 
 TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
@@ -102,13 +102,13 @@ TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
   ConnectionPool cp{mock_cf};
 
   {
-    auto result_one = cp.get(folly::to<ServerName>(
+    auto result_one = cp.Get(folly::to<ServerName>(
         hostname_one + ":" + folly::to<std::string>(port)));
-    auto result_two = cp.get(folly::to<ServerName>(
+    auto result_two = cp.Get(folly::to<ServerName>(
         hostname_two + ":" + folly::to<std::string>(port)));
   }
-  auto result_one = cp.get(
+  auto result_one = cp.Get(
       folly::to<ServerName>(hostname_one + ":" + folly::to<std::string>(port)));
-  auto result_two = cp.get(
+  auto result_two = cp.Get(
       folly::to<ServerName>(hostname_two + ":" + folly::to<std::string>(port)));
 }

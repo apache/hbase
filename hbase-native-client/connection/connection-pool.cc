@@ -48,25 +48,54 @@ ConnectionPool::~ConnectionPool() {
   clients_.clear();
 }
 
-std::shared_ptr<HBaseService> ConnectionPool::get(const ServerName &sn) {
-  // Create a read lock.
-  SharedMutexWritePriority::UpgradeHolder holder(map_mutex_);
+std::shared_ptr<HBaseService> ConnectionPool::Get(const ServerName &sn) {
+  // Try and get th cached connection.
+  auto found_ptr = GetCached(sn);
 
+  // If there's no connection then create it.
+  if (found_ptr == nullptr) {
+    found_ptr = GetNew(sn);
+  }
+  return found_ptr;
+}
+
+std::shared_ptr<HBaseService> ConnectionPool::GetCached(const ServerName &sn) {
+  SharedMutexWritePriority::ReadHolder holder(map_mutex_);
   auto found = connections_.find(sn);
-  if (found == connections_.end() || found->second == nullptr) {
-    // Move the upgradable lock into the write lock if the connection
-    // hasn't been found.
-    SharedMutexWritePriority::WriteHolder holder(std::move(holder));
+  if (found == connections_.end()) {
+    return nullptr;
+  }
+  return found->second;
+}
+
+std::shared_ptr<HBaseService> ConnectionPool::GetNew(const ServerName &sn) {
+  // Grab the upgrade lock. While we are double checking other readers can
+  // continue on
+  SharedMutexWritePriority::UpgradeHolder u_holder{map_mutex_};
+
+  // Now check if someone else created the connection before we got the lock
+  // This is safe since we hold the upgrade lock.
+  // upgrade lock is more power than the reader lock.
+  auto found = connections_.find(sn);
+  if (found != connections_.end() && found->second != nullptr) {
+    return found->second;
+  } else {
+    // Yeah it looks a lot like there's no connection
+    SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
+
+    // Make double sure there are not stale connections hanging around.
+    connections_.erase(sn);
+
+    // Nope we are the ones who should create the new connection.
     auto client = cf_->MakeBootstrap();
     auto dispatcher = cf_->Connect(client, sn.host_name(), sn.port());
     clients_.insert(std::make_pair(sn, client));
     connections_.insert(std::make_pair(sn, dispatcher));
     return dispatcher;
   }
-  return found->second;
 }
 
-void ConnectionPool::close(const ServerName &sn) {
+void ConnectionPool::Close(const ServerName &sn) {
   SharedMutexWritePriority::WriteHolder holder{map_mutex_};
 
   auto found = connections_.find(sn);
