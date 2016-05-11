@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -675,6 +676,7 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
+    addServlet("metrics", "/metrics", MetricsServlet.class);
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
     addServlet("conf", "/conf", ConfServlet.class);
   }
