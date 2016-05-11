@@ -115,7 +115,7 @@ Future<std::shared_ptr<RegionLocation>>
 LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
-      .then([this](ServerName sn) { return this->cp_.get(sn); })
+      .then([this](ServerName sn) { return this->cp_.Get(sn); })
     .then([tn, row, this](std::shared_ptr<HBaseService> service) {
         return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
       })
@@ -134,67 +134,25 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
       })
       .then([this](std::shared_ptr<RegionLocation> rl) {
         // Now fill out the connection.
-        rl->set_service(cp_.get(rl->server_name()));
+        rl->set_service(cp_.Get(rl->server_name()));
         return rl;
       });
 }
-
-/**
- * Filter to remove a service from the location cache and the connection cache
- * on errors
- * or on cloase.
- */
-class RemoveServiceFilter
-    : public ServiceFilter<std::unique_ptr<Request>, Response> {
-
-public:
-  /** Create a new filter. */
-  RemoveServiceFilter(std::shared_ptr<HBaseService> service, ServerName sn,
-                      ConnectionPool &cp)
-      : ServiceFilter<unique_ptr<Request>, Response>(service), sn_(sn),
-        cp_(cp) {}
-
-  /**
-   * Close will remove the connection from all caches.
-   */
-  folly::Future<folly::Unit> close() override {
-    if (!released.exchange(true)) {
-      return this->service_->close().then([this]() {
-        // TODO(eclark): remove the service from the meta cache.
-        this->cp_.close(this->sn_);
-      });
-    } else {
-      return folly::makeFuture();
-    }
-  }
-
-  /** Has this been closed */
-  virtual bool isAvailable() override {
-    return !released && service_->isAvailable();
-  }
-
-  /** Send the message. */
-  folly::Future<Response> operator()(unique_ptr<Request> req) override {
-    // TODO(eclark): add in an on error handler that will
-    // remove the region location from the cache if needed.
-    // Also close the connection if this is likely to be an error
-    // that needs to get a new connection.
-    return (*this->service_)(std::move(req));
-  }
-
-private:
-  std::atomic<bool> released{false};
-  hbase::pb::ServerName sn_;
-  ConnectionPool &cp_;
-};
 
 std::shared_ptr<RegionLocation>
 LocationCache::CreateLocation(const Response &resp) {
   auto resp_msg = static_pointer_cast<ScanResponse>(resp.resp_msg());
   auto &results = resp_msg->results().Get(0);
   auto &cells = results.cell();
-  auto ri = folly::to<RegionInfo>(cells.Get(0).value());
-  auto sn = folly::to<ServerName>(cells.Get(1).value());
-  return std::make_shared<RegionLocation>(cells.Get(0).row(), std::move(ri), sn,
-                                          nullptr);
+
+  // TODO(eclark): There should probably be some better error
+  // handling around this.
+  auto cell_zero = cells.Get(0).value();
+  auto cell_one = cells.Get(1).value();
+  auto row = cells.Get(0).row();
+
+  auto region_info = folly::to<RegionInfo>(cell_zero);
+  auto server_name = folly::to<ServerName>(cell_one);
+  return std::make_shared<RegionLocation>(row, std::move(region_info),
+                                          server_name, nullptr);
 }

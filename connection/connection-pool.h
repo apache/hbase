@@ -80,14 +80,16 @@ public:
    * Get a connection to the server name. Start time is ignored.
    * This can be a blocking operation for a short time.
    */
-  std::shared_ptr<HBaseService> get(const hbase::pb::ServerName &sn);
+  std::shared_ptr<HBaseService> Get(const hbase::pb::ServerName &sn);
 
   /**
    * Close/remove a connection.
    */
-  void close(const hbase::pb::ServerName &sn);
+  void Close(const hbase::pb::ServerName &sn);
 
 private:
+  std::shared_ptr<HBaseService> GetCached(const hbase::pb::ServerName& sn);
+  std::shared_ptr<HBaseService> GetNew(const hbase::pb::ServerName& sn);
   std::unordered_map<hbase::pb::ServerName, std::shared_ptr<HBaseService>,
                      ServerNameHash, ServerNameEquals>
       connections_;
