@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -400,6 +402,37 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     assertExpectedTable(table, ROWCOUNT, 2);
     assertEquals(20, countedLqis.get());
+  }
+
+  /**
+   * This test creates a table with many small regions.  The bulk load files
+   * would be splitted multiple times before all of them can be loaded successfully.
+   */
+  @Test (timeout=120000)
+  public void testSplitTmpFileCleanUp() throws Exception {
+    final String table = "splitTmpFileCleanUp";
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
+        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"),
+        Bytes.toBytes("row_00000040"), Bytes.toBytes("row_00000050")};
+    setupTableWithSplitkeys(table, 10, SPLIT_KEYS);
+    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
+
+    // create HFiles
+    Path bulk = buildBulkFiles(table, 2);
+    HTable ht = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    lih.doBulkLoad(bulk, ht);
+
+    // family path
+    Path tmpPath = new Path(bulk, family(0));
+    // TMP_DIR under family path
+    tmpPath = new Path(tmpPath, LoadIncrementalHFiles.TMP_DIR);
+    FileSystem fs = bulk.getFileSystem(util.getConfiguration());
+    // HFiles have been splitted, there is TMP_DIR
+    assertTrue(fs.exists(tmpPath));
+    // TMP_DIR should have been cleaned-up
+    assertNull(LoadIncrementalHFiles.TMP_DIR + " should be empty.",
+      FSUtils.listStatus(fs, tmpPath));
+    assertExpectedTable(table, ROWCOUNT, 2);
   }
 
   /**

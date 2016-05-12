@@ -115,6 +115,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   public final static String CREATE_TABLE_CONF_KEY = "create.table";
 
+  // We use a '.' prefix which is ignored when walking directory trees
+  // above. It is invalid family name.
+  final static String TMP_DIR = ".tmp";
+
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
 
@@ -194,6 +198,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       Path familyDir = familyStat.getPath();
       byte[] familyName = familyDir.getName().getBytes();
+      // Skip invalid family
+      try {
+        HColumnDescriptor.isLegalFamilyName(familyName);
+      }
+      catch (IllegalArgumentException e) {
+        LOG.warn("Skipping invalid " + familyStat.getPath());
+        continue;
+      }
       TFamily family = visitor.bulkFamily(familyName);
 
       FileStatus[] hfileStatuses = fs.listStatus(familyDir);
@@ -560,9 +572,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       byte[] splitKey) throws IOException {
     final Path hfilePath = item.hfilePath;
 
-    // We use a '_' prefix which is ignored when walking directory trees
-    // above.
-    final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
+    Path tmpDir = item.hfilePath.getParent();
+    if (!tmpDir.getName().equals(TMP_DIR)) {
+      tmpDir = new Path(tmpDir, TMP_DIR);
+    }
 
     LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
     "region. Splitting...");
@@ -585,6 +598,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     lqis.add(new LoadQueueItem(item.family, botOut));
     lqis.add(new LoadQueueItem(item.family, topOut));
 
+    // If the current item is already the result of previous splits,
+    // we don't need it anymore. Clean up to save space.
+    // It is not part of the original input files.
+    try {
+      tmpDir = item.hfilePath.getParent();
+      if (tmpDir.getName().equals(TMP_DIR)) {
+        fs.delete(item.hfilePath, false);
+      }
+    } catch (IOException e) {
+      LOG.warn("Unable to delete temporary split file " + item.hfilePath);
+    }
     LOG.info("Successfully split into new HFiles " + botOut + " and " + topOut);
     return lqis;
   }
