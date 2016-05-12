@@ -1678,7 +1678,7 @@ class AsyncProcess {
         synchronized (actionsInProgress) {
           if (actionsInProgress.get() == 0) break;
           if (!hasWait) {
-            actionsInProgress.wait(100);
+            actionsInProgress.wait(10);
           } else {
             long waitMicroSecond = Math.min(100000L, (cutoff - now * 1000L));
             TimeUnit.MICROSECONDS.timedWait(actionsInProgress, waitMicroSecond);
@@ -1770,9 +1770,16 @@ class AsyncProcess {
 
   /** Wait until the async does not have more than max tasks in progress. */
   private void waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
+    waitForMaximumCurrentTasks(max, tasksInProgress, id);
+  }
+
+  // Break out this method so testable
+  @VisibleForTesting
+  static void waitForMaximumCurrentTasks(int max, final AtomicLong tasksInProgress, final long id)
+  throws InterruptedIOException {
     long lastLog = EnvironmentEdgeManager.currentTime();
     long currentInProgress, oldInProgress = Long.MAX_VALUE;
-    while ((currentInProgress = this.tasksInProgress.get()) > max) {
+    while ((currentInProgress = tasksInProgress.get()) > max) {
       if (oldInProgress != currentInProgress) { // Wait for in progress to change.
         long now = EnvironmentEdgeManager.currentTime();
         if (now > lastLog + 10000) {
@@ -1783,9 +1790,10 @@ class AsyncProcess {
       }
       oldInProgress = currentInProgress;
       try {
-        synchronized (this.tasksInProgress) {
-          if (tasksInProgress.get() != oldInProgress) break;
-          this.tasksInProgress.wait(100);
+        synchronized (tasksInProgress) {
+          if (tasksInProgress.get() == oldInProgress) {
+            tasksInProgress.wait(10);
+          }
         }
       } catch (InterruptedException e) {
         throw new InterruptedIOException("#" + id + ", interrupted." +
