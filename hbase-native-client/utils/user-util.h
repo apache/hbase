@@ -19,8 +19,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <memory>
+#include <string>
 #include <mutex>
 
 namespace hbase {
@@ -49,8 +48,7 @@ private:
    * Compute the username. This will block.
    */
   void compute_user_name();
-  std::atomic<bool> init_;
+  std::once_flag once_flag_;
   std::string user_name_;
-  std::mutex m_;
 };
 } // namespace hbase

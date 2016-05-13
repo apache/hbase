@@ -27,22 +27,14 @@
 using namespace hbase;
 using namespace std;
 
-UserUtil::UserUtil() : init_{false}, user_name_{"drwho"}, m_() {}
+UserUtil::UserUtil() : once_flag_{}, user_name_{"drwho"} {}
 
 string UserUtil::user_name() {
-  if (!init_) {
-    compute_user_name();
-  }
+  std::call_once(once_flag_, [this]() { compute_user_name(); });
   return user_name_;
 }
 
 void UserUtil::compute_user_name() {
-  lock_guard<mutex> lock(m_);
-
-  if (init_) {
-    return;
-  }
-
   // According to the man page of getpwuid
   // this should never be free'd
   //
@@ -52,6 +44,5 @@ void UserUtil::compute_user_name() {
   // make sure that we got something.
   if (passwd && passwd->pw_name) {
     user_name_ = string{passwd->pw_name};
-    init_ = true;
   }
 }
