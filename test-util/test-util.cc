@@ -24,13 +24,18 @@
 using hbase::TestUtil;
 using folly::Random;
 
-const static int STR_LEN = 32;
+std::string TestUtil::RandString(int len) {
+  // Create the whole string.
+  // Filling everything with z's
+  auto s = std::string(len, 'z');
 
-std::string TestUtil::RandString() {
-  auto s = std::string(STR_LEN, 'z');
-
-  for (int i = 0; i < STR_LEN; i++) {
+  // Now pick a bunch of random numbers
+  for (int i = 0; i < len; i++) {
+    // use Folly's random to get the numbers
+    // as I don't want to have to learn
+    // all the cpp rand invocation magic.
     auto r = Random::rand32('a', 'z');
+    // Cast that to ascii.
     s[i] = static_cast<char>(r);
   }
   return s;
@@ -42,12 +47,13 @@ TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {
   auto res_code = std::system(cmd.c_str());
   CHECK(res_code == 0);
 }
+
 TestUtil::~TestUtil() {
   auto res_code = std::system("bin/stop-local-hbase.sh");
   CHECK(res_code == 0);
 }
 
-void TestUtil::RunShellCmd(const std::string& command) {
+void TestUtil::RunShellCmd(const std::string &command) {
   auto cmd_string = folly::sformat("echo \"{}\" | ../bin/hbase shell", command);
   auto res_code = std::system(cmd_string.c_str());
   CHECK(res_code == 0);

@@ -30,20 +30,30 @@ namespace hbase {
  */
 class TestUtil {
 public:
-
   /**
    * Creating a TestUtil will spin up a cluster.
    */
   TestUtil();
+
   /**
-   * Destroying a TestUtil will spin down a cluster.
+   * Destroying a TestUtil will spin down a cluster and remove the test dir.
    */
   ~TestUtil();
+
   /**
-   * Run a command in the hbase shell.
+   * Run a command in the hbase shell. Command should not include any double
+   * quotes.
+   *
+   * This should only be used until there is a good Admin support from the
+   * native client
    */
-  void RunShellCmd(const std::string& command);
-  static std::string RandString();
+  void RunShellCmd(const std::string &command);
+
+  /**
+   * Create a random string. This random string is all letters, as such it is
+   * very good for use as a directory name.
+   */
+  static std::string RandString(int len = 32);
 
 private:
   folly::test::TemporaryDirectory temp_dir_;

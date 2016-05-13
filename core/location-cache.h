@@ -55,7 +55,7 @@ public:
    * @param io_executor executor used to talk to the network
    */
   LocationCache(std::string quorum_spec,
-                std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_exector,
+                std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                 std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
   /**
    * Destructor.
