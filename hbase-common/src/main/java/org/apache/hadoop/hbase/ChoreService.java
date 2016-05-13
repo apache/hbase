@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * ChoreService is a service that can be used to schedule instances of {@link ScheduledChore} to run
@@ -52,13 +53,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * When finished with a ChoreService it is good practice to call {@link ChoreService#shutdown()}.
  * Calling this method ensures that all scheduled chores are cancelled and cleaned up properly.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ChoreService implements ChoreServicer {
   private static final Log LOG = LogFactory.getLog(ChoreService.class);
 
   /**
    * The minimum number of threads in the core pool of the underlying ScheduledThreadPoolExecutor
    */
+  @InterfaceAudience.Private
   public final static int MIN_CORE_POOL_SIZE = 1;
 
   /**
@@ -92,12 +95,15 @@ public class ChoreService implements ChoreServicer {
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
    */
+  @InterfaceAudience.Private
   @VisibleForTesting
   public ChoreService(final String coreThreadPoolPrefix) {
     this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, false);
   }
 
   /**
+   * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
+   *          spawned by this service
    * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
    *               to true this will add -10% to 10% jitter.
    */
@@ -111,6 +117,8 @@ public class ChoreService implements ChoreServicer {
    * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor 
    *          to during initialization. The default size is 1, but specifying a larger size may be
    *          beneficial if you know that 1 thread will not be enough.
+   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
+   *               to true this will add -10% to 10% jitter.
    */
   public ChoreService(final String coreThreadPoolPrefix, int corePoolSize, boolean jitter) {
     this.coreThreadPoolPrefix = coreThreadPoolPrefix;
@@ -128,14 +136,6 @@ public class ChoreService implements ChoreServicer {
     scheduler.setRemoveOnCancelPolicy(true);
     scheduledChores = new HashMap<ScheduledChore, ScheduledFuture<?>>();
     choresMissingStartTime = new HashMap<ScheduledChore, Boolean>();
-  }
-
-  /**
-   * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
-   *          spawned by this service
-   */
-  public static ChoreService getInstance(final String coreThreadPoolPrefix) {
-    return new ChoreService(coreThreadPoolPrefix);
   }
 
   /**
@@ -179,11 +179,13 @@ public class ChoreService implements ChoreServicer {
     scheduleChore(chore);
   }
 
+  @InterfaceAudience.Private
   @Override
   public synchronized void cancelChore(ScheduledChore chore) {
     cancelChore(chore, true);
   }
 
+  @InterfaceAudience.Private
   @Override
   public synchronized void cancelChore(ScheduledChore chore, boolean mayInterruptIfRunning) {
     if (chore != null && scheduledChores.containsKey(chore)) {
@@ -200,12 +202,14 @@ public class ChoreService implements ChoreServicer {
     }
   }
 
+  @InterfaceAudience.Private
   @Override
   public synchronized boolean isChoreScheduled(ScheduledChore chore) {
     return chore != null && scheduledChores.containsKey(chore)
         && !scheduledChores.get(chore).isDone();
   }
 
+  @InterfaceAudience.Private
   @Override
   public synchronized boolean triggerNow(ScheduledChore chore) {
     if (chore == null) {
@@ -293,6 +297,7 @@ public class ChoreService implements ChoreServicer {
     }
   }
 
+  @InterfaceAudience.Private
   @Override
   public synchronized void onChoreMissedStartTime(ScheduledChore chore) {
     if (chore == null || !scheduledChores.containsKey(chore)) return;

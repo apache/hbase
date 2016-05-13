@@ -235,7 +235,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testInitialChorePrecedence() throws InterruptedException {
-    ChoreService service = ChoreService.getInstance("testInitialChorePrecedence");
+    ChoreService service = new ChoreService("testInitialChorePrecedence");
 
     final int period = 100;
     final int failureThreshold = 5;
@@ -266,7 +266,7 @@ public class TestChoreService {
   public void testCancelChore() throws InterruptedException {
     final int period = 100;
     ScheduledChore chore1 = new DoNothingChore("chore1", period);
-    ChoreService service = ChoreService.getInstance("testCancelChore");
+    ChoreService service = new ChoreService("testCancelChore");
     try {
       service.scheduleChore(chore1);
       assertTrue(chore1.isScheduled());
@@ -344,7 +344,7 @@ public class TestChoreService {
     final int period = 100;
     // Small delta that acts as time buffer (allowing chores to complete if running slowly)
     final int delta = 5;
-    ChoreService service = ChoreService.getInstance("testFrequencyOfChores");
+    ChoreService service = new ChoreService("testFrequencyOfChores");
     CountingChore chore = new CountingChore("countingChore", period);
     try {
       service.scheduleChore(chore);
@@ -370,7 +370,7 @@ public class TestChoreService {
   public void testForceTrigger() throws InterruptedException {
     final int period = 100;
     final int delta = 5;
-    ChoreService service = ChoreService.getInstance("testForceTrigger");
+    ChoreService service = new ChoreService("testForceTrigger");
     final CountingChore chore = new CountingChore("countingChore", period);
     try {
       service.scheduleChore(chore);
@@ -717,7 +717,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testStopperForScheduledChores() throws InterruptedException {
-    ChoreService service = ChoreService.getInstance("testStopperForScheduledChores");
+    ChoreService service = new ChoreService("testStopperForScheduledChores");
     Stoppable stopperForGroup1 = new SampleStopper();
     Stoppable stopperForGroup2 = new SampleStopper();
     final int period = 100;
