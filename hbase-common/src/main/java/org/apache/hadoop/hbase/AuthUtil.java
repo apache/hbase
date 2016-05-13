@@ -32,15 +32,48 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * Utility methods for helping with security tasks.
+ * Utility methods for helping with security tasks. Downstream users
+ * may rely on this class to handle authenticating via keytab where
+ * long running services need access to a secure HBase cluster.
+ *
+ * Callers must ensure:
+ *
+ * <ul>
+ *   <li>HBase configuration files are in the Classpath
+ *   <li>hbase.client.keytab.file points to a valid keytab on the local filesystem
+ *   <li>hbase.client.kerberos.principal gives the Kerberos principal to use
+ * </ul>
+ *
+ * <pre>
+ * {@code
+ *   ChoreService choreService = null;
+ *   // Presumes HBase configuration files are on the classpath
+ *   final Configuration conf = HBaseConfiguration.create();
+ *   final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
+ *   if (authChore != null) {
+ *     choreService = new ChoreService("MY_APPLICATION");
+ *     choreService.scheduleChore(authChore);
+ *   }
+ *   try {
+ *     // do application work
+ *   } finally {
+ *     if (choreService != null) {
+ *       choreService.shutdown();
+ *     }
+ *   }
+ * }
+ * </pre>
+ *
+ * See the "Running Canary in a Kerberos-enabled Cluster" section of the HBase Reference Guide for
+ * an example of configuring a user of this Auth Chore to run on a secure cluster.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class AuthUtil {
   private static final Log LOG = LogFactory.getLog(AuthUtil.class);
 
   /** Prefix character to denote group names */
-  public static final String GROUP_PREFIX = "@";
+  private static final String GROUP_PREFIX = "@";
 
   private AuthUtil() {
     super();
@@ -48,6 +81,8 @@ public class AuthUtil {
 
   /**
    * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
+   * @param conf the hbase service configuration
+   * @return a ScheduledChore for renewals, if needed, and null otherwise.
    */
   public static ScheduledChore getAuthChore(Configuration conf) throws IOException {
     UserProvider userProvider = UserProvider.instantiate(conf);
@@ -109,6 +144,7 @@ public class AuthUtil {
    * principal.  Currently this simply checks if the name starts with the
    * special group prefix character ("@").
    */
+  @InterfaceAudience.Private
   public static boolean isGroupPrincipal(String name) {
     return name != null && name.startsWith(GROUP_PREFIX);
   }
@@ -117,6 +153,7 @@ public class AuthUtil {
    * Returns the actual name for a group principal (stripped of the
    * group prefix).
    */
+  @InterfaceAudience.Private
   public static String getGroupName(String aclKey) {
     if (!isGroupPrincipal(aclKey)) {
       return aclKey;
@@ -128,6 +165,7 @@ public class AuthUtil {
   /**
    * Returns the group entry with the group prefix for a group principal.
    */
+  @InterfaceAudience.Private
   public static String toGroupEntry(String name) {
     return GROUP_PREFIX + name;
   }

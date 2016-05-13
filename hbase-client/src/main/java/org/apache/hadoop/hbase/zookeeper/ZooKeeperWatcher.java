@@ -341,7 +341,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     for (String user : superUsers) {
       boolean hasAccess = false;
       // TODO: Validate super group members also when ZK supports setting node ACL for groups.
-      if (!user.startsWith(AuthUtil.GROUP_PREFIX)) {
+      if (!AuthUtil.isGroupPrincipal(user)) {
         for (ACL acl : acls) {
           if (user.equals(acl.getId().getId())) {
             if (acl.getPerms() == Perms.ALL) {
@@ -370,7 +370,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public static boolean isSuperUserId(String[] superUsers, Id id) {
     for (String user : superUsers) {
       // TODO: Validate super group members also when ZK supports setting node ACL for groups.
-      if (!user.startsWith(AuthUtil.GROUP_PREFIX) && new Id("sasl", user).equals(id)) {
+      if (!AuthUtil.isGroupPrincipal(user) && new Id("sasl", user).equals(id)) {
         return true;
       }
     }

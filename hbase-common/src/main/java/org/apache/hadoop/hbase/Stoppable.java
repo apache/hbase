@@ -24,11 +24,12 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * Implementers are Stoppable.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Stoppable {
   /**
    * Stop this service.
+   * Implementers should favor logging errors over throwing RuntimeExceptions.
    * @param why Why we're stopping.
    */
   void stop(String why);
