@@ -116,7 +116,7 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) { return this->cp_.Get(sn); })
-    .then([tn, row, this](std::shared_ptr<HBaseService> service) {
+      .then([tn, row, this](std::shared_ptr<HBaseService> service) {
         return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
       })
       .then([this](Response resp) {

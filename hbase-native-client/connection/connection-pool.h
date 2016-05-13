@@ -88,8 +88,8 @@ public:
   void Close(const hbase::pb::ServerName &sn);
 
 private:
-  std::shared_ptr<HBaseService> GetCached(const hbase::pb::ServerName& sn);
-  std::shared_ptr<HBaseService> GetNew(const hbase::pb::ServerName& sn);
+  std::shared_ptr<HBaseService> GetCached(const hbase::pb::ServerName &sn);
+  std::shared_ptr<HBaseService> GetNew(const hbase::pb::ServerName &sn);
   std::unordered_map<hbase::pb::ServerName, std::shared_ptr<HBaseService>,
                      ServerNameHash, ServerNameEquals>
       connections_;
