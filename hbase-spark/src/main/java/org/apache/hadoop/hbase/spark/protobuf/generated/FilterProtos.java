@@ -783,6 +783,21 @@ public final class FilterProtos {
      */
     org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos.SQLPredicatePushDownCellToColumnMappingOrBuilder getCellToColumnMappingOrBuilder(
         int index);
+
+    // optional string encoderClassName = 4;
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    boolean hasEncoderClassName();
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    java.lang.String getEncoderClassName();
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getEncoderClassNameBytes();
   }
   /**
    * Protobuf type {@code hbase.pb.SQLPredicatePushDownFilter}
@@ -854,6 +869,11 @@ public final class FilterProtos {
                 mutable_bitField0_ |= 0x00000004;
               }
               cellToColumnMapping_.add(input.readMessage(org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos.SQLPredicatePushDownCellToColumnMapping.PARSER, extensionRegistry));
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000002;
+              encoderClassName_ = input.readBytes();
               break;
             }
           }
@@ -1004,10 +1024,54 @@ public final class FilterProtos {
       return cellToColumnMapping_.get(index);
     }
 
+    // optional string encoderClassName = 4;
+    public static final int ENCODERCLASSNAME_FIELD_NUMBER = 4;
+    private java.lang.Object encoderClassName_;
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    public boolean hasEncoderClassName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    public java.lang.String getEncoderClassName() {
+      java.lang.Object ref = encoderClassName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          encoderClassName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string encoderClassName = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getEncoderClassNameBytes() {
+      java.lang.Object ref = encoderClassName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        encoderClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       dynamicLogicExpression_ = "";
       valueFromQueryArray_ = java.util.Collections.emptyList();
       cellToColumnMapping_ = java.util.Collections.emptyList();
+      encoderClassName_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1040,6 +1104,9 @@ public final class FilterProtos {
       for (int i = 0; i < cellToColumnMapping_.size(); i++) {
         output.writeMessage(3, cellToColumnMapping_.get(i));
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(4, getEncoderClassNameBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1065,6 +1132,10 @@ public final class FilterProtos {
       for (int i = 0; i < cellToColumnMapping_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(3, cellToColumnMapping_.get(i));
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getEncoderClassNameBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1098,6 +1169,11 @@ public final class FilterProtos {
           .equals(other.getValueFromQueryArrayList());
       result = result && getCellToColumnMappingList()
           .equals(other.getCellToColumnMappingList());
+      result = result && (hasEncoderClassName() == other.hasEncoderClassName());
+      if (hasEncoderClassName()) {
+        result = result && getEncoderClassName()
+            .equals(other.getEncoderClassName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1122,6 +1198,10 @@ public final class FilterProtos {
       if (getCellToColumnMappingCount() > 0) {
         hash = (37 * hash) + CELL_TO_COLUMN_MAPPING_FIELD_NUMBER;
         hash = (53 * hash) + getCellToColumnMappingList().hashCode();
+      }
+      if (hasEncoderClassName()) {
+        hash = (37 * hash) + ENCODERCLASSNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getEncoderClassName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1243,6 +1323,8 @@ public final class FilterProtos {
         } else {
           cellToColumnMappingBuilder_.clear();
         }
+        encoderClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -1289,6 +1371,10 @@ public final class FilterProtos {
         } else {
           result.cellToColumnMapping_ = cellToColumnMappingBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.encoderClassName_ = encoderClassName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1345,6 +1431,11 @@ public final class FilterProtos {
               cellToColumnMappingBuilder_.addAllMessages(other.cellToColumnMapping_);
             }
           }
+        }
+        if (other.hasEncoderClassName()) {
+          bitField0_ |= 0x00000008;
+          encoderClassName_ = other.encoderClassName_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1769,6 +1860,80 @@ public final class FilterProtos {
         return cellToColumnMappingBuilder_;
       }
 
+      // optional string encoderClassName = 4;
+      private java.lang.Object encoderClassName_ = "";
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public boolean hasEncoderClassName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public java.lang.String getEncoderClassName() {
+        java.lang.Object ref = encoderClassName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          encoderClassName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getEncoderClassNameBytes() {
+        java.lang.Object ref = encoderClassName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          encoderClassName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public Builder setEncoderClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        encoderClassName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public Builder clearEncoderClassName() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        encoderClassName_ = getDefaultInstance().getEncoderClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string encoderClassName = 4;</code>
+       */
+      public Builder setEncoderClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        encoderClassName_ = value;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:hbase.pb.SQLPredicatePushDownFilter)
     }
 
@@ -1802,13 +1967,14 @@ public final class FilterProtos {
       "\n\014Filter.proto\022\010hbase.pb\"h\n\'SQLPredicate" +
       "PushDownCellToColumnMapping\022\025\n\rcolumn_fa" +
       "mily\030\001 \002(\014\022\021\n\tqualifier\030\002 \002(\014\022\023\n\013column_" +
-      "name\030\003 \002(\t\"\261\001\n\032SQLPredicatePushDownFilte" +
+      "name\030\003 \002(\t\"\313\001\n\032SQLPredicatePushDownFilte" +
       "r\022 \n\030dynamic_logic_expression\030\001 \002(\t\022\036\n\026v" +
       "alue_from_query_array\030\002 \003(\014\022Q\n\026cell_to_c" +
       "olumn_mapping\030\003 \003(\01321.hbase.pb.SQLPredic" +
-      "atePushDownCellToColumnMappingBH\n0org.ap" +
-      "ache.hadoop.hbase.spark.protobuf.generat" +
-      "edB\014FilterProtosH\001\210\001\001\240\001\001"
+      "atePushDownCellToColumnMapping\022\030\n\020encode" +
+      "rClassName\030\004 \001(\tBH\n0org.apache.hadoop.hb" +
+      "ase.spark.protobuf.generatedB\014FilterProt",
+      "osH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1826,7 +1992,7 @@ public final class FilterProtos {
           internal_static_hbase_pb_SQLPredicatePushDownFilter_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SQLPredicatePushDownFilter_descriptor,
-              new java.lang.String[] { "DynamicLogicExpression", "ValueFromQueryArray", "CellToColumnMapping", });
+              new java.lang.String[] { "DynamicLogicExpression", "ValueFromQueryArray", "CellToColumnMapping", "EncoderClassName", });
           return null;
         }
       };

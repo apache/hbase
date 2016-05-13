@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.spark.datasources.BytesEncoder;
+import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder;
 import org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,21 +58,25 @@ public class SparkSQLPushDownFilter extends FilterBase{
   static final byte[] rowKeyFamily = new byte[0];
   static final byte[] rowKeyQualifier = Bytes.toBytes("key");
 
+  String encoderClassName;
+
   public SparkSQLPushDownFilter(DynamicLogicExpression dynamicLogicExpression,
                                 byte[][] valueFromQueryArray,
                                 HashMap<ByteArrayComparable,
                                         HashMap<ByteArrayComparable, String>>
-                                        currentCellToColumnIndexMap) {
+                                        currentCellToColumnIndexMap, String encoderClassName) {
     this.dynamicLogicExpression = dynamicLogicExpression;
     this.valueFromQueryArray = valueFromQueryArray;
     this.currentCellToColumnIndexMap = currentCellToColumnIndexMap;
+    this.encoderClassName = encoderClassName;
   }
 
   public SparkSQLPushDownFilter(DynamicLogicExpression dynamicLogicExpression,
                                 byte[][] valueFromQueryArray,
-                                MutableList<Field> fields) {
+                                MutableList<Field> fields, String encoderClassName) {
     this.dynamicLogicExpression = dynamicLogicExpression;
     this.valueFromQueryArray = valueFromQueryArray;
+    this.encoderClassName = encoderClassName;
 
     //generate family qualifier to index mapping
     this.currentCellToColumnIndexMap =
@@ -184,9 +190,12 @@ public class SparkSQLPushDownFilter extends FilterBase{
       throw new DeserializationException(e);
     }
 
+    String encoder = proto.getEncoderClassName();
+    BytesEncoder enc = JavaBytesEncoder.create(encoder);
+
     //Load DynamicLogicExpression
     DynamicLogicExpression dynamicLogicExpression =
-            DynamicLogicExpressionBuilder.build(proto.getDynamicLogicExpression());
+            DynamicLogicExpressionBuilder.build(proto.getDynamicLogicExpression(), enc);
 
     //Load valuesFromQuery
     final List<ByteString> valueFromQueryArrayList = proto.getValueFromQueryArrayList();
@@ -225,7 +234,7 @@ public class SparkSQLPushDownFilter extends FilterBase{
     }
 
     return new SparkSQLPushDownFilter(dynamicLogicExpression,
-            valueFromQueryArray, currentCellToColumnIndexMap);
+            valueFromQueryArray, currentCellToColumnIndexMap, encoder);
   }
 
   /**
@@ -256,6 +265,8 @@ public class SparkSQLPushDownFilter extends FilterBase{
         builder.addCellToColumnMapping(columnMappingBuilder.build());
       }
     }
+    builder.setEncoderClassName(encoderClassName);
+
 
     return builder.build().toByteArray();
   }

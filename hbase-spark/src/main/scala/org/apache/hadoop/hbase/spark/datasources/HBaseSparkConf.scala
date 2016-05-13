@@ -41,4 +41,6 @@ object HBaseSparkConf{
   val MIN_TIMESTAMP = "hbase.spark.query.minTimestamp"
   val MAX_TIMESTAMP = "hbase.spark.query.maxTimestamp"
   val MAX_VERSIONS = "hbase.spark.query.maxVersions"
+  val ENCODER = "hbase.spark.query.encoder"
+  val defaultEncoder = classOf[NaiveEncoder].getCanonicalName
 }

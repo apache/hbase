@@ -23,9 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
-import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
-import org.apache.hadoop.hbase.spark.datasources.HBaseTableScanRDD
-import org.apache.hadoop.hbase.spark.datasources.SerializableConfiguration
+import org.apache.hadoop.hbase.spark.datasources._
 import org.apache.hadoop.hbase.types._
 import org.apache.hadoop.hbase.util.{Bytes, PositionedByteRange, SimplePositionedMutableByteRange}
 import org.apache.hadoop.hbase._
@@ -92,6 +90,9 @@ case class HBaseRelation (
   val minTimestamp = parameters.get(HBaseSparkConf.MIN_TIMESTAMP).map(_.toLong)
   val maxTimestamp = parameters.get(HBaseSparkConf.MAX_TIMESTAMP).map(_.toLong)
   val maxVersions = parameters.get(HBaseSparkConf.MAX_VERSIONS).map(_.toInt)
+  val encoderClsName = parameters.get(HBaseSparkConf.ENCODER).getOrElse(HBaseSparkConf.defaultEncoder)
+
+  @transient val encoder = JavaBytesEncoder.create(encoderClsName)
 
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
@@ -335,7 +336,7 @@ case class HBaseRelation (
 
     val pushDownFilterJava = if (usePushDownColumnFilter && pushDownDynamicLogicExpression != null) {
         Some(new SparkSQLPushDownFilter(pushDownDynamicLogicExpression,
-          valueArray, requiredQualifierDefinitionList))
+          valueArray, requiredQualifierDefinitionList, encoderClsName))
     } else {
       None
     }
@@ -402,11 +403,22 @@ case class HBaseRelation (
     (superRowKeyFilter, superDynamicLogicExpression, queryValueArray)
   }
 
+  /**
+    * For some codec, the order may be inconsistent between java primitive
+    * type and its byte array. We may have to  split the predicates on some
+    * of the java primitive type into multiple predicates. The encoder will take
+    * care of it and returning the concrete ranges.
+    *
+    * For example in naive codec,  some of the java primitive types have to be split into multiple
+    * predicates, and union these predicates together to make the predicates be performed correctly.
+    * For example, if we have "COLUMN < 2", we will transform it into
+    * "0 <= COLUMN < 2 OR Integer.MIN_VALUE <= COLUMN <= -1"
+    */
+
   def transverseFilterTree(parentRowKeyFilter:RowKeyFilter,
                                   valueArray:mutable.MutableList[Array[Byte]],
                                   filter:Filter): DynamicLogicExpression = {
     filter match {
-
       case EqualTo(attr, value) =>
         val field = catalog.getField(attr)
         if (field != null) {
@@ -420,18 +432,38 @@ case class HBaseRelation (
           valueArray += byteValue
         }
         new EqualLogicExpression(attr, valueArray.length - 1, false)
+
+      /**
+        * encoder may split the predicates into multiple byte array boundaries.
+        * Each boundaries is mapped into the RowKeyFilter and then is unioned by the reduce
+        * operation. If the data type is not supported, b will be None, and there is
+        * no operation happens on the parentRowKeyFilter.
+        *
+        * Note that because LessThan is not inclusive, thus the first bound should be exclusive,
+        * which is controlled by inc.
+        *
+        * The other predicates, i.e., GreaterThan/LessThanOrEqual/GreaterThanOrEqual follows
+        * the similar logic.
+        */
       case LessThan(attr, value) =>
         val field = catalog.getField(attr)
         if (field != null) {
           if (field.isRowKey) {
-            parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(DefaultSourceStaticUtils.getByteValue(field,
-                value.toString), false,
-                new Array[Byte](0), true)))
+            val b = encoder.ranges(value)
+            var inc = false
+            b.map(_.less.map { x =>
+              val r = new RowKeyFilter(null,
+                new ScanRange(x.upper, inc, x.low, true)
+              )
+              inc = true
+              r
+            }).map { x =>
+              x.reduce { (i, j) =>
+                i.mergeUnion(j)
+              }
+            }.map(parentRowKeyFilter.mergeIntersect(_))
           }
-          val byteValue =
-            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
-              value.toString)
+          val byteValue = encoder.encode(field.dt, value)
           valueArray += byteValue
         }
         new LessThanLogicExpression(attr, valueArray.length - 1)
@@ -439,13 +471,20 @@ case class HBaseRelation (
         val field = catalog.getField(attr)
         if (field != null) {
           if (field.isRowKey) {
-            parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(field,
-                value.toString), false)))
+            val b = encoder.ranges(value)
+            var inc = false
+            b.map(_.greater.map{x =>
+              val r = new RowKeyFilter(null,
+                new ScanRange(x.upper, true, x.low, inc))
+              inc = true
+              r
+            }).map { x =>
+              x.reduce { (i, j) =>
+                i.mergeUnion(j)
+              }
+            }.map(parentRowKeyFilter.mergeIntersect(_))
           }
-          val byteValue =
-            DefaultSourceStaticUtils.getByteValue(field,
-              value.toString)
+          val byteValue = encoder.encode(field.dt, value)
           valueArray += byteValue
         }
         new GreaterThanLogicExpression(attr, valueArray.length - 1)
@@ -453,14 +492,17 @@ case class HBaseRelation (
         val field = catalog.getField(attr)
         if (field != null) {
           if (field.isRowKey) {
-            parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(DefaultSourceStaticUtils.getByteValue(field,
-                value.toString), true,
-                new Array[Byte](0), true)))
+            val b = encoder.ranges(value)
+            b.map(_.less.map(x =>
+              new RowKeyFilter(null,
+                new ScanRange(x.upper, true, x.low, true))))
+              .map { x =>
+                x.reduce{ (i, j) =>
+                  i.mergeUnion(j)
+                }
+              }.map(parentRowKeyFilter.mergeIntersect(_))
           }
-          val byteValue =
-            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
-              value.toString)
+          val byteValue = encoder.encode(field.dt, value)
           valueArray += byteValue
         }
         new LessThanOrEqualLogicExpression(attr, valueArray.length - 1)
@@ -468,15 +510,18 @@ case class HBaseRelation (
         val field = catalog.getField(attr)
         if (field != null) {
           if (field.isRowKey) {
-            parentRowKeyFilter.mergeIntersect(new RowKeyFilter(null,
-              new ScanRange(null, true, DefaultSourceStaticUtils.getByteValue(field,
-                value.toString), true)))
+            val b = encoder.ranges(value)
+            b.map(_.greater.map(x =>
+              new RowKeyFilter(null,
+                new ScanRange(x.upper, true, x.low, true))))
+              .map { x =>
+                x.reduce { (i, j) =>
+                  i.mergeUnion(j)
+                }
+              }.map(parentRowKeyFilter.mergeIntersect(_))
           }
-          val byteValue =
-            DefaultSourceStaticUtils.getByteValue(catalog.getField(attr),
-              value.toString)
+          val byteValue = encoder.encode(field.dt, value)
           valueArray += byteValue
-
         }
         new GreaterThanOrEqualLogicExpression(attr, valueArray.length - 1)
       case Or(left, right) =>
@@ -587,7 +632,7 @@ class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
     var leftRange:ScanRange = null
     var rightRange:ScanRange = null
 
-    //First identify the Left range
+    // First identify the Left range
     // Also lower bound can't be null
     if (compareRange(lowerBound, other.lowerBound) < 0 ||
       compareRange(upperBound, other.upperBound) < 0) {
@@ -598,14 +643,31 @@ class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
       rightRange = this
     }
 
-    //Then see if leftRange goes to null or if leftRange.upperBound
-    // upper is greater or equals to rightRange.lowerBound
-    if (leftRange.upperBound == null ||
-      Bytes.compareTo(leftRange.upperBound, rightRange.lowerBound) >= 0) {
-      new ScanRange(leftRange.upperBound, leftRange.isUpperBoundEqualTo, rightRange.lowerBound, rightRange.isLowerBoundEqualTo)
+    if (hasOverlap(leftRange, rightRange)) {
+      // Find the upper bound and lower bound
+      if (compareRange(leftRange.upperBound, rightRange.upperBound) >= 0) {
+        new ScanRange(rightRange.upperBound, rightRange.isUpperBoundEqualTo,
+          rightRange.lowerBound, rightRange.isLowerBoundEqualTo)
+      } else {
+        new ScanRange(leftRange.upperBound, leftRange.isUpperBoundEqualTo,
+          rightRange.lowerBound, rightRange.isLowerBoundEqualTo)
+      }
     } else {
       null
     }
+  }
+
+  /**
+    * The leftRange.upperBound has to be larger than the rightRange's lowerBound.
+    * Otherwise, there is no overlap.
+    *
+    * @param left: The range with the smaller lowBound
+    * @param right: The range with the larger lowBound
+    * @return Whether two ranges have overlap.
+    */
+
+  def hasOverlap(left: ScanRange, right: ScanRange): Boolean = {
+    compareRange(left.upperBound, right.lowerBound) >= 0
   }
 
   /**
@@ -1046,7 +1108,7 @@ class RowKeyFilter (currentPoint:Array[Byte] = null,
    *
    * @param other Filter to merge
    */
-  def mergeUnion(other:RowKeyFilter): Unit = {
+  def mergeUnion(other:RowKeyFilter): RowKeyFilter = {
     other.points.foreach( p => points += p)
 
     other.ranges.foreach( otherR => {
@@ -1058,6 +1120,7 @@ class RowKeyFilter (currentPoint:Array[Byte] = null,
         }}
       if (!doesOverLap) ranges.+=(otherR)
     })
+    this
   }
 
   /**
@@ -1066,7 +1129,7 @@ class RowKeyFilter (currentPoint:Array[Byte] = null,
    *
    * @param other Filter to merge
    */
-  def mergeIntersect(other:RowKeyFilter): Unit = {
+  def mergeIntersect(other:RowKeyFilter): RowKeyFilter = {
     val survivingPoints = new mutable.MutableList[Array[Byte]]()
     val didntSurviveFirstPassPoints = new mutable.MutableList[Array[Byte]]()
     if (points == null || points.length == 0) {
@@ -1112,6 +1175,7 @@ class RowKeyFilter (currentPoint:Array[Byte] = null,
     }
     points = survivingPoints
     ranges = survivingRanges
+    this
   }
 
   override def toString:String = {

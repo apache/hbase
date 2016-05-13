@@ -23,6 +23,8 @@ import scala.math.Ordering
 
 package object hbase {
   type HBaseType = Array[Byte]
+  def bytesMin = new Array[Byte](0)
+  def bytesMax = null
   val ByteMax = -1.asInstanceOf[Byte]
   val ByteMin = 0.asInstanceOf[Byte]
   val ord: Ordering[HBaseType] = new Ordering[HBaseType] {

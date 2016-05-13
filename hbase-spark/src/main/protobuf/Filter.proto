@@ -35,4 +35,5 @@ message SQLPredicatePushDownFilter {
   required string dynamic_logic_expression = 1;
   repeated bytes value_from_query_array = 2;
   repeated SQLPredicatePushDownCellToColumnMapping cell_to_column_mapping = 3;
+  optional string encoderClassName = 4;
 }
