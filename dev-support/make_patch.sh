@@ -97,7 +97,7 @@ elif  [ "$status" -ge 1 ]; then
     # At least one patch already exists -- add a version prefix
     for i in {1..99}; do
         # Check to see the maximum version of patch that exists
-        if [ ! -f "$patch_dir/$branch-v$i.patch" ]; then
+        if [ ! -f "$patch_dir/$branch.v$i.patch" ]; then
             version=$i
             if [ -n "$addendum" ]; then
                 # Don't increment the patch # if it is an addendum
@@ -108,10 +108,10 @@ elif  [ "$status" -ge 1 ]; then
                 else
                     # We are making an addendum to a different version of the patch
                     let version=$version-1
-                    prefix="-v$version"
+                    prefix=".v$version"
                 fi
             else
-                prefix="-v$version"
+                prefix=".v$version"
             fi
             break
         fi
@@ -122,7 +122,7 @@ fi
 tracking_suffix=""
 if [[ $tracking_branch != "origin/master" \
     &&  $tracking_branch != "master" ]]; then
-    tracking_suffix="-${tracking_branch#origin/}"
+    tracking_suffix=".${tracking_branch#origin/}"
 fi
 
 patch_name="$branch$prefix$addendum$tracking_suffix.patch"
