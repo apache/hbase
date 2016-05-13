@@ -915,7 +915,7 @@ public class ZKUtil {
       if (superUsers != null) {
         List<String> groups = new ArrayList<String>();
         for (String user : superUsers) {
-          if (user.startsWith(AuthUtil.GROUP_PREFIX)) {
+          if (AuthUtil.isGroupPrincipal(user)) {
             // TODO: Set node ACL for groups when ZK supports this feature
             groups.add(user);
           } else {

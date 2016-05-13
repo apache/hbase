@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -40,7 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
  * Don't subclass ScheduledChore if the task relies on being woken up for something to do, such as
  * an entry being added to a queue, etc.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class ScheduledChore implements Runnable {
   private static final Log LOG = LogFactory.getLog(ScheduledChore.class);
 
@@ -116,6 +118,8 @@ public abstract class ScheduledChore implements Runnable {
   /**
    * This constructor is for test only. It allows us to create an object and to call chore() on it.
    */
+  @InterfaceAudience.Private
+  @VisibleForTesting
   protected ScheduledChore() {
     this.name = null;
     this.stopper = null;
@@ -165,7 +169,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
-   * @see java.lang.Thread#run()
+   * @see java.lang.Runnable#run()
    */
   @Override
   public void run() {
@@ -327,6 +331,7 @@ public abstract class ScheduledChore implements Runnable {
     return choreServicer != null && choreServicer.isChoreScheduled(this);
   }
 
+  @InterfaceAudience.Private
   @VisibleForTesting
   public synchronized void choreForTesting() {
     chore();
@@ -352,6 +357,12 @@ public abstract class ScheduledChore implements Runnable {
   protected synchronized void cleanup() {
   }
 
+  /**
+   * A summation of this chore in human readable format. Downstream users should not presume
+   * parsing of this string can relaibly be done between versions. Instead, they should rely
+   * on the public accessor methods to get the information they desire.
+   */
+  @InterfaceAudience.Private
   @Override
   public String toString() {
     return "[ScheduledChore: Name: " + getName() + " Period: " + getPeriod() + " Unit: "
