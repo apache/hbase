@@ -154,7 +154,7 @@ def move(admin, r, newServer, original)
       sleep 0.1
     end
   end
-  raise RuntimeError, "Region stuck on #{original}, newserver=#{newServer}" if same
+  raise RuntimeError, "Region " + r.getRegionNameAsString() + " stuck on #{original}, newserver=#{newServer}" if same
   # Assert can Scan from new location.
   isSuccessfulScan(admin, r)
   $LOG.info("Moved region " + r.getRegionNameAsString() + " cost: " + 
