@@ -26,6 +26,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface Future<V> extends io.netty.util.concurrent.Future<V> {
 
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NM_SAME_SIMPLE_NAME_AS_INTERFACE",
+  justification="Agree that this can be confusing but folks will pull in this and think twice "
+      + "about pulling in netty; incidence of confusion should be rare in this case.")
+public interface Future<V> extends io.netty.util.concurrent.Future<V> {
 }
