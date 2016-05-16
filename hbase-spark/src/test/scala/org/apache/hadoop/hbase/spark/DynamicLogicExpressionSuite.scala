@@ -32,7 +32,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Basic And Test") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
     val andLogic = new AndLogicExpression(leftLogic, rightLogic)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
@@ -72,7 +74,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Basic OR Test") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
     val OrLogic = new OrLogicExpression(leftLogic, rightLogic)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
@@ -119,9 +123,13 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Basic Command Test") {
     val greaterLogic = new GreaterThanLogicExpression("Col1", 0)
+    greaterLogic.setEncoder(encoder)
     val greaterAndEqualLogic = new GreaterThanOrEqualLogicExpression("Col1", 0)
+    greaterAndEqualLogic.setEncoder(encoder)
     val lessLogic = new LessThanLogicExpression("Col1", 0)
+    lessLogic.setEncoder(encoder)
     val lessAndEqualLogic = new LessThanOrEqualLogicExpression("Col1", 0)
+    lessAndEqualLogic.setEncoder(encoder)
     val equalLogic = new EqualLogicExpression("Col1", 0, false)
     val notEqualLogic = new EqualLogicExpression("Col1", 0, true)
     val passThrough = new PassThroughLogicExpression
@@ -192,7 +200,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Double Type") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
     val andLogic = new AndLogicExpression(leftLogic, rightLogic)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
@@ -231,7 +241,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Float Type") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
     val andLogic = new AndLogicExpression(leftLogic, rightLogic)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
@@ -270,7 +282,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("String Type") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
     val andLogic = new AndLogicExpression(leftLogic, rightLogic)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
@@ -309,7 +323,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("Boolean Type") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)
+    leftLogic.setEncoder(encoder)
     val rightLogic = new GreaterThanLogicExpression("Col1", 1)
+    rightLogic.setEncoder(encoder)
 
     val columnToCurrentRowValueMap = new util.HashMap[String, ByteArrayComparable]()
 
