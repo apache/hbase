@@ -159,8 +159,8 @@ public class RpcRetryingCaller<T> {
         }
         // If the server is dead, we need to wait a little before retrying, to give
         //  a chance to the regions to be
-        // tries hasn't been bumped up yet so we use "tries + 1" to get right pause time
-        expectedSleep = callable.sleep(pause, tries + 1);
+        // get right pause time, start by RETRY_BACKOFF[0] * pause
+        expectedSleep = callable.sleep(pause, tries);
 
         // If, after the planned sleep, there won't be enough time left, we stop now.
         long duration = singleCallDuration(expectedSleep);
