@@ -100,8 +100,7 @@ abstract class AbstractRegionServerCallable<T> implements RetryingCallable<T> {
 
   @Override
   public long sleep(long pause, int tries) {
-    // Tries hasn't been bumped up yet so we use "tries + 1" to get right pause time
-    long sleep = ConnectionUtils.getPauseTime(pause, tries + 1);
+    long sleep = ConnectionUtils.getPauseTime(pause, tries);
     if (sleep < MIN_WAIT_DEAD_SERVER
         && (location == null || getConnection().isDeadServer(location.getServerName()))) {
       sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
