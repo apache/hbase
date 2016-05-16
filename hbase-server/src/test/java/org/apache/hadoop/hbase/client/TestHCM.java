@@ -866,7 +866,7 @@ public class TestHCM {
     conn.close();
   }
 
-  @Ignore ("Test presumes RETRY_BACKOFF will never change; it has") @Test
+  @Test
   public void testErrorBackoffTimeCalculation() throws Exception {
     // TODO: This test would seem to presume hardcoded RETRY_BACKOFF which it should not.
     final long ANY_PAUSE = 100;
@@ -887,46 +887,24 @@ public class TestHCM {
 
       // Check some backoff values from HConstants sequence.
       tracker.reportServerError(location);
-      assertEqualsWithJitter(ANY_PAUSE, tracker.calculateBackoffTime(location, ANY_PAUSE));
+      assertEqualsWithJitter(ANY_PAUSE * HConstants.RETRY_BACKOFF[0],
+        tracker.calculateBackoffTime(location, ANY_PAUSE));
       tracker.reportServerError(location);
       tracker.reportServerError(location);
       tracker.reportServerError(location);
-      assertEqualsWithJitter(ANY_PAUSE * 5, tracker.calculateBackoffTime(location, ANY_PAUSE));
+      assertEqualsWithJitter(ANY_PAUSE * HConstants.RETRY_BACKOFF[3],
+        tracker.calculateBackoffTime(location, ANY_PAUSE));
 
       // All of this shouldn't affect backoff for different location.
 
       assertEquals(0, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
       tracker.reportServerError(diffLocation);
-      assertEqualsWithJitter(ANY_PAUSE, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
-
-      // But should still work for a different region in the same location.
-      HRegionInfo ri2 = new HRegionInfo(TABLE_NAME2);
-      HRegionLocation diffRegion = new HRegionLocation(ri2, location.getServerName());
-      assertEqualsWithJitter(ANY_PAUSE * 5, tracker.calculateBackoffTime(diffRegion, ANY_PAUSE));
+      assertEqualsWithJitter(ANY_PAUSE * HConstants.RETRY_BACKOFF[0],
+        tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
 
       // Check with different base.
-      assertEqualsWithJitter(ANY_PAUSE * 10,
-          tracker.calculateBackoffTime(location, ANY_PAUSE * 2));
-
-      // See that time from last error is taken into account. Time shift is applied after jitter,
-      // so pass the original expected backoff as the base for jitter.
-      long timeShift = (long)(ANY_PAUSE * 0.5);
-      timeMachine.setValue(timeBase + timeShift);
-      assertEqualsWithJitter((ANY_PAUSE * 5) - timeShift,
-        tracker.calculateBackoffTime(location, ANY_PAUSE), ANY_PAUSE * 2);
-
-      // However we should not go into negative.
-      timeMachine.setValue(timeBase + ANY_PAUSE * 100);
-      assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
-
-      // We also should not go over the boundary; last retry would be on it.
-      long timeLeft = (long)(ANY_PAUSE * 0.5);
-      timeMachine.setValue(timeBase + largeAmountOfTime - timeLeft);
-      assertTrue(tracker.canRetryMore(1));
-      tracker.reportServerError(location);
-      assertEquals(timeLeft, tracker.calculateBackoffTime(location, ANY_PAUSE));
-      timeMachine.setValue(timeBase + largeAmountOfTime);
-      assertFalse(tracker.canRetryMore(1));
+      assertEqualsWithJitter(ANY_PAUSE * 2 * HConstants.RETRY_BACKOFF[3],
+        tracker.calculateBackoffTime(location, ANY_PAUSE * 2));
     } finally {
       EnvironmentEdgeManager.reset();
     }

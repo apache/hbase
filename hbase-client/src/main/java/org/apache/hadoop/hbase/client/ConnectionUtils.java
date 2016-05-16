@@ -41,6 +41,9 @@ public class ConnectionUtils {
     if (ntries >= HConstants.RETRY_BACKOFF.length) {
       ntries = HConstants.RETRY_BACKOFF.length - 1;
     }
+    if (ntries < 0) {
+      ntries = 0;
+    }
 
     long normalPause = pause * HConstants.RETRY_BACKOFF[ntries];
     long jitter =  (long)(normalPause * RANDOM.nextFloat() * 0.01f); // 1% possible jitter
