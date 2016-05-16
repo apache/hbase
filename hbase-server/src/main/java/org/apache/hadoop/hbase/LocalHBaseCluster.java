@@ -144,6 +144,9 @@ public class LocalHBaseCluster {
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
     conf.set(HConstants.MASTER_PORT, "0");
+    if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1) {
+      conf.set(HConstants.MASTER_INFO_PORT, "0");
+    }
     conf.set(HConstants.REGIONSERVER_PORT, "0");
     if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1) {
       conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
@@ -196,6 +199,7 @@ public class LocalHBaseCluster {
   throws IOException, InterruptedException {
     return user.runAs(
         new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
+          @Override
           public JVMClusterUtil.RegionServerThread run() throws Exception {
             return addRegionServer(config, index);
           }
@@ -228,6 +232,7 @@ public class LocalHBaseCluster {
   throws IOException, InterruptedException {
     return user.runAs(
         new PrivilegedExceptionAction<JVMClusterUtil.MasterThread>() {
+          @Override
           public JVMClusterUtil.MasterThread run() throws Exception {
             return addMaster(c, index);
           }
