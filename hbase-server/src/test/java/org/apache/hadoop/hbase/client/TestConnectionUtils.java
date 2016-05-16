@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -53,4 +54,23 @@ public class TestConnectionUtils {
     assertTrue(retyTimeSet.size() > (retries.length * 0.80));
   }
 
+  @Test
+  public void testGetPauseTime() {
+    long pauseTime;
+    long baseTime = 100;
+    pauseTime = ConnectionUtils.getPauseTime(baseTime, -1);
+    assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[0]));
+    assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[0] * 1.01f));
+
+    for (int i = 0; i < HConstants.RETRY_BACKOFF.length; i++) {
+      pauseTime = ConnectionUtils.getPauseTime(baseTime, i);
+      assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[i]));
+      assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
+    }
+
+    int length = HConstants.RETRY_BACKOFF.length;
+    pauseTime = ConnectionUtils.getPauseTime(baseTime, length);
+    assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[length - 1]));
+    assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[length - 1] * 1.01f));
+  }
 }
