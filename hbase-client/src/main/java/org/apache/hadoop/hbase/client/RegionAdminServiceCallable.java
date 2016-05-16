@@ -153,7 +153,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
 
   @Override
   public long sleep(long pause, int tries) {
-    long sleep = ConnectionUtils.getPauseTime(pause, tries + 1);
+    long sleep = ConnectionUtils.getPauseTime(pause, tries);
     if (sleep < MIN_WAIT_DEAD_SERVER
         && (location == null || connection.isDeadServer(location.getServerName()))) {
       sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
