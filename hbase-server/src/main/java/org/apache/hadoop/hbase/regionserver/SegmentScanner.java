@@ -62,6 +62,7 @@ public class SegmentScanner implements KeyValueScanner {
 
   /**
    * @param scannerOrder see {@link KeyValueScanner#getScannerOrder()}.
+   * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
   protected SegmentScanner(Segment segment, long readPoint, long scannerOrder) {
     this.segment = segment;
@@ -84,7 +85,6 @@ public class SegmentScanner implements KeyValueScanner {
       throw new RuntimeException("current is invalid: read point is "+readPoint+", " +
           "while current sequence id is " +current.getSequenceId());
     }
-
     return current;
   }
 
@@ -172,9 +172,8 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean seekToPreviousRow(Cell cell) throws IOException {
-    boolean keepSeeking = false;
+    boolean keepSeeking;
     Cell key = cell;
-
     do {
       Cell firstKeyOnRow = CellUtil.createFirstOnRow(key);
       SortedSet<Cell> cellHead = segment.headSet(firstKeyOnRow);

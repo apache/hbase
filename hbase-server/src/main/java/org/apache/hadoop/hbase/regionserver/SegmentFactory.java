@@ -44,16 +44,16 @@ public final class SegmentFactory {
       final CellComparator comparator, long size) {
     MemStoreLAB memStoreLAB = getMemStoreLAB(conf);
     MutableSegment segment = generateMutableSegment(conf, comparator, memStoreLAB, size);
-    return createImmutableSegment(conf, segment);
+    return createImmutableSegment(segment);
   }
 
   public ImmutableSegment createImmutableSegment(CellComparator comparator,
       long size) {
     MutableSegment segment = generateMutableSegment(null, comparator, null, size);
-    return createImmutableSegment(null, segment);
+    return createImmutableSegment(segment);
   }
 
-  public ImmutableSegment createImmutableSegment(final Configuration conf, MutableSegment segment) {
+  public ImmutableSegment createImmutableSegment(MutableSegment segment) {
     return new ImmutableSegment(segment);
   }
   public MutableSegment createMutableSegment(final Configuration conf,

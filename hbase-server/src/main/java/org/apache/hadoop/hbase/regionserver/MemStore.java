@@ -42,19 +42,10 @@ public interface MemStore extends HeapSize {
   MemStoreSnapshot snapshot();
 
   /**
-   * Creates a snapshot of the current memstore. Snapshot must be cleared by call to
-   * {@link #clearSnapshot(long)}.
-   * @param flushOpSeqId the current sequence number of the wal; to be attached to the flushed
-   *                     segment
-   * @return {@link MemStoreSnapshot}
-   */
-  MemStoreSnapshot snapshot(long flushOpSeqId);
-
-  /**
    * Clears the current snapshot of the Memstore.
    * @param id
    * @throws UnexpectedStateException
-   * @see #snapshot(long)
+   * @see #snapshot()
    */
   void clearSnapshot(long id) throws UnexpectedStateException;
 
@@ -144,4 +135,7 @@ public interface MemStore extends HeapSize {
    * One example is to update the wal with sequence number that is known only at the store level.
    */
   void finalizeFlush();
+
+  /* Return true if the memstore may need some extra memory space*/
+  boolean isSloppy();
 }

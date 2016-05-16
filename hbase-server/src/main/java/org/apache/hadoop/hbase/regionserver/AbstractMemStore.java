@@ -64,7 +64,7 @@ public abstract class AbstractMemStore implements MemStore {
           (2 * Bytes.SIZEOF_LONG));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      2 * (ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER +
+      (ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER +
       ClassSize.CELL_SKIPLIST_SET + ClassSize.CONCURRENT_SKIPLISTMAP));
 
 
@@ -99,7 +99,7 @@ public abstract class AbstractMemStore implements MemStore {
    * @param onlyIfMoreRecent a flag that marks whether to update the sequence id no matter what or
    *                      only if it is greater than the previous sequence id
    */
-  public abstract void updateLowestUnflushedSequenceIdInWal(boolean onlyIfMoreRecent);
+  public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
   /**
    * Write an update
@@ -162,17 +162,9 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
-   * An override on snapshot so the no arg version of the method implies zero seq num,
-   * like for cases without wal
-   */
-  public MemStoreSnapshot snapshot() {
-    return snapshot(0);
-  }
-
-  /**
    * The passed snapshot was successfully persisted; it can be let go.
    * @param id Id of the snapshot to clean out.
-   * @see MemStore#snapshot(long)
+   * @see MemStore#snapshot()
    */
   @Override
   public void clearSnapshot(long id) throws UnexpectedStateException {
@@ -201,18 +193,6 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
-   * On flush, how much memory we will clear from the active cell set.
-   *
-   * @return size of data that is going to be flushed from active set
-   */
-  @Override
-  public long getFlushableSize() {
-    long snapshotSize = getSnapshot().getSize();
-    return snapshotSize > 0 ? snapshotSize : keySize();
-  }
-
-
-  /**
    * @return a list containing a single memstore scanner.
    */
   @Override
@@ -230,7 +210,7 @@ public abstract class AbstractMemStore implements MemStore {
     StringBuffer buf = new StringBuffer();
     int i = 1;
     try {
-      for (Segment segment : getListOfSegments()) {
+      for (Segment segment : getSegments()) {
         buf.append("Segment (" + i + ") " + segment.toString() + "; ");
         i++;
       }
@@ -471,9 +451,6 @@ public abstract class AbstractMemStore implements MemStore {
    * Returns an ordered list of segments from most recent to oldest in memstore
    * @return an ordered list of segments from most recent to oldest in memstore
    */
-  protected abstract List<Segment> getListOfSegments() throws IOException;
+  protected abstract List<Segment> getSegments() throws IOException;
 
-  public long getActiveSize() {
-    return getActive().getSize();
-  }
 }

@@ -230,8 +230,15 @@ public class HStore implements Store {
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
     String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
-    this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
-        Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
+    if (family.isInMemoryCompaction()) {
+      className = CompactingMemStore.class.getName();
+      this.memstore = new CompactingMemStore(conf, this.comparator, this,
+          this.getHRegion().getRegionServicesForStores());
+    } else {
+      this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+          Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
+    }
+    LOG.info("Memstore class name is " + className);
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -2149,7 +2156,7 @@ public class HStore implements Store {
     @Override
     public void prepare() {
       // passing the current sequence number of the wal - to allow bookkeeping in the memstore
-      this.snapshot = memstore.snapshot(cacheFlushSeqNum);
+      this.snapshot = memstore.snapshot();
       this.cacheFlushCount = snapshot.getCellsCount();
       this.cacheFlushSize = snapshot.getSize();
       committedFiles = new ArrayList<Path>(1);
@@ -2474,6 +2481,10 @@ public class HStore implements Store {
 
   @Override public void finalizeFlush() {
     memstore.finalizeFlush();
+  }
+
+  @Override public MemStore getMemStore() {
+    return memstore;
   }
 
   private void clearCompactedfiles(final List<StoreFile> filesToRemove) throws IOException {

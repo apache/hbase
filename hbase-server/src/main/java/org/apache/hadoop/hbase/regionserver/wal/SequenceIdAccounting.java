@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.google.common.collect.Maps;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,8 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.common.collect.Maps;
 
 /**
  * Accounting of sequence ids per region and then by column family. So we can our accounting
@@ -159,6 +158,38 @@ class SequenceIdAccounting {
       ConcurrentMap<byte[], Long> m = getOrCreateLowestSequenceIds(encodedRegionName);
       for (byte[] familyName : families) {
         m.putIfAbsent(familyName, l);
+      }
+    }
+  }
+
+  /**
+   * Update the store sequence id, e.g., upon executing in-memory compaction
+   */
+  void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceId,
+      boolean onlyIfGreater) {
+    if(sequenceId == null) return;
+    Long highest = this.highestSequenceIds.get(encodedRegionName);
+    if(highest == null || sequenceId > highest) {
+      this.highestSequenceIds.put(encodedRegionName,sequenceId);
+    }
+    synchronized (this.tieLock) {
+      ConcurrentMap<byte[], Long> m = getOrCreateLowestSequenceIds(encodedRegionName);
+      boolean replaced = false;
+      while (!replaced) {
+        Long oldSeqId = m.get(familyName);
+        if (oldSeqId == null) {
+          m.put(familyName, sequenceId);
+          replaced = true;
+        } else if (onlyIfGreater) {
+          if (sequenceId > oldSeqId) {
+            replaced = m.replace(familyName, oldSeqId, sequenceId);
+          } else {
+            return;
+          }
+        } else { // replace even if sequence id is not greater than oldSeqId
+          m.put(familyName, sequenceId);
+          return;
+        }
       }
     }
   }

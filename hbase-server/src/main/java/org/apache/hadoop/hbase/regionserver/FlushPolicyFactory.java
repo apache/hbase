@@ -41,7 +41,7 @@ public class FlushPolicyFactory {
   public static final String HBASE_FLUSH_POLICY_KEY = "hbase.regionserver.flush.policy";
 
   private static final Class<? extends FlushPolicy> DEFAULT_FLUSH_POLICY_CLASS =
-      FlushLargeStoresPolicy.class;
+      FlushAllLargeStoresPolicy.class;
 
   /**
    * Create the FlushPolicy configured for the given table.

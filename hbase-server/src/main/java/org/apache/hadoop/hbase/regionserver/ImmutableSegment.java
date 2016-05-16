@@ -64,8 +64,4 @@ public class ImmutableSegment extends Segment {
     return this.timeRange.getMin();
   }
 
-  @Override
-  protected void updateMetaInfo(Cell toAdd, long s) {
-    throw new IllegalAccessError("This is an immutable segment");
-  }
 }
