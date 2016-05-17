@@ -413,7 +413,8 @@ public class AsyncRpcChannel {
       if (call.controller.getPriority() != PayloadCarryingRpcController.PRIORITY_UNSET) {
         requestHeaderBuilder.setPriority(call.controller.getPriority());
       }
-
+      requestHeaderBuilder.setTimeout(call.rpcTimeout > Integer.MAX_VALUE ?
+          Integer.MAX_VALUE : (int)call.rpcTimeout);
       RPCProtos.RequestHeader rh = requestHeaderBuilder.build();
 
       int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(rh, call.param);
