@@ -59,10 +59,10 @@ public class TestZKConfig {
 
   @Test
   public void testClusterKey() throws Exception {
-    testKey("server", 2181, "hbase");
-    testKey("server1,server2,server3", 2181, "hbase");
+    testKey("server", 2181, "/hbase");
+    testKey("server1,server2,server3", 2181, "/hbase");
     try {
-      ZKConfig.validateClusterKey("2181:hbase");
+      ZKConfig.validateClusterKey("2181:/hbase");
     } catch (IOException ex) {
       // OK
     }
@@ -71,19 +71,19 @@ public class TestZKConfig {
   @Test
   public void testClusterKeyWithMultiplePorts() throws Exception {
     // server has different port than the default port
-    testKey("server1:2182", 2181, "hbase", true);
+    testKey("server1:2182", 2181, "/hbase", true);
     // multiple servers have their own port
-    testKey("server1:2182,server2:2183,server3:2184", 2181, "hbase", true);
+    testKey("server1:2182,server2:2183,server3:2184", 2181, "/hbase", true);
     // one server has no specified port, should use default port
-    testKey("server1:2182,server2,server3:2184", 2181, "hbase", true);
+    testKey("server1:2182,server2,server3:2184", 2181, "/hbase", true);
     // the last server has no specified port, should use default port
-    testKey("server1:2182,server2:2183,server3", 2181, "hbase", true);
+    testKey("server1:2182,server2:2183,server3", 2181, "/hbase", true);
     // multiple servers have no specified port, should use default port for those servers
-    testKey("server1:2182,server2,server3:2184,server4", 2181, "hbase", true);
+    testKey("server1:2182,server2,server3:2184,server4", 2181, "/hbase", true);
     // same server, different ports
-    testKey("server1:2182,server1:2183,server1", 2181, "hbase", true);
+    testKey("server1:2182,server1:2183,server1", 2181, "/hbase", true);
     // mix of same server/different port and different server
-    testKey("server1:2182,server2:2183,server1", 2181, "hbase", true);
+    testKey("server1:2182,server2:2183,server1", 2181, "/hbase", true);
   }
 
   private void testKey(String ensemble, int port, String znode)

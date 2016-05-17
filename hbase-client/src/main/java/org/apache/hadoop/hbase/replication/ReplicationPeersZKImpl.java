@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -114,6 +115,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       if(id.contains("-")){
         throw new IllegalArgumentException("Found invalid peer name:" + id);
+      }
+
+      if (peerConfig.getClusterKey() != null) {
+        try {
+          ZKConfig.validateClusterKey(peerConfig.getClusterKey());
+        } catch (IOException ioe) {
+          throw new IllegalArgumentException(ioe.getMessage());
+        }
       }
 
       checkQueuesDeleted(id);
