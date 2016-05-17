@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -102,16 +103,16 @@ public class TestScannerHeartbeatMessages {
   private static int VALUE_SIZE = 128;
   private static byte[] VALUE = Bytes.createMaxByteArray(VALUE_SIZE);
 
+
+  private static int SERVER_TIMEOUT = 6000;
+
   // Time, in milliseconds, that the client will wait for a response from the server before timing
   // out. This value is used server side to determine when it is necessary to send a heartbeat
   // message to the client
-  private static int CLIENT_TIMEOUT = 2000;
-
-  // The server limits itself to running for half of the CLIENT_TIMEOUT value.
-  private static int SERVER_TIME_LIMIT = CLIENT_TIMEOUT / 2;
+  private static int CLIENT_TIMEOUT = SERVER_TIMEOUT / 3;
 
   // By default, at most one row's worth of cells will be retrieved before the time limit is reached
-  private static int DEFAULT_ROW_SLEEP_TIME = SERVER_TIME_LIMIT / 2;
+  private static int DEFAULT_ROW_SLEEP_TIME = CLIENT_TIMEOUT / 5;
   // By default, at most cells for two column families are retrieved before the time limit is
   // reached
   private static int DEFAULT_CF_SLEEP_TIME = DEFAULT_ROW_SLEEP_TIME / NUM_FAMILIES;
@@ -124,8 +125,8 @@ public class TestScannerHeartbeatMessages {
 
     conf.setStrings(HConstants.REGION_IMPL, HeartbeatHRegion.class.getName());
     conf.setStrings(HConstants.REGION_SERVER_IMPL, HeartbeatHRegionServer.class.getName());
-    conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, CLIENT_TIMEOUT);
+    conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SERVER_TIMEOUT);
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, SERVER_TIMEOUT);
     conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 1);
 
     // Check the timeout condition after every cell
@@ -140,7 +141,7 @@ public class TestScannerHeartbeatMessages {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
-
+    ht.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
     return ht;
   }
 
@@ -282,7 +283,7 @@ public class TestScannerHeartbeatMessages {
     @Override
     public ReturnCode filterKeyValue(Cell v) throws IOException {
       try {
-        Thread.sleep(SERVER_TIME_LIMIT + 10);
+        Thread.sleep(CLIENT_TIMEOUT/2 + 10);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
