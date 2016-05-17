@@ -57,7 +57,7 @@ public class RpcRetryingCaller<T> {
   /**
    * Start and end times for a single call.
    */
-  private final static int MIN_RPC_TIMEOUT = 2000;
+  private final static int MIN_RPC_TIMEOUT = 1;
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
 

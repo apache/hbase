@@ -3895,6 +3895,16 @@ public final class RPCProtos {
      * </pre>
      */
     int getPriority();
+
+    // optional uint32 timeout = 7;
+    /**
+     * <code>optional uint32 timeout = 7;</code>
+     */
+    boolean hasTimeout();
+    /**
+     * <code>optional uint32 timeout = 7;</code>
+     */
+    int getTimeout();
   }
   /**
    * Protobuf type {@code hbase.pb.RequestHeader}
@@ -3995,6 +4005,11 @@ public final class RPCProtos {
             case 48: {
               bitField0_ |= 0x00000020;
               priority_ = input.readUInt32();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              timeout_ = input.readUInt32();
               break;
             }
           }
@@ -4210,6 +4225,22 @@ public final class RPCProtos {
       return priority_;
     }
 
+    // optional uint32 timeout = 7;
+    public static final int TIMEOUT_FIELD_NUMBER = 7;
+    private int timeout_;
+    /**
+     * <code>optional uint32 timeout = 7;</code>
+     */
+    public boolean hasTimeout() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional uint32 timeout = 7;</code>
+     */
+    public int getTimeout() {
+      return timeout_;
+    }
+
     private void initFields() {
       callId_ = 0;
       traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
@@ -4217,6 +4248,7 @@ public final class RPCProtos {
       requestParam_ = false;
       cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
       priority_ = 0;
+      timeout_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4247,6 +4279,9 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeUInt32(6, priority_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(7, timeout_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4280,6 +4315,10 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(6, priority_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(7, timeout_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4334,6 +4373,11 @@ public final class RPCProtos {
         result = result && (getPriority()
             == other.getPriority());
       }
+      result = result && (hasTimeout() == other.hasTimeout());
+      if (hasTimeout()) {
+        result = result && (getTimeout()
+            == other.getTimeout());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4370,6 +4414,10 @@ public final class RPCProtos {
       if (hasPriority()) {
         hash = (37 * hash) + PRIORITY_FIELD_NUMBER;
         hash = (53 * hash) + getPriority();
+      }
+      if (hasTimeout()) {
+        hash = (37 * hash) + TIMEOUT_FIELD_NUMBER;
+        hash = (53 * hash) + getTimeout();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4506,6 +4554,8 @@ public final class RPCProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         priority_ = 0;
         bitField0_ = (bitField0_ & ~0x00000020);
+        timeout_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -4566,6 +4616,10 @@ public final class RPCProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.priority_ = priority_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.timeout_ = timeout_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4601,6 +4655,9 @@ public final class RPCProtos {
         }
         if (other.hasPriority()) {
           setPriority(other.getPriority());
+        }
+        if (other.hasTimeout()) {
+          setTimeout(other.getTimeout());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5120,6 +5177,39 @@ public final class RPCProtos {
       public Builder clearPriority() {
         bitField0_ = (bitField0_ & ~0x00000020);
         priority_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 timeout = 7;
+      private int timeout_ ;
+      /**
+       * <code>optional uint32 timeout = 7;</code>
+       */
+      public boolean hasTimeout() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional uint32 timeout = 7;</code>
+       */
+      public int getTimeout() {
+        return timeout_;
+      }
+      /**
+       * <code>optional uint32 timeout = 7;</code>
+       */
+      public Builder setTimeout(int value) {
+        bitField0_ |= 0x00000040;
+        timeout_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 timeout = 7;</code>
+       */
+      public Builder clearTimeout() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        timeout_ = 0;
         onChanged();
         return this;
       }
@@ -6141,17 +6231,17 @@ public final class RPCProtos {
       "llBlockMeta\022\016\n\006length\030\001 \001(\r\"|\n\021Exception" +
       "Response\022\034\n\024exception_class_name\030\001 \001(\t\022\023",
       "\n\013stack_trace\030\002 \001(\t\022\020\n\010hostname\030\003 \001(\t\022\014\n" +
-      "\004port\030\004 \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"\270\001\n\rRe" +
+      "\004port\030\004 \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"\311\001\n\rRe" +
       "questHeader\022\017\n\007call_id\030\001 \001(\r\022&\n\ntrace_in" +
       "fo\030\002 \001(\0132\022.hbase.pb.RPCTInfo\022\023\n\013method_n" +
       "ame\030\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\0220\n\017cell" +
       "_block_meta\030\005 \001(\0132\027.hbase.pb.CellBlockMe" +
-      "ta\022\020\n\010priority\030\006 \001(\r\"\203\001\n\016ResponseHeader\022" +
-      "\017\n\007call_id\030\001 \001(\r\022.\n\texception\030\002 \001(\0132\033.hb" +
-      "ase.pb.ExceptionResponse\0220\n\017cell_block_m" +
-      "eta\030\003 \001(\0132\027.hbase.pb.CellBlockMetaB<\n*or",
-      "g.apache.hadoop.hbase.protobuf.generated" +
-      "B\tRPCProtosH\001\240\001\001"
+      "ta\022\020\n\010priority\030\006 \001(\r\022\017\n\007timeout\030\007 \001(\r\"\203\001" +
+      "\n\016ResponseHeader\022\017\n\007call_id\030\001 \001(\r\022.\n\texc" +
+      "eption\030\002 \001(\0132\033.hbase.pb.ExceptionRespons" +
+      "e\0220\n\017cell_block_meta\030\003 \001(\0132\027.hbase.pb.Ce",
+      "llBlockMetaB<\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -6187,7 +6277,7 @@ public final class RPCProtos {
           internal_static_hbase_pb_RequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RequestHeader_descriptor,
-              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "Priority", });
+              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "Priority", "Timeout", });
           internal_static_hbase_pb_ResponseHeader_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_hbase_pb_ResponseHeader_fieldAccessorTable = new
