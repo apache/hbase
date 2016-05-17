@@ -424,6 +424,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.out.println("  Table: " + snapshotDesc.getTable());
     System.out.println(" Format: " + snapshotDesc.getVersion());
     System.out.println("Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
+    System.out.println("  Owner: " + snapshotDesc.getOwner());
     System.out.println();
   }
 
