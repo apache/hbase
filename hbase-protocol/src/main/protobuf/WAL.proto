@@ -44,9 +44,9 @@ message WALKey {
   required uint64 log_sequence_number = 3;
   required uint64 write_time = 4;
   /*
-  This parameter is deprecated in favor of clusters which 
+  This parameter is deprecated in favor of clusters which
   contains the list of clusters that have consumed the change.
-  It is retained so that the log created by earlier releases (0.94) 
+  It is retained so that the log created by earlier releases (0.94)
   can be read by the newer releases.
   */
   optional UUID cluster_id = 5 [deprecated=true];
@@ -132,7 +132,7 @@ message StoreDescriptor {
   required bytes family_name = 1;
   required string store_home_dir = 2; //relative to region dir
   repeated string store_file = 3; // relative to store dir
-  optional uint64 store_file_size = 4; // size of store file
+  optional uint64 store_file_size_bytes = 4; // size of store file
 }
 
 /**

@@ -3092,7 +3092,7 @@ public final class ProtobufUtil {
         String name = path.getName();
         builder.addStoreFile(name);
         Long size = storeFilesSize.get(name) == null ? (Long) 0L : storeFilesSize.get(name);
-        builder.setStoreFileSize(size);
+        builder.setStoreFileSizeBytes(size);
       }
       desc.addStores(builder);
     }
