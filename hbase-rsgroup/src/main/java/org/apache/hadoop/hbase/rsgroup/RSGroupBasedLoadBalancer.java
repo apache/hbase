@@ -325,7 +325,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
             " on server: " + assignedServer +
             " found in group: " +
             RSGroupInfoManager.getRSGroupOfServer(assignedServer.getHostPort()) +
-            " outside of group: " + info.getName());
+            " outside of group: " + (info == null ? "UNKNOWN" : info.getName()));
         misplacedRegions.add(region);
       }
     }
@@ -346,7 +346,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
         try {
           info = RSGroupInfoManager.getRSGroup(
               RSGroupInfoManager.getRSGroupOfTable(region.getTable()));
-        }catch(IOException exp){
+        } catch (IOException exp) {
           LOG.debug("Group information null for region of table " + region.getTable(),
               exp);
         }
