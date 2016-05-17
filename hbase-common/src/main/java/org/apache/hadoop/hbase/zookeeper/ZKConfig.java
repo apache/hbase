@@ -339,12 +339,23 @@ public final class ZKConfig {
     String[] parts = key.split(":");
 
     if (parts.length == 3) {
+      if (!parts[2].matches("/.*[^/]")) {
+        throw new IOException("Cluster key passed " + key + " is invalid, the format should be:" +
+            HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_CLIENT_PORT + ":"
+            + HConstants.ZOOKEEPER_ZNODE_PARENT);
+      }
       return new ZKClusterKey(parts [0], Integer.parseInt(parts [1]), parts [2]);
     }
 
     if (parts.length > 3) {
       // The quorum could contain client port in server:clientport format, try to transform more.
       String zNodeParent = parts [parts.length - 1];
+      if (!zNodeParent.matches("/.*[^/]")) {
+        throw new IOException("Cluster key passed " + key + " is invalid, the format should be:"
+            + HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_CLIENT_PORT + ":"
+            + HConstants.ZOOKEEPER_ZNODE_PARENT);
+      }
+
       String clientPort = parts [parts.length - 2];
 
       // The first part length is the total length minus the lengths of other parts and minus 2 ":"

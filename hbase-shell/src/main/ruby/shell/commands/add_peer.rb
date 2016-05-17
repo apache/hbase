@@ -31,11 +31,8 @@ This gives a full path for HBase to connect to another HBase cluster. An optiona
 table column families identifies which column families will be replicated to the peer cluster.
 Examples:
 
-  hbase> add_peer '1', "server1.cie.com:2181:/hbase"
-  hbase> add_peer '2', "zk1,zk2,zk3:2182:/hbase-prod"
-  hbase> add_peer '3', "zk4,zk5,zk6:11000:/hbase-test", "table1; table2:cf1; table3:cf1,cf2"
-  hbase> add_peer '4', CLUSTER_KEY => "server1.cie.com:2181:/hbase"
-  hbase> add_peer '5', CLUSTER_KEY => "server1.cie.com:2181:/hbase",
+  hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase"
+  hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
     TABLE_CFS => { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
 
 For a custom replication endpoint, the ENDPOINT_CLASSNAME can be provided. Two optional arguments
