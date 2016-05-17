@@ -755,7 +755,7 @@ public class ReplicationSource extends Thread
             List<StoreDescriptor> stores = bld.getStoresList();
             int totalStores = stores.size();
             for (int j = 0; j < totalStores; j++) {
-              totalStoreFilesSize += stores.get(j).getStoreFileSize();
+              totalStoreFilesSize += stores.get(j).getStoreFileSizeBytes();
             }
           } catch (IOException e) {
             LOG.error("Failed to deserialize bulk load entry from wal edit. "
