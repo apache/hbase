@@ -338,7 +338,7 @@ HBase includes some tuning mechanisms for folding the Bloom filter to reduce the
 
 Bloom filters were introduced in link:https://issues.apache.org/jira/browse/HBASE-1200[HBASE-1200].
 Since HBase 0.96, row-based Bloom filters are enabled by default.
-(link:https://issues.apache.org/jira/browse/HBASE-8450[HBASE-])
+(link:https://issues.apache.org/jira/browse/HBASE-8450[HBASE-8450])
 
 For more information on Bloom filters in relation to HBase, see <<blooms>> for more information, or the following Quora discussion: link:http://www.quora.com/How-are-bloom-filters-used-in-HBase[How are bloom filters used in HBase?].
 
