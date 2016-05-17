@@ -88,7 +88,7 @@ import com.google.protobuf.ServiceException;
  *
  * <p>This class is not thread safe for reads nor write.
  *
- * <p>In case of writes (Put, Delete), the underlying write buffer can
+ * <p>In case of writes (<code>Put</code>s), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
  *
  * <p>In case of reads, some fields used by a Scan are shared among all threads.
