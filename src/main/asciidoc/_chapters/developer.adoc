@@ -105,7 +105,7 @@ We encourage you to have this formatter in place in eclipse when editing HBase c
 
 .Procedure: Load the HBase Formatter Into Eclipse
 . Open the  menu item.
-. In Preferences, click the  menu item.
+. In Preferences, Go to `Java->Code Style->Formatter`.
 . Click btn:[Import] and browse to the location of the _hbase_eclipse_formatter.xml_ file, which is in the _dev-support/_ directory.
   Click btn:[Apply].
 . Still in Preferences, click .
