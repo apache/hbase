@@ -107,7 +107,7 @@ public class HFileReplicator {
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("HFileReplicationCallable-%1$d");
     this.exec =
-        new ThreadPoolExecutor(1, maxCopyThreads, 60, TimeUnit.SECONDS,
+        new ThreadPoolExecutor(maxCopyThreads, maxCopyThreads, 60, TimeUnit.SECONDS,
             new LinkedBlockingQueue<Runnable>(), builder.build());
     this.exec.allowCoreThreadTimeOut(true);
     this.copiesPerThread =

@@ -132,7 +132,7 @@ public class TBoundedThreadPoolServer extends TServer {
   }
 
   /** Executor service for handling client connections */
-  private ExecutorService executorService;
+  private ThreadPoolExecutor executorService;
 
   /** Flag for stopping the server */
   private volatile boolean stopped;
@@ -142,9 +142,12 @@ public class TBoundedThreadPoolServer extends TServer {
   public TBoundedThreadPoolServer(Args options, ThriftMetrics metrics) {
     super(options);
 
+    int minWorkerThreads = options.minWorkerThreads;
+    int maxWorkerThreads = options.maxWorkerThreads;
     if (options.maxQueuedRequests > 0) {
       this.callQueue = new CallQueue(
           new LinkedBlockingQueue<Call>(options.maxQueuedRequests), metrics);
+      minWorkerThreads = maxWorkerThreads;
     } else {
       this.callQueue = new CallQueue(new SynchronousQueue<Call>(), metrics);
     }
@@ -153,9 +156,10 @@ public class TBoundedThreadPoolServer extends TServer {
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
     executorService =
-        new ThreadPoolExecutor(options.minWorkerThreads,
-            options.maxWorkerThreads, options.threadKeepAliveTimeSec,
+        new ThreadPoolExecutor(minWorkerThreads,
+            maxWorkerThreads, options.threadKeepAliveTimeSec,
             TimeUnit.SECONDS, this.callQueue, tfb.build());
+    executorService.allowCoreThreadTimeOut(true);
     serverOptions = options;
   }
 

@@ -555,7 +555,7 @@ public class ThriftServerRunner implements Runnable {
         CallQueue callQueue =
             new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
         ExecutorService executorService = createExecutor(
-            callQueue, serverArgs.getMinWorkerThreads(), serverArgs.getMaxWorkerThreads());
+            callQueue, serverArgs.getMaxWorkerThreads(), serverArgs.getMaxWorkerThreads());
         serverArgs.executorService(executorService)
                   .processor(processor)
                   .transportFactory(transportFactory)
@@ -620,8 +620,10 @@ public class ThriftServerRunner implements Runnable {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
-    return new ThreadPoolExecutor(minWorkers, maxWorkers,
+    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(minWorkers, maxWorkers,
             Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+    threadPool.allowCoreThreadTimeOut(true);
+    return threadPool;
   }
 
   private InetAddress getBindAddress(Configuration conf)

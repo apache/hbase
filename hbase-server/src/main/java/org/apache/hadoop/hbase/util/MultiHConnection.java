@@ -135,12 +135,8 @@ public class MultiHConnection {
   private void createBatchPool(Configuration conf) {
     // Use the same config for keep alive as in ConnectionImplementation.getBatchPool();
     int maxThreads = conf.getInt("hbase.multihconnection.threads.max", 256);
-    int coreThreads = conf.getInt("hbase.multihconnection.threads.core", 256);
     if (maxThreads == 0) {
       maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
     long keepAliveTime = conf.getLong("hbase.multihconnection.threads.keepalivetime", 60);
     LinkedBlockingQueue<Runnable> workQueue =
@@ -148,7 +144,7 @@ public class MultiHConnection {
             * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe =
-        new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+        new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
             Threads.newDaemonThreadFactory("MultiHConnection" + "-shared-"));
     tpe.allowCoreThreadTimeOut(true);
     this.batchPool = tpe;

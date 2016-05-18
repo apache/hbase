@@ -235,12 +235,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
    */
   private ExecutorService getDefaultThreadPool(Configuration conf) {
     int maxThreads = conf.getInt("hbase.region.replica.replication.threads.max", 256);
-    int coreThreads = conf.getInt("hbase.region.replica.replication.threads.core", 16);
     if (maxThreads == 0) {
       maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
     long keepAliveTime = conf.getLong("hbase.region.replica.replication.threads.keepalivetime", 60);
     LinkedBlockingQueue<Runnable> workQueue =
@@ -248,7 +244,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(
-      coreThreads,
+      maxThreads,
       maxThreads,
       keepAliveTime,
       TimeUnit.SECONDS,

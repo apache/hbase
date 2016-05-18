@@ -352,8 +352,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (batchPool == null) {
       synchronized (this) {
         if (batchPool == null) {
-          this.batchPool = getThreadPool(conf.getInt("hbase.hconnection.threads.max", 256),
-              conf.getInt("hbase.hconnection.threads.core", 256), "-shared", null);
+          int threads = conf.getInt("hbase.hconnection.threads.max", 256);
+          this.batchPool = getThreadPool(threads, threads, "-shared", null);
           this.cleanupPool = true;
         }
       }
@@ -377,6 +377,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         new LinkedBlockingQueue<Runnable>(maxThreads *
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
                 HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+      coreThreads = maxThreads;
     }
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(
         coreThreads,
@@ -397,9 +398,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           //To start with, threads.max.core threads can hit the meta (including replicas).
           //After that, requests will get queued up in the passed queue, and only after
           //the queue is full, a new thread will be started
+          int threads = conf.getInt("hbase.hconnection.meta.lookup.threads.max", 128);
           this.metaLookupPool = getThreadPool(
-             conf.getInt("hbase.hconnection.meta.lookup.threads.max", 128),
-             conf.getInt("hbase.hconnection.meta.lookup.threads.core", 10),
+             threads,
+             threads,
              "-metaLookup-shared-", new LinkedBlockingQueue<Runnable>());
         }
       }

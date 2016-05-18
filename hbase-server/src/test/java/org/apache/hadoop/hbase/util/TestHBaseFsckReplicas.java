@@ -64,7 +64,6 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
 
     conf.setInt("hbase.htable.threads.max", POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);
-    conf.setInt("hbase.hconnection.threads.core", POOL_SIZE);
     conf.setInt("hbase.hbck.close.timeout", 2 * REGION_ONLINE_TIMEOUT);
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 8 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(3);
