@@ -2029,8 +2029,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           // total size in GB specified
           opts.totalRows = (int) opts.size * rowsPerGB;
           opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
-        } else if (opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
-          // number of rows specified
+        } else {
           opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
           opts.size = opts.totalRows / rowsPerGB;
         }
