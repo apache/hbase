@@ -52,11 +52,6 @@ public interface RpcServerInterface {
     Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
   throws IOException, ServiceException;
 
-  Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      int timeout)
-      throws IOException, ServiceException;
-
   void setErrorHandler(HBaseRPCErrorHandler handler);
   HBaseRPCErrorHandler getErrorHandler();
 

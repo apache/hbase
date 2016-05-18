@@ -264,13 +264,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   private static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
 
-  /**
-   * Minimum allowable timeout (in milliseconds) in rpc request's header. This
-   * configuration exists to prevent the rpc service regarding this request as timeout immediately.
-   */
-  private static final String MIN_CLIENT_REQUEST_TIMEOUT = "hbase.ipc.min.client.request.timeout";
-  private static final int DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT = 20;
-
   /** Default value for above params */
   private static final int DEFAULT_MAX_REQUEST_SIZE = DEFAULT_MAX_CALLQUEUE_SIZE / 4; // 256M
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
@@ -281,9 +274,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private final int maxRequestSize;
   private final int warnResponseTime;
   private final int warnResponseSize;
-
-  private final int minClientRequestTimeout;
-
   private final Server server;
   private final List<BlockingServiceAndInterface> services;
 
@@ -312,7 +302,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected Connection connection;              // connection to client
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
-    protected int timeout;
     /**
      * Chain of buffers to send as response.
      */
@@ -336,7 +325,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         justification="Can't figure why this complaint is happening... see below")
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
-         long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout) {
+         long size, TraceInfo tinfo, final InetAddress remoteAddress) {
       this.id = id;
       this.service = service;
       this.md = md;
@@ -354,7 +343,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.remoteAddress = remoteAddress;
       this.retryImmediatelySupported =
           connection == null? null: connection.retryImmediatelySupported;
-      this.timeout = timeout;
     }
 
     /**
@@ -1287,13 +1275,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     // Fake 'call' for failed authorization response
     private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null, null,
-        null, null, this, null, 0, null, null, 0);
+        null, null, this, null, 0, null, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
     private final Call saslCall = new Call(SASL_CALLID, null, null, null, null, null, this, null,
-        0, null, null, 0);
+        0, null, null);
 
     // was authentication allowed with a fallback to simple auth
     private boolean authenticatedWithFallback;
@@ -1711,7 +1699,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null,0);
+      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null);
       setupResponse(null, fakeCall, e, msg);
       responder.doRespond(fakeCall);
       // Returning -1 closes out the connection.
@@ -1886,7 +1874,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if ((totalRequestSize + callQueueSize.get()) > maxQueueSize) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0);
+            responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
         setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
@@ -1935,7 +1923,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0);
+            responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, readParamsFailedCall, t,
           msg + "; " + t.getMessage());
@@ -1946,12 +1934,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       TraceInfo traceInfo = header.hasTraceInfo()
           ? new TraceInfo(header.getTraceInfo().getTraceId(), header.getTraceInfo().getParentId())
           : null;
-      int timeout = 0;
-      if (header.hasTimeout()){
-        timeout = Math.max(minClientRequestTimeout, header.getTimeout());
-      }
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
-              totalRequestSize, traceInfo, this.addr, timeout);
+              totalRequestSize, traceInfo, this.addr);
 
       if (!scheduler.dispatch(new CallRunner(RpcServer.this, call))) {
         callQueueSize.add(-1 * call.getSize());
@@ -2103,8 +2087,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
     this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
-    this.minClientRequestTimeout = conf.getInt(MIN_CLIENT_REQUEST_TIMEOUT,
-        DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT);
+
     this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
 
     // Start the listener here and let it bind to the port
@@ -2245,12 +2228,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
   }
 
-  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
-      throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status, 0);
-  }
-
   /**
    * This is a server side method, which is invoked over RPC. On success
    * the return response has protobuf response payload. On failure, the
@@ -2258,8 +2235,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    */
   @Override
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      int timeout)
+      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
   throws IOException {
     try {
       status.setRPC(md.getName(), new Object[]{param}, receiveTime);
@@ -2269,7 +2245,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       //get an instance of the method arg type
       long startTime = System.currentTimeMillis();
       PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cellScanner);
-      controller.setCallTimeout(timeout);
       Message result = service.callBlockingMethod(md, controller, param);
       long endTime = System.currentTimeMillis();
       int processingTime = (int) (endTime - startTime);

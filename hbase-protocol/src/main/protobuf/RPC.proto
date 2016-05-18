@@ -125,7 +125,6 @@ message RequestHeader {
   // 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
   // See HConstants.
   optional uint32 priority = 6;
-  optional uint32 timeout = 7;
 }
 
 message ResponseHeader {
