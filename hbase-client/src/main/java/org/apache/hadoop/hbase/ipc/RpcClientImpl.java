@@ -907,6 +907,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       if (priority != PayloadCarryingRpcController.PRIORITY_UNSET) {
         builder.setPriority(priority);
       }
+      builder.setTimeout(call.timeout);
       RequestHeader requestHeader = builder.build();
 
       setupIOstreams();

@@ -397,6 +397,8 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
       if (call.getPriority() != PayloadCarryingRpcController.PRIORITY_UNSET) {
         requestHeaderBuilder.setPriority(call.getPriority());
       }
+      requestHeaderBuilder.setTimeout(call.rpcTimeout > Integer.MAX_VALUE ?
+          Integer.MAX_VALUE : (int)call.rpcTimeout);
 
       RPCProtos.RequestHeader rh = requestHeaderBuilder.build();
 
