@@ -1472,7 +1472,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
 
     hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK});
+    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK});
 
     final CountDownLatch latch = new CountDownLatch(1);
     new Thread() {
@@ -1496,24 +1497,27 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     Threads.sleep(300); // wait some more to ensure writeLock.acquire() is called
 
     hbck = doFsck(conf, false);
+    // still one expired, one not-expired
     assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK}); // still one expired, one not-expired
+        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK});
 
     edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
         TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
 
     hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK,
+    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK,
         HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK}); // both are expired
 
-    conf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1);
+    Configuration localConf = new Configuration(conf);
     // reaping from ZKInterProcessWriteLock uses znode cTime,
     // which is not injectable through EnvironmentEdge
+    localConf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1);
 
     Threads.sleep(10);
-    hbck = doFsck(conf, true); // now fix both cases
+    hbck = doFsck(localConf, true); // now fix both cases
 
-    hbck = doFsck(conf, false);
+    hbck = doFsck(localConf, false);
     assertNoErrors(hbck);
 
     // ensure that locks are deleted
