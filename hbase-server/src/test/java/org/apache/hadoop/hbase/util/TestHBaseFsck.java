@@ -2465,20 +2465,26 @@ public class TestHBaseFsck {
     Threads.sleep(300); // wait some more to ensure writeLock.acquire() is called
 
     hbck = doFsck(conf, false);
-    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK}); // still one expired, one not-expired
+    // still one expired, one not-expired
+    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK});
 
     edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
         TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
 
     hbck = doFsck(conf, false);
-    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK, ERROR_CODE.EXPIRED_TABLE_LOCK}); // both are expired
+    // both are expired
+    assertErrors(
+      hbck,
+      new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK, ERROR_CODE.EXPIRED_TABLE_LOCK});
 
-    conf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1); // reaping from ZKInterProcessWriteLock uses znode cTime,
-                                                                 // which is not injectable through EnvironmentEdge
+    Configuration localConf = new Configuration(conf);
+    // reaping from ZKInterProcessWriteLock uses znode cTime,
+    // which is not injectable through EnvironmentEdge
+    localConf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1);
     Threads.sleep(10);
-    hbck = doFsck(conf, true); // now fix both cases
+    hbck = doFsck(localConf, true); // now fix both cases
 
-    hbck = doFsck(conf, false);
+    hbck = doFsck(localConf, false);
     assertNoErrors(hbck);
 
     // ensure that locks are deleted
