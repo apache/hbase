@@ -80,6 +80,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -609,7 +610,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       hbck.close();
     }
   }
-  
+
   @Test (timeout=180000)
   public void testHbckAfterRegionMerge() throws Exception {
     TableName table = TableName.valueOf("testMergeRegionFilesInHdfs");
@@ -1527,7 +1528,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     // check no errors
     HBaseFsck hbck = doFsck(conf, false);
     assertNoErrors(hbck);
-    
+
     // create peer
     ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf);
     Assert.assertEquals(0, replicationAdmin.getPeersCount());
@@ -1538,7 +1539,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     replicationAdmin.addPeer("1", rpc, null);
     replicationAdmin.getPeersCount();
     Assert.assertEquals(1, replicationAdmin.getPeersCount());
-    
+
     // create replicator
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "Test Hbase Fsck", connection);
     ReplicationQueues repQueues =
@@ -1550,7 +1551,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     Assert.assertEquals(2, repQueues.getAllQueues().size());
     hbck = doFsck(conf, false);
     assertNoErrors(hbck);
-    
+
     // queues for removed peer
     repQueues.addLog("2", "file1");
     repQueues.addLog("2-server2", "file1");
@@ -1559,7 +1560,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
         HBaseFsck.ErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE,
         HBaseFsck.ErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE });
-    
+
     // fix the case
     hbck = doFsck(conf, true);
     hbck = doFsck(conf, false);
@@ -1568,7 +1569,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     Assert.assertEquals(2, repQueues.getAllQueues().size());
     Assert.assertNull(repQueues.getLogsInQueue("2"));
     Assert.assertNull(repQueues.getLogsInQueue("2-sever2"));
-    
+
     replicationAdmin.removePeer("1");
     repQueues.removeAllQueues();
     zkw.close();
@@ -1678,8 +1679,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      Map<String, RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-      for (RegionState state : regionsInTransition.values()) {
+      Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
+      for (RegionState state : regionsInTransition) {
         am.regionOffline(state.getRegion());
       }
       Map<HRegionInfo, ServerName> regionsMap = new HashMap<HRegionInfo, ServerName>();

@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -116,11 +117,9 @@ public class MasterDumpServlet extends StateDumpServlet {
       return;
     }
 
-    Map<String, RegionState> regionsInTransition =
-      am.getRegionStates().getRegionsInTransition();
-    for (Map.Entry<String, RegionState> e : regionsInTransition.entrySet()) {
-      String rid = e.getKey();
-      RegionState rs = e.getValue();
+    Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
+    for (RegionState rs : regionsInTransition) {
+      String rid = rs.getRegion().getRegionNameAsString();
       out.println("Region " + rid + ": " + rs.toDescriptiveString());
     }
   }

@@ -31,6 +31,7 @@ import java.io.InterruptedIOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -213,8 +214,7 @@ public class TestSplitTransactionOnCluster {
         @Override
         public boolean evaluate() throws Exception {
           RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-          return !rit.containsKey(hri.getEncodedName());
+          return !regionStates.isRegionInTransition(hri.getEncodedName());
         }
       });
     } finally {
@@ -657,7 +657,7 @@ public class TestSplitTransactionOnCluster {
       tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
-      Map<String, RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
+      Set<RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
           .getRegionsInTransition();
       assertTrue(rit.size() == 3);
       cluster.getMaster().getAssignmentManager().regionOffline(st.getFirstDaughter());
@@ -1311,7 +1311,7 @@ public class TestSplitTransactionOnCluster {
       if (enabled.get() && req.getTransition(0).getTransitionCode().equals(
           TransitionCode.READY_TO_SPLIT) && !resp.hasErrorMessage()) {
         RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState: regionStates.getRegionsInTransition().values()) {
+        for (RegionState regionState: regionStates.getRegionsInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isSplittingNew()) {
             regionStates.deleteRegion(regionState.getRegion());

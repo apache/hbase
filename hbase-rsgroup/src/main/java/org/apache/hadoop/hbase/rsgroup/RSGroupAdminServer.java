@@ -191,7 +191,7 @@ public class RSGroupAdminServer extends RSGroupAdmin {
               }
             }
             for (RegionState state :
-                master.getAssignmentManager().getRegionStates().getRegionsInTransition().values()) {
+                master.getAssignmentManager().getRegionStates().getRegionsInTransition()) {
               if (state.getServerName().getHostPort().equals(rs)) {
                 regions.add(state.getRegion());
               }

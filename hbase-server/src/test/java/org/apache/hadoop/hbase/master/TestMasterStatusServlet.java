@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.List;
-import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,10 +90,8 @@ public class TestMasterStatusServlet {
     // Fake AssignmentManager and RIT
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
     RegionStates rs = Mockito.mock(RegionStates.class);
-    NavigableMap<String, RegionState> regionsInTransition =
-      Maps.newTreeMap();
-    regionsInTransition.put("r1",
-      new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
+    Set<RegionState> regionsInTransition = new HashSet<RegionState>();
+    regionsInTransition.add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
@@ -165,19 +163,18 @@ public class TestMasterStatusServlet {
     RegionStates rs = Mockito.mock(RegionStates.class);
 
     // Add 100 regions as in-transition
-    NavigableMap<String, RegionState> regionsInTransition =
-      Maps.newTreeMap();
+    TreeSet<RegionState> regionsInTransition = new TreeSet<RegionState>(
+      RegionStates.REGION_STATE_COMPARATOR);
     for (byte i = 0; i < 100; i++) {
       HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});
-      regionsInTransition.put(hri.getEncodedName(),
+      regionsInTransition.add(
         new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     }
     // Add hbase:meta in transition as well
-    regionsInTransition.put(
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(),
+    regionsInTransition.add(
         new RegionState(HRegionInfo.FIRST_META_REGIONINFO,
-                        RegionState.State.CLOSING, 12345L, FAKE_HOST));
+                        RegionState.State.CLOSING, 123L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransitionOrderedByTimestamp();

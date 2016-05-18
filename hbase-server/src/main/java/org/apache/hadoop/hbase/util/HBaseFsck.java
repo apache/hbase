@@ -547,10 +547,10 @@ public class HBaseFsck extends Configured implements Closeable {
     errors.print("Number of requests: " + status.getRequestsCount());
     errors.print("Number of regions: " + status.getRegionsCount());
 
-    Map<String, RegionState> rits = status.getRegionsInTransition();
+    Set<RegionState> rits = status.getRegionsInTransition();
     errors.print("Number of regions in transition: " + rits.size());
     if (details) {
-      for (RegionState state: rits.values()) {
+      for (RegionState state: rits) {
         errors.print("  " + state.toDescriptiveString());
       }
     }
@@ -722,7 +722,7 @@ public class HBaseFsck extends Configured implements Closeable {
     checkAndFixTableLocks();
 
     checkAndFixReplication();
-    
+
     // Remove the hbck lock
     unlockHbck();
 
@@ -3283,7 +3283,7 @@ public class HBaseFsck extends Configured implements Closeable {
       checker.fixExpiredTableLocks();
     }
   }
-  
+
   private void checkAndFixReplication() throws IOException {
     ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
     checker.checkUnDeletedQueues();
@@ -4214,7 +4214,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public boolean shouldDisableSplitAndMerge() {
     return fixAny || disableSplitAndMerge;
   }
-  
+
   /**
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
@@ -4246,7 +4246,7 @@ public class HBaseFsck extends Configured implements Closeable {
     fixTableLocks = shouldFix;
     fixAny |= shouldFix;
   }
-  
+
   /**
    * Set replication fix mode.
    */
@@ -4517,7 +4517,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("");
     out.println(" Replication options");
     out.println("   -fixReplication   Deletes replication queues for removed peers");
-    
+
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
 

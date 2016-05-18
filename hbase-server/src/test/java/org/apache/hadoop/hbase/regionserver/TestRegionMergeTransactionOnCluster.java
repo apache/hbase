@@ -544,7 +544,7 @@ public class TestRegionMergeTransactionOnCluster {
       if (enabled.get() && req.getTransition(0).getTransitionCode()
           == TransitionCode.READY_TO_MERGE && !resp.hasErrorMessage()) {
         RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState: regionStates.getRegionsInTransition().values()) {
+        for (RegionState regionState: regionStates.getRegionsInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
             regionStates.deleteRegion(regionState.getRegion());

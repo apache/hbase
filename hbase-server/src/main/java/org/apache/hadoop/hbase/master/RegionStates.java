@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,9 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -62,6 +64,15 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 public class RegionStates {
   private static final Log LOG = LogFactory.getLog(RegionStates.class);
+
+  public final static RegionStateStampComparator REGION_STATE_COMPARATOR =
+    new RegionStateStampComparator();
+  private static class RegionStateStampComparator implements Comparator<RegionState> {
+    @Override
+    public int compare(RegionState l, RegionState r) {
+      return Long.compare(l.getStamp(), r.getStamp());
+    }
+  }
 
   /**
    * Regions currently in transition.
@@ -205,31 +216,16 @@ public class RegionStates {
   /**
    * Get regions in transition and their states
    */
-  @SuppressWarnings("unchecked")
-  public synchronized Map<String, RegionState> getRegionsInTransition() {
-    return (Map<String, RegionState>)regionsInTransition.clone();
+  public synchronized Set<RegionState> getRegionsInTransition() {
+    return new HashSet<RegionState>(regionsInTransition.values());
   }
 
-  @SuppressWarnings("unchecked")
-  public synchronized Map<String, RegionState> getRegionsInTransitionOrderedByTimestamp() {
-    Map<String, RegionState> rit = (Map<String, RegionState>)regionsInTransition.clone();
-    List<Map.Entry<String, RegionState>> list = new LinkedList<>(rit.entrySet());
-
-    // Compare the RITs' timestamps for ordering.
-    Comparator<Map.Entry<String, RegionState>> c =
-        new Comparator<Map.Entry<String, RegionState>>() {
-      @Override
-      public int compare(Map.Entry<String, RegionState> o1, Map.Entry<String, RegionState> o2) {
-        return ((Long)o1.getValue().getStamp()).compareTo((Long)o2.getValue().getStamp());
-      }
-    };
-
-    Collections.sort(list, c);
-    Map<String, RegionState> result = new LinkedHashMap<>();
-    for (Map.Entry<String, RegionState> entry : list) {
-      result.put(entry.getKey(), entry.getValue());
+  public synchronized SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
+    final TreeSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_COMPARATOR);
+    for (RegionState rs: regionsInTransition.values()) {
+      rit.add(rs);
     }
-    return result;
+    return rit;
   }
 
   /**

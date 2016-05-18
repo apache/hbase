@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -80,7 +81,7 @@ public class ClusterStatus extends VersionedWritable {
   private Collection<ServerName> deadServers;
   private ServerName master;
   private Collection<ServerName> backupMasters;
-  private Map<String, RegionState> intransition;
+  private Set<RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
   private Boolean balancerOn;
@@ -90,7 +91,7 @@ public class ClusterStatus extends VersionedWritable {
       final Collection<ServerName> deadServers,
       final ServerName master,
       final Collection<ServerName> backupMasters,
-      final Map<String, RegionState> rit,
+      final Set<RegionState> rit,
       final String[] masterCoprocessors,
       final Boolean balancerOn) {
     this.hbaseVersion = hbaseVersion;
@@ -261,7 +262,7 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   @InterfaceAudience.Private
-  public Map<String, RegionState> getRegionsInTransition() {
+  public Set<RegionState> getRegionsInTransition() {
     return this.intransition;
   }
 
@@ -340,7 +341,7 @@ public class ClusterStatus extends VersionedWritable {
     int ritSize = (intransition != null) ? intransition.size() : 0;
     sb.append("\nNumber of regions in transition: " + ritSize);
     if (ritSize > 0) {
-      for (RegionState state: intransition.values()) {
+      for (RegionState state: intransition) {
         sb.append("\n  " + state.toDescriptiveString());
       }
     }

@@ -1916,8 +1916,7 @@ public class TestMasterObserver {
 
       // wait for assignments to finish, if any
       AssignmentManager mgr = master.getAssignmentManager();
-      Collection<RegionState> transRegions =
-        mgr.getRegionStates().getRegionsInTransition().values();
+      Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
       for (RegionState state : transRegions) {
         mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
@@ -1953,8 +1952,7 @@ public class TestMasterObserver {
   private void waitForRITtoBeZero(HMaster master) throws Exception {
     // wait for assignments to finish
     AssignmentManager mgr = master.getAssignmentManager();
-    Collection<RegionState> transRegions =
-      mgr.getRegionStates().getRegionsInTransition().values();
+    Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
     for (RegionState state : transRegions) {
       mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
     }

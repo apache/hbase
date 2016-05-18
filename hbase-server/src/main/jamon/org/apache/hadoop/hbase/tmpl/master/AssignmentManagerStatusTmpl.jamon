@@ -23,38 +23,34 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
-java.util.Iterator;
-java.util.Map;
-java.util.List;
-java.util.ArrayList;
-java.util.Map.Entry;
-java.util.Arrays;
+java.util.HashSet;
+java.util.SortedSet;
 </%import>
 <%args>
 AssignmentManager assignmentManager;
 int limit = 100;
 </%args>
 
-<%java Map<String, RegionState> rit = assignmentManager
+<%java SortedSet<RegionState> rit = assignmentManager
   .getRegionStates().getRegionsInTransitionOrderedByTimestamp(); %>
 
 <%if !rit.isEmpty() %>
 <%java>
-List<String> ritsOverThreshold = new ArrayList<>();
-List<String> ritsTwiceThreshold = new ArrayList<>();
+HashSet<String> ritsOverThreshold = new HashSet<String>();
+HashSet<String> ritsTwiceThreshold = new HashSet<String>();
 // process the map to find region in transition details
 Configuration conf = HBaseConfiguration.create();
 int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
 int numOfRITOverThreshold = 0;
 long currentTime = System.currentTimeMillis();
-for (Map.Entry<String, RegionState> e : rit.entrySet()) {
-  long ritTime = currentTime - e.getValue().getStamp();
+for (RegionState rs : rit) {
+  long ritTime = currentTime - rs.getStamp();
   if(ritTime > (ritThreshold * 2)) {
      numOfRITOverThreshold++;
-     ritsTwiceThreshold.add(e.getKey());
+     ritsTwiceThreshold.add(rs.getRegion().getEncodedName());
   } else if (ritTime > ritThreshold) {
      numOfRITOverThreshold++;
-     ritsOverThreshold.add(e.getKey());
+     ritsOverThreshold.add(rs.getRegion().getEncodedName());
   }
 }
 
@@ -64,7 +60,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
 </%java>
     <section>
     <h2>Regions in Transition</h2>
-     <p><% numOfRITs %> region(s) in transition.  
+     <p><% numOfRITs %> region(s) in transition.
      <%if !ritsTwiceThreshold.isEmpty()  %>
          <span class="label label-danger" style="font-size:100%;font-weight:normal">
      <%elseif !ritsOverThreshold.isEmpty() %>
@@ -72,14 +68,14 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
      <%else>
          <span>
      </%if>
-         <% numOfRITOverThreshold %> region(s) in transition for 
+         <% numOfRITOverThreshold %> region(s) in transition for
              more than <% ritThreshold %> milliseconds.
          </span>
      </p>
      <div class="tabbable">
          <div class="tab-content">
          <%java int recordItr = 0; %>
-         <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
+         <%for RegionState rs : rit %>
              <%if (recordItr % ritsPerPage) == 0 %>
                  <%if recordItr == 0 %>
              <div class="tab-pane active" id="tab_rits<% (recordItr / ritsPerPage) + 1 %>">
@@ -89,18 +85,17 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
                  <table class="table table-striped" style="margin-bottom:0px;"><tr><th>Region</th>
                      <th>State</th><th>RIT time (ms)</th></tr>
              </%if>
- 
-             <%if ritsOverThreshold.contains(entry.getKey()) %>
+
+             <%if ritsOverThreshold.contains(rs.getRegion().getEncodedName()) %>
                      <tr class="alert alert-warning" role="alert">
-             <%elseif ritsTwiceThreshold.contains(entry.getKey()) %>
+             <%elseif ritsTwiceThreshold.contains(rs.getRegion().getEncodedName()) %>
                      <tr class="alert alert-danger" role="alert">
             <%else>
                     <tr>
             </%if>
-                         <td><% entry.getKey() %></td><td>
-                         <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(
-                         entry.getValue(), conf) %></td>
-                         <td><% (currentTime - entry.getValue().getStamp()) %> </td>
+                        <td><% rs.getRegion().getEncodedName() %></td><td>
+                        <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(rs, conf) %></td>
+                        <td><% (currentTime - rs.getStamp()) %> </td>
                      </tr>
                      <%java recordItr++; %>
              <%if (recordItr % ritsPerPage) == 0 %>
@@ -108,7 +103,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
              </div>
          </%if>
          </%for>
-  
+
          <%if (recordItr % ritsPerPage) != 0 %>
              <%for ; (recordItr % ritsPerPage) != 0 ; recordItr++ %>
              <tr><td colspan="3" style="height:61px"></td></tr>

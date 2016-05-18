@@ -1254,7 +1254,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (!this.loadBalancerTracker.isBalancerOn()) return false;
       // Only allow one balance run at at time.
       if (this.assignmentManager.getRegionStates().isRegionsInTransition()) {
-        Map<String, RegionState> regionsInTransition =
+        Set<RegionState> regionsInTransition =
           this.assignmentManager.getRegionStates().getRegionsInTransition();
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
@@ -2152,7 +2152,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     String clusterId = fileSystemManager != null ?
       fileSystemManager.getClusterId().toString() : null;
-    Map<String, RegionState> regionsInTransition = assignmentManager != null ?
+    Set<RegionState> regionsInTransition = assignmentManager != null ?
       assignmentManager.getRegionStates().getRegionsInTransition() : null;
     String[] coprocessors = cpHost != null ? getMasterCoprocessors() : null;
     boolean balancerOn = loadBalancerTracker != null ?

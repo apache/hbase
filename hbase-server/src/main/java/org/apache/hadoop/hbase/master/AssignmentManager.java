@@ -471,9 +471,9 @@ public class AssignmentManager {
     }
     if (!failover) {
       // If any region except meta is in transition on a live server, it's a failover.
-      Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
+      Set<RegionState> regionsInTransition = regionStates.getRegionsInTransition();
       if (!regionsInTransition.isEmpty()) {
-        for (RegionState regionState: regionsInTransition.values()) {
+        for (RegionState regionState: regionsInTransition) {
           ServerName serverName = regionState.getServerName();
           if (!regionState.getRegion().isMetaRegion()
               && serverName != null && onlineServers.contains(serverName)) {
@@ -542,7 +542,7 @@ public class AssignmentManager {
           }
         }
       }
-      processRegionsInTransition(regionStates.getRegionsInTransition().values());
+      processRegionsInTransition(regionStates.getRegionsInTransition());
     }
 
     // Now we can safely claim failover cleanup completed and enable
@@ -2010,7 +2010,7 @@ public class AssignmentManager {
     long oldestRITTime = 0;
     int ritThreshold = this.server.getConfiguration().
       getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
-    for (RegionState state: regionStates.getRegionsInTransition().values()) {
+    for (RegionState state: regionStates.getRegionsInTransition()) {
       totalRITs++;
       long ritTime = currentTime - state.getStamp();
       if (ritTime > ritThreshold) { // more than the threshold

@@ -31,10 +31,12 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -3528,12 +3530,11 @@ public final class ProtobufUtil {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
-    Map<String, RegionState> rit = null;
-    rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
+    Set<RegionState> rit = null;
+    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
-      String key = new String(region.getSpec().getValue().toByteArray());
       RegionState value = RegionState.convert(region.getRegionState());
-      rit.put(key, value);
+      rit.add(value);
     }
 
     String[] masterCoprocessors = null;
@@ -3577,11 +3578,11 @@ public final class ProtobufUtil {
     }
 
     if (status.getRegionsInTransition() != null) {
-      for (Map.Entry<String, RegionState> rit : status.getRegionsInTransition().entrySet()) {
-        ClusterStatusProtos.RegionState rs = rit.getValue().convert();
+      for (RegionState rit : status.getRegionsInTransition()) {
+        ClusterStatusProtos.RegionState rs = rit.convert();
         RegionSpecifier.Builder spec =
             RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
-        spec.setValue(ByteStringer.wrap(Bytes.toBytes(rit.getKey())));
+        spec.setValue(ByteStringer.wrap(rit.getRegion().getRegionName()));
 
         RegionInTransition pbRIT =
             RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
