@@ -86,6 +86,9 @@ public class MiniHBaseCluster extends HBaseCluster {
       throws IOException, InterruptedException {
     super(conf);
     conf.set(HConstants.MASTER_PORT, "0");
+    if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1) {
+      conf.set(HConstants.MASTER_INFO_PORT, "0");
+    }
 
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
