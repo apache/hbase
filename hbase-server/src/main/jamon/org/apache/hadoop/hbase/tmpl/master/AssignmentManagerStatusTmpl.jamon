@@ -24,15 +24,14 @@ org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
 java.util.Iterator;
-java.util.Map;
+java.util.Set;
 </%import>
 <%args>
 AssignmentManager assignmentManager;
 int limit = 100;
 </%args>
 <%java>
-Map<String, RegionState> rit = assignmentManager
-  .getRegionStates().getRegionsInTransition();
+Set<RegionState> rit = assignmentManager.getRegionStates().getRegionsInTransition();
 // process the map to find region in transition details
 Configuration conf = HBaseConfiguration.create();
 int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
@@ -40,14 +39,14 @@ int numOfRITOverThreshold = 0;
 long maxRITTime = Long.MIN_VALUE;
 long currentTime = System.currentTimeMillis();
 String regionIDForOldestRIT = ""; // avoiding null
-for (Map.Entry<String, RegionState> e : rit.entrySet()) {
-  long ritTime = currentTime - e.getValue().getStamp();
+for (RegionState rs : rit) {
+  long ritTime = currentTime - rs.getStamp();
   if(ritTime > ritThreshold) {
      numOfRITOverThreshold++;
    }
    if(maxRITTime < ritTime) {
      maxRITTime = ritTime;
-     regionIDForOldestRIT = e.getKey();
+     regionIDForOldestRIT = rs.getRegion().getEncodedName();
    }
 }
 
@@ -56,16 +55,14 @@ int toRemove = rit.size() - limit;
 int removed = 0;
 if (toRemove > 0) {
   // getRegionsInTransition returned a copy, so we can mutate it
-  for (Iterator<Map.Entry<String, RegionState>> it = rit.entrySet().iterator();
-       it.hasNext() && toRemove > 0;
-       ) {
-    Map.Entry<String, RegionState> e = it.next();
-    if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(
-          e.getKey()) ||
-         regionIDForOldestRIT.equals(e.getKey())) {
+  for (Iterator<RegionState> it = rit.iterator(); it.hasNext() && toRemove > 0;) {
+    RegionState rs = it.next();
+    String regionEncodedName = rs.getRegion().getEncodedName();
+    if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(regionEncodedName) ||
+         regionIDForOldestRIT.equals(regionEncodedName)) {
       // don't remove the meta & the oldest rit regions, they're too interesting!
       continue;
-    } 
+    }
     it.remove();
     toRemove--;
     removed++;
@@ -80,14 +77,14 @@ if (toRemove > 0) {
     <h2>Regions in Transition</h2>
     <table class="table table-striped">
             <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
-            <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
-            <%if regionIDForOldestRIT.equals(entry.getKey()) %>
+            <%for RegionState rs : rit %>
+            <%if regionIDForOldestRIT.equals(rs.getRegion().getEncodedName()) %>
                     <tr BGCOLOR="#FE2E2E" >
             <%else>
                     <tr>
             </%if>
-            <td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
-    <td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
+            <td><% rs.getRegion().getEncodedName() %></td><td><% rs.toDescriptiveString() %></td>
+    <td><% (currentTime - rs.getStamp()) %> </td></tr>
             </%for>
             <%if numOfRITOverThreshold > 0 %>
                     <tr BGCOLOR="#D7DF01" >

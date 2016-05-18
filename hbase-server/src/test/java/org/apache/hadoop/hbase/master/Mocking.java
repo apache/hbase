@@ -51,27 +51,6 @@ public class Mocking {
     }
   }
 
-  static void waitForRegionPendingOpenInRIT(AssignmentManager am, String encodedName)
-    throws InterruptedException {
-    // We used to do a check like this:
-    //!Mocking.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
-    // There is a race condition with this: because we may do the transition to
-    // RS_ZK_REGION_OPENING before the RIT is internally updated. We need to wait for the
-    // RIT to be as we need it to be instead. This cannot happen in a real cluster as we
-    // update the RIT before sending the openRegion request.
-
-    boolean wait = true;
-    while (wait) {
-      RegionState state = am.getRegionStates()
-        .getRegionsInTransition().get(encodedName);
-      if (state != null && state.isPendingOpen()){
-        wait = false;
-      } else {
-        Thread.sleep(1);
-      }
-    }
-  }
-
   /**
    * Verifies that the specified region is in the specified state in ZooKeeper.
    * <p>

@@ -130,10 +130,14 @@ public class HBaseFsckRepair {
     long expiration = timeout + EnvironmentEdgeManager.currentTime();
     while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
-        Map<String, RegionState> rits=
-            admin.getClusterStatus().getRegionsInTransition();
-
-        if (rits.keySet() != null && !rits.keySet().contains(region.getEncodedName())) {
+        boolean inTransition = false;
+        for (RegionState rs: admin.getClusterStatus().getRegionsInTransition()) {
+          if (rs.getRegion().equals(region)) {
+            inTransition = true;
+            break;
+          }
+        }
+        if (!inTransition) {
           // yay! no longer RIT
           return;
         }

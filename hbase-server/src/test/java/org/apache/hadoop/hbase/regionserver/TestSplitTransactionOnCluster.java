@@ -31,6 +31,7 @@ import java.io.InterruptedIOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
@@ -257,13 +258,10 @@ public class TestSplitTransactionOnCluster {
       assertTrue("fist split did not complete", firstSplitCompleted);
 
       RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-      Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-
-      for (int i=0; rit.containsKey(hri.getTable()) && i<100; i++) {
+      for (int i = 0; regionStates.isRegionInTransition(hri) && i < 100; i++) {
         Thread.sleep(100);
       }
-      assertFalse("region still in transition", rit.containsKey(
-          rit.containsKey(hri.getTable())));
+      assertFalse("region still in transition", regionStates.isRegionInTransition(hri));
 
       List<Region> onlineRegions = regionServer.getOnlineRegions(tableName);
       // Region server side split is successful.
@@ -322,8 +320,7 @@ public class TestSplitTransactionOnCluster {
         @Override
         public boolean evaluate() throws Exception {
           RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-          return (rit.size() == 0);
+          return !regionStates.isRegionsInTransition();
         }
       });
     } finally {
@@ -383,8 +380,7 @@ public class TestSplitTransactionOnCluster {
         @Override
         public boolean evaluate() throws Exception {
           RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-          return (rit.size() == 0);
+          return !regionStates.isRegionsInTransition();
         }
       });
       assertEquals(2, cluster.getRegions(tableName).size());
@@ -954,7 +950,7 @@ public class TestSplitTransactionOnCluster {
       tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
-      Map<String, RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
+      Set<RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
           .getRegionsInTransition();
       assertTrue(rit.size() == 3);
       cluster.getMaster().getAssignmentManager().regionOffline(st.getFirstDaughter());
@@ -1329,14 +1325,13 @@ public class TestSplitTransactionOnCluster {
         @Override
         public boolean evaluate() throws Exception {
           RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-          return (rit.size() == 0);
+          return !regionStates.isRegionsInTransition();
         }
       });
       regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
       assertTrue(regions.size() == 1);
       RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
-      Map<String, RegionState> rit = regionStates.getRegionsInTransition();
+      Set<RegionState> rit = regionStates.getRegionsInTransition();
       assertTrue(rit.size() == 0);
     } finally {
       table.close();

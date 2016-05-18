@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -208,9 +209,8 @@ public class RegionStates {
   /**
    * Get regions in transition and their states
    */
-  @SuppressWarnings("unchecked")
-  public synchronized Map<String, RegionState> getRegionsInTransition() {
-    return (Map<String, RegionState>)regionsInTransition.clone();
+  public synchronized Set<RegionState> getRegionsInTransition() {
+    return new HashSet<RegionState>(regionsInTransition.values());
   }
 
   /**

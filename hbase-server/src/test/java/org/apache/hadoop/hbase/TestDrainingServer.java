@@ -255,10 +255,9 @@ public class TestDrainingServer {
 
     am.assign(bulk);
 
-    Map<String, RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-    for (Entry<String, RegionState> entry : regionsInTransition.entrySet()) {
-      setRegionOpenedOnZK(zkWatcher, entry.getValue().getServerName(),
-        entry.getValue().getRegion());
+    Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
+    for (RegionState rs : regionsInTransition) {
+      setRegionOpenedOnZK(zkWatcher, rs.getServerName(), rs.getRegion());
     }
 
     am.waitForAssignment(REGIONINFO_A);

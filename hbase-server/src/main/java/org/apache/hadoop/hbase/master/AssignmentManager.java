@@ -558,10 +558,10 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     if (!failover && !useZKForAssignment) {
       // If any region except meta is in transition on a live server, it's a failover.
-      Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
+      Set<RegionState> regionsInTransition = regionStates.getRegionsInTransition();
       if (!regionsInTransition.isEmpty()) {
         Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
-        for (RegionState regionState: regionsInTransition.values()) {
+        for (RegionState regionState: regionsInTransition) {
           ServerName serverName = regionState.getServerName();
           if (!regionState.getRegion().isMetaRegion()
               && serverName != null && onlineServers.contains(serverName)) {
@@ -2312,8 +2312,8 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.debug("ALREADY_OPENED " + region.getRegionNameAsString()
       + " to " + sn);
     String encodedName = region.getEncodedName();
-    
-    //If use ZkForAssignment, region already Opened event should not be handled, 
+
+    //If use ZkForAssignment, region already Opened event should not be handled,
     //leave it to zk event. See HBase-14407.
     if(useZKForAssignment){
       String node = ZKAssign.getNodeName(watcher, encodedName);
@@ -2335,10 +2335,10 @@ public class AssignmentManager extends ZooKeeperListener {
       } catch (DeserializationException e) {
         LOG.warn("Get RegionTransition from zk deserialization failed! ", e);
       }
-      
+
       deleteNodeInStates(encodedName, "offline", sn, EventType.M_ZK_REGION_OFFLINE);
     }
-    
+
     regionStates.regionOnline(region, sn);
   }
 
@@ -3142,8 +3142,8 @@ public class AssignmentManager extends ZooKeeperListener {
     // since we update the state before we send the RPC call. We can't update
     // the state after the RPC call. Otherwise, we don't know what's happened
     // to the region if the master dies right after the RPC call is out.
-    Map<String, RegionState> rits = regionStates.getRegionsInTransition();
-    for (RegionState regionState : rits.values()) {
+    Set<RegionState> rits = regionStates.getRegionsInTransition();
+    for (RegionState regionState : rits) {
       LOG.info("Processing " + regionState);
       ServerName serverName = regionState.getServerName();
       // Server could be null in case of FAILED_OPEN when master cannot find a region plan. In that
@@ -3309,7 +3309,7 @@ public class AssignmentManager extends ZooKeeperListener {
     long oldestRITTime = 0;
     int ritThreshold = this.server.getConfiguration().
       getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
-    for (RegionState state: regionStates.getRegionsInTransition().values()) {
+    for (RegionState state: regionStates.getRegionsInTransition()) {
       totalRITs++;
       long ritTime = currentTime - state.getStamp();
       if (ritTime > ritThreshold) { // more than the threshold

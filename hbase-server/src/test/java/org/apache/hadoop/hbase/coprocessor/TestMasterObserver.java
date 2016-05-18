@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
@@ -851,7 +852,7 @@ public class TestMasterObserver {
     public boolean wasSnapshotCalled() {
       return preSnapshotCalled && postSnapshotCalled;
     }
-    
+
     @Override
     public void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final SnapshotDescription snapshot) throws IOException {
@@ -1201,7 +1202,7 @@ public class TestMasterObserver {
     public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName) throws IOException {
     }
-    
+
     @Override
     public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final String userName, final Quotas quotas) throws IOException {
@@ -1501,7 +1502,7 @@ public class TestMasterObserver {
       admin.snapshot(TEST_SNAPSHOT, tableName);
       assertTrue("Coprocessor should have been called on snapshot",
         cp.wasSnapshotCalled());
-      
+
       //Test list operation
       admin.listSnapshots();
       assertTrue("Coprocessor should have been called on snapshot list",
@@ -1681,8 +1682,7 @@ public class TestMasterObserver {
 
       // wait for assignments to finish, if any
       AssignmentManager mgr = master.getAssignmentManager();
-      Collection<RegionState> transRegions =
-        mgr.getRegionStates().getRegionsInTransition().values();
+      Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
       for (RegionState state : transRegions) {
         mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
@@ -1718,8 +1718,7 @@ public class TestMasterObserver {
   private void waitForRITtoBeZero(HMaster master) throws Exception {
     // wait for assignments to finish
     AssignmentManager mgr = master.getAssignmentManager();
-    Collection<RegionState> transRegions =
-      mgr.getRegionStates().getRegionsInTransition().values();
+    Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
     for (RegionState state : transRegions) {
       mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
     }

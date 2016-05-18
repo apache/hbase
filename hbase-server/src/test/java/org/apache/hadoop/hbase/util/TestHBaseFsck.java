@@ -472,7 +472,7 @@ public class TestHBaseFsck {
       i++;
     }
     return i;
-  }  
+  }
   /**
    * delete table in preparation for next test
    *
@@ -1251,13 +1251,13 @@ public class TestHBaseFsck {
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
-  
+
       // Mess it up by leaving a hole in the meta data
       admin.disableTable(table);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
         true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
       admin.enableTable(table);
-  
+
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck,
         new HBaseFsck.ErrorReporter.ERROR_CODE[] {
@@ -1266,13 +1266,13 @@ public class TestHBaseFsck {
             HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       // holes are separate from overlap groups
       assertEquals(0, hbck.getOverlapGroups(table).size());
-  
+
       // fix hole
       doFsck(conf, true);
-  
+
       // check that hole fixed
       assertNoErrors(doFsck(conf, false));
-  
+
       // check data belong to the correct region,every scan should get one row.
       for (int i = 0; i < ROWKEYS.length; i++) {
         if (i != ROWKEYS.length - 1) {
@@ -1281,12 +1281,12 @@ public class TestHBaseFsck {
           assertEquals(1, countRows(ROWKEYS[i], null));
         }
       }
-  
+
     } finally {
       cleanupTable(table);
     }
   }
-    
+
   /**
    * This creates and fixes a bad table with a region that is missing meta and
    * not assigned to a region server.
@@ -2268,13 +2268,13 @@ public class TestHBaseFsck {
     doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
     hbck.close();
   }
-  
+
   @Test(timeout=60000)
   public void testCheckReplication() throws Exception {
     // check no errors
     HBaseFsck hbck = doFsck(conf, false);
     assertNoErrors(hbck);
-    
+
     // create peer
     ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf);
     Assert.assertEquals(0, replicationAdmin.getPeersCount());
@@ -2282,7 +2282,7 @@ public class TestHBaseFsck {
     replicationAdmin.addPeer("1", "127.0.0.1:2181" + zkPort + ":/hbase");
     replicationAdmin.getPeersCount();
     Assert.assertEquals(1, replicationAdmin.getPeersCount());
-    
+
     // create replicator
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "Test Hbase Fsck", connection);
     ReplicationQueues repQueues =
@@ -2294,7 +2294,7 @@ public class TestHBaseFsck {
     Assert.assertEquals(2, repQueues.getAllQueues().size());
     hbck = doFsck(conf, false);
     assertNoErrors(hbck);
-    
+
     // queues for removed peer
     repQueues.addLog("2", "file1");
     repQueues.addLog("2-server2", "file1");
@@ -2302,7 +2302,7 @@ public class TestHBaseFsck {
     hbck = doFsck(conf, false);
     assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.UNDELETED_REPLICATION_QUEUE,
         ERROR_CODE.UNDELETED_REPLICATION_QUEUE });
-    
+
     // fix the case
     hbck = doFsck(conf, true);
     hbck = doFsck(conf, false);
@@ -2311,7 +2311,7 @@ public class TestHBaseFsck {
     Assert.assertEquals(2, repQueues.getAllQueues().size());
     Assert.assertNull(repQueues.getLogsInQueue("2"));
     Assert.assertNull(repQueues.getLogsInQueue("2-sever2"));
-    
+
     replicationAdmin.removePeer("1");
     repQueues.removeAllQueues();
     zkw.close();
@@ -2841,8 +2841,8 @@ public class TestHBaseFsck {
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      Map<String, RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-      for (RegionState state : regionsInTransition.values()) {
+      Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
+      for (RegionState state : regionsInTransition) {
         am.regionOffline(state.getRegion());
       }
       ZKAssign.deleteNodeFailSilent(regionServer.getZooKeeper(), regions.get(0).getRegionInfo());

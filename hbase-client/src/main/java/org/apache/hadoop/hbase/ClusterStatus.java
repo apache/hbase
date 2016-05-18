@@ -24,7 +24,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -80,7 +82,7 @@ public class ClusterStatus extends VersionedWritable {
   private Collection<ServerName> deadServers;
   private ServerName master;
   private Collection<ServerName> backupMasters;
-  private Map<String, RegionState> intransition;
+  private Set<RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
   private Boolean balancerOn;
@@ -102,7 +104,7 @@ public class ClusterStatus extends VersionedWritable {
       final Collection<ServerName> deadServers,
       final ServerName master,
       final Collection<ServerName> backupMasters,
-      final Map<String, RegionState> rit,
+      final Set<RegionState> rit,
       final String[] masterCoprocessors,
       final Boolean balancerOn) {
     this.hbaseVersion = hbaseVersion;
@@ -275,7 +277,7 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   @InterfaceAudience.Private
-  public Map<String, RegionState> getRegionsInTransition() {
+  public Set<RegionState> getRegionsInTransition() {
     return this.intransition;
   }
 
@@ -354,7 +356,7 @@ public class ClusterStatus extends VersionedWritable {
     int ritSize = (intransition != null) ? intransition.size() : 0;
     sb.append("\nNumber of regions in transition: " + ritSize);
     if (ritSize > 0) {
-      for (RegionState state: intransition.values()) {
+      for (RegionState state: intransition) {
         sb.append("\n  " + state.toDescriptiveString());
       }
     }
@@ -388,11 +390,11 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     if (intransition != null) {
-      for (Map.Entry<String, RegionState> rit : getRegionsInTransition().entrySet()) {
-        ClusterStatusProtos.RegionState rs = rit.getValue().convert();
+      for (RegionState rit : getRegionsInTransition()) {
+        ClusterStatusProtos.RegionState rs = rit.convert();
         RegionSpecifier.Builder spec =
             RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
-        spec.setValue(ByteStringer.wrap(Bytes.toBytes(rit.getKey())));
+        spec.setValue(ByteStringer.wrap(rit.getRegion().getRegionName()));
 
         RegionInTransition pbRIT =
             RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
@@ -461,13 +463,12 @@ public class ClusterStatus extends VersionedWritable {
       }
     }
 
-    Map<String, RegionState> rit = null;
+    Set<RegionState> rit = null;
     if (proto.getRegionsInTransitionList() != null) {
-      rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
+      rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
       for (RegionInTransition region : proto.getRegionsInTransitionList()) {
-        String key = new String(region.getSpec().getValue().toByteArray());
         RegionState value = RegionState.convert(region.getRegionState());
-        rit.put(key, value);
+        rit.add(value);
       }
     }
 
