@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -72,6 +74,7 @@ import org.junit.experimental.categories.Category;
 public class TestReplicationSmallTests extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationSmallTests.class);
+  private static final String PEER_ID = "2";
 
   /**
    * @throws java.lang.Exception
@@ -84,6 +87,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         utility1.getHBaseCluster().getRegionServerThreads()) {
       utility1.getHBaseAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
+    int rowCount = utility1.countRows(tableName);
     utility1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
     // in an async fashion, which is why we cannot just call deleteTableData on
@@ -97,7 +101,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         fail("Waited too much time for truncate");
       }
       ResultScanner scanner = htable2.getScanner(scan);
-      Result[] res = scanner.next(NB_ROWS_IN_BIG_BATCH);
+      Result[] res = scanner.next(rowCount);
       scanner.close();
       if (res.length != 0) {
         if (res.length < lastCount) {
@@ -254,13 +258,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
     // normal Batch tests
-    List<Put> puts = new ArrayList<>();
-    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
-      Put put = new Put(Bytes.toBytes(i));
-      put.addColumn(famName, row, row);
-      puts.add(put);
-    }
-    htable1.put(puts);
+    loadData("", row);
 
     Scan scan = new Scan();
 
@@ -269,21 +267,36 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     scanner1.close();
     assertEquals(NB_ROWS_IN_BATCH, res1.length);
 
-    for (int i = 0; i < NB_RETRIES; i++) {
+    waitForReplication(NB_ROWS_IN_BATCH, NB_RETRIES);
+  }
+
+  private void waitForReplication(int expectedRows, int retries) throws IOException, InterruptedException {
+    Scan scan;
+    for (int i = 0; i < retries; i++) {
       scan = new Scan();
-      if (i==NB_RETRIES-1) {
+      if (i== retries -1) {
         fail("Waited too much time for normal batch replication");
       }
       ResultScanner scanner = htable2.getScanner(scan);
-      Result[] res = scanner.next(NB_ROWS_IN_BATCH);
+      Result[] res = scanner.next(expectedRows);
       scanner.close();
-      if (res.length != NB_ROWS_IN_BATCH) {
+      if (res.length != expectedRows) {
         LOG.info("Only got " + res.length + " rows");
         Thread.sleep(SLEEP_TIME);
       } else {
         break;
       }
     }
+  }
+
+  private void loadData(String prefix, byte[] row) throws IOException {
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+      Put put = new Put(Bytes.toBytes(prefix + Integer.toString(i)));
+      put.addColumn(famName, row, row);
+      puts.add(put);
+    }
+    htable1.put(puts);
   }
 
   /**
@@ -296,7 +309,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testDisableEnable() throws Exception {
 
     // Test disabling replication
-    admin.disablePeer("2");
+    admin.disablePeer(PEER_ID);
 
     byte[] rowkey = Bytes.toBytes("disable enable");
     Put put = new Put(rowkey);
@@ -315,7 +328,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     }
 
     // Test enable replication
-    admin.enablePeer("2");
+    admin.enablePeer(PEER_ID);
 
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
@@ -339,7 +352,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testAddAndRemoveClusters() throws Exception {
     LOG.info("testAddAndRemoveClusters");
-    admin.removePeer("2");
+    admin.removePeer(PEER_ID);
     Thread.sleep(SLEEP_TIME);
     byte[] rowKey = Bytes.toBytes("Won't be replicated");
     Put put = new Put(rowKey);
@@ -361,7 +374,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     }
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
-    admin.addPeer("2", rpc, null);
+    admin.addPeer(PEER_ID, rpc, null);
     Thread.sleep(SLEEP_TIME);
     rowKey = Bytes.toBytes("do rep");
     put = new Put(rowKey);
@@ -459,18 +472,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     // identical since it does the check
     testSmallBatch();
 
-    String[] args = new String[] {"2", tableName.getNameAsString()};
-    Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
-    if (job == null) {
-      fail("Job wasn't created, see the log");
-    }
-    if (!job.waitForCompletion(true)) {
-      fail("Job failed, see the log");
-    }
-    assertEquals(NB_ROWS_IN_BATCH, job.getCounters().
-        findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
-    assertEquals(0, job.getCounters().
-        findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+    String[] args = new String[] {PEER_ID, tableName.getNameAsString()};
+    runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
 
     Scan scan = new Scan();
     ResultScanner rs = htable2.getScanner(scan);
@@ -484,16 +487,21 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     }
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
-    job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
+    runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
+  }
+
+  private void runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
+      throws IOException, InterruptedException, ClassNotFoundException {
+    Job job = VerifyReplication.createSubmittableJob(new Configuration(CONF_WITH_LOCALFS), args);
     if (job == null) {
       fail("Job wasn't created, see the log");
     }
     if (!job.waitForCompletion(true)) {
       fail("Job failed, see the log");
     }
-    assertEquals(0, job.getCounters().
+    assertEquals(expectedGoodRows, job.getCounters().
         findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
-    assertEquals(NB_ROWS_IN_BATCH, job.getCounters().
+    assertEquals(expectedBadRows, job.getCounters().
         findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
   }
 
@@ -556,18 +564,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     assertEquals(1, res1.length);
     assertEquals(5, res1[0].getColumnCells(famName, qualifierName).size());
 
-    String[] args = new String[] {"--versions=100", "2", tableName.getNameAsString()};
-    Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
-    if (job == null) {
-      fail("Job wasn't created, see the log");
-    }
-    if (!job.waitForCompletion(true)) {
-      fail("Job failed, see the log");
-    }
-    assertEquals(0, job.getCounters().
-      findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
-    assertEquals(1, job.getCounters().
-      findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+    String[] args = new String[] {"--versions=100", PEER_ID, tableName.getNameAsString()};
+    runVerifyReplication(args, 0, 1);
   }
 
   @Test(timeout=300000)
@@ -618,7 +616,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    
     try {
       // Disabling replication and modifying the particular version of the cell to validate the feature.  
-      admin.disablePeer("2");
+      admin.disablePeer(PEER_ID);
       Put put2 = new Put(Bytes.toBytes("r1"));
       put2.addColumn(famName, qualifierName, ts +2, Bytes.toBytes("v99"));
       htable2.put(put2);
@@ -631,21 +629,11 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       assertEquals(1, res1.length);
       assertEquals(3, res1[0].getColumnCells(famName, qualifierName).size());
     
-      String[] args = new String[] {"--versions=100", "2", tableName.getNameAsString()};
-      Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
-      if (job == null) {
-        fail("Job wasn't created, see the log");
-      }
-      if (!job.waitForCompletion(true)) {
-        fail("Job failed, see the log");
-      }    
-      assertEquals(0, job.getCounters().
-        findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
-      assertEquals(1, job.getCounters().
-        findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+      String[] args = new String[] {"--versions=100", PEER_ID, tableName.getNameAsString()};
+      runVerifyReplication(args, 0, 1);
       }
     finally {
-      admin.enablePeer("2");
+      admin.enablePeer(PEER_ID);
     }
   }
 
@@ -803,5 +791,18 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     }
   }
 
+  @Test(timeout=300000)
+  public void testVerifyReplicationPrefixFiltering() throws Exception {
+    final byte[] prefixRow = Bytes.toBytes("prefixrow");
+    final byte[] prefixRow2 = Bytes.toBytes("secondrow");
+    loadData("prefixrow", prefixRow);
+    loadData("secondrow", prefixRow2);
+    loadData("aaa", row);
+    loadData("zzz", row);
+    waitForReplication(NB_ROWS_IN_BATCH * 4, NB_RETRIES * 4);
+    String[] args = new String[] {"--row-prefixes=prefixrow,secondrow", PEER_ID,
+        tableName.getNameAsString()};
+    runVerifyReplication(args, NB_ROWS_IN_BATCH *2, 0);
+  }
 
 }
