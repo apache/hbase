@@ -30,6 +30,7 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -262,7 +263,7 @@ public abstract class AbstractRpcClient implements RpcClient {
 
   @Override
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
-      int defaultOperationTimeout) {
+      int defaultOperationTimeout) throws UnknownHostException {
     return new BlockingRpcChannelImplementation(this, sn, ticket, defaultOperationTimeout);
   }
 
@@ -307,8 +308,12 @@ public abstract class AbstractRpcClient implements RpcClient {
      * @param channelOperationTimeout - the default timeout when no timeout is given
      */
     protected BlockingRpcChannelImplementation(final AbstractRpcClient rpcClient,
-        final ServerName sn, final User ticket, int channelOperationTimeout) {
+        final ServerName sn, final User ticket, int channelOperationTimeout)
+        throws UnknownHostException {
       this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
+      if (this.isa.isUnresolved()) {
+        throw new UnknownHostException(sn.getHostname());
+      }
       this.rpcClient = rpcClient;
       this.ticket = ticket;
       this.channelOperationTimeout = channelOperationTimeout;
