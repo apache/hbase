@@ -172,6 +172,12 @@ public class TestMasterNoCluster {
     };
     rs1.setNextResults(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), results);
 
+    // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
+    // the conf from the master; the conf will already have an HConnection
+    // associate so the below mocking of a connection will fail.
+    final HConnection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
+        TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
+        HRegionInfo.FIRST_META_REGIONINFO);
     // Create master.  Subclass to override a few methods so we can insert mocks
     // and get notification on transitions.  We need to fake out any rpcs the
     // master does opening/closing regions.  Also need to fake out the address
@@ -202,14 +208,7 @@ public class TestMasterNoCluster {
       CatalogTracker createCatalogTracker(ZooKeeperWatcher zk,
           Configuration conf, Abortable abortable)
       throws IOException {
-        // Insert a mock for the connection used by the CatalogTracker.  Any
-        // regionserver should do.  Use TESTUTIL.getConfiguration rather than
-        // the conf from the master; the conf will already have an HConnection
-        // associate so the below mocking of a connection will fail.
-        HConnection connection =
-          HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0, rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-        return new CatalogTracker(zk, conf, connection, abortable);
+        return new CatalogTracker(zk, conf, mockedConnection, abortable);
       }
 
       @Override

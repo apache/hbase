@@ -1721,7 +1721,7 @@ public class RpcClient {
    * @return A blocking rpc channel that goes via this rpc client instance.
    */
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn,
-      final User ticket, final int rpcTimeout) {
+      final User ticket, final int rpcTimeout) throws UnknownHostException {
     return new BlockingRpcChannelImplementation(this, sn, ticket, rpcTimeout);
   }
 
@@ -1744,8 +1744,11 @@ public class RpcClient {
     private final User ticket;
 
     protected BlockingRpcChannelImplementation(final RpcClient rpcClient, final ServerName sn,
-        final User ticket, final int rpcTimeout) {
+        final User ticket, final int rpcTimeout) throws UnknownHostException {
       this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
+      if (this.isa.isUnresolved()) {
+        throw new UnknownHostException(sn.getHostname());
+      }
       this.rpcClient = rpcClient;
       // Set the rpc timeout to be the minimum of configured timeout and whatever the current
       // thread local setting is.
