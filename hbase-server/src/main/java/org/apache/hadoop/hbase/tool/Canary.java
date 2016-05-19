@@ -885,7 +885,7 @@ public final class Canary implements Tool {
       }
       List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
       for (HTableDescriptor table : admin.listTables()) {
-        if (admin.isTableEnabled(table.getTableName())
+        if (connection.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
           taskFutures.addAll(Canary.sniff(connection, sink, table.getTableName(), executor,
             taskType));
@@ -895,7 +895,7 @@ public final class Canary implements Tool {
     }
 
     private void checkWriteTableDistribution() throws IOException, ServiceException {
-      if (!admin.tableExists(writeTableName)) {
+      if (Arrays.binarySearch(connection.listTableNames(), writeTableName) == -1) {
         int numberOfServers = admin.getClusterStatus().getServers().size();
         if (numberOfServers == 0) {
           throw new IllegalStateException("No live regionservers");
@@ -903,7 +903,7 @@ public final class Canary implements Tool {
         createWriteTable(numberOfServers);
       }
 
-      if (!admin.isTableEnabled(writeTableName)) {
+      if (!connection.isTableEnabled(writeTableName)) {
         admin.enableTable(writeTableName);
       }
 
@@ -968,18 +968,13 @@ public final class Canary implements Tool {
       LOG.debug(String.format("checking table is enabled and getting table descriptor for table %s",
         tableName));
     }
-    HBaseAdmin admin = new HBaseAdmin(connection);
-    try {
-      if (admin.isTableEnabled(TableName.valueOf(tableName))) {
-        return Canary.sniff(connection, sink, TableName.valueOf(tableName), executor,
-          taskType);
-      } else {
-        LOG.warn(String.format("Table %s is not enabled", tableName));
-      }
-      return new LinkedList<Future<Void>>();
-    } finally {
-      admin.close();
+    if (connection.isTableEnabled(TableName.valueOf(tableName))) {
+      return Canary.sniff(connection, sink, TableName.valueOf(tableName), executor,
+        taskType);
+    } else {
+      LOG.warn(String.format("Table %s is not enabled", tableName));
     }
+    return new LinkedList<Future<Void>>();
   }
 
   /*
