@@ -64,8 +64,8 @@ public class ColumnRangeFilter extends FilterBase {
    * there is no lower bound.
    * @param minColumnInclusive if true, include minColumn in the range.
    * @param maxColumn maximum value for the column range. If it's null,
-   * @param maxColumnInclusive if true, include maxColumn in the range.
    * there is no upper bound.
+   * @param maxColumnInclusive if true, include maxColumn in the range.
    */
   public ColumnRangeFilter(final byte[] minColumn, boolean minColumnInclusive,
       final byte[] maxColumn, boolean maxColumnInclusive) {
