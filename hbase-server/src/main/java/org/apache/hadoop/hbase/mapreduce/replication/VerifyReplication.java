@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce.replication;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -77,6 +81,7 @@ public class VerifyReplication extends Configured implements Tool {
   static String tableName = null;
   static String families = null;
   static String peerId = null;
+  static String rowPrefixes = null;
 
   /**
    * Map-only comparator for 2 tables
@@ -117,6 +122,8 @@ public class VerifyReplication extends Configured implements Tool {
             scan.addFamily(Bytes.toBytes(fam));
           }
         }
+        String rowPrefixes = conf.get(NAME + ".rowPrefixes", null);
+        setRowPrefixFilter(scan, rowPrefixes);
         scan.setTimeRange(startTime, endTime);
         int versions = conf.getInt(NAME+".versions", -1);
         LOG.info("Setting number of version inside map as: " + versions);
@@ -254,6 +261,9 @@ public class VerifyReplication extends Configured implements Tool {
     if (families != null) {
       conf.set(NAME+".families", families);
     }
+    if (rowPrefixes != null){
+      conf.set(NAME+".rowPrefixes", rowPrefixes);
+    }
 
     Pair<ReplicationPeerConfig, Configuration> peerConfigPair = getPeerQuorumConfig(conf);
     ReplicationPeerConfig peerConfig = peerConfigPair.getFirst();
@@ -282,6 +292,9 @@ public class VerifyReplication extends Configured implements Tool {
         scan.addFamily(Bytes.toBytes(fam));
       }
     }
+
+    setRowPrefixFilter(scan, rowPrefixes);
+
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
         Verifier.class, null, null, job);
 
@@ -294,11 +307,38 @@ public class VerifyReplication extends Configured implements Tool {
     return job;
   }
 
+  private static void setRowPrefixFilter(Scan scan, String rowPrefixes) {
+    if (rowPrefixes != null && !rowPrefixes.isEmpty()) {
+      String[] rowPrefixArray = rowPrefixes.split(",");
+      Arrays.sort(rowPrefixArray);
+      FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+      for (String prefix : rowPrefixArray) {
+        Filter filter = new PrefixFilter(Bytes.toBytes(prefix));
+        filterList.addFilter(filter);
+      }
+      scan.setFilter(filterList);
+      byte[] startPrefixRow = Bytes.toBytes(rowPrefixArray[0]);
+      byte[] lastPrefixRow = Bytes.toBytes(rowPrefixArray[rowPrefixArray.length -1]);
+      setStartAndStopRows(scan, startPrefixRow, lastPrefixRow);
+    }
+  }
+
+  private static void setStartAndStopRows(Scan scan, byte[] startPrefixRow, byte[] lastPrefixRow) {
+    scan.setStartRow(startPrefixRow);
+    byte[] stopRow = Bytes.add(Bytes.head(lastPrefixRow, lastPrefixRow.length - 1),
+        new byte[]{(byte) (lastPrefixRow[lastPrefixRow.length - 1] + 1)});
+    scan.setStopRow(stopRow);
+  }
+
   private static boolean doCommandLine(final String[] args) {
     if (args.length < 2) {
       printUsage(null);
       return false;
     }
+    //in case we've been run before, restore all parameters to their initial states
+    //Otherwise, if our previous run included a parameter not in args this time,
+    //we might hold on to the old value.
+    restoreDefaults();
     try {
       for (int i = 0; i < args.length; i++) {
         String cmd = args[i];
@@ -337,6 +377,12 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        final String rowPrefixesKey = "--row-prefixes=";
+        if (cmd.startsWith(rowPrefixesKey)){
+          rowPrefixes = cmd.substring(rowPrefixesKey.length());
+          continue;
+        }
+
         if (i == args.length-2) {
           peerId = cmd;
         }
@@ -353,6 +399,17 @@ public class VerifyReplication extends Configured implements Tool {
     return true;
   }
 
+  private static void restoreDefaults() {
+    startTime = 0;
+    endTime = Long.MAX_VALUE;
+    batch = Integer.MAX_VALUE;
+    versions = -1;
+    tableName = null;
+    families = null;
+    peerId = null;
+    rowPrefixes = null;
+  }
+
   /*
    * @param errorMsg Error message.  Can be null.
    */
@@ -361,7 +418,7 @@ public class VerifyReplication extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: verifyrep [--starttime=X]" +
-        " [--stoptime=Y] [--families=A] <peerid> <tablename>");
+        " [--stoptime=Y] [--families=A] [--row-prefixes=B] <peerid> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
@@ -369,6 +426,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" endtime      end of the time range");
     System.err.println(" versions     number of cell versions to verify");
     System.err.println(" families     comma-separated list of families to copy");
+    System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" peerid       Id of the peer used for verification, must match the one given for replication");
