@@ -2599,6 +2599,10 @@ public class TestAccessController extends SecureTestUtil {
           systemUserConnection, AccessControlLists.toNamespaceEntry(namespace));
       assertTrue(namespacePermissions != null);
       assertTrue(namespacePermissions.size() == 1);
+      for (UserPermission namespacePermission : namespacePermissions) {
+        assertFalse(namespacePermission.isGlobal());  // Verify it is not a global user permission
+        assertEquals(namespace, namespacePermission.getNamespace());  // Verify namespace is set
+      }
     } catch (Throwable thw) {
       throw new HBaseException(thw);
     }
