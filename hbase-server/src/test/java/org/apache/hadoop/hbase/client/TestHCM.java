@@ -260,19 +260,13 @@ public class TestHCM {
 
     HTable t = TEST_UTIL.createTable(tn, cf);
     TEST_UTIL.waitTableAvailable(tn);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
 
-    while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-        getRegionStates().isRegionsInTransition()){
-      Thread.sleep(1);
-    }
     final HConnectionImplementation hci =  (HConnectionImplementation)t.getConnection();
     while (t.getRegionLocation(rk).getPort() != sn.getPort()){
       TEST_UTIL.getHBaseAdmin().move(t.getRegionLocation(rk).getRegionInfo().
           getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
-      while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-          getRegionStates().isRegionsInTransition()){
-        Thread.sleep(1);
-      }
+      TEST_UTIL.waitUntilNoRegionsInTransition();
       hci.clearRegionCache(tn);
     }
     Assert.assertNotNull(hci.clusterStatusListener);
@@ -753,9 +747,7 @@ public class TestHCM {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
-    while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-      Thread.sleep(1);
-    }
+    TEST_UTIL.waitUntilNoRegionsInTransition();
 
     // Now moving the region to the second server
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
@@ -1132,7 +1124,7 @@ public class TestHCM {
   @Test
   public void testMulti() throws Exception {
     HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
-     try {
+    try {
        ConnectionManager.HConnectionImplementation conn =
            ( ConnectionManager.HConnectionImplementation)table.getConnection();
 
@@ -1145,9 +1137,7 @@ public class TestHCM {
        HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
        // We can wait for all regions to be online, that makes log reading easier when debugging
-       while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-         Thread.sleep(1);
-       }
+       TEST_UTIL.waitUntilNoRegionsInTransition();
 
        Put put = new Put(ROW_X);
        put.add(FAM_NAM, ROW_X, ROW_X);
