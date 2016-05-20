@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.handler;
+package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -51,7 +51,7 @@ import org.junit.rules.TestName;
  * addColumn(), deleteColumn() and modifyTable() operations.
  */
 @Category(LargeTests.class)
-public class TestTableDescriptorModification {
+public class TestTableDescriptorModificationFromClient {
 
   @Rule public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
