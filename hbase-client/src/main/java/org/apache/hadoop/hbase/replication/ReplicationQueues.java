@@ -83,13 +83,13 @@ public interface ReplicationQueues {
   /**
    * Get a list of all WALs in the given queue.
    * @param queueId a String that identifies the queue
-   * @return a list of WALs, null if this region server is dead and has no outstanding queues
+   * @return a list of WALs, null if no such queue exists for this server
    */
   List<String> getLogsInQueue(String queueId);
 
   /**
    * Get a list of all queues for this region server.
-   * @return a list of queueIds, null if this region server is dead and has no outstanding queues
+   * @return a list of queueIds, an empty list if this region server is dead and has no outstanding queues
    */
   List<String> getAllQueues();
 
@@ -110,10 +110,10 @@ public interface ReplicationQueues {
 
   /**
    * Checks if the provided znode is the same as this region server's
-   * @param znode to check
+   * @param regionserver the id of the region server
    * @return if this is this rs's znode
    */
-  boolean isThisOurZnode(String znode);
+  boolean isThisOurRegionServer(String regionserver);
 
   /**
    * Add a peer to hfile reference queue if peer does not exist.

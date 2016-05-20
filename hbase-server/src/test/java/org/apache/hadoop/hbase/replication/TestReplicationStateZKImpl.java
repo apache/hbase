@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -91,9 +93,14 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     DummyServer ds1 = new DummyServer(server1);
     DummyServer ds2 = new DummyServer(server2);
     DummyServer ds3 = new DummyServer(server3);
-    rq1 = ReplicationFactory.getReplicationQueues(zkw, conf, ds1);
-    rq2 = ReplicationFactory.getReplicationQueues(zkw, conf, ds2);
-    rq3 = ReplicationFactory.getReplicationQueues(zkw, conf, ds3);
+    try {
+      rq1 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds1, zkw));
+      rq2 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds2, zkw));
+      rq3 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds3, zkw));
+    } catch (Exception e) {
+      // This should not occur, because getReplicationQueues() only throws for ReplicationQueuesHBaseImpl
+      fail("ReplicationFactory.getReplicationQueues() threw an IO Exception");
+    }
     rqc = ReplicationFactory.getReplicationQueuesClient(zkw, conf, ds1);
     rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);
