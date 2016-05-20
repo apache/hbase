@@ -70,7 +70,6 @@ public class BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }

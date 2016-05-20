@@ -49,7 +49,6 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     loadBalancer.setConf(conf);
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
@@ -57,9 +56,6 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     int numTables = 100;
     int replication = 3;
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
-    // reset config
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
-    loadBalancer.setConf(conf);
   }
 
   @Test (timeout = 800000)

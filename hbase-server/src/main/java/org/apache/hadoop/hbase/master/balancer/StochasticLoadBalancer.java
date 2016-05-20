@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRegionAction;
@@ -108,8 +107,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   protected static final String KEEP_REGION_LOADS =
       "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
   private static final String TABLE_FUNCTION_SEP = "_";
-  protected static final String MIN_COST_NEED_BALANCE_KEY =
-      "hbase.master.balancer.stochastic.minCostNeedBalance";
 
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
@@ -121,7 +118,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private int stepsPerRegion = 800;
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
-  private float minCostNeedBalance = 0.05f;
 
   private CandidateGenerator[] candidateGenerators;
   private CostFromRegionLoadFunction[] regionLoadFunctions;
@@ -166,8 +162,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-
-    minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
 
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
@@ -264,41 +258,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  protected boolean needsBalance(Cluster cluster) {
-    ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
-    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not running balancer because only " + cs.getNumServers()
-            + " active regionserver(s)");
-      }
-      return false;
-    }
-    if (areSomeRegionReplicasColocated(cluster)) {
-      return true;
-    }
-
-    double total = 0.0;
-    float sumMultiplier = 0.0f;
-    for (CostFunction c : costFunctions) {
-      float multiplier = c.getMultiplier();
-      if (multiplier <= 0) {
-        continue;
-      }
-      sumMultiplier += multiplier;
-      total += c.cost() * multiplier;
-    }
-
-    if (total <= 0 || sumMultiplier <= 0
-        || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
-      LOG.info("Skipping load balancing because balanced cluster; " + "total cost is " + total
-          + ", sum multiplier is " + sumMultiplier + " min cost which need balance is "
-          + minCostNeedBalance);
-      return false;
-    }
-    return true;
-  }
-
-  @Override
   public synchronized List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
     List<HRegionInfo>> clusterState) {
     this.tableName = tableName;
@@ -339,21 +298,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Keep track of servers to iterate through them.
     Cluster cluster = new Cluster(clusterState, loads, finder, rackManager);
 
-    long startTime = EnvironmentEdgeManager.currentTime();
-
-    initCosts(cluster);
-
     if (!needsBalance(cluster)) {
       return null;
     }
+
+    long startTime = EnvironmentEdgeManager.currentTime();
+
+    initCosts(cluster);
 
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
     for (int i = 0; i < this.curFunctionCosts.length; i++) {
       curFunctionCosts[i] = tempFunctionCosts[i];
     }
-    LOG.info("start StochasticLoadBalancer.balaner, initCost=" + currentCost + ", functionCost="
-        + functionCost());
 
     double initCost = currentCost;
     double newCost = currentCost;
@@ -450,18 +407,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private String functionCost() {
-    StringBuilder builder = new StringBuilder();
-    for (CostFunction c:costFunctions) {
-      builder.append(c.getClass().getSimpleName());
-      builder.append(" : (");
-      builder.append(c.getMultiplier());
-      builder.append(", ");
-      builder.append(c.cost());
-      builder.append("); ");
-    }
-    return builder.toString();
-  }
 
   /**
    * Create all of the RegionPlan's needed to move from the initial cluster state to the desired
