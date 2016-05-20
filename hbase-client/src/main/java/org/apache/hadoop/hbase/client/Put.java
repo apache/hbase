@@ -43,9 +43,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Used to perform Put operations for a single row.
  * <p>
- * To perform a Put, instantiate a Put object with the row to insert to and
- * for eachumn to be inserted, execute {@link #addColumn(byte[], byte[], byte[]) add} or
- * {@link #addColumn(byte[], byte[], long, byte[]) add} if setting the timestamp.
+ * To perform a Put, instantiate a Put object with the row to insert to, and
+ * for each column to be inserted, execute {@link #addColumn(byte[], byte[],
+ * byte[]) add} or {@link #addColumn(byte[], byte[], long, byte[]) add} if
+ * setting the timestamp.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
