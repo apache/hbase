@@ -22,15 +22,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -417,66 +414,6 @@ public class TestWALProcedureStore {
   }
 
   @Test
-  public void testInsertUpdateDelete() throws Exception {
-    final int NTHREAD = 2;
-
-    procStore.stop(false);
-    fs.delete(logDir, true);
-
-    org.apache.hadoop.conf.Configuration conf =
-      new org.apache.hadoop.conf.Configuration(htu.getConfiguration());
-    conf.setBoolean("hbase.procedure.store.wal.use.hsync", false);
-    conf.setInt("hbase.procedure.store.wal.periodic.roll.msec", 10000);
-    conf.setInt("hbase.procedure.store.wal.roll.threshold", 128 * 1024);
-
-    fs.mkdirs(logDir);
-    procStore = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
-    procStore.start(NTHREAD);
-    procStore.recoverLease();
-
-    LoadCounter loader = new LoadCounter();
-    procStore.load(loader);
-    assertEquals(0, loader.getMaxProcId());
-    assertEquals(0, loader.getLoadedCount());
-    assertEquals(0, loader.getCorruptedCount());
-
-    final long LAST_PROC_ID = 9999;
-    final Thread[] thread = new Thread[NTHREAD];
-    final AtomicLong procCounter = new AtomicLong((long)Math.round(Math.random() * 100));
-    for (int i = 0; i < thread.length; ++i) {
-      thread[i] = new Thread() {
-        @Override
-        public void run() {
-          Random rand = new Random();
-          TestProcedure proc;
-          do {
-            proc = new TestProcedure(procCounter.addAndGet(1));
-            // Insert
-            procStore.insert(proc, null);
-            // Update
-            for (int i = 0, nupdates = rand.nextInt(10); i <= nupdates; ++i) {
-              try { Thread.sleep(0, rand.nextInt(15)); } catch (InterruptedException e) {}
-              procStore.update(proc);
-            }
-            // Delete
-            procStore.delete(proc.getProcId());
-          } while (proc.getProcId() < LAST_PROC_ID);
-        }
-      };
-      thread[i].start();
-    }
-
-    for (int i = 0; i < thread.length; ++i) {
-      thread[i].join();
-    }
-
-    procStore.getStoreTracker().dump();
-    assertTrue(procCounter.get() >= LAST_PROC_ID);
-    assertTrue(procStore.getStoreTracker().isEmpty());
-    assertEquals(1, procStore.getActiveLogs().size());
-  }
-
-  @Test
   public void testRollAndRemove() throws IOException {
     // Insert something in the log
     Procedure proc1 = new TestSequentialProcedure();
@@ -572,80 +509,6 @@ public class TestWALProcedureStore {
         assertEquals(procId, Bytes.toLong(bProcId));
       } else {
         assertEquals(0, stream.available());
-      }
-    }
-  }
-
-  private class LoadCounter implements ProcedureStore.ProcedureLoader {
-    private final ArrayList<Procedure> corrupted = new ArrayList<Procedure>();
-    private final ArrayList<Procedure> loaded = new ArrayList<Procedure>();
-
-    private Set<Long> procIds;
-    private long maxProcId = 0;
-
-    public LoadCounter() {
-      this(null);
-    }
-
-    public LoadCounter(final Set<Long> procIds) {
-      this.procIds = procIds;
-    }
-
-    public void reset() {
-      reset(null);
-    }
-
-    public void reset(final Set<Long> procIds) {
-      corrupted.clear();
-      loaded.clear();
-      this.procIds = procIds;
-      this.maxProcId = 0;
-    }
-
-    public long getMaxProcId() {
-      return maxProcId;
-    }
-
-    public ArrayList<Procedure> getLoaded() {
-      return loaded;
-    }
-
-    public int getLoadedCount() {
-      return loaded.size();
-    }
-
-    public ArrayList<Procedure> getCorrupted() {
-      return corrupted;
-    }
-
-    public int getCorruptedCount() {
-      return corrupted.size();
-    }
-
-    @Override
-    public void setMaxProcId(long maxProcId) {
-      maxProcId = maxProcId;
-    }
-
-    @Override
-    public void load(ProcedureIterator procIter) throws IOException {
-      while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
-        LOG.debug("loading procId=" + proc.getProcId() + ": " + proc);
-        if (procIds != null) {
-          assertTrue("procId=" + proc.getProcId() + " unexpected",
-                     procIds.contains(proc.getProcId()));
-        }
-        loaded.add(proc);
-      }
-    }
-
-    @Override
-    public void handleCorrupted(ProcedureIterator procIter) throws IOException {
-      while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
-        LOG.debug("corrupted procId=" + proc.getProcId() + ": " + proc);
-        corrupted.add(proc);
       }
     }
   }
