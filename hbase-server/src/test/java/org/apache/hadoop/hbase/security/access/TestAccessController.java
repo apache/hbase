@@ -2421,11 +2421,10 @@ public class TestAccessController extends SecureTestUtil {
       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
         conf, AccessControlLists.toNamespaceEntry(namespaceRegexWithoutPrefix));
       assertTrue(namespacePermissions != null);
-      assertEquals(expectedAmount, namespacePermissions.size());
+      assertTrue(namespacePermissions.size() == 1);
       for (UserPermission namespacePermission : namespacePermissions) {
         assertFalse(namespacePermission.isGlobal());  // Verify it is not a global user permission
-        // Verify namespace is set
-        assertEquals(expectedNamespace, namespacePermission.getNamespace());
+        assertEquals(expectedNamespace, namespacePermission.getNamespace());  // Verify namespace is set
       }
     } catch (Throwable thw) {
       throw new HBaseException(thw);
