@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
@@ -243,5 +246,79 @@ public class ProcedureTestingUtility {
 
     @Override
     protected void deserializeStateData(final InputStream stream) throws IOException { }
+  }
+
+  public static class LoadCounter implements ProcedureStore.ProcedureLoader {
+    private final ArrayList<Procedure> corrupted = new ArrayList<Procedure>();
+    private final ArrayList<Procedure> loaded = new ArrayList<Procedure>();
+
+    private Set<Long> procIds;
+    private long maxProcId = 0;
+
+    public LoadCounter() {
+      this(null);
+    }
+
+    public LoadCounter(final Set<Long> procIds) {
+      this.procIds = procIds;
+    }
+
+    public void reset() {
+      reset(null);
+    }
+
+    public void reset(final Set<Long> procIds) {
+      corrupted.clear();
+      loaded.clear();
+      this.procIds = procIds;
+      this.maxProcId = 0;
+    }
+
+    public long getMaxProcId() {
+      return maxProcId;
+    }
+
+    public ArrayList<Procedure> getLoaded() {
+      return loaded;
+    }
+
+    public int getLoadedCount() {
+      return loaded.size();
+    }
+
+    public ArrayList<Procedure> getCorrupted() {
+      return corrupted;
+    }
+
+    public int getCorruptedCount() {
+      return corrupted.size();
+    }
+
+    @Override
+    public void setMaxProcId(long maxProcId) {
+      maxProcId = maxProcId;
+    }
+
+    @Override
+    public void load(ProcedureIterator procIter) throws IOException {
+      while (procIter.hasNext()) {
+        Procedure proc = procIter.nextAsProcedure();
+        LOG.debug("loading procId=" + proc.getProcId() + ": " + proc);
+        if (procIds != null) {
+          assertTrue("procId=" + proc.getProcId() + " unexpected",
+                     procIds.contains(proc.getProcId()));
+        }
+        loaded.add(proc);
+      }
+    }
+
+    @Override
+    public void handleCorrupted(ProcedureIterator procIter) throws IOException {
+      while (procIter.hasNext()) {
+        Procedure proc = procIter.nextAsProcedure();
+        LOG.debug("corrupted procId=" + proc.getProcId() + ": " + proc);
+        corrupted.add(proc);
+      }
+    }
   }
 }
