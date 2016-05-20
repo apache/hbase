@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
-import java.util.SortedMap;
-import java.util.SortedSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -96,10 +96,10 @@ public interface ReplicationQueues {
   /**
    * Take ownership for the set of queues belonging to a dead region server.
    * @param regionserver the id of the dead region server
-   * @return A SortedMap of the queues that have been claimed, including a SortedSet of WALs in
+   * @return A Map of the queues that have been claimed, including a Set of WALs in
    *         each queue. Returns an empty map if no queues were failed-over.
    */
-  SortedMap<String, SortedSet<String>> claimQueues(String regionserver);
+  Map<String, Set<String>> claimQueues(String regionserver);
 
   /**
    * Get a list of all region servers that have outstanding replication queues. These servers could

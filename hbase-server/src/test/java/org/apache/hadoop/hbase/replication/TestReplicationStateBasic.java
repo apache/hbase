@@ -22,8 +22,8 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedMap;
-import java.util.SortedSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -146,7 +146,7 @@ public abstract class TestReplicationStateBasic {
     assertEquals(0, rq3.claimQueues(server1).size());
     assertEquals(2, rq3.getListOfReplicators().size());
 
-    SortedMap<String, SortedSet<String>> queues = rq2.claimQueues(server3);
+    Map<String, Set<String>> queues = rq2.claimQueues(server3);
     assertEquals(5, queues.size());
     assertEquals(1, rq2.getListOfReplicators().size());
 

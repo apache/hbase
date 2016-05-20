@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SortedMap;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -389,7 +389,7 @@ public class TestReplicationSourceManager {
         ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s1.getConfiguration(), s1,
           s1.getZooKeeper()));
     rq1.init(s1.getServerName().toString());
-    SortedMap<String, SortedSet<String>> testMap =
+    Map<String, Set<String>> testMap =
         rq1.claimQueues(server.getServerName().getServerName());
     ReplicationQueues rq2 =
         ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s2.getConfiguration(), s2,
@@ -402,7 +402,7 @@ public class TestReplicationSourceManager {
     rq3.init(s3.getServerName().toString());
     testMap = rq3.claimQueues(s2.getServerName().getServerName());
 
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(testMap.firstKey());
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(testMap.keySet().iterator().next());
     List<String> result = replicationQueueInfo.getDeadRegionServers();
 
     // verify
@@ -523,7 +523,7 @@ public class TestReplicationSourceManager {
   }
 
   static class DummyNodeFailoverWorker extends Thread {
-    private SortedMap<String, SortedSet<String>> logZnodesMap;
+    private Map<String, Set<String>> logZnodesMap;
     Server server;
     private String deadRsZnode;
     ReplicationQueues rq;
@@ -553,12 +553,12 @@ public class TestReplicationSourceManager {
      * @return 1 when the map is not empty.
      */
     private int isLogZnodesMapPopulated() {
-      Collection<SortedSet<String>> sets = logZnodesMap.values();
+      Collection<Set<String>> sets = logZnodesMap.values();
       if (sets.size() > 1) {
         throw new RuntimeException("unexpected size of logZnodesMap: " + sets.size());
       }
       if (sets.size() == 1) {
-        SortedSet<String> s = sets.iterator().next();
+        Set<String> s = sets.iterator().next();
         for (String file : files) {
           // at least one file was missing
           if (!s.contains(file)) {

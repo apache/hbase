@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -642,7 +641,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         LOG.info("Not transferring queue since we are shutting down");
         return;
       }
-      SortedMap<String, SortedSet<String>> newQueues = null;
+      Map<String, Set<String>> newQueues = null;
 
       newQueues = this.rq.claimQueues(rsZnode);
 
@@ -653,9 +652,9 @@ public class ReplicationSourceManager implements ReplicationListener {
         return;
       }
 
-      for (Map.Entry<String, SortedSet<String>> entry : newQueues.entrySet()) {
+      for (Map.Entry<String, Set<String>> entry : newQueues.entrySet()) {
         String peerId = entry.getKey();
-        SortedSet<String> walsSet = entry.getValue();
+        Set<String> walsSet = entry.getValue();
         try {
           // there is not an actual peer defined corresponding to peerId for the failover.
           ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
