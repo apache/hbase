@@ -66,7 +66,7 @@ import com.google.common.collect.Sets;
  *
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
-  protected static final int MIN_SERVER_BALANCE = 2;
+  private static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
   private static final List<HRegionInfo> EMPTY_REGION_LIST = new ArrayList<HRegionInfo>(0);
