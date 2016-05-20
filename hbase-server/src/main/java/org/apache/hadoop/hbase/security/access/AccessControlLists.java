@@ -496,11 +496,19 @@ public class AccessControlLists {
 
     List<UserPermission> perms = new ArrayList<UserPermission>();
 
-    for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
-      UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
-          entry.getValue().getTableName(), entry.getValue().getFamily(),
-          entry.getValue().getQualifier(), entry.getValue().getActions());
-      perms.add(up);
+    if(isNamespaceEntry(entryName)) {  // Namespace
+      for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
+        UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
+          entry.getValue().getNamespace(), entry.getValue().getActions());
+        perms.add(up);
+      }
+    } else {  // Table
+      for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
+        UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
+            entry.getValue().getTableName(), entry.getValue().getFamily(),
+            entry.getValue().getQualifier(), entry.getValue().getActions());
+        perms.add(up);
+      }
     }
     return perms;
   }
@@ -619,11 +627,11 @@ public class AccessControlLists {
   }
 
   public static boolean isNamespaceEntry(String entryName) {
-    return entryName.charAt(0) == NAMESPACE_PREFIX;
+    return entryName != null && entryName.charAt(0) == NAMESPACE_PREFIX;
   }
 
   public static boolean isNamespaceEntry(byte[] entryName) {
-    return entryName[0] == NAMESPACE_PREFIX;
+    return entryName != null && entryName.length !=0 && entryName[0] == NAMESPACE_PREFIX;
   }
 
   public static String toNamespaceEntry(String namespace) {
