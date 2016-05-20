@@ -51,11 +51,9 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -1915,17 +1913,13 @@ public class TestMasterObserver {
       master.balanceSwitch(false);
 
       // wait for assignments to finish, if any
-      AssignmentManager mgr = master.getAssignmentManager();
-      Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
-      for (RegionState state : transRegions) {
-        mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
-      }
+      UTIL.waitUntilNoRegionsInTransition();
 
       // move half the open regions from RS 0 to RS 1
       HRegionServer rs = cluster.getRegionServer(0);
       byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
       //Make sure no regions are in transition now
-      waitForRITtoBeZero(master);
+      UTIL.waitUntilNoRegionsInTransition();
       List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
       int moveCnt = openRegions.size()/2;
       for (int i=0; i<moveCnt; i++) {
@@ -1936,7 +1930,7 @@ public class TestMasterObserver {
         }
       }
       //Make sure no regions are in transition now
-      waitForRITtoBeZero(master);
+      UTIL.waitUntilNoRegionsInTransition();
       // now trigger a balance
       master.balanceSwitch(true);
       boolean balanceRun = master.balance();
@@ -1946,15 +1940,6 @@ public class TestMasterObserver {
       Admin admin = UTIL.getHBaseAdmin();
       admin.disableTable(tableName);
       deleteTable(admin, tableName);
-    }
-  }
-
-  private void waitForRITtoBeZero(HMaster master) throws Exception {
-    // wait for assignments to finish
-    AssignmentManager mgr = master.getAssignmentManager();
-    Set<RegionState> transRegions = mgr.getRegionStates().getRegionsInTransition();
-    for (RegionState state : transRegions) {
-      mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
     }
   }
 

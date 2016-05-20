@@ -250,20 +250,14 @@ public class TestHCM {
 
     Table t = TEST_UTIL.createTable(tn, cf);
     TEST_UTIL.waitTableAvailable(tn);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
 
-    while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-        getRegionStates().isRegionsInTransition()){
-      Thread.sleep(1);
-    }
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tn)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
         TEST_UTIL.getHBaseAdmin().move(l.getRegionLocation(rk).getRegionInfo().
             getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
-        while (TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().isRegionsInTransition()) {
-          Thread.sleep(1);
-        }
+        TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tn);
       }
       Assert.assertNotNull(hci.clusterStatusListener);
@@ -741,9 +735,7 @@ public class TestHCM {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
-    while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-      Thread.sleep(1);
-    }
+    TEST_UTIL.waitUntilNoRegionsInTransition();
 
     // Now moving the region to the second server
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
@@ -1034,9 +1026,7 @@ public class TestHCM {
       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
       // We can wait for all regions to be online, that makes log reading easier when debugging
-      while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-        Thread.sleep(1);
-      }
+      TEST_UTIL.waitUntilNoRegionsInTransition();
 
       Put put = new Put(ROW_X);
       put.addColumn(FAM_NAM, ROW_X, ROW_X);

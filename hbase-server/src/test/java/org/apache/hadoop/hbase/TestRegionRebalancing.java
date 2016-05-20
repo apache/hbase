@@ -103,39 +103,39 @@ public class TestRegionRebalancing {
       admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
           1, HBaseTestingUtility.KEYS.length));
       this.regionLocator = connection.getRegionLocator(this.desc.getTableName());
-  
+
       MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
-  
+
       assertEquals("Test table should have right number of regions",
         HBaseTestingUtility.KEYS.length,
         this.regionLocator.getStartKeys().length);
-  
+
       // verify that the region assignments are balanced to start out
       assertRegionsAreBalanced();
-  
+
       // add a region server - total of 2
       LOG.info("Started second server=" +
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       UTIL.getHBaseCluster().getMaster().balance();
       assertRegionsAreBalanced();
-  
+
       // On a balanced cluster, calling balance() should return true
       assert(UTIL.getHBaseCluster().getMaster().balance() == true);
-  
+
       // if we add a server, then the balance() call should return true
       // add a region server - total of 3
       LOG.info("Started third server=" +
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       assert(UTIL.getHBaseCluster().getMaster().balance() == true);
       assertRegionsAreBalanced();
-  
+
       // kill a region server - total of 2
       LOG.info("Stopped third server=" + UTIL.getHBaseCluster().stopRegionServer(2, false));
       UTIL.getHBaseCluster().waitOnRegionServer(2);
       waitOnCrashProcessing();
       UTIL.getHBaseCluster().getMaster().balance();
       assertRegionsAreBalanced();
-  
+
       // start two more region servers - total of 4
       LOG.info("Readding third server=" +
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
@@ -253,10 +253,7 @@ public class TestRegionRebalancing {
         Thread.sleep(200);
       } catch (InterruptedException e) {}
     }
-    RegionStates regionStates = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-    while (!regionStates.getRegionsInTransition().isEmpty()) {
-      Threads.sleep(100);
-    }
+    UTIL.waitUntilNoRegionsInTransition();
   }
 
 }

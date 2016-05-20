@@ -1683,8 +1683,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-      for (RegionState state : regionsInTransition) {
+      for (RegionState state : am.getRegionStates().getRegionsInTransition()) {
         am.regionOffline(state.getRegion());
       }
       Map<HRegionInfo, ServerName> regionsMap = new HashMap<HRegionInfo, ServerName>();

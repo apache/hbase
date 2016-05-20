@@ -3887,11 +3887,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Wait until no regions in transition.
    * @param timeout How long to wait.
-   * @throws Exception
+   * @throws IOException
    */
-  public void waitUntilNoRegionsInTransition(
-      final long timeout) throws Exception {
+  public void waitUntilNoRegionsInTransition(final long timeout) throws IOException {
     waitFor(timeout, predicateNoRegionsInTransition());
+  }
+
+  /**
+   * Wait until no regions in transition. (time limit 15min)
+   * @throws IOException
+   */
+  public void waitUntilNoRegionsInTransition() throws IOException {
+    waitUntilNoRegionsInTransition(15 * 60000);
   }
 
   /**

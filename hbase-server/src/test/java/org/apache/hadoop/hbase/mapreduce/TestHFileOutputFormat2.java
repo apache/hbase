@@ -515,11 +515,8 @@ public class TestHFileOutputFormat2  {
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
         admin.disableTable(table.getName());
-        while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().isRegionsInTransition()) {
-          Threads.sleep(200);
-          LOG.info("Waiting on table to finish disabling");
-        }
+        util.waitUntilNoRegionsInTransition();
+
         util.deleteTable(table.getName());
         byte[][] newSplitKeys = generateRandomSplitKeys(14);
         table = util.createTable(TABLE_NAME, FAMILIES, newSplitKeys);

@@ -61,7 +61,7 @@ public class TestTableDeleteFamilyHandler {
 
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
-   * 
+   *
    * @throws Exception
    */
   @BeforeClass
@@ -80,15 +80,8 @@ public class TestTableDeleteFamilyHandler {
     // Create a table of three families. This will assign a region.
     TEST_UTIL.createTable(TABLENAME, FAMILIES);
     Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
-    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsInTransition().size() > 0) {
-      Thread.sleep(100);
-    }
-    // Create multiple regions in all the three column families
-    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsInTransition().size() > 0) {
-      Thread.sleep(100);
-    }
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+
     // Load the table with data for all families
     TEST_UTIL.loadTable(t, FAMILIES);
 
