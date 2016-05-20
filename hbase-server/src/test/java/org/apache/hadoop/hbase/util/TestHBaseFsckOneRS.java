@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -1543,7 +1544,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     // create replicator
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "Test Hbase Fsck", connection);
     ReplicationQueues repQueues =
-        ReplicationFactory.getReplicationQueues(zkw, conf, connection);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, connection,
+          zkw));
     repQueues.init("server1");
     // queues for current peer, no errors
     repQueues.addLog("1", "file1");

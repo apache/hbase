@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
@@ -284,9 +285,11 @@ public class TestReplicationSourceManager {
     LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("hostname0.example.org");
+
+
     ReplicationQueues rq =
-        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
-          server);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(server.getConfiguration(), server,
+          server.getZooKeeper()));
     rq.init(server.getServerName().toString());
     // populate some znodes in the peer znode
     files.add("log1");
@@ -326,8 +329,8 @@ public class TestReplicationSourceManager {
   public void testCleanupFailoverQueues() throws Exception {
     final Server server = new DummyServer("hostname1.example.org");
     ReplicationQueues rq =
-        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
-          server);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(server.getConfiguration(), server,
+          server.getZooKeeper()));
     rq.init(server.getServerName().toString());
     // populate some znodes in the peer znode
     SortedSet<String> files = new TreeSet<String>();
@@ -341,7 +344,8 @@ public class TestReplicationSourceManager {
     }
     Server s1 = new DummyServer("dummyserver1.example.org");
     ReplicationQueues rq1 =
-        ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s1.getConfiguration(), s1,
+          s1.getZooKeeper()));
     rq1.init(s1.getServerName().toString());
     ReplicationPeers rp1 =
         ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration(), s1);
@@ -365,7 +369,8 @@ public class TestReplicationSourceManager {
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
     ReplicationQueues repQueues =
-        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), conf, server);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, server,
+          server.getZooKeeper()));
     repQueues.init(server.getServerName().toString());
     // populate some znodes in the peer znode
     files.add("log1");
@@ -381,16 +386,19 @@ public class TestReplicationSourceManager {
 
     // simulate three servers fail sequentially
     ReplicationQueues rq1 =
-        ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s1.getConfiguration(), s1,
+          s1.getZooKeeper()));
     rq1.init(s1.getServerName().toString());
     SortedMap<String, SortedSet<String>> testMap =
         rq1.claimQueues(server.getServerName().getServerName());
     ReplicationQueues rq2 =
-        ReplicationFactory.getReplicationQueues(s2.getZooKeeper(), s2.getConfiguration(), s2);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s2.getConfiguration(), s2,
+          s2.getZooKeeper()));
     rq2.init(s2.getServerName().toString());
     testMap = rq2.claimQueues(s1.getServerName().getServerName());
     ReplicationQueues rq3 =
-        ReplicationFactory.getReplicationQueues(s3.getZooKeeper(), s3.getConfiguration(), s3);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s3.getConfiguration(), s3,
+          s3.getZooKeeper()));
     rq3.init(s3.getServerName().toString());
     testMap = rq3.claimQueues(s2.getServerName().getServerName());
 
@@ -412,7 +420,8 @@ public class TestReplicationSourceManager {
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server s0 = new DummyServer("cversion-change0.example.org");
     ReplicationQueues repQueues =
-        ReplicationFactory.getReplicationQueues(s0.getZooKeeper(), conf, s0);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, s0,
+          s0.getZooKeeper()));
     repQueues.init(s0.getServerName().toString());
     // populate some znodes in the peer znode
     files.add("log1");
@@ -423,7 +432,8 @@ public class TestReplicationSourceManager {
     // simulate queue transfer
     Server s1 = new DummyServer("cversion-change1.example.org");
     ReplicationQueues rq1 =
-        ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
+        ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s1.getConfiguration(), s1,
+          s1.getZooKeeper()));
     rq1.init(s1.getServerName().toString());
 
     ReplicationQueuesClient client =
@@ -522,8 +532,8 @@ public class TestReplicationSourceManager {
       this.deadRsZnode = znode;
       this.server = s;
       this.rq =
-          ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
-            server);
+          ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(server.getConfiguration(), server,
+            server.getZooKeeper()));
       this.rq.init(this.server.getServerName().toString());
     }
 

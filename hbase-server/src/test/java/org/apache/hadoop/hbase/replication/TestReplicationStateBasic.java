@@ -121,7 +121,7 @@ public abstract class TestReplicationStateBasic {
     rq1.removeQueue("bogus");
     rq1.removeLog("bogus", "bogus");
     rq1.removeAllQueues();
-    assertNull(rq1.getAllQueues());
+    assertEquals(0, rq1.getAllQueues().size());
     assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
     assertNull(rq1.getLogsInQueue("bogus"));
     assertEquals(0, rq1.claimQueues(ServerName.valueOf("bogus", 1234, -1L).toString()).size());
