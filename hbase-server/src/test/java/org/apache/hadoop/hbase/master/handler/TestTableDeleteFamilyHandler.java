@@ -81,16 +81,10 @@ public class TestTableDeleteFamilyHandler {
   public void setup() throws IOException, InterruptedException {
     // Create a table of three families. This will assign a region.
     TEST_UTIL.createTable(TABLENAME, FAMILIES);
+
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsInTransition().size() > 0) {
-      Thread.sleep(100);
-    }
-    // Create multiple regions in all the three column families
-    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsInTransition().size() > 0) {
-      Thread.sleep(100);
-    }
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+
     // Load the table with data for all families
     TEST_UTIL.loadTable(t, FAMILIES);
 
