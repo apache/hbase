@@ -56,11 +56,11 @@ public class ReplicationQueuesArguments {
     this.conf = conf;
   }
 
-  public Abortable getAbort() {
+  public Abortable getAbortable() {
     return abort;
   }
 
-  public void setAbort(Abortable abort) {
+  public void setAbortable(Abortable abort) {
     this.abort = abort;
   }
 }
