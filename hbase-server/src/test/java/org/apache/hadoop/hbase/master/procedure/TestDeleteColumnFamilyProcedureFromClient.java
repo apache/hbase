@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.handler;
+package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -51,9 +51,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, LargeTests.class})
-public class TestTableDeleteFamilyHandler {
-
+public class TestDeleteColumnFamilyProcedureFromClient {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   private static final TableName TABLENAME =
       TableName.valueOf("column_family_handlers");
   private static final byte[][] FAMILIES = new byte[][] { Bytes.toBytes("cf1"),
@@ -177,7 +177,6 @@ public class TestTableDeleteFamilyHandler {
 
   @Test
   public void deleteColumnFamilyTwice() throws Exception {
-
     Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
     String cfToDelete = "cf1";
@@ -190,8 +189,7 @@ public class TestTableDeleteFamilyHandler {
     // 2 - Check if all the target column family exist in descriptor
     HColumnDescriptor[] families = beforehtd.getColumnFamilies();
     Boolean foundCF = false;
-    int i;
-    for (i = 0; i < families.length; i++) {
+    for (int i = 0; i < families.length; i++) {
       if (families[i].getNameAsString().equals(cfToDelete)) {
         foundCF = true;
         break;
@@ -206,7 +204,7 @@ public class TestTableDeleteFamilyHandler {
     // 4 - Check if all the target column family exist in FS
     FileStatus[] fileStatus = fs.listStatus(tableDir);
     foundCF = false;
-    for (i = 0; i < fileStatus.length; i++) {
+    for (int i = 0; i < fileStatus.length; i++) {
       if (fileStatus[i].isDirectory() == true) {
         FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
           @Override
@@ -238,7 +236,7 @@ public class TestTableDeleteFamilyHandler {
 
     // 5 - Check if the target column family is gone from the FS
     fileStatus = fs.listStatus(tableDir);
-    for (i = 0; i < fileStatus.length; i++) {
+    for (int i = 0; i < fileStatus.length; i++) {
       if (fileStatus[i].isDirectory() == true) {
         FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
           @Override
@@ -265,5 +263,4 @@ public class TestTableDeleteFamilyHandler {
       // Expected.
     }
   }
-
 }
