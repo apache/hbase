@@ -58,7 +58,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.rmi.UnknownHostException;
+import java.net.UnknownHostException;
 
 import java.util.List;
 import java.util.ArrayList;
