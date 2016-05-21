@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.balancer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -27,13 +29,25 @@ import org.junit.experimental.categories.Category;
 public class TestStochasticLoadBalancer2 extends BalancerTestBase {
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer2.class);
 
-  @Test (timeout = 800000)
-  public void testRegionReplicasOnMidCluster() {
+  @Before
+  public void before() {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    TestStochasticLoadBalancer.loadBalancer.setConf(conf);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
+    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
+    loadBalancer.setConf(conf);
+  }
+
+  @After
+  public void after() {
+    // reset config to make sure balancer run
+    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
+    loadBalancer.setConf(conf);
+  }
+
+  @Test (timeout = 800000)
+  public void testRegionReplicasOnMidCluster() {
     int numNodes = 200;
     int numRegions = 40 * 200;
     int replication = 3; // 3 replicas per region
@@ -44,11 +58,6 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
 
   @Test (timeout = 800000)
   public void testRegionReplicasOnLargeCluster() {
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
-    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    loadBalancer.setConf(conf);
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
     int numRegionsPerServer = 19; // all servers except one
@@ -61,8 +70,6 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
   public void testRegionReplicasOnMidClusterHighReplication() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
-    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     int numNodes = 80;
     int numRegions = 6 * numNodes;
@@ -74,10 +81,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
 
   @Test (timeout = 800000)
   public void testRegionReplicationOnMidClusterReplicationGreaterThanNumNodes() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
-    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     int numNodes = 40;
     int numRegions = 6 * 50;
