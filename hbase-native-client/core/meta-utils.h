@@ -20,7 +20,7 @@
 
 #include <string>
 
-#include "connection/Request.h"
+#include "connection/request.h"
 #include "if/HBase.pb.h"
 #include "serde/table-name.h"
 

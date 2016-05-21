@@ -1,0 +1,53 @@
+#use "gcc" to compile source files
+CC:=g++
+LD:=g++
+ 
+DEBUG_PATH = build/debug
+RELEASE_PATH = build/release
+MODULES = build/if
+SRC_DIR = $(MODULES)
+DEBUG_BUILD_DIR = $(addprefix $(DEBUG_PATH)/,$(MODULES))
+RELEASE_BUILD_DIR = $(addprefix $(RELEASE_PATH)/,$(MODULES))
+INCLUDE_DIR = .
+
+#flags to pass to the CPP compiler & linker
+CPPFLAGS_DEBUG = -D_GLIBCXX_USE_CXX11_ABI=0 -g -Wall -std=c++14 -pedantic -fPIC
+CPPFLAGS_RELEASE = -D_GLIBCXX_USE_CXX11_ABI=0 -DNDEBUG -O2 -Wall -std=c++14 -pedantic -fPIC
+
+#define list of source files and object files
+SRC = $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+DEPS =  $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.h))
+DEBUG_OBJ = $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(SRC))
+RELEASE_OBJ = $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(SRC))
+INCLUDES = $(addprefix -I,$(INCLUDE_DIR))
+	
+vpath %.cc $(SRC_DIR)
+
+$(DEBUG_OBJ): $(DEBUG_BUILD_DIR)
+define make-goal-dbg
+$1/%.o: %.cc $(DEPS)
+	$(CC) -c $$< -o $$@ $(CPPFLAGS_DEBUG) $(INCLUDES)
+endef
+
+$(RELEASE_OBJ): $(RELEASE_BUILD_DIR)
+define make-goal-rel
+$1/%.o: %.cc $(DEPS)
+	$(CC) -c $$< -o $$@ $(CPPFLAGS_RELEASE) $(INCLUDES) 
+endef
+
+$(DEBUG_BUILD_DIR):
+	@mkdir -p $@
+
+$(RELEASE_BUILD_DIR):
+	@mkdir -p $@
+
+.PHONY: all clean
+
+all: $(DEBUG_OBJ) $(RELEASE_OBJ) 
+
+clean:
+	@rm -rf $(DEBUG_OBJ) $(RELEASE_OBJ)
+
+$(foreach bdir,$(DEBUG_BUILD_DIR), $(eval $(call make-goal-dbg,$(bdir))))
+
+$(foreach bdir,$(RELEASE_BUILD_DIR),$(eval $(call make-goal-rel,$(bdir))))
