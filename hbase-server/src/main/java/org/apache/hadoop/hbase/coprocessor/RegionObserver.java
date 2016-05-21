@@ -1219,6 +1219,28 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
+   * Called before replaying WALs for this region.
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param ctx the environment provided by the region server
+   * @param info the RegionInfo for this region
+   * @param edits the file of recovered edits
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preReplayWALs(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+      HRegionInfo info, Path edits) throws IOException;
+
+  /**
+   * Called after replaying WALs for this region.
+   * @param ctx the environment provided by the region server
+   * @param info the RegionInfo for this region
+   * @param edits the file of recovered edits
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postReplayWALs(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+      HRegionInfo info, Path edits) throws IOException;
+
+  /**
    * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
    */

@@ -607,7 +607,6 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Ignore // TODO: HBASE-13391 to fix flaky test
   @Test (timeout=300000)
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testRecovery");
@@ -630,6 +629,9 @@ public class TestRegionObserverInterface {
       put.addColumn(C, C, C);
       table.put(put);
 
+      // put two times
+      table.put(put);
+
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
         "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
@@ -638,10 +640,11 @@ public class TestRegionObserverInterface {
           );
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
-              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+          new String[] {"getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+            "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+            "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
           tableName,
-          new Integer[] {0, 0, 1, 1, 0, 0});
+          new Integer[] {0, 0, 0, 0, 2, 2, 0, 0});
 
       cluster.killRegionServer(rs1.getRegionServer().getServerName());
       Threads.sleep(1000); // Let the kill soak in.
@@ -649,17 +652,17 @@ public class TestRegionObserverInterface {
       LOG.info("All regions assigned");
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
-              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+          new String[] {"getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+            "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+            "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
           tableName,
-          new Integer[]{1, 1, 0, 0, 0, 0});
+          new Integer[]{1, 1, 2, 2, 0, 0, 0, 0});
     } finally {
       util.deleteTable(tableName);
       table.close();
     }
   }
 
-  @Ignore // TODO: HBASE-13391 to fix flaky test
   @Test (timeout=300000)
   public void testLegacyRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testLegacyRecovery");
@@ -682,6 +685,9 @@ public class TestRegionObserverInterface {
         put.addColumn(C, C, C);
         table.put(put);
 
+        // put two times
+        table.put(put);
+
         verifyMethodResult(SimpleRegionObserver.Legacy.class,
             new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
                 "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
@@ -690,10 +696,11 @@ public class TestRegionObserverInterface {
         );
 
         verifyMethodResult(SimpleRegionObserver.Legacy.class,
-            new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut",
-                "getCtPostPut", "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+            new String[] {"getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+              "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
             tableName,
-            new Integer[] {0, 0, 1, 1, 0, 0});
+            new Integer[] {0, 0, 0, 0, 2, 2, 0, 0});
 
         cluster.killRegionServer(rs1.getRegionServer().getServerName());
         Threads.sleep(1000); // Let the kill soak in.
@@ -701,10 +708,11 @@ public class TestRegionObserverInterface {
         LOG.info("All regions assigned");
 
         verifyMethodResult(SimpleRegionObserver.Legacy.class,
-            new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut",
-                "getCtPostPut", "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+            new String[] {"getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+              "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
             tableName,
-            new Integer[]{1, 1, 0, 0, 1, 1});
+            new Integer[]{1, 1, 2, 2, 0, 0, 2, 2});
       }
     } finally {
       util.deleteTable(tableName);

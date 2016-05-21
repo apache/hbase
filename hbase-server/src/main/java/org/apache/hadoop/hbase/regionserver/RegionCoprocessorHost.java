@@ -1402,6 +1402,36 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * @param info the RegionInfo for this region
+   * @param edits the file of recovered edits
+   * @throws IOException Exception
+   */
+  public void preReplayWALs(final HRegionInfo info, final Path edits) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+        throws IOException {
+        oserver.preReplayWALs(ctx, info, edits);
+      }
+    });
+  }
+
+  /**
+   * @param info the RegionInfo for this region
+   * @param edits the file of recovered edits
+   * @throws IOException Exception
+   */
+  public void postReplayWALs(final HRegionInfo info, final Path edits) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+        throws IOException {
+        oserver.postReplayWALs(ctx, info, edits);
+      }
+    });
+  }
+
+  /**
    * @param info
    * @param logKey
    * @param logEdit

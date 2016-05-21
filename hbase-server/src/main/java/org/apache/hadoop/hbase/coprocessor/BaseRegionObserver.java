@@ -452,6 +452,16 @@ public class BaseRegionObserver implements RegionObserver {
       final InternalScanner s) throws IOException {
   }
 
+  @Override
+  public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, Path edits) throws IOException {
+  }
+
+  @Override
+  public void postReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, Path edits) throws IOException {
+  }
+
   /**
    * Implementers should override this version of the method and leave the deprecated one as-is.
    */

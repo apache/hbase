@@ -4026,6 +4026,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         int period = this.conf.getInt("hbase.hstore.report.period", 300000);
         long lastReport = EnvironmentEdgeManager.currentTime();
 
+        if (coprocessorHost != null) {
+          coprocessorHost.preReplayWALs(this.getRegionInfo(), edits);
+        }
+
         while ((entry = reader.next()) != null) {
           WALKey key = entry.getKey();
           WALEdit val = entry.getEdit();
@@ -4143,6 +4147,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (coprocessorHost != null) {
             coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
           }
+        }
+
+        if (coprocessorHost != null) {
+          coprocessorHost.postReplayWALs(this.getRegionInfo(), edits);
         }
       } catch (EOFException eof) {
         Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
