@@ -55,6 +55,26 @@ public class TestConnectionUtils {
   }
 
   @Test
+  public void testAddJitter() {
+    long basePause = 10000;
+    long maxTimeExpected = (long) (basePause * 1.25f);
+    long minTimeExpected = (long) (basePause * 0.75f);
+    int testTries = 100;
+
+    Set<Long> timeSet = new TreeSet<Long>();
+    for (int i = 0; i < testTries; i++) {
+      long withJitter = ConnectionUtils.addJitter(basePause, 0.5f);
+      assertTrue(withJitter >= minTimeExpected);
+      assertTrue(withJitter <= maxTimeExpected);
+      // Add the long to the set
+      timeSet.add(withJitter);
+    }
+
+    //Make sure that most are unique.  some overlap will happen
+    assertTrue(timeSet.size() > (testTries * 0.90));
+  }
+
+  @Test
   public void testGetPauseTime() {
     long pauseTime;
     long baseTime = 100;

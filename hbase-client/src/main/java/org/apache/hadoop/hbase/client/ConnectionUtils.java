@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -41,7 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class ConnectionUtils {
 
-  private static final Random RANDOM = new Random();
   /**
    * Calculate pause time.
    * Built on {@link HConstants#RETRY_BACKOFF}.
@@ -59,18 +58,19 @@ public class ConnectionUtils {
     }
 
     long normalPause = pause * HConstants.RETRY_BACKOFF[ntries];
-    long jitter =  (long)(normalPause * RANDOM.nextFloat() * 0.01f); // 1% possible jitter
+    // 1% possible jitter
+    long jitter = (long) (normalPause * ThreadLocalRandom.current().nextFloat() * 0.01f);
     return normalPause + jitter;
   }
 
 
   /**
-   * Adds / subs a 10% jitter to a pause time. Minimum is 1.
+   * Adds / subs an up to 50% jitter to a pause time. Minimum is 1.
    * @param pause the expected pause.
    * @param jitter the jitter ratio, between 0 and 1, exclusive.
    */
   public static long addJitter(final long pause, final float jitter) {
-    float lag = pause * (RANDOM.nextFloat() - 0.5f) * jitter;
+    float lag = pause * (ThreadLocalRandom.current().nextFloat() - 0.5f) * jitter;
     long newPause = pause + (long) lag;
     if (newPause <= 0) {
       return 1;
