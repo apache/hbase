@@ -249,33 +249,40 @@ public class AccessControlClient {
   public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
       throws Throwable {
     List<UserPermission> permList = new ArrayList<UserPermission>();
-    HTable ht = null;
-    HBaseAdmin ha = null;
+    HTable table = new HTable(conf, ACL_TABLE_NAME);
     try {
-      ha = new HBaseAdmin(conf);
-      ht = new HTable(conf, ACL_TABLE_NAME);
-      CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
+      CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
       BlockingInterface protocol =
           AccessControlProtos.AccessControlService.newBlockingStub(service);
-      HTableDescriptor[] htds = null;
-
-      if (tableRegex == null || tableRegex.isEmpty()) {
-        permList = ProtobufUtil.getUserPermissions(protocol);
-      } else if (tableRegex.charAt(0) == '@') {
-        String namespace = tableRegex.substring(1);
-        permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
-      } else {
-        htds = ha.listTables(Pattern.compile(tableRegex));
-        for (HTableDescriptor hd : htds) {
-          permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      try {
+        HTableDescriptor[] htds = null;
+        if (tableRegex == null || tableRegex.isEmpty()) {
+          permList = ProtobufUtil.getUserPermissions(protocol);
+        } else if (tableRegex.charAt(0) == '@') {  // Namespaces
+          String namespaceRegex = tableRegex.substring(1);
+          // Read out all namespaces
+          for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) {
+            String namespace = nsds.getName();
+            if (namespace.matches(namespaceRegex)) {  // Match the given namespace regex?
+              permList.addAll(ProtobufUtil.getUserPermissions(protocol,
+                Bytes.toBytes(namespace)));
+            }
+          }
+        } else {  // Tables
+          htds = admin.listTables(Pattern.compile(tableRegex));
+          for (HTableDescriptor hd : htds) {
+            permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+          }
+        }
+      } finally {
+        if (admin != null) {
+          admin.close();
         }
       }
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
-      if (ha != null) {
-        ha.close();
+      if (table != null) {
+        table.close();
       }
     }
     return permList;
