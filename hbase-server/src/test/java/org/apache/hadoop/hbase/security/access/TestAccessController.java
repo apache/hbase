@@ -2564,19 +2564,41 @@ public class TestAccessController extends SecureTestUtil {
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     createNamespace(TEST_UTIL, desc);
     grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
+
+    // Test 1: A specific namespace
+    getNamespacePermissionsAndVerify(namespace, 1, namespace);
+
+    // Test 2: '@.*'
+    getNamespacePermissionsAndVerify(".*", 1, namespace);
+
+    // Test 3: A more complex regex
+    getNamespacePermissionsAndVerify("^test[a-zA-Z]*", 1, namespace);
+
+    deleteNamespace(TEST_UTIL, namespace);
+  }
+
+  /**
+   * List all user permissions match the given regular expression for namespace
+   * and verify each of them.
+   * @param namespaceRegexWithoutPrefix the regualar expression for namespace, without NAMESPACE_PREFIX
+   * @param expectedAmount the expected amount of user permissions returned
+   * @param expectedNamespace the expected namespace of each user permission returned
+   * @throws HBaseException in the case of any HBase exception when accessing hbase:acl table
+   */
+  private void getNamespacePermissionsAndVerify(String namespaceRegexWithoutPrefix,
+      int expectedAmount, String expectedNamespace) throws HBaseException {
     try {
       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
-          systemUserConnection, AccessControlLists.toNamespaceEntry(namespace));
+        systemUserConnection, AccessControlLists.toNamespaceEntry(namespaceRegexWithoutPrefix));
       assertTrue(namespacePermissions != null);
-      assertTrue(namespacePermissions.size() == 1);
+      assertEquals(expectedAmount, namespacePermissions.size());
       for (UserPermission namespacePermission : namespacePermissions) {
         assertFalse(namespacePermission.isGlobal());  // Verify it is not a global user permission
-        assertEquals(namespace, namespacePermission.getNamespace());  // Verify namespace is set
+        assertEquals(expectedNamespace, namespacePermission.getNamespace());  // Verify namespace is set
       }
     } catch (Throwable thw) {
       throw new HBaseException(thw);
     }
-    deleteNamespace(TEST_UTIL, namespace);
   }
 
   @Test (timeout=180000)
