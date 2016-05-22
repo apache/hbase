@@ -217,11 +217,16 @@ public class AccessControlClient {
         HTableDescriptor[] htds = null;
         if (tableRegex == null || tableRegex.isEmpty()) {
           permList = ProtobufUtil.getUserPermissions(controller, protocol);
-        } else if (tableRegex.charAt(0) == '@') {
-          String namespace = tableRegex.substring(1);
-          permList = ProtobufUtil.getUserPermissions(controller, protocol,
-            Bytes.toBytes(namespace));
-        } else {
+        } else if (tableRegex.charAt(0) == '@') {  // Namespaces
+          String namespaceRegex = tableRegex.substring(1);
+          for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) {  // Read out all namespaces
+            String namespace = nsds.getName();
+            if (namespace.matches(namespaceRegex)) {  // Match the given namespace regex?
+              permList.addAll(ProtobufUtil.getUserPermissions(controller, protocol,
+                Bytes.toBytes(namespace)));
+            }
+          }
+        } else {  // Tables
           htds = admin.listTables(Pattern.compile(tableRegex), true);
           for (HTableDescriptor hd : htds) {
             permList.addAll(ProtobufUtil.getUserPermissions(controller, protocol,
