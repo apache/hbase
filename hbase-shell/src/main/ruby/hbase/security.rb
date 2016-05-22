@@ -137,9 +137,9 @@ module Hbase
       all_perms.each do |value|
           user_name = String.from_java_bytes(value.getUser)
           if (table_regex != nil && isNamespace?(table_regex))
-            namespace = table_regex[1...table_regex.length]
+            namespace = value.getNamespace()
           else
-            namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : ''
+            namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : value.getNamespace()
           end
           table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
           family = (value.getFamily != nil) ?

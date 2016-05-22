@@ -30,6 +30,8 @@ For example:
 
     hbase> user_permission
     hbase> user_permission '@ns1'
+    hbase> user_permission '@.*'
+    hbase> user_permission '@^[a-c].*'
     hbase> user_permission 'table1'
     hbase> user_permission 'namespace1:table1'
     hbase> user_permission '.*'
