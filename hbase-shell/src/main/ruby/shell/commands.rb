@@ -54,6 +54,10 @@ module Shell
         @shell.hbase_admin
       end
 
+      def taskmonitor
+        @shell.hbase_taskmonitor
+      end
+
       def table(name)
         @shell.hbase_table(name)
       end
