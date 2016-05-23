@@ -60,6 +60,10 @@ module Hbase
       @shell.hbase_admin
     end
 
+    def taskmonitor
+      @shell.hbase_taskmonitor
+    end
+
     def security_admin
       @shell.hbase_security_admin
     end

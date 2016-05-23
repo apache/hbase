@@ -21,6 +21,7 @@ include Java
 
 require 'hbase/admin'
 require 'hbase/table'
+require 'hbase/taskmonitor'
 require 'hbase/quotas'
 require 'hbase/security'
 require 'hbase/visibility_labels'
@@ -45,6 +46,10 @@ module Hbase
 
     def admin(formatter)
       ::Hbase::Admin.new(@connection.getAdmin, formatter)
+    end
+
+    def taskmonitor(formatter)
+      ::Hbase::TaskMonitor.new(configuration, formatter)
     end
 
     # Create new one each time

@@ -87,6 +87,10 @@ module Shell
       @hbase_admin ||= hbase.admin(formatter)
     end
 
+    def hbase_taskmonitor
+      @hbase_taskmonitor ||= hbase.taskmonitor(formatter)
+    end
+
     def hbase_table(name)
       hbase.table(name, self)
     end
@@ -243,6 +247,7 @@ Shell.load_command_group(
     version
     table_help
     whoami
+    processlist
   ]
 )
 
