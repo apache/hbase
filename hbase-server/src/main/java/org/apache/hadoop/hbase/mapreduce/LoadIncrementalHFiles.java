@@ -312,12 +312,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * of a job using HFileOutputFormat
    * @param table the table to load into
    * @throws TableNotFoundException if table does not yet exist
-   * @deprecated since hbase-1.3.0, hbase-1.2.2, and hbase-1.1.6; replaced
-   * by {@link #doBulkLoad(Path, Admin, Table, RegionLocator)}.
-   * @see HBASE-15876
    */
   @SuppressWarnings("deprecation")
-  @Deprecated
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
