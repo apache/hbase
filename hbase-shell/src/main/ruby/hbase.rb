@@ -98,6 +98,7 @@ end
 # Include classes definition
 require 'hbase/hbase'
 require 'hbase/admin'
+require 'hbase/taskmonitor'
 require 'hbase/table'
 require 'hbase/quotas'
 require 'hbase/replication_admin'

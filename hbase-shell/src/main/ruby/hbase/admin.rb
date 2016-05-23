@@ -1007,6 +1007,47 @@ module Hbase
       @admin.listTableSnapshots(tableNameRegex, snapshotNameRegex).to_a
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of regionservers
+    def getRegionServers()
+      return @admin.getClusterStatus.getServers.map { |serverName| serverName }
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of servernames
+    def getServerNames(servers)
+      regionservers = getRegionServers()
+      servernames = []
+
+      if servers.length == 0
+        # if no servers were specified as arguments, get a list of all servers
+        servernames = regionservers
+      else
+        # Strings replace with ServerName objects in servers array
+        i = 0
+        while (i < servers.length)
+          server = servers[i]
+
+          if ServerName.isFullServerName(server)
+            servernames.push(ServerName.valueOf(server))
+          else
+            name_list = server.split(",")
+            j = 0
+            while (j < regionservers.length)
+              sn = regionservers[j]
+              if name_list[0] == sn.hostname and (name_list[1] == nil ? true : (name_list[1] == sn.port.to_s) )
+                servernames.push(sn)
+              end
+              j += 1
+            end
+          end
+          i += 1
+        end
+      end
+
+      return servernames
+    end 
+
     # Apply config specific to a table/column to its descriptor
     def set_descriptor_config(descriptor, config)
       raise(ArgumentError, "#{CONFIGURATION} must be a Hash type") unless config.kind_of?(Hash)
