@@ -704,24 +704,24 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
       // call coproc pre hook
       if (cpHost != null) {
-        cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+        cpHost.preRestoreSnapshot(fsSnapshot, snapshotTableDesc);
       }
       restoreSnapshot(fsSnapshot, snapshotTableDesc);
       LOG.info("Restore snapshot=" + fsSnapshot.getName() + " as table=" + tableName);
 
       if (cpHost != null) {
-        cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+        cpHost.postRestoreSnapshot(fsSnapshot, snapshotTableDesc);
       }
     } else {
       HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc, tableName);
       if (cpHost != null) {
-        cpHost.preCloneSnapshot(reqSnapshot, htd);
+        cpHost.preCloneSnapshot(fsSnapshot, htd);
       }
       cloneSnapshot(fsSnapshot, htd);
       LOG.info("Clone snapshot=" + fsSnapshot.getName() + " as table=" + tableName);
 
       if (cpHost != null) {
-        cpHost.postCloneSnapshot(reqSnapshot, htd);
+        cpHost.postCloneSnapshot(fsSnapshot, htd);
       }
     }
   }
