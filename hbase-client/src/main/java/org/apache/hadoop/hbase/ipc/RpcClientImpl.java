@@ -875,7 +875,7 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
 
     protected void tracedWriteRequest(Call call, int priority, Span span) throws IOException {
-      try (TraceScope ignored = Trace.continueSpan(span)) {
+      try (TraceScope ignored = Trace.startSpan("RpcClientImpl.tracedWriteRequest", span)) {
         writeRequest(call, priority, span);
       }
     }
