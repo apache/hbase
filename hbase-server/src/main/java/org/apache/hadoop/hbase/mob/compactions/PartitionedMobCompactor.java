@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -90,10 +89,10 @@ public class PartitionedMobCompactor extends MobCompactor {
   protected int compactionBatchSize;
   protected int compactionKVMax;
 
-  private Path tempPath;
-  private Path bulkloadPath;
-  private CacheConfig compactionCacheConfig;
-  private Tag tableNameTag;
+  private final Path tempPath;
+  private final Path bulkloadPath;
+  private final CacheConfig compactionCacheConfig;
+  private final Tag tableNameTag;
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public PartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
@@ -137,13 +136,12 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param candidates All the candidates.
    * @param allFiles Whether add all mob files into the compaction.
    * @return A compaction request.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   protected PartitionedMobCompactionRequest select(List<FileStatus> candidates,
     boolean allFiles) throws IOException {
-    Collection<FileStatus> allDelFiles = new ArrayList<FileStatus>();
-    Map<CompactionPartitionId, CompactionPartition> filesToCompact =
-      new HashMap<CompactionPartitionId, CompactionPartition>();
+    Collection<FileStatus> allDelFiles = new ArrayList<>();
+    Map<CompactionPartitionId, CompactionPartition> filesToCompact = new HashMap<>();
     int selectedFileCount = 0;
     int irrelevantFileCount = 0;
     for (FileStatus file : candidates) {
@@ -202,17 +200,17 @@ public class PartitionedMobCompactor extends MobCompactor {
    * </ol>
    * @param request The compaction request.
    * @return The paths of new mob files generated in the compaction.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   protected List<Path> performCompaction(PartitionedMobCompactionRequest request)
     throws IOException {
     // merge the del files
-    List<Path> delFilePaths = new ArrayList<Path>();
+    List<Path> delFilePaths = new ArrayList<>();
     for (FileStatus delFile : request.delFiles) {
       delFilePaths.add(delFile.getPath());
     }
     List<Path> newDelPaths = compactDelFiles(request, delFilePaths);
-    List<StoreFile> newDelFiles = new ArrayList<StoreFile>();
+    List<StoreFile> newDelFiles = new ArrayList<>();
     List<Path> paths = null;
     try {
       for (Path newDelPath : newDelPaths) {
@@ -247,7 +245,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param request The compaction request.
    * @param delFiles The del files.
    * @return The paths of new mob files after compactions.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   protected List<Path> compactMobFiles(final PartitionedMobCompactionRequest request,
     final List<StoreFile> delFiles) throws IOException {
@@ -256,24 +254,23 @@ public class PartitionedMobCompactor extends MobCompactor {
       LOG.info("No partitions of mob files");
       return Collections.emptyList();
     }
-    List<Path> paths = new ArrayList<Path>();
-    Connection c = ConnectionFactory.createConnection(conf);
+    List<Path> paths = new ArrayList<>();
+    final Connection c = ConnectionFactory.createConnection(conf);
     final Table table = c.getTable(tableName);
     try {
-      Map<CompactionPartitionId, Future<List<Path>>> results =
-        new HashMap<CompactionPartitionId, Future<List<Path>>>();
+      Map<CompactionPartitionId, Future<List<Path>>> results = new HashMap<>();
       // compact the mob files by partitions in parallel.
       for (final CompactionPartition partition : partitions) {
         results.put(partition.getPartitionId(), pool.submit(new Callable<List<Path>>() {
           @Override
           public List<Path> call() throws Exception {
             LOG.info("Compacting mob files for partition " + partition.getPartitionId());
-            return compactMobFilePartition(request, partition, delFiles, table);
+            return compactMobFilePartition(request, partition, delFiles, c, table);
           }
         }));
       }
       // compact the partitions in parallel.
-      List<CompactionPartitionId> failedPartitions = new ArrayList<CompactionPartitionId>();
+      List<CompactionPartitionId> failedPartitions = new ArrayList<>();
       for (Entry<CompactionPartitionId, Future<List<Path>>> result : results.entrySet()) {
         try {
           paths.addAll(result.getValue().get());
@@ -291,7 +288,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       try {
         table.close();
       } catch (IOException e) {
-        LOG.error("Failed to close the HTable", e);
+        LOG.error("Failed to close the Table", e);
       }
     }
     return paths;
@@ -302,13 +299,16 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param request The compaction request.
    * @param partition A compaction partition.
    * @param delFiles The del files.
-   * @param table The current table.
-   * @return The paths of new mob files after compactions.
-   * @throws IOException
+   * @param connection to use
+   * @param table The current table.  @return The paths of new mob files after compactions.
+   * @throws IOException if IO failure is encountered
    */
   private List<Path> compactMobFilePartition(PartitionedMobCompactionRequest request,
-    CompactionPartition partition, List<StoreFile> delFiles, Table table) throws IOException {
-    List<Path> newFiles = new ArrayList<Path>();
+                                             CompactionPartition partition,
+                                             List<StoreFile> delFiles,
+                                             Connection connection,
+                                             Table table) throws IOException {
+    List<Path> newFiles = new ArrayList<>();
     List<FileStatus> files = partition.listFiles();
     int offset = 0;
     Path bulkloadPathOfPartition = new Path(bulkloadPath, partition.getPartitionId().toString());
@@ -328,7 +328,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       // clean the bulkload directory to avoid loading old files.
       fs.delete(bulkloadPathOfPartition, true);
       // add the selected mob files and del files into filesToCompact
-      List<StoreFile> filesToCompact = new ArrayList<StoreFile>();
+      List<StoreFile> filesToCompact = new ArrayList<>();
       for (int i = offset; i < batch + offset; i++) {
         StoreFile sf = new StoreFile(fs, files.get(i).getPath(), conf, compactionCacheConfig,
           BloomType.NONE);
@@ -336,7 +336,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
       filesToCompact.addAll(delFiles);
       // compact the mob files in a batch.
-      compactMobFilesInBatch(request, partition, table, filesToCompact, batch,
+      compactMobFilesInBatch(request, partition, connection, table, filesToCompact, batch,
         bulkloadPathOfPartition, bulkloadColumnPath, newFiles);
       // move to the next batch.
       offset += batch;
@@ -364,19 +364,23 @@ public class PartitionedMobCompactor extends MobCompactor {
    * Compacts a partition of selected small mob files and all the del files in a batch.
    * @param request The compaction request.
    * @param partition A compaction partition.
+   * @param connection To use for transport
    * @param table The current table.
    * @param filesToCompact The files to be compacted.
    * @param batch The number of mob files to be compacted in a batch.
    * @param bulkloadPathOfPartition The directory where the bulkload column of the current
-   *        partition is saved.
+   *   partition is saved.
    * @param bulkloadColumnPath The directory where the bulkload files of current partition
-   *        are saved.
+   *   are saved.
    * @param newFiles The paths of new mob files after compactions.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private void compactMobFilesInBatch(PartitionedMobCompactionRequest request,
-    CompactionPartition partition, Table table, List<StoreFile> filesToCompact, int batch,
-    Path bulkloadPathOfPartition, Path bulkloadColumnPath, List<Path> newFiles)
+                                      CompactionPartition partition,
+                                      Connection connection, Table table,
+                                      List<StoreFile> filesToCompact, int batch,
+                                      Path bulkloadPathOfPartition, Path bulkloadColumnPath,
+                                      List<Path> newFiles)
     throws IOException {
     // open scanner to the selected mob files and del files.
     StoreScanner scanner = createScanner(filesToCompact, ScanType.COMPACT_DROP_DELETES);
@@ -400,8 +404,8 @@ public class PartitionedMobCompactor extends MobCompactor {
       refFileWriter = MobUtils.createRefFileWriter(conf, fs, column, bulkloadColumnPath, fileInfo
         .getSecond().longValue(), compactionCacheConfig, cryptoContext);
       refFilePath = refFileWriter.getPath();
-      List<Cell> cells = new ArrayList<Cell>();
-      boolean hasMore = false;
+      List<Cell> cells = new ArrayList<>();
+      boolean hasMore;
       ScannerContext scannerContext =
               ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
       do {
@@ -428,7 +432,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       // commit mob file
       MobUtils.commitFile(conf, fs, filePath, mobFamilyDir, compactionCacheConfig);
       // bulkload the ref file
-      bulkloadRefFile(table, bulkloadPathOfPartition, filePath.getName());
+      bulkloadRefFile(connection, table, bulkloadPathOfPartition, filePath.getName());
       newFiles.add(new Path(mobFamilyDir, filePath.getName()));
     } else {
       // remove the new files
@@ -450,10 +454,10 @@ public class PartitionedMobCompactor extends MobCompactor {
   /**
    * Compacts the del files in batches which avoids opening too many files.
    * @param request The compaction request.
-   * @param delFilePaths
+   * @param delFilePaths Del file paths to compact
    * @return The paths of new del files after merging or the original files if no merging
    *         is necessary.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   protected List<Path> compactDelFiles(PartitionedMobCompactionRequest request,
     List<Path> delFilePaths) throws IOException {
@@ -462,14 +466,14 @@ public class PartitionedMobCompactor extends MobCompactor {
     }
     // when there are more del files than the number that is allowed, merge it firstly.
     int offset = 0;
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     while (offset < delFilePaths.size()) {
       // get the batch
       int batch = compactionBatchSize;
       if (delFilePaths.size() - offset < compactionBatchSize) {
         batch = delFilePaths.size() - offset;
       }
-      List<StoreFile> batchedDelFiles = new ArrayList<StoreFile>();
+      List<StoreFile> batchedDelFiles = new ArrayList<>();
       if (batch == 1) {
         // only one file left, do not compact it, directly add it to the new files.
         paths.add(delFilePaths.get(offset));
@@ -493,7 +497,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param request The compaction request.
    * @param delFiles The del files.
    * @return The path of new del file after merging.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private Path compactDelFilesInBatch(PartitionedMobCompactionRequest request,
     List<StoreFile> delFiles) throws IOException {
@@ -507,8 +511,8 @@ public class PartitionedMobCompactor extends MobCompactor {
         column.getCompactionCompression(), HConstants.EMPTY_START_ROW, compactionCacheConfig,
         cryptoContext);
       filePath = writer.getPath();
-      List<Cell> cells = new ArrayList<Cell>();
-      boolean hasMore = false;
+      List<Cell> cells = new ArrayList<>();
+      boolean hasMore;
       ScannerContext scannerContext =
               ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
       do {
@@ -544,7 +548,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param filesToCompact The files to be compacted.
    * @param scanType The scan type.
    * @return The store scanner.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private StoreScanner createScanner(List<StoreFile> filesToCompact, ScanType scanType)
     throws IOException {
@@ -561,17 +565,23 @@ public class PartitionedMobCompactor extends MobCompactor {
 
   /**
    * Bulkloads the current file.
+   *
+   * @param connection to use to get admin/RegionLocator
    * @param table The current table.
    * @param bulkloadDirectory The path of bulkload directory.
    * @param fileName The current file name.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
-  private void bulkloadRefFile(Table table, Path bulkloadDirectory, String fileName)
+  private void bulkloadRefFile(Connection connection, Table table, Path bulkloadDirectory,
+                               String fileName)
     throws IOException {
     // bulkload the ref file
     try {
       LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-      bulkload.doBulkLoad(bulkloadDirectory, (HTable)table);
+      bulkload.doBulkLoad(bulkloadDirectory,
+        connection.getAdmin(),
+        table,
+        connection.getRegionLocator(table.getName()));
     } catch (Exception e) {
       // delete the committed mob file
       deletePath(new Path(mobFamilyDir, fileName));
@@ -587,7 +597,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param writer The mob file writer.
    * @param maxSeqId Maximum sequence id.
    * @param mobCellsCount The number of mob cells.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private void closeMobFileWriter(StoreFileWriter writer, long maxSeqId, long mobCellsCount)
     throws IOException {
@@ -606,7 +616,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param writer The ref file writer.
    * @param maxSeqId Maximum sequence id.
    * @param bulkloadTime The timestamp at which the bulk load file is created.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private void closeRefFileWriter(StoreFileWriter writer, long maxSeqId, long bulkloadTime)
     throws IOException {
@@ -626,7 +636,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * Gets the max seqId and number of cells of the store files.
    * @param storeFiles The store files.
    * @return The pair of the max seqId and number of cells of the store files.
-   * @throws IOException
+   * @throws IOException if IO failure is encountered
    */
   private Pair<Long, Long> getFileInfo(List<StoreFile> storeFiles) throws IOException {
     long maxSeqId = 0;
@@ -639,7 +649,7 @@ public class PartitionedMobCompactor extends MobCompactor {
         maxKeyCount += Bytes.toLong(count);
       }
     }
-    return new Pair<Long, Long>(Long.valueOf(maxSeqId), Long.valueOf(maxKeyCount));
+    return new Pair<>(Long.valueOf(maxSeqId), Long.valueOf(maxKeyCount));
   }
 
   /**
