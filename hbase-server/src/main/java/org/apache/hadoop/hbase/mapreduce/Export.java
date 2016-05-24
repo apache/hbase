@@ -86,7 +86,7 @@ public class Export extends Configured implements Tool {
     return job;
   }
 
-  public static Scan getConfiguredScanForJob(Configuration conf, String[] args) throws IOException {
+  private static Scan getConfiguredScanForJob(Configuration conf, String[] args) throws IOException {
     Scan s = new Scan();
     // Optional arguments.
     // Set Scan Versions
@@ -150,7 +150,7 @@ public class Export extends Configured implements Tool {
   /*
    * @param errorMsg Error message.  Can be null.
    */
-  public static void usage(final String errorMsg) {
+  private static void usage(final String errorMsg) {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
@@ -176,12 +176,11 @@ public class Export extends Configured implements Tool {
     System.err.println("For tables with very wide rows consider setting the batch size as below:\n"
         + "   -D" + EXPORT_BATCHING + "=10");
   }
-  public static boolean checkArguments(final String[] args) {
-    return args.length >= 2;
-  }
+
+
   @Override
   public int run(String[] args) throws Exception {
-    if (!checkArguments(args)) {
+    if (args.length < 2) {
       usage("Wrong number of arguments: " + args.length);
       return -1;
     }

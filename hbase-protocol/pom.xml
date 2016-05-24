@@ -180,7 +180,6 @@
                           <include>Comparator.proto</include>
                           <include>Encryption.proto</include>
                           <include>ErrorHandling.proto</include>
-                          <include>Export.proto</include>
                           <include>FS.proto</include>
                           <include>Filter.proto</include>
                           <include>HBase.proto</include>
