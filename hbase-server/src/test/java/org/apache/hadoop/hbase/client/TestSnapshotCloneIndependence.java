@@ -94,9 +94,6 @@ public class TestSnapshotCloneIndependence {
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 15);
     // enable snapshot support
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    // disable the ui
-    conf.setInt("hbase.regionsever.info.port", -1);
-    conf.setInt("hbase.master.info.port", -1);
     // change the flush size to a small amount, regulating number of store files
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // so make sure we get a compaction when doing a load, but keep around

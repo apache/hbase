@@ -44,10 +44,6 @@ public abstract class AbstractTestShell {
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
 
-    //NOTE: Below Settings are disabled for taskmonitor_test
-    TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, -1);
-    TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, true);
     // Security setup configuration
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     VisibilityTestUtil.enableVisiblityLabels(TEST_UTIL.getConfiguration());

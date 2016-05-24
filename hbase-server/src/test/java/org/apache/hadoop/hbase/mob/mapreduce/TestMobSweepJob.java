@@ -47,8 +47,6 @@ public class TestMobSweepJob {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
     TEST_UTIL.getConfiguration().set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
         JavaSerialization.class.getName() + "," + WritableSerialization.class.getName());
     TEST_UTIL.startMiniCluster();

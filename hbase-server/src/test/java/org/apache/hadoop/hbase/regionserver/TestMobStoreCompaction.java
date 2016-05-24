@@ -85,8 +85,6 @@ public class TestMobStoreCompaction {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
-    UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
     UTIL.startMiniCluster(1);
   }
 

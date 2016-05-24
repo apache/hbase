@@ -55,9 +55,6 @@ public class TestMobDataBlockEncoding {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
-
     TEST_UTIL.startMiniCluster(1);
   }
 

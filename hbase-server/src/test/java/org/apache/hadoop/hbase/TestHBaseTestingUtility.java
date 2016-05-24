@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -224,7 +225,7 @@ public class TestHBaseTestingUtility {
       // kill another active zk server
       currentActivePort = cluster2.killCurrentActiveZooKeeperServer();
       assertTrue(currentActivePort >= defaultClientPort);
-      assertTrue(cluster2.getClientPort() == currentActivePort);      
+      assertTrue(cluster2.getClientPort() == currentActivePort);
       assertEquals(2, cluster2.getBackupZooKeeperServerNum());
       assertEquals(3, cluster2.getZooKeeperServerNum());
 
@@ -417,5 +418,29 @@ public class TestHBaseTestingUtility {
     int port2 = portAllocator.randomFreePort();
     assertNotEquals(port1, port2);
     Mockito.verify(random, Mockito.times(3)).nextInt(Mockito.any(Integer.class));
+  }
+
+  @Test
+  public void testOverridingOfDefaultPorts() {
+
+    // confirm that default port properties being overridden to "-1"
+    Configuration defaultConfig = HBaseConfiguration.create();
+    defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
+    defaultConfig.setInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
+    HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
+    assertEquals(-1, htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+    assertEquals(-1, htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+
+    // confirm that nonDefault (custom) port settings are NOT overridden
+    Configuration altConfig = HBaseConfiguration.create();
+    final int nonDefaultMasterInfoPort = 3333;
+    final int nonDefaultRegionServerPort = 4444;
+    altConfig.setInt(HConstants.MASTER_INFO_PORT, nonDefaultMasterInfoPort);
+    altConfig.setInt(HConstants.REGIONSERVER_PORT, nonDefaultRegionServerPort);
+    htu = new HBaseTestingUtility(altConfig);
+    assertEquals(nonDefaultMasterInfoPort,
+            htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+    assertEquals(nonDefaultRegionServerPort
+            , htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
   }
 }

@@ -143,7 +143,10 @@ import org.apache.zookeeper.ZooKeeper.States;
  * Not all methods work with the real cluster.
  * Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set
- * logging levels nor make changes to configuration parameters.
+ * logging levels.
+ * In the configuration properties, default values for master-info-port and
+ * region-server-port are overridden such that a random port will be assigned (thus
+ * avoiding port contention if another local HBase instance is already running).
  * <p>To preserve test data directories, pass the system property "hbase.testing.preserve.testdir"
  * setting it to true.
  */
@@ -310,6 +313,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
+
+    // prevent contention for ports if other hbase thread(s) already running
+    if (conf != null) {
+      if (conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
+              == HConstants.DEFAULT_MASTER_INFOPORT) {
+        conf.setInt(HConstants.MASTER_INFO_PORT, -1);
+        LOG.debug("Config property " + HConstants.MASTER_INFO_PORT + " changed to -1");
+      }
+      if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
+              == HConstants.DEFAULT_REGIONSERVER_PORT) {
+        conf.setInt(HConstants.REGIONSERVER_PORT, -1);
+        LOG.debug("Config property " + HConstants.REGIONSERVER_PORT + " changed to -1");
+      }
+    }
   }
 
   /**
