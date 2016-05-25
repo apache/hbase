@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
@@ -308,8 +309,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static boolean checkTable(HBaseAdmin admin, TestOptions opts) throws IOException {
     TableName tableName = TableName.valueOf(opts.tableName);
     boolean needsDelete = false, exists = admin.tableExists(tableName);
-    boolean isReadCmd = opts.cmdName.toLowerCase().contains("read")
-      || opts.cmdName.toLowerCase().contains("scan");
+    boolean isReadCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("read")
+      || opts.cmdName.toLowerCase(Locale.ROOT).contains("scan");
     if (!exists && isReadCmd) {
       throw new IllegalStateException(
         "Must specify an existing table for read commands. Run a write command first.");

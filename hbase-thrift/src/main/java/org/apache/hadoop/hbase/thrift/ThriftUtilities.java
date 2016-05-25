@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.thrift;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -55,7 +56,7 @@ public class ThriftUtilities {
   static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in)
       throws IllegalArgument {
     Compression.Algorithm comp =
-      Compression.getCompressionAlgorithmByName(in.compression.toLowerCase());
+      Compression.getCompressionAlgorithmByName(in.compression.toLowerCase(Locale.ROOT));
     BloomType bt =
       BloomType.valueOf(in.bloomFilterType);
 

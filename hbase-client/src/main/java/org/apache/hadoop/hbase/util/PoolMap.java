@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -255,7 +256,7 @@ public class PoolMap<K, V> implements Map<K, V> {
     }
 
     public static String fuzzyNormalize(String name) {
-      return name != null ? name.replaceAll("-", "").trim().toLowerCase() : "";
+      return name != null ? name.replaceAll("-", "").trim().toLowerCase(Locale.ROOT) : "";
     }
 
     public static PoolType fuzzyMatch(String name) {

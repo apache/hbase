@@ -37,6 +37,7 @@ import javax.xml.ws.http.HTTPException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -273,8 +274,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
         if (role.get("hostRef").get("hostId").getTextValue().equals(hostId) &&
             role.get("type")
                 .getTextValue()
-                .toLowerCase()
-                .equals(roleType.toLowerCase())) {
+                .toLowerCase(Locale.ROOT)
+                .equals(roleType.toLowerCase(Locale.ROOT))) {
           roleValue = role.get(property).getTextValue();
           break;
         }
@@ -327,7 +328,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     // APIs tend to take commands in lowercase, so convert them to save the trouble later.
     @Override
     public String toString() {
-      return name().toLowerCase();
+      return name().toLowerCase(Locale.ROOT);
     }
   }
 

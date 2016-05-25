@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 
 /**
@@ -63,7 +64,7 @@ public class CreateSnapshot extends AbstractHBaseTool {
             admin = new HBaseAdmin(conf);
             HBaseProtos.SnapshotDescription.Type type = HBaseProtos.SnapshotDescription.Type.FLUSH;
             if (snapshotType != null) {
-                type = HBaseProtos.SnapshotDescription.Type.valueOf(snapshotName.toUpperCase());
+                type = HBaseProtos.SnapshotDescription.Type.valueOf(snapshotName.toUpperCase(Locale.ROOT));
             }
 
             admin.snapshot(snapshotName, TableName.valueOf(tableName), type);

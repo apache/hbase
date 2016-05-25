@@ -50,6 +50,7 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 /**
  * Tracks the availability of the catalog tables
@@ -383,7 +384,7 @@ public class CatalogTracker {
       } else if (cause != null && cause instanceof EOFException) {
         // Catch. Other end disconnected us.
       } else if (cause != null && cause.getMessage() != null &&
-        cause.getMessage().toLowerCase().contains("connection reset")) {
+        cause.getMessage().toLowerCase(Locale.ROOT).contains("connection reset")) {
         // Catch. Connection reset.
       } else {
         throw ioe;

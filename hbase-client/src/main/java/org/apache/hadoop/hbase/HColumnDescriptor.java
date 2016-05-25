@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -445,11 +446,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     setBlockCacheEnabled(blockCacheEnabled);
     setTimeToLive(timeToLive);
     setCompressionType(Compression.Algorithm.
-      valueOf(compression.toUpperCase()));
+      valueOf(compression.toUpperCase(Locale.ROOT)));
     setDataBlockEncoding(DataBlockEncoding.
-        valueOf(dataBlockEncoding.toUpperCase()));
+        valueOf(dataBlockEncoding.toUpperCase(Locale.ROOT)));
     setBloomFilterType(BloomType.
-      valueOf(bloomFilter.toUpperCase()));
+      valueOf(bloomFilter.toUpperCase(Locale.ROOT)));
     setBlocksize(blocksize);
     setScope(scope);
   }
@@ -568,7 +569,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     if (n == null) {
       return Compression.Algorithm.NONE;
     }
-    return Compression.Algorithm.valueOf(n.toUpperCase());
+    return Compression.Algorithm.valueOf(n.toUpperCase(Locale.ROOT));
   }
 
   /** @return compression type being used for the column family for major
@@ -578,7 +579,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     if (n == null) {
       return getCompression();
     }
-    return Compression.Algorithm.valueOf(n.toUpperCase());
+    return Compression.Algorithm.valueOf(n.toUpperCase(Locale.ROOT));
   }
 
   /** @return maximum number of versions */
@@ -673,7 +674,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setCompressionType(Compression.Algorithm type) {
-    return setValue(COMPRESSION, type.getName().toUpperCase());
+    return setValue(COMPRESSION, type.getName().toUpperCase(Locale.ROOT));
   }
 
   /** @return data block encoding algorithm used on disk */
@@ -760,7 +761,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public HColumnDescriptor setCompactionCompressionType(
       Compression.Algorithm type) {
-    return setValue(COMPRESSION_COMPACT, type.getName().toUpperCase());
+    return setValue(COMPRESSION_COMPACT, type.getName().toUpperCase(Locale.ROOT));
   }
 
   /**
@@ -786,7 +787,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     String value = getValue(KEEP_DELETED_CELLS);
     if (value != null) {
       // toUpperCase for backwards compatibility
-      return KeepDeletedCells.valueOf(value.toUpperCase());
+      return KeepDeletedCells.valueOf(value.toUpperCase(Locale.ROOT));
     }
     return DEFAULT_KEEP_DELETED;
   }
@@ -871,7 +872,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     if (n == null) {
       n = DEFAULT_BLOOMFILTER;
     }
-    return BloomType.valueOf(n.toUpperCase());
+    return BloomType.valueOf(n.toUpperCase(Locale.ROOT));
   }
 
   /**

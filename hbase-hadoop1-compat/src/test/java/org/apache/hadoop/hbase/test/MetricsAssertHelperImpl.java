@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -226,6 +227,6 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   }
 
   private String canonicalizeMetricName(String in) {
-    return in.toLowerCase().replaceAll("[^A-Za-z0-9 ]", "");
+    return in.toLowerCase(Locale.ROOT).replaceAll("[^A-Za-z0-9 ]", "");
   }
 }

@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1885,7 +1886,7 @@ public abstract class FSUtils {
           return false;
         }
 
-        if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+        if (!regionName.toLowerCase(Locale.ROOT).matches("[0-9a-f]+")) {
           return false;
         }
         return true;

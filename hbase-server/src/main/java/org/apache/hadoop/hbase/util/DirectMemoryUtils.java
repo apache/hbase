@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,7 +88,7 @@ public class DirectMemoryUtils {
     long multiplier = 1; //for the byte case.
     for (String s : arguments) {
       if (s.contains("-XX:MaxDirectMemorySize=")) {
-        String memSize = s.toLowerCase()
+        String memSize = s.toLowerCase(Locale.ROOT)
             .replace("-xx:maxdirectmemorysize=", "").trim();
 
         if (memSize.contains("k")) {

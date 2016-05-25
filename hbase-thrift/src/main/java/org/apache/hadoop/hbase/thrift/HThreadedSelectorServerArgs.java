@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.util.Locale;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -79,7 +80,7 @@ public class HThreadedSelectorServerArgs extends TThreadedSelectorServer.Args {
     int acceptQueueSizePerThread = conf.getInt(
         ACCEPT_QUEUE_SIZE_PER_THREAD_CONF_KEY, getAcceptQueueSizePerThread());
     AcceptPolicy acceptPolicy = AcceptPolicy.valueOf(conf.get(
-        ACCEPT_POLICY_CONF_KEY, getAcceptPolicy().toString()).toUpperCase());
+        ACCEPT_POLICY_CONF_KEY, getAcceptPolicy().toString()).toUpperCase(Locale.ROOT));
 
     super.selectorThreads(selectorThreads)
          .workerThreads(workerThreads)

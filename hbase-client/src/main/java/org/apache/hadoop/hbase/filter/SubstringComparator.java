@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.Locale;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -52,8 +53,8 @@ public class SubstringComparator extends ByteArrayComparable {
    * @param substr the substring
    */
   public SubstringComparator(String substr) {
-    super(Bytes.toBytes(substr.toLowerCase()));
-    this.substr = substr.toLowerCase();
+    super(Bytes.toBytes(substr.toLowerCase(Locale.ROOT)));
+    this.substr = substr.toLowerCase(Locale.ROOT);
   }
 
   @Override
@@ -63,7 +64,7 @@ public class SubstringComparator extends ByteArrayComparable {
 
   @Override
   public int compareTo(byte[] value, int offset, int length) {
-    return Bytes.toString(value, offset, length).toLowerCase().contains(substr) ? 0
+    return Bytes.toString(value, offset, length).toLowerCase(Locale.ROOT).contains(substr) ? 0
         : 1;
   }
 

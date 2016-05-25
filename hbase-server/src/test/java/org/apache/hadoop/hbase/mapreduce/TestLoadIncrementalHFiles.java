@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -353,7 +354,7 @@ public class TestLoadIncrementalHFiles {
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     HColumnDescriptor family =
-        new HColumnDescriptor(Bytes.toBytes(new String(FAMILY).toUpperCase()));
+        new HColumnDescriptor(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT)));
     htd.addFamily(family);
 
     try {

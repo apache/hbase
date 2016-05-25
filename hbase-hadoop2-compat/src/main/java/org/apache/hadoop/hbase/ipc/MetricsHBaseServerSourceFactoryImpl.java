@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.HashMap;
+import java.util.Locale;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -48,7 +49,7 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
       source = new MetricsHBaseServerSourceImpl(
           METRICS_NAME,
           METRICS_DESCRIPTION,
-          context.toLowerCase(),
+          context.toLowerCase(Locale.ROOT),
           context + METRICS_JMX_CONTEXT_SUFFIX, wrapper);
 
       //Store back in storage

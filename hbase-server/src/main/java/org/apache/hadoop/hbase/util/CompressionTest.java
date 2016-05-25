@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -47,7 +48,7 @@ public class CompressionTest {
   static final Log LOG = LogFactory.getLog(CompressionTest.class);
 
   public static boolean testCompression(String codec) {
-    codec = codec.toLowerCase();
+    codec = codec.toLowerCase(Locale.ROOT);
 
     Compression.Algorithm a;
 
@@ -103,7 +104,7 @@ public class CompressionTest {
 
     System.err.println(
       "Usage: CompressionTest <path> " +
-      StringUtils.join( Compression.Algorithm.values(), "|").toLowerCase() +
+      StringUtils.join( Compression.Algorithm.values(), "|").toLowerCase(Locale.ROOT) +
       "\n" +
       "For example:\n" +
       "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");
