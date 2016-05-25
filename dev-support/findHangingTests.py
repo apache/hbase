@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -19,64 +19,47 @@
 # script to find hanging test from Jenkins build output
 # usage: ./findHangingTests.py <url of Jenkins build console>
 #
-import urllib2
+import re
+import requests
 import sys
-import string
-if len(sys.argv) != 2 :
-  print "ERROR : Provide the jenkins job console URL as the only argument."
-  exit(1)
-print "Fetching " + sys.argv[1]
-response = urllib2.urlopen(sys.argv[1])
-i = 0;
-tests = {}
-failed_tests = {}
-summary = 0
-host = False
-patch = False
-branch = False
-while True:
-  n = response.readline()
-  if n == "" :
-    break
-  if not host and n.find("Building remotely on") >= 0:
-    host = True
-    print n.strip()    
-    continue
-  if not patch and n.find("Testing patch for ") >= 0:
-    patch = True
-    print n.strip()    
-    continue
-  if not branch and n.find("Testing patch on branch ") >= 0:
-    branch = True
-    print n.strip()    
-    continue
-  if n.find("PATCH APPLICATION FAILED") >= 0:
-    print "PATCH APPLICATION FAILED"
-    sys.exit(1) 
-  if summary == 0 and n.find("Running tests.") >= 0:
-    summary = summary + 1
-    continue
-  if summary == 1 and n.find("[INFO] Reactor Summary:") >= 0:
-    summary = summary + 1
-    continue
-  if summary == 2 and n.find("[INFO] Apache HBase ") >= 0:
-    sys.stdout.write(n)
-    continue
-  if n.find("org.apache.hadoop.hbase") < 0:
-    continue 
-  test_name = string.strip(n[n.find("org.apache.hadoop.hbase"):len(n)])
-  if n.find("Running org.apache.hadoop.hbase") > -1 :
-    tests[test_name] = False
-  if n.find("Tests run:") > -1 :
-    if n.find("FAILURE") > -1 or n.find("ERROR") > -1:
-      failed_tests[test_name] = True
-    tests[test_name] = True
-response.close()
 
-print "Printing hanging tests"
-for key, value in tests.iteritems():
-  if value == False:
-    print "Hanging test : " + key
-print "Printing Failing tests"
-for key, value in failed_tests.iteritems():
-  print "Failing test : " + key
+def get_hanging_tests(console_url):
+    response = requests.get(console_url)
+    if response.status_code != 200:
+        print "Error getting consoleText. Response = {} {}".format(
+            response.status_code, response.reason)
+        return {}
+
+    all_tests = set()
+    hanging_tests = set()
+    failed_tests = set()
+    for line in response.content.splitlines():
+        result1 = re.match("^Running org.apache.hadoop.hbase.(\w*\.)*(\w*)", line)
+        if result1:
+            test_case = result1.group(2)
+            hanging_tests.add(test_case)
+            all_tests.add(test_case)
+        result2 = re.match("^Tests run:.*- in org.apache.hadoop.hbase.(\w*\.)*(\w*)", line)
+        if result2:
+            test_case = result2.group(2)
+            hanging_tests.remove(test_case)
+            if "FAILURE!" in line:
+                failed_tests.add(test_case)
+    print "Result > total tests: {:4}   hanging : {:4}   failed : {:4}".format(
+        len(all_tests), len(hanging_tests), len(failed_tests))
+    return [all_tests, hanging_tests, failed_tests]
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2 :
+        print "ERROR : Provide the jenkins job console URL as the only argument."
+        sys.exit(1)
+
+    print "Fetching {}".format(sys.argv[1])
+    [all_tests, hanging_tests, failed_tests] = get_hanging_tests(sys.argv[1])
+    print "Found {} hanging tests:".format(len(hanging_tests))
+    for test in hanging_tests:
+        print test
+    print "\n"
+    print "Found {} failed tests:".format(len(failed_tests))
+    for test in failed_tests:
+        print test
