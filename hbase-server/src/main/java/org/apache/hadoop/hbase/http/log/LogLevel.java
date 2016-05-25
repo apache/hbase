@@ -72,14 +72,14 @@ public class LogLevel {
       System.out.println("Connecting to " + url);
       URLConnection connection = url.openConnection();
       connection.connect();
-
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
-      for(String line; (line = in.readLine()) != null; )
-        if (line.startsWith(MARKER)) {
-          System.out.println(TAG.matcher(line).replaceAll(""));
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(
+               connection.getInputStream()))) {
+        for(String line; (line = in.readLine()) != null; ) {
+          if (line.startsWith(MARKER)) {
+            System.out.println(TAG.matcher(line).replaceAll(""));
+          }
         }
-      in.close();
+      }
     } catch (IOException ioe) {
       System.err.println("" + ioe);
     }

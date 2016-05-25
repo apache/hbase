@@ -177,8 +177,10 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
         if (m.matches()) {
           File file = new File(parentDirStr, "." + pathPrefix + "."
             + path.getName() + "." + System.currentTimeMillis() + "." + m.group(1));
-          IOUtils.copyBytes(jarFile.getInputStream(entry),
-            new FileOutputStream(file), conf, true);
+          try (FileOutputStream outStream = new FileOutputStream(file)) {
+            IOUtils.copyBytes(jarFile.getInputStream(entry),
+              outStream, conf, true);
+          }
           file.deleteOnExit();
           addURL(file.toURI().toURL());
         }

@@ -1926,27 +1926,27 @@ public class ZKUtil {
     int port = sp.length > 1 ? Integer.parseInt(sp[1])
         : HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
 
-    Socket socket = new Socket();
     InetSocketAddress sockAddr = new InetSocketAddress(host, port);
-    socket.connect(sockAddr, timeout);
+    try (Socket socket = new Socket()) {
+      socket.connect(sockAddr, timeout);
 
-    socket.setSoTimeout(timeout);
-    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-    BufferedReader in = new BufferedReader(new InputStreamReader(
-      socket.getInputStream()));
-    out.println("stat");
-    out.flush();
-    ArrayList<String> res = new ArrayList<String>();
-    while (true) {
-      String line = in.readLine();
-      if (line != null) {
-        res.add(line);
-      } else {
-        break;
+      socket.setSoTimeout(timeout);
+      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+      BufferedReader in = new BufferedReader(new InputStreamReader(
+        socket.getInputStream()));
+      out.println("stat");
+      out.flush();
+      ArrayList<String> res = new ArrayList<String>();
+      while (true) {
+        String line = in.readLine();
+        if (line != null) {
+          res.add(line);
+        } else {
+          break;
+        }
       }
+      return res.toArray(new String[res.size()]);
     }
-    socket.close();
-    return res.toArray(new String[res.size()]);
   }
 
   private static void logRetrievedMsg(final ZooKeeperWatcher zkw,

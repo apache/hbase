@@ -124,8 +124,9 @@ public class JarFinder {
                                                    jarDir));
       }
     }
-    JarOutputStream zos = new JarOutputStream(new FileOutputStream(jarFile));
-    jarDir(dir, "", zos);
+    try (JarOutputStream zos = new JarOutputStream(new FileOutputStream(jarFile))) {
+      jarDir(dir, "", zos);
+    }
   }
 
   /**
