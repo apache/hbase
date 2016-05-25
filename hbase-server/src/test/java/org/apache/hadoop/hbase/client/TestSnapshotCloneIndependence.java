@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,24 +33,34 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.snapshot.TestRestoreFlushSnapshotFromClient;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.Timeout;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({MediumTests.class, ClientTests.class})
 public class TestSnapshotCloneIndependence {
   private static final Log LOG = LogFactory.getLog(TestSnapshotCloneIndependence.class);
+
+  @Rule
+  public Timeout globalTimeout = Timeout.seconds(60);
+
+  @Rule
+  public TestName testName = new TestName();
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -59,12 +68,20 @@ public class TestSnapshotCloneIndependence {
   private static final String STRING_TABLE_NAME = "test";
   private static final String TEST_FAM_STR = "fam";
   protected static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
-  protected static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
   private static final int CLEANER_INTERVAL = 100;
+
+  private FileSystem fs;
+  private Path rootDir;
+  private Admin admin;
+  private TableName originalTableName;
+  private Table originalTable;
+  private TableName cloneTableName;
+  private int countOriginalTable;
+  String snapshotNameAsString;
+  byte[] snapshotName;
 
   /**
    * Setup the config for the cluster and start it
-   * @throws Exception on fOailure
    */
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -104,12 +121,25 @@ public class TestSnapshotCloneIndependence {
 
   @Before
   public void setup() throws Exception {
-    createTable(TABLE_NAME, TEST_FAM);
+    fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+
+    admin = UTIL.getHBaseAdmin();
+    originalTableName = TableName.valueOf("test" + testName.getMethodName());
+    cloneTableName = TableName.valueOf("test-clone-" + originalTableName);
+    snapshotNameAsString = "snapshot_" + originalTableName;
+    snapshotName = Bytes.toBytes(snapshotNameAsString);
+
+    originalTable = createTable(originalTableName, TEST_FAM);
+    loadData(originalTable, TEST_FAM);
+    countOriginalTable = countRows(originalTable);
+    System.out.println("Original table has: " + countOriginalTable + " rows");
   }
 
   @After
   public void tearDown() throws Exception {
-    UTIL.deleteTable(TABLE_NAME);
+    UTIL.deleteTable(originalTableName);
+    UTIL.deleteTable(cloneTableName);
     SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
@@ -127,78 +157,77 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an online snapshot.
    */
-  @Ignore ("Flakey. Fix") @Test (timeout=300000)
+  @Test
   public void testOnlineSnapshotAppendIndependent() throws Exception {
-    runTestSnapshotAppendIndependent(true);
+    createAndCloneSnapshot(true);
+    runTestSnapshotAppendIndependent();
   }
 
   /**
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an offline snapshot.
    */
-  @Test (timeout=300000)
-  @Ignore
+  @Test
   public void testOfflineSnapshotAppendIndependent() throws Exception {
-    runTestSnapshotAppendIndependent(false);
+    createAndCloneSnapshot(false);
+    runTestSnapshotAppendIndependent();
   }
 
   /**
    * Verify that adding metadata to the cloned table will not affect the original, and vice-versa
    * when it is taken as an online snapshot.
    */
-  @Test (timeout=300000)
+  @Test
   public void testOnlineSnapshotMetadataChangesIndependent() throws Exception {
-    runTestSnapshotMetadataChangesIndependent(true);
+    createAndCloneSnapshot(true);
+    runTestSnapshotMetadataChangesIndependent();
   }
 
   /**
    * Verify that adding netadata to the cloned table will not affect the original, and vice-versa
    * when is taken as an online snapshot.
    */
-  @Test (timeout=300000)
-  @Ignore
+  @Test
   public void testOfflineSnapshotMetadataChangesIndependent() throws Exception {
-    runTestSnapshotMetadataChangesIndependent(false);
+    createAndCloneSnapshot(false);
+    runTestSnapshotMetadataChangesIndependent();
   }
 
   /**
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test (timeout=300000)
-  @Ignore
+  @Test
   public void testOfflineSnapshotRegionOperationsIndependent() throws Exception {
-    runTestRegionOperationsIndependent(false);
+    createAndCloneSnapshot(false);
+    runTestRegionOperationsIndependent();
   }
 
   /**
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test (timeout=300000)
+  @Test
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
-    runTestRegionOperationsIndependent(true);
+    createAndCloneSnapshot(true);
+    runTestRegionOperationsIndependent();
   }
 
-  @Test (timeout=300000)
-  @Ignore
+  @Test
   public void testOfflineSnapshotDeleteIndependent() throws Exception {
-    runTestSnapshotDeleteIndependent(false);
+    createAndCloneSnapshot(false);
+    runTestSnapshotDeleteIndependent();
   }
 
-  @Ignore ("Flakey test") @Test (timeout=300000)
+  @Test
   public void testOnlineSnapshotDeleteIndependent() throws Exception {
-    runTestSnapshotDeleteIndependent(true);
+    createAndCloneSnapshot(true);
+    runTestSnapshotDeleteIndependent();
   }
 
   private static void waitOnSplit(Connection c, final Table t, int originalCount) throws Exception {
     for (int i = 0; i < 200; i++) {
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException e) {
-        // Restore the interrupted status
-        Thread.currentThread().interrupt();
-      }
+      Threads.sleepWithoutInterrupt(500);
       try (RegionLocator locator = c.getRegionLocator(t.getName())) {
         if (locator.getAllRegionLocations().size() > originalCount) {
           return;
@@ -208,240 +237,125 @@ public class TestSnapshotCloneIndependence {
     throw new Exception("Split did not increase the number of regions");
   }
 
-  /*
-   * Take a snapshot of a table, add data, and verify that this only
-   * affects one table
+  /**
+   * Takes the snapshot of originalTable and clones the snapshot to another tables.
+   * If {@code online} is false, the original table is disabled during taking snapshot, so also
+   * enables it again.
    * @param online - Whether the table is online or not during the snapshot
    */
-  private void runTestSnapshotAppendIndependent(boolean online) throws Exception {
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+  private void createAndCloneSnapshot(boolean online) throws Exception {
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, TEST_FAM_STR,
+      snapshotNameAsString, rootDir, fs, online);
 
-    Admin admin = UTIL.getHBaseAdmin();
-    final long startTime = System.currentTimeMillis();
-    final TableName localTableName =
-        TableName.valueOf(STRING_TABLE_NAME + startTime);
+    // If offline, enable the table disabled by snapshot testing util.
+    if (!online) {
+      admin.enableTable(originalTableName);
+      UTIL.waitTableAvailable(originalTableName);
+    }
 
-    try (Table original = createTable(localTableName, TEST_FAM)) {
-      loadData(original, TEST_FAM);
-      final int origTableRowCount = countRows(original);
+    admin.cloneSnapshot(snapshotName, cloneTableName);
+    UTIL.waitUntilAllRegionsAssigned(cloneTableName);
+  }
 
-      // Take a snapshot
-      final String snapshotNameAsString = "snapshot_" + localTableName;
-      byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
+  /**
+   * Verify that adding data to original table or clone table doesn't affect other table.
+   */
+  private void runTestSnapshotAppendIndependent() throws Exception {
+    try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
+      final int clonedTableRowCount = countRows(clonedTable);
 
-      SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
-          snapshotNameAsString, rootDir, fs, online);
+      Assert.assertEquals(
+        "The line counts of original and cloned tables do not match after clone. ",
+        countOriginalTable, clonedTableRowCount);
 
-      if (!online) {
-        tryDisable(admin, localTableName);
-      }
-      TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
-      admin.cloneSnapshot(snapshotName, cloneTableName);
+      // Attempt to add data to the test
+      Put p = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
+      originalTable.put(p);
 
-      try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
+      // Verify that the new row is not in the restored table
+      Assert.assertEquals("The row count of the original table was not modified by the put",
+        countOriginalTable + 1, countRows(originalTable));
+      Assert.assertEquals(
+        "The row count of the cloned table changed as a result of addition to the original",
+        clonedTableRowCount, countRows(clonedTable));
 
-        // Make sure that all the regions are available before starting
-        UTIL.waitUntilAllRegionsAssigned(cloneTableName);
+      Put p2 = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      p2.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
+      clonedTable.put(p2);
 
-        final int clonedTableRowCount = countRows(clonedTable);
-
-        Assert.assertEquals(
-            "The line counts of original and cloned tables do not match after clone. ",
-            origTableRowCount, clonedTableRowCount);
-
-        // Attempt to add data to the test
-        final String rowKey = "new-row-" + System.currentTimeMillis();
-
-        Put p = new Put(Bytes.toBytes(rowKey));
-        p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
-        original.put(p);
-
-        // Verify that it is not present in the original table
-        Assert.assertEquals("The row count of the original table was not modified by the put",
-            origTableRowCount + 1, countRows(original));
-        Assert.assertEquals(
-            "The row count of the cloned table changed as a result of addition to the original",
-            clonedTableRowCount, countRows(clonedTable));
-
-        p = new Put(Bytes.toBytes(rowKey));
-        p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
-        clonedTable.put(p);
-
-        // Verify that the new family is not in the restored table's description
-        Assert.assertEquals(
-            "The row count of the original table was modified by the put to the clone",
-            origTableRowCount + 1, countRows(original));
-        Assert.assertEquals("The row count of the cloned table was not modified by the put",
-            clonedTableRowCount + 1, countRows(clonedTable));
-      }
+      // Verify that the row is not added to the original table.
+      Assert.assertEquals(
+        "The row count of the original table was modified by the put to the clone",
+        countOriginalTable + 1, countRows(originalTable));
+      Assert.assertEquals("The row count of the cloned table was not modified by the put",
+        clonedTableRowCount + 1, countRows(clonedTable));
     }
   }
 
-  /*
-   * Take a snapshot of a table, do a split, and verify that this only affects one table
-   * @param online - Whether the table is online or not during the snapshot
+  /**
+   * Do a split, and verify that this only affects one table
    */
-  private void runTestRegionOperationsIndependent(boolean online) throws Exception {
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-
-    // Create a table
-    Admin admin = UTIL.getHBaseAdmin();
-    final long startTime = System.currentTimeMillis();
-    final TableName localTableName =
-        TableName.valueOf(STRING_TABLE_NAME + startTime);
-    Table original = createTable(localTableName, TEST_FAM);
-    loadData(original, TEST_FAM);
-    final int loadedTableCount = countRows(original);
-    System.out.println("Original table has: " + loadedTableCount + " rows");
-
-    final String snapshotNameAsString = "snapshot_" + localTableName;
-
-    // Create a snapshot
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
-        snapshotNameAsString, rootDir, fs, online);
-
-    if (!online) {
-      tryDisable(admin, localTableName);
-    }
-
-    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
-
-    // Clone the snapshot
-    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
-    admin.cloneSnapshot(snapshotName, cloneTableName);
-
+  private void runTestRegionOperationsIndependent() throws Exception {
     // Verify that region information is the same pre-split
     ((ClusterConnection) UTIL.getConnection()).clearRegionCache();
-    List<HRegionInfo> originalTableHRegions = admin.getTableRegions(localTableName);
+    List<HRegionInfo> originalTableHRegions = admin.getTableRegions(originalTableName);
 
     final int originalRegionCount = originalTableHRegions.size();
     final int cloneTableRegionCount = admin.getTableRegions(cloneTableName).size();
     Assert.assertEquals(
-        "The number of regions in the cloned table is different than in the original table.",
-        originalRegionCount, cloneTableRegionCount);
+      "The number of regions in the cloned table is different than in the original table.",
+      originalRegionCount, cloneTableRegionCount);
 
     // Split a region on the parent table
     admin.splitRegion(originalTableHRegions.get(0).getRegionName());
-    waitOnSplit(UTIL.getConnection(), original, originalRegionCount);
+    waitOnSplit(UTIL.getConnection(), originalTable, originalRegionCount);
 
     // Verify that the cloned table region is not split
     final int cloneTableRegionCount2 = admin.getTableRegions(cloneTableName).size();
     Assert.assertEquals(
-        "The number of regions in the cloned table changed though none of its regions were split.",
-        cloneTableRegionCount, cloneTableRegionCount2);
+      "The number of regions in the cloned table changed though none of its regions were split.",
+      cloneTableRegionCount, cloneTableRegionCount2);
   }
 
-  /*
-   * Take a snapshot of a table, add metadata, and verify that this only
-   * affects one table
-   * @param online - Whether the table is online or not during the snapshot
+  /**
+   * Add metadata, and verify that this only affects one table
    */
-  private void runTestSnapshotMetadataChangesIndependent(boolean online) throws Exception {
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-
-    // Create a table
-    Admin admin = UTIL.getHBaseAdmin();
-    final long startTime = System.currentTimeMillis();
-    final TableName localTableName =
-        TableName.valueOf(STRING_TABLE_NAME + startTime);
-    Table original = createTable(localTableName, TEST_FAM);
-    loadData(original, TEST_FAM);
-
-    final String snapshotNameAsString = "snapshot_" + localTableName;
-
-    // Create a snapshot
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
-        snapshotNameAsString, rootDir, fs, online);
-
-    if (!online) {
-      tryDisable(admin, localTableName);
-    }
-
-    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
-
-    // Clone the snapshot
-    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
-    admin.cloneSnapshot(snapshotName, cloneTableName);
-
+  private void runTestSnapshotMetadataChangesIndependent() throws Exception {
     // Add a new column family to the original table
     byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
 
-    tryDisable(admin, localTableName);
-    admin.addColumnFamily(localTableName, hcd);
+    admin.disableTable(originalTableName);
+    admin.addColumnFamily(originalTableName, hcd);
 
     // Verify that it is not in the snapshot
-    admin.enableTable(localTableName);
-    UTIL.waitTableAvailable(localTableName);
+    admin.enableTable(originalTableName);
+    UTIL.waitTableAvailable(originalTableName);
 
     // get a description of the cloned table
     // get a list of its families
     // assert that the family is there
-    HTableDescriptor originalTableDescriptor = original.getTableDescriptor();
+    HTableDescriptor originalTableDescriptor = originalTable.getTableDescriptor();
     HTableDescriptor clonedTableDescriptor = admin.getTableDescriptor(cloneTableName);
 
     Assert.assertTrue("The original family was not found. There is something wrong. ",
-        originalTableDescriptor.hasFamily(TEST_FAM));
+      originalTableDescriptor.hasFamily(TEST_FAM));
     Assert.assertTrue("The original family was not found in the clone. There is something wrong. ",
-        clonedTableDescriptor.hasFamily(TEST_FAM));
+      clonedTableDescriptor.hasFamily(TEST_FAM));
 
     Assert.assertTrue("The new family was not found. ",
-        originalTableDescriptor.hasFamily(TEST_FAM_2));
+      originalTableDescriptor.hasFamily(TEST_FAM_2));
     Assert.assertTrue("The new family was not found. ",
-        !clonedTableDescriptor.hasFamily(TEST_FAM_2));
+      !clonedTableDescriptor.hasFamily(TEST_FAM_2));
   }
 
-  private void tryDisable(Admin admin, TableName localTableName) throws IOException {
-    int offlineRetry = 0;
-    while ( offlineRetry < 5 && admin.isTableEnabled(localTableName)) {
-      try {
-        admin.disableTable(localTableName);
-      } catch (IOException ioe) {
-        LOG.warn("Error disabling the table", ioe);
-      }
-      offlineRetry ++;
-    }
-  }
-
-  /*
-   * Take a snapshot of a table, add data, and verify that deleting the snapshot does not affect
-   * either table.
-   * @param online - Whether the table is online or not during the snapshot
+  /**
+   * Verify that deleting the snapshot does not affect either table.
    */
-  private void runTestSnapshotDeleteIndependent(boolean online) throws Exception {
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-
-    final Admin admin = UTIL.getHBaseAdmin();
-    final long startTime = System.currentTimeMillis();
-    final TableName localTableName =
-        TableName.valueOf(STRING_TABLE_NAME + startTime);
-
-    try (Table original = createTable(localTableName, TEST_FAM)) {
-      loadData(original, TEST_FAM);
-    }
-
-    // Take a snapshot
-    final String snapshotNameAsString = "snapshot_" + localTableName;
-    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
-
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
-        snapshotNameAsString, rootDir, fs, online);
-
-    if (!online) {
-      tryDisable(admin, localTableName);
-    }
-
-    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
-    admin.cloneSnapshot(snapshotName, cloneTableName);
-
-    UTIL.waitUntilAllRegionsAssigned(cloneTableName);
-
+  private void runTestSnapshotDeleteIndependent() throws Exception {
     // Ensure the original table does not reference the HFiles anymore
-    admin.majorCompact(localTableName);
+    admin.majorCompact(originalTableName);
 
     // Deleting the snapshot used to break the cloned table by deleting in-use HFiles
     admin.deleteSnapshot(snapshotName);
@@ -451,7 +365,7 @@ public class TestSnapshotCloneIndependence {
       Thread.sleep(5000);
     } while (!admin.listSnapshots(snapshotNameAsString).isEmpty());
 
-    try (Table original = UTIL.getConnection().getTable(localTableName)) {
+    try (Table original = UTIL.getConnection().getTable(originalTableName)) {
       try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
         // Verify that all regions of both tables are readable
         final int origTableRowCount = countRows(original);
@@ -462,7 +376,7 @@ public class TestSnapshotCloneIndependence {
   }
 
   protected Table createTable(final TableName table, byte[] family) throws Exception {
-    Table t = UTIL.createTable(table, family);
+   Table t = UTIL.createTable(table, family);
     // Wait for everything to be ready with the table
     UTIL.waitUntilAllRegionsAssigned(table);
 
@@ -470,8 +384,8 @@ public class TestSnapshotCloneIndependence {
     return t;
   }
 
-  protected void loadData(final Table table, byte[]... families) throws Exception {
-    UTIL.loadTable(table, families);
+  public void loadData(final Table table, byte[]... families) throws Exception {
+    UTIL.loadTable(originalTable, TEST_FAM);
   }
 
   protected int countRows(final Table table, final byte[]... families) throws Exception {
