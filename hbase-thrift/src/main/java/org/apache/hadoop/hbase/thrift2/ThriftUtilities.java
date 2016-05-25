@@ -430,6 +430,10 @@ public class ThriftUtilities {
       out.setReversed(in.isReversed());
     }
 
+    if (in.isSetCacheBlocks()) {
+      out.setCacheBlocks(in.isCacheBlocks());
+    }
+
     return out;
   }
 
