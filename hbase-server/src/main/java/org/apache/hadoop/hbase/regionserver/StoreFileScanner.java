@@ -253,9 +253,9 @@ public class StoreFileScanner implements KeyValueScanner {
     while(enforceMVCC
         && cur != null
         && (cur.getSequenceId() > readPt)) {
-      hfs.next();
+      boolean hasNext = hfs.next();
       setCurrentCell(hfs.getCell());
-      if (this.stopSkippingKVsIfNextRow
+      if (hasNext && this.stopSkippingKVsIfNextRow
           && getComparator().compareRows(cur, startKV) > 0) {
         return false;
       }
