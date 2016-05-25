@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -4067,7 +4068,7 @@ public class HBaseFsck extends Configured implements Closeable {
           errors.progress();
           String encodedName = regionDir.getPath().getName();
           // ignore directories that aren't hexadecimal
-          if (!encodedName.toLowerCase().matches("[0-9a-f]+")) {
+          if (!encodedName.toLowerCase(Locale.ROOT).matches("[0-9a-f]+")) {
             continue;
           }
 

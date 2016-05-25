@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -975,7 +976,7 @@ public class RegionMover extends AbstractHBaseTool {
     if (cmd.hasOption('t')) {
       rmbuilder.timeout(Integer.parseInt(cmd.getOptionValue('t')));
     }
-    this.loadUnload = cmd.getOptionValue("o").toLowerCase();
+    this.loadUnload = cmd.getOptionValue("o").toLowerCase(Locale.ROOT);
   }
 
   @Override

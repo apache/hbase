@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
@@ -205,7 +206,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     @Override
     public String getCommand(ServiceType service, Operation op) {
       return String.format("%s/bin/hbase-daemon.sh %s %s %s", hbaseHome, confDir,
-          op.toString().toLowerCase(), service);
+          op.toString().toLowerCase(Locale.ROOT), service);
     }
   }
 
@@ -235,7 +236,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     @Override
     public String getCommand(ServiceType service, Operation op) {
       return String.format("%s/sbin/hadoop-daemon.sh %s %s %s", hadoopHome, confDir,
-          op.toString().toLowerCase(), service);
+          op.toString().toLowerCase(Locale.ROOT), service);
     }
   }
 
@@ -264,7 +265,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
     @Override
     public String getCommand(ServiceType service, Operation op) {
-      return String.format("%s/bin/zkServer.sh %s", zookeeperHome, op.toString().toLowerCase());
+      return String.format("%s/bin/zkServer.sh %s", zookeeperHome, op.toString().toLowerCase(Locale.ROOT));
     }
 
     @Override

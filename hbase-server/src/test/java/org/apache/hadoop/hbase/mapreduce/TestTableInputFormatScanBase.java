@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -176,8 +177,8 @@ public abstract class TestTableInputFormatScanBase {
    */
   protected void testScanFromConfiguration(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase() : "Empty") +
-      "To" + (stop != null ? stop.toUpperCase() : "Empty");
+    String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") +
+      "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.set(TableInputFormat.INPUT_TABLE, TABLE_NAME.getNameAsString());
     c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILY));
@@ -213,8 +214,8 @@ public abstract class TestTableInputFormatScanBase {
    */
   protected void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
-      "To" + (stop != null ? stop.toUpperCase() : "Empty");
+    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") +
+      "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();

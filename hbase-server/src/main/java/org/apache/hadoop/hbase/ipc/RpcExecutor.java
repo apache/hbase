@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -221,7 +222,7 @@ public abstract class RpcExecutor {
    */
   public void resizeQueues(Configuration conf) {
     String configKey = RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH;
-    if (name != null && name.toLowerCase().contains("priority")) {
+    if (name != null && name.toLowerCase(Locale.ROOT).contains("priority")) {
       configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
     }
     currentQueueLimit = conf.getInt(configKey, currentQueueLimit);

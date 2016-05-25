@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest.filter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -65,11 +66,11 @@ public class GzipFilter implements Filter {
     String acceptEncoding = request.getHeader("accept-encoding");
     String contentType = request.getHeader("content-type");
     if ((contentEncoding != null) &&
-        (contentEncoding.toLowerCase().indexOf("gzip") > -1)) {
+        (contentEncoding.toLowerCase(Locale.ROOT).indexOf("gzip") > -1)) {
       request = new GZIPRequestWrapper(request);
     }
     if (((acceptEncoding != null) &&
-          (acceptEncoding.toLowerCase().indexOf("gzip") > -1)) ||
+          (acceptEncoding.toLowerCase(Locale.ROOT).indexOf("gzip") > -1)) ||
         ((contentType != null) && mimeTypes.contains(contentType))) {
       response = new GZIPResponseWrapper(response);
     }

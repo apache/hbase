@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
@@ -3447,7 +3448,7 @@ public final class ProtobufUtil {
    */
   public static HBaseProtos.SnapshotDescription.Type
       createProtosSnapShotDescType(String snapshotDesc) {
-    return HBaseProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase());
+    return HBaseProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase(Locale.ROOT));
   }
 
   /**

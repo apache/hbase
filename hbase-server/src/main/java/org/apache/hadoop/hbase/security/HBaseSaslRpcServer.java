@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.security;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.security.auth.callback.Callback;
@@ -53,7 +54,7 @@ public class HBaseSaslRpcServer {
 
   public static void init(Configuration conf) {
     saslProps = SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection",
-          QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+          QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
   }
 
   public static Map<String, String> getSaslProps() {

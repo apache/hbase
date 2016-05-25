@@ -45,6 +45,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -331,7 +332,7 @@ public class RpcClientImpl extends AbstractRpcClient {
               "Can't obtain server Kerberos config key from SecurityInfo");
         }
         serverPrincipal = SecurityUtil.getServerPrincipal(
-            conf.get(serverKey), server.getAddress().getCanonicalHostName().toLowerCase());
+            conf.get(serverKey), server.getAddress().getCanonicalHostName().toLowerCase(Locale.ROOT));
         if (LOG.isDebugEnabled()) {
           LOG.debug("RPC Server Kerberos principal name for service="
               + remoteId.getServiceName() + " is " + serverPrincipal);
@@ -618,7 +619,7 @@ public class RpcClientImpl extends AbstractRpcClient {
         final OutputStream out2) throws IOException {
       saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal, fallbackAllowed,
           conf.get("hbase.rpc.protection",
-              QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+              QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
       return saslRpcClient.saslConnect(in2, out2);
     }
 

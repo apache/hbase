@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -92,7 +93,7 @@ public class TestRegionServerHostname {
           assertTrue(servers.size() == NUM_RS+1);
           for (String server : servers) {
             assertTrue("From zookeeper: " + server + " hostname: " + hostName,
-              server.startsWith(hostName.toLowerCase()+","));
+              server.startsWith(hostName.toLowerCase(Locale.ROOT)+","));
           }
           zkw.close();
         } finally {

@@ -38,6 +38,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -262,7 +263,7 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
     return new SaslClientHandler(realTicket, authMethod, token, serverPrincipal,
         client.fallbackAllowed,
         client.conf.get("hbase.rpc.protection",
-          SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()),
+          SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
         getChannelHeaderBytes(authMethod),
         new SaslClientHandler.SaslExceptionHandler() {
           @Override
@@ -479,7 +480,7 @@ public class AsyncRpcChannelImpl implements AsyncRpcChannel {
         throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
       }
       this.serverPrincipal = SecurityUtil.getServerPrincipal(client.conf.get(serverKey),
-        address.getAddress().getCanonicalHostName().toLowerCase());
+        address.getAddress().getCanonicalHostName().toLowerCase(Locale.ROOT));
       if (LOG.isDebugEnabled()) {
         LOG.debug("RPC Server Kerberos principal name for service=" + serviceName + " is "
             + serverPrincipal);

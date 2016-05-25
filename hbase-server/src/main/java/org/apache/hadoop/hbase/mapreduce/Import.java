@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -401,7 +402,7 @@ public class Import extends Configured implements Tool {
       filter = instantiateFilter(conf);
       String durabilityStr = conf.get(WAL_DURABILITY);
       if(durabilityStr != null){
-        durability = Durability.valueOf(durabilityStr.toUpperCase());
+        durability = Durability.valueOf(durabilityStr.toUpperCase(Locale.ROOT));
         LOG.info("setting WAL durability to " + durability);
       } else {
         LOG.info("setting WAL durability to default.");

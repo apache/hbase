@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -225,8 +226,8 @@ public abstract class MultiTableInputFormatTestBase {
   private void testScan(String start, String stop, String last)
       throws IOException, InterruptedException, ClassNotFoundException {
     String jobName =
-        "Scan" + (start != null ? start.toUpperCase() : "Empty") + "To" +
-            (stop != null ? stop.toUpperCase() : "Empty");
+        "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To" +
+            (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
