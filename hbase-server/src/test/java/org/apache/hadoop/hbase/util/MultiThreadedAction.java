@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.util;
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.MUTATE_INFO;
 
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,14 +41,11 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
@@ -57,7 +56,7 @@ public abstract class MultiThreadedAction {
 
   protected final TableName tableName;
   protected final Configuration conf;
-  protected final HConnection connection; // all reader / writer threads will share this connection
+  protected final ClusterConnection connection; // all reader / writer threads will share this connection
 
   protected int numThreads = 1;
 
@@ -152,7 +151,7 @@ public abstract class MultiThreadedAction {
     this.dataGenerator = dataGen;
     this.tableName = tableName;
     this.actionLetter = actionLetter;
-    this.connection = (HConnection) ConnectionFactory.createConnection(conf);
+    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
   }
 
   public void start(long startKey, long endKey, int numThreads) throws IOException {

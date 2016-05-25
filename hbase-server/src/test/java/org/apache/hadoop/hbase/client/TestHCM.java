@@ -223,7 +223,7 @@ public class TestHCM {
   }
 
   /**
-   * Naive test to check that HConnection#getAdmin returns a properly constructed HBaseAdmin object
+   * Naive test to check that Connection#getAdmin returns a properly constructed HBaseAdmin object
    * @throws IOException Unable to construct admin
    */
   @Test
@@ -435,7 +435,7 @@ public class TestHCM {
       assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
     }
 
-    MasterCallable masterCallable = new MasterCallable((HConnection) TEST_UTIL.getConnection()) {
+    MasterCallable masterCallable = new MasterCallable(TEST_UTIL.getConnection()) {
       public Object call(int timeout) throws IOException {
         return null;
       }
@@ -452,7 +452,7 @@ public class TestHCM {
     TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
-    boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -993,7 +993,7 @@ public class TestHCM {
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
 
     // This should be enough to connect
-    HConnection conn = (HConnection) ConnectionFactory.createConnection(c);
+    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(c);
     assertTrue(conn.isMasterRunning());
     conn.close();
   }

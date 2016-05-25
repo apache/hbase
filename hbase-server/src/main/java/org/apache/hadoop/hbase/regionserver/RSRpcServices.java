@@ -1033,7 +1033,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     priority = createPriority();
     String name = rs.getProcessName() + "/" + initialIsa.toString();
-    // Set how many times to retry talking to another server over HConnection.
+    // Set how many times to retry talking to another server over Connection.
     ConnectionUtils.setServerSideHConnectionRetriesConfig(rs.conf, name, LOG);
     try {
       rpcServer = new RpcServer(rs, name, getServices(),

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -482,7 +483,7 @@ public abstract class TestRSGroupsBase {
     }
 
     final AdminProtos.AdminService.BlockingInterface targetRS =
-        admin.getConnection().getAdmin(targetServer);
+      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
 
     //move target server to group
     rsGroupAdmin.moveServers(Sets.newHashSet(targetServer.getHostPort()),
@@ -571,7 +572,7 @@ public abstract class TestRSGroupsBase {
     ServerName targetServer = ServerName.parseServerName(
         appInfo.getServers().iterator().next().toString());
     AdminProtos.AdminService.BlockingInterface targetRS =
-        admin.getConnection().getAdmin(targetServer);
+      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
     HRegionInfo targetRegion = ProtobufUtil.getOnlineRegions(targetRS).get(0);
     Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
 
@@ -612,7 +613,7 @@ public abstract class TestRSGroupsBase {
     targetServer = ServerName.parseServerName(
         newServers.iterator().next().toString());
     targetRS =
-        admin.getConnection().getAdmin(targetServer);
+      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
     Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
     Assert.assertEquals(tableName,
         ProtobufUtil.getOnlineRegions(targetRS).get(0).getTable());

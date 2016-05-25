@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -64,13 +63,11 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -98,7 +95,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-
 /**
  * Main implementation of {@link Connection} and {@link ClusterConnection} interfaces.
  * Encapsulates connection to zookeeper and regionservers.
@@ -124,8 +120,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * Once it's set under nonceGeneratorCreateLock, it is never unset or changed.
    */
   private static volatile NonceGenerator nonceGenerator = null;
-  /** The nonce generator lock. Only taken when creating HConnection, which gets a private copy. */
-  private static Object nonceGeneratorCreateLock = new Object();
+  /** The nonce generator lock. Only taken when creating Connection, which gets a private copy. */
+  private static final Object nonceGeneratorCreateLock = new Object();
 
   private final AsyncProcess asyncProcess;
   // single tracker per connection
@@ -136,7 +132,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   // package protected for the tests
   ClusterStatusListener clusterStatusListener;
-
 
   private final Object metaRegionLock = new Object();
 
@@ -162,23 +157,23 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final ConnectionConfiguration connectionConfig;
 
   // Client rpc instance.
-  private RpcClient rpcClient;
+  private final RpcClient rpcClient;
 
   private final MetaCache metaCache;
   private final MetricsConnection metrics;
 
   protected User user;
 
-  private RpcRetryingCallerFactory rpcCallerFactory;
+  private final RpcRetryingCallerFactory rpcCallerFactory;
 
-  private RpcControllerFactory rpcControllerFactory;
+  private final RpcControllerFactory rpcControllerFactory;
 
   private final RetryingCallerInterceptor interceptor;
 
   /**
    * Cluster registry of basic info such as clusterid and meta region location.
    */
-   Registry registry;
+  Registry registry;
 
   private final ClientBackoffPolicy backoffPolicy;
 
@@ -279,30 +274,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return ng;
   }
 
-
-  @Override
-  public HTableInterface getTable(String tableName) throws IOException {
-    return getTable(TableName.valueOf(tableName));
-  }
-
-  @Override
-  public HTableInterface getTable(byte[] tableName) throws IOException {
-    return getTable(TableName.valueOf(tableName));
-  }
-
   @Override
   public HTableInterface getTable(TableName tableName) throws IOException {
     return getTable(tableName, getBatchPool());
-  }
-
-  @Override
-  public HTableInterface getTable(String tableName, ExecutorService pool) throws IOException {
-    return getTable(TableName.valueOf(tableName), pool);
-  }
-
-  @Override
-  public HTableInterface getTable(byte[] tableName, ExecutorService pool) throws IOException {
-    return getTable(TableName.valueOf(tableName), pool);
   }
 
   @Override
@@ -463,7 +437,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   protected String clusterId = null;
 
   protected void retrieveClusterId() {
-    if (clusterId != null) return;
+    if (clusterId != null) {
+      return;
+    }
     this.clusterId = this.registry.getClusterId();
     if (clusterId == null) {
       clusterId = HConstants.CLUSTER_ID_DEFAULT;
@@ -519,21 +495,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return reload? relocateRegion(tableName, row): locateRegion(tableName, row);
   }
 
-  @Override
-  public HRegionLocation getRegionLocation(final byte[] tableName,
-      final byte [] row, boolean reload)
-  throws IOException {
-    return getRegionLocation(TableName.valueOf(tableName), row, reload);
-  }
 
   @Override
   public boolean isTableEnabled(TableName tableName) throws IOException {
     return getTableState(tableName).inStates(TableState.State.ENABLED);
-  }
-
-  @Override
-  public boolean isTableEnabled(byte[] tableName) throws IOException {
-    return isTableEnabled(TableName.valueOf(tableName));
   }
 
   @Override
@@ -542,24 +507,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public boolean isTableDisabled(byte[] tableName) throws IOException {
-    return isTableDisabled(TableName.valueOf(tableName));
-  }
-
-  @Override
-  public boolean isTableAvailable(final TableName tableName) throws IOException {
-    return isTableAvailable(tableName, null);
-  }
-
-  @Override
-  public boolean isTableAvailable(final byte[] tableName) throws IOException {
-    return isTableAvailable(TableName.valueOf(tableName));
-  }
-
-  @Override
   public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
       throws IOException {
-    if (this.closed) throw new IOException(toString() + " closed");
+    if (this.closed) {
+      throw new IOException(toString() + " closed");
+    }
     try {
       if (!isTableEnabled(tableName)) {
         LOG.debug("Table " + tableName + " not enabled");
@@ -616,12 +568,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public boolean isTableAvailable(final byte[] tableName, final byte[][] splitKeys)
-      throws IOException {
-    return isTableAvailable(TableName.valueOf(tableName), splitKeys);
-  }
-
-  @Override
   public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
     RegionLocations locations = locateRegion(HRegionInfo.getTable(regionName),
       HRegionInfo.getStartKey(regionName), false, true);
@@ -644,12 +590,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public List<HRegionLocation> locateRegions(final byte[] tableName)
-  throws IOException {
-    return locateRegions(TableName.valueOf(tableName));
-  }
-
-  @Override
   public List<HRegionLocation> locateRegions(final TableName tableName,
       final boolean useCache, final boolean offlined) throws IOException {
     List<HRegionInfo> regions = MetaTableAccessor
@@ -669,23 +609,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public List<HRegionLocation> locateRegions(final byte[] tableName,
-     final boolean useCache, final boolean offlined) throws IOException {
-    return locateRegions(TableName.valueOf(tableName), useCache, offlined);
-  }
-
-  @Override
   public HRegionLocation locateRegion(
       final TableName tableName, final byte[] row) throws IOException{
     RegionLocations locations = locateRegion(tableName, row, true, true);
     return locations == null ? null : locations.getRegionLocation();
-  }
-
-  @Override
-  public HRegionLocation locateRegion(final byte[] tableName,
-      final byte [] row)
-  throws IOException{
-    return locateRegion(TableName.valueOf(tableName), row);
   }
 
   @Override
@@ -711,12 +638,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public HRegionLocation relocateRegion(final byte[] tableName,
-      final byte [] row) throws IOException {
-    return relocateRegion(TableName.valueOf(tableName), row);
-  }
-
-  @Override
   public RegionLocations locateRegion(final TableName tableName,
     final byte [] row, boolean useCache, boolean retry)
   throws IOException {
@@ -727,7 +648,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   public RegionLocations locateRegion(final TableName tableName,
     final byte [] row, boolean useCache, boolean retry, int replicaId)
   throws IOException {
-    if (this.closed) throw new IOException(toString() + " closed");
+    if (this.closed) {
+      throw new IOException(toString() + " closed");
+    }
     if (tableName== null || tableName.getName().length == 0) {
       throw new IllegalArgumentException(
           "table name cannot be null or zero length");
@@ -966,11 +889,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache(tableName);
   }
 
-  @Override
-  public void clearRegionCache(final byte[] tableName) {
-    clearRegionCache(TableName.valueOf(tableName));
-  }
-
   /**
    * Put a newly discovered HRegionLocation into the cache.
    * @param tableName The table name.
@@ -993,11 +911,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * State of the MasterService connection/setup.
    */
   static class MasterServiceState {
-    HConnection connection;
+    Connection connection;
     MasterProtos.MasterService.BlockingInterface stub;
     int userCount;
 
-    MasterServiceState(final HConnection connection) {
+    MasterServiceState(final Connection connection) {
       super();
       this.connection = connection;
     }
@@ -1189,7 +1107,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     /**
      * Create a stub against the master.  Retry if necessary.
      * @return A stub to do <code>intf</code> against the master
-     * @throws org.apache.hadoop.hbase.MasterNotRunningException
+     * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
      */
     Object makeStub() throws IOException {
       // The lock must be at the beginning to prevent multiple master creations
@@ -1245,26 +1163,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public AdminProtos.AdminService.BlockingInterface getAdmin(final ServerName serverName)
       throws IOException {
-    return getAdmin(serverName, false);
-  }
-
-  @Override
-  // Nothing is done w/ the 'master' parameter.  It is ignored.
-  public AdminProtos.AdminService.BlockingInterface getAdmin(final ServerName serverName,
-    final boolean master)
-  throws IOException {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
     String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(),
-        serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
+      serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
     this.connectionLock.putIfAbsent(key, key);
-    AdminProtos.AdminService.BlockingInterface stub = null;
+    AdminProtos.AdminService.BlockingInterface stub;
     synchronized (this.connectionLock.get(key)) {
       stub = (AdminProtos.AdminService.BlockingInterface)this.stubs.get(key);
       if (stub == null) {
         BlockingRpcChannel channel =
-            this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
+          this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
         stub = AdminProtos.AdminService.newBlockingStub(channel);
         this.stubs.put(key, stub);
       }
@@ -1798,7 +1708,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   void releaseMaster(MasterServiceState mss) {
-    if (mss.getStub() == null) return;
+    if (mss.getStub() == null) {
+      return;
+    }
     synchronized (masterAndZKLock) {
       --mss.userCount;
     }
@@ -1833,20 +1745,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache(location);
   }
 
-  @Override
-  public void updateCachedLocations(final TableName tableName, byte[] rowkey,
-      final Object exception, final HRegionLocation source) {
-    assert source != null;
-    updateCachedLocations(tableName, source.getRegionInfo().getRegionName()
-        , rowkey, exception, source.getServerName());
-  }
-
   /**
    * Update the location with the new value (if the exception is a RegionMovedException)
    * or delete it from the cache. Does nothing if we can be sure from the exception that
    * the location is still accurate, or if the cache has already been updated.
    * @param exception an object (to simplify user code) on which we will try to find a nested
-   *  or wrapped or both RegionMovedException
+   *   or wrapped or both RegionMovedException
    * @param source server that is the source of the location update.
    */
   @Override
@@ -1916,84 +1820,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache(regionInfo);
   }
 
-  @Override
-  public void updateCachedLocations(final byte[] tableName, byte[] rowkey,
-    final Object exception, final HRegionLocation source) {
-    updateCachedLocations(TableName.valueOf(tableName), rowkey, exception, source);
-  }
-
-  /**
-   * @deprecated since 0.96 Use {@link org.apache.hadoop.hbase.client.HTableInterface#batch} instead
-   */
-  @Override
-  @Deprecated
-  public void processBatch(List<? extends Row> list,
-      final TableName tableName,
-      ExecutorService pool,
-      Object[] results) throws IOException, InterruptedException {
-    // This belongs in HTable!!! Not in here.  St.Ack
-
-    // results must be the same size as list
-    if (results.length != list.size()) {
-      throw new IllegalArgumentException(
-        "argument results must be the same size as argument list");
-    }
-    processBatchCallback(list, tableName, pool, results, null);
-  }
-
-  /**
-   * @deprecated Unsupported API
-   */
-  @Override
-  @Deprecated
-  public void processBatch(List<? extends Row> list,
-      final byte[] tableName,
-      ExecutorService pool,
-      Object[] results) throws IOException, InterruptedException {
-    processBatch(list, TableName.valueOf(tableName), pool, results);
-  }
-
-  /**
-   * Send the queries in parallel on the different region servers. Retries on failures.
-   * If the method returns it means that there is no error, and the 'results' array will
-   * contain no exception. On error, an exception is thrown, and the 'results' array will
-   * contain results and exceptions.
-   * @deprecated since 0.96
-   *  Use {@link org.apache.hadoop.hbase.client.HTable#processBatchCallback} instead
-   */
-  @Override
-  @Deprecated
-  public <R> void processBatchCallback(
-    List<? extends Row> list,
-    TableName tableName,
-    ExecutorService pool,
-    Object[] results,
-    Batch.Callback<R> callback)
-    throws IOException, InterruptedException {
-
-    AsyncProcess.AsyncRequestFuture ars = this.asyncProcess.submitAll(
-        pool, tableName, list, callback, results);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
-    }
-  }
-
-  /**
-   * @deprecated Unsupported API
-   */
-  @Override
-  @Deprecated
-  public <R> void processBatchCallback(
-    List<? extends Row> list,
-    byte[] tableName,
-    ExecutorService pool,
-    Object[] results,
-    Batch.Callback<R> callback)
-    throws IOException, InterruptedException {
-    processBatchCallback(list, TableName.valueOf(tableName), pool, results, callback);
-  }
-
   // For tests to override.
   protected AsyncProcess createAsyncProcess(Configuration conf) {
     // No default pool available.
@@ -2022,41 +1848,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @VisibleForTesting
   int getNumberOfCachedRegionLocations(final TableName tableName) {
     return metaCache.getNumberOfCachedRegionLocations(tableName);
-  }
-
-  /**
-   * @deprecated always return false since 0.99
-   */
-  @Override
-  @Deprecated
-  public void setRegionCachePrefetch(final TableName tableName, final boolean enable) {
-  }
-
-  /**
-   * @deprecated always return false since 0.99
-   */
-  @Override
-  @Deprecated
-  public void setRegionCachePrefetch(final byte[] tableName,
-      final boolean enable) {
-  }
-
-  /**
-   * @deprecated always return false since 0.99
-   */
-  @Override
-  @Deprecated
-  public boolean getRegionCachePrefetch(TableName tableName) {
-    return false;
-  }
-
-  /**
-   * @deprecated always return false since 0.99
-   */
-  @Override
-  @Deprecated
-  public boolean getRegionCachePrefetch(byte[] tableName) {
-    return false;
   }
 
   @Override
@@ -2133,146 +1924,20 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     close();
   }
 
-  /**
-   * @deprecated Use {@link org.apache.hadoop.hbase.client.Admin#listTables()} instead
-   */
-  @Deprecated
-  @Override
-  public HTableDescriptor[] listTables() throws IOException {
-    MasterKeepAliveConnection master = getKeepAliveMasterService();
-    try {
-      MasterProtos.GetTableDescriptorsRequest req =
-        RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
-      return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    } finally {
-      master.close();
-    }
-  }
-
-  /**
-   * @deprecated Use {@link org.apache.hadoop.hbase.client.Admin#listTableNames()} instead
-   */
-  @Deprecated
-  @Override
-  public String[] getTableNames() throws IOException {
-    TableName[] tableNames = listTableNames();
-    String[] result = new String[tableNames.length];
-    for (int i = 0; i < tableNames.length; i++) {
-      result[i] = tableNames[i].getNameAsString();
-    }
-    return result;
-  }
-
-  /**
-   * @deprecated Use {@link org.apache.hadoop.hbase.client.Admin#listTableNames()} instead
-   */
-  @Deprecated
-  @Override
-  public TableName[] listTableNames() throws IOException {
-    MasterKeepAliveConnection master = getKeepAliveMasterService();
-    try {
-      return ProtobufUtil.getTableNameArray(master.getTableNames(null,
-        MasterProtos.GetTableNamesRequest.newBuilder().build())
-        .getTableNamesList());
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    } finally {
-      master.close();
-    }
-  }
-
-  /**
-   * @deprecated Use {@link
-   *  org.apache.hadoop.hbase.client.Admin#getTableDescriptorsByTableName(java.util.List)} instead
-   */
-  @Deprecated
-  @Override
-  public HTableDescriptor[] getHTableDescriptorsByTableName(
-      List<TableName> tableNames) throws IOException {
-    if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
-    MasterKeepAliveConnection master = getKeepAliveMasterService();
-    try {
-      MasterProtos.GetTableDescriptorsRequest req =
-        RequestConverter.buildGetTableDescriptorsRequest(tableNames);
-      return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    } finally {
-      master.close();
-    }
-  }
-
-  /**
-   * @deprecated Use
-   *  {@link org.apache.hadoop.hbase.client.Admin#getTableDescriptorsByTableName(java.util.List)}
-   *  instead
-   */
-  @Deprecated
-  @Override
-  public HTableDescriptor[] getHTableDescriptors(List<String> names) throws IOException {
-    List<TableName> tableNames = new ArrayList<TableName>(names.size());
-    for(String name : names) {
-      tableNames.add(TableName.valueOf(name));
-    }
-
-    return getHTableDescriptorsByTableName(tableNames);
-  }
-
   @Override
   public NonceGenerator getNonceGenerator() {
     return nonceGenerator;
   }
 
-  /**
-   * Connects to the master to get the table descriptor.
-   * @param tableName table name
-   * @throws java.io.IOException if the connection to master fails or if the table
-   *  is not found.
-   * @deprecated Use {@link
-   *  org.apache.hadoop.hbase.client.Admin#getTableDescriptor(org.apache.hadoop.hbase.TableName)}
-   *  instead
-   */
-  @Deprecated
-  @Override
-  public HTableDescriptor getHTableDescriptor(final TableName tableName)
-  throws IOException {
-    if (tableName == null) return null;
-    MasterKeepAliveConnection master = getKeepAliveMasterService();
-    MasterProtos.GetTableDescriptorsResponse htds;
-    try {
-      MasterProtos.GetTableDescriptorsRequest req =
-          RequestConverter.buildGetTableDescriptorsRequest(tableName);
-      htds = master.getTableDescriptors(null, req);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    } finally {
-      master.close();
-    }
-    if (!htds.getTableSchemaList().isEmpty()) {
-      return ProtobufUtil.convertToHTableDesc(htds.getTableSchemaList().get(0));
-    }
-    throw new TableNotFoundException(tableName.getNameAsString());
-  }
-
-  /**
-   * @deprecated Use {@link
-   *  org.apache.hadoop.hbase.client.Admin#getTableDescriptor(org.apache.hadoop.hbase.TableName)}
-   *  instead
-   */
-  @Deprecated
-  @Override
-  public HTableDescriptor getHTableDescriptor(final byte[] tableName)
-  throws IOException {
-    return getHTableDescriptor(TableName.valueOf(tableName));
-  }
-
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
-    if (this.closed) throw new IOException(toString() + " closed");
+    if (this.closed) {
+      throw new IOException(toString() + " closed");
+    }
     TableState tableState = MetaTableAccessor.getTableState(this, tableName);
-    if (tableState == null) throw new TableNotFoundException(tableName);
+    if (tableState == null) {
+      throw new TableNotFoundException(tableName);
+    }
     return tableState;
   }
 

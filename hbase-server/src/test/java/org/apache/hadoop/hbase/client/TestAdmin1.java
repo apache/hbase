@@ -631,12 +631,12 @@ public class TestAdmin1 {
       expectedRegions) throws IOException {
     int numRS = c.getCurrentNrHRS();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
-    Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {
       ServerName server = loc.getServerName();
       List<HRegionInfo> regs = server2Regions.get(server);
       if (regs == null) {
-        regs = new ArrayList<HRegionInfo>();
+        regs = new ArrayList<>();
         server2Regions.put(server, regs);
       }
       regs.add(loc.getRegionInfo());
@@ -1176,7 +1176,7 @@ public class TestAdmin1 {
     byte[][] splitRows = new byte[2][];
     splitRows[0] = new byte[]{(byte)'4'};
     splitRows[1] = new byte[]{(byte)'7'};
-    TEST_UTIL.getHBaseAdmin().createTable(desc, splitRows);
+    TEST_UTIL.getAdmin().createTable(desc, splitRows);
     List<HRegion> oldRegions;
     do {
       oldRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
@@ -1203,7 +1203,7 @@ public class TestAdmin1 {
     // the element at index 1 would be a replica (since the metareader gives us ordered
     // regions). Try splitting that region via the split API . Should fail
     try {
-      TEST_UTIL.getHBaseAdmin().splitRegion(regions.get(1).getFirst().getRegionName());
+      TEST_UTIL.getAdmin().splitRegion(regions.get(1).getFirst().getRegionName());
     } catch (IllegalArgumentException ex) {
       gotException = true;
     }
@@ -1222,7 +1222,7 @@ public class TestAdmin1 {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
-      TEST_UTIL.getHBaseAdmin().mergeRegions(regions.get(1).getFirst().getEncodedNameAsBytes(),
+      TEST_UTIL.getAdmin().mergeRegions(regions.get(1).getFirst().getEncodedNameAsBytes(),
           regions.get(2).getFirst().getEncodedNameAsBytes(), true);
     } catch (IllegalArgumentException m) {
       gotException = true;
@@ -1233,7 +1233,8 @@ public class TestAdmin1 {
       DispatchMergingRegionsRequest request = RequestConverter
           .buildDispatchMergingRegionsRequest(regions.get(1).getFirst().getEncodedNameAsBytes(),
               regions.get(2).getFirst().getEncodedNameAsBytes(), true);
-      TEST_UTIL.getHBaseAdmin().getConnection().getMaster().dispatchMergingRegions(null, request);
+      ((ClusterConnection) TEST_UTIL.getAdmin().getConnection()).getMaster()
+        .dispatchMergingRegions(null, request);
     } catch (ServiceException m) {
       Throwable t = m.getCause();
       do {
@@ -1252,8 +1253,8 @@ public class TestAdmin1 {
       moveRegionAndWait(regions.get(2).getFirst(), regions.get(1).getSecond());
     }
     try {
-      AdminService.BlockingInterface admin = TEST_UTIL.getHBaseAdmin().getConnection()
-          .getAdmin(regions.get(1).getSecond());
+      AdminService.BlockingInterface admin = ((ClusterConnection) TEST_UTIL.getAdmin()
+        .getConnection()).getAdmin(regions.get(1).getSecond());
       ProtobufUtil.mergeRegions(null, admin, regions.get(1).getFirst(), regions.get(2).getFirst(),
         true, null);
     } catch (MergeRegionException mm) {
@@ -1266,7 +1267,7 @@ public class TestAdmin1 {
       throws InterruptedException, MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getHBaseAdmin().move(
+    TEST_UTIL.getAdmin().move(
         destRegion.getEncodedNameAsBytes(),
         Bytes.toBytes(destServer.getServerName()));
     while (true) {

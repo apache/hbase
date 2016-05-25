@@ -562,10 +562,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           if (cause instanceof IOException) {
             // The table can be disabled or dropped at this time. For disabled tables, we have no
             // cheap mechanism to detect this case because meta does not contain this information.
-            // HConnection.isTableDisabled() is a zk call which we cannot do for every replay RPC.
-            // So instead we start the replay RPC with retries and
-            // check whether the table is dropped or disabled which might cause
-            // SocketTimeoutException, or RetriesExhaustedException or similar if we get IOE.
+            // ClusterConnection.isTableDisabled() is a zk call which we cannot do for every replay
+            // RPC. So instead we start the replay RPC with retries and check whether the table is
+            // dropped or disabled which might cause SocketTimeoutException, or
+            // RetriesExhaustedException or similar if we get IOE.
             if (cause instanceof TableNotFoundException || connection.isTableDisabled(tableName)) {
               if (LOG.isTraceEnabled()) {
                 LOG.trace("Skipping " + entries.size() + " entries in table " + tableName

@@ -132,7 +132,7 @@ public class TestRpcControllerFactory {
     TableName name = TableName.valueOf("testcustomcontroller");
     UTIL.createTable(name, fam1).close();
 
-    // change one of the connection properties so we get a new HConnection with our configuration
+    // change one of the connection properties so we get a new Connection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
     Connection connection = ConnectionFactory.createConnection(conf);

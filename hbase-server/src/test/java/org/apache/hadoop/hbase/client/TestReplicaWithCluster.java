@@ -79,8 +79,7 @@ public class TestReplicaWithCluster {
    */
   public static class SlowMeCopro extends BaseRegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
-    static final AtomicReference<CountDownLatch> cdl =
-        new AtomicReference<CountDownLatch>(new CountDownLatch(0));
+    static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(new CountDownLatch(0));
 
     public SlowMeCopro() {
     }
@@ -336,7 +335,7 @@ public class TestReplicaWithCluster {
     // bulk load HFiles
     LOG.debug("Loading test data");
     @SuppressWarnings("deprecation")
-    final HConnection conn = HTU.getHBaseAdmin().getConnection();
+    final ClusterConnection conn = (ClusterConnection) HTU.getAdmin().getConnection();
     RegionServerCallable<Void> callable = new RegionServerCallable<Void>(
       conn, hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0)) {
         @Override
@@ -351,7 +350,7 @@ public class TestReplicaWithCluster {
         }
       };
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(HTU.getConfiguration());
-    RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
+    RpcRetryingCaller<Void> caller = factory.newCaller();
     caller.callWithRetries(callable, 10000);
 
     // verify we can read them from the primary

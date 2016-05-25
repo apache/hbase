@@ -207,7 +207,7 @@ public class ConnectionCache {
         return false;
       }
       if (connection.isAborted() || connection.isClosed()) {
-        LOG.info("Unexpected: cached HConnection is aborted/closed, removed from cache");
+        LOG.info("Unexpected: cached Connection is aborted/closed, removed from cache");
         connections.remove(userName);
         return false;
       }

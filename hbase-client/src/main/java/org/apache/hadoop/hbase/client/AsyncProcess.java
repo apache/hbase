@@ -277,7 +277,7 @@ class AsyncProcess {
       RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors,
       RpcControllerFactory rpcFactory) {
     if (hc == null) {
-      throw new IllegalArgumentException("HConnection cannot be null.");
+      throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
 
     this.connection = hc;

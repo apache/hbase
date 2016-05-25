@@ -144,7 +144,7 @@ public class RegionStateStore {
     if (metaRegion == null) {
       Configuration conf = server.getConfiguration();
       // Config to determine the no of HConnections to META.
-      // A single HConnection should be sufficient in most cases. Only if
+      // A single Connection should be sufficient in most cases. Only if
       // you are doing lot of writes (>1M) to META,
       // increasing this value might improve the write throughput.
       multiHConnection =

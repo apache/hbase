@@ -25,9 +25,9 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -51,7 +51,7 @@ public class TestReplicationSinkManager {
   public void setUp() {
     replicationPeers = mock(ReplicationPeers.class);
     replicationEndpoint = mock(HBaseReplicationEndpoint.class);
-    sinkManager = new ReplicationSinkManager(mock(HConnection.class),
+    sinkManager = new ReplicationSinkManager(mock(ClusterConnection.class),
                       PEER_CLUSTER_ID, replicationEndpoint, new Configuration());
   }
 

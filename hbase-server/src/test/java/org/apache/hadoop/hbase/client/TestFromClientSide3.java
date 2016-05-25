@@ -121,7 +121,7 @@ public class TestFromClientSide3 {
       // connection needed for poll-wait
       HRegionLocation loc = locator.getRegionLocation(row, true);
       AdminProtos.AdminService.BlockingInterface server =
-          admin.getConnection().getAdmin(loc.getServerName());
+        ((ClusterConnection) admin.getConnection()).getAdmin(loc.getServerName());
       byte[] regName = loc.getRegionInfo().getRegionName();
 
       for (int i = 0; i < nFlushes; i++) {

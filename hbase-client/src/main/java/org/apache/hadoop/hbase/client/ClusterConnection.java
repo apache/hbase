@@ -40,13 +40,18 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 @InterfaceAudience.Private
 // NOTE: Although this class is public, this class is meant to be used directly from internal
 // classes and unit tests only.
-public interface ClusterConnection extends HConnection {
+public interface ClusterConnection extends Connection {
+
+  /**
+   * Key for configuration in Configuration whose value is the class we implement making a
+   * new Connection instance.
+   */
+  String HBASE_CLIENT_CONNECTION_IMPL = "hbase.client.connection.impl";
 
   /**
    * @return - true if the master server is running
    * @deprecated this has been deprecated without a replacement
    */
-  @Override
   @Deprecated
   boolean isMasterRunning()
       throws MasterNotRunningException, ZooKeeperConnectionException;
@@ -63,9 +68,32 @@ public interface ClusterConnection extends HConnection {
    * @throws IOException
    *           if a remote or network exception occurs
    */
-  @Override
   boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
       IOException;
+
+  /**
+   * A table that isTableEnabled == false and isTableDisabled == false
+   * is possible. This happens when a table has a lot of regions
+   * that must be processed.
+   * @param tableName table name
+   * @return true if the table is enabled, false otherwise
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isTableEnabled(TableName tableName) throws IOException;
+
+  /**
+   * @param tableName table name
+   * @return true if the table is disabled, false otherwise
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isTableDisabled(TableName tableName) throws IOException;
+
+  /**
+   * Retrieve TableState, represent current table state.
+   * @param tableName table state for
+   * @return state of the table
+   */
+  TableState getTableState(TableName tableName)  throws IOException;
 
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
@@ -73,19 +101,16 @@ public interface ClusterConnection extends HConnection {
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
    * @return HRegionLocation that describes where to find the region in
-   * question
+   *   question
    * @throws IOException if a remote or network exception occurs
    */
-  @Override
-  public HRegionLocation locateRegion(final TableName tableName,
+  HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
   /**
    * Allows flushing the region cache.
    */
-  @Override
   void clearRegionCache();
-
 
   void cacheLocation(final TableName tableName, final RegionLocations location);
 
@@ -93,16 +118,14 @@ public interface ClusterConnection extends HConnection {
    * Allows flushing the region cache of all locations that pertain to
    * <code>tableName</code>
    * @param tableName Name of the table whose regions we are to remove from
-   * cache.
+   *   cache.
    */
-  @Override
   void clearRegionCache(final TableName tableName);
 
   /**
    * Deletes cached locations for the specific region.
    * @param location The location object for the region, to be purged from cache.
    */
-  @Override
   void deleteCachedRegionLocation(final HRegionLocation location);
 
   /**
@@ -111,10 +134,9 @@ public interface ClusterConnection extends HConnection {
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
    * @return HRegionLocation that describes where to find the region in
-   * question
+   *   question
    * @throws IOException if a remote or network exception occurs
    */
-  @Override
   HRegionLocation relocateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
@@ -125,7 +147,7 @@ public interface ClusterConnection extends HConnection {
    * @param row row key you're trying to find the region of
    * @param replicaId the replicaId of the region
    * @return RegionLocations that describe where to find the region in
-   * question
+   *   question
    * @throws IOException if a remote or network exception occurs
    */
   RegionLocations relocateRegion(final TableName tableName,
@@ -140,19 +162,16 @@ public interface ClusterConnection extends HConnection {
    * @param exception the exception if any. Can be null.
    * @param source the previous location
    */
-  @Override
   void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
                                     Object exception, ServerName source);
-
 
   /**
    * Gets the location of the region of <i>regionName</i>.
    * @param regionName name of the region to locate
    * @return HRegionLocation that describes where to find the region in
-   * question
+   *   question
    * @throws IOException if a remote or network exception occurs
    */
-  @Override
   HRegionLocation locateRegion(final byte[] regionName)
   throws IOException;
 
@@ -160,9 +179,8 @@ public interface ClusterConnection extends HConnection {
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
    * @param tableName table to get regions of
    * @return list of region locations for all regions of table
-   * @throws IOException
+   * @throws IOException if IO failure occurs
    */
-  @Override
   List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
 
   /**
@@ -172,9 +190,8 @@ public interface ClusterConnection extends HConnection {
    * @param offlined True if we are to include offlined regions, false and we'll leave out offlined
    *          regions from returned list.
    * @return list of region locations for all regions of table
-   * @throws IOException
+   * @throws IOException if IO failure occurs
    */
-  @Override
   List<HRegionLocation> locateRegions(final TableName tableName,
       final boolean useCache,
       final boolean offlined) throws IOException;
@@ -186,12 +203,12 @@ public interface ClusterConnection extends HConnection {
    * @param useCache Should we use the cache to retrieve the region information.
    * @param retry do we retry
    * @return region locations for this row.
-   * @throws IOException
+   * @throws IOException if IO failure occurs
    */
   RegionLocations locateRegion(TableName tableName,
                                byte[] row, boolean useCache, boolean retry) throws IOException;
 
-  /**
+ /**
   *
   * @param tableName table to get regions of
   * @param row the row
@@ -199,15 +216,14 @@ public interface ClusterConnection extends HConnection {
   * @param retry do we retry
   * @param replicaId the replicaId for the region
   * @return region locations for this row.
-  * @throws IOException
+  * @throws IOException if IO failure occurs
   */
- RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
+  RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
      int replicaId) throws IOException;
 
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */
-  @Override
   MasterService.BlockingInterface getMaster() throws IOException;
 
 
@@ -217,7 +233,6 @@ public interface ClusterConnection extends HConnection {
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
-  @Override
   AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
 
   /**
@@ -229,7 +244,6 @@ public interface ClusterConnection extends HConnection {
    * @throws IOException if a remote or network exception occurs
    *
    */
-  @Override
   ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
 
   /**
@@ -240,7 +254,6 @@ public interface ClusterConnection extends HConnection {
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
    */
-  @Override
   HRegionLocation getRegionLocation(TableName tableName, byte [] row,
     boolean reload)
   throws IOException;
@@ -249,34 +262,30 @@ public interface ClusterConnection extends HConnection {
    * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
    */
-  @Override
   void clearCaches(final ServerName sn);
 
   /**
    * This function allows HBaseAdmin and potentially others to get a shared MasterService
    * connection.
    * @return The shared instance. Never returns null.
-   * @throws MasterNotRunningException
+   * @throws MasterNotRunningException if master is not running
    * @deprecated Since 0.96.0
    */
-  @Override
   @Deprecated
   MasterKeepAliveConnection getKeepAliveMasterService()
   throws MasterNotRunningException;
 
   /**
-   * @param serverName
+   * @param serverName of server to check
    * @return true if the server is known as dead, false otherwise.
-   * @deprecated internal method, do not use thru HConnection */
-  @Override
+   * @deprecated internal method, do not use thru ClusterConnection */
   @Deprecated
   boolean isDeadServer(ServerName serverName);
 
   /**
-   * @return Nonce generator for this HConnection; may be null if disabled in configuration.
+   * @return Nonce generator for this ClusterConnection; may be null if disabled in configuration.
    */
-  @Override
-  public NonceGenerator getNonceGenerator();
+  NonceGenerator getNonceGenerator();
 
   /**
    * @return Default AsyncProcess associated with this connection.
@@ -287,7 +296,7 @@ public interface ClusterConnection extends HConnection {
    * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}.
    * This RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
    * intercepted with the configured {@link RetryingCallerInterceptor}
-   * @param conf
+   * @param conf configuration
    * @return RpcRetryingCallerFactory
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
@@ -320,11 +329,17 @@ public interface ClusterConnection extends HConnection {
   /**
    * @return the MetricsConnection instance associated with this connection.
    */
-  public MetricsConnection getConnectionMetrics();
+  MetricsConnection getConnectionMetrics();
 
   /**
    * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
+
+  /**
+   * @return the number of region servers that are currently running
+   * @throws IOException if a remote or network exception occurs
+   */
+  int getCurrentNrHRS() throws IOException;
 }

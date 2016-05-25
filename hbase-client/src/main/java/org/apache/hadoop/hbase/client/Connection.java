@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * thread will obtain its own Table instance. Caching or pooling of {@link Table} and {@link Admin}
  * is not recommended.
  *
- * <p>This class replaces {@link HConnection}, which is now deprecated.
  * @see ConnectionFactory
  * @since 0.99.0
  */
@@ -59,7 +58,7 @@ public interface Connection extends Abortable, Closeable {
    *  - Only allow new style of interfaces:
    *   -- All table names are passed as TableName. No more byte[] and string arguments
    *   -- Most of the classes with names H is deprecated in favor of non-H versions
-   *   (Table, Connection vs HConnection, etc)
+   *   (Table, Connection, etc)
    *   -- Only real client-facing public methods are allowed
    *  - Connection should contain only getTable(), getAdmin() kind of general methods.
    */
@@ -123,7 +122,7 @@ public interface Connection extends Abortable, Closeable {
    *
    * @return a {@link BufferedMutator} for the supplied tableName.
    */
-  public BufferedMutator getBufferedMutator(TableName tableName) throws IOException;
+  BufferedMutator getBufferedMutator(TableName tableName) throws IOException;
 
   /**
    * Retrieve a {@link BufferedMutator} for performing client-side buffering of writes. The
@@ -134,7 +133,7 @@ public interface Connection extends Abortable, Closeable {
    * @param params details on how to instantiate the {@code BufferedMutator}.
    * @return a {@link BufferedMutator} for the supplied tableName.
    */
-  public BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException;
+  BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException;
 
   /**
    * Retrieve a RegionLocator implementation to inspect region information on a table. The returned
@@ -151,7 +150,7 @@ public interface Connection extends Abortable, Closeable {
    * @param tableName Name of the table who's region is to be examined
    * @return A RegionLocator instance
    */
-  public RegionLocator getRegionLocator(TableName tableName) throws IOException;
+  RegionLocator getRegionLocator(TableName tableName) throws IOException;
 
   /**
    * Retrieve an Admin implementation to administer an HBase cluster.
@@ -167,7 +166,7 @@ public interface Connection extends Abortable, Closeable {
   Admin getAdmin() throws IOException;
 
   @Override
-  public void close() throws IOException;
+  void close() throws IOException;
 
   /**
    * Returns whether the connection is closed or not.

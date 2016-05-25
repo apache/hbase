@@ -170,7 +170,7 @@ public class TestMetaTableAccessorNoCluster {
               return builder.build();
             }
           }).thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
-      // Associate a spied-upon HConnection with UTIL.getConfiguration.  Need
+      // Associate a spied-upon Connection with UTIL.getConfiguration.  Need
       // to shove this in here first so it gets picked up all over; e.g. by
       // HTable.
       connection = HConnectionTestingUtility.getSpiedConnection(UTIL.getConfiguration());

@@ -17,6 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.TreeMultimap;
+import com.google.protobuf.ServiceException;
+
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -55,15 +65,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.TreeMultimap;
-import com.google.protobuf.ServiceException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
@@ -104,7 +105,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -413,7 +413,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * This method maintains a lock using a file. If the creation fails we return null
    *
    * @return FSDataOutputStream object corresponding to the newly opened lock file
-   * @throws IOException
+   * @throws IOException if IO failure occurs
    */
   private FSDataOutputStream checkAndMarkRunningHbck() throws IOException {
     RetryCounter retryCounter = lockFileRetryCounterFactory.create();
@@ -3981,13 +3981,13 @@ public class HBaseFsck extends Configured implements Closeable {
    * Contact a region server and get all information from it
    */
   static class WorkItemRegion implements Callable<Void> {
-    private HBaseFsck hbck;
-    private ServerName rsinfo;
-    private ErrorReporter errors;
-    private HConnection connection;
+    private final HBaseFsck hbck;
+    private final ServerName rsinfo;
+    private final ErrorReporter errors;
+    private final ClusterConnection connection;
 
     WorkItemRegion(HBaseFsck hbck, ServerName info,
-                   ErrorReporter errors, HConnection connection) {
+                   ErrorReporter errors, ClusterConnection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
       this.errors = errors;

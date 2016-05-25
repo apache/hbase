@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -51,14 +51,14 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class ReplicationChecker {
   private static final Log LOG = LogFactory.getLog(ReplicationChecker.class);
-  private ErrorReporter errorReporter;
-  private ReplicationQueuesClient queuesClient;
-  private ReplicationPeers replicationPeers;
-  private ReplicationQueueDeletor queueDeletor;
+  private final ErrorReporter errorReporter;
+  private final ReplicationQueuesClient queuesClient;
+  private final ReplicationPeers replicationPeers;
+  private final ReplicationQueueDeletor queueDeletor;
   // replicator with its queueIds for removed peers
-  private Map<String, List<String>> undeletedQueueIds = new HashMap<String, List<String>>();
+  private final Map<String, List<String>> undeletedQueueIds = new HashMap<>();
   
-  public ReplicationChecker(Configuration conf, ZooKeeperWatcher zkw, HConnection connection,
+  public ReplicationChecker(Configuration conf, ZooKeeperWatcher zkw, ClusterConnection connection,
       ErrorReporter errorReporter) throws IOException {
     try {
       this.errorReporter = errorReporter;
@@ -79,7 +79,7 @@ public class ReplicationChecker {
   }
 
   public void checkUnDeletedQueues() throws IOException {
-    Set<String> peerIds = new HashSet<String>(this.replicationPeers.getAllPeerIds());
+    Set<String> peerIds = new HashSet<>(this.replicationPeers.getAllPeerIds());
     try {
       List<String> replicators = this.queuesClient.getListOfReplicators();
       for (String replicator : replicators) {

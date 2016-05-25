@@ -214,7 +214,7 @@ public class ConnectionFactory {
       user = provider.getCurrent();
     }
 
-    String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
+    String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionImplementation.class.getName());
     Class<?> clazz;
     try {

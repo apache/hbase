@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Used to communicate with a single HBase table.
- * Obtain an instance from an {@link HConnection}.
+ * Obtain an instance from a {@link Connection}.
  *
  * @since 0.21.0
  * @deprecated use {@link org.apache.hadoop.hbase.client.Table} instead

@@ -104,7 +104,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
-    // Run my HConnection overrides.  Use my little ConnectionImplementation below which
+    // Run my Connection overrides.  Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());

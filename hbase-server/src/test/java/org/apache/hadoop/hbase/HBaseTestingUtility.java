@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -358,8 +357,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Returns this classes's instance of {@link Configuration}.  Be careful how
-   * you use the returned Configuration since {@link HConnection} instances
-   * can be shared.  The Map of HConnections is keyed by the Configuration.  If
+   * you use the returned Configuration since {@link Connection} instances
+   * can be shared.  The Map of Connections is keyed by the Configuration.  If
    * say, a Connection was being used against a cluster that had been shutdown,
    * see {@link #shutdownMiniCluster()}, then the Connection will no longer
    * be wholesome.  Rather than use the return direct, its usually best to

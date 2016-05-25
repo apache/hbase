@@ -66,7 +66,7 @@ public class TestShortCircuitConnection {
     UTIL.createTable(htd, null);
     HRegionServer regionServer = UTIL.getRSForFirstRegionInTable(tn);
     ClusterConnection connection = regionServer.getClusterConnection();
-    HTableInterface tableIf = connection.getTable(tn);
+    Table tableIf = connection.getTable(tn);
     assertTrue(tableIf instanceof HTable);
     HTable table = (HTable) tableIf;
     assertTrue(table.getConnection() == connection);

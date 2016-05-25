@@ -18,6 +18,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -67,12 +73,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 
 /**
  * An implementation of {@link Table}. Used to communicate with a single HBase table.
@@ -149,7 +149,7 @@ public class HTable implements HTableInterface {
    * Used by HBase internally.  DO NOT USE. See {@link ConnectionFactory} class comment for how to
    * get a {@link Table} instance (use {@link Table} instead of {@link HTable}).
    * @param tableName Name of the table.
-   * @param connection HConnection to be used.
+   * @param connection Connection to be used.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
    */
@@ -253,13 +253,10 @@ public class HTable implements HTableInterface {
   /**
    * <em>INTERNAL</em> Used by unit tests and tools to do low-level
    * manipulations.
-   * @return An HConnection instance.
-   * @deprecated This method will be changed from public to package protected.
+   * @return A Connection instance.
    */
-  // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
-  @Deprecated
   @VisibleForTesting
-  public HConnection getConnection() {
+  protected Connection getConnection() {
     return this.connection;
   }
 
@@ -500,9 +497,20 @@ public class HTable implements HTableInterface {
    */
   @Override
   public <R> void batchCallback(
-      final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
-      throws IOException, InterruptedException {
-    connection.processBatchCallback(actions, tableName, pool, results, callback);
+    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
+    throws IOException, InterruptedException {
+    doBatchWithCallback(actions, results, callback, connection, pool, tableName);
+  }
+
+  public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
+    Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
+    AsyncRequestFuture ars = connection.getAsyncProcess().submitAll(
+      pool, tableName, actions, callback, results);
+    ars.waitUntilDone();
+    if (ars.hasError()) {
+      throw ars.getErrors();
+    }
   }
 
   /**
@@ -991,10 +999,10 @@ public class HTable implements HTableInterface {
    *
    * @param list The collection of actions.
    * @param results An empty array, same size as list. If an exception is thrown,
-   * you can test here for partial results, and to determine which actions
-   * processed successfully.
+   *   you can test here for partial results, and to determine which actions
+   *   processed successfully.
    * @throws IOException if there are problems talking to META. Per-item
-   * exceptions are stored in the results array.
+   *   exceptions are stored in the results array.
    */
   public <R> void processBatchCallback(
     final List<? extends Row> list, final Object[] results, final Batch.Callback<R> callback)

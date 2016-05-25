@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -176,10 +180,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
-
 /**
  * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
  * this is an HBase-internal class as defined in
@@ -313,9 +313,9 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  /** @return HConnection used by this object. */
+  /** @return Connection used by this object. */
   @Override
-  public HConnection getConnection() {
+  public Connection getConnection() {
     return connection;
   }
 
@@ -404,11 +404,11 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
-     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
+    return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
        operationTimeout, rpcTimeout);
   }
 
-  static HTableDescriptor getTableDescriptor(final TableName tableName, HConnection connection,
+  static HTableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
       RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
       int operationTimeout, int rpcTimeout) throws IOException {
       if (tableName == null) return null;
@@ -588,7 +588,7 @@ public class HBaseAdmin implements Admin {
     protected Void postOperationResult(final Void result, final long deadlineTs)
         throws IOException, TimeoutException {
       // Delete cached information to prevent clients from using old locations
-      getAdmin().getConnection().clearRegionCache(getTableName());
+      ((ClusterConnection) getAdmin().getConnection()).clearRegionCache(getTableName());
       return super.postOperationResult(result, deadlineTs);
     }
   }
@@ -843,7 +843,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public boolean isTableAvailable(TableName tableName) throws IOException {
-    return connection.isTableAvailable(tableName);
+    return connection.isTableAvailable(tableName, null);
   }
 
   @Override
@@ -1701,7 +1701,7 @@ public class HBaseAdmin implements Admin {
    * @param regionName Name of a region.
    * @return a pair of HRegionInfo and ServerName if <code>regionName</code> is
    *  a verified region name (we call {@link
-   *  MetaTableAccessor#getRegionLocation(HConnection, byte[])}
+   *  MetaTableAccessor#getRegionLocation(Connection, byte[])}
    *  else null.
    * Throw IllegalArgumentException if <code>regionName</code> is null.
    * @throws IOException

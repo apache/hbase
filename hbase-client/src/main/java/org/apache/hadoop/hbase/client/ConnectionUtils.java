@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,8 +34,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility used by client connections.
  */
@@ -45,8 +45,8 @@ public final class ConnectionUtils {
   /**
    * Calculate pause time.
    * Built on {@link HConstants#RETRY_BACKOFF}.
-   * @param pause
-   * @param tries
+   * @param pause time to pause
+   * @param tries amount of tries
    * @return How long to wait after <code>tries</code> retries
    */
   public static long getPauseTime(final long pause, final int tries) {
@@ -90,7 +90,7 @@ public final class ConnectionUtils {
   }
 
   /**
-   * Changes the configuration to set the number of retries needed when using HConnection
+   * Changes the configuration to set the number of retries needed when using Connection
    * internally, e.g. for  updating catalog tables, etc.
    * Call this method before we create any Connections.
    * @param c The Configuration instance to set the retries into.
@@ -106,7 +106,7 @@ public final class ConnectionUtils {
     int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
-    log.info(sn + " server-side HConnection retries=" + retries);
+    log.info(sn + " server-side Connection retries=" + retries);
   }
 
   /**
@@ -119,7 +119,7 @@ public final class ConnectionUtils {
    * @param admin the admin interface of the local server
    * @param client the client interface of the local server
    * @return an short-circuit connection.
-   * @throws IOException
+   * @throws IOException if IO failure occurred
    */
   public static ClusterConnection createShortCircuitConnection(final Configuration conf,
     ExecutorService pool, User user, final ServerName serverName,
@@ -130,9 +130,8 @@ public final class ConnectionUtils {
     }
     return new ConnectionImplementation(conf, pool, user) {
       @Override
-      public AdminService.BlockingInterface getAdmin(ServerName sn, boolean getMaster)
-        throws IOException {
-        return serverName.equals(sn) ? admin : super.getAdmin(sn, getMaster);
+      public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
+        return serverName.equals(sn) ? admin : super.getAdmin(sn);
       }
 
       @Override
@@ -148,7 +147,7 @@ public final class ConnectionUtils {
    */
   @VisibleForTesting
   public static void setupMasterlessConnection(Configuration conf) {
-    conf.set(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
+    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
       MasterlessConnection.class.getName());
   }
 

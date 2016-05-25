@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -195,11 +195,11 @@ public class TestHRegionServerBulkLoad {
         Path hfile = new Path(dir, family(i));
         byte[] fam = Bytes.toBytes(family(i));
         createHFile(fs, hfile, fam, QUAL, val, 1000);
-        famPaths.add(new Pair<byte[], String>(fam, hfile.toString()));
+        famPaths.add(new Pair<>(fam, hfile.toString()));
       }
 
       // bulk load HFiles
-      final HConnection conn = UTIL.getHBaseAdmin().getConnection();
+      final ClusterConnection conn = (ClusterConnection) UTIL.getAdmin().getConnection();
       RegionServerCallable<Void> callable =
           new RegionServerCallable<Void>(conn, tableName, Bytes.toBytes("aaa")) {
         @Override

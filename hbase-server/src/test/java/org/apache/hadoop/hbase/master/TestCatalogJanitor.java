@@ -134,8 +134,8 @@ public class TestCatalogJanitor {
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
-      // Mock an HConnection and a AdminProtocol implementation.  Have the
-      // HConnection return the HRI.  Have the HRI return a few mocked up responses
+      // Mock an ClusterConnection and a AdminProtocol implementation.  Have the
+      // ClusterConnection return the HRI.  Have the HRI return a few mocked up responses
       // to make our test work.
       this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,

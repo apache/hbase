@@ -26,11 +26,11 @@ import java.io.IOException;
  * @param <V> return type
  */
 abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
-  protected HConnection connection;
+  protected ClusterConnection connection;
   protected MasterKeepAliveConnection master;
 
-  public MasterCallable(final HConnection connection) {
-    this.connection = connection;
+  public MasterCallable(final Connection connection) {
+    this.connection = (ClusterConnection) connection;
   }
 
   @Override
@@ -41,7 +41,9 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   @Override
   public void close() throws IOException {
     // The above prepare could fail but this would still be called though masterAdmin is null
-    if (this.master != null) this.master.close();
+    if (this.master != null) {
+      this.master.close();
+    }
   }
 
   @Override

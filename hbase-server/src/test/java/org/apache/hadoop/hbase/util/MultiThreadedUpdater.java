@@ -130,7 +130,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       table = createTable();
     }
 
-    protected HTableInterface createTable() throws IOException {
+    protected Table createTable() throws IOException {
       return connection.getTable(tableName);
     }
 

@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -30,42 +29,44 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
 
 /**
- * Provides ability to create multiple HConnection instances and allows to process a batch of
- * actions using HConnection.processBatchCallback()
+ * Provides ability to create multiple Connection instances and allows to process a batch of
+ * actions using CHTable.doBatchWithCallback()
  */
 @InterfaceAudience.Private
 public class MultiHConnection {
   private static final Log LOG = LogFactory.getLog(MultiHConnection.class);
-  private HConnection[] hConnections;
-  private final Object hConnectionsLock =  new Object();
-  private int noOfConnections;
+  private Connection[] connections;
+  private final Object connectionsLock =  new Object();
+  private final int noOfConnections;
   private ExecutorService batchPool;
 
   /**
-   * Create multiple HConnection instances and initialize a thread pool executor
+   * Create multiple Connection instances and initialize a thread pool executor
    * @param conf configuration
-   * @param noOfConnections total no of HConnections to create
-   * @throws IOException
+   * @param noOfConnections total no of Connections to create
+   * @throws IOException if IO failure occurs
    */
   public MultiHConnection(Configuration conf, int noOfConnections)
       throws IOException {
     this.noOfConnections = noOfConnections;
-    synchronized (this.hConnectionsLock) {
-      hConnections = new HConnection[noOfConnections];
+    synchronized (this.connectionsLock) {
+      connections = new Connection[noOfConnections];
       for (int i = 0; i < noOfConnections; i++) {
-        HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
-        hConnections[i] = conn;
+        Connection conn = ConnectionFactory.createConnection(conf);
+        connections[i] = conn;
       }
     }
     createBatchPool(conf);
@@ -75,9 +76,9 @@ public class MultiHConnection {
    * Close the open connections and shutdown the batchpool
    */
   public void close() {
-    synchronized (hConnectionsLock) {
-      if (hConnections != null) {
-        for (Connection conn : hConnections) {
+    synchronized (connectionsLock) {
+      if (connections != null) {
+        for (Connection conn : connections) {
           if (conn != null) {
             try {
               conn.close();
@@ -88,7 +89,7 @@ public class MultiHConnection {
             }
           }
         }
-        hConnections = null;
+        connections = null;
       }
     }
     if (this.batchPool != null && !this.batchPool.isShutdown()) {
@@ -109,28 +110,21 @@ public class MultiHConnection {
    * @param actions the actions
    * @param tableName table name
    * @param results the results array
-   * @param callback 
-   * @throws IOException
+   * @param callback to run when results are in
+   * @throws IOException If IO failure occurs
    */
   @SuppressWarnings("deprecation")
   public <R> void processBatchCallback(List<? extends Row> actions, TableName tableName,
       Object[] results, Batch.Callback<R> callback) throws IOException {
     // Currently used by RegionStateStore
-    // A deprecated method is used as multiple threads accessing RegionStateStore do a single put
-    // and htable is not thread safe. Alternative would be to create an Htable instance for each 
-    // put but that is not very efficient.
-    // See HBASE-11610 for more details.
-    try {
-      hConnections[ThreadLocalRandom.current().nextInt(noOfConnections)].processBatchCallback(
-        actions, tableName, this.batchPool, results, callback);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    }
+    ClusterConnection conn =
+      (ClusterConnection) connections[ThreadLocalRandom.current().nextInt(noOfConnections)];
+
+    HTable.doBatchWithCallback(actions, results, callback, conn, batchPool, tableName);
   }
 
-  
   // Copied from ConnectionImplementation.getBatchPool()
-  // We should get rid of this when HConnection.processBatchCallback is un-deprecated and provides
+  // We should get rid of this when Connection.processBatchCallback is un-deprecated and provides
   // an API to manage a batch pool
   private void createBatchPool(Configuration conf) {
     // Use the same config for keep alive as in ConnectionImplementation.getBatchPool();
@@ -140,7 +134,7 @@ public class MultiHConnection {
     }
     long keepAliveTime = conf.getLong("hbase.multihconnection.threads.keepalivetime", 60);
     LinkedBlockingQueue<Runnable> workQueue =
-        new LinkedBlockingQueue<Runnable>(maxThreads
+        new LinkedBlockingQueue<>(maxThreads
             * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe =

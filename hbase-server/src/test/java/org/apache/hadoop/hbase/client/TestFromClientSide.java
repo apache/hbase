@@ -4036,7 +4036,7 @@ public class TestFromClientSide {
 
   /**
    * simple test that just executes parts of the client
-   * API that accept a pre-created HConnection instance
+   * API that accept a pre-created Connection instance
    *
    * @throws IOException
    */

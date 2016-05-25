@@ -31,7 +31,7 @@ public class TestConnectionCache extends TestCase {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   /**
-   * test for ConnectionCache cleaning expired HConnection
+   * test for ConnectionCache cleaning expired Connection
    */
   @Test
   public void testConnectionChore() throws Exception {

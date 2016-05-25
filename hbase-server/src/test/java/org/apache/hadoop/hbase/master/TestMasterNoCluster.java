@@ -186,7 +186,7 @@ public class TestMasterNoCluster {
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TESTUTIL.getConfiguration());
     // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
-    // the conf from the master; the conf will already have an HConnection
+    // the conf from the master; the conf will already have an ClusterConnection
     // associate so the below mocking of a connection will fail.
     final ClusterConnection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
         TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
@@ -293,7 +293,7 @@ public class TestMasterNoCluster {
       @Override
       public ClusterConnection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
-        // the conf from the master; the conf will already have an HConnection
+        // the conf from the master; the conf will already have a Connection
         // associate so the below mocking of a connection will fail.
         try {
           return HConnectionTestingUtility.getMockedConnectionAndDecorate(

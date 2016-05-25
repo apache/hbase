@@ -101,11 +101,11 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
    * Wraps the invocation of {@link PerformanceEvaluation} in a {@code Callable}.
    */
   static class PerfEvalCallable implements Callable<TimingResult> {
-    private final Queue<String> argv = new LinkedList<String>();
+    private final Queue<String> argv = new LinkedList<>();
     private final Admin admin;
 
     public PerfEvalCallable(Admin admin, String argv) {
-      // TODO: this API is awkward, should take HConnection, not HBaseAdmin
+      // TODO: this API is awkward, should take Connection, not Admin
       this.admin = admin;
       this.argv.addAll(Arrays.asList(argv.split(" ")));
       LOG.debug("Created PerformanceEvaluationCallable with args: " + argv);

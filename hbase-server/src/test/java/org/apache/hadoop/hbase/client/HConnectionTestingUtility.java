@@ -37,17 +37,17 @@ import org.mockito.Mockito;
 public class HConnectionTestingUtility {
   /*
    * Not part of {@link HBaseTestingUtility} because this class is not
-   * in same package as {@link HConnection}.  Would have to reveal ugly
+   * in same package as {@link ClusterConnection}.  Would have to reveal ugly
    * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
    */
   /**
-   * Get a Mocked {@link HConnection} that goes with the passed <code>conf</code>
+   * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
    * <code>conf</conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
-   * @return HConnection object for <code>conf</code>
+   * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
   public static ClusterConnection getMockedConnection(final Configuration conf)
@@ -139,7 +139,7 @@ public class HConnectionTestingUtility {
    * Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
-   * @return HConnection object for <code>conf</code>
+   * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    * @see @link
    * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}

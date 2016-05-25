@@ -712,7 +712,7 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Create a 'smarter' HConnection, one that is capable of by-passing RPC if the request is to
+   * Create a 'smarter' Connection, one that is capable of by-passing RPC if the request is to
    * the local server. Safe to use going to local or remote server.
    * Create this instance in a method can be intercepted and mocked in tests.
    * @throws IOException
@@ -1074,7 +1074,7 @@ public class HRegionServer extends HasThread implements
       } catch (IOException e) {
         // Although the {@link Closeable} interface throws an {@link
         // IOException}, in reality, the implementation would never do that.
-        LOG.warn("Attempt to close server's short circuit HConnection failed.", e);
+        LOG.warn("Attempt to close server's short circuit ClusterConnection failed.", e);
       }
     }
 
@@ -1786,7 +1786,7 @@ public class HRegionServer extends HasThread implements
 
     // Create the log splitting worker and start it
     // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
-    // quite a while inside HConnection layer. The worker won't be available for other
+    // quite a while inside Connection layer. The worker won't be available for other
     // tasks even after current task is preempted after a split task times out.
     Configuration sinkConf = HBaseConfiguration.create(conf);
     sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,

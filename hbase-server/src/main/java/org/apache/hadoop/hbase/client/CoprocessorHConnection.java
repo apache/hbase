@@ -43,11 +43,11 @@ public class CoprocessorHConnection extends ConnectionImplementation {
   private static final NonceGenerator NO_NONCE_GEN = new NoNonceGenerator();
 
   /**
-   * Create an {@link HConnection} based on the environment in which we are running the
-   * coprocessor. The {@link HConnection} must be externally cleaned up (we bypass the usual HTable
-   * cleanup mechanisms since we own everything).
-   * @param env environment hosting the {@link HConnection}
-   * @return instance of {@link HConnection}.
+   * Create a {@link ClusterConnection} based on the environment in which we are running the
+   * coprocessor. The {@link ClusterConnection} must be externally cleaned up
+   * (we bypass the usual HTable cleanup mechanisms since we own everything).
+   * @param env environment hosting the {@link ClusterConnection}
+   * @return instance of {@link ClusterConnection}.
    * @throws IOException if we cannot create the connection
    */
   public static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)

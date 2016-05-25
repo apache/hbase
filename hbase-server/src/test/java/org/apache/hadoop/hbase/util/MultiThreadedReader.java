@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Get;
 
 import org.apache.hadoop.hbase.client.Consistency;
@@ -158,7 +159,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       setName(getClass().getSimpleName() + "_" + readerId);
     }
 
-    protected HTableInterface createTable() throws IOException {
+    protected Table createTable() throws IOException {
       return connection.getTable(tableName);
     }
 
@@ -379,7 +380,7 @@ public class MultiThreadedReader extends MultiThreadedAction
           numKeysVerified.incrementAndGet();
         }
       } else {
-        HRegionLocation hloc = connection.getRegionLocation(tableName,
+        HRegionLocation hloc = ((ClusterConnection) connection).getRegionLocation(tableName,
           get.getRow(), false);
         String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", Region location: " + hloc);

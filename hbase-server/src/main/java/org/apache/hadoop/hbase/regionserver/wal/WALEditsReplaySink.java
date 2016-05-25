@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +29,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -36,7 +37,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -49,8 +52,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryR
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
-import com.google.protobuf.ServiceException;
 
 /**
  * This class is responsible for replaying the edits coming from a failed region server.
@@ -65,22 +66,22 @@ public class WALEditsReplaySink {
   private static final int MAX_BATCH_SIZE = 1024;
 
   private final Configuration conf;
-  private final HConnection conn;
+  private final ClusterConnection conn;
   private final TableName tableName;
   private final MetricsWALEditsReplay metrics;
   private final AtomicLong totalReplayedEdits = new AtomicLong();
   private final boolean skipErrors;
   private final int replayTimeout;
-  private RpcControllerFactory rpcControllerFactory;
+  private final RpcControllerFactory rpcControllerFactory;
 
   /**
    * Create a sink for WAL log entries replay
-   * @param conf
-   * @param tableName
-   * @param conn
-   * @throws IOException
+   * @param conf configuration
+   * @param tableName of table to replay edits of
+   * @param conn connection to use
+   * @throws IOException on IO failure
    */
-  public WALEditsReplaySink(Configuration conf, TableName tableName, HConnection conn)
+  public WALEditsReplaySink(Configuration conf, TableName tableName, ClusterConnection conn)
       throws IOException {
     this.conf = conf;
     this.metrics = new MetricsWALEditsReplay();
@@ -95,8 +96,8 @@ public class WALEditsReplaySink {
 
   /**
    * Replay an array of actions of the same region directly into the newly assigned Region Server
-   * @param entries
-   * @throws IOException
+   * @param entries to replay
+   * @throws IOException on IO failure
    */
   public void replayEntries(List<Pair<HRegionLocation, Entry>> entries) throws IOException {
     if (entries.size() == 0) {
@@ -105,7 +106,7 @@ public class WALEditsReplaySink {
 
     int batchSize = entries.size();
     Map<HRegionInfo, List<Entry>> entriesByRegion =
-        new HashMap<HRegionInfo, List<Entry>>();
+        new HashMap<>();
     HRegionLocation loc = null;
     Entry entry = null;
     List<Entry> regionEntries = null;
@@ -186,7 +187,7 @@ public class WALEditsReplaySink {
     private HRegionInfo regionInfo;
     private List<Entry> entries;
 
-    ReplayServerCallable(final HConnection connection, final TableName tableName,
+    ReplayServerCallable(final Connection connection, final TableName tableName,
         final HRegionLocation regionLoc, final HRegionInfo regionInfo,
         final List<Entry> entries) {
       super(connection, tableName, null);

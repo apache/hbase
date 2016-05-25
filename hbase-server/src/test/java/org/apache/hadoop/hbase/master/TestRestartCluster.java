@@ -86,8 +86,8 @@ public class TestRestartCluster {
     LOG.info("\n\nStarting cluster the second time");
     UTIL.restartHBaseCluster(3);
 
-    // Need to use a new 'Configuration' so we make a new HConnection.
-    // Otherwise we're reusing an HConnection that has gone stale because
+    // Need to use a new 'Configuration' so we make a new Connection.
+    // Otherwise we're reusing an Connection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
     allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
     assertEquals(4, allRegions.size());

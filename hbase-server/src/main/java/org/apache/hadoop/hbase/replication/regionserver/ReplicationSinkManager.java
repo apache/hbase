@@ -17,22 +17,25 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+
 
 /**
  * Maintains a collection of peers to replicate to, and randomly selects a
@@ -57,7 +60,7 @@ public class ReplicationSinkManager {
   static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.1f;
 
 
-  private final HConnection conn;
+  private final Connection conn;
 
   private final String peerClusterId;
 
@@ -89,7 +92,7 @@ public class ReplicationSinkManager {
    * @param conf HBase configuration, used for determining replication source ratio and bad peer
    *          threshold
    */
-  public ReplicationSinkManager(HConnection conn, String peerClusterId,
+  public ReplicationSinkManager(ClusterConnection conn, String peerClusterId,
       HBaseReplicationEndpoint endpoint, Configuration conf) {
     this.conn = conn;
     this.peerClusterId = peerClusterId;
@@ -116,7 +119,7 @@ public class ReplicationSinkManager {
       throw new IOException("No replication sinks are available");
     }
     ServerName serverName = sinks.get(random.nextInt(sinks.size()));
-    return new SinkPeer(serverName, conn.getAdmin(serverName));
+    return new SinkPeer(serverName, ((ClusterConnection) conn).getAdmin(serverName));
   }
 
   /**

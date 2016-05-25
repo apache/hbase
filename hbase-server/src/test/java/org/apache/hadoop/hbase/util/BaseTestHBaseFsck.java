@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -138,7 +137,7 @@ public class BaseTestHBaseFsck {
   protected void undeployRegion(Connection conn, ServerName sn,
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
-      HBaseFsckRepair.closeRegionSilentlyAndWait((HConnection) conn, sn, hri);
+      HBaseFsckRepair.closeRegionSilentlyAndWait(conn, sn, hri);
       if (!hri.isMetaTable()) {
         admin.offline(hri.getRegionName());
       }
@@ -344,11 +343,11 @@ public class BaseTestHBaseFsck {
     Map<ServerName, List<String>> mm =
         new HashMap<ServerName, List<String>>();
     for (ServerName hsi : regionServers) {
-      AdminProtos.AdminService.BlockingInterface server = ((HConnection) connection).getAdmin(hsi);
+      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(hsi);
 
       // list all online regions from this region server
       List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
-      List<String> regionNames = new ArrayList<String>();
+      List<String> regionNames = new ArrayList<>();
       for (HRegionInfo hri : regions) {
         regionNames.add(hri.getRegionNameAsString());
       }

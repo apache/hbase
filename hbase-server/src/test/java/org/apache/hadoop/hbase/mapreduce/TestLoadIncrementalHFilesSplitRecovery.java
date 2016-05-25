@@ -47,9 +47,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -285,7 +285,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
                 throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
-            Connection errConn = null;
+            Connection errConn;
             try {
               errConn = getMockedConnection(util.getConfiguration());
             } catch (Exception e) {
@@ -293,10 +293,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();
-            return super.tryAtomicRegionLoad((HConnection)errConn, tableName, first, lqis);
+            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis);
           }
 
-          return super.tryAtomicRegionLoad((HConnection)conn, tableName, first, lqis);
+          return super.tryAtomicRegionLoad(conn, tableName, first, lqis);
         }
       };
       try {
@@ -316,9 +316,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   }
 
   @SuppressWarnings("deprecation")
-  private HConnection getMockedConnection(final Configuration conf)
+  private ClusterConnection getMockedConnection(final Configuration conf)
   throws IOException, ServiceException {
-    HConnection c = Mockito.mock(HConnection.class);
+    ClusterConnection c = Mockito.mock(ClusterConnection.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.

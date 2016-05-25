@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,19 +38,12 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 
 /**
  * This class contains helper methods that repair parts of hbase's filesystem
@@ -64,7 +62,7 @@ public class HBaseFsckRepair {
    * @param region Region to undeploy
    * @param servers list of Servers to undeploy from
    */
-  public static void fixMultiAssignment(HConnection connection, HRegionInfo region,
+  public static void fixMultiAssignment(Connection connection, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
@@ -153,7 +151,7 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(HConnection connection,
+  public static void closeRegionSilentlyAndWait(Connection connection,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     long timeout = connection.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);

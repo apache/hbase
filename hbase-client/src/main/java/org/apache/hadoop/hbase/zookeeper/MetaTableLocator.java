@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -38,8 +40,6 @@ import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -59,14 +59,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
  * which keeps hbase:meta region server location.
  *
  * Stateless class with a bunch of static methods. Doesn't manage resources passed in
- * (e.g. HConnection, ZooKeeperWatcher etc).
+ * (e.g. Connection, ZooKeeperWatcher etc).
  *
  * Meta region location is set by <code>RegionServerServices</code>.
  * This class doesn't use ZK watchers, rather accesses ZK directly.
@@ -260,7 +258,7 @@ public class MetaTableLocator {
    * @throws java.io.IOException
    * @throws InterruptedException
    */
-  public boolean verifyMetaRegionLocation(HConnection hConnection,
+  public boolean verifyMetaRegionLocation(ClusterConnection hConnection,
       ZooKeeperWatcher zkw, final long timeout)
   throws InterruptedException, IOException {
     return verifyMetaRegionLocation(hConnection, zkw, timeout, HRegionInfo.DEFAULT_REPLICA_ID);
@@ -268,7 +266,7 @@ public class MetaTableLocator {
 
   /**
    * Verify <code>hbase:meta</code> is deployed and accessible.
-   * @param hConnection
+   * @param connection
    * @param zkw
    * @param timeout How long to wait on zk for meta address (passed through to
    * @param replicaId
@@ -276,12 +274,12 @@ public class MetaTableLocator {
    * @throws InterruptedException
    * @throws IOException
    */
-  public boolean verifyMetaRegionLocation(HConnection hConnection,
+  public boolean verifyMetaRegionLocation(ClusterConnection connection,
       ZooKeeperWatcher zkw, final long timeout, int replicaId)
   throws InterruptedException, IOException {
     AdminProtos.AdminService.BlockingInterface service = null;
     try {
-      service = getMetaServerConnection(hConnection, zkw, timeout, replicaId);
+      service = getMetaServerConnection(connection, zkw, timeout, replicaId);
     } catch (NotAllMetaRegionsOnlineException e) {
       // Pass
     } catch (ServerNotRunningYetException e) {
@@ -291,7 +289,7 @@ public class MetaTableLocator {
     } catch (RegionServerStoppedException e) {
       // Pass -- server name sends us to a server that is dying or already dead.
     }
-    return (service != null) && verifyRegionLocation(hConnection, service,
+    return (service != null) && verifyRegionLocation(connection, service,
             getMetaRegionLocation(zkw, replicaId), RegionReplicaUtil.getRegionInfoForReplica(
                 HRegionInfo.FIRST_META_REGIONINFO, replicaId).getRegionName());
   }
@@ -311,7 +309,7 @@ public class MetaTableLocator {
   // rather than have to pass it in.  Its made awkward by the fact that the
   // HRI is likely a proxy against remote server so the getServerName needs
   // to be fixed to go to a local method or to a cache before we can do this.
-  private boolean verifyRegionLocation(final Connection connection,
+  private boolean verifyRegionLocation(final ClusterConnection connection,
       AdminService.BlockingInterface hostingServer, final ServerName address,
       final byte [] regionName)
   throws IOException {
@@ -320,10 +318,7 @@ public class MetaTableLocator {
       return false;
     }
     Throwable t;
-    PayloadCarryingRpcController controller = null;
-    if (connection instanceof ClusterConnection) {
-      controller = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-    }
+    PayloadCarryingRpcController controller = connection.getRpcControllerFactory().newController();
     try {
       // Try and get regioninfo from the hosting server.
       return ProtobufUtil.getRegionInfo(controller, hostingServer, regionName) != null;
@@ -354,7 +349,7 @@ public class MetaTableLocator {
    * Gets a connection to the server hosting meta, as reported by ZooKeeper,
    * waiting up to the specified timeout for availability.
    * <p>WARNING: Does not retry.  Use an {@link org.apache.hadoop.hbase.client.HTable} instead.
-   * @param hConnection
+   * @param connection
    * @param zkw
    * @param timeout How long to wait on meta location
    * @param replicaId
@@ -363,10 +358,10 @@ public class MetaTableLocator {
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
    */
-  private AdminService.BlockingInterface getMetaServerConnection(HConnection hConnection,
+  private AdminService.BlockingInterface getMetaServerConnection(ClusterConnection connection,
       ZooKeeperWatcher zkw, long timeout, int replicaId)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
-    return getCachedConnection(hConnection, waitMetaRegionLocation(zkw, replicaId, timeout));
+    return getCachedConnection(connection, waitMetaRegionLocation(zkw, replicaId, timeout));
   }
 
   /**
@@ -377,7 +372,7 @@ public class MetaTableLocator {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  private static AdminService.BlockingInterface getCachedConnection(HConnection hConnection,
+  private static AdminService.BlockingInterface getCachedConnection(ClusterConnection connection,
     ServerName sn)
   throws IOException {
     if (sn == null) {
@@ -385,7 +380,7 @@ public class MetaTableLocator {
     }
     AdminService.BlockingInterface service = null;
     try {
-      service = hConnection.getAdmin(sn);
+      service = connection.getAdmin(sn);
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
         // Catch this; presume it means the cached connection has gone bad.

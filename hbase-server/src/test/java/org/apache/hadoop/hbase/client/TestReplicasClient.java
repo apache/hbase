@@ -204,7 +204,7 @@ public class TestReplicasClient {
 
   @Before
   public void before() throws IOException {
-    HTU.getHBaseAdmin().getConnection().clearRegionCache();
+    ((ClusterConnection) HTU.getAdmin().getConnection()).clearRegionCache();
     try {
       openRegion(hriPrimary);
     } catch (Exception ignored) {
@@ -226,7 +226,7 @@ public class TestReplicasClient {
     } catch (Exception ignored) {
     }
 
-    HTU.getHBaseAdmin().getConnection().clearRegionCache();
+    ((ClusterConnection) HTU.getAdmin().getConnection()).clearRegionCache();
   }
 
   private HRegionServer getRS() {

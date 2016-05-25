@@ -175,7 +175,7 @@ public class LocalHBaseCluster {
       Configuration config, final int index)
   throws IOException {
     // Create each regionserver with its own Configuration instance so each has
-    // its HConnection instance rather than share (see HBASE_INSTANCES down in
+    // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager).
 
     // Also, create separate CoordinatedStateManager instance per Server.
@@ -210,7 +210,7 @@ public class LocalHBaseCluster {
   public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
   throws IOException {
     // Create each master with its own Configuration instance so each has
-    // its HConnection instance rather than share (see HBASE_INSTANCES down in
+    // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager.
 
     // Also, create separate CoordinatedStateManager instance per Server.

@@ -19,8 +19,13 @@
 
 package org.apache.hadoop.hbase.util;
 
-
 import com.google.common.collect.Multimap;
+
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -33,7 +38,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -51,11 +55,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.*;
 import static org.junit.Assert.*;
@@ -350,7 +349,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
             }
           }
 
-          HBaseFsckRepair.closeRegionSilentlyAndWait((HConnection) connection,
+          HBaseFsckRepair.closeRegionSilentlyAndWait(connection,
               cluster.getRegionServer(k).getServerName(), hbi.getHdfsHRI());
           admin.offline(regionName);
           break;

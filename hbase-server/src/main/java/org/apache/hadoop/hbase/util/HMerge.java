@@ -37,10 +37,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -103,10 +103,10 @@ class HMerge {
     final TableName tableName, final boolean testMasterRunning)
   throws IOException {
     boolean masterIsRunning = false;
-    HConnection hConnection = null;
+    ClusterConnection hConnection = null;
     if (testMasterRunning) {
       try {
-        hConnection = (HConnection) ConnectionFactory.createConnection(conf);
+        hConnection = (ClusterConnection) ConnectionFactory.createConnection(conf);
         masterIsRunning = hConnection.isMasterRunning();
       } finally {
         if (hConnection != null) {

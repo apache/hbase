@@ -21,10 +21,10 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -44,7 +44,7 @@ class HFileArchiveManager {
   private final ZooKeeperWatcher zooKeeper;
   private volatile boolean stopped = false;
 
-  public HFileArchiveManager(HConnection connection, Configuration conf)
+  public HFileArchiveManager(Connection connection, Configuration conf)
       throws ZooKeeperConnectionException, IOException {
     this.zooKeeper = new ZooKeeperWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
         connection);
@@ -74,7 +74,7 @@ class HFileArchiveManager {
    */
   public HFileArchiveManager disableHFileBackup(byte[] table) throws KeeperException {
       disable(this.zooKeeper, table);
-      return this;
+    return this;
   }
 
   /**

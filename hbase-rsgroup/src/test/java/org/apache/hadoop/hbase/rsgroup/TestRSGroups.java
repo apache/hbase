@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import com.google.common.net.HostAndPort;
@@ -35,9 +34,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -50,20 +49,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -190,7 +180,8 @@ public class TestRSGroups extends TestRSGroupsBase {
     });
     ServerName targetServer =
         ServerName.parseServerName(appInfo.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface rs = admin.getConnection().getAdmin(targetServer);
+    AdminProtos.AdminService.BlockingInterface rs =
+      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
     //verify it was assigned to the right group
     Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(rs).size());
   }
