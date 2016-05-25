@@ -24,6 +24,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
@@ -124,7 +125,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_DEFERRED_LOG_FLUSH_USAGE = "Enable deferred log flush.";
 
   public static final String OPT_DATA_BLOCK_ENCODING =
-      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase();
+      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
 
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +

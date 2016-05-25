@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -8433,7 +8434,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     boolean majorCompact = false;
     if (args.length > 1) {
-      if (!args[1].toLowerCase().startsWith("major")) {
+      if (!args[1].toLowerCase(Locale.ROOT).startsWith("major")) {
         printUsageAndExit("ERROR: Unrecognized option <" + args[1] + ">");
       }
       majorCompact = true;

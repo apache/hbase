@@ -30,6 +30,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.Locale;
 import java.util.Properties;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -142,7 +143,7 @@ public class KeyStoreKeyProvider implements KeyProvider {
         throw new RuntimeException("KeyProvider scheme should specify KeyStore type");
       }
       // KeyStore expects instance type specifications in uppercase
-      store = KeyStore.getInstance(storeType.toUpperCase());
+      store = KeyStore.getInstance(storeType.toUpperCase(Locale.ROOT));
       processParameters(uri);
       load(uri);
     } catch (URISyntaxException e) {

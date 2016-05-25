@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
@@ -111,7 +112,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     } else {
       minValueSize = maxValueSize = Integer.parseInt(valueSize);
     }
-    String datagen = cmd.getOptionValue(DATAGEN_KEY, "default").toLowerCase();
+    String datagen = cmd.getOptionValue(DATAGEN_KEY, "default").toLowerCase(Locale.ROOT);
     if ("default".equals(datagen)) {
       dataGen = new MultiThreadedAction.DefaultDataGenerator(
           minValueSize, maxValueSize, 1, 1, new byte[][] { COLUMN_FAMILY });

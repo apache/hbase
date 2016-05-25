@@ -22,6 +22,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -103,8 +104,8 @@ public abstract class ServerCommandLine extends Configured implements Tool {
 
       nextEnv:
       for (Entry<String, String> entry : System.getenv().entrySet()) {
-        String key = entry.getKey().toLowerCase();
-        String value = entry.getValue().toLowerCase();
+        String key = entry.getKey().toLowerCase(Locale.ROOT);
+        String value = entry.getValue().toLowerCase(Locale.ROOT);
         // exclude variables which may contain skip words
         for(String skipWord : skipWords) {
           if (key.contains(skipWord) || value.contains(skipWord))

@@ -24,6 +24,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -142,7 +143,7 @@ public class DataBlockEncodingTool {
       String s = super.toString();
       StringBuilder sb = new StringBuilder();
       sb.append(s.charAt(0));
-      sb.append(s.substring(1).toLowerCase());
+      sb.append(s.substring(1).toLowerCase(Locale.ROOT));
       return sb.toString();
     }
   }
@@ -372,7 +373,7 @@ public class DataBlockEncodingTool {
   private void benchmarkDefaultCompression(int totalSize, byte[] rawBuffer)
       throws IOException {
     benchmarkAlgorithm(compressionAlgorithm,
-        compressionAlgorithmName.toUpperCase(), rawBuffer, 0, totalSize);
+        compressionAlgorithmName.toUpperCase(Locale.ROOT), rawBuffer, 0, totalSize);
   }
 
   /**
@@ -526,7 +527,7 @@ public class DataBlockEncodingTool {
    * @throws IOException
    */
   public void displayStatistics() throws IOException {
-    final String comprAlgo = compressionAlgorithmName.toUpperCase();
+    final String comprAlgo = compressionAlgorithmName.toUpperCase(Locale.ROOT);
     long rawBytes = totalKeyLength + totalPrefixLength + totalValueLength;
 
     System.out.println("Raw data size:");
@@ -694,7 +695,7 @@ public class DataBlockEncodingTool {
     String compressionName = DEFAULT_COMPRESSION.getName();
     if (cmd.hasOption(OPT_ENCODING_ALGORITHM)) {
       compressionName =
-          cmd.getOptionValue(OPT_ENCODING_ALGORITHM).toLowerCase();
+          cmd.getOptionValue(OPT_ENCODING_ALGORITHM).toLowerCase(Locale.ROOT);
     }
     boolean doBenchmark = cmd.hasOption(OPT_MEASURE_THROUGHPUT);
     boolean doVerify = !cmd.hasOption(OPT_OMIT_CORRECTNESS_TEST);

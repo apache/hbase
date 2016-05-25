@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,7 +121,7 @@ public abstract class FSUtils {
    */
   public static void setStoragePolicy(final FileSystem fs, final Configuration conf,
       final Path path, final String policyKey, final String defaultPolicy) {
-    String storagePolicy = conf.get(policyKey, defaultPolicy).toUpperCase();
+    String storagePolicy = conf.get(policyKey, defaultPolicy).toUpperCase(Locale.ROOT);
     if (storagePolicy.equals(defaultPolicy)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("default policy of " + defaultPolicy + " requested, exiting early.");
@@ -1910,7 +1911,7 @@ public abstract class FSUtils {
           return false;
         }
 
-        if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+        if (!regionName.toLowerCase(Locale.ROOT).matches("[0-9a-f]+")) {
           return false;
         }
         return true;

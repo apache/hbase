@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.security;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -79,13 +80,13 @@ public class SaslUtil {
    */
   public static QualityOfProtection getQop(String stringQop) {
     QualityOfProtection qop = null;
-    if (QualityOfProtection.AUTHENTICATION.name().toLowerCase().equals(stringQop)
+    if (QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT).equals(stringQop)
         || QualityOfProtection.AUTHENTICATION.saslQop.equals(stringQop)) {
       qop = QualityOfProtection.AUTHENTICATION;
-    } else if (QualityOfProtection.INTEGRITY.name().toLowerCase().equals(stringQop)
+    } else if (QualityOfProtection.INTEGRITY.name().toLowerCase(Locale.ROOT).equals(stringQop)
         || QualityOfProtection.INTEGRITY.saslQop.equals(stringQop)) {
       qop = QualityOfProtection.INTEGRITY;
-    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(stringQop)
+    } else if (QualityOfProtection.PRIVACY.name().toLowerCase(Locale.ROOT).equals(stringQop)
         || QualityOfProtection.PRIVACY.saslQop.equals(stringQop)) {
       qop = QualityOfProtection.PRIVACY;
     }

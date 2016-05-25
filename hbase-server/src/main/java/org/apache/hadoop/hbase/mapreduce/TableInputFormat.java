@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -253,7 +254,7 @@ implements Configurable {
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
     List<InputSplit> splits = super.getSplits(context);
-    if ((conf.get(SHUFFLE_MAPS) != null) && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase())) {
+    if ((conf.get(SHUFFLE_MAPS) != null) && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase(Locale.ROOT))) {
       Collections.shuffle(splits);
     }
     return splits;
