@@ -109,12 +109,11 @@ EOF
 
         scan = table._hash_to_scan(args)
         #actually do the scanning
-        count = table._scan_internal(args, scan) do |row, cells|
+        count, is_stale = table._scan_internal(args, scan) do |row, cells|
           formatter.row([ row, cells ])
         end
 
-        formatter.footer(now, count)
-
+        formatter.footer(now, count, is_stale)
         # if scan metrics were enabled, print them after the results
         if (scan != nil && scan.isScanMetricsEnabled())
           formatter.scan_metrics(scan.getScanMetrics(), args["METRICS"])

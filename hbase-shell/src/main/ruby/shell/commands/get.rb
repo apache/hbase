@@ -84,11 +84,11 @@ EOF
         now = Time.now
         formatter.header(["COLUMN", "CELL"])
 
-        table._get_internal(row, *args) do |column, value|
+        count, is_stale = table._get_internal(row, *args) do |column, value|
           formatter.row([ column, value ])
         end
 
-        formatter.footer(now)
+        formatter.footer(now, count, is_stale)
       end
     end
   end
