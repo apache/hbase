@@ -1117,7 +1117,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
     }
-    return this.memstoreSize.addAndGet(memStoreSize);
+    long size = this.memstoreSize.addAndGet(memStoreSize);
+    // This is extremely bad if we make memstoreSize negative. Log as much info on the offending
+    // caller as possible. (memStoreSize might be a negative value already -- freeing memory)
+    if (size < 0) {
+      LOG.error("Asked to modify this region's (" + this.toString()
+      + ") memstoreSize to a negative value which is incorrect. Current memstoreSize="
+      + (size-memStoreSize) + ", delta=" + memStoreSize, new Exception());
+    }
+    return size;
   }
 
   @Override
@@ -2367,7 +2375,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       perCfExtras = new StringBuilder();
       for (Store store: storesToFlush) {
         perCfExtras.append("; ").append(store.getColumnFamilyName());
-        perCfExtras.append("=").append(StringUtils.byteDesc(store.getMemStoreSize()));
+        perCfExtras.append("=").append(StringUtils.byteDesc(store.getFlushableSize()));
       }
     }
     LOG.info("Flushing " + + storesToFlush.size() + "/" + stores.size() +
@@ -2943,8 +2951,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           initialized = true;
         }
-        long addedSize = doMiniBatchMutate(batchOp);
-        long newSize = this.addAndGetGlobalMemstoreSize(addedSize);
+        doMiniBatchMutate(batchOp);
+        long newSize = this.getMemstoreSize();
         requestFlushIfNeeded(newSize);
       }
     } finally {
@@ -3025,6 +3033,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int cellCount = 0;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
+    long addedSize = 0;
     try {
       // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
       int numReadyToWrite = 0;
@@ -3206,7 +3215,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       // STEP 5. Write back to memstore
-      long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
           continue;
@@ -3267,6 +3275,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       // Call complete rather than completeAndWait because we probably had error if walKey != null
       if (writeEntry != null) mvcc.complete(writeEntry);
+      this.addAndGetGlobalMemstoreSize(addedSize);
       if (locked) {
         this.updatesLock.readLock().unlock();
       }
