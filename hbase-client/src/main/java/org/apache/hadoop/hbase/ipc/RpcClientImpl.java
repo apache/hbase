@@ -672,7 +672,7 @@ public class RpcClientImpl extends AbstractRpcClient {
               String msg = "Couldn't setup connection for " +
                 UserGroupInformation.getLoginUser().getUserName() +
                 " to " + serverPrincipal;
-              LOG.warn(msg);
+              LOG.warn(msg, ex);
               throw (IOException) new IOException(msg).initCause(ex);
             }
           } else {
