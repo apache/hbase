@@ -177,11 +177,16 @@ module Shell
         end
       end
 
-      def footer(start_time = nil, row_count = nil)
+      def footer(start_time = nil, row_count = nil, is_stale = false)
         return unless start_time
         row_count ||= @row_count
         # Only output elapsed time and row count if startTime passed
-        @out.puts("%d row(s) in %.4f seconds" % [row_count, Time.now - start_time])
+        @out.print("%d row(s) in %.4f seconds" % [row_count, Time.now - start_time])
+        if is_stale == true
+          @out.puts(" (possible stale results) ")
+        else
+          @out.puts("")
+        end
       end
     end
 
