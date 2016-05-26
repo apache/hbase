@@ -941,7 +941,15 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
     }
-    return this.memstoreSize.addAndGet(memStoreSize);
+    long size = this.memstoreSize.addAndGet(memStoreSize);
+    // This is extremely bad if we make memstoreSize negative. Log as much info on the offending
+    // caller as possible. (memStoreSize might be a negative value already -- freeing memory)
+    if (size < 0) {
+      LOG.error("Asked to modify this region's (" + this.toString()
+      + ") memstoreSize to a negative value which is incorrect. Current memstoreSize="
+      + (size-memStoreSize) + ", delta=" + memStoreSize, new Exception());
+    }
+    return size;
   }
 
   /** @return a HRegionInfo object for this region */
@@ -2346,8 +2354,8 @@ public class HRegion implements HeapSize { // , Writable{
           }
           initialized = true;
         }
-        long addedSize = doMiniBatchMutation(batchOp);
-        long newSize = this.addAndGetGlobalMemstoreSize(addedSize);
+        doMiniBatchMutation(batchOp);
+        long newSize = this.getMemstoreSize().get();
         if (isFlushSize(newSize)) {
           requestFlush();
         }
@@ -2426,6 +2434,7 @@ public class HRegion implements HeapSize { // , Writable{
     int lastIndexExclusive = firstIndex;
     boolean success = false;
     int noOfPuts = 0, noOfDeletes = 0;
+    long addedSize = 0;
     try {
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
@@ -2578,7 +2587,6 @@ public class HRegion implements HeapSize { // , Writable{
       // visible to scanners till we update the MVCC. The MVCC is
       // moved only when the sync is complete.
       // ----------------------------------
-      long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) {
@@ -2712,6 +2720,8 @@ public class HRegion implements HeapSize { // , Writable{
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
         rollbackMemstore(batchOp, familyMaps, firstIndex, lastIndexExclusive);
+      } else {
+        this.addAndGetGlobalMemstoreSize(addedSize);
       }
       if (w != null) mvcc.completeMemstoreInsert(w);
 
