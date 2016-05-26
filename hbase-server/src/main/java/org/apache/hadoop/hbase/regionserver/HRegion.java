@@ -1090,7 +1090,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
     }
-    return this.memstoreSize.addAndGet(memStoreSize);
+    long size = this.memstoreSize.addAndGet(memStoreSize);
+    // This is extremely bad if we make memstoreSize negative. Log as much info on the offending
+    // caller as possible. (memStoreSize might be a negative value already -- freeing memory)
+    if (size < 0) {
+      LOG.error("Asked to modify this region's (" + this.toString()
+      + ") memstoreSize to a negative value which is incorrect. Current memstoreSize="
+      + (size-memStoreSize) + ", delta=" + memStoreSize, new Exception());
+    }
+    return size;
   }
 
   @Override
@@ -2868,8 +2876,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           initialized = true;
         }
-        long addedSize = doMiniBatchMutation(batchOp);
-        long newSize = this.addAndGetGlobalMemstoreSize(addedSize);
+        doMiniBatchMutation(batchOp);
+        long newSize = this.getMemstoreSize();
         if (isFlushSize(newSize)) {
           requestFlush();
         }
@@ -2950,6 +2958,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int noOfPuts = 0, noOfDeletes = 0;
     WALKey walKey = null;
     long mvccNum = 0;
+    long addedSize = 0;
     try {
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
@@ -3182,7 +3191,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // visible to scanners till we update the MVCC. The MVCC is
       // moved only when the sync is complete.
       // ----------------------------------
-      long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) {
@@ -3265,8 +3273,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
         }
         if (writeEntry != null) mvcc.complete(writeEntry);
-      } else if (writeEntry != null) {
-        mvcc.completeAndWait(writeEntry);
+      } else {
+        this.addAndGetGlobalMemstoreSize(addedSize);
+        if (writeEntry != null) {
+          mvcc.completeAndWait(writeEntry);
+        }
       }
 
       if (locked) {
