@@ -36,6 +36,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -367,6 +368,44 @@ public class TestHRegion {
     assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize());
     assertEquals("flushable size should be zero", 0, store.getFlushableSize());
     HRegion.closeHRegion(region);
+  }
+
+  @Test
+  public void testMemstoreSizeAccountingWithFailedPostBatchMutate() throws IOException {
+    String testName = "testMemstoreSizeAccountingWithFailedPostBatchMutate";
+    FileSystem fs = FileSystem.get(CONF);
+    Path rootDir = new Path(dir + testName);
+    FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
+    HRegion region = initHRegion(tableName, null, null, name.getMethodName(),
+        CONF, false, Durability.SYNC_WAL, hLog, COLUMN_FAMILY_BYTES);
+    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    assertEquals(0, region.getMemstoreSize());
+
+    // Put one value
+    byte [] value = Bytes.toBytes(name.getMethodName());
+    Put put = new Put(value);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    region.put(put);
+    long onePutSize = region.getMemstoreSize();
+    assertTrue(onePutSize > 0);
+
+    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    doThrow(new IOException())
+       .when(mockedCPHost).postBatchMutate(Mockito.<MiniBatchOperationInProgress<Mutation>>any());
+    region.setCoprocessorHost(mockedCPHost);
+
+    put = new Put(value);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("dfg"), value);
+    try {
+      region.put(put);
+      fail("Should have failed with IOException");
+    } catch (IOException expected) {
+    }
+    assertEquals("memstoreSize should be incremented", onePutSize * 2, region.getMemstoreSize());
+    assertEquals("flushable size should be incremented", onePutSize * 2, store.getFlushableSize());
+
+    region.setCoprocessorHost(null);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
