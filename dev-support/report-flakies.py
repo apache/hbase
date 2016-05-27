@@ -48,7 +48,11 @@ if args.verbose:
 # Given url of an executed build, analyzes its console text, and returns
 # [list of all tests, list of timeout tests, list of failed tests].
 def get_bad_tests(build_url):
-    logger.info("Getting test results for %s", build_url)
+    logger.info("Analyzing %s", build_url)
+    json_response = requests.get(build_url + "/api/json").json()
+    if json_response["building"]:
+        logger.info("Skipping this build since it is in progress.")
+        return {}
     console_url = build_url + "/consoleText"
     return findHangingTests.get_hanging_tests(console_url)
 
@@ -95,6 +99,8 @@ for url_max_build in expanded_urls:
         build_id = build["number"]
         build_ids.append(build_id)
         result = get_bad_tests(build["url"])
+        if result == {}:
+            continue
         if len(result[0]) > 0:
             build_id_to_results[build_id] = result
         else:
