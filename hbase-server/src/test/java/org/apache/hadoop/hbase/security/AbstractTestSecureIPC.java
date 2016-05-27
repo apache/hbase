@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.Cell;
@@ -217,6 +218,12 @@ public abstract class AbstractTestSecureIPC {
 
     setRpcProtection("integrity,authentication", "privacy,authentication");
     callRpcService(User.create(ugi));
+
+    setRpcProtection("integrity,authentication", "integrity,authentication");
+    callRpcService(User.create(ugi));
+
+    setRpcProtection("privacy,authentication", "privacy,authentication");
+    callRpcService(User.create(ugi));
   }
 
   @Test
@@ -302,18 +309,17 @@ public abstract class AbstractTestSecureIPC {
 
           @Override
       public void run() {
-          String result;
           try {
-              result = stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(String.valueOf(
-                  ThreadLocalRandom.current().nextInt())).build()).getMessage();
-            } catch (ServiceException e) {
-              throw new RuntimeException(e);
+            int[] messageSize = new int[] {100, 1000, 10000};
+            for (int i = 0; i < messageSize.length; i++) {
+              String input = RandomStringUtils.random(messageSize[i]);
+              String result = stub.echo(null, TestProtos.EchoRequestProto.newBuilder()
+                  .setMessage(input).build()).getMessage();
+              assertEquals(input, result);
             }
-          if (results != null) {
-              synchronized (results) {
-                  results.add(result);
-                }
-            }
+          } catch (ServiceException e) {
+            throw new RuntimeException(e);
+          }
         }
     }
 }
