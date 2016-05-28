@@ -17,9 +17,9 @@
 # limitations under the License.
 #
 # Makes a patch for the current branch, creates/updates the review board request and uploads new
-# patch to jira. Patch is named as JIRAID_BRANCH_VERSION.patch. If no jira is specified,
-# patch will be named BRANCH_v0.patch and jira and review board are not updated.
-# Review board id is retrieved from the remote link in the jira.
+# patch to jira. Patch is named as (JIRA).(branch name).(patch number).patch as per Yetus' naming
+# rules. If no jira is specified, patch will be named (branch name).patch and jira and review board
+# are not updated. Review board id is retrieved from the remote link in the jira.
 # Print help: submit-patch.py --h
 import argparse
 import getpass
@@ -54,7 +54,7 @@ parser.add_argument("-jid", "--jira-id",
                     help = "Jira id of the issue. If set, we deduce next patch version from "
                            "attachments in the jira and also upload the new patch. Script will "
                            "ask for jira username/password for authentication. If not set, "
-                           "patch is named <branch>_v0.patch.")
+                           "patch is named <branch>.patch.")
 
 # Arguments related to Review Board.
 parser.add_argument("-srb", "--skip-review-board",
@@ -123,24 +123,19 @@ def get_base_branch():
         return tracking_branch.name
 
 
-# Returns patch name having format "JIRAID_BRANCH_VERSION.patch". If no jira is specified,
-# the format changes to "BRANCH_v0.patch".
+# Returns patch name having format (JIRA).(branch name).(patch number).patch. If no jira is
+# specified, patch is name (branch name).patch.
 def get_patch_name(branch):
-    patch_name = ""
-    if args.jira_id is not None:
-        patch_name = args.jira_id.upper() + "_"
-
-    patch_name = patch_name + branch
-    patch_version = get_next_patch_version(patch_name)
-    return patch_name + "_v" + patch_version + ".patch"
-
-
-# Fetches list of attachments in specified jira (--jira-id) and deduces next version of patch for
-# the given patch_name_prefix. If no jira is specified, returns 0.
-def get_next_patch_version(patch_name_prefix):
     if args.jira_id is None:
-        return "0"
+        return branch + ".patch"
 
+    patch_name_prefix = args.jira_id.upper() + "." + branch
+    return get_patch_name_with_version(patch_name_prefix)
+
+
+# Fetches list of attachments from the jira, deduces next version for the patch and returns final
+# patch name.
+def get_patch_name_with_version(patch_name_prefix):
     # JIRA's rest api is broken wrt to attachments. https://jira.atlassian.com/browse/JRA-27637.
     # Using crude way to get list of attachments.
     url = "https://issues.apache.org/jira/browse/" + args.jira_id
@@ -152,11 +147,10 @@ def get_next_patch_version(patch_name_prefix):
         log_fatal_and_exit(" Cannot fetch jira information. Status code %s", html.status_code)
     # Iterate over patch names starting from version 1 and return when name is not already used.
     content = unicode(html.content, 'utf-8')
-    for i in range(1, 100):
-        name = patch_name_prefix + "_v" + str(i) + ".patch"
-        print name
-        if content.find(name) == -1:
-            return str(i)
+    for i in range(1, 1000):
+        name = patch_name_prefix + "." + ('{0:03d}'.format(i)) + ".patch"
+        if name not in content:
+            return name
 
 
 # Validates that patch directory exists, if not, creates it.
@@ -196,6 +190,7 @@ def get_credentials():
     creds_filepath = os.path.expanduser("~/.apache-creds")
     if os.path.exists(creds_filepath):
         try:
+            logger.info(" Reading ~/.apache-creds for Jira and ReviewBoard credentials")
             content = subprocess.check_output("openssl enc -aes-256-cbc -d -in " + creds_filepath,
                                               shell=True)
         except subprocess.CalledProcessError as e:
