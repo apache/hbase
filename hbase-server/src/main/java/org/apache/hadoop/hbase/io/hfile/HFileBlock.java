@@ -1712,7 +1712,7 @@ public class HFileBlock implements Cacheable {
       ByteBuffer onDiskBlockByteBuffer = ByteBuffer.wrap(onDiskBlock, 0, onDiskSizeWithHeader);
       // Verify checksum of the data before using it for building HFileBlock.
       if (verifyChecksum &&
-          !validateChecksum(offset, onDiskBlockByteBuffer.asReadOnlyBuffer(), hdrSize)) {
+          !validateChecksum(offset, onDiskBlockByteBuffer, hdrSize)) {
         return null;
       }
       // The onDiskBlock will become the headerAndDataBuffer for this block.
