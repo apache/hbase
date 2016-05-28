@@ -1487,6 +1487,9 @@ public class ThriftServerRunner implements Runnable {
         if (tScan.isSetReversed()) {
           scan.setReversed(tScan.isReversed());
         }
+        if (tScan.isSetCacheBlocks()) {
+          scan.setCacheBlocks(tScan.isCacheBlocks());
+        }
         return addScanner(table.getScanner(scan), tScan.sortColumns);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
