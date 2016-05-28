@@ -1780,21 +1780,29 @@ It provides a nice overview that applies equally to the Apache HBase Project.
 [[submitting.patches.create]]
 ==== Create Patch
 
-The script _dev-support/make_patch.sh_ has been provided to help you adhere to patch-creation guidelines.
-The script has the following syntax:
+Use _dev-support/submit-patch.py_ to create patches and optionally, upload to jira and update
+reviews on Review Board. Patch name is formatted as (JIRA).(branch name).(patch number).patch to
+follow Yetus' naming rules. Use `-h` flag to know detailed usage information. Most useful options
+are:
 
-----
-$ make_patch.sh [-a] [-p <patch_dir>]
-----
+. `-b BRANCH, --branch BRANCH` : Specify base branch for generating the diff. If not specified, tracking branch is used. If there is no tracking branch, error will be thrown.
+. `-jid JIRA_ID, --jira-id JIRA_ID` : Jira id of the issue. If set, we deduce next patch version from attachments in the jira and also upload the new patch. Script will ask for jira username/password for authentication. If not set, patch is named <branch>.patch.
 
-. If you do not pass a `patch_dir`, the script defaults to _~/patches/_.
-  If the `patch_dir` does not exist, it is created.
-. By default, if an existing patch exists with the JIRA ID, the version of the new patch is incremented (_HBASE-XXXX-v3.patch_). If the `-a`                            option is passed, the version is not incremented, but the suffix `-addendum` is added (_HBASE-XXXX-v2-addendum.patch_). A second addendum to a given version is not supported.
-. Detects whether you have more than one local commit on your branch.
-  If you do, the script offers you the chance to run +git rebase
-  -i+ to squash the changes into a single commit so that it can use +git format-patch+.
-  If you decline, the script uses +git diff+ instead.
-  The patch is saved in a configurable directory and is ready to be attached to your JIRA.
+The script builds a new patch, and uses REST API to upload it to the jira (if --jira-id is
+specified) and update the review on ReviewBoard (if --skip-review-board not specified).
+Remote links in the jira are used to figure out if a review request already exists. If no review
+request is present, then creates a new one and populates all required fields using jira summary,
+patch description, etc. Also adds this review's link to the jira.
+
+Authentication::
+Since attaching patches on JIRA and creating/changing review request on ReviewBoard requires a
+logged in user, the script will prompt you for username and password. To avoid the hassle every
+time, set up `~/.apache-creds` with login details and encrypt it by following the steps in footer
+of script's help message.
+
+Python dependencies::
+To install required python dependencies, execute
+`pip install -r dev-support/python-requirements.txt` from the master branch.
 
 .Patching Workflow
 
@@ -1803,21 +1811,12 @@ $ make_patch.sh [-a] [-p <patch_dir>]
 * Submit one single patch for a fix.
   If necessary, squash local commits to merge local commits into a single one first.
   See this link:http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash[Stack Overflow question] for more information about squashing commits.
-* The patch should have the JIRA ID in the name.
-  If you are generating from a branch, include the target branch in the filename.
-  A common naming scheme for patches is:
+* Patch name should be as follows to adhere to Yetus' naming convention.
 +
 ----
-HBASE-XXXX.patch
+(JIRA).(branch name).(patch number).patch
 ----
-+
-----
-HBASE-XXXX-0.90.patch     # to denote that the patch is against branch 0.90
-----
-+
-----
-HBASE-XXXX-v3.patch       # to denote that this is the third version of the patch
-----
+For eg. HBASE-11625.master.001.patch, HBASE-XXXXX.branch-1.2.0005.patch, etc.
 
 * To submit a patch, first create it using one of the methods in <<patching.methods,patching.methods>>.
   Next, attach the patch to the JIRA (one patch for the whole fix), using the  dialog.
@@ -1831,8 +1830,7 @@ Please understand that not every patch may get committed, and that feedback will
 * If you need to revise your patch, leave the previous patch file(s) attached to the JIRA, and upload the new one, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
   Cancel the Patch Available flag and then re-trigger it, by toggling the btn:[Patch Available] button in JIRA.
   JIRA sorts attached files by the time they were attached, and has no problem with multiple attachments with the same name.
-  However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
-* If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
+  However, at times it is easier to increment patch number in the patch name.
 
 [[patching.methods]]
 .Methods to Create Patches
