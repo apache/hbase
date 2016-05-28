@@ -2389,19 +2389,39 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testGetNamespacePermission() throws Exception {
-    String namespace = "testNamespace";
+    final String namespace = "testNamespace";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     createNamespace(TEST_UTIL, desc);
-    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
+    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.ADMIN);
 
-    // Test 1: A specific namespace
-    getNamespacePermissionsAndVerify(namespace, 1, namespace);
+    AccessTestAction test1 = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        // Test 1: A specific namespace
+        getNamespacePermissionsAndVerify(namespace, 1, namespace);
+        return null;
+      }
+    };
 
-    // Test 2: '@.*'
-    getNamespacePermissionsAndVerify(".*", 1, namespace);
+    AccessTestAction test2 = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        // Test 2: '@.*'
+        getNamespacePermissionsAndVerify(".*", 1, namespace);
+        return null;
+      }
+    };
 
-    // Test 3: A more complex regex
-    getNamespacePermissionsAndVerify("^test[a-zA-Z]*", 1, namespace);
+    AccessTestAction test3 = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        // Test 3: A more complex regex
+        getNamespacePermissionsAndVerify("^test[a-zA-Z]*", 1, namespace);
+        return null;
+      }
+    };
+
+    verifyAllowed(USER_NONE, test1, test2, test3);
 
     deleteNamespace(TEST_UTIL, namespace);
   }
