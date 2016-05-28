@@ -224,6 +224,7 @@ struct TScan {
   9: optional map<binary, binary> attributes
   10: optional TAuthorization authorizations
   11: optional bool reversed
+  12: optional bool cacheBlocks
 }
 
 /**

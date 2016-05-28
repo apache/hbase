@@ -10061,7 +10061,7 @@ public class Hbase {
                   struct.success = new HashMap<ByteBuffer,ColumnDescriptor>(2*_map42.size);
                   for (int _i43 = 0; _i43 < _map42.size; ++_i43)
                   {
-                    ByteBuffer _key44; // optional
+                    ByteBuffer _key44; // required
                     ColumnDescriptor _val45; // required
                     _key44 = iprot.readBinary();
                     _val45 = new ColumnDescriptor();
@@ -10167,7 +10167,7 @@ public class Hbase {
             struct.success = new HashMap<ByteBuffer,ColumnDescriptor>(2*_map48.size);
             for (int _i49 = 0; _i49 < _map48.size; ++_i49)
             {
-              ByteBuffer _key50; // optional
+              ByteBuffer _key50; // required
               ColumnDescriptor _val51; // required
               _key50 = iprot.readBinary();
               _val51 = new ColumnDescriptor();
@@ -13642,7 +13642,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map68.size);
                   for (int _i69 = 0; _i69 < _map68.size; ++_i69)
                   {
-                    ByteBuffer _key70; // optional
+                    ByteBuffer _key70; // required
                     ByteBuffer _val71; // required
                     _key70 = iprot.readBinary();
                     _val71 = iprot.readBinary();
@@ -13772,7 +13772,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map74.size);
             for (int _i75 = 0; _i75 < _map74.size; ++_i75)
             {
-              ByteBuffer _key76; // optional
+              ByteBuffer _key76; // required
               ByteBuffer _val77; // required
               _key76 = iprot.readBinary();
               _val77 = iprot.readBinary();
@@ -15083,7 +15083,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map86.size);
                   for (int _i87 = 0; _i87 < _map86.size; ++_i87)
                   {
-                    ByteBuffer _key88; // optional
+                    ByteBuffer _key88; // required
                     ByteBuffer _val89; // required
                     _key88 = iprot.readBinary();
                     _val89 = iprot.readBinary();
@@ -15226,7 +15226,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map92.size);
             for (int _i93 = 0; _i93 < _map92.size; ++_i93)
             {
-              ByteBuffer _key94; // optional
+              ByteBuffer _key94; // required
               ByteBuffer _val95; // required
               _key94 = iprot.readBinary();
               _val95 = iprot.readBinary();
@@ -16635,7 +16635,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map104.size);
                   for (int _i105 = 0; _i105 < _map104.size; ++_i105)
                   {
-                    ByteBuffer _key106; // optional
+                    ByteBuffer _key106; // required
                     ByteBuffer _val107; // required
                     _key106 = iprot.readBinary();
                     _val107 = iprot.readBinary();
@@ -16791,7 +16791,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map110.size);
             for (int _i111 = 0; _i111 < _map110.size; ++_i111)
             {
-              ByteBuffer _key112; // optional
+              ByteBuffer _key112; // required
               ByteBuffer _val113; // required
               _key112 = iprot.readBinary();
               _val113 = iprot.readBinary();
@@ -17888,7 +17888,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map122.size);
                   for (int _i123 = 0; _i123 < _map122.size; ++_i123)
                   {
-                    ByteBuffer _key124; // optional
+                    ByteBuffer _key124; // required
                     ByteBuffer _val125; // required
                     _key124 = iprot.readBinary();
                     _val125 = iprot.readBinary();
@@ -18003,7 +18003,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map128.size);
             for (int _i129 = 0; _i129 < _map128.size; ++_i129)
             {
-              ByteBuffer _key130; // optional
+              ByteBuffer _key130; // required
               ByteBuffer _val131; // required
               _key130 = iprot.readBinary();
               _val131 = iprot.readBinary();
@@ -19232,7 +19232,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map143.size);
                   for (int _i144 = 0; _i144 < _map143.size; ++_i144)
                   {
-                    ByteBuffer _key145; // optional
+                    ByteBuffer _key145; // required
                     ByteBuffer _val146; // required
                     _key145 = iprot.readBinary();
                     _val146 = iprot.readBinary();
@@ -19384,7 +19384,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map154.size);
             for (int _i155 = 0; _i155 < _map154.size; ++_i155)
             {
-              ByteBuffer _key156; // optional
+              ByteBuffer _key156; // required
               ByteBuffer _val157; // required
               _key156 = iprot.readBinary();
               _val157 = iprot.readBinary();
@@ -20583,7 +20583,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map166.size);
                   for (int _i167 = 0; _i167 < _map166.size; ++_i167)
                   {
-                    ByteBuffer _key168; // optional
+                    ByteBuffer _key168; // required
                     ByteBuffer _val169; // required
                     _key168 = iprot.readBinary();
                     _val169 = iprot.readBinary();
@@ -20711,7 +20711,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map172.size);
             for (int _i173 = 0; _i173 < _map172.size; ++_i173)
             {
-              ByteBuffer _key174; // optional
+              ByteBuffer _key174; // required
               ByteBuffer _val175; // required
               _key174 = iprot.readBinary();
               _val175 = iprot.readBinary();
@@ -22030,7 +22030,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map187.size);
                   for (int _i188 = 0; _i188 < _map187.size; ++_i188)
                   {
-                    ByteBuffer _key189; // optional
+                    ByteBuffer _key189; // required
                     ByteBuffer _val190; // required
                     _key189 = iprot.readBinary();
                     _val190 = iprot.readBinary();
@@ -22195,7 +22195,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map198.size);
             for (int _i199 = 0; _i199 < _map198.size; ++_i199)
             {
-              ByteBuffer _key200; // optional
+              ByteBuffer _key200; // required
               ByteBuffer _val201; // required
               _key200 = iprot.readBinary();
               _val201 = iprot.readBinary();
@@ -23312,7 +23312,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map213.size);
                   for (int _i214 = 0; _i214 < _map213.size; ++_i214)
                   {
-                    ByteBuffer _key215; // optional
+                    ByteBuffer _key215; // required
                     ByteBuffer _val216; // required
                     _key215 = iprot.readBinary();
                     _val216 = iprot.readBinary();
@@ -23449,7 +23449,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map224.size);
             for (int _i225 = 0; _i225 < _map224.size; ++_i225)
             {
-              ByteBuffer _key226; // optional
+              ByteBuffer _key226; // required
               ByteBuffer _val227; // required
               _key226 = iprot.readBinary();
               _val227 = iprot.readBinary();
@@ -24698,7 +24698,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map242.size);
                   for (int _i243 = 0; _i243 < _map242.size; ++_i243)
                   {
-                    ByteBuffer _key244; // optional
+                    ByteBuffer _key244; // required
                     ByteBuffer _val245; // required
                     _key244 = iprot.readBinary();
                     _val245 = iprot.readBinary();
@@ -24872,7 +24872,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map258.size);
             for (int _i259 = 0; _i259 < _map258.size; ++_i259)
             {
-              ByteBuffer _key260; // optional
+              ByteBuffer _key260; // required
               ByteBuffer _val261; // required
               _key260 = iprot.readBinary();
               _val261 = iprot.readBinary();
@@ -26091,7 +26091,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map273.size);
                   for (int _i274 = 0; _i274 < _map273.size; ++_i274)
                   {
-                    ByteBuffer _key275; // optional
+                    ByteBuffer _key275; // required
                     ByteBuffer _val276; // required
                     _key275 = iprot.readBinary();
                     _val276 = iprot.readBinary();
@@ -26241,7 +26241,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map284.size);
             for (int _i285 = 0; _i285 < _map284.size; ++_i285)
             {
-              ByteBuffer _key286; // optional
+              ByteBuffer _key286; // required
               ByteBuffer _val287; // required
               _key286 = iprot.readBinary();
               _val287 = iprot.readBinary();
@@ -27580,7 +27580,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map302.size);
                   for (int _i303 = 0; _i303 < _map302.size; ++_i303)
                   {
-                    ByteBuffer _key304; // optional
+                    ByteBuffer _key304; // required
                     ByteBuffer _val305; // required
                     _key304 = iprot.readBinary();
                     _val305 = iprot.readBinary();
@@ -27767,7 +27767,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map318.size);
             for (int _i319 = 0; _i319 < _map318.size; ++_i319)
             {
-              ByteBuffer _key320; // optional
+              ByteBuffer _key320; // required
               ByteBuffer _val321; // required
               _key320 = iprot.readBinary();
               _val321 = iprot.readBinary();
@@ -28997,7 +28997,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map333.size);
                   for (int _i334 = 0; _i334 < _map333.size; ++_i334)
                   {
-                    ByteBuffer _key335; // optional
+                    ByteBuffer _key335; // required
                     ByteBuffer _val336; // required
                     _key335 = iprot.readBinary();
                     _val336 = iprot.readBinary();
@@ -29150,7 +29150,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map344.size);
             for (int _i345 = 0; _i345 < _map344.size; ++_i345)
             {
-              ByteBuffer _key346; // optional
+              ByteBuffer _key346; // required
               ByteBuffer _val347; // required
               _key346 = iprot.readBinary();
               _val347 = iprot.readBinary();
@@ -30430,7 +30430,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map351.size);
                   for (int _i352 = 0; _i352 < _map351.size; ++_i352)
                   {
-                    ByteBuffer _key353; // optional
+                    ByteBuffer _key353; // required
                     ByteBuffer _val354; // required
                     _key353 = iprot.readBinary();
                     _val354 = iprot.readBinary();
@@ -30596,7 +30596,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map362.size);
             for (int _i363 = 0; _i363 < _map362.size; ++_i363)
             {
-              ByteBuffer _key364; // optional
+              ByteBuffer _key364; // required
               ByteBuffer _val365; // required
               _key364 = iprot.readBinary();
               _val365 = iprot.readBinary();
@@ -31662,7 +31662,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map369.size);
                   for (int _i370 = 0; _i370 < _map369.size; ++_i370)
                   {
-                    ByteBuffer _key371; // optional
+                    ByteBuffer _key371; // required
                     ByteBuffer _val372; // required
                     _key371 = iprot.readBinary();
                     _val372 = iprot.readBinary();
@@ -31800,7 +31800,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map380.size);
             for (int _i381 = 0; _i381 < _map380.size; ++_i381)
             {
-              ByteBuffer _key382; // optional
+              ByteBuffer _key382; // required
               ByteBuffer _val383; // required
               _key382 = iprot.readBinary();
               _val383 = iprot.readBinary();
@@ -32968,7 +32968,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map387.size);
                   for (int _i388 = 0; _i388 < _map387.size; ++_i388)
                   {
-                    ByteBuffer _key389; // optional
+                    ByteBuffer _key389; // required
                     ByteBuffer _val390; // required
                     _key389 = iprot.readBinary();
                     _val390 = iprot.readBinary();
@@ -33119,7 +33119,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map398.size);
             for (int _i399 = 0; _i399 < _map398.size; ++_i399)
             {
-              ByteBuffer _key400; // optional
+              ByteBuffer _key400; // required
               ByteBuffer _val401; // required
               _key400 = iprot.readBinary();
               _val401 = iprot.readBinary();
@@ -35603,7 +35603,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map402.size);
                   for (int _i403 = 0; _i403 < _map402.size; ++_i403)
                   {
-                    ByteBuffer _key404; // optional
+                    ByteBuffer _key404; // required
                     ByteBuffer _val405; // required
                     _key404 = iprot.readBinary();
                     _val405 = iprot.readBinary();
@@ -35733,7 +35733,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map408.size);
             for (int _i409 = 0; _i409 < _map408.size; ++_i409)
             {
-              ByteBuffer _key410; // optional
+              ByteBuffer _key410; // required
               ByteBuffer _val411; // required
               _key410 = iprot.readBinary();
               _val411 = iprot.readBinary();
@@ -36885,7 +36885,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map412.size);
                   for (int _i413 = 0; _i413 < _map412.size; ++_i413)
                   {
-                    ByteBuffer _key414; // optional
+                    ByteBuffer _key414; // required
                     ByteBuffer _val415; // required
                     _key414 = iprot.readBinary();
                     _val415 = iprot.readBinary();
@@ -37028,7 +37028,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map418.size);
             for (int _i419 = 0; _i419 < _map418.size; ++_i419)
             {
-              ByteBuffer _key420; // optional
+              ByteBuffer _key420; // required
               ByteBuffer _val421; // required
               _key420 = iprot.readBinary();
               _val421 = iprot.readBinary();
@@ -37966,7 +37966,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map422.size);
                   for (int _i423 = 0; _i423 < _map422.size; ++_i423)
                   {
-                    ByteBuffer _key424; // optional
+                    ByteBuffer _key424; // required
                     ByteBuffer _val425; // required
                     _key424 = iprot.readBinary();
                     _val425 = iprot.readBinary();
@@ -38081,7 +38081,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map428.size);
             for (int _i429 = 0; _i429 < _map428.size; ++_i429)
             {
-              ByteBuffer _key430; // optional
+              ByteBuffer _key430; // required
               ByteBuffer _val431; // required
               _key430 = iprot.readBinary();
               _val431 = iprot.readBinary();
@@ -40652,7 +40652,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map440.size);
                   for (int _i441 = 0; _i441 < _map440.size; ++_i441)
                   {
-                    ByteBuffer _key442; // optional
+                    ByteBuffer _key442; // required
                     ByteBuffer _val443; // required
                     _key442 = iprot.readBinary();
                     _val443 = iprot.readBinary();
@@ -40780,7 +40780,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map446.size);
             for (int _i447 = 0; _i447 < _map446.size; ++_i447)
             {
-              ByteBuffer _key448; // optional
+              ByteBuffer _key448; // required
               ByteBuffer _val449; // required
               _key448 = iprot.readBinary();
               _val449 = iprot.readBinary();
@@ -41712,7 +41712,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map450.size);
                   for (int _i451 = 0; _i451 < _map450.size; ++_i451)
                   {
-                    ByteBuffer _key452; // optional
+                    ByteBuffer _key452; // required
                     ByteBuffer _val453; // required
                     _key452 = iprot.readBinary();
                     _val453 = iprot.readBinary();
@@ -41828,7 +41828,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map456.size);
             for (int _i457 = 0; _i457 < _map456.size; ++_i457)
             {
-              ByteBuffer _key458; // optional
+              ByteBuffer _key458; // required
               ByteBuffer _val459; // required
               _key458 = iprot.readBinary();
               _val459 = iprot.readBinary();
@@ -43015,7 +43015,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map463.size);
                   for (int _i464 = 0; _i464 < _map463.size; ++_i464)
                   {
-                    ByteBuffer _key465; // optional
+                    ByteBuffer _key465; // required
                     ByteBuffer _val466; // required
                     _key465 = iprot.readBinary();
                     _val466 = iprot.readBinary();
@@ -43167,7 +43167,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map474.size);
             for (int _i475 = 0; _i475 < _map474.size; ++_i475)
             {
-              ByteBuffer _key476; // optional
+              ByteBuffer _key476; // required
               ByteBuffer _val477; // required
               _key476 = iprot.readBinary();
               _val477 = iprot.readBinary();
@@ -44470,7 +44470,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map481.size);
                   for (int _i482 = 0; _i482 < _map481.size; ++_i482)
                   {
-                    ByteBuffer _key483; // optional
+                    ByteBuffer _key483; // required
                     ByteBuffer _val484; // required
                     _key483 = iprot.readBinary();
                     _val484 = iprot.readBinary();
@@ -44637,7 +44637,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map492.size);
             for (int _i493 = 0; _i493 < _map492.size; ++_i493)
             {
-              ByteBuffer _key494; // optional
+              ByteBuffer _key494; // required
               ByteBuffer _val495; // required
               _key494 = iprot.readBinary();
               _val495 = iprot.readBinary();
@@ -45812,7 +45812,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map499.size);
                   for (int _i500 = 0; _i500 < _map499.size; ++_i500)
                   {
-                    ByteBuffer _key501; // optional
+                    ByteBuffer _key501; // required
                     ByteBuffer _val502; // required
                     _key501 = iprot.readBinary();
                     _val502 = iprot.readBinary();
@@ -45964,7 +45964,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map510.size);
             for (int _i511 = 0; _i511 < _map510.size; ++_i511)
             {
-              ByteBuffer _key512; // optional
+              ByteBuffer _key512; // required
               ByteBuffer _val513; // required
               _key512 = iprot.readBinary();
               _val513 = iprot.readBinary();
@@ -47253,7 +47253,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map517.size);
                   for (int _i518 = 0; _i518 < _map517.size; ++_i518)
                   {
-                    ByteBuffer _key519; // optional
+                    ByteBuffer _key519; // required
                     ByteBuffer _val520; // required
                     _key519 = iprot.readBinary();
                     _val520 = iprot.readBinary();
@@ -47418,7 +47418,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map528.size);
             for (int _i529 = 0; _i529 < _map528.size; ++_i529)
             {
-              ByteBuffer _key530; // optional
+              ByteBuffer _key530; // required
               ByteBuffer _val531; // required
               _key530 = iprot.readBinary();
               _val531 = iprot.readBinary();
@@ -48823,7 +48823,7 @@ public class Hbase {
                   struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map535.size);
                   for (int _i536 = 0; _i536 < _map535.size; ++_i536)
                   {
-                    ByteBuffer _key537; // optional
+                    ByteBuffer _key537; // required
                     ByteBuffer _val538; // required
                     _key537 = iprot.readBinary();
                     _val538 = iprot.readBinary();
@@ -49003,7 +49003,7 @@ public class Hbase {
             struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map546.size);
             for (int _i547 = 0; _i547 < _map546.size; ++_i547)
             {
-              ByteBuffer _key548; // optional
+              ByteBuffer _key548; // required
               ByteBuffer _val549; // required
               _key548 = iprot.readBinary();
               _val549 = iprot.readBinary();

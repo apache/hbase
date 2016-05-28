@@ -770,7 +770,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
                 struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map91.size);
                 for (int _i92 = 0; _i92 < _map91.size; ++_i92)
                 {
-                  ByteBuffer _key93; // optional
+                  ByteBuffer _key93; // required
                   ByteBuffer _val94; // required
                   _key93 = iprot.readBinary();
                   _val94 = iprot.readBinary();
@@ -939,7 +939,7 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map102.size);
           for (int _i103 = 0; _i103 < _map102.size; ++_i103)
           {
-            ByteBuffer _key104; // optional
+            ByteBuffer _key104; // required
             ByteBuffer _val105; // required
             _key104 = iprot.readBinary();
             _val105 = iprot.readBinary();
