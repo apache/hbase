@@ -192,8 +192,8 @@ public class TableResource extends ResourceBase {
       }
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
       tableScan.setCaching(fetchSize);
-     return new TableScanResource(hTable.getScanner(tableScan), userRequestedLimit);
-    } catch (Exception exp) {
+      return new TableScanResource(hTable.getScanner(tableScan), userRequestedLimit);
+    } catch (IOException exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
       processException(exp);
       LOG.warn(exp);

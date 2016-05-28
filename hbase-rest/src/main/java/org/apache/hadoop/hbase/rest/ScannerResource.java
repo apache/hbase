@@ -91,7 +91,6 @@ public class ScannerResource extends ResourceBase {
       spec = new RowSpec(model.getStartRow(), endRow, model.getColumns(), model.getStartTime(),
           model.getEndTime(), model.getMaxVersions());
     }
-    MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
     
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
