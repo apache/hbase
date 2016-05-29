@@ -32,10 +32,6 @@
   import="org.owasp.esapi.ESAPI"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.client.HTable"
-  import="org.apache.hadoop.hbase.client.Admin"
-  import="org.apache.hadoop.hbase.client.CompactionState"
-  import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HRegionLocation"
   import="org.apache.hadoop.hbase.ServerName"
@@ -50,9 +46,9 @@
   import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
-  import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.TableNotFoundException"%>
+<%@ page import="org.apache.hadoop.hbase.client.*" %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -64,7 +60,7 @@
   final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
   String showWholeKey = request.getParameter("showwhole");
   final boolean showWhole = (showWholeKey!=null && showWholeKey.equals("true"));
-  HTable table = null;
+  Table table;
   String tableHeader;
   boolean withReplica = false;
   ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
@@ -141,7 +137,7 @@
 <%
 if ( fqtn != null ) {
   try {
-  table = (HTable) master.getConnection().getTable(TableName.valueOf(fqtn));
+  table = master.getConnection().getTable(TableName.valueOf(fqtn));
   if (table.getTableDescriptor().getRegionReplication() > 1) {
     tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr>";
     withReplica = true;

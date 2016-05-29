@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
  * Base class which provides clients with an RPC connection to
  * call coprocessor endpoint {@link com.google.protobuf.Service}s.
  * Note that clients should not use this class directly, except through
- * {@link org.apache.hadoop.hbase.client.HTableInterface#coprocessorService(byte[])}.
+ * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

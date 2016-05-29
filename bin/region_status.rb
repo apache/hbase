@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.MasterNotRunningException
 import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.client.HTable
+import org.apache.hadoop.hbase.client.Table
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.util.Bytes

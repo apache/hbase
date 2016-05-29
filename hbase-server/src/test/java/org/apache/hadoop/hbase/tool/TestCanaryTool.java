@@ -19,20 +19,14 @@
 
 package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
@@ -87,7 +81,7 @@ public class TestCanaryTool {
   @Test
   public void testBasicCanaryWorks() throws Exception {
     TableName tableName = TableName.valueOf("testTable");
-    HTable table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
+    Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
     // insert some test rows
     for (int i=0; i<1000; i++) {
       byte[] iBytes = Bytes.toBytes(i);

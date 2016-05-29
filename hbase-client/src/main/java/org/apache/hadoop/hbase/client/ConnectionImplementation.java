@@ -275,12 +275,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public HTableInterface getTable(TableName tableName) throws IOException {
+  public Table getTable(TableName tableName) throws IOException {
     return getTable(tableName, getBatchPool());
   }
 
   @Override
-  public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
+  public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
     return new HTable(tableName, this, connectionConfig,
       rpcCallerFactory, rpcControllerFactory, pool);
   }

@@ -3809,51 +3809,6 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testRowsPutBufferedOneFlush() throws IOException {
-    final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");
-    final byte [] SMALL_FAMILY = Bytes.toBytes("smallfam");
-    final byte [] value = Bytes.toBytes("abcd");
-    final int NB_BATCH_ROWS = 10;
-    Table t = TEST_UTIL.createTable(TableName.valueOf("testRowsPutBufferedOneFlush"),
-        new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
-
-    // Only do this test if it is a HTable
-    if(t instanceof HTableInterface) {
-      HTable table = (HTable) t;
-      table.setAutoFlushTo(false);
-      ArrayList<Put> rowsUpdate = new ArrayList<Put>();
-      for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
-        byte[] row = Bytes.toBytes("row" + i);
-        Put put = new Put(row);
-        put.setDurability(Durability.SKIP_WAL);
-        put.addColumn(CONTENTS_FAMILY, null, value);
-        rowsUpdate.add(put);
-      }
-      table.put(rowsUpdate);
-
-      Scan scan = new Scan();
-      scan.addFamily(CONTENTS_FAMILY);
-      ResultScanner scanner = table.getScanner(scan);
-      int nbRows = 0;
-      for (@SuppressWarnings("unused") Result row : scanner)
-        nbRows++;
-      assertEquals(0, nbRows);
-      scanner.close();
-
-      table.flushCommits();
-
-      scan = new Scan();
-      scan.addFamily(CONTENTS_FAMILY);
-      scanner = table.getScanner(scan);
-      nbRows = 0;
-      for (@SuppressWarnings("unused") Result row : scanner)
-        nbRows++;
-      assertEquals(NB_BATCH_ROWS * 10, nbRows);
-      table.close();
-    }
-  }
-
-  @Test
   public void testRowsPutBufferedManyManyFlushes() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -4175,92 +4130,89 @@ public class TestFromClientSide {
     final byte[] beforeThirdRow = Bytes.toBytes("row33");
     final byte[] beforeForthRow = Bytes.toBytes("row44");
 
-    try (Table t =
+    try (Table table =
         TEST_UTIL.createTable(tableName,
           new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 1024);
-        RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      if (t instanceof HTableInterface) {
-        HTableInterface table = (HTableInterface) t;
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
 
-        // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
-        // in Store.rowAtOrBeforeFromStoreFile
-        String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-        Region region =
-            TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
-        Put put1 = new Put(firstRow);
-        Put put2 = new Put(secondRow);
-        Put put3 = new Put(thirdRow);
-        Put put4 = new Put(forthRow);
-        byte[] one = new byte[] { 1 };
-        byte[] two = new byte[] { 2 };
-        byte[] three = new byte[] { 3 };
-        byte[] four = new byte[] { 4 };
+      // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
+      // in Store.rowAtOrBeforeFromStoreFile
+      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      Region region =
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
+      Put put1 = new Put(firstRow);
+      Put put2 = new Put(secondRow);
+      Put put3 = new Put(thirdRow);
+      Put put4 = new Put(forthRow);
+      byte[] one = new byte[] { 1 };
+      byte[] two = new byte[] { 2 };
+      byte[] three = new byte[] { 3 };
+      byte[] four = new byte[] { 4 };
 
-        put1.addColumn(HConstants.CATALOG_FAMILY, null, one);
-        put2.addColumn(HConstants.CATALOG_FAMILY, null, two);
-        put3.addColumn(HConstants.CATALOG_FAMILY, null, three);
-        put4.addColumn(HConstants.CATALOG_FAMILY, null, four);
-        table.put(put1);
-        table.put(put2);
-        table.put(put3);
-        table.put(put4);
-        region.flush(true);
+      put1.addColumn(HConstants.CATALOG_FAMILY, null, one);
+      put2.addColumn(HConstants.CATALOG_FAMILY, null, two);
+      put3.addColumn(HConstants.CATALOG_FAMILY, null, three);
+      put4.addColumn(HConstants.CATALOG_FAMILY, null, four);
+      table.put(put1);
+      table.put(put2);
+      table.put(put3);
+      table.put(put4);
+      region.flush(true);
 
-        Result result;
+      Result result;
 
-        // Test before first that null is returned
-        result = getReverseScanResult(table, beforeFirstRow,
-          HConstants.CATALOG_FAMILY);
-        assertNull(result);
+      // Test before first that null is returned
+      result = getReverseScanResult(table, beforeFirstRow,
+        HConstants.CATALOG_FAMILY);
+      assertNull(result);
 
-        // Test at first that first is returned
-        result = getReverseScanResult(table, firstRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), firstRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+      // Test at first that first is returned
+      result = getReverseScanResult(table, firstRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), firstRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
-        // Test in between first and second that first is returned
-        result = getReverseScanResult(table, beforeSecondRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), firstRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+      // Test in between first and second that first is returned
+      result = getReverseScanResult(table, beforeSecondRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), firstRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
-        // Test at second make sure second is returned
-        result = getReverseScanResult(table, secondRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), secondRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
+      // Test at second make sure second is returned
+      result = getReverseScanResult(table, secondRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), secondRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
 
-        // Test in second and third, make sure second is returned
-        result = getReverseScanResult(table, beforeThirdRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), secondRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
+      // Test in second and third, make sure second is returned
+      result = getReverseScanResult(table, beforeThirdRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), secondRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
 
-        // Test at third make sure third is returned
-        result = getReverseScanResult(table, thirdRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), thirdRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
+      // Test at third make sure third is returned
+      result = getReverseScanResult(table, thirdRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), thirdRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
 
-        // Test in third and forth, make sure third is returned
-        result = getReverseScanResult(table, beforeForthRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), thirdRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
+      // Test in third and forth, make sure third is returned
+      result = getReverseScanResult(table, beforeForthRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), thirdRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
 
-        // Test at forth make sure forth is returned
-        result = getReverseScanResult(table, forthRow, HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), forthRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
+      // Test at forth make sure forth is returned
+      result = getReverseScanResult(table, forthRow, HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), forthRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
 
-        // Test after forth make sure forth is returned
-        result = getReverseScanResult(table, Bytes.add(forthRow, one), HConstants.CATALOG_FAMILY);
-        assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
-        assertTrue(Bytes.equals(result.getRow(), forthRow));
-        assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
-      }
+      // Test after forth make sure forth is returned
+      result = getReverseScanResult(table, Bytes.add(forthRow, one), HConstants.CATALOG_FAMILY);
+      assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+      assertTrue(Bytes.equals(result.getRow(), forthRow));
+      assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
     }
   }
 
@@ -5015,57 +4967,53 @@ public class TestFromClientSide {
     TableName TABLE = TableName.valueOf("testGetRegionsInRange");
     Table t = TEST_UTIL.createMultiRegionTable(TABLE, new byte[][] { FAMILY }, 10);
 
-    if (t instanceof HTable){
-      HTable table = (HTable) t;
-
-      int numOfRegions = -1;
-      try (RegionLocator r = table.getRegionLocator()) {
-        numOfRegions = r.getStartKeys().length;
-      }
-      assertEquals(26, numOfRegions);
-
-      // Get the regions in this range
-      List<HRegionLocation> regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(10, regionsList.size());
-
-      // Change the start key
-      startKey = Bytes.toBytes("fff");
-      regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(7, regionsList.size());
-
-      // Change the end key
-      endKey = Bytes.toBytes("nnn");
-      regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(8, regionsList.size());
-
-      // Empty start key
-      regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW, endKey);
-      assertEquals(13, regionsList.size());
-
-      // Empty end key
-      regionsList = getRegionsInRange(TABLE, startKey, HConstants.EMPTY_END_ROW);
-      assertEquals(21, regionsList.size());
-
-      // Both start and end keys empty
-      regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW,
-          HConstants.EMPTY_END_ROW);
-      assertEquals(26, regionsList.size());
-
-      // Change the end key to somewhere in the last block
-      endKey = Bytes.toBytes("zzz1");
-      regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(21, regionsList.size());
-
-      // Change the start key to somewhere in the first block
-      startKey = Bytes.toBytes("aac");
-      regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(26, regionsList.size());
-
-      // Make start and end key the same
-      startKey = endKey = Bytes.toBytes("ccc");
-      regionsList = getRegionsInRange(TABLE, startKey, endKey);
-      assertEquals(1, regionsList.size());
+    int numOfRegions = -1;
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+      numOfRegions = r.getStartKeys().length;
     }
+    assertEquals(26, numOfRegions);
+
+    // Get the regions in this range
+    List<HRegionLocation> regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(10, regionsList.size());
+
+    // Change the start key
+    startKey = Bytes.toBytes("fff");
+    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(7, regionsList.size());
+
+    // Change the end key
+    endKey = Bytes.toBytes("nnn");
+    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(8, regionsList.size());
+
+    // Empty start key
+    regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW, endKey);
+    assertEquals(13, regionsList.size());
+
+    // Empty end key
+    regionsList = getRegionsInRange(TABLE, startKey, HConstants.EMPTY_END_ROW);
+    assertEquals(21, regionsList.size());
+
+    // Both start and end keys empty
+    regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW,
+        HConstants.EMPTY_END_ROW);
+    assertEquals(26, regionsList.size());
+
+    // Change the end key to somewhere in the last block
+    endKey = Bytes.toBytes("zzz1");
+    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(21, regionsList.size());
+
+    // Change the start key to somewhere in the first block
+    startKey = Bytes.toBytes("aac");
+    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(26, regionsList.size());
+
+    // Make start and end key the same
+    startKey = endKey = Bytes.toBytes("ccc");
+    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    assertEquals(1, regionsList.size());
   }
 
   private List<HRegionLocation> getRegionsInRange(TableName tableName, byte[] startKey,

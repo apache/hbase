@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -376,7 +375,7 @@ public class TestRegionObserverInterface {
   @Test (timeout=300000)
   public void testHBASE14489() throws IOException {
     TableName tableName = TableName.valueOf("testHBASE14489");
-    HTable table = util.createTable(tableName, new byte[][] { A });
+    Table table = util.createTable(tableName, new byte[][] { A });
     Put put = new Put(ROW);
     put.addColumn(A, A, A);
     table.put(put);

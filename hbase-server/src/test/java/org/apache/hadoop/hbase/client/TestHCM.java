@@ -176,45 +176,56 @@ public class TestHCM {
 
     TableName tableName = TableName.valueOf("testClusterConnection");
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
-    HTable t = (HTable)con1.getTable(tableName, otherPool);
-    // make sure passing a pool to the getTable does not trigger creation of an internal pool
-    assertNull("Internal Thread pool should be null",
+    Table table = con1.getTable(tableName, otherPool);
+
+    ExecutorService pool = null;
+
+    if(table instanceof HTable) {
+      HTable t = (HTable) table;
+      // make sure passing a pool to the getTable does not trigger creation of an internal pool
+      assertNull("Internal Thread pool should be null",
         ((ConnectionImplementation) con1).getCurrentBatchPool());
-    // table should use the pool passed
-    assertTrue(otherPool == t.getPool());
-    t.close();
+      // table should use the pool passed
+      assertTrue(otherPool == t.getPool());
+      t.close();
 
-    t = (HTable)con2.getTable(tableName);
-    // table should use the connectin's internal pool
-    assertTrue(otherPool == t.getPool());
-    t.close();
+      t = (HTable) con2.getTable(tableName);
+      // table should use the connectin's internal pool
+      assertTrue(otherPool == t.getPool());
+      t.close();
 
-    t = (HTable)con2.getTable(tableName);
-    // try other API too
-    assertTrue(otherPool == t.getPool());
-    t.close();
+      t = (HTable) con2.getTable(tableName);
+      // try other API too
+      assertTrue(otherPool == t.getPool());
+      t.close();
 
-    t = (HTable)con2.getTable(tableName);
-    // try other API too
-    assertTrue(otherPool == t.getPool());
-    t.close();
+      t = (HTable) con2.getTable(tableName);
+      // try other API too
+      assertTrue(otherPool == t.getPool());
+      t.close();
 
-    t = (HTable)con1.getTable(tableName);
-    ExecutorService pool = ((ConnectionImplementation)con1).getCurrentBatchPool();
-    // make sure an internal pool was created
-    assertNotNull("An internal Thread pool should have been created", pool);
-    // and that the table is using it
-    assertTrue(t.getPool() == pool);
-    t.close();
+      t = (HTable) con1.getTable(tableName);
+      pool = ((ConnectionImplementation) con1).getCurrentBatchPool();
+      // make sure an internal pool was created
+      assertNotNull("An internal Thread pool should have been created", pool);
+      // and that the table is using it
+      assertTrue(t.getPool() == pool);
+      t.close();
 
-    t = (HTable)con1.getTable(tableName);
-    // still using the *same* internal pool
-    assertTrue(t.getPool() == pool);
-    t.close();
+      t = (HTable) con1.getTable(tableName);
+      // still using the *same* internal pool
+      assertTrue(t.getPool() == pool);
+      t.close();
+    } else {
+      table.close();
+    }
 
     con1.close();
+
     // if the pool was created on demand it should be closed upon connection close
-    assertTrue(pool.isShutdown());
+    if(pool != null) {
+      assertTrue(pool.isShutdown());
+    }
 
     con2.close();
     // if the pool is passed, it is not closed
@@ -316,30 +327,27 @@ public class TestHCM {
   public void testOperationTimeout() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
-    Table t = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM});
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setRpcTimeout(Integer.MAX_VALUE);
-      // Check that it works if the timeout is big enough
-      table.setOperationTimeout(120 * 1000);
-      table.get(new Get(FAM_NAM));
+    Table table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM});
+    table.setRpcTimeout(Integer.MAX_VALUE);
+    // Check that it works if the timeout is big enough
+    table.setOperationTimeout(120 * 1000);
+    table.get(new Get(FAM_NAM));
 
-      // Resetting and retrying. Will fail this time, not enough time for the second try
-      SleepAndFailFirstTime.ct.set(0);
-      try {
-        table.setOperationTimeout(30 * 1000);
-        table.get(new Get(FAM_NAM));
-        Assert.fail("We expect an exception here");
-      } catch (SocketTimeoutException e) {
-        // The client has a CallTimeout class, but it's not shared.We're not very clean today,
-        //  in the general case you can expect the call to stop, but the exception may vary.
-        // In this test however, we're sure that it will be a socket timeout.
-        LOG.info("We received an exception, as expected ", e);
-      } catch (IOException e) {
-        Assert.fail("Wrong exception:" + e.getMessage());
-      } finally {
-        table.close();
-      }
+    // Resetting and retrying. Will fail this time, not enough time for the second try
+    SleepAndFailFirstTime.ct.set(0);
+    try {
+      table.setOperationTimeout(30 * 1000);
+      table.get(new Get(FAM_NAM));
+      Assert.fail("We expect an exception here");
+    } catch (SocketTimeoutException e) {
+      // The client has a CallTimeout class, but it's not shared.We're not very clean today,
+      //  in the general case you can expect the call to stop, but the exception may vary.
+      // In this test however, we're sure that it will be a socket timeout.
+      LOG.info("We received an exception, as expected ", e);
+    } catch (IOException e) {
+      Assert.fail("Wrong exception:" + e.getMessage());
+    } finally {
+      table.close();
     }
   }
 
@@ -350,11 +358,9 @@ public class TestHCM {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
     try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
-      assert t instanceof HTable;
-      HTable table = (HTable) t;
-      table.setRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
-      table.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
-      table.get(new Get(FAM_NAM));
+      t.setRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
+      t.get(new Get(FAM_NAM));
     }
   }
 
@@ -373,29 +379,26 @@ public class TestHCM {
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 4000);
 
     Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf("HCM-testRpcRetryingCallerSleep"));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(8000);
-      // Check that it works. Because 2s + 3s * RETRY_BACKOFF[0] + 2s < 8s
-      table.get(new Get(FAM_NAM));
+    Table table = connection.getTable(TableName.valueOf("HCM-testRpcRetryingCallerSleep"));
+    table.setOperationTimeout(8000);
+    // Check that it works. Because 2s + 3s * RETRY_BACKOFF[0] + 2s < 8s
+    table.get(new Get(FAM_NAM));
 
-      // Resetting and retrying.
-      SleepAndFailFirstTime.ct.set(0);
-      try {
-        table.setOperationTimeout(6000);
-        // Will fail this time. After sleep, there are not enough time for second retry
-        // Beacuse 2s + 3s + 2s > 6s
-        table.get(new Get(FAM_NAM));
-        Assert.fail("We expect an exception here");
-      } catch (SocketTimeoutException e) {
-        LOG.info("We received an exception, as expected ", e);
-      } catch (IOException e) {
-        Assert.fail("Wrong exception:" + e.getMessage());
-      } finally {
-        table.close();
-        connection.close();
-      }
+    // Resetting and retrying.
+    SleepAndFailFirstTime.ct.set(0);
+    try {
+      table.setOperationTimeout(6000);
+      // Will fail this time. After sleep, there are not enough time for second retry
+      // Beacuse 2s + 3s + 2s > 6s
+      table.get(new Get(FAM_NAM));
+      Assert.fail("We expect an exception here");
+    } catch (SocketTimeoutException e) {
+      LOG.info("We received an exception, as expected ", e);
+    } catch (IOException e) {
+      Assert.fail("Wrong exception:" + e.getMessage());
+    } finally {
+      table.close();
+      connection.close();
     }
   }
 
@@ -404,7 +407,7 @@ public class TestHCM {
     long pauseTime;
     long baseTime = 100;
     TableName tableName = TableName.valueOf("HCM-testCallableSleep");
-    HTable table = TEST_UTIL.createTable(tableName, FAM_NAM);
+    Table table = TEST_UTIL.createTable(tableName, FAM_NAM);
     RegionServerCallable<Object> regionServerCallable = new RegionServerCallable<Object>(
         TEST_UTIL.getConnection(), tableName, ROW) {
       public Object call(int timeout) throws IOException {
@@ -882,15 +885,21 @@ public class TestHCM {
   public void testConnectionManagement() throws Exception{
     Table table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    HTable table = (HTable) conn.getTable(TABLE_NAME1);
+    Table table = conn.getTable(TABLE_NAME1);
     table.close();
     assertFalse(conn.isClosed());
-    assertFalse(table.getPool().isShutdown());
-    table = (HTable) conn.getTable(TABLE_NAME1);
+    if(table instanceof HTable) {
+      assertFalse(((HTable) table).getPool().isShutdown());
+    }
+    table = conn.getTable(TABLE_NAME1);
     table.close();
-    assertFalse(table.getPool().isShutdown());
+    if(table instanceof HTable) {
+      assertFalse(((HTable) table).getPool().isShutdown());
+    }
     conn.close();
-    assertTrue(table.getPool().isShutdown());
+    if(table instanceof HTable) {
+      assertTrue(((HTable) table).getPool().isShutdown());
+    }
     table0.close();
   }
 

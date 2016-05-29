@@ -100,14 +100,13 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HTable implements HTableInterface {
+public class HTable implements Table {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   protected ClusterConnection connection;
   private final TableName tableName;
   private volatile Configuration configuration;
   private ConnectionConfiguration connConfiguration;
   protected BufferedMutatorImpl mutator;
-  private boolean autoFlush = true;
   private boolean closed = false;
   protected int scannerCaching;
   protected long scannerMaxResultSize;
@@ -237,14 +236,6 @@ public class HTable implements HTableInterface {
     return configuration;
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public byte [] getTableName() {
-    return this.tableName.getName();
-  }
-
   @Override
   public TableName getName() {
     return tableName;
@@ -328,7 +319,7 @@ public class HTable implements HTableInterface {
 
   /**
    * The underlying {@link HTable} must not be closed.
-   * {@link HTableInterface#getScanner(Scan)} has other usage details.
+   * {@link Table#getScanner(Scan)} has other usage details.
    */
   @Override
   public ResultScanner getScanner(final Scan scan) throws IOException {
@@ -379,7 +370,7 @@ public class HTable implements HTableInterface {
 
   /**
    * The underlying {@link HTable} must not be closed.
-   * {@link HTableInterface#getScanner(byte[])} has other usage details.
+   * {@link Table#getScanner(byte[])} has other usage details.
    */
   @Override
   public ResultScanner getScanner(byte [] family) throws IOException {
@@ -390,7 +381,7 @@ public class HTable implements HTableInterface {
 
   /**
    * The underlying {@link HTable} must not be closed.
-   * {@link HTableInterface#getScanner(byte[], byte[])} has other usage details.
+   * {@link Table#getScanner(byte[], byte[])} has other usage details.
    */
   @Override
   public ResultScanner getScanner(byte [] family, byte [] qualifier)
@@ -572,9 +563,7 @@ public class HTable implements HTableInterface {
   @Override
   public void put(final Put put) throws IOException {
     getBufferedMutator().mutate(put);
-    if (autoFlush) {
-      flushCommits();
-    }
+    flushCommits();
   }
 
   /**
@@ -584,9 +573,7 @@ public class HTable implements HTableInterface {
   @Override
   public void put(final List<Put> puts) throws IOException {
     getBufferedMutator().mutate(puts);
-    if (autoFlush) {
-      flushCommits();
-    }
+    flushCommits();
   }
 
   /**
@@ -984,8 +971,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    * @throws IOException
    */
-  @Override
-  public void flushCommits() throws IOException {
+  void flushCommits() throws IOException {
     if (mutator == null) {
       // nothing to flush if there's no mutator; don't bother creating one.
       return;
@@ -1067,30 +1053,6 @@ public class HTable implements HTableInterface {
         }
       }
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean isAutoFlush() {
-    return autoFlush;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void setAutoFlushTo(boolean autoFlush) {
-    this.autoFlush = autoFlush;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
-    this.autoFlush = autoFlush;
   }
 
   /**

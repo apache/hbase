@@ -260,7 +260,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   /**
    * This is used for legacy purposes in {@link HTable#setWriteBufferSize(long)} only. This ought
    * not be called for production uses.
-   * @deprecated Going away when we drop public support for {@link HTableInterface}.
+   * @deprecated Going away when we drop public support for {@link HTable}.
    */
   @Deprecated
   public void setWriteBufferSize(long writeBufferSize) throws RetriesExhaustedWithDetailsException,

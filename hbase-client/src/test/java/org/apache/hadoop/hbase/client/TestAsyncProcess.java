@@ -712,14 +712,16 @@ public class TestAsyncProcess {
 
   private void doHTableFailedPut(boolean bufferOn) throws Exception {
     ClusterConnection conn = createHConnection();
-    HTable ht = new HTable(conn, new BufferedMutatorParams(DUMMY_TABLE));
+    BufferedMutatorParams bufferParam = new BufferedMutatorParams(DUMMY_TABLE);
+    if (bufferOn) {
+      bufferParam.writeBufferSize(1024L * 1024L);
+    } else {
+      bufferParam.writeBufferSize(0L);
+    }
+
+    HTable ht = new HTable(conn, bufferParam);
     MyAsyncProcess ap = new MyAsyncProcess(conn, conf, true);
     ht.mutator.ap = ap;
-    if (bufferOn) {
-      ht.setWriteBufferSize(1024L * 1024L);
-    } else {
-      ht.setWriteBufferSize(0L);
-    }
 
     Put put = createPut(1, false);
 

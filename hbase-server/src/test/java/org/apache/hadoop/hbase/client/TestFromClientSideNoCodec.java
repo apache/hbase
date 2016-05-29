@@ -82,15 +82,12 @@ public class TestFromClientSideNoCodec {
         Bytes.equals(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
           f, 0, f.length));
     }
-    if(ht instanceof HTableInterface) {
-      HTableInterface hti = (HTableInterface) ht;
-      // Check getRowOrBefore
-      byte[] f = fs[0];
-      Get get = new Get(row);
-      get.addFamily(f);
-      r = ht.get(get);
-      assertTrue(r.toString(), r.containsColumn(f, f));
-    }
+    // Check getRowOrBefore
+    byte[] f = fs[0];
+    Get get = new Get(row);
+    get.addFamily(f);
+    r = ht.get(get);
+    assertTrue(r.toString(), r.containsColumn(f, f));
     // Check scan.
     ResultScanner scanner = ht.getScanner(new Scan());
     int count = 0;

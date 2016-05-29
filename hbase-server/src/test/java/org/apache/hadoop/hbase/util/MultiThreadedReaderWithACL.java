@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
@@ -69,7 +68,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
     }
 
     @Override
-    protected HTableInterface createTable() throws IOException {
+    protected Table createTable() throws IOException {
       return null;
     }
 

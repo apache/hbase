@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
@@ -235,11 +235,11 @@ public class TestTokenAuthentication {
         public Configuration getConfiguration() { return conf; }
 
         @Override
-        public HTableInterface getTable(TableName tableName) throws IOException
+        public Table getTable(TableName tableName) throws IOException
           { return null; }
 
         @Override
-        public HTableInterface getTable(TableName tableName, ExecutorService service)
+        public Table getTable(TableName tableName, ExecutorService service)
             throws IOException {
           return null;
         }

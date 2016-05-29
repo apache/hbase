@@ -128,7 +128,7 @@ public class TestHTableMultiplexerFlushCache {
     // Region cache (and not just tearing down the entire connection).
     TableName TABLE = TableName.valueOf("testOnRegionMove");
     final int NUM_REGIONS = 10;
-    HTable htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
+    Table htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
     HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),

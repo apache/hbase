@@ -61,7 +61,7 @@ public class TestClientPushback {
   private static final TableName tableName = TableName.valueOf("client-pushback");
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");
-  private static long flushSizeBytes = 1024;
+  private static final long flushSizeBytes = 1024;
 
   @BeforeClass
   public static void setupCluster() throws Exception{
@@ -91,7 +91,7 @@ public class TestClientPushback {
     Configuration conf = UTIL.getConfiguration();
 
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    HTable table = (HTable) conn.getTable(tableName);
+    Table table = conn.getTable(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     Region region = rs.getOnlineRegions(tableName).get(0);
@@ -130,13 +130,13 @@ public class TestClientPushback {
 
     // Reach into the connection and submit work directly to AsyncProcess so we can
     // monitor how long the submission was delayed via a callback
-    List<Row> ops = new ArrayList<Row>(1);
+    List<Row> ops = new ArrayList<>(1);
     ops.add(p);
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
     long startTime = EnvironmentEdgeManager.currentTime();
 
-    table.mutator.ap.submit(tableName, ops, true, new Batch.Callback<Result>() {
+    ((HTable) table).mutator.ap.submit(tableName, ops, true, new Batch.Callback<Result>() {
       @Override
       public void update(byte[] region, byte[] row, Result result) {
         endTime.set(EnvironmentEdgeManager.currentTime());
@@ -172,7 +172,7 @@ public class TestClientPushback {
   public void testMutateRowStats() throws IOException {
     Configuration conf = UTIL.getConfiguration();
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    HTable table = (HTable) conn.getTable(tableName);
+    Table table = conn.getTable(tableName);
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     Region region = rs.getOnlineRegions(tableName).get(0);
 

@@ -558,9 +558,8 @@ public class TestRegionServerMetrics {
     htd.addFamily(hcd);
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
-    HTable t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
+    Table t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
     Region region = rs.getOnlineRegions(tableName).get(0);
-    t.setAutoFlush(true, true);
     for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
       p.addColumn(cf, qualifier, val);

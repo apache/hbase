@@ -396,7 +396,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     long mobCells = 0;
     try {
       writer = MobUtils.createWriter(conf, fs, column, partition.getPartitionId().getDate(),
-        tempPath, Long.MAX_VALUE, column.getCompactionCompression(), partition.getPartitionId()
+        tempPath, Long.MAX_VALUE, column.getCompactionCompressionType(), partition.getPartitionId()
           .getStartKey(), compactionCacheConfig, cryptoContext);
       filePath = writer.getPath();
       byte[] fileName = Bytes.toBytes(filePath.getName());
@@ -508,7 +508,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     try {
       writer = MobUtils.createDelFileWriter(conf, fs, column,
         MobUtils.formatDate(new Date(request.selectionTime)), tempPath, Long.MAX_VALUE,
-        column.getCompactionCompression(), HConstants.EMPTY_START_ROW, compactionCacheConfig,
+        column.getCompactionCompressionType(), HConstants.EMPTY_START_ROW, compactionCacheConfig,
         cryptoContext);
       filePath = writer.getPath();
       List<Cell> cells = new ArrayList<>();
@@ -558,9 +558,8 @@ public class PartitionedMobCompactor extends MobCompactor {
     scan.setMaxVersions(column.getMaxVersions());
     long ttl = HStore.determineTTLFromFamily(column);
     ScanInfo scanInfo = new ScanInfo(conf, column, ttl, 0, CellComparator.COMPARATOR);
-    StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners, 0L,
+    return new StoreScanner(scan, scanInfo, scanType, null, scanners, 0L,
       HConstants.LATEST_TIMESTAMP);
-    return scanner;
   }
 
   /**
@@ -649,7 +648,7 @@ public class PartitionedMobCompactor extends MobCompactor {
         maxKeyCount += Bytes.toLong(count);
       }
     }
-    return new Pair<>(Long.valueOf(maxSeqId), Long.valueOf(maxKeyCount));
+    return new Pair<>(maxSeqId, maxKeyCount);
   }
 
   /**
@@ -680,8 +679,7 @@ public class PartitionedMobCompactor extends MobCompactor {
   private FileStatus getFileStatus(Path path) throws IOException {
     try {
       if (path != null) {
-        FileStatus file = fs.getFileStatus(path);
-        return file;
+        return fs.getFileStatus(path);
       }
     } catch (FileNotFoundException e) {
       LOG.warn("The file " + path + " can not be found", e);

@@ -444,7 +444,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private void validateFamiliesInHFiles(Table table, Deque<LoadQueueItem> queue)
       throws IOException {
     Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-    List<String> familyNames = new ArrayList<String>(families.size());
+    List<String> familyNames = new ArrayList<>(families.size());
     for (HColumnDescriptor family : families) {
       familyNames.add(family.getNameAsString());
     }
@@ -501,7 +501,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       ExecutorService pool, Deque<LoadQueueItem> queue,
       final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
     // atomically bulk load the groups.
-    Set<Future<List<LoadQueueItem>>> loadingFutures = new HashSet<Future<List<LoadQueueItem>>>();
+    Set<Future<List<LoadQueueItem>>> loadingFutures = new HashSet<>();
     for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> e: regionGroups.asMap().entrySet()){
       final byte[] first = e.getKey().array();
       final Collection<LoadQueueItem> lqis =  e.getValue();

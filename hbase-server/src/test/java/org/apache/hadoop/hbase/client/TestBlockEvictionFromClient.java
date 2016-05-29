@@ -165,7 +165,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testBlockEvictionWithParallelScans() throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       TableName tableName = TableName.valueOf("testBlockEvictionWithParallelScans");
@@ -173,7 +173,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -253,7 +253,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testParallelGetsAndScans() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
@@ -264,7 +264,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -312,7 +312,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testGetWithCellsInDifferentFiles() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
@@ -323,7 +323,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -374,7 +374,7 @@ public class TestBlockEvictionFromClient {
   // TODO : check how block index works here
   public void testGetsWithMultiColumnsAndExplicitTracker()
       throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
@@ -385,7 +385,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -462,7 +462,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testGetWithMultipleColumnFamilies() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
@@ -478,7 +478,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, fams, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -557,12 +557,12 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       TableName tableName = TableName.valueOf("testBlockRefCountAfterSplits");
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
@@ -608,7 +608,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testMultiGets() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
@@ -619,7 +619,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -687,7 +687,7 @@ public class TestBlockEvictionFromClient {
   }
   @Test
   public void testScanWithMultipleColumnFamilies() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
@@ -702,7 +702,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, fams, 1, 1024,
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -791,7 +791,7 @@ public class TestBlockEvictionFromClient {
   @Test
   public void testParallelGetsAndScanWithWrappedRegionScanner() throws IOException,
       InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
@@ -802,7 +802,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -859,7 +859,7 @@ public class TestBlockEvictionFromClient {
 
   private void testScanWithCompactionInternals(String tableNameStr, boolean reversed)
       throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       compactionLatch = new CountDownLatch(1);
@@ -868,7 +868,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -977,7 +977,7 @@ public class TestBlockEvictionFromClient {
   public void testBlockEvictionAfterHBASE13082WithCompactionAndFlush()
       throws IOException, InterruptedException {
     // do flush and scan in parallel
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       compactionLatch = new CountDownLatch(1);
@@ -987,7 +987,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -1107,7 +1107,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testScanWithException() throws IOException, InterruptedException {
-    HTable table = null;
+    Table table = null;
     try {
       latch = new CountDownLatch(1);
       exceptionLatch = new CountDownLatch(1);
@@ -1117,7 +1117,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
-      RegionLocator locator = table.getRegionLocator();
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(
           regionName);
@@ -1225,7 +1225,7 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  private void insertData(HTable table) throws IOException {
+  private void insertData(Table table) throws IOException {
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, data);
     table.put(put);
@@ -1238,7 +1238,7 @@ public class TestBlockEvictionFromClient {
     table.put(put);
   }
 
-  private ScanThread[] initiateScan(HTable table, boolean reverse) throws IOException,
+  private ScanThread[] initiateScan(Table table, boolean reverse) throws IOException,
       InterruptedException {
     ScanThread[] scanThreads = new ScanThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
@@ -1250,7 +1250,7 @@ public class TestBlockEvictionFromClient {
     return scanThreads;
   }
 
-  private GetThread[] initiateGet(HTable table, boolean tracker, boolean multipleCFs)
+  private GetThread[] initiateGet(Table table, boolean tracker, boolean multipleCFs)
       throws IOException, InterruptedException {
     GetThread[] getThreads = new GetThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
@@ -1262,7 +1262,7 @@ public class TestBlockEvictionFromClient {
     return getThreads;
   }
 
-  private MultiGetThread[] initiateMultiGet(HTable table)
+  private MultiGetThread[] initiateMultiGet(Table table)
       throws IOException, InterruptedException {
     MultiGetThread[] multiGetThreads = new MultiGetThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
@@ -1337,9 +1337,9 @@ public class TestBlockEvictionFromClient {
   }
 
   private static class MultiGetThread extends Thread {
-    private final HTable table;
+    private final Table table;
     private final List<Get> gets = new ArrayList<Get>();
-    public MultiGetThread(HTable table) {
+    public MultiGetThread(Table table) {
       this.table = table;
     }
     @Override
@@ -1357,11 +1357,11 @@ public class TestBlockEvictionFromClient {
   }
 
   private static class GetThread extends Thread {
-    private final HTable table;
+    private final Table table;
     private final boolean tracker;
     private final boolean multipleCFs;
 
-    public GetThread(HTable table, boolean tracker, boolean multipleCFs) {
+    public GetThread(Table table, boolean tracker, boolean multipleCFs) {
       this.table = table;
       this.tracker = tracker;
       this.multipleCFs = multipleCFs;
@@ -1376,7 +1376,7 @@ public class TestBlockEvictionFromClient {
       }
     }
 
-    private void initiateGet(HTable table) throws IOException {
+    private void initiateGet(Table table) throws IOException {
       Get get = new Get(ROW);
       if (tracker) {
         // Change this
@@ -1421,10 +1421,10 @@ public class TestBlockEvictionFromClient {
   }
 
   private static class ScanThread extends Thread {
-    private final HTable table;
+    private final Table table;
     private final boolean reverse;
 
-    public ScanThread(HTable table, boolean reverse) {
+    public ScanThread(Table table, boolean reverse) {
       this.table = table;
       this.reverse = reverse;
     }
@@ -1438,7 +1438,7 @@ public class TestBlockEvictionFromClient {
       }
     }
 
-    private void initiateScan(HTable table) throws IOException {
+    private void initiateScan(Table table) throws IOException {
       Scan scan = new Scan();
       if (reverse) {
         scan.setReversed(true);

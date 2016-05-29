@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,11 +41,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.io.MultipleIOException;
-
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 
 /**
  * A wrapper for HTable. Can be used to restrict privilege.
@@ -61,7 +61,7 @@ import com.google.protobuf.ServiceException;
 public final class HTableWrapper implements Table {
 
   private final Table table;
-  private ClusterConnection connection;
+  private final ClusterConnection connection;
   private final List<Table> openTables;
 
   /**
@@ -134,7 +134,9 @@ public final class HTableWrapper implements Table {
   public Boolean[] exists(List<Get> gets) throws IOException {
     // Do convertion.
     boolean [] exists = table.existsAll(gets);
-    if (exists == null) return null;
+    if (exists == null) {
+      return null;
+    }
     Boolean [] results = new Boolean [exists.length];
     for (int i = 0; i < exists.length; i++) {
       results[i] = exists[i]? Boolean.TRUE: Boolean.FALSE;

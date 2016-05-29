@@ -95,7 +95,7 @@ public class TestLeaseRenewal {
 
   @Test
   public void testLeaseRenewal() throws Exception {
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       TableName.valueOf("testLeaseRenewal"), FAMILY);
     Put p = new Put(ROW_BYTES);
     p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);

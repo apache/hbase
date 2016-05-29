@@ -74,7 +74,7 @@ import org.apache.thrift.TException;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
- * defined in the HTableInterface.
+ * defined in the Table interface.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")

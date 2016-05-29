@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -611,7 +610,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Compression.Algorithm> familyToCompression =
           getMockColumnFamiliesForCompression(numCfs);
-      Table table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(Table.class);
       setupMockColumnFamiliesForCompression(table, familyToCompression);
       HFileOutputFormat2.configureCompression(conf, table.getTableDescriptor());
 
@@ -682,7 +681,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, BloomType> familyToBloomType =
           getMockColumnFamiliesForBloomType(numCfs);
-      Table table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(Table.class);
       setupMockColumnFamiliesForBloomType(table,
           familyToBloomType);
       HFileOutputFormat2.configureBloomType(table.getTableDescriptor(), conf);
@@ -753,7 +752,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Integer> familyToBlockSize =
           getMockColumnFamiliesForBlockSize(numCfs);
-      Table table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(Table.class);
       setupMockColumnFamiliesForBlockSize(table,
           familyToBlockSize);
       HFileOutputFormat2.configureBlockSize(table.getTableDescriptor(), conf);
@@ -828,7 +827,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, DataBlockEncoding> familyToDataBlockEncoding =
           getMockColumnFamiliesForDataBlockEncoding(numCfs);
-      Table table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(Table.class);
       setupMockColumnFamiliesForDataBlockEncoding(table,
           familyToDataBlockEncoding);
       HTableDescriptor tableDescriptor = table.getTableDescriptor();
