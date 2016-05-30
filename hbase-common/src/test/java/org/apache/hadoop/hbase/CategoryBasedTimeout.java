@@ -32,6 +32,15 @@ import org.junit.rules.Timeout;
  */
 public class CategoryBasedTimeout extends Timeout {
 
+  public static Timeout forClass(Class<?> clazz) {
+    return CategoryBasedTimeout.builder().withTimeout(clazz).withLookingForStuckThread(true)
+        .build();
+  }
+
+  public static Builder builder() {
+    return new CategoryBasedTimeout.Builder();
+  }
+
   @Deprecated
   public CategoryBasedTimeout(int millis) {
     super(millis);
@@ -43,10 +52,6 @@ public class CategoryBasedTimeout extends Timeout {
 
   protected CategoryBasedTimeout(Builder builder) {
     super(builder);
-  }
-
-  public static Builder builder() {
-    return new CategoryBasedTimeout.Builder();
   }
 
   public static class Builder extends Timeout.Builder {

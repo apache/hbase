@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TestMobSnapshotCloneIndependence;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,8 +65,10 @@ import org.mockito.Mockito;
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverWithProcedures {
   private static final Log LOG = LogFactory.getLog(TestMasterFailoverWithProcedures.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final TestRule timeout =
+      CategoryBasedTimeout.forClass(TestMasterFailoverWithProcedures.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

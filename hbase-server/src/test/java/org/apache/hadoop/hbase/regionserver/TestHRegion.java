@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -89,6 +90,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TestMobSnapshotCloneIndependence;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -101,6 +103,7 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.master.procedure.TestMasterFailoverWithProcedures;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -145,10 +148,12 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -193,6 +198,9 @@ public class TestHRegion {
   // over in TestHRegionOnCluster.
   private static final Log LOG = LogFactory.getLog(TestHRegion.class);
   @Rule public TestName name = new TestName();
+  @ClassRule
+  public static final TestRule timeout =
+      CategoryBasedTimeout.forClass(TestHRegion.class);
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
@@ -244,7 +252,7 @@ public class TestHRegion {
    * Test that I can use the max flushed sequence id after the close.
    * @throws IOException
    */
-  @Test (timeout = 100000)
+  @Test
   public void testSequenceId() throws IOException {
     HRegion region = initHRegion(tableName, name.getMethodName(), CONF, COLUMN_FAMILY_BYTES);
     assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
@@ -279,7 +287,7 @@ public class TestHRegion {
    * flushes for region close."
    * @throws IOException
    */
-  @Test (timeout=60000)
+  @Test
   public void testCloseCarryingSnapshot() throws IOException {
     HRegion region = initHRegion(tableName, name.getMethodName(), CONF, COLUMN_FAMILY_BYTES);
     Store store = region.getStore(COLUMN_FAMILY_BYTES);
@@ -305,7 +313,7 @@ public class TestHRegion {
    * This test is for verifying memstore snapshot size is correctly updated in case of rollback
    * See HBASE-10845
    */
-  @Test (timeout=60000)
+  @Test
   public void testMemstoreSnapshotSize() throws IOException {
     class MyFaultyFSLog extends FaultyFSLog {
       StoreFlushContext storeFlushCtx;
@@ -466,7 +474,7 @@ public class TestHRegion {
    * if memstoreSize is not larger than 0."
    * @throws Exception
    */
-  @Test (timeout=60000)
+  @Test
   public void testFlushSizeAccounting() throws Exception {
     final Configuration conf = HBaseConfiguration.create(CONF);
     final String callingMethod = name.getMethodName();
@@ -531,7 +539,7 @@ public class TestHRegion {
     FileSystem.closeAllForUGI(user.getUGI());
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testCloseWithFailingFlush() throws Exception {
     final Configuration conf = HBaseConfiguration.create(CONF);
     final String callingMethod = name.getMethodName();
@@ -1139,7 +1147,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testFlushMarkersWALFail() throws Exception {
     // test the cases where the WAL append for flush markers fail.
     String method = name.getMethodName();
@@ -5235,7 +5243,7 @@ public class TestHRegion {
         Bytes.toString(CellUtil.cloneValue(kv)));
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_FromMemStore_SingleCF_Normal()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5294,7 +5302,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_FromMemStore_SingleCF_LargerKey()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5354,7 +5362,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_FromMemStore_SingleCF_FullScan()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5411,7 +5419,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_moreRowsMayExistAfter() throws IOException {
     // case for "INCLUDE_AND_SEEK_NEXT_ROW & SEEK_NEXT_ROW" endless loop
     byte[] rowA = Bytes.toBytes("rowA");
@@ -5493,7 +5501,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_smaller_blocksize() throws IOException {
     // case to ensure no conflict with HFile index optimization
     byte[] rowA = Bytes.toBytes("rowA");
@@ -5577,7 +5585,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs1()
       throws IOException {
     byte[] row0 = Bytes.toBytes("row0"); // 1 kv
@@ -5746,7 +5754,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs2()
       throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
@@ -5827,7 +5835,7 @@ public class TestHRegion {
   /**
    * Test for HBASE-14497: Reverse Scan threw StackOverflow caused by readPt checking
    */
-  @Test (timeout = 60000)
+  @Test
   public void testReverseScanner_StackOverflow() throws IOException {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = {cf1};
@@ -5882,7 +5890,7 @@ public class TestHRegion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test
   public void testSplitRegionWithReverseScan() throws IOException {
     TableName tableName = TableName.valueOf("testSplitRegionWithReverseScan");
     byte [] qualifier = Bytes.toBytes("qualifier");
@@ -6283,7 +6291,7 @@ public class TestHRegion {
   /**
    * Test RegionTooBusyException thrown when region is busy
    */
-  @Test (timeout=24000)
+  @Test
   public void testRegionTooBusy() throws IOException {
     String method = "testRegionTooBusy";
     TableName tableName = TableName.valueOf(method);
@@ -6546,7 +6554,7 @@ public class TestHRegion {
       qual2, 0, qual2.length));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testBatchMutateWithWrongRegionException() throws Exception {
     final byte[] a = Bytes.toBytes("a");
     final byte[] b = Bytes.toBytes("b");

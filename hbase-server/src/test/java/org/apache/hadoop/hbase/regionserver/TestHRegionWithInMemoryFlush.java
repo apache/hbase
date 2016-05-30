@@ -22,13 +22,18 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.TestMobSnapshotCloneIndependence;
+import org.apache.hadoop.hbase.master.procedure.TestMasterFailoverWithProcedures;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 /**
  * A test similar to TestHRegion, but with in-memory flush families.
@@ -40,6 +45,9 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion{
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
   // over in TestHRegionOnCluster.
   private static final Log LOG = LogFactory.getLog(TestHRegionWithInMemoryFlush.class);
+  @ClassRule
+  public static final TestRule timeout =
+      CategoryBasedTimeout.forClass(TestHRegionWithInMemoryFlush.class);
 
   /**
    * @return A region on which you must call

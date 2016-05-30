@@ -22,13 +22,16 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
@@ -36,6 +39,10 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndependence {
   private static final Log LOG = LogFactory.getLog(TestMobSnapshotCloneIndependence.class);
+
+  @ClassRule
+  public static final TestRule timeout =
+      CategoryBasedTimeout.forClass( TestMobSnapshotCloneIndependence.class);
 
   /**
    * Setup the config for the cluster and start it
