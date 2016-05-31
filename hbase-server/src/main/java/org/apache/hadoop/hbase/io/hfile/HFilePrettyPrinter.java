@@ -1,4 +1,3 @@
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -88,6 +87,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private boolean checkFamily;
   private boolean isSeekToRow = false;
 
+  private PrintStream out = System.out;
+  private PrintStream err = System.err;
+
   /**
    * The row which the user wants to specify and print all the KeyValues for.
    */
@@ -131,6 +133,11 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     options.addOptionGroup(files);
   }
 
+  public void setPrintStreams(PrintStream out, PrintStream err) {
+    this.out = out;
+    this.err = err;
+  }
+
   public boolean parseOptions(String args[]) throws ParseException,
       IOException {
     if (args.length == 0) {
@@ -161,7 +168,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         row = key.getBytes();
         isSeekToRow = true;
       } else {
-        System.err.println("Invalid row is specified.");
+        err.println("Invalid row is specified.");
         System.exit(-1);
       }
     }
@@ -175,17 +182,17 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       String enc = HRegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
-        System.out.println("region dir -> " + regionDir);
+        out.println("region dir -> " + regionDir);
       List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
           regionDir);
       if (verbose)
-        System.out.println("Number of region files found -> "
+        out.println("Number of region files found -> "
             + regionFiles.size());
       if (verbose) {
         int i = 1;
         for (Path p : regionFiles) {
           if (verbose)
-            System.out.println("Found file[" + i++ + "] -> " + p);
+            out.println("Found file[" + i++ + "] -> " + p);
         }
       }
       files.addAll(regionFiles);
@@ -217,27 +224,46 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     // iterate over all files found
     for (Path fileName : files) {
       try {
-        processFile(fileName);
+        int exitCode = processFile(fileName);
+        if (exitCode != 0) {
+          return exitCode;
+        }
       } catch (IOException ex) {
         LOG.error("Error reading " + fileName, ex);
-        System.exit(-2);
+        return -2;
       }
     }
 
     if (verbose || printKey) {
-      System.out.println("Scanned kv count -> " + count);
+      out.println("Scanned kv count -> " + count);
     }
 
     return 0;
   }
 
-  private void processFile(Path file) throws IOException {
+  public int processFile(Path file) throws IOException {
     if (verbose)
-      System.out.println("Scanning -> " + file);
+      out.println("Scanning -> " + file);
+
+    Path rootPath = FSUtils.getRootDir(getConf());
+    String rootString = rootPath + rootPath.SEPARATOR;
+    if (!file.toString().startsWith(rootString)) {
+      // First we see if fully-qualified URI matches the root dir. It might
+      // also be an absolute path in the same filesystem, so we prepend the FS
+      // of the root dir and see if that fully-qualified URI matches.
+      FileSystem rootFS = rootPath.getFileSystem(getConf());
+      String qualifiedFile = rootFS.getUri().toString() + file.toString();
+      if (!qualifiedFile.startsWith(rootString)) {
+        err.println("ERROR, file (" + file +
+            ") is not in HBase's root directory (" + rootString + ")");
+        return -2;
+      }
+    }
+
     FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
-      System.err.println("ERROR, file doesnt exist: " + file);
-      System.exit(-2);
+      err.println("ERROR, file doesnt exist: " + file);
+      return -2;
     }
 
     HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
@@ -268,12 +294,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
 
     if (printBlockIndex) {
-      System.out.println("Block Index:");
-      System.out.println(reader.getDataBlockIndexReader());
+      out.println("Block Index:");
+      out.println(reader.getDataBlockIndexReader());
     }
 
     if (printBlockHeaders) {
-      System.out.println("Block Headers:");
+      out.println("Block Headers:");
       /*
        * TODO: this same/similar block iteration logic is used in HFileBlock#blockRange and
        * TestLazyDataBlockDecompression. Refactor?
@@ -289,16 +315,17 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
           /* isCompaction */ false, /* updateCacheMetrics */ false, null);
         offset += block.getOnDiskSizeWithHeader();
-        System.out.println(block);
+        out.println(block);
       }
     }
 
     if (printStats) {
       fileStats.finish();
-      System.out.println("Stats:\n" + fileStats);
+      out.println("Stats:\n" + fileStats);
     }
 
     reader.close();
+    return 0;
   }
 
   private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
@@ -320,22 +347,24 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // dump key value
       if (printKey) {
-        System.out.print("K: " + kv);
+        out.print("K: " + kv);
         if (printValue) {
-          System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+          out.print(" V: "
+              + Bytes.toStringBinary(kv.getValueArray(), kv.getValueOffset(),
+                  kv.getValueLength()));
           int i = 0;
           List<Tag> tags = kv.getTags();
           for (Tag tag : tags) {
-            System.out
-                .print(String.format(" T[%d]: %s", i++, Bytes.toStringBinary(tag.getValue())));
+            out.print(String.format(" T[%d]: %s", i++,
+                Bytes.toStringBinary(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength())));
           }
         }
-        System.out.println();
+        out.println();
       }
       // check if rows are in order
       if (checkRow && pkv != null) {
         if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
-          System.err.println("WARNING, previous row is greater then"
+          err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
               + Bytes.toStringBinary(pkv.getKey()) + "\n\tcurrent  -> "
               + Bytes.toStringBinary(kv.getKey()));
@@ -345,13 +374,13 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       if (checkFamily) {
         String fam = Bytes.toString(kv.getFamily());
         if (!file.toString().contains(fam)) {
-          System.err.println("WARNING, filename does not match kv family,"
+          err.println("WARNING, filename does not match kv family,"
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
               + Bytes.toStringBinary(kv.getKey()));
         }
         if (pkv != null
             && !Bytes.equals(pkv.getFamily(), kv.getFamily())) {
-          System.err.println("WARNING, previous kv has different family"
+          err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
               + "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey())
               + "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
@@ -373,33 +402,35 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
   private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo)
       throws IOException {
-    System.out.println("Block index size as per heapsize: "
+    out.println("Block index size as per heapsize: "
         + reader.indexSize());
-    System.out.println(asSeparateLines(reader.toString()));
-    System.out.println("Trailer:\n    "
+    out.println(asSeparateLines(reader.toString()));
+    out.println("Trailer:\n    "
         + asSeparateLines(reader.getTrailer().toString()));
-    System.out.println("Fileinfo:");
+    out.println("Fileinfo:");
     for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
-      System.out.print(FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
+      out.print(FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
       if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY")) == 0) {
         long seqid = Bytes.toLong(e.getValue());
-        System.out.println(seqid);
+        out.println(seqid);
       } else if (Bytes.compareTo(e.getKey(), Bytes.toBytes("TIMERANGE")) == 0) {
+
         TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
         Writables.copyWritable(e.getValue(), timeRangeTracker);
-        System.out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
+        out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
       } else if (Bytes.compareTo(e.getKey(), FileInfo.AVG_KEY_LEN) == 0
           || Bytes.compareTo(e.getKey(), FileInfo.AVG_VALUE_LEN) == 0) {
-        System.out.println(Bytes.toInt(e.getValue()));
+        out.println(Bytes.toInt(e.getValue()));
       } else {
-        System.out.println(Bytes.toStringBinary(e.getValue()));
+        out.println(Bytes.toStringBinary(e.getValue()));
       }
     }
 
     try {
-      System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
+
+      out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
     } catch (Exception e) {
-      System.out.println ("Unable to retrieve the midkey");
+      out.println ("Unable to retrieve the midkey");
     }
 
     // Printing general bloom information
@@ -408,12 +439,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (bloomMeta != null)
       bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
 
-    System.out.println("Bloom filter:");
+    out.println("Bloom filter:");
     if (bloomFilter != null) {
-      System.out.println(FOUR_SPACES + bloomFilter.toString().replaceAll(
+      out.println(FOUR_SPACES + bloomFilter.toString().replaceAll(
           ByteBloomFilter.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
     } else {
-      System.out.println(FOUR_SPACES + "Not present");
+      out.println(FOUR_SPACES + "Not present");
     }
 
     // Printing delete bloom information
@@ -422,13 +453,13 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (bloomMeta != null)
       bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
 
-    System.out.println("Delete Family Bloom filter:");
+    out.println("Delete Family Bloom filter:");
     if (bloomFilter != null) {
-      System.out.println(FOUR_SPACES
+      out.println(FOUR_SPACES
           + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
               "\n" + FOUR_SPACES));
     } else {
-      System.out.println(FOUR_SPACES + "Not present");
+      out.println(FOUR_SPACES + "Not present");
     }
   }
 

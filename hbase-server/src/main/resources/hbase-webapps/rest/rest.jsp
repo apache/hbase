@@ -18,10 +18,15 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.io.ByteArrayOutputStream"
+  import="java.io.PrintStream"
   import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="java.util.Date"%>
+  import="org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter"
+  import="org.apache.hadoop.hbase.regionserver.HRegionServer"
+  import="org.apache.hadoop.hbase.regionserver.StoreFile"
+  %>
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
@@ -74,40 +79,27 @@ String listenPort = conf.get("hbase.rest.port", "8080");
             <h1>RESTServer <small><%= listenPort %></small></h1>
         </div>
     </div>
-    <div class="row">
-
-    <section>
-    <h2>Software Attributes</h2>
-    <table id="attributes_table" class="table table-striped">
-        <tr>
-            <th>Attribute Name</th>
-            <th>Value</th>
-            <th>Description</th>
-        </tr>
-        <tr>
-            <td>HBase Version</td>
-            <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>
-            <td>HBase version and revision</td>
-        </tr>
-        <tr>
-            <td>HBase Compiled</td>
-            <td><%= VersionInfo.getDate() %>, <%= VersionInfo.getUser() %></td>
-            <td>When HBase version was compiled and by whom</td>
-        </tr>
-        <tr>
-            <td>REST Server Start Time</td>
-            <td><%= new Date(startcode) %></td>
-            <td>Date stamp of when this REST server was started</td>
-        </tr>
-    </table>
-    </section>
-    </div>
-    <div class="row">
-
-    <section>
-<a href="http://wiki.apache.org/hadoop/Hbase/Stargate">Apache HBase Wiki on REST</a>
-    </section>
-    </div>
+    <pre>
+<%
+   try {
+     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+     PrintStream printerOutput = new PrintStream(byteStream);
+     HFilePrettyPrinter printer = new HFilePrettyPrinter();
+     printer.setPrintStreams(printerOutput, printerOutput);
+     printer.setConf(conf);
+     String[] options = {"-s"};
+     printer.parseOptions(options);
+     printer.processFile(new Path(storeFile));
+     String text = byteStream.toString();%>
+     <%=
+       text
+     %>
+   <%}
+   catch (Exception e) {%>
+     <%= e %>
+   <%}
+%>
+  </pre>
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
