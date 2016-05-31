@@ -161,7 +161,7 @@ for url_max_build in expanded_urls:
     print ""
 
 
-all_bad_tests = all_timeout_tests.union(all_failed_tests)
+all_bad_tests = all_hanging_tests.union(all_failed_tests)
 if args.mvn:
     includes = ",".join(all_bad_tests)
     with open("./includes", "w") as inc_file:
