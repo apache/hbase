@@ -18,20 +18,15 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="java.util.Collection"
-  import="java.util.Date"
-  import="java.util.List"
   import="java.io.ByteArrayOutputStream"
   import="java.io.PrintStream"
-  import="java.io.BufferedReader"
-  import="java.io.InputStreamReader"
   import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
-  import="org.apache.hadoop.hbase.regionserver.Region"
-  import="org.apache.hadoop.hbase.regionserver.Store"
-  import="org.apache.hadoop.hbase.regionserver.StoreFile"%>
+  import="org.apache.hadoop.hbase.regionserver.StoreFile"
+  %>
 <%
   String storeFile = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
@@ -91,17 +86,19 @@
     <pre>
 <%
    try {
-     ProcessBuilder pb=new ProcessBuilder("hbase", "hfile", "-s", "-f", storeFile);
-     pb.redirectErrorStream(true);
-     Process pr = pb.start();
-     BufferedReader in = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-     String line;
-     while ((line = in.readLine()) != null) {%>
-       <%= line %>
-     <%}
-     pr.waitFor();
-     in.close();
-   }
+     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+     PrintStream printerOutput = new PrintStream(byteStream);
+     HFilePrettyPrinter printer = new HFilePrettyPrinter();
+     printer.setPrintStreams(printerOutput, printerOutput);
+     printer.setConf(conf);
+     String[] options = {"-s"};
+     printer.parseOptions(options);
+     printer.processFile(new Path(storeFile));
+     String text = byteStream.toString();%>
+     <%=
+       text
+     %>
+   <%}
    catch (Exception e) {%>
      <%= e %>
    <%}
