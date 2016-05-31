@@ -18,3 +18,4 @@
 requests
 gitpython
 rbtools
+jinja2
