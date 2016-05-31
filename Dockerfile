@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM pjameson/buck-folly-watchman:20160425
+FROM pjameson/buck-folly-watchman:20160511
 
 ARG CC=/usr/bin/gcc-5
 ARG CXX=/usr/bin/g++-5
