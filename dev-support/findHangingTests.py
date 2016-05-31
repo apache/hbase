@@ -23,7 +23,15 @@ import re
 import requests
 import sys
 
-def get_hanging_tests(console_url):
+# Returns [[all tests], [failed tests], [timeout tests], [hanging tests]]
+# Definitions:
+# All tests: All testcases which were run.
+# Hanging test: A testcase which started but never finished.
+# Failed test: Testcase which encountered any kind of failure. It can be failing atomic tests,
+#   timed out tests, etc
+# Timeout test: A Testcase which encountered timeout. Naturally, all timeout tests will be
+#   included in failed tests.
+def get_bad_tests(console_url):
     response = requests.get(console_url)
     if response.status_code != 200:
         print "Error getting consoleText. Response = {} {}".format(
@@ -33,6 +41,7 @@ def get_hanging_tests(console_url):
     all_tests = set()
     hanging_tests = set()
     failed_tests = set()
+    timeout_tests = set()
     for line in response.content.splitlines():
         result1 = re.match("^Running org.apache.hadoop.hbase.(\w*\.)*(\w*)", line)
         if result1:
@@ -45,9 +54,13 @@ def get_hanging_tests(console_url):
             hanging_tests.remove(test_case)
             if "FAILURE!" in line:
                 failed_tests.add(test_case)
-    print "Result > total tests: {:4}   hanging : {:4}   failed : {:4}".format(
-        len(all_tests), len(hanging_tests), len(failed_tests))
-    return [all_tests, hanging_tests, failed_tests]
+        result3 = re.match("^\s+(\w*).*\sTestTimedOut", line)
+        if result3:
+            test_case = result3.group(1)
+            timeout_tests.add(test_case)
+    print "Result > total tests: {:4}   failed : {:4}  timedout : {:4}  hanging : {:4}".format(
+          len(all_tests), len(failed_tests), len(timeout_tests), len(hanging_tests))
+    return [all_tests, failed_tests, timeout_tests, hanging_tests]
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 :
@@ -55,11 +68,15 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print "Fetching {}".format(sys.argv[1])
-    [all_tests, hanging_tests, failed_tests] = get_hanging_tests(sys.argv[1])
+    [all_tests, failed_tests, timedout_tests, hanging_tests] = get_bad_tests(sys.argv[1])
     print "Found {} hanging tests:".format(len(hanging_tests))
     for test in hanging_tests:
         print test
     print "\n"
-    print "Found {} failed tests:".format(len(failed_tests))
+    print "Found {} failed tests of which {} timed out:".format(
+        len(failed_tests), len(timedout_tests))
     for test in failed_tests:
-        print test
+        print "{0} {1}".format(test, ("(Timed Out)" if test in timedout_tests else ""))
+
+    print ("\nA test may have had 0 or more atomic test failures before it timed out. So a "
+           "'Timed Out' test may have other errors too.")
