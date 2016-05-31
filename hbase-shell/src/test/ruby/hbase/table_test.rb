@@ -561,7 +561,7 @@ module Hbase
     define_test "scan with a block should yield rows and return rows counter" do
       rows = {}
       res = @test_table._scan_internal { |row, cells| rows[row] = cells }
-      assert_equal(rows.keys.size, res)
+      assert_equal([rows.keys.size,false], res)
     end
     
     define_test "scan should support COLUMNS with value CONVERTER information" do
