@@ -499,7 +499,7 @@ For bulk imports, this means that all clients will write to the same region unti
 A useful pattern to speed up the bulk import process is to pre-create empty regions.
 Be somewhat conservative in this, because too-many regions can actually degrade performance.
 
-There are two different approaches to pre-creating splits.
+There are two different approaches to pre-creating splits using the HBase API.
 The first approach is to rely on the default `Admin` strategy (which is implemented in `Bytes.split`)...
 
 [source,java]
@@ -511,7 +511,7 @@ int numberOfRegions = ...;  // # of regions to create
 admin.createTable(table, startKey, endKey, numberOfRegions);
 ----
 
-And the other approach is to define the splits yourself...
+And the other approach, using the HBase API, is to define the splits yourself...
 
 [source,java]
 ----
@@ -519,8 +519,23 @@ byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 ----
 
+You can achieve a similar effect using the HBase Shell to create tables by specifying split options. 
+
+[source]
+----
+# create table with specific split points
+hbase>create 't1','f1',SPLITS => ['\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00']
+
+# create table with four regions based on random bytes keys
+hbase>create 't2','f1', { NUMREGIONS => 4 , SPLITALGO => 'UniformSplit' }
+
+# create table with five regions based on hex keys
+create 't3','f1', { NUMREGIONS => 5, SPLITALGO => 'HexStringSplit' }
+----
+
 See <<rowkey.regionsplits>> for issues related to understanding your keyspace and pre-creating regions.
 See <<manual_region_splitting_decisions,manual region splitting decisions>>  for discussion on manually pre-splitting regions.
+See <<tricks.pre-split>> for more details of using the HBase Shell to pre-split tables.
 
 [[def.log.flush]]
 ===  Table Creation: Deferred Log Flush
