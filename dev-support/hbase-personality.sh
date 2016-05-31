@@ -104,6 +104,7 @@ function personality_modules
           if [[ -n "${excludes}" ]]; then
             extra="${extra} -Dtest.exclude.pattern=${excludes}"
           fi
+          rm excludes
         else
           echo "Wget error $? in fetching excludes file from url" \
                "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
@@ -115,6 +116,7 @@ function personality_modules
           if [[ -n "${includes}" ]]; then
             extra="${extra} -Dtest=${includes}"
           fi
+          rm includes
         else
           echo "Wget error $? in fetching includes file from url" \
                "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
