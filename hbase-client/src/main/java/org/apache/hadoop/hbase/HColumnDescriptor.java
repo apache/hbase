@@ -64,7 +64,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   // Version 11 -- add column family level configuration.
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 11;
 
-  private static final String IN_MEMORY_COMPACTION = "IN_MEMORY_COMPACTION";
+  public static final String IN_MEMORY_COMPACTION = "IN_MEMORY_COMPACTION";
 
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
