@@ -1123,16 +1123,17 @@ public class TestAsyncProcess {
   }
 
   @Test
-  public void testWaitForMaximumCurrentTasks() throws InterruptedException, BrokenBarrierException {
+  public void testWaitForMaximumCurrentTasks() throws Exception {
     final AtomicLong tasks = new AtomicLong(0);
     final AtomicInteger max = new AtomicInteger(0);
     final CyclicBarrier barrier = new CyclicBarrier(2);
+    final AsyncProcess ap = new MyAsyncProcess(createHConnection(), conf);
     Runnable runnable = new Runnable() {
       @Override
       public void run() {
         try {
           barrier.await();
-          AsyncProcess.waitForMaximumCurrentTasks(max.get(), tasks, 1);
+          ap.waitForMaximumCurrentTasks(max.get(), tasks, 1, null);
         } catch (InterruptedIOException e) {
           Assert.fail(e.getMessage());
         } catch (InterruptedException e) {
