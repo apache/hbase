@@ -170,7 +170,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
         if (mergeEnabled) {
           HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
           long regionSize2 = getRegionSize(hri2);
-          if (regionSize + regionSize2 < avgRegionSize) {
+          if (regionSize > 0 && regionSize2 > 0 && regionSize + regionSize2 < avgRegionSize) {
             LOG.info("Table " + table + ", small region size: " + regionSize
               + " plus its neighbor size: " + regionSize2
               + ", less than the avg size " + avgRegionSize + ", merging them");
