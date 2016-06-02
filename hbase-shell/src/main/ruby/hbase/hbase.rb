@@ -58,7 +58,7 @@ module Hbase
 
     # Create new one each time
     def table(table, shell)
-      ::Hbase::Table.new(@connection.getTable(table), shell)
+      ::Hbase::Table.new(@connection.getTable(TableName.valueOf(table)), shell)
     end
 
     def replication_admin(formatter)
