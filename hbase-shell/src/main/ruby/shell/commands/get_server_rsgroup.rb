@@ -31,7 +31,7 @@ EOF
 
       def command(server)
         now = Time.now
-        group_name = rsgroup_admin.getGroupOfServer(server).getName
+        group_name = rsgroup_admin.getRSGroupOfServer(server).getName
         formatter.row([group_name])
         formatter.footer(now, 1)
       end
