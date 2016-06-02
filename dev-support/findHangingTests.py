@@ -46,14 +46,22 @@ def get_bad_tests(console_url):
         result1 = re.match("^Running org.apache.hadoop.hbase.(\w*\.)*(\w*)", line)
         if result1:
             test_case = result1.group(2)
-            hanging_tests.add(test_case)
-            all_tests.add(test_case)
+            if test_case in all_tests:
+                print  ("ERROR! Multiple tests with same name '{}'. Might get wrong results "
+                       "for this test.".format(test_case))
+            else:
+                hanging_tests.add(test_case)
+                all_tests.add(test_case)
         result2 = re.match("^Tests run:.*- in org.apache.hadoop.hbase.(\w*\.)*(\w*)", line)
         if result2:
             test_case = result2.group(2)
-            hanging_tests.remove(test_case)
             if "FAILURE!" in line:
                 failed_tests.add(test_case)
+            if test_case not in hanging_tests:
+                print  ("ERROR! No test '{}' found in hanging_tests. Might get wrong results "
+                        "for this test.".format(test_case))
+            else:
+                hanging_tests.remove(test_case)
         result3 = re.match("^\s+(\w*).*\sTestTimedOut", line)
         if result3:
             test_case = result3.group(1)
