@@ -49,12 +49,15 @@ module Hbase
       assert_not_nil(group)
       assert_equal(0, group.getServers.count)
 
-      hostport =
-          @rsgroup_admin.getRSGroupInfo('default').getServers.iterator.next.toString
+      hostport = @rsgroup_admin.getRSGroupInfo('default').getServers.iterator.next
+      @shell.command('get_rsgroup', 'default')
+      hostPortStr = hostport.toString
+      @shell.command('get_server_rsgroup', [hostPortStr])
       @shell.command('move_rsgroup_servers',
                      group_name,
-                     [hostport])
+                     [hostPortStr])
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getServers.count)
+      assert_equal(group_name, @rsgroup_admin.getRSGroupOfServer(hostport).getName)
 
       @shell.command('move_rsgroup_tables',
                      group_name,
@@ -65,7 +68,7 @@ module Hbase
       @hbase.rsgroup_admin(@formatter).get_rsgroup(group_name) do |line|
         case count
         when 1
-          assert_equal(hostport, line)
+          assert_equal(hostPortStr, line)
         when 3
           assert_equal(table_name, line)
         end
