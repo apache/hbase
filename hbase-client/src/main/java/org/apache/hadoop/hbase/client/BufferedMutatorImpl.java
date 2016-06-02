@@ -237,7 +237,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
         while (!buffer.isEmpty()) {
           ap.submit(tableName, buffer, true, null, false);
         }
-        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(null);
+        RetriesExhaustedWithDetailsException error =
+            ap.waitForAllPreviousOpsAndReset(null, tableName.getNameAsString());
         if (error != null) {
           if (listener == null) {
             throw error;
