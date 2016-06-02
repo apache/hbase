@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.tool;
 
+import com.google.common.collect.Iterables;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,13 +45,11 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.spy;
@@ -80,6 +80,24 @@ public class TestCanaryTool {
 
   @Mock
   Appender mockAppender;
+
+  @Test
+  public void testBasicZookeeperCanaryWorks() throws Exception {
+    Integer port =
+        Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
+    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM,
+        "localhost:" + port + "/hbase");
+    ExecutorService executor = new ScheduledThreadPoolExecutor(2);
+    Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String[] args = { "-t", "10000", "-zookeeper" };
+    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+
+    String baseZnode = testingUtility.getConfiguration()
+        .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    verify(sink, atLeastOnce())
+        .publishReadTiming(eq(baseZnode), eq("localhost:" + port), anyLong());
+  }
 
   @Test
   public void testBasicCanaryWorks() throws Exception {
