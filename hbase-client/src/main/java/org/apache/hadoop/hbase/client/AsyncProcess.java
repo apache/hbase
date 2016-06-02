@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
 
 import com.google.common.base.Preconditions;
@@ -105,6 +104,12 @@ class AsyncProcess<CResult> {
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
       "hbase.client.start.log.errors.counter";
   public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
+  
+  private final int thresholdToLogUndoneTaskDetails;
+  private static final String THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS =
+      "hbase.client.threshold.log.details";
+  private static final int DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS = 10;
+  private final int THRESHOLD_TO_LOG_REGION_DETAILS = 2;
 
   protected static final AtomicLong COUNTER = new AtomicLong();
   protected final long id;
@@ -247,6 +252,9 @@ class AsyncProcess<CResult> {
     this.startLogErrorsCnt =
         conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
 
+    this.thresholdToLogUndoneTaskDetails = conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
+      DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS);
+
     if (this.maxTotalConcurrentTasks <= 0) {
       throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);
     }
@@ -321,7 +329,7 @@ class AsyncProcess<CResult> {
       }
 
       // Wait until there is at least one slot for a new task.
-      waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1);
+      waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1, tableName.getNameAsString());
 
       // Remember the previous decisions about regions or region servers we put in the
       //  final multi.
@@ -1020,7 +1028,8 @@ class AsyncProcess<CResult> {
   /**
    * Wait until the async does not have more than max tasks in progress.
    */
-  private void waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
+  private void waitForMaximumCurrentTasks(int max, String tableName)
+      throws InterruptedIOException {
     long lastLog = EnvironmentEdgeManager.currentTimeMillis();
     long currentTasksDone = this.tasksDone.get();
 
@@ -1032,6 +1041,9 @@ class AsyncProcess<CResult> {
             + max + ", tasksSent=" + tasksSent.get() + ", tasksDone=" + tasksDone.get() +
             ", currentTasksDone=" + currentTasksDone + ", retries=" + retriesCnt.get() +
             " hasError=" + hasError() + ", tableName=" + tableName);
+        if (getCurrentTasksCount() <= thresholdToLogUndoneTaskDetails) {
+          logDetailsOfUndoneTasks(getCurrentTasksCount());
+        }
       }
       waitForNextTaskDone(currentTasksDone);
       currentTasksDone = this.tasksDone.get();
@@ -1046,7 +1058,7 @@ class AsyncProcess<CResult> {
    * Wait until all tasks are executed, successfully or not.
    */
   public void waitUntilDone() throws InterruptedIOException {
-    waitForMaximumCurrentTasks(0);
+    waitForMaximumCurrentTasks(0, null);
   }
 
 
@@ -1122,5 +1134,24 @@ class AsyncProcess<CResult> {
    */
   protected HConnectionManager.ServerErrorTracker createServerErrorTracker() {
     return new HConnectionManager.ServerErrorTracker(this.serverTrackerTimeout, this.numTries);
+  }
+
+  private void logDetailsOfUndoneTasks(long taskInProgress) {
+    ArrayList<ServerName> servers = new ArrayList<ServerName>();
+    for (Map.Entry<ServerName, AtomicInteger> entry : taskCounterPerServer.entrySet()) {
+      if (entry.getValue().get() > 0) {
+        servers.add(entry.getKey());
+      }
+    }
+    LOG.info("Left over " + taskInProgress + " task(s) are processed on server(s): " + servers);
+    if (taskInProgress <= THRESHOLD_TO_LOG_REGION_DETAILS) {
+      ArrayList<String> regions = new ArrayList<String>();
+      for (Map.Entry<byte[], AtomicInteger> entry : taskCounterPerRegion.entrySet()) {
+        if (entry.getValue().get() > 0) {
+          regions.add(Bytes.toString(entry.getKey()));
+        }
+      }
+      LOG.info("Regions against which left over task(s) are processed: " + regions);
+    }
   }
 }
