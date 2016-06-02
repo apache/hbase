@@ -235,7 +235,34 @@ public final class Compression {
           throw new RuntimeException(e);
         }
       }
-  };
+    },
+    BZIP2("bzip2") {
+      // Use base type to avoid compile-time dependencies.
+      private volatile transient CompressionCodec bzipCodec;
+      private transient Object lock = new Object();
+
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (bzipCodec == null) {
+          synchronized (lock) {
+            if (bzipCodec == null) {
+              bzipCodec = buildCodec(conf);
+            }
+          }
+        }
+        return bzipCodec;
+      }
+
+      private CompressionCodec buildCodec(Configuration conf) {
+        try {
+          Class<?> externalCodec =
+              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.BZip2Codec");
+          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
 
     private final transient Configuration conf; // FindBugs: SE_BAD_FIELD so just made it transient
     private final String compressName;
