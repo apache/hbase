@@ -22,6 +22,7 @@
 import argparse
 import findHangingTests
 from jinja2 import Template
+import os
 import logging
 import requests
 
@@ -177,114 +178,9 @@ if args.mvn:
     with open("./failed", "w") as file:
         file.write(",".join(all_failed_tests))
 
-
-template = Template("""
-    <!DOCTYPE html>
-    <html>
-        <head>
-        <title>Apache HBase Flaky Dashboard</title>
-        <style type="text/css">
-            table {
-                table-layout: fixed;
-            }
-            th {
-                font-size: 15px;
-            }
-            td {
-                font-size: 18px;
-                vertical-align: text-top;
-                overflow: hidden;
-                white-space: nowrap;
-            }
-            .show_hide_button {
-                font-size: 100%;
-                padding: .5em 1em;
-                border: 0 rgba(0,0,0,0);
-                border-radius: 10px;
-            }
-        </style>
-        </head>
-        <body>
-            <p>
-              <img style="vertical-align:middle; display:inline-block;" height="80px"
-                   src="https://hbase.apache.org/images/hbase_logo_with_orca_large.png">
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <span style="font-size:50px; vertical-align:middle; display:inline-block;">
-                  Apache HBase Flaky Tests Dashboard
-              </span>
-            </p>
-            <br><br>
-            {% set counter = 0 %}
-            {% for url in results %}
-                {% set result = results[url] %}
-                {# Dedup ids since test names may duplicate across urls #}
-                {% set counter = counter + 1 %}
-                <span style="font-size:20px; font-weight:bold;">Job : {{ url |e }}
-                <a href="{{ url |e }}" style="text-decoration:none;">&#x1f517;</a></span>
-                <br/><br/>
-                <table>
-                    <tr>
-                        <th width="400px">Test Name</th>
-                        <th width="150px">Flakyness</th>
-                        <th width="200px">Failed/Timeout/Hanging</th>
-                        <th>Run Ids</th>
-                    </tr>
-                    {% for test in result %}
-                        {% set all = result[test]['all'] %}
-                        {% set failed = result[test]['failed'] %}
-                        {% set timeout = result[test]['timeout'] %}
-                        {% set hanging = result[test]['hanging'] %}
-                        {% set success = all.difference(failed).difference(hanging) %}
-                        <tr>
-                            <td>{{ test |e }}</td>
-                            {% set flakyness =
-                                (failed|length + hanging|length) * 100 / all|length %}
-                            {% if flakyness == 100 %}
-                                <td align="middle" style="background-color:#FF9999;">
-                            {% else %}
-                                <td align="middle">
-                            {% endif %}
-                                    {{ "{:.1f}% ({} / {})".format(
-                                        flakyness, failed|length + hanging|length, all|length) }}
-                                </td>
-                            <td align="middle">
-                                {{ failed|length }} / {{ timeout|length }} / {{ hanging|length }}
-                            </td>
-                            <td>
-                                {% set id = "details_" ~ test ~ "_" ~ counter  %}
-                                <button class="show_hide_button" onclick="toggle('{{ id }}')">
-                                    show/hide</button>
-                                <br/>
-                                <div id="{{ id }}"
-                                    style="display: none; width:500px; white-space: normal">
-                                {% macro print_run_ids(url, run_ids) -%}
-                                    {% for i in run_ids %}
-                                        <a href="{{ url }}/{{ i }}">{{ i }}</a>&nbsp;
-                                    {% endfor %}
-                                {%- endmacro %}
-                                    Failed : {{ print_run_ids(url, failed) }}<br/>
-                                    Timed Out : {{ print_run_ids(url, timeout) }}<br/>
-                                    Hanging : {{ print_run_ids(url, hanging) }}<br/>
-                                    Succeeded : {{ print_run_ids(url, success) }}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </table>
-                <br><br><br>
-            {% endfor %}
-            <script type="text/javascript">
-                function toggle(id) {
-                    if (document.getElementById(id).style["display"] == "none") {
-                        document.getElementById(id).style["display"]  = "block";
-                    } else {
-                        document.getElementById(id).style["display"] = "none";
-                    }
-                }
-            </script>
-        </body>
-    </html>
-    """)
+dev_support_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(dev_support_dir, "flaky-dashboard-template.html"), "r") as f:
+    template = Template(f.read())
 
 with open("dashboard.html", "w") as f:
     f.write(template.render(results=url_to_bad_test_results))
