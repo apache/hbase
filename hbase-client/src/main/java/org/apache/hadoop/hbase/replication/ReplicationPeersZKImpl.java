@@ -550,6 +550,12 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
           }
         }
       }
+      // Check for hfile-refs queue
+      if (-1 != ZKUtil.checkExists(zookeeper, hfileRefsZNode)
+          && queuesClient.getAllPeersFromHFileRefsQueue().contains(peerId)) {
+        throw new ReplicationException("Undeleted queue for peerId: " + peerId
+            + ", found in hfile-refs node path " + hfileRefsZNode);
+      }
     } catch (KeeperException e) {
       throw new ReplicationException("Could not check queues deleted with id=" + peerId, e);
     }
