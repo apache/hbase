@@ -263,7 +263,7 @@ public abstract class AbstractTestIPC {
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
       LOG.info("Caught expected exception: " + e.toString());
-      assertTrue(StringUtils.stringifyException(e).contains("Injected fault"));
+      assertTrue(e.toString(), StringUtils.stringifyException(e).contains("Injected fault"));
     } finally {
       rpcServer.stop();
     }
