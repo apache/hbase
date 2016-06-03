@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
 
 /**
@@ -88,7 +89,17 @@ public class CatalogJanitor extends ScheduledChore {
    * @param enabled
    */
   public boolean setEnabled(final boolean enabled) {
-    return this.enabled.getAndSet(enabled);
+    boolean alreadyEnabled = this.enabled.getAndSet(enabled);
+    // If disabling is requested on an already enabled chore, we could have an active
+    // scan still going on, callers might not be aware of that and do further action thinkng
+    // that no action would be from this chore.  In this case, the right action is to wait for
+    // the active scan to complete before exiting this function.
+    if (!enabled && alreadyEnabled) {
+      while (alreadyRunning.get()) {
+        Threads.sleepWithoutInterrupt(100);
+      }
+    }
+    return alreadyEnabled;
   }
 
   boolean getEnabled() {
