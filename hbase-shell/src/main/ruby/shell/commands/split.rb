@@ -34,9 +34,7 @@ EOF
       end
 
       def command(table_or_region_name, split_point = nil)
-        format_simple_command do
-          admin.split(table_or_region_name, split_point)
-        end
+        admin.split(table_or_region_name, split_point)
       end
     end
   end

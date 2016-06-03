@@ -48,9 +48,7 @@ EOF
       end
 
       def command(startstop="status", spanname="HBaseShell")
-        format_and_return_simple_command do 
-          trace(startstop, spanname)
-        end
+        trace(startstop, spanname)
       end
 
       def trace(startstop, spanname)

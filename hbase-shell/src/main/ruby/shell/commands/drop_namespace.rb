@@ -27,9 +27,7 @@ EOF
       end
 
       def command(namespace)
-        format_simple_command do
-          admin.drop_namespace(namespace)
-        end
+        admin.drop_namespace(namespace)
       end
     end
   end

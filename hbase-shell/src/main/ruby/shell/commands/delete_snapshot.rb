@@ -28,9 +28,7 @@ EOF
       end
 
       def command(snapshot_name)
-        format_simple_command do
-          admin.delete_snapshot(snapshot_name)
-        end
+        admin.delete_snapshot(snapshot_name)
       end
     end
   end

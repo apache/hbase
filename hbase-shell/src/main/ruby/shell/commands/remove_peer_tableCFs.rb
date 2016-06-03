@@ -33,9 +33,7 @@ EOF
       end
 
       def command(id, table_cfs)
-        format_simple_command do
-          replication_admin.remove_peer_tableCFs(id, table_cfs)
-        end
+        replication_admin.remove_peer_tableCFs(id, table_cfs)
       end
     end
   end

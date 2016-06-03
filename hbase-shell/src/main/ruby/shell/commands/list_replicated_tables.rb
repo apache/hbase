@@ -31,8 +31,6 @@ EOF
       end
 
       def command(regex = ".*")
-        now = Time.now
-
         formatter.header([ "TABLE:COLUMNFAMILY", "ReplicationType" ], [ 32 ])
         list = replication_admin.list_replicated_tables(regex)
         list.each do |e|
@@ -43,7 +41,7 @@ EOF
           end
           formatter.row([e.get(org.apache.hadoop.hbase.client.replication.ReplicationAdmin::TNAME) + ":" + e.get(org.apache.hadoop.hbase.client.replication.ReplicationAdmin::CFNAME), replicateType], true, [32])
         end
-        formatter.footer(now)
+        formatter.footer()
       end
     end
   end

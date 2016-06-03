@@ -30,11 +30,9 @@ EOF
       end
 
       def command(switch_type)
-        format_simple_command do
-          formatter.row(
-            [admin.splitormerge_enabled(switch_type) ? 'true' : 'false']
-          )
-        end
+        formatter.row(
+          [admin.splitormerge_enabled(switch_type) ? 'true' : 'false']
+        )
       end
     end
   end

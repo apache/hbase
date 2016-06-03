@@ -29,7 +29,6 @@ EOF
       end
 
       def command()
-        now = Time.now
         formatter.header([ "Id", "Name", "State", "Start_Time", "Last_Update" ])
 
         list = admin.list_procedures()
@@ -39,7 +38,7 @@ EOF
           formatter.row([ proc.getProcId, proc.getProcName, proc.getProcState, start_time, last_update ])
         end
 
-        formatter.footer(now, list.size)
+        formatter.footer(list.size)
       end
     end
   end

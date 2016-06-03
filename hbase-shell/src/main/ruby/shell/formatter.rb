@@ -64,7 +64,7 @@ module Shell
 
         # Print a string
         if args.is_a?(String)
-          output(args)
+          output_str(args)
           @out.puts
           return
         end
@@ -162,7 +162,7 @@ module Shell
         return str
       end
 
-      def output(str)
+      def output_str(str)
         output(@max_width, str)
       end
 
@@ -177,15 +177,12 @@ module Shell
         end
       end
 
-      def footer(start_time = nil, row_count = nil, is_stale = false)
-        return unless start_time
+      def footer(row_count = nil, is_stale = false)
         row_count ||= @row_count
         # Only output elapsed time and row count if startTime passed
-        @out.print("%d row(s) in %.4f seconds" % [row_count, Time.now - start_time])
+        @out.puts("%d row(s)" % [row_count])
         if is_stale == true
           @out.puts(" (possible stale results) ")
-        else
-          @out.puts("")
         end
       end
     end
