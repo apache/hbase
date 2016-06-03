@@ -136,9 +136,8 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // Now let's mess it up, by adding a region with a duplicate startkey
       HRegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("A2"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriDupe);
+      TEST_UTIL.assignRegion(hriDupe);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
       TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
@@ -176,10 +175,8 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // Now let's mess it up, by adding a region with a duplicate startkey
       HRegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("B"));
+      TEST_UTIL.assignRegion(hriDupe);
 
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriDupe);
       ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
       TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
@@ -228,9 +225,8 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriOverlap);
+      TEST_UTIL.assignRegion(hriOverlap);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
       TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
@@ -317,12 +313,11 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       HMaster master = cluster.getMaster();
       HRegionInfo hriOverlap1 =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("AB"));
-      master.assignRegion(hriOverlap1);
-      master.getAssignmentManager().waitForAssignment(hriOverlap1);
+      TEST_UTIL.assignRegion(hriOverlap1);
+
       HRegionInfo hriOverlap2 =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("AB"), Bytes.toBytes("B"));
-      master.assignRegion(hriOverlap2);
-      master.getAssignmentManager().waitForAssignment(hriOverlap2);
+      TEST_UTIL.assignRegion(hriOverlap2);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
@@ -458,7 +453,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
     scanner.close();
     meta.close();
   }
-  
+
   /**
    * This creates and fixes a bad table with a missing region -- hole in meta and data present but
    * .regioninfo missing (an orphan hdfs region)in the fs. At last we check every row was present

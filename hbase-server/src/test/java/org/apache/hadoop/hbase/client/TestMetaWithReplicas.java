@@ -448,7 +448,7 @@ public class TestMetaWithReplicas {
     // create in-memory state otherwise master won't assign
     TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
              .getRegionStates().createRegionState(h);
-    TEST_UTIL.getMiniHBaseCluster().getMaster().assignRegion(h);
+    TEST_UTIL.assignRegion(h);
     HBaseFsckRepair.waitUntilAssigned(TEST_UTIL.getHBaseAdmin(), h);
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
