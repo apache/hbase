@@ -31,9 +31,7 @@ EOF
       end
 
       def command(user, *args)
-        format_simple_command do
-          visibility_labels_admin.clear_auths(user, args)
-        end
+        visibility_labels_admin.clear_auths(user, args)
       end
     end
   end

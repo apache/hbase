@@ -51,9 +51,7 @@ EOF
       end
 
       def command(region_name, server = nil)
-        format_simple_command do
-          admin.close_region(region_name, server)
-        end
+        admin.close_region(region_name, server)
       end
     end
   end

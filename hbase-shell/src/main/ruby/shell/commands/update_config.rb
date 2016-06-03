@@ -31,9 +31,7 @@ EOF
       end
 
       def command(serverName)
-        format_simple_command do
-          admin.update_config(serverName)
-        end
+        admin.update_config(serverName)
       end
     end
   end

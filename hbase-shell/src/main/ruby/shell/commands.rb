@@ -29,9 +29,12 @@ module Shell
       # cmd - command name to execute
       # args - arguments to pass to the command
       def command_safe(debug, cmd = :command, *args)
+        # Commands can overwrite start_time to skip time used in some kind of setup.
+        # See count.rb for example.
+        @start_time = Time.now
         # send is internal ruby method to call 'cmd' with *args
         #(everything is a message, so this is just the formal semantics to support that idiom)
-        translate_hbase_exceptions(*args) { send(cmd,*args) }
+        translate_hbase_exceptions(*args) { send(cmd, *args) }
       rescue => e
         rootCause = e
         while rootCause != nil && rootCause.respond_to?(:cause) && rootCause.cause != nil
@@ -48,13 +51,16 @@ module Shell
         else
           raise rootCause
         end
+      ensure
+        # If end_time is not already set by the command, use current time.
+        @end_time ||= Time.now
+        formatter.output_str("Took %.4f seconds" % [@end_time - @start_time])
       end
 
       # Convenience functions to get different admins
-
       # Returns HBase::Admin ruby class.
       def admin
-        @shell.hbase_admin
+        @shell.admin
       end
 
       def taskmonitor
@@ -89,21 +95,6 @@ module Shell
       # Creates formatter instance first time and then reuses it.
       def formatter
         @formatter ||= ::Shell::Formatter::Console.new
-      end
-
-      def format_simple_command
-        now = Time.now
-        yield
-        formatter.header
-        formatter.footer(now)
-      end
-
-      def format_and_return_simple_command
-        now = Time.now
-        ret = yield
-        formatter.header
-        formatter.footer(now)
-        return ret
       end
 
       def translate_hbase_exceptions(*args)

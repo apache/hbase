@@ -30,11 +30,7 @@ EOF
       end
 
       def command(enableDisable)
-        format_simple_command do
-          formatter.row([
-            admin.catalogjanitor_switch(enableDisable)? "true" : "false"
-          ])
-        end
+        formatter.row([admin.catalogjanitor_switch(enableDisable)? "true" : "false"])
       end
     end
   end

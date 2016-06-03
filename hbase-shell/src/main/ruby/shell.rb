@@ -81,8 +81,9 @@ module Shell
       self.interactive = interactive
     end
 
-    def hbase_admin
-      @hbase_admin ||= hbase.admin()
+    # Returns Admin class from admin.rb
+    def admin
+      @admin ||= hbase.admin()
     end
 
     def hbase_taskmonitor
@@ -143,7 +144,7 @@ module Shell
     # method_name - name of the method on the command to call. Defaults to just 'command'
     # args - to be passed to the named method
     def internal_command(command, method_name= :command, *args)
-      command_instance(command).command_safe(self.debug,method_name, *args)
+      command_instance(command).command_safe(self.debug, method_name, *args)
     end
 
     def print_banner

@@ -30,7 +30,6 @@ EOF
       end
 
       def command(namespace)
-        now = Time.now
         formatter.header([ "TABLE" ])
 
         list = admin.list_namespace_tables(namespace)
@@ -38,7 +37,7 @@ EOF
           formatter.row([ table ])
         end
 
-        formatter.footer(now, list.size)
+        formatter.footer(list.size)
       end
     end
   end

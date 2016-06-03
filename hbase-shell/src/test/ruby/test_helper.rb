@@ -55,7 +55,7 @@ module Hbase
     end
 
     def admin
-      @shell.hbase_admin
+      @shell.admin
     end
 
     def taskmonitor
