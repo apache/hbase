@@ -267,7 +267,8 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       Generator generator = new Generator();
       generator.setConf(source.getConfiguration());
 
-      int retCode = generator.run(numMappers, numNodes, generatorOutput, width, wrapMultiplier);
+      // Disable concurrent walkers for IntegrationTestReplication
+      int retCode = generator.run(numMappers, numNodes, generatorOutput, width, wrapMultiplier, 0);
       if (retCode > 0) {
         throw new RuntimeException("Generator failed with return code: " + retCode);
       }
