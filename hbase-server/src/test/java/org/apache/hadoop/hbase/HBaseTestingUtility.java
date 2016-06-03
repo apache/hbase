@@ -3200,6 +3200,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Uses directly the assignment manager to assign the region.
+   * and waits until the specified region has completed assignment.
+   * @param tableName the table name
+   * @throws IOException
+   * @throw InterruptedException
+   * @return true if the region is assigned false otherwise.
+   */
+  public boolean assignRegion(final HRegionInfo regionInfo)
+      throws IOException, InterruptedException {
+    final AssignmentManager am = getHBaseCluster().getMaster().getAssignmentManager();
+    am.assign(regionInfo);
+    return am.waitForAssignment(regionInfo);
+  }
+
+  /**
    * Wait until all regions for a table in hbase:meta have a non-empty
    * info:server, up to a configuable timeout value (default is 60 seconds)
    * This means all regions have been deployed,

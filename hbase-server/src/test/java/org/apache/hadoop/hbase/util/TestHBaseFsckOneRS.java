@@ -310,9 +310,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriOverlap);
+      TEST_UTIL.assignRegion(hriOverlap);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
       TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
@@ -350,9 +349,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B2"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriOverlap);
+      TEST_UTIL.assignRegion(hriOverlap);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
       TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
@@ -1225,9 +1223,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriOverlap);
+      TEST_UTIL.assignRegion(hriOverlap);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
       TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
@@ -1351,9 +1348,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Now let's mess it up, by adding a region with a duplicate startkey
       HRegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("B"));
-      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .waitForAssignment(hriDupe);
+      TEST_UTIL.assignRegion(hriDupe);
+
       ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
       TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 

@@ -191,9 +191,8 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      am.waitForAssignment(hri);
+      TEST_UTIL.assignRegion(hri);
 
       RegionStates regionStates = am.getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
@@ -248,7 +247,7 @@ public class TestAssignmentManagerOnCluster {
       final AssignmentManager am = master.getAssignmentManager();
       RegionPlan plan = new RegionPlan(hri, null, deadServer);
       am.addPlan(hri.getEncodedName(), plan);
-      master.assignRegion(hri);
+      TEST_UTIL.assignRegion(hri);
 
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
@@ -446,9 +445,8 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
 
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
@@ -495,9 +493,8 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
@@ -543,9 +540,8 @@ public class TestAssignmentManagerOnCluster {
       MyLoadBalancer.controledRegion = hri;
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      assertFalse(am.waitForAssignment(hri));
+      assertFalse(TEST_UTIL.assignRegion(hri));
 
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_OPEN, state.getState());
@@ -553,8 +549,7 @@ public class TestAssignmentManagerOnCluster {
       assertNull(state.getServerName());
 
       MyLoadBalancer.controledRegion = null;
-      master.assignRegion(hri);
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
@@ -581,17 +576,15 @@ public class TestAssignmentManagerOnCluster {
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
-      MyLoadBalancer.controledRegion = hri;
-
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       AssignmentManager am = master.getAssignmentManager();
+
       // round-robin assignment but balancer cannot find a plan
       // assignment should fail
-      am.assign(Arrays.asList(hri));
-
+      MyLoadBalancer.controledRegion = hri;
       // if bulk assignment cannot update region state to online
       // or failed_open this waits until timeout
-      assertFalse(am.waitForAssignment(hri));
+      assertFalse(TEST_UTIL.assignRegion(hri));
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_OPEN, state.getState());
       // Failed to open since no plan, so it's on no server
@@ -599,8 +592,7 @@ public class TestAssignmentManagerOnCluster {
 
       // try again with valid plan
       MyLoadBalancer.controledRegion = null;
-      am.assign(Arrays.asList(hri));
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
@@ -689,9 +681,8 @@ public class TestAssignmentManagerOnCluster {
       fs.create(regionDir, true);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      assertFalse(am.waitForAssignment(hri));
+      assertFalse(TEST_UTIL.assignRegion(hri));
 
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_OPEN, state.getState());
@@ -702,8 +693,7 @@ public class TestAssignmentManagerOnCluster {
 
       // remove the blocking file, so that region can be opened
       fs.delete(regionDir, true);
-      master.assignRegion(hri);
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
@@ -768,9 +758,8 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
@@ -816,8 +805,9 @@ public class TestAssignmentManagerOnCluster {
       MyRegionObserver.postOpenEnabled.set(true);
       MyRegionObserver.postOpenCalled = false;
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      AssignmentManager am = master.getAssignmentManager();
       // Region will be opened, but it won't complete
-      master.assignRegion(hri);
+      am.assign(hri);
       long end = EnvironmentEdgeManager.currentTime() + 20000;
       // Wait till postOpen is called
       while (!MyRegionObserver.postOpenCalled ) {
@@ -826,7 +816,6 @@ public class TestAssignmentManagerOnCluster {
         Thread.sleep(300);
       }
 
-      AssignmentManager am = master.getAssignmentManager();
       // Now let's unassign it, it should do nothing
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
@@ -887,12 +876,14 @@ public class TestAssignmentManagerOnCluster {
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();
-      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+
+      am.assign(hri);
 
       // Hold SSH before killing the hosting server
       master.enableSSH(false);
 
-      AssignmentManager am = master.getAssignmentManager();
+
       RegionStates regionStates = am.getRegionStates();
       ServerName metaServer = regionStates.getRegionServerOfRegion(
         HRegionInfo.FIRST_META_REGIONINFO);
@@ -1015,10 +1006,9 @@ public class TestAssignmentManagerOnCluster {
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       RegionStates regionStates = am.getRegionStates();
-      assertTrue(am.waitForAssignment(hri));
+      assertTrue(TEST_UTIL.assignRegion(hri));
 
       // Disable the table
       admin.disableTable(table);
@@ -1056,9 +1046,9 @@ public class TestAssignmentManagerOnCluster {
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();
-      master.assignRegion(hri);
-
       AssignmentManager am = master.getAssignmentManager();
+      am.assign(hri);
+
       RegionStates regionStates = am.getRegionStates();
       ServerName metaServer = regionStates.getRegionServerOfRegion(
         HRegionInfo.FIRST_META_REGIONINFO);
@@ -1129,9 +1119,9 @@ public class TestAssignmentManagerOnCluster {
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();
-      master.assignRegion(hri);
-
       AssignmentManager am = master.getAssignmentManager();
+      am.assign(hri);
+
       RegionStates regionStates = am.getRegionStates();
       ServerName metaServer = regionStates.getRegionServerOfRegion(
         HRegionInfo.FIRST_META_REGIONINFO);
@@ -1196,9 +1186,8 @@ public class TestAssignmentManagerOnCluster {
           new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
-      am.waitForAssignment(hri);
+      TEST_UTIL.assignRegion(hri);
       RegionStates regionStates = am.getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
       // Assert the the region is actually open on the server
