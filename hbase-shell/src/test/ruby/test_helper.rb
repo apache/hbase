@@ -40,12 +40,10 @@ module Hbase
     require 'hbase'
     require 'hbase/hbase'
     require 'shell'
-    require 'shell/formatter'
 
     def setup_hbase
-      formatter = ::Shell::Formatter::Console.new
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-      @shell = ::Shell::Shell.new(hbase, formatter)
+      @shell = ::Shell::Shell.new(hbase)
     end
     
     def shutdown
@@ -70,6 +68,10 @@ module Hbase
 
     def visibility_admin
       @shell.hbase_visibility_labels_admin
+    end
+
+    def quotas_admin
+      @shell.hbase_quotas_admin
     end
 
     def replication_admin

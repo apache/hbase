@@ -123,15 +123,11 @@ require 'shell'
 # Require formatter
 require 'shell/formatter'
 
-# Presume console format.
-# Formatter takes an :output_stream parameter, if you don't want STDOUT.
-@formatter = Shell::Formatter::Console.new
-
 # Setup the HBase module.  Create a configuration.
 @hbase = Hbase::Hbase.new
 
 # Setup console
-@shell = Shell::Shell.new(@hbase, @formatter, interactive)
+@shell = Shell::Shell.new(@hbase, interactive)
 @shell.debug = @shell_debug
 
 # Add commands to this namespace

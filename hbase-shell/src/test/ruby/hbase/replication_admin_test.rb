@@ -18,7 +18,6 @@
 #
 
 require 'shell'
-require 'shell/formatter'
 require 'hbase'
 require 'hbase/hbase'
 require 'hbase/table'

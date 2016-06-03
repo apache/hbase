@@ -24,10 +24,9 @@ module Hbase
   class SecurityAdmin
     include HBaseConstants
 
-    def initialize(admin, formatter)
+    def initialize(admin)
       @admin = admin
       @connection = @admin.getConnection()
-      @formatter = formatter
     end
 
     def close

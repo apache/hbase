@@ -295,7 +295,7 @@ EOF
       # Parse arguments
       #
       unless args.kind_of?(Hash)
-        raise ArgumentError, "Failed parse of of #{args.inspect}, #{args.class}"
+        raise ArgumentError, "Failed parse of #{args.inspect}, #{args.class}"
       end
 
       # Get maxlength parameter if passed

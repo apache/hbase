@@ -24,10 +24,9 @@ java_import org.apache.hadoop.hbase.util.Bytes
 module Hbase
   class VisibilityLabelsAdmin
 
-    def initialize(admin, formatter)
+    def initialize(admin)
       @admin = admin
       @config = @admin.getConfiguration()
-      @formatter = formatter
     end
 
     def close
@@ -41,7 +40,7 @@ module Hbase
         labels = [ args ].flatten.compact
       end
       if labels.size() == 0
-      	raise(ArgumentError, "Arguments cannot be null")
+        raise(ArgumentError, "Arguments cannot be null")
       end
 
       begin
