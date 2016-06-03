@@ -30,10 +30,8 @@ EOF
       end
 
       def command(table_name)
-        format_simple_command do
-          replication_admin.disable_tablerep(table_name)
-        end
-        puts "The replication swith of table '#{table_name}' successfully disabled"
+        replication_admin.disable_tablerep(table_name)
+        puts "Replication of table '#{table_name}' successfully disabled."
       end
     end
   end

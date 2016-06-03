@@ -62,10 +62,9 @@ EOF
       end
 
       def command(table, *args)
-        format_simple_command do
-          ret = admin.create(table, *args)
-        end
-        #and then return the table you just created
+        admin.create(table, *args)
+        @end_time = Time.now
+        #and then return the table just created
         table(table)
       end
     end

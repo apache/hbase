@@ -58,9 +58,7 @@ EOF
       end
 
       def command(id, args = {}, peer_tableCFs = nil)
-        format_simple_command do
-          replication_admin.add_peer(id, args, peer_tableCFs)
-        end
+        replication_admin.add_peer(id, args, peer_tableCFs)
       end
     end
   end

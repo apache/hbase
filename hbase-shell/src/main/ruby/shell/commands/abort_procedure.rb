@@ -40,11 +40,7 @@ EOF
       end
 
       def command(proc_id, may_interrupt_if_running=nil)
-        format_simple_command do
-          formatter.row([
-            admin.abort_procedure?(proc_id, may_interrupt_if_running).to_s
-          ])
-        end
+        formatter.row([admin.abort_procedure?(proc_id, may_interrupt_if_running).to_s])
       end
     end
   end

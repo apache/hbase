@@ -29,9 +29,7 @@ EOF
       end
 
       def command(table)
-        format_simple_command do
-          admin.enable(table)
-        end
+        admin.enable(table)
       end
     end
   end

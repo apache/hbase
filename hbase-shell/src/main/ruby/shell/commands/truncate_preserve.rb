@@ -27,10 +27,8 @@ EOF
       end
 
       def command(table)
-        format_simple_command do
-          puts "Truncating '#{table}' table (it may take a while):"
-          admin.truncate_preserve(table) { |log| puts " - #{log}" }
-        end
+        puts "Truncating '#{table}' table (it may take a while):"
+        admin.truncate_preserve(table) { |log| puts " - #{log}" }
       end
 
     end

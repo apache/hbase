@@ -92,9 +92,7 @@ EOF
       end
 
       def command(table, *args)
-        format_simple_command do
-          admin.alter(table, true, *args)
-        end
+        admin.alter(table, true, *args)
       end
     end
   end

@@ -25,10 +25,9 @@ module Shell
       end
 
       def command(id)
-          peer_config = replication_admin.get_peer_config(id)
-          format_simple_command do
-            format_peer_config(peer_config)
-          end
+        peer_config = replication_admin.get_peer_config(id)
+        @start_time = Time.now
+        format_peer_config(peer_config)
       end
 
       def format_peer_config(peer_config)

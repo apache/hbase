@@ -81,14 +81,14 @@ EOF
       end
 
       def get(table, row, *args)
-        now = Time.now
+        @start_time = Time.now
         formatter.header(["COLUMN", "CELL"])
 
         count, is_stale = table._get_internal(row, *args) do |column, value|
           formatter.row([ column, value ])
         end
 
-        formatter.footer(now, count, is_stale)
+        formatter.footer(count, is_stale)
       end
     end
   end

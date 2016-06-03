@@ -36,7 +36,6 @@ EOF
       end
 
       def command( )
-        now = Time.now
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters
 

@@ -28,13 +28,10 @@ EOF
       end
 
       def command(namespace)
-        now = Time.now
-
         desc = admin.describe_namespace(namespace)
 
         formatter.header([ "DESCRIPTION" ], [ 64 ])
         formatter.row([ desc ], true, [ 64 ])
-        formatter.footer(now)
       end
     end
   end

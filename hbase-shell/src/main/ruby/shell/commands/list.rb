@@ -33,7 +33,6 @@ EOF
       end
 
       def command(regex = ".*")
-        now = Time.now
         formatter.header([ "TABLE" ])
 
         list = admin.list(regex)
@@ -41,7 +40,7 @@ EOF
           formatter.row([ table ])
         end
 
-        formatter.footer(now, list.size)
+        formatter.footer(list.size)
         return list
       end
     end
