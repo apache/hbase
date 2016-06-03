@@ -271,13 +271,13 @@ public class TestMasterFailover {
     for (HRegionInfo hri : enabledAndAssignedRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, serverName));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
 
     for (HRegionInfo hri : disabledAndAssignedRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, serverName));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
 
     // wait for no more RIT
@@ -604,12 +604,12 @@ public class TestMasterFailover {
     for (HRegionInfo hri : enabledAndAssignedRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, hrs.getServerName()));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
     for (HRegionInfo hri : disabledAndAssignedRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, hrs.getServerName()));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
 
     log("Waiting for assignment to finish");
@@ -632,12 +632,12 @@ public class TestMasterFailover {
     for (HRegionInfo hri : enabledAndOnDeadRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, deadServerName));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
     for (HRegionInfo hri : disabledAndOnDeadRegions) {
       master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, deadServerName));
-      master.assignRegion(hri);
+      master.assignmentManager.assign(hri, true);
     }
 
     // wait for no more RIT
@@ -646,7 +646,7 @@ public class TestMasterFailover {
     master.assignmentManager.waitUntilNoRegionsInTransition(60000);
     log("Assignment completed");
 
-    // Due to master.assignRegion(hri) could fail to assign a region to a specified RS
+    // Due to master.assignment.assign(hri) could fail to assign a region to a specified RS
     // therefore, we need make sure that regions are in the expected RS
     verifyRegionLocation(hrs, enabledAndAssignedRegions);
     verifyRegionLocation(hrs, disabledAndAssignedRegions);
@@ -1064,7 +1064,7 @@ public class TestMasterFailover {
     RegionState newState = regionStates.getRegionState(hri);
     assertTrue(newState.isOpened());
   }
-  
+
  /**
    * Simple test of master failover.
    * <p>
@@ -1246,37 +1246,37 @@ public class TestMasterFailover {
     oldState = new RegionState(hriOffline, State.OFFLINE);
     newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedClose, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedClose);
-    
+
     oldState = new RegionState(failedClose, State.PENDING_CLOSE);
     newState = new RegionState(failedClose, State.FAILED_CLOSE, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
-   
+
+
     HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedOpen, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpen);
-    
+
     // Simulate a region transitioning to failed open when the region server reports the
     // transition as FAILED_OPEN
     oldState = new RegionState(failedOpen, State.PENDING_OPEN);
     newState = new RegionState(failedOpen, State.FAILED_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedOpenNullServer, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpenNullServer);
-    
+
     // Simulate a region transitioning to failed open when the master couldn't find a plan for
     // the region
     oldState = new RegionState(failedOpenNullServer, State.OFFLINE);
     newState = new RegionState(failedOpenNullServer, State.FAILED_OPEN, null);
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
-    
+
+
 
     // Stop the master
     log("Aborting master");
@@ -1303,7 +1303,7 @@ public class TestMasterFailover {
     assertTrue(regionStates.isRegionOnline(failedClose));
     assertTrue(regionStates.isRegionOnline(failedOpenNullServer));
     assertTrue(regionStates.isRegionOnline(failedOpen));
-    
+
     log("Done with verification, shutting down cluster");
 
     // Done, shutdown the cluster

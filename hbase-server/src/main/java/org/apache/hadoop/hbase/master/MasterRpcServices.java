@@ -1389,7 +1389,7 @@ public class MasterRpcServices extends RSRpcServices
       if (master.assignmentManager.getRegionStates().isRegionOffline(hri)) {
         LOG.debug("Region " + hri.getRegionNameAsString()
             + " is not online on any region server, reassigning it.");
-        master.assignRegion(hri);
+        master.assignmentManager.assign(hri, true);
       }
       if (master.cpHost != null) {
         master.cpHost.postUnassign(hri, force);
@@ -1572,7 +1572,7 @@ public class MasterRpcServices extends RSRpcServices
     }
   }
 
-  /** 
+  /**
    * Returns the security capabilities in effect on the cluster
    */
   @Override

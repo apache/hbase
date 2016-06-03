@@ -2387,10 +2387,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return this.initializationBeforeMetaAssignment;
   }
 
-  public void assignRegion(HRegionInfo hri) {
-    assignmentManager.assign(hri, true);
-  }
-
   /**
    * Compute the average load across all region servers.
    * Currently, this uses a very naive computation - just uses the number of
