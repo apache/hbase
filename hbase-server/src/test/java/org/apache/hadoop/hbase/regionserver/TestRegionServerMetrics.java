@@ -17,29 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 
 import static org.junit.Assert.*;
 
@@ -47,36 +38,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@Category({RegionServerTests.class, MediumTests.class})
+
+@Category(MediumTests.class)
 public class TestRegionServerMetrics {
-  private static final Log LOG = LogFactory.getLog(TestRegionServerMetrics.class);
-
-  @Rule
-  public TestName testName = new TestName();
-
-  @ClassRule
-  public static TestRule timeout = CategoryBasedTimeout.builder()
-      .withTimeout(TestRegionServerMetrics.class).withLookingForStuckThread(true).build();
+  private static MetricsAssertHelper metricsHelper;
 
   static {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
 
-  private static MetricsAssertHelper metricsHelper;
   private static MiniHBaseCluster cluster;
   private static HRegionServer rs;
   private static Configuration conf;
   private static HBaseTestingUtility TEST_UTIL;
-  private static Connection connection;
   private static MetricsRegionServer metricsRegionServer;
   private static MetricsRegionServerSource serverSource;
   private static final int NUM_SCAN_NEXT = 30;
   private static int numScanNext = 0;
-  private static byte[] cf = Bytes.toBytes("cf");
-  private static byte[] row = Bytes.toBytes("row");
-  private static byte[] qualifier = Bytes.toBytes("qual");
-  private static byte[] val = Bytes.toBytes("val");
-  private static Admin admin;
 
   @BeforeClass
   public static void startCluster() throws Exception {
@@ -86,16 +64,12 @@ public class TestRegionServerMetrics {
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
     conf.setInt("zookeeper.recovery.retry", 0);
-    // testMobMetrics creates few hfiles and manages compaction manually.
-    conf.setInt("hbase.hstore.compactionThreshold", 100);
-    conf.setInt("hbase.hstore.compaction.max", 100);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
     TEST_UTIL.startMiniCluster(1, 1);
     cluster = TEST_UTIL.getHBaseCluster();
+
     cluster.waitForActiveAndReadyMaster();
-    admin = TEST_UTIL.getHBaseAdmin();
-    connection = TEST_UTIL.getConnection();
 
     while (cluster.getLiveRegionServerThreads().size() < 1) {
       Threads.sleep(100);
@@ -113,129 +87,85 @@ public class TestRegionServerMetrics {
     }
   }
 
-  TableName tableName;
-  Table table;
-
-  @Before
-  public void beforeTestMethod() throws Exception {
-    metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    tableName = TableName.valueOf(testName.getMethodName());
-    table = TEST_UTIL.createTable(tableName, cf);
-  }
-
-  @After
-  public void afterTestMethod() throws Exception {
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
-  }
-
-  public void waitTableDeleted(TableName name, long timeoutInMillis) throws Exception {
-    long start = System.currentTimeMillis();
-    while (true) {
-      HTableDescriptor[] tables = admin.listTables();
-      for (HTableDescriptor htd : tables) {
-        if (htd.getNameAsString() == name.getNameAsString())
-          return;
-      }
-      if (System.currentTimeMillis() - start > timeoutInMillis)
-        return;
-      Thread.sleep(1000);
-    }
-  }
-
-  public void assertCounter(String metric, long expectedValue) {
-    metricsHelper.assertCounter(metric, expectedValue, serverSource);
-  }
-
-  public void assertGauge(String metric, long expectedValue) {
-    metricsHelper.assertGauge(metric, expectedValue, serverSource);
-  }
-
-  // Aggregates metrics from regions and assert given list of metrics and expected values.
-  public void assertRegionMetrics(String metric, long expectedValue) throws Exception {
-    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
-      for ( HRegionLocation location: locator.getAllRegionLocations()) {
-        HRegionInfo hri = location.getRegionInfo();
-        MetricsRegionAggregateSource agg =
-            rs.getRegion(hri.getRegionName()).getMetrics().getSource().getAggregateSource();
-        String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR +
-            "_table_" + tableName.getNameAsString() +
-            "_region_" + hri.getEncodedName()+
-            "_metric_";
-        metricsHelper.assertCounter(prefix + metric, expectedValue, agg);
-      }
-    }
-  }
-
-  public void doNPuts(int n, boolean batch) throws Exception {
-    if (batch) {
-      List<Put> puts = new ArrayList<>();
-      for (int i = 0; i < n; i++) {
-        Put p = new Put(Bytes.toBytes("" + i + "row")).addColumn(cf, qualifier, val);
-        puts.add(p);
-      }
-      table.put(puts);
-    } else {
-      for (int i = 0; i < n; i++) {
-        Put p = new Put(row).addColumn(cf, qualifier, val);
-        table.put(p);
-      }
-    }
-  }
-
-  public void doNGets(int n, boolean batch) throws Exception {
-    if (batch) {
-      List<Get> gets = new ArrayList<>();
-      for (int i = 0; i < n; i++) {
-        gets.add(new Get(row));
-      }
-      table.get(gets);
-    } else {
-      for (int i = 0; i < n; i++) {
-        table.get(new Get(row));
-      }
-    }
-  }
-
-  @Test
+  @Test(timeout = 300000)
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", 1, serverSource);
+    String regionMetricsKey = "regionCount";
+    long regions = metricsHelper.getGaugeLong(regionMetricsKey, serverSource);
+    // Creating a table should add one region
+    TEST_UTIL.createTable(TableName.valueOf("table"), Bytes.toBytes("cf"));
+    metricsHelper.assertGaugeGt(regionMetricsKey, regions, serverSource);
   }
 
   @Test
   public void testLocalFiles() throws Exception {
-    assertGauge("percentFilesLocal", 0);
-    assertGauge("percentFilesLocalSecondaryRegions", 0);
+    metricsHelper.assertGauge("percentFilesLocal", 0, serverSource);
+    metricsHelper.assertGauge("percentFilesLocalSecondaryRegions", 0, serverSource);
   }
 
   @Test
   public void testRequestCount() throws Exception {
+    String tableNameString = "testRequestCount";
+    TableName tName = TableName.valueOf(tableNameString);
+    byte[] cfName = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] initValue = Bytes.toBytes("Value");
+
+    TEST_UTIL.createTable(tName, cfName);
+
+    Connection connection = TEST_UTIL.getConnection();
+    connection.getTable(tName).close(); //wait for the table to come up.
+
     // Do a first put to be sure that the connection is established, meta is there and so on.
-    doNPuts(1, false);
+    Table table = connection.getTable(tName);
+    Put p = new Put(row);
+    p.add(cfName, qualifier, initValue);
+    table.put(p);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     long requests = metricsHelper.getCounter("totalRequestCount", serverSource);
     long readRequests = metricsHelper.getCounter("readRequestCount", serverSource);
     long writeRequests = metricsHelper.getCounter("writeRequestCount", serverSource);
 
-    doNPuts(30, false);
+    for (int i=0; i< 30; i++) {
+      table.put(p);
+    }
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 30);
-    assertCounter("readRequestCount", readRequests);
-    assertCounter("writeRequestCount", writeRequests + 30);
+    metricsHelper.assertCounter("totalRequestCount", requests + 30, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
-    doNGets(10, false);
+    Get g = new Get(row);
+    for (int i=0; i< 10; i++) {
+      table.get(g);
+    }
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 40);
-    assertCounter("readRequestCount", readRequests + 10);
-    assertCounter("writeRequestCount", writeRequests + 30);
+    metricsHelper.assertCounter("totalRequestCount", requests + 40, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 10, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
-    assertRegionMetrics("getNumOps", 10);
-    assertRegionMetrics("mutateCount", 31);
-
-    doNGets(10, true);  // true = batch
+    try (RegionLocator locator = connection.getRegionLocator(tName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
+      }
+    }
+    List<Get> gets = new ArrayList<Get>();
+    for (int i=0; i< 10; i++) {
+      gets.add(new Get(row));
+    }
+    table.get(gets);
 
     // By default, master doesn't host meta now.
     // Adding some meta related requests
@@ -243,181 +173,416 @@ public class TestRegionServerMetrics {
     readRequests ++;
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 50);
-    assertCounter("readRequestCount", readRequests + 20);
-    assertCounter("writeRequestCount", writeRequests + 30);
+    metricsHelper.assertCounter("totalRequestCount", requests + 50, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
-    doNPuts(30, true);
+    List<Put> puts = new ArrayList<>();
+    for (int i=0; i< 30; i++) {
+      puts.add(p);
+    }
+    table.put(puts);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 80);
-    assertCounter("readRequestCount", readRequests + 20);
-    assertCounter("writeRequestCount", writeRequests + 60);
+    metricsHelper.assertCounter("totalRequestCount", requests + 80, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 60, serverSource);
+
+    table.close();
   }
 
   @Test
   public void testGet() throws Exception {
+    String tableNameString = "testGet";
+    TableName tName = TableName.valueOf(tableNameString);
+    byte[] cfName = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] initValue = Bytes.toBytes("Value");
+
+    TEST_UTIL.createTable(tName, cfName);
+
+    Connection connection = TEST_UTIL.getConnection();
+    connection.getTable(tName).close(); //wait for the table to come up.
+
     // Do a first put to be sure that the connection is established, meta is there and so on.
-    doNPuts(1, false);
-    doNGets(10, false);
-    assertRegionMetrics("getNumOps", 10);
-    assertRegionMetrics("getSizeNumOps", 10);
-    metricsHelper.assertCounterGt("Get_num_ops", 10, serverSource);
+    Table table = connection.getTable(tName);
+    Put p = new Put(row);
+    p.addColumn(cfName, qualifier, initValue);
+    table.put(p);
+
+    Get g = new Get(row);
+    for (int i=0; i< 10; i++) {
+      table.get(g);
+    }
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    try (RegionLocator locator = connection.getRegionLocator(tName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+        metricsHelper.assertCounter(prefix + "_getSizeNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+      }
+      metricsHelper.assertCounterGt("Get_num_ops", 10, serverSource);
+    }
+    table.close();
   }
 
   @Test
   public void testMutationsWithoutWal() throws Exception {
-    Put p = new Put(row).addColumn(cf, qualifier, val)
-        .setDurability(Durability.SKIP_WAL);
-    table.put(p);
+    TableName tableName = TableName.valueOf("testMutationsWithoutWal");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("mutationsWithoutWALCount", 1);
+
+    TEST_UTIL.createTable(tableName, cf);
+
+    Table t = new HTable(conf, tableName);
+
+    Put p = new Put(row);
+    p.add(cf, qualifier, val);
+    p.setDurability(Durability.SKIP_WAL);
+
+    t.put(p);
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertGauge("mutationsWithoutWALCount", 1, serverSource);
     long minLength = row.length + cf.length + qualifier.length + val.length;
     metricsHelper.assertGaugeGt("mutationsWithoutWALSize", minLength, serverSource);
+
+    t.close();
   }
 
   @Test
   public void testStoreCount() throws Exception {
+    TableName tableName = TableName.valueOf("testStoreCount");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    long stores = metricsHelper.getGaugeLong("storeCount", serverSource);
+    long storeFiles = metricsHelper.getGaugeLong("storeFileCount", serverSource);
+
+    TEST_UTIL.createTable(tableName, cf);
+
     //Force a hfile.
-    doNPuts(1, false);
+    Table t = new HTable(conf, tableName);
+    Put p = new Put(row);
+    p.add(cf, qualifier, val);
+    t.put(p);
     TEST_UTIL.getHBaseAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", 1);
-    assertGauge("storeFileCount", 1);
+    metricsHelper.assertGauge("storeCount", stores +1, serverSource);
+    metricsHelper.assertGauge("storeFileCount", storeFiles + 1, serverSource);
+
+    t.close();
   }
 
   @Test
   public void testStoreFileAge() throws Exception {
+    TableName tableName = TableName.valueOf("testStoreFileAge");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
     //Force a hfile.
-    doNPuts(1, false);
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    Put p = new Put(row);
+    p.addColumn(cf, qualifier, val);
+    t.put(p);
     TEST_UTIL.getHBaseAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeLong("maxStoreFileAge", serverSource) > 0);
     assertTrue(metricsHelper.getGaugeLong("minStoreFileAge", serverSource) > 0);
     assertTrue(metricsHelper.getGaugeLong("avgStoreFileAge", serverSource) > 0);
+
+    t.close();
   }
 
   @Test
   public void testCheckAndPutCount() throws Exception {
+    String tableNameString = "testCheckAndPutCount";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
     byte[] valOne = Bytes.toBytes("Value");
     byte[] valTwo = Bytes.toBytes("ValueTwo");
     byte[] valThree = Bytes.toBytes("ValueThree");
 
+    TEST_UTIL.createTable(tableName, cf);
+    Table t = new HTable(conf, tableName);
     Put p = new Put(row);
-    p.addColumn(cf, qualifier, valOne);
-    table.put(p);
+    p.add(cf, qualifier, valOne);
+    t.put(p);
 
     Put pTwo = new Put(row);
-    pTwo.addColumn(cf, qualifier, valTwo);
-    table.checkAndPut(row, cf, qualifier, valOne, pTwo);
+    pTwo.add(cf, qualifier, valTwo);
+    t.checkAndPut(row, cf, qualifier, valOne, pTwo);
 
     Put pThree = new Put(row);
-    pThree.addColumn(cf, qualifier, valThree);
-    table.checkAndPut(row, cf, qualifier, valOne, pThree);
+    pThree.add(cf, qualifier, valThree);
+    t.checkAndPut(row, cf, qualifier, valOne, pThree);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("checkMutateFailedCount", 1);
-    assertCounter("checkMutatePassedCount", 1);
+    metricsHelper.assertCounter("checkMutateFailedCount", 1, serverSource);
+    metricsHelper.assertCounter("checkMutatePassedCount", 1, serverSource);
+
+    t.close();
   }
 
   @Test
   public void testIncrement() throws Exception {
-    Put p = new Put(row).addColumn(cf, qualifier, Bytes.toBytes(0L));
-    table.put(p);
+    String tableNameString = "testIncrement";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes(0l);
 
-    for(int count = 0; count < 13; count++) {
+
+    TEST_UTIL.createTable(tableName, cf);
+    Table t = new HTable(conf, tableName);
+
+    Put p = new Put(row);
+    p.add(cf, qualifier, val);
+    t.put(p);
+
+    for(int count = 0; count< 13; count++) {
       Increment inc = new Increment(row);
       inc.addColumn(cf, qualifier, 100);
-      table.increment(inc);
+      t.increment(inc);
     }
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("incrementNumOps", 13);
+    metricsHelper.assertCounter("incrementNumOps", 13, serverSource);
+
+    t.close();
   }
 
   @Test
   public void testAppend() throws Exception {
-    doNPuts(1, false);
+    String tableNameString = "testAppend";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+
+    TEST_UTIL.createTable(tableName, cf);
+    Table t = new HTable(conf, tableName);
+
+    Put p = new Put(row);
+    p.add(cf, qualifier, val);
+    t.put(p);
 
     for(int count = 0; count< 73; count++) {
       Append append = new Append(row);
       append.add(cf, qualifier, Bytes.toBytes(",Test"));
-      table.append(append);
+      t.append(append);
     }
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("appendNumOps", 73);
+    metricsHelper.assertCounter("appendNumOps", 73, serverSource);
+
+    t.close();
   }
 
   @Test
-  public void testScanSize() throws Exception {
-    doNPuts(100, true);  // batch put
-    Scan s = new Scan();
-    s.setBatch(1);
-    s.setCaching(1);
-    ResultScanner resultScanners = table.getScanner(s);
+  public void testScanSize() throws IOException {
+    String tableNameString = "testScanSize";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
 
-    for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
-      Result result = resultScanners.next();
-      assertNotNull(result);
-      assertEquals(1, result.size());
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setBatch(1);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanSizeNumOps", NUM_SCAN_NEXT);
-    assertCounter("ScanSize_num_ops", numScanNext);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
   }
 
   @Test
-  public void testScanTime() throws Exception {
-    doNPuts(100, true);
-    Scan s = new Scan();
-    s.setBatch(1);
-    s.setCaching(1);
-    ResultScanner resultScanners = table.getScanner(s);
+  public void testScanTime() throws IOException {
+    String tableNameString = "testScanTime";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
 
-    for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
-      Result result = resultScanners.next();
-      assertNotNull(result);
-      assertEquals(1, result.size());
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.addColumn(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (Table t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setBatch(1);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanTimeNumOps", NUM_SCAN_NEXT);
-    assertCounter("ScanTime_num_ops", numScanNext);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+        metricsHelper.assertCounter(prefix + "_scanTimeNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounterGt("ScanTime_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
   }
 
   @Test
-  public void testScanSizeForSmallScan() throws Exception {
-    doNPuts(100, true);
-    Scan s = new Scan();
-    s.setSmall(true);
-    s.setCaching(1);
-    ResultScanner resultScanners = table.getScanner(s);
+  public void testScanSizeForSmallScan() throws IOException {
+    String tableNameString = "testScanSizeSmall";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
 
-    for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
-      Result result = resultScanners.next();
-      assertNotNull(result);
-      assertEquals(1, result.size());
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setSmall(true);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanSizeNumOps", NUM_SCAN_NEXT);
-    assertCounter("ScanSize_num_ops", numScanNext);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      int cnt = 0;
+      for (HRegionLocation location: locator.getAllRegionLocations()) {
+        cnt++;
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
   }
-
+ 
   @Test
   @Ignore
   public void testRangeCountMetrics() throws Exception {
+    String tableNameString = "testRangeCountMetrics";
     final long[] timeranges =
         { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
     final String timeRangeType = "TimeRangeCount";
     final String timeRangeMetricName = "Mutate";
     boolean timeRangeCountUpdated = false;
 
+    TableName tName = TableName.valueOf(tableNameString);
+    byte[] cfName = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] initValue = Bytes.toBytes("Value");
+
+    TEST_UTIL.createTable(tName, cfName);
+
+    Connection connection = TEST_UTIL.getConnection();
+    connection.getTable(tName).close(); // wait for the table to come up.
+
     // Do a first put to be sure that the connection is established, meta is there and so on.
+    Table table = connection.getTable(tName);
     Put p = new Put(row);
-    p.addColumn(cf, qualifier, val);
+    p.addColumn(cfName, qualifier, initValue);
     table.put(p);
 
     // do some puts and gets
@@ -457,15 +622,28 @@ public class TestRegionServerMetrics {
       }
     }
     assertEquals(true, timeRangeCountUpdated);
+
+    table.close();
   }
 
   @Test
   public void testAverageRegionSize() throws Exception {
+    TableName tableName = TableName.valueOf("testAverageRegionSize");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
     //Force a hfile.
-    doNPuts(1, false);
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    Put p = new Put(row);
+    p.addColumn(cf, qualifier, val);
+    t.put(p);
     TEST_UTIL.getHBaseAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
+
+    t.close();
   }
 }
