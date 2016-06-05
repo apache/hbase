@@ -86,6 +86,13 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String EXCEPTIONS_MULTI_TOO_LARGE_DESC = "A response to a multi request was too large and the " +
       "rest of the requests will have to be retried.";
 
+  String RUNNING_READERS = "runningReaders";
+  String RUNNING_READERS_DESCRIPTION =
+      "Count of Reader threads currently busy parsing requests to hand off to the scheduler";
+
+  void incrRunningReaders();
+  void decrRunningReaders();
+
   void authorizationSuccess();
 
   void authorizationFailure();
@@ -122,6 +129,4 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void processedCall(int processingTime);
 
   void queuedAndProcessedCall(int totalTime);
-
-
 }
