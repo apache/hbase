@@ -62,7 +62,7 @@ public class ScannerInstanceResource extends ResourceBase {
 
   public ScannerInstanceResource() throws IOException { }
 
-  public ScannerInstanceResource(String table, String id, 
+  public ScannerInstanceResource(String table, String id,
       ResultGenerator generator, int batch) throws IOException {
     this.id = id;
     this.generator = generator;
@@ -72,10 +72,10 @@ public class ScannerInstanceResource extends ResourceBase {
   @GET
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
-  public Response get(final @Context UriInfo uriInfo, 
+  public Response get(final @Context UriInfo uriInfo,
       @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     if (generator == null) {
@@ -108,7 +108,9 @@ public class ScannerInstanceResource extends ResourceBase {
           .build();
       }
       if (value == null) {
-        LOG.info("generator exhausted");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("generator exhausted");
+        }
         // respond with 204 (No Content) if an empty cell set would be
         // returned
         if (count == limit) {
@@ -123,7 +125,7 @@ public class ScannerInstanceResource extends ResourceBase {
       if (!Bytes.equals(CellUtil.cloneRow(value), rowKey)) {
         // if maxRows was given as a query param, stop if we would exceed the
         // specified number of rows
-        if (maxRows > 0) { 
+        if (maxRows > 0) {
           if (--maxRows == 0) {
             generator.putBack(value);
             break;
@@ -134,7 +136,7 @@ public class ScannerInstanceResource extends ResourceBase {
         rowModel = new RowModel(rowKey);
       }
       rowModel.addCell(
-        new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value), 
+        new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
           value.getTimestamp(), CellUtil.cloneValue(value)));
     } while (--count > 0);
     model.addRow(rowModel);
@@ -147,21 +149,23 @@ public class ScannerInstanceResource extends ResourceBase {
   @GET
   @Produces(MIMETYPE_BINARY)
   public Response getBinary(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath() + " as " +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " +
         MIMETYPE_BINARY);
     }
     servlet.getMetrics().incrementRequests(1);
     try {
       Cell value = generator.next();
       if (value == null) {
-        LOG.info("generator exhausted");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("generator exhausted");
+        }
         return Response.noContent().build();
       }
       ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encodeBytes(CellUtil.cloneRow(value)));      
-      response.header("X-Column", 
+      response.header("X-Row", Base64.encodeBytes(CellUtil.cloneRow(value)));
+      response.header("X-Column",
         Base64.encodeBytes(
           KeyValue.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value))));
       response.header("X-Timestamp", value.getTimestamp());
@@ -182,8 +186,8 @@ public class ScannerInstanceResource extends ResourceBase {
 
   @DELETE
   public Response delete(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
