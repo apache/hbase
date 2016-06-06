@@ -49,8 +49,10 @@ public class ProtobufStreamingUtil implements StreamingOutput {
     this.contentType = type;
     this.limit = limit;
     this.fetchSize = fetchSize;
-    LOG.debug("Created ScanStreamingUtil with content type = " + this.contentType + " user limit : "
-        + this.limit + " scan fetch size : " + this.fetchSize);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Created ScanStreamingUtil with content type = " + this.contentType
+        + " user limit : " + this.limit + " scan fetch size : " + this.fetchSize);
+    }
   }
 
   @Override
@@ -82,7 +84,9 @@ public class ProtobufStreamingUtil implements StreamingOutput {
     outStream.write(Bytes.toBytes((short)objectBytes.length));
     outStream.write(objectBytes);
     outStream.flush();
-    LOG.trace("Wrote " + model.getRows().size() + " rows to stream successfully.");
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Wrote " + model.getRows().size() + " rows to stream successfully.");
+    }
   }
 
   private CellSetModel createModelFromResults(Result[] results) {

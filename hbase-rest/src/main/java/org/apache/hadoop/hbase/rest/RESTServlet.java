@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -29,14 +31,13 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.log4j.Logger;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
  */
 @InterfaceAudience.Private
 public class RESTServlet implements Constants {
-  private static final Logger LOG = Logger.getLogger(RESTServlet.class);
+  private static final Log LOG = LogFactory.getLog(RESTServlet.class);
   private static RESTServlet INSTANCE;
   private final Configuration conf;
   private final MetricsREST metrics = new MetricsREST();

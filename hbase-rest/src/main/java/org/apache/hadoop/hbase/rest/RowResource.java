@@ -85,8 +85,8 @@ public class RowResource extends ResourceBase {
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
@@ -130,8 +130,8 @@ public class RowResource extends ResourceBase {
   @GET
   @Produces(MIMETYPE_BINARY)
   public Response getBinary(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
     }
     servlet.getMetrics().incrementRequests(1);
     // doesn't make sense to use a non specific coordinate as this can only
@@ -221,8 +221,8 @@ public class RowResource extends ResourceBase {
           put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
         }
         puts.add(put);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("PUT " + put.toString());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("PUT " + put.toString());
         }
       }
       table = servlet.getTable(tableResource.getName());
@@ -289,8 +289,8 @@ public class RowResource extends ResourceBase {
       put.addImmutable(parts[0], parts[1], timestamp, message);
       table = servlet.getTable(tableResource.getName());
       table.put(put);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("PUT " + put.toString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("PUT " + put.toString());
       }
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
@@ -301,7 +301,7 @@ public class RowResource extends ResourceBase {
       if (table != null) try {
         table.close();
       } catch (IOException ioe) {
-        LOG.debug(ioe);
+        LOG.debug("Exception received while closing the table", ioe);
       }
     }
   }
@@ -311,8 +311,8 @@ public class RowResource extends ResourceBase {
     MIMETYPE_PROTOBUF_IETF})
   public Response put(final CellSetModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath()
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath()
         + " " + uriInfo.getQueryParameters());
     }
     return update(model, true);
@@ -322,8 +322,8 @@ public class RowResource extends ResourceBase {
   @Consumes(MIMETYPE_BINARY)
   public Response putBinary(final byte[] message,
       final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
     }
     return updateBinary(message, headers, true);
   }
@@ -333,8 +333,8 @@ public class RowResource extends ResourceBase {
     MIMETYPE_PROTOBUF_IETF})
   public Response post(final CellSetModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath()
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("POST " + uriInfo.getAbsolutePath()
         + " " + uriInfo.getQueryParameters());
     }
     return update(model, false);
@@ -344,16 +344,16 @@ public class RowResource extends ResourceBase {
   @Consumes(MIMETYPE_BINARY)
   public Response postBinary(final byte[] message,
       final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath() + " as "+MIMETYPE_BINARY);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("POST " + uriInfo.getAbsolutePath() + " as "+MIMETYPE_BINARY);
     }
     return updateBinary(message, headers, false);
   }
 
   @DELETE
   public Response delete(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
@@ -397,8 +397,8 @@ public class RowResource extends ResourceBase {
       table = servlet.getTable(tableResource.getName());
       table.delete(delete);
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("DELETE " + delete.toString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("DELETE " + delete.toString());
       }
     } catch (Exception e) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
@@ -407,7 +407,7 @@ public class RowResource extends ResourceBase {
       if (table != null) try {
         table.close();
       } catch (IOException ioe) {
-        LOG.debug(ioe);
+        LOG.debug("Exception received while closing the table", ioe);
       }
     }
     return Response.ok().build();
@@ -499,8 +499,8 @@ public class RowResource extends ResourceBase {
           .build();
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CHECK-AND-PUT " + put.toString() + ", returns " + retValue);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("CHECK-AND-PUT " + put.toString() + ", returns " + retValue);
       }
       if (!retValue) {
         servlet.getMetrics().incrementFailedPutRequests(1);
@@ -517,7 +517,7 @@ public class RowResource extends ResourceBase {
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { 
+      } catch (IOException ioe) {
         LOG.debug("Exception received while closing the table", ioe);
       }
     }
@@ -627,8 +627,8 @@ public class RowResource extends ResourceBase {
           .build();
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CHECK-AND-DELETE " + delete.toString() + ", returns "
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("CHECK-AND-DELETE " + delete.toString() + ", returns "
           + retValue);
       }
 
