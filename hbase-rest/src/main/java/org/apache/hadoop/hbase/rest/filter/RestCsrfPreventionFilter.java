@@ -34,12 +34,11 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This filter provides protection against cross site request forgery (CSRF)
@@ -52,8 +51,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class RestCsrfPreventionFilter implements Filter {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RestCsrfPreventionFilter.class);
+  private static final Log LOG =
+      LogFactory.getLog(RestCsrfPreventionFilter.class);
 
   public static final String HEADER_USER_AGENT = "User-Agent";
   public static final String BROWSER_USER_AGENT_PARAM =
@@ -87,9 +86,9 @@ public class RestCsrfPreventionFilter implements Filter {
       agents = BROWSER_USER_AGENTS_DEFAULT;
     }
     parseBrowserUserAgents(agents);
-    LOG.info("Adding cross-site request forgery (CSRF) protection, "
-        + "headerName = {}, methodsToIgnore = {}, browserUserAgents = {}",
-        headerName, methodsToIgnore, browserUserAgents);
+    LOG.info(String.format("Adding cross-site request forgery (CSRF) protection, "
+        + "headerName = %s, methodsToIgnore = %s, browserUserAgents = %s",
+        headerName, methodsToIgnore, browserUserAgents));
   }
 
   void parseBrowserUserAgents(String userAgents) {

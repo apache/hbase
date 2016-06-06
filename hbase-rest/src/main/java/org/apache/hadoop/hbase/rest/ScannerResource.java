@@ -31,7 +31,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -91,7 +90,7 @@ public class ScannerResource extends ResourceBase {
       spec = new RowSpec(model.getStartRow(), endRow, model.getColumns(), model.getStartTime(),
           model.getEndTime(), model.getMaxVersions());
     }
-    
+
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
       String tableName = tableResource.getName();
@@ -102,8 +101,8 @@ public class ScannerResource extends ResourceBase {
       ScannerInstanceResource instance =
         new ScannerInstanceResource(tableName, id, gen, model.getBatch());
       scanners.put(id, instance);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("new scanner: " + id);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("new scanner: " + id);
       }
       UriBuilder builder = uriInfo.getAbsolutePathBuilder();
       URI uri = builder.path(id).build();
@@ -129,10 +128,10 @@ public class ScannerResource extends ResourceBase {
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
-  public Response put(final ScannerModel model, 
+  public Response put(final ScannerModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
     return update(model, true, uriInfo);
   }
@@ -142,8 +141,8 @@ public class ScannerResource extends ResourceBase {
     MIMETYPE_PROTOBUF_IETF})
   public Response post(final ScannerModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("POST " + uriInfo.getAbsolutePath());
     }
     return update(model, false, uriInfo);
   }

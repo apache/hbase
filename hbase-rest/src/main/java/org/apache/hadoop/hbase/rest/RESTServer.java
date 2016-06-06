@@ -168,20 +168,26 @@ public class RESTServer implements Constants {
     if (commandLine != null && commandLine.hasOption("port")) {
       String val = commandLine.getOptionValue("port");
       servlet.getConfiguration().setInt("hbase.rest.port", Integer.parseInt(val));
-      LOG.debug("port set to " + val);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("port set to " + val);
+      }
     }
 
     // check if server should only process GET requests, if so override the conf
     if (commandLine != null && commandLine.hasOption("readonly")) {
       servlet.getConfiguration().setBoolean("hbase.rest.readonly", true);
-      LOG.debug("readonly set to true");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("readonly set to true");
+      }
     }
 
     // check for user-defined info server port setting, if so override the conf
     if (commandLine != null && commandLine.hasOption("infoport")) {
       String val = commandLine.getOptionValue("infoport");
       servlet.getConfiguration().setInt("hbase.rest.info.port", Integer.parseInt(val));
-      LOG.debug("Web UI port set to " + val);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Web UI port set to " + val);
+      }
     }
 
     @SuppressWarnings("unchecked")

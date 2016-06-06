@@ -133,7 +133,7 @@ public class TableResource extends ResourceBase {
       @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
       @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
       @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks, 
+      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks,
       @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String filters) {
     try {
       Filter filter = null;
@@ -146,10 +146,12 @@ public class TableResource extends ResourceBase {
           tableScan.setStartRow(prefixBytes);
         }
       }
-      LOG.debug("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
-          + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
-          + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
-          + maxVersions + " Batch Size => " + batchSize);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
+            + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
+            + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
+            + maxVersions + " Batch Size => " + batchSize);
+      }
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
       tableScan.setMaxVersions(maxVersions);
@@ -162,15 +164,21 @@ public class TableResource extends ResourceBase {
         String[] familysplit = csplit.trim().split(":");
         if (familysplit.length == 2) {
           if (familysplit[1].length() > 0) {
-            LOG.debug("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
+            }
             tableScan.addColumn(Bytes.toBytes(familysplit[0]), Bytes.toBytes(familysplit[1]));
           } else {
             tableScan.addFamily(Bytes.toBytes(familysplit[0]));
-            LOG.debug("Scan family : " + familysplit[0] + " and empty qualifier.");
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Scan family : " + familysplit[0] + " and empty qualifier.");
+            }
             tableScan.addColumn(Bytes.toBytes(familysplit[0]), null);
           }
-        } else if (StringUtils.isNotEmpty(familysplit[0])){
-          LOG.debug("Scan family : " + familysplit[0]);
+        } else if (StringUtils.isNotEmpty(familysplit[0])) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Scan family : " + familysplit[0]);
+          }
           tableScan.addFamily(Bytes.toBytes(familysplit[0]));
         }
       }
