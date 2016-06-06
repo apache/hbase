@@ -101,10 +101,10 @@ public class Client {
   }
 
   /**
-   * Shut down the client. Close any open persistent connections. 
+   * Shut down the client. Close any open persistent connections.
    */
   public void shutdown() {
-    MultiThreadedHttpConnectionManager manager = 
+    MultiThreadedHttpConnectionManager manager =
       (MultiThreadedHttpConnectionManager) httpClient.getHttpConnectionManager();
     manager.shutdown();
   }
@@ -151,7 +151,7 @@ public class Client {
    * one of the members of the supplied cluster definition and iterate through
    * the list until a transaction can be successfully completed. The
    * definition of success here is a complete HTTP transaction, irrespective
-   * of result code.  
+   * of result code.
    * @param cluster the cluster definition
    * @param method the transaction method
    * @param headers HTTP header values to send
@@ -209,8 +209,8 @@ public class Client {
     long startTime = System.currentTimeMillis();
     int code = httpClient.executeMethod(method);
     long endTime = System.currentTimeMillis();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(method.getName() + " " + uri + " " + code + " " +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(method.getName() + " " + uri + " " + code + " " +
         method.getStatusText() + " in " + (endTime - startTime) + " ms");
     }
     return code;
@@ -250,7 +250,7 @@ public class Client {
   }
 
   /**
-   * Send a HEAD request 
+   * Send a HEAD request
    * @param path the path or URI
    * @return a Response object with response detail
    * @throws IOException
@@ -260,14 +260,14 @@ public class Client {
   }
 
   /**
-   * Send a HEAD request 
+   * Send a HEAD request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @param headers the HTTP headers to include in the request
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response head(Cluster cluster, String path, Header[] headers) 
+  public Response head(Cluster cluster, String path, Header[] headers)
       throws IOException {
     HeadMethod method = new HeadMethod();
     try {
@@ -280,7 +280,7 @@ public class Client {
   }
 
   /**
-   * Send a GET request 
+   * Send a GET request
    * @param path the path or URI
    * @return a Response object with response detail
    * @throws IOException
@@ -290,7 +290,7 @@ public class Client {
   }
 
   /**
-   * Send a GET request 
+   * Send a GET request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @return a Response object with response detail
@@ -301,7 +301,7 @@ public class Client {
   }
 
   /**
-   * Send a GET request 
+   * Send a GET request
    * @param path the path or URI
    * @param accept Accept header value
    * @return a Response object with response detail
@@ -312,7 +312,7 @@ public class Client {
   }
 
   /**
-   * Send a GET request 
+   * Send a GET request
    * @param cluster the cluster definition
    * @param path the path or URI
    * @param accept Accept header value
@@ -329,7 +329,7 @@ public class Client {
   /**
    * Send a GET request
    * @param path the path or URI
-   * @param headers the HTTP headers to include in the request, 
+   * @param headers the HTTP headers to include in the request,
    * <tt>Accept</tt> must be supplied
    * @return a Response object with response detail
    * @throws IOException
@@ -346,7 +346,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response get(Cluster c, String path, Header[] headers) 
+  public Response get(Cluster c, String path, Header[] headers)
       throws IOException {
     GetMethod method = new GetMethod();
     try {
@@ -396,7 +396,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response put(Cluster cluster, String path, String contentType, 
+  public Response put(Cluster cluster, String path, String contentType,
       byte[] content) throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new Header("Content-Type", contentType);
@@ -413,7 +413,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response put(Cluster cluster, String path, String contentType, 
+  public Response put(Cluster cluster, String path, String contentType,
       byte[] content, Header extraHdr) throws IOException {
     int cnt = extraHdr == null ? 1 : 2;
     Header[] headers = new Header[cnt];
@@ -433,7 +433,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response put(String path, Header[] headers, byte[] content) 
+  public Response put(String path, Header[] headers, byte[] content)
       throws IOException {
     return put(cluster, path, headers, content);
   }
@@ -448,7 +448,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response put(Cluster cluster, String path, Header[] headers, 
+  public Response put(Cluster cluster, String path, Header[] headers,
       byte[] content) throws IOException {
     PutMethod method = new PutMethod();
     try {
@@ -498,7 +498,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response post(Cluster cluster, String path, String contentType, 
+  public Response post(Cluster cluster, String path, String contentType,
       byte[] content) throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new Header("Content-Type", contentType);
@@ -515,7 +515,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response post(Cluster cluster, String path, String contentType, 
+  public Response post(Cluster cluster, String path, String contentType,
       byte[] content, Header extraHdr) throws IOException {
     int cnt = extraHdr == null ? 1 : 2;
     Header[] headers = new Header[cnt];
@@ -535,7 +535,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response post(String path, Header[] headers, byte[] content) 
+  public Response post(String path, Header[] headers, byte[] content)
       throws IOException {
     return post(cluster, path, headers, content);
   }
@@ -550,7 +550,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response post(Cluster cluster, String path, Header[] headers, 
+  public Response post(Cluster cluster, String path, Header[] headers,
       byte[] content) throws IOException {
     PostMethod method = new PostMethod();
     try {
