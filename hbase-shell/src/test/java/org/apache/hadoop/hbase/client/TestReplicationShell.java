@@ -28,7 +28,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestReplicationShell extends AbstractTestShell {
-  @Ignore ("Disabled because hangs on occasion.. about 10% of the time") @Test
+  @Test
   public void testRunShellTests() throws IOException {
     System.setProperty("shell.test.include", "replication_admin_test.rb");
     // Start all ruby tests

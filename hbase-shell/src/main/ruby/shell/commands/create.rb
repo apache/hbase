@@ -64,6 +64,8 @@ EOF
       def command(table, *args)
         admin.create(table, *args)
         @end_time = Time.now
+        puts "Created table " + table.to_s
+
         #and then return the table just created
         table(table)
       end

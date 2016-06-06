@@ -30,7 +30,14 @@ EOF
       end
 
       def command(group_name)
-        rsgroup_admin.balance_rs_group(group_name)
+        # Returns true if balancer was run, otherwise false.
+        ret = rsgroup_admin.balance_rs_group(group_name)
+        if ret
+          puts "Ran the balancer."
+        else
+          puts "Couldn't run the balancer."
+        end
+        ret
       end
     end
   end

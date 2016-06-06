@@ -43,11 +43,16 @@ module Hbase
 
     def setup_hbase
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-      @shell = ::Shell::Shell.new(hbase)
+      @shell = ::Shell::Shell.new(hbase, interactive = false)
     end
     
     def shutdown
       @shell.hbase.shutdown
+    end
+
+    # This function triggers exactly same path as the users.
+    def command(command, *args)
+      @shell.command(command, *args)
     end
 
     def table(table)
@@ -85,7 +90,7 @@ module Hbase
     def create_test_table(name)
       # Create the table if needed
       unless admin.exists?(name)
-        admin.create name, [{'NAME' => 'x', 'VERSIONS' => 5}, 'y']
+        command(:create, name, {'NAME' => 'x', 'VERSIONS' => 5}, 'y')
         return
       end
 
@@ -98,7 +103,7 @@ module Hbase
     def create_test_table_with_splits(name, splits)
       # Create the table if needed
       unless admin.exists?(name)
-        admin.create name, 'f1', splits
+        command(:create, name, 'f1', splits)
       end
 
       # Enable the table if needed
@@ -130,6 +135,18 @@ module Hbase
         admin.delete_all_snapshot(".*")
       rescue => e
         puts "IGNORING DELETE ALL SNAPSHOT ERROR: #{e}"
+      end
+    end
+
+
+    def capture_stdout
+      begin
+        old_stdout = $stdout
+        $stdout = StringIO.new('','w')
+        yield
+        $stdout.string
+      ensure
+        $stdout = old_stdout
       end
     end
   end

@@ -96,8 +96,10 @@ public class ReplicationPeerConfig {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("clusterKey=").append(clusterKey).append(",");
-    builder.append("replicationEndpointImpl=").append(replicationEndpointImpl).append(",")
-        .append("tableCFs=").append(tableCFsMap.toString());
+    builder.append("replicationEndpointImpl=").append(replicationEndpointImpl).append(",");
+    if (tableCFsMap != null) {
+      builder.append("tableCFs=").append(tableCFsMap.toString());
+    }
     return builder.toString();
   }
 }
