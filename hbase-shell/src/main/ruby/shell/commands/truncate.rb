@@ -27,8 +27,7 @@ EOF
       end
 
       def command(table)
-        puts "Truncating '#{table}' table (it may take a while):"
-        admin.truncate(table) { |log| puts " - #{log}" }
+        admin.truncate(table)
       end
 
     end

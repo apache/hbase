@@ -17,6 +17,8 @@
 # limitations under the License.
 #
 
+require 'shell/formatter'
+
 module Shell
   module Commands
     class Command

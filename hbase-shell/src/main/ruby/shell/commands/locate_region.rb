@@ -36,6 +36,7 @@ EOF
         formatter.header([ "HOST", "REGION" ])
         formatter.row([region_location.getHostnamePort(), hri.toString()])
         formatter.footer(1)
+        region_location
       end
     end
   end

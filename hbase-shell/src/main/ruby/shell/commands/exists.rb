@@ -29,9 +29,11 @@ EOF
       end
 
       def command(table)
+        exists = admin.exists?(table.to_s)
         formatter.row([
-            "Table #{table} " + (admin.exists?(table.to_s) ? "does exist" : "does not exist")
+            "Table #{table} " + (exists ? "does exist" : "does not exist")
           ])
+        exists
       end
     end
   end
