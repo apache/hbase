@@ -1111,6 +1111,16 @@ public final class ProtobufUtil {
     return builder.build();
   }
 
+  static void setTimeRange(final MutationProto.Builder builder, final TimeRange timeRange) {
+    if (!timeRange.isAllTime()) {
+      HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+      timeRangeBuilder.setFrom(timeRange.getMin());
+      timeRangeBuilder.setTo(timeRange.getMax());
+      builder.setTimeRange(timeRangeBuilder.build());
+    }
+  }
+
   /**
    * Convert a client Increment to a protobuf Mutate.
    *
@@ -1126,13 +1136,7 @@ public final class ProtobufUtil {
       builder.setNonce(nonce);
     }
     TimeRange timeRange = increment.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
+    setTimeRange(builder, timeRange);
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
@@ -1253,6 +1257,9 @@ public final class ProtobufUtil {
       final MutationProto.Builder builder, long nonce) throws IOException {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
     builder.setAssociatedCellCount(mutation.size());
+    if (mutation instanceof Increment) {
+      setTimeRange(builder, ((Increment)mutation).getTimeRange());
+    }
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
     }
