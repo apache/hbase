@@ -57,6 +57,7 @@ public class ServerLoad {
   private long totalCompactingKVs = 0;
   private long currentCompactedKVs = 0;
 
+  @InterfaceAudience.Private
   public ServerLoad(ClusterStatusProtos.ServerLoad serverLoad) {
     this.serverLoad = serverLoad;
     for (ClusterStatusProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
@@ -81,6 +82,7 @@ public class ServerLoad {
   // NOTE: Function name cannot start with "get" because then an OpenDataException is thrown because
   // HBaseProtos.ServerLoad cannot be converted to an open data type(see HBASE-5967).
   /* @return the underlying ServerLoad protobuf object */
+  @InterfaceAudience.Private
   public ClusterStatusProtos.ServerLoad obtainServerLoadPB() {
     return serverLoad;
   }

@@ -38,6 +38,7 @@ public class RegionLoad {
 
   protected ClusterStatusProtos.RegionLoad regionLoadPB;
 
+  @InterfaceAudience.Private
   public RegionLoad(ClusterStatusProtos.RegionLoad regionLoadPB) {
     this.regionLoadPB = regionLoadPB;
   }
