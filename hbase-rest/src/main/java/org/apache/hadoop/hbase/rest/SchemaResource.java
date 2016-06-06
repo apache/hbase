@@ -87,8 +87,8 @@ public class SchemaResource extends ResourceBase {
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try {
@@ -100,7 +100,7 @@ public class SchemaResource extends ResourceBase {
     } catch (Exception e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
       return processException(e);
-    } 
+    }
   }
 
   private Response replace(final byte[] name, final TableSchemaModel model,
@@ -199,10 +199,10 @@ public class SchemaResource extends ResourceBase {
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
-  public Response put(final TableSchemaModel model, 
+  public Response put(final TableSchemaModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     return update(model, true, uriInfo);
@@ -211,10 +211,10 @@ public class SchemaResource extends ResourceBase {
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
-  public Response post(final TableSchemaModel model, 
+  public Response post(final TableSchemaModel model,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     return update(model, false, uriInfo);
@@ -222,8 +222,8 @@ public class SchemaResource extends ResourceBase {
 
   @DELETE
   public Response delete(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {

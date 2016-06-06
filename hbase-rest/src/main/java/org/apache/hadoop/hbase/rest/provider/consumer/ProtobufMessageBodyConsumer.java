@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 @Provider
 @Consumes({Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF})
 @InterfaceAudience.Private
-public class ProtobufMessageBodyConsumer 
+public class ProtobufMessageBodyConsumer
     implements MessageBodyReader<ProtobufMessageHandler> {
   private static final Log LOG =
     LogFactory.getLog(ProtobufMessageBodyConsumer.class);
@@ -73,8 +73,8 @@ public class ProtobufMessageBodyConsumer
           baos.write(buffer, 0, read);
         }
       } while (read > 0);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getClass() + ": read " + baos.size() + " bytes from " +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(getClass() + ": read " + baos.size() + " bytes from " +
           inputStream);
       }
       obj = obj.getObjectFromMessage(baos.toByteArray());

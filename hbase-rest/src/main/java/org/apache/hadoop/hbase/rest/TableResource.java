@@ -142,10 +142,12 @@ public class TableResource extends ResourceBase {
           tableScan.setStartRow(prefixBytes);
         }
       }
-      LOG.debug("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
-          + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
-          + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
-          + maxVersions + " Batch Size => " + batchSize);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
+            + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
+            + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
+            + maxVersions + " Batch Size => " + batchSize);
+      }
       HTableInterface hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
       tableScan.setMaxVersions(maxVersions);
@@ -158,15 +160,21 @@ public class TableResource extends ResourceBase {
         String[] familysplit = csplit.trim().split(":");
         if (familysplit.length == 2) {
           if (familysplit[1].length() > 0) {
-            LOG.debug("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
+            }
             tableScan.addColumn(Bytes.toBytes(familysplit[0]), Bytes.toBytes(familysplit[1]));
           } else {
             tableScan.addFamily(Bytes.toBytes(familysplit[0]));
-            LOG.debug("Scan family : " + familysplit[0] + " and empty qualifier.");
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Scan family : " + familysplit[0] + " and empty qualifier.");
+            }
             tableScan.addColumn(Bytes.toBytes(familysplit[0]), null);
           }
-        } else if (StringUtils.isNotEmpty(familysplit[0])){
-          LOG.debug("Scan family : " + familysplit[0]);
+        } else if (StringUtils.isNotEmpty(familysplit[0])) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Scan family : " + familysplit[0]);
+          }
           tableScan.addFamily(Bytes.toBytes(familysplit[0]));
         }
       }

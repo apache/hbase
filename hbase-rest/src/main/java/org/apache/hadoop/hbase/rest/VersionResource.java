@@ -68,15 +68,15 @@ public class VersionResource extends ResourceBase {
    * Build a response for a version request.
    * @param context servlet context
    * @param uriInfo (JAX-RS context variable) request URL
-   * @return a response for a version request 
+   * @return a response for a version request
    */
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
-  public Response get(final @Context ServletContext context, 
+  public Response get(final @Context ServletContext context,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     ResponseBuilder response = Response.ok(new VersionModel(context));
@@ -89,7 +89,7 @@ public class VersionResource extends ResourceBase {
    * Dispatch to StorageClusterVersionResource
    */
   @Path("cluster")
-  public StorageClusterVersionResource getClusterVersionResource() 
+  public StorageClusterVersionResource getClusterVersionResource()
       throws IOException {
     return new StorageClusterVersionResource();
   }

@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
@@ -34,7 +35,7 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A utility to store user specific HConnections in memory.
@@ -44,7 +45,7 @@ import org.apache.log4j.Logger;
  */
 @InterfaceAudience.Private
 public class ConnectionCache {
-  private static Logger LOG = Logger.getLogger(ConnectionCache.class);
+  private static final Log LOG = LogFactory.getLog(ConnectionCache.class);
 
   private final Map<String, ConnectionInfo>
    connections = new ConcurrentHashMap<String, ConnectionInfo>();
@@ -56,6 +57,7 @@ public class ConnectionCache {
 
   private final ThreadLocal<String> effectiveUserNames =
       new ThreadLocal<String>() {
+    @Override
     protected String initialValue() {
       return realUserName;
     }
