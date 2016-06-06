@@ -35,6 +35,7 @@ module Shell
             formatter.row([" "])
           end
         end
+        peer_configs
       end
     end
   end

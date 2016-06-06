@@ -41,6 +41,7 @@ EOF
         end
 
         formatter.footer()
+        peers
       end
     end
   end

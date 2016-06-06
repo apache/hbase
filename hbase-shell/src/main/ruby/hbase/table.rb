@@ -719,6 +719,7 @@ EOF
           map{|i| Bytes.toStringBinary(i.getRegionInfo().getStartKey)}.delete_if{|k| k == ""}
       locator.close()
       puts("Total number of splits = %s" % [splits.size + 1])
+      puts splits
       return splits
     end
   end

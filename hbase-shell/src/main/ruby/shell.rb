@@ -134,9 +134,17 @@ module Shell
       ::Shell.commands[command.to_s].new(self)
     end
 
-    #call the method 'command' on the specified command
+    # call the method 'command' on the specified command
+    # If interactive is enabled, then we suppress the return value. The command should have
+    # printed relevant output.
+    # Return value is only useful in non-interactive mode, for e.g. tests.
     def command(command, *args)
-      internal_command(command, :command, *args)
+      ret = internal_command(command, :command, *args)
+      if self.interactive
+        return nil
+      else
+        return ret
+      end
     end
 
     # call a specific internal method in the command instance

@@ -35,6 +35,7 @@ EOF
         list.each do |auths|
           formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(auths.toByteArray)])
         end
+        list
       end
     end
   end

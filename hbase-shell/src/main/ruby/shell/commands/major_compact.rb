@@ -44,7 +44,7 @@ module Shell
       end
 
       def command(table_or_region_name, family = nil, type = "NORMAL")
-        admin.majorCompact(table_or_region_name, family, type)
+        admin.major_compact(table_or_region_name, family, type)
       end
     end
   end
