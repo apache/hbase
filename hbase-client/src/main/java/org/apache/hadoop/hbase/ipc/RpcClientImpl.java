@@ -1146,9 +1146,8 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
     if (connsToClose != null) {
       for (Connection conn : connsToClose) {
-        if (conn.markClosed(new InterruptedIOException("RpcClient is closing"))) {
-          conn.close();
-        }
+        conn.markClosed(new InterruptedIOException("RpcClient is closing"));
+        conn.close();
       }
     }
     // wait until all connections are closed
