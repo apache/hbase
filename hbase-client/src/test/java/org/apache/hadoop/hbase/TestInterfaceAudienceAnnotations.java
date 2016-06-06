@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.ClassFinder.And;
 import org.apache.hadoop.hbase.ClassFinder.FileNameFilter;
 import org.apache.hadoop.hbase.ClassFinder.Not;
@@ -59,6 +65,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestInterfaceAudienceAnnotations {
 
+  private static final String HBASE_PROTOBUF = "org.apache.hadoop.hbase.protobuf.generated";
   private static final Log LOG = LogFactory.getLog(TestInterfaceAudienceAnnotations.class);
 
   /** Selects classes with generated in their package name */
@@ -180,6 +187,28 @@ public class TestInterfaceAudienceAnnotations {
         c.equals(InterfaceStability.Evolving.class);
   }
 
+  private boolean isInterfacePrivateMethod(Method m) {
+    if(m.getDeclaredAnnotations().length > 0) {
+      for(Annotation ann : m.getDeclaredAnnotations()) {
+        if(ann.annotationType().equals(InterfaceAudience.Private.class)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private boolean isInterfacePrivateContructor(Constructor<?> c) {
+    if(c.getDeclaredAnnotations().length > 0) {
+      for(Annotation ann : c.getDeclaredAnnotations()) {
+        if(ann.annotationType().equals(InterfaceAudience.Private.class)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /** Selects classes that are declared public */
   class PublicClassFilter implements ClassFinder.ClassFilter {
     @Override
@@ -298,5 +327,128 @@ public class TestInterfaceAudienceAnnotations {
     Assert.assertEquals("All classes that are marked with @InterfaceAudience.Public should "
         + "have @InterfaceStability annotation as well",
       0, classes.size());
+  }
+
+  @Test
+  public void testProtosInReturnTypes() throws ClassNotFoundException, IOException, LinkageError {
+    Set<Class<?>> classes = findPublicClasses();
+    List<Pair<Class<?>, Method>> protosReturnType = new ArrayList<Pair<Class<?>, Method>>();
+    for (Class<?> clazz : classes) {
+      findProtoInReturnType(clazz, protosReturnType);
+    }
+    if (protosReturnType.size() != 0) {
+      LOG.info("These are the methods that have Protos as the return type");
+      for (Pair<Class<?>, Method> pair : protosReturnType) {
+        LOG.info(pair.getFirst().getName() + " " + pair.getSecond().getName() + " "
+            + pair.getSecond().getReturnType().getName());
+      }
+    }
+
+    Assert.assertEquals("Public exposed methods should not have protos in return type", 0,
+      protosReturnType.size());
+  }
+
+  private Set<Class<?>> findPublicClasses()
+      throws ClassNotFoundException, IOException, LinkageError {
+    ClassFinder classFinder =
+        new ClassFinder(new And(new MainCodeResourcePathFilter(), new TestFileNameFilter()),
+            new Not((FileNameFilter) new TestFileNameFilter()),
+            new And(new PublicClassFilter(), new Not(new TestClassFilter()),
+                new Not(new GeneratedClassFilter()),
+                new InterfaceAudiencePublicAnnotatedClassFilter()));
+    Set<Class<?>> classes = classFinder.findClasses(false);
+    return classes;
+  }
+
+  @Test
+  public void testProtosInParamTypes() throws ClassNotFoundException, IOException, LinkageError {
+    Set<Class<?>> classes = findPublicClasses();
+    List<Triple<Class<?>, Method, Class<?>>> protosParamType =
+        new ArrayList<Triple<Class<?>, Method, Class<?>>>();
+    for (Class<?> clazz : classes) {
+      findProtoInParamType(clazz, protosParamType);
+    }
+
+    if (protosParamType.size() != 0) {
+      LOG.info("These are the methods that have Protos as the param type");
+      for (Triple<Class<?>, Method, Class<?>> pair : protosParamType) {
+        LOG.info(pair.getFirst().getName() + " " + pair.getSecond().getName() + " "
+            + pair.getThird().getName());
+      }
+    }
+
+    Assert.assertEquals("Public exposed methods should not have protos in param type", 0,
+      protosParamType.size());
+  }
+
+  @Test
+  public void testProtosInConstructors() throws ClassNotFoundException, IOException, LinkageError {
+    Set<Class<?>> classes = findPublicClasses();
+    List<Class<?>> classList = new ArrayList<Class<?>>();
+    for (Class<?> clazz : classes) {
+      Constructor<?>[] constructors = clazz.getConstructors();
+      for (Constructor<?> cons : constructors) {
+        if (!isInterfacePrivateContructor(cons)) {
+          Class<?>[] parameterTypes = cons.getParameterTypes();
+          for (Class<?> param : parameterTypes) {
+            if (param.getName().contains(HBASE_PROTOBUF)) {
+              classList.add(clazz);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (classList.size() != 0) {
+      LOG.info("These are the classes that have Protos in the constructor");
+      for (Class<?> clazz : classList) {
+        LOG.info(clazz.getName());
+      }
+    }
+
+    Assert.assertEquals("Public exposed classes should not have protos in constructors", 0,
+      classList.size());
+  }
+
+  private void findProtoInReturnType(Class<?> clazz,
+      List<Pair<Class<?>, Method>> protosReturnType) {
+    Pair<Class<?>, Method> returnTypePair = new Pair<Class<?>, Method>();
+    Method[] methods = clazz.getMethods();
+    returnTypePair.setFirst(clazz);
+    for (Method method : methods) {
+      if (clazz.isInterface() || method.getModifiers() == Modifier.PUBLIC) {
+        if (!isInterfacePrivateMethod(method)) {
+          Class<?> returnType = method.getReturnType();
+          if (returnType.getName().contains(HBASE_PROTOBUF)) {
+            returnTypePair.setSecond(method);
+            protosReturnType.add(returnTypePair);
+            continue;
+          }
+        }
+      }
+    }
+  }
+
+  private void findProtoInParamType(Class<?> clazz,
+      List<Triple<Class<?>, Method, Class<?>>> protosParamType) {
+    Triple<Class<?>, Method, Class<?>> paramType = new Triple<Class<?>, Method, Class<?>>();
+    Method[] methods = clazz.getMethods();
+    paramType.setFirst(clazz);
+    for (Method method : methods) {
+      if (clazz.isInterface() || method.getModifiers() == Modifier.PUBLIC) {
+        if (!isInterfacePrivateMethod(method)) {
+          Class<?>[] parameters = method.getParameterTypes();
+          for (Class<?> param : parameters) {
+            if (param.getName().contains(HBASE_PROTOBUF)) {
+              paramType.setSecond(method);
+              paramType.setThird(param);
+              protosParamType.add(paramType);
+              break;
+            }
+          }
+        }
+      }
+    }
   }
 }

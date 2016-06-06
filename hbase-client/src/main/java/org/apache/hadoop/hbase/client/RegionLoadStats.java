@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 /**
  * POJO representing region server load
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RegionLoadStats {
   int memstoreLoad;
   int heapOccupancy;
