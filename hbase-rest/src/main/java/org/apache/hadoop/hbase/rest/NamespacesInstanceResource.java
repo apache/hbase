@@ -91,8 +91,8 @@ public class NamespacesInstanceResource extends ResourceBase {
     MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context ServletContext context,
       final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
 
@@ -135,8 +135,8 @@ public class NamespacesInstanceResource extends ResourceBase {
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
   public Response put(final NamespacesInstanceModel model, final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     return processUpdate(model, true, uriInfo);
@@ -151,8 +151,8 @@ public class NamespacesInstanceResource extends ResourceBase {
   @PUT
   public Response putNoBody(final byte[] message,
       final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("PUT " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try{
@@ -176,8 +176,8 @@ public class NamespacesInstanceResource extends ResourceBase {
   public Response post(final NamespacesInstanceModel model,
       final @Context UriInfo uriInfo) {
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("POST " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     return processUpdate(model, false, uriInfo);
@@ -192,8 +192,8 @@ public class NamespacesInstanceResource extends ResourceBase {
   @POST
   public Response postNoBody(final byte[] message,
       final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("POST " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try{
@@ -287,8 +287,8 @@ public class NamespacesInstanceResource extends ResourceBase {
   @DELETE
   public Response deleteNoBody(final byte[] message,
       final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
     if (servlet.isReadOnly()) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
