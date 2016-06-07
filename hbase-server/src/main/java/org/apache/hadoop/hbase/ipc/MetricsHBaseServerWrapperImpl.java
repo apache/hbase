@@ -36,7 +36,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     if (!isServerStarted()) {
       return 0;
     }
-    return server.callQueueSizeInBytes.get();
+    return server.callQueueSize.get();
   }
 
   @Override
@@ -65,10 +65,10 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getNumOpenConnections() {
-    if (!isServerStarted()) {
+    if (!isServerStarted() || this.server.connectionList == null) {
       return 0;
     }
-    return server.getNumOpenConnections();
+    return server.connectionList.size();
   }
 
   @Override
