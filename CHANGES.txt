@@ -1,5 +1,58 @@
 HBase Change Log
 
+Release 0.98.20 - 6/13/2016
+
+** Sub-task
+    * [HBASE-15740] - Replication source.shippedKBs metric is undercounting because it is in KB
+
+** Bug
+    * [HBASE-14818] - user_permission does not list namespace permissions
+    * [HBASE-15292] - Refined ZooKeeperWatcher to prevent ZooKeeper's callback while construction
+    * [HBASE-15465] - userPermission returned by getUserPermission() for the selected namespace does not have namespace set
+    * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
+    * [HBASE-15617] - Canary in regionserver mode might not enumerate all regionservers
+    * [HBASE-15634] - TestDateTieredCompactionPolicy#negativeForMajor is flaky
+    * [HBASE-15676] - FuzzyRowFilter fails and matches all the rows in the table if the mask consists of all 0s
+    * [HBASE-15693] - Reconsider the ImportOrder rule of checkstyle
+    * [HBASE-15698] - Increment TimeRange not serialized to server
+    * [HBASE-15707] - ImportTSV bulk output does not support tags with hfile.format.version=3
+    * [HBASE-15710] - Include issue servers information in RetriesExhaustedWithDetailsException message
+    * [HBASE-15738] - Ensure artifacts in project dist area include required md5 file
+    * [HBASE-15742] - Reduce allocation of objects in metrics
+    * [HBASE-15752] - ClassNotFoundException is encountered when custom WAL codec is not found in WALPlayer job
+    * [HBASE-15755] - SnapshotDescriptionUtils and SnapshotTestingUtils do not have any Interface audience marked
+    * [HBASE-15769] - Perform validation on cluster key for add_peer
+    * [HBASE-15801] - Upgrade checkstyle for all branches
+    * [HBASE-15803] - ZooKeeperWatcher's constructor can leak a ZooKeeper instance with throwing ZooKeeperConnectionException when canCreateBaseZNode is true
+    * [HBASE-15805] - Canary test timeout if there is failed or shutdown zookeeper node in a quorum
+    * [HBASE-15815] - Region mover script sometimes reports stuck region where only one server was involved
+    * [HBASE-15841] - Performance Evaluation tool total rows may not be set correctly
+    * [HBASE-15846] - Minor fix in javadoc clearing misstatement that deletes go into the Table write buffer
+    * [HBASE-15856] - Cached Connection instances can wind up with addresses never resolved
+    * [HBASE-15873] - ACL for snapshot restore / clone is not enforced
+    * [HBASE-15889] - String case conversions are locale-sensitive, used without locale
+    * [HBASE-15954] - REST server should log requests with TRACE instead of DEBUG
+
+** Improvement
+    * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-15686] - Add override mechanism for the exempt classes when dynamically loading table coprocessor
+    * [HBASE-15720] - Print row locks at the debug dump page
+    * [HBASE-15727] - Canary Tool for Zookeeper
+    * [HBASE-15808] - Reduce potential bulk load intermediate space usage and waste
+    * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
+    * [HBASE-15854] - Log the cause of SASL connection failures
+    * [HBASE-15890] - Allow thrift to set/unset "cacheBlocks" for Scans
+    * [HBASE-15931] - Add log for long-running tasks in AsyncProcess
+
+** New Feature
+    * [HBASE-15847] - VerifyReplication prefix filtering
+    * [HBASE-15881] - Allow BZIP2 compression
+
+** Task
+    * [HBASE-4368] - Expose processlist in shell (per regionserver and perhaps by cluster)
+    * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
+
+
 Release 0.98.19 - 4/29/2016
 
 ** Sub-task
