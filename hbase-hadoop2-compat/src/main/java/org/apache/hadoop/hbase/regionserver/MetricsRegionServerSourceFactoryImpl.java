@@ -65,4 +65,10 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   public MetricsTableSource createTable(String table, MetricsTableWrapperAggregate wrapper) {
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
   }
+
+  @Override
+  public synchronized MetricsHeapMemoryManagerSource
+      getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
+    return new MetricsHeapMemoryManagerSourceImpl(wrapper);
+  }
 }

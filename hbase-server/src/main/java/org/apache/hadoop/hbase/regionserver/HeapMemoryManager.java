@@ -84,6 +84,9 @@ public class HeapMemoryManager {
   private final float heapOccupancyLowWatermark;
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+  
+  private MetricsHeapMemoryManager metricsHeapMemoryManager;
+  private MetricsHeapMemoryManagerWrapper metricsHeapMemoryManagerWrapper;
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
@@ -108,6 +111,9 @@ public class HeapMemoryManager {
       HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD);
     this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
       HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
+    metricsHeapMemoryManagerWrapper =
+        new MetricsHeapMemoryManagerWrapperImpl(server, regionServerAccounting, blockCache);
+    metricsHeapMemoryManager = new MetricsHeapMemoryManager(metricsHeapMemoryManagerWrapper);
   }
 
   private boolean doInit(Configuration conf) {
@@ -201,7 +207,10 @@ public class HeapMemoryManager {
     // The thread is Daemon. Just interrupting the ongoing process.
     LOG.info("Stoping HeapMemoryTuner chore.");
     this.heapMemTunerChore.cancel(true);
-    
+  }
+  
+  public MetricsHeapMemoryManager getMetrics() {
+    return metricsHeapMemoryManager;
   }
 
   // Used by the test cases.
@@ -237,6 +246,7 @@ public class HeapMemoryManager {
       // Sample heap occupancy
       MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
       heapOccupancyPercent = (float)memUsage.getUsed() / (float)memUsage.getCommitted();
+      metricsHeapMemoryManager.updateHeapOccupancy(heapOccupancyPercent, memUsage.getUsed());
       // If we are above the heap occupancy alarm low watermark, switch to short
       // sleeps for close monitoring. Stop autotuning, we are in a danger zone.
       if (heapOccupancyPercent >= heapOccupancyLowWatermark) {
@@ -273,17 +283,31 @@ public class HeapMemoryManager {
       // while remaining in the limits
       long curEvictCount;
       long curCacheMisCount;
+      long bFlushCount;
+      long unbFlushCount;
+      float curBlockCacheUsed;
+      float curMemStoreUsed;
       curEvictCount = blockCache.getStats().getEvictedCount();
       tunerContext.setEvictCount(curEvictCount - evictCount);
+      metricsHeapMemoryManager.updateCacheEvictedCount(curEvictCount - evictCount);
       evictCount = curEvictCount;
       curCacheMisCount = blockCache.getStats().getMissCachingCount();
       tunerContext.setCacheMissCount(curCacheMisCount-cacheMissCount);
+      metricsHeapMemoryManager.updateCacheMissCount(curCacheMisCount - cacheMissCount);
       cacheMissCount = curCacheMisCount;
-      tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
-      tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));
-      tunerContext.setCurBlockCacheUsed((float)blockCache.getCurrentSize() / maxHeapSize);
-      tunerContext.setCurMemStoreUsed(
-                 (float)regionServerAccounting.getGlobalMemstoreSize() / maxHeapSize);
+      bFlushCount = blockedFlushCount.getAndSet(0);
+      tunerContext.setBlockedFlushCount(bFlushCount);
+      metricsHeapMemoryManager.updateBlockedFlushCount(bFlushCount);
+      unbFlushCount = unblockedFlushCount.getAndSet(0);
+      tunerContext.setUnblockedFlushCount(unbFlushCount);
+      metricsHeapMemoryManager.updateUnblockedFlushCount(unbFlushCount);
+      curBlockCacheUsed = (float)blockCache.getCurrentSize() / maxHeapSize;
+      tunerContext.setCurBlockCacheUsed(curBlockCacheUsed);
+      metricsHeapMemoryManager.updateCurBlockCache(curBlockCacheUsed, blockCache.getCurrentSize());
+      curMemStoreUsed = (float)regionServerAccounting.getGlobalMemstoreSize() / maxHeapSize;
+      tunerContext.setCurMemStoreUsed(curMemStoreUsed);
+      metricsHeapMemoryManager.updateCurMemStore(curMemStoreUsed,
+        regionServerAccounting.getGlobalMemstoreSize());
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
       TunerResult result = null;
@@ -327,6 +351,12 @@ public class HeapMemoryManager {
               + blockCacheSize);
           // TODO can adjust the value so as not exceed 80%. Is that correct? may be.
         } else {
+          int deltaMemStoreSize =
+              (int) (memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE;
+          int deltaBlockCacheSize =
+              (int) (blockCacheSize - blockCachePercent) * CONVERT_TO_PERCENTAGE;
+          metricsHeapMemoryManager.updateDeltaMemStoreSize(deltaMemStoreSize);
+          metricsHeapMemoryManager.updateDeltaBlockCacheSize(deltaBlockCacheSize);
           long newBlockCacheSize = (long) (maxHeapSize * blockCacheSize);
           long newMemstoreSize = (long) (maxHeapSize * memstoreSize);
           LOG.info("Setting block cache heap size to " + newBlockCacheSize
