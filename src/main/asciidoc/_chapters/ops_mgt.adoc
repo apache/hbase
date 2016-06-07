@@ -1320,6 +1320,14 @@ The master cluster relies on randomization to attempt to balance the stream of r
 It is expected that the slave cluster has storage capacity to hold the replicated data, as well as any data it is responsible for ingesting.
 If a slave cluster does run out of room, or is inaccessible for other reasons, it throws an error and the master retains the WAL and retries the replication at intervals.
 
+.Consistency Across Replicated Clusters
+[WARNING]
+====
+How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. Further more, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
+
+The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
+====
+
 .Terminology Changes
 [NOTE]
 ====
