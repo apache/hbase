@@ -171,7 +171,17 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
-      createBaseZNodes();
+      try {
+        createBaseZNodes();
+      } catch (ZooKeeperConnectionException zce) {
+        try {
+          this.recoverableZooKeeper.close();
+        } catch (InterruptedException ie) {
+          LOG.debug("Encountered InterruptedException when closing " + this.recoverableZooKeeper);
+          Thread.currentThread().interrupt();
+        }
+        throw zce;
+      }
     }
   }
 
