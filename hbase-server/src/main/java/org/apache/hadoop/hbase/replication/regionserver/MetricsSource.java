@@ -242,6 +242,41 @@ public class MetricsSource implements BaseSource {
     }
   }
 
+  public void incrUnknownFileLengthForClosedWAL() {
+    singleSourceSource.incrUnknownFileLengthForClosedWAL();
+    globalSourceSource.incrUnknownFileLengthForClosedWAL();
+  }
+
+  public void incrUncleanlyClosedWALs() {
+    singleSourceSource.incrUncleanlyClosedWALs();
+    globalSourceSource.incrUncleanlyClosedWALs();
+  }
+
+  public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
+    singleSourceSource.incrBytesSkippedInUncleanlyClosedWALs(bytes);
+    globalSourceSource.incrBytesSkippedInUncleanlyClosedWALs(bytes);
+  }
+
+  public void incrRestartedWALReading() {
+    singleSourceSource.incrRestartedWALReading();
+    globalSourceSource.incrRestartedWALReading();
+  }
+
+  public void incrRepeatedFileBytes(final long bytes) {
+    singleSourceSource.incrRepeatedFileBytes(bytes);
+    globalSourceSource.incrRepeatedFileBytes(bytes);
+  }
+
+  public void incrCompletedWAL() {
+    singleSourceSource.incrCompletedWAL();
+    globalSourceSource.incrCompletedWAL();
+  }
+
+  public void incrCompletedRecoveryQueue() {
+    singleSourceSource.incrCompletedRecoveryQueue();
+    globalSourceSource.incrCompletedRecoveryQueue();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();
