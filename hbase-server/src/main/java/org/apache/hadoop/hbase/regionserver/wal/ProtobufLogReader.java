@@ -74,6 +74,21 @@ public class ProtobufLogReader extends ReaderBase {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
   }
 
+  @InterfaceAudience.Private
+  public long trailerSize() {
+    if (trailerPresent) {
+      // sizeof PB_WAL_COMPLETE_MAGIC + sizof trailerSize + trailer
+      final long calculatedSize = PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT + trailer.getSerializedSize();
+      final long expectedSize = fileLength - walEditsStopOffset;
+      if (expectedSize != calculatedSize) {
+        LOG.warn("After parsing the trailer, we expect the total footer to be "+ expectedSize +" bytes, but we calculate it as being " + calculatedSize);
+      }
+      return expectedSize;
+    } else {
+      return -1L;
+    }
+  }
+
   enum WALHdrResult {
     EOF,                   // stream is at EOF when method starts
     SUCCESS,
@@ -180,7 +195,7 @@ public class ProtobufLogReader extends ReaderBase {
     this.seekOnFs(currentPosition);
     if (LOG.isTraceEnabled()) {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
-          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + trailerPresent);
+          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") + ", currentPosition: " + currentPosition);
     }
     return hdrCtxt.getCellCodecClsName();
   }
@@ -273,6 +288,9 @@ public class ProtobufLogReader extends ReaderBase {
       // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
       long originalPosition = this.inputStream.getPos();
       if (trailerPresent && originalPosition > 0 && originalPosition == this.walEditsStopOffset) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Reached end of expected edits area at offset " + originalPosition);
+        }
         return false;
       }
       WALKey.Builder builder = WALKey.newBuilder();
@@ -282,7 +300,7 @@ public class ProtobufLogReader extends ReaderBase {
         try {
           int firstByte = this.inputStream.read();
           if (firstByte == -1) {
-            throw new EOFException("First byte is negative");
+            throw new EOFException("First byte is negative at offset " + originalPosition);
           }
           size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
           // available may be < 0 on local fs for instance.  If so, can't depend on it.
@@ -290,7 +308,7 @@ public class ProtobufLogReader extends ReaderBase {
           if (available > 0 && available < size) {
             throw new EOFException("Available stream not enough for edit, " +
                 "inputStream.available()= " + this.inputStream.available() + ", " +
-                "entry size= " + size);
+                "entry size= " + size + " at offset = " + this.inputStream.getPos());
           }
           ProtobufUtil.mergeFrom(builder, new LimitInputStream(this.inputStream, size),
             (int)size);
@@ -303,12 +321,14 @@ public class ProtobufLogReader extends ReaderBase {
           // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
           //       If we can get the KV count, we could, theoretically, try to get next record.
           throw new EOFException("Partial PB while reading WAL, " +
-              "probably an unexpected EOF, ignoring");
+              "probably an unexpected EOF, ignoring. current offset=" + this.inputStream.getPos());
         }
         WALKey walKey = builder.build();
         entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
         if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
-          LOG.trace("WALKey has no KVs that follow it; trying the next one");
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" + this.inputStream.getPos());
+          }
           continue;
         }
         int expectedCells = walKey.getFollowingKvCount();
@@ -323,7 +343,9 @@ public class ProtobufLogReader extends ReaderBase {
           try {
             posAfterStr = this.inputStream.getPos() + "";
           } catch (Throwable t) {
-            LOG.trace("Error getting pos for error message - ignoring", t);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Error getting pos for error message - ignoring", t);
+            }
           }
           String message = " while reading " + expectedCells + " WAL KVs; started reading at "
               + posBefore + " and read up to " + posAfterStr;
@@ -338,11 +360,18 @@ public class ProtobufLogReader extends ReaderBase {
           throw new EOFException("Read WALTrailer while reading WALEdits");
         }
       } catch (EOFException eof) {
-        LOG.trace("Encountered a malformed edit, seeking back to last good position in file", eof);
         // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
-        if (originalPosition < 0) throw eof;
+        if (originalPosition < 0) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Encountered a malformed edit, but can't seek back to last good position because originalPosition is negative. last offset=" + this.inputStream.getPos(), eof);
+          }
+          throw eof;
+        }
         // Else restore our position to original location in hope that next time through we will
         // read successfully.
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Encountered a malformed edit, seeking back to last good position in file, from "+ inputStream.getPos()+" to " + originalPosition, eof);
+        }
         seekOnFs(originalPosition);
         return false;
       }

@@ -37,6 +37,16 @@ public interface MetricsReplicationSourceSource extends BaseSource {
 
   public static final String SOURCE_LOG_EDITS_FILTERED = "source.logEditsFiltered";
 
+  public static final String SOURCE_CLOSED_LOGS_WITH_UNKNOWN_LENGTH =
+      "source.closedLogsWithUnknownFileLength";
+  public static final String SOURCE_UNCLEANLY_CLOSED_LOGS = "source.uncleanlyClosedLogs";
+  public static final String SOURCE_UNCLEANLY_CLOSED_IGNORED_IN_BYTES =
+      "source.ignoredUncleanlyClosedLogContentsInBytes";
+  public static final String SOURCE_RESTARTED_LOG_READING = "source.restartedLogReading";
+  public static final String SOURCE_REPEATED_LOG_FILE_BYTES = "source.repeatedLogFileBytes";
+  public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
+  public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
+
   void setLastShippedAge(long age);
   void setSizeOfLogQueue(int size);
   void incrSizeOfLogQueue(int size);
@@ -49,4 +59,11 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void incrLogReadInEdits(long size);
   void clear();
   long getLastShippedAge();
+  void incrUnknownFileLengthForClosedWAL();
+  void incrUncleanlyClosedWALs();
+  void incrBytesSkippedInUncleanlyClosedWALs(final long bytes);
+  void incrRestartedWALReading();
+  void incrRepeatedFileBytes(final long bytes);
+  void incrCompletedWAL();
+  void incrCompletedRecoveryQueue();
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 
 import java.io.IOException;
 
@@ -116,6 +117,15 @@ public class ReplicationHLogReaderManager {
 
   public void setPosition(long pos) {
     this.position = pos;
+  }
+
+  public long currentTrailerSize() {
+    long size = -1L;
+    if (reader instanceof ProtobufLogReader) {
+      final ProtobufLogReader pblr = (ProtobufLogReader)reader;
+      size = pblr.trailerSize();
+    }
+    return size;
   }
 
   /**

@@ -1,5 +1,5 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
+hbase-hadoop2-compat/src/main/java/org/apache/hadoop/hbase/replication/regionserver/MetricsReplicationSourceSourceImpl.java<<< * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -210,7 +210,42 @@ public class MetricsSource implements BaseSource {
   public String getPeerID() {
     return id;
   }
-  
+
+  public void incrUnknownFileLengthForClosedWAL() {
+    singleSourceSource.incrUnknownFileLengthForClosedWAL();
+    globalSourceSource.incrUnknownFileLengthForClosedWAL();
+  }
+
+  public void incrUncleanlyClosedWALs() {
+    singleSourceSource.incrUncleanlyClosedWALs();
+    globalSourceSource.incrUncleanlyClosedWALs();
+  }
+
+  public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
+    singleSourceSource.incrBytesSkippedInUncleanlyClosedWALs(bytes);
+    globalSourceSource.incrBytesSkippedInUncleanlyClosedWALs(bytes);
+  }
+
+  public void incrRestartedWALReading() {
+    singleSourceSource.incrRestartedWALReading();
+    globalSourceSource.incrRestartedWALReading();
+  }
+
+  public void incrRepeatedFileBytes(final long bytes) {
+    singleSourceSource.incrRepeatedFileBytes(bytes);
+    globalSourceSource.incrRepeatedFileBytes(bytes);
+  }
+
+  public void incrCompletedWAL() {
+    singleSourceSource.incrCompletedWAL();
+    globalSourceSource.incrCompletedWAL();
+  }
+
+  public void incrCompletedRecoveryQueue() {
+    singleSourceSource.incrCompletedRecoveryQueue();
+    globalSourceSource.incrCompletedRecoveryQueue();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();
