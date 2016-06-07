@@ -42,6 +42,21 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableCounterLong shippedKBsCounter;
   private final MutableCounterLong logReadInBytesCounter;
 
+  private final String unknownFileLengthKey;
+  private final String uncleanlyClosedKey;
+  private final String uncleanlySkippedBytesKey;
+  private final String restartedKey;
+  private final String repeatedBytesKey;
+  private final String completedLogsKey;
+  private final String completedRecoveryKey;
+  private final MutableCounterLong unknownFileLengthForClosedWAL;
+  private final MutableCounterLong uncleanlyClosedWAL;
+  private final MutableCounterLong uncleanlyClosedSkippedBytes;
+  private final MutableCounterLong restartWALReading;
+  private final MutableCounterLong repeatedFileBytes;
+  private final MutableCounterLong completedWAL;
+  private final MutableCounterLong completedRecoveryQueue;
+
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
     this.id = id;
@@ -69,6 +84,27 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     logEditsFilteredKey = "source." + id + ".logEditsFiltered";
     logEditsFilteredCounter = rms.getMetricsRegistry().getLongCounter(logEditsFilteredKey, 0L);
+
+    unknownFileLengthKey = "source." + id + "closedLogsWithUnknownFileLength";
+    unknownFileLengthForClosedWAL = rms.getMetricsRegistry().getLongCounter(unknownFileLengthKey, 0L);
+
+    uncleanlyClosedKey = "source." + id + "uncleanlyClosedLogs";
+    uncleanlyClosedWAL = rms.getMetricsRegistry().getLongCounter(uncleanlyClosedKey, 0L);
+
+    uncleanlySkippedBytesKey = "source." + id + "ignoredUncleanlyClosedLogContentsInBytes";
+    uncleanlyClosedSkippedBytes = rms.getMetricsRegistry().getLongCounter(uncleanlySkippedBytesKey, 0L);
+
+    restartedKey = "source." + id + "restartedLogReading";
+    restartWALReading = rms.getMetricsRegistry().getLongCounter(restartedKey, 0L);
+
+    repeatedBytesKey = "source." + id + "repeatedLogFileBytes";
+    repeatedFileBytes = rms.getMetricsRegistry().getLongCounter(repeatedBytesKey, 0L);
+
+    completedLogsKey = "source." + id + "completedLogs";
+    completedWAL = rms.getMetricsRegistry().getLongCounter(completedLogsKey, 0L);
+
+    completedRecoveryKey = "source." + id + "completedRecoverQueues";
+    completedRecoveryQueue = rms.getMetricsRegistry().getLongCounter(completedRecoveryKey, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -124,10 +160,53 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(logReadInEditsKey);
 
     rms.removeMetric(logEditsFilteredKey);
+
+    rms.removeMetric(unknownFileLengthKey);
+    rms.removeMetric(uncleanlyClosedKey);
+    rms.removeMetric(uncleanlySkippedBytesKey);
+    rms.removeMetric(restartedKey);
+    rms.removeMetric(repeatedBytesKey);
+    rms.removeMetric(completedLogsKey);
+    rms.removeMetric(completedRecoveryKey);
   }
 
   @Override
   public long getLastShippedAge() {
     return ageOfLastShippedOpGauge.value();
+  }
+
+  @Override
+  public void incrUnknownFileLengthForClosedWAL() {
+    unknownFileLengthForClosedWAL.incr(1L);
+  }
+
+  @Override
+  public void incrUncleanlyClosedWALs() {
+    uncleanlyClosedWAL.incr(1L);
+  }
+
+  @Override
+  public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
+    uncleanlyClosedSkippedBytes.incr(bytes);
+  }
+
+  @Override
+  public void incrRestartedWALReading() {
+    restartWALReading.incr(1L);
+  }
+
+  @Override
+  public void incrRepeatedFileBytes(final long bytes) {
+    repeatedFileBytes.incr(bytes);
+  }
+
+  @Override
+  public void incrCompletedWAL() {
+    completedWAL.incr(1L);
+  }
+
+  @Override
+  public void incrCompletedRecoveryQueue() {
+    completedRecoveryQueue.incr(1L);
   }
 }

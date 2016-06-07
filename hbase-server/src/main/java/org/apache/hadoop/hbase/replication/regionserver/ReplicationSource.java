@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -774,23 +773,49 @@ public class ReplicationSource extends Thread
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="Yeah, this is how it works")
   protected boolean processEndOfFile() {
+    // We presume this means the file we're reading is closed.
     if (this.queue.size() != 0) {
+      // -1 means the wal wasn't closed cleanly.
+      final long trailerSize = this.repLogReader.currentTrailerSize();
+      final long currentPosition = this.repLogReader.getPosition();
+      FileStatus stat = null;
+      try {
+        stat = fs.getFileStatus(this.currentPath);
+      } catch (IOException exception) {
+        LOG.warn("Couldn't get file length information about log " + this.currentPath + ", it " + (trailerSize < 0 ? "was not" : "was") + " closed cleanly"
+            + ", stats: " + getStats());
+        metrics.incrUnknownFileLengthForClosedWAL();
+      }
+      if (stat != null) {
+        if (trailerSize < 0) {
+          if (currentPosition < stat.getLen()) {
+            final long skippedBytes = stat.getLen() - currentPosition;
+            LOG.info("Reached the end of WAL file '" + currentPath + "'. It was not closed cleanly, so we did not parse " + skippedBytes + " bytes of data.");
+            metrics.incrUncleanlyClosedWALs();
+            metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
+          }
+        } else if (currentPosition + trailerSize < stat.getLen()){
+          LOG.warn("Processing end of WAL file '" + currentPath + "'. At position " + currentPosition + ", which is too far away from reported file length " + stat.getLen() +
+            ". Restarting WAL reading (see HBASE-15983 for details). stats: " + getStats());
+          repLogReader.setPosition(0);
+          metrics.incrRestartedWALReading();
+          metrics.incrRepeatedFileBytes(currentPosition);
+          return false;
+        }
+      }
       if (LOG.isTraceEnabled()) {
-        String filesize = "N/A";
-        try {
-          FileStatus stat = this.fs.getFileStatus(this.currentPath);
-          filesize = stat.getLen()+"";
-        } catch (IOException ex) {}
-        LOG.trace("Reached the end of a log, stats: " + getStats() +
-            ", and the length of the file is " + filesize);
+        LOG.trace("Reached the end of a log, stats: " + getStats()
+          + ", and the length of the file is " + (stat == null ? "N/A" : stat.getLen()));
       }
       this.currentPath = null;
       this.repLogReader.finishCurrentFile();
       this.reader = null;
+      metrics.incrCompletedWAL();
       return true;
     } else if (this.replicationQueueInfo.isQueueRecovered()) {
       this.manager.closeRecoveredQueue(this);
       LOG.info("Finished recovering the queue with the following stats " + getStats());
+      metrics.incrCompletedRecoveryQueue();
       this.running = false;
       return true;
     }

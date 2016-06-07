@@ -32,6 +32,13 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableCounterLong shippedOpsCounter;
   private final MutableCounterLong shippedKBsCounter;
   private final MutableCounterLong logReadInBytesCounter;
+  private final MutableCounterLong unknownFileLengthForClosedWAL;
+  private final MutableCounterLong uncleanlyClosedWAL;
+  private final MutableCounterLong uncleanlyClosedSkippedBytes;
+  private final MutableCounterLong restartWALReading;
+  private final MutableCounterLong repeatedFileBytes;
+  private final MutableCounterLong completedWAL;
+  private final MutableCounterLong completedRecoveryQueue;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -51,6 +58,14 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     logReadInEditsCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_LOG_READ_IN_EDITS, 0L);
 
     logEditsFilteredCounter = rms.getMetricsRegistry().getLongCounter(SOURCE_LOG_EDITS_FILTERED, 0L);
+
+    unknownFileLengthForClosedWAL = rms.getMetricsRegistry().getLongCounter(SOURCE_CLOSED_LOGS_WITH_UNKNOWN_LENGTH, 0L);
+    uncleanlyClosedWAL = rms.getMetricsRegistry().getLongCounter(SOURCE_UNCLEANLY_CLOSED_LOGS, 0L);
+    uncleanlyClosedSkippedBytes = rms.getMetricsRegistry().getLongCounter(SOURCE_UNCLEANLY_CLOSED_IGNORED_IN_BYTES, 0L);
+    restartWALReading = rms.getMetricsRegistry().getLongCounter(SOURCE_RESTARTED_LOG_READING, 0L);
+    repeatedFileBytes = rms.getMetricsRegistry().getLongCounter(SOURCE_REPEATED_LOG_FILE_BYTES, 0L);
+    completedWAL = rms.getMetricsRegistry().getLongCounter(SOURCE_COMPLETED_LOGS, 0L);
+    completedRecoveryQueue = rms.getMetricsRegistry().getLongCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -99,5 +114,34 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public long getLastShippedAge() {
     return ageOfLastShippedOpGauge.value();
+  }
+
+  @Override
+  public void incrUnknownFileLengthForClosedWAL() {
+    unknownFileLengthForClosedWAL.incr(1L);
+  }
+  @Override
+  public void incrUncleanlyClosedWALs() {
+    uncleanlyClosedWAL.incr(1L);
+  }
+  @Override
+  public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
+    uncleanlyClosedSkippedBytes.incr(bytes);
+  }
+  @Override
+  public void incrRestartedWALReading() {
+    restartWALReading.incr(1L);
+  }
+  @Override
+  public void incrRepeatedFileBytes(final long bytes) {
+    repeatedFileBytes.incr(bytes);
+  }
+  @Override
+  public void incrCompletedWAL() {
+    completedWAL.incr(1L);
+  }
+  @Override
+  public void incrCompletedRecoveryQueue() {
+    completedRecoveryQueue.incr(1L);
   }
 }
