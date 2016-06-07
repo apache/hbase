@@ -61,6 +61,7 @@ public class SaslClientHandler extends ChannelDuplexHandler {
   private final SaslExceptionHandler exceptionHandler;
   private final SaslSuccessfulConnectHandler successfulConnectHandler;
   private byte[] saslToken;
+  private byte[] connectionHeader;
   private boolean firstRead = true;
 
   private int retryCount = 0;
@@ -82,10 +83,11 @@ public class SaslClientHandler extends ChannelDuplexHandler {
    */
   public SaslClientHandler(UserGroupInformation ticket, AuthMethod method,
       Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
-      String rpcProtection, SaslExceptionHandler exceptionHandler,
+      String rpcProtection, byte[] connectionHeader, SaslExceptionHandler exceptionHandler,
       SaslSuccessfulConnectHandler successfulConnectHandler) throws IOException {
     this.ticket = ticket;
     this.fallbackAllowed = fallbackAllowed;
+    this.connectionHeader = connectionHeader;
 
     this.exceptionHandler = exceptionHandler;
     this.successfulConnectHandler = successfulConnectHandler;
@@ -236,8 +238,13 @@ public class SaslClientHandler extends ChannelDuplexHandler {
 
         if (!useWrap) {
           ctx.pipeline().remove(this);
+          successfulConnectHandler.onSuccess(ctx.channel());
+        } else {
+          byte[] wrappedCH = saslClient.wrap(connectionHeader, 0, connectionHeader.length);
+          // write connection header
+          writeSaslToken(ctx, wrappedCH);
+          successfulConnectHandler.onSaslProtectionSucess(ctx.channel());
         }
-        successfulConnectHandler.onSuccess(ctx.channel());
       }
     }
     // Normal wrapped reading
@@ -322,9 +329,11 @@ public class SaslClientHandler extends ChannelDuplexHandler {
       super.write(ctx, msg, promise);
     } else {
       ByteBuf in = (ByteBuf) msg;
+      byte[] unwrapped = new byte[in.readableBytes()];
+      in.readBytes(unwrapped);
 
       try {
-        saslToken = saslClient.wrap(in.array(), in.readerIndex(), in.readableBytes());
+        saslToken = saslClient.wrap(unwrapped, 0, unwrapped.length);
       } catch (SaslException se) {
         try {
           saslClient.dispose();
@@ -375,5 +384,12 @@ public class SaslClientHandler extends ChannelDuplexHandler {
      * @param channel which is successfully authenticated
      */
     public void onSuccess(Channel channel);
+
+    /**
+     * Runs on success if data protection used in Sasl
+     *
+     * @param channel which is successfully authenticated
+     */
+    public void onSaslProtectionSucess(Channel channel);
   }
 }
