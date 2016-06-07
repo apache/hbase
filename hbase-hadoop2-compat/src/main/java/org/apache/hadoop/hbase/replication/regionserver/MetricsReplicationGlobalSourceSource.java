@@ -36,6 +36,13 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter logReadInBytesCounter;
   private final MutableFastCounter shippedHFilesCounter;
   private final MutableGaugeLong sizeOfHFileRefsQueueGauge;
+  private final MutableFastCounter unknownFileLengthForClosedWAL;
+  private final MutableFastCounter uncleanlyClosedWAL;
+  private final MutableFastCounter uncleanlyClosedSkippedBytes;
+  private final MutableFastCounter restartWALReading;
+  private final MutableFastCounter repeatedFileBytes;
+  private final MutableFastCounter completedWAL;
+  private final MutableFastCounter completedRecoveryQueue;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -62,6 +69,14 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
 
     sizeOfHFileRefsQueueGauge =
         rms.getMetricsRegistry().getGauge(SOURCE_SIZE_OF_HFILE_REFS_QUEUE, 0L);
+
+    unknownFileLengthForClosedWAL = rms.getMetricsRegistry().getCounter(SOURCE_CLOSED_LOGS_WITH_UNKNOWN_LENGTH, 0L);
+    uncleanlyClosedWAL = rms.getMetricsRegistry().getCounter(SOURCE_UNCLEANLY_CLOSED_LOGS, 0L);
+    uncleanlyClosedSkippedBytes = rms.getMetricsRegistry().getCounter(SOURCE_UNCLEANLY_CLOSED_IGNORED_IN_BYTES, 0L);
+    restartWALReading = rms.getMetricsRegistry().getCounter(SOURCE_RESTARTED_LOG_READING, 0L);
+    repeatedFileBytes = rms.getMetricsRegistry().getCounter(SOURCE_REPEATED_LOG_FILE_BYTES, 0L);
+    completedWAL = rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_LOGS, 0L);
+    completedRecoveryQueue = rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -144,6 +159,34 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     return (int)sizeOfLogQueueGauge.value();
   }
 
+  @Override
+  public void incrUnknownFileLengthForClosedWAL() {
+    unknownFileLengthForClosedWAL.incr(1L);
+  }
+  @Override
+  public void incrUncleanlyClosedWALs() {
+    uncleanlyClosedWAL.incr(1L);
+  }
+  @Override
+  public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
+    uncleanlyClosedSkippedBytes.incr(bytes);
+  }
+  @Override
+  public void incrRestartedWALReading() {
+    restartWALReading.incr(1L);
+  }
+  @Override
+  public void incrRepeatedFileBytes(final long bytes) {
+    repeatedFileBytes.incr(bytes);
+  }
+  @Override
+  public void incrCompletedWAL() {
+    completedWAL.incr(1L);
+  }
+  @Override
+  public void incrCompletedRecoveryQueue() {
+    completedRecoveryQueue.incr(1L);
+  }
 
   @Override
   public void init() {
