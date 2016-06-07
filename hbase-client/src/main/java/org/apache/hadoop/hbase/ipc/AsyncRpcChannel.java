@@ -241,6 +241,30 @@ public class AsyncRpcChannel {
   }
 
   /**
+   * Start HBase connection with sasl encryption
+   * @param ch channel to start connection on
+   */
+  private void startConnectionWithEncryption(Channel ch) {
+    // for rpc encryption, the order of ChannelInboundHandler should be:
+    // LengthFieldBasedFrameDecoder->SaslClientHandler->LengthFieldBasedFrameDecoder
+    // Don't skip the first 4 bytes for length in beforeUnwrapDecoder,
+    // SaslClientHandler will handler this
+    ch.pipeline().addFirst("beforeUnwrapDecoder",
+        new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 0));
+    ch.pipeline().addLast("afterUnwrapDecoder",
+        new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+    ch.pipeline().addLast(new AsyncServerResponseHandler(this));
+    List<AsyncCall> callsToWrite;
+    synchronized (pendingCalls) {
+      connected = true;
+      callsToWrite = new ArrayList<AsyncCall>(pendingCalls.values());
+    }
+    for (AsyncCall call : callsToWrite) {
+      writeRequest(call);
+    }
+  }
+
+  /**
    * Get SASL handler
    * @param bootstrap to reconnect to
    * @return new SASL handler
@@ -252,6 +276,7 @@ public class AsyncRpcChannel {
         client.fallbackAllowed,
         client.conf.get("hbase.rpc.protection",
           SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
+        getChannelHeaderBytes(authMethod),
         new SaslClientHandler.SaslExceptionHandler() {
           @Override
           public void handle(int retryCount, Random random, Throwable cause) {
@@ -274,6 +299,11 @@ public class AsyncRpcChannel {
           @Override
           public void onSuccess(Channel channel) {
             startHBaseConnection(channel);
+          }
+
+          @Override
+          public void onSaslProtectionSucess(Channel channel) {
+            startConnectionWithEncryption(channel);
           }
         });
   }
@@ -358,6 +388,26 @@ public class AsyncRpcChannel {
    * @throws java.io.IOException on failure to write
    */
   private ChannelFuture writeChannelHeader(Channel channel) throws IOException {
+    RPCProtos.ConnectionHeader header = getChannelHeader(authMethod);
+    int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(header);
+
+    ByteBuf b = channel.alloc().directBuffer(totalSize);
+
+    b.writeInt(header.getSerializedSize());
+    b.writeBytes(header.toByteArray());
+
+    return channel.writeAndFlush(b);
+  }
+
+  private byte[] getChannelHeaderBytes(AuthMethod authMethod) {
+    RPCProtos.ConnectionHeader header = getChannelHeader(authMethod);
+    ByteBuffer b = ByteBuffer.allocate(header.getSerializedSize() + 4);
+    b.putInt(header.getSerializedSize());
+    b.put(header.toByteArray());
+    return b.array();
+  }
+
+  private RPCProtos.ConnectionHeader getChannelHeader(AuthMethod authMethod) {
     RPCProtos.ConnectionHeader.Builder headerBuilder = RPCProtos.ConnectionHeader.newBuilder()
         .setServiceName(serviceName);
 
@@ -374,16 +424,7 @@ public class AsyncRpcChannel {
     }
 
     headerBuilder.setVersionInfo(ProtobufUtil.getVersionInfo());
-    RPCProtos.ConnectionHeader header = headerBuilder.build();
-
-    int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(header);
-
-    ByteBuf b = channel.alloc().directBuffer(totalSize);
-
-    b.writeInt(header.getSerializedSize());
-    b.writeBytes(header.toByteArray());
-
-    return channel.writeAndFlush(b);
+    return headerBuilder.build();
   }
 
   /**
