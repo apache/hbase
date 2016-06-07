@@ -10,7 +10,7 @@ public class MetricsHeapMemoryManager {
 
   public MetricsHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
     this(wrapper, CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-                                                                             .getHeapMemoryManager(wrapper));
+        .getHeapMemoryManager(wrapper));
   }
   
   public MetricsHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper,
@@ -64,5 +64,9 @@ public class MetricsHeapMemoryManager {
 
   public void updateDeltaBlockCacheSize(final int deltaBlockCacheSize) {
     source.updateDeltaBlockCacheSize(deltaBlockCacheSize);
+  }
+  
+  public void updateHeapMemoryNoChangeCount() {
+    source.updateHeapMemoryNoChangeCount();
   }
 }

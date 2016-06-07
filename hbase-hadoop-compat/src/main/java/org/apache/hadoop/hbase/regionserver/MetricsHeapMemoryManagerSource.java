@@ -105,6 +105,11 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
    */
   void updateDeltaBlockCacheSize(int deltaBlockCacheSize);
   
+  /**
+   * Update the counter for no change situation to the tuning result.
+   */
+  void updateHeapMemoryNoChangeCount();
+  
   String HEAP_SIZE_NAME = "Heap Size in Use";
   String HEAP_SIZE_DESC = "Heap used currently";
   
@@ -141,11 +146,20 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String DRC_MEMSTORE_TUNING_NAME = "Decrease MemStore size";
   String DRC_MEMSTORE_TUNING_DESC = "The tuning result is to decrease memstore size";
   
+  String INC_MEMSTORE_COUNTER_NAME = "MemStore Increase Counter";
+  String INC_MEMSTORE_COUNTER_DESC = "The number of times that the memstore needs to expand";
+  
   String INC_BLOCKCACHE_TUNING_NAME = "Increase BlockCache size";
   String INC_BLOCKCACHE_TUNING_DESC = "The tuning result is to increase blockcache size";
   
   String DRC_BLOCKCACHE_TUNING_NAME = "Decrease BlockCache size";
   String DRC_BLOCKCACHE_TUNING_DESC = "The tuning result is to decrease memstore size";
+  
+  String INC_BLOCKCACHE_COUNTER_NAME = "BlockCache Increase Counter";
+  String INC_BLOCKCACHE_COUNTER_DESC = "The number of times that the blockcache needs to expand";
+  
+  String INC_NOCHANGE_COUNTER_NAME = "NoChange Increase Counter";
+  String INC_NOCHANGE_COUNTER_DESC = "The number of times that the heap memory needs no change";
   
   String CACHE_EVICTED_COUNTER_NAME = "Total Cache Block Evicted";
   String CACHE_EVICTED_COUNTER_DESC = "Total occurrence of cache block evicted";

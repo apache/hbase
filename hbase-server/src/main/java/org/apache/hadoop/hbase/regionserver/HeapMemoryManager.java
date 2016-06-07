@@ -368,6 +368,7 @@ public class HeapMemoryManager {
         }
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("No changes made by HeapMemoryTuner.");
+        metricsHeapMemoryManager.updateHeapMemoryNoChangeCount();
       }
     }
 

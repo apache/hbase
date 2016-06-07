@@ -34,6 +34,9 @@ public class MetricsHeapMemoryManagerSourceImpl
   private final MutableFastCounter unblockedFlushCounter;
   private final MutableFastCounter cacheEvictedCounter;
   private final MutableFastCounter cacheMissCounter;
+  private final MutableFastCounter memStoreIncCounter;
+  private final MutableFastCounter blockCacheInrCounter;
+  private final MutableFastCounter noChangeCounter;
   
   private final MetricsHeapMemoryManagerWrapper wrapper;
 
@@ -87,6 +90,12 @@ public class MetricsHeapMemoryManagerSourceImpl
         .newCounter(BLOCKED_FLUSH_COUNTER_NAME, BLOCKED_FLUSH_COUNTER_DESC, 0L);
     unblockedFlushCounter = getMetricsRegistry()
         .newCounter(UNBLOCKED_FLUSH_COUNTER_NAME, UNBLOCKED_FLUSH_COUNTER_DESC, 0L);
+    memStoreIncCounter = getMetricsRegistry()
+        .newCounter(INC_MEMSTORE_COUNTER_NAME, INC_MEMSTORE_COUNTER_DESC, 0L);
+    blockCacheInrCounter = getMetricsRegistry()
+        .newCounter(INC_BLOCKCACHE_COUNTER_NAME, INC_BLOCKCACHE_COUNTER_DESC, 0L);
+    noChangeCounter = getMetricsRegistry()
+        .newCounter(INC_NOCHANGE_COUNTER_NAME, INC_NOCHANGE_COUNTER_DESC, 0L);
   }
   
   @Override
@@ -147,6 +156,7 @@ public class MetricsHeapMemoryManagerSourceImpl
   public void updateDeltaMemStoreSize(int deltaMemStoreSize) {
     if (deltaMemStoreSize > 0) {
       incMemStoreSizeHisto.add(deltaMemStoreSize);
+      memStoreIncCounter.incr();
     } else {
       drcMemStoreSizeHisto.add(-deltaMemStoreSize);
     }
@@ -156,9 +166,15 @@ public class MetricsHeapMemoryManagerSourceImpl
   public void updateDeltaBlockCacheSize(int deltaBlockCacheSize) {
     if (deltaBlockCacheSize > 0) {
       incBlockCacheSizeHisto.add(deltaBlockCacheSize);
+      blockCacheInrCounter.incr();
     } else {
       drcBlockCacheSizeHisto.add(-deltaBlockCacheSize);
     }
+  }
+  
+  @Override
+  public void updateHeapMemoryNoChangeCount() {
+    noChangeCounter.incr();
   }
   
   @Override
