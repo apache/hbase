@@ -1577,7 +1577,7 @@ The new layout will be:
 
 === Replication Metrics
 
-The following metrics are exposed at the global region server level and (since HBase 0.95) at the peer level:
+The following metrics are exposed at the global region server level and at the peer level:
 
 `source.sizeOfLogQueue`::
   number of WALs to process (excludes the one which is being processed) at the Replication source
@@ -1590,6 +1590,28 @@ The following metrics are exposed at the global region server level and (since H
 
 `source.ageOfLastShippedOp`::
   age of last batch that was shipped by the replication source
+
+`source.completedLogs`::
+  The number of write-ahead-log files that have completed their acknowledged sending to the peer associated with this source. Increments to this metric are a part of normal operation of HBase replication.
+
+`source.completedRecoverQueues`::
+  The number of recovery queues this source has completed sending to the associated peer. Increments to this metric are a part of normal recovery of HBase replication in the face of failed Region Servers.
+
+`source.uncleanlyClosedLogs`::
+  The number of write-ahead-log files the replication system considered completed after reaching the end of readable entries in the face of an uncleanly closed file.
+
+`source.ignoredUncleanlyClosedLogContentsInBytes`::
+  When a write-ahead-log file is not closed cleanly, there will likely be some entry that has been partially serialized. This metric contains the number of bytes of such entries the HBase replication system believes were remaining at the end of files skipped in the face of an uncleanly closed file. Those bytes should either be in different file or represent a client write that was not acknowledged.
+
+`source.restartedLogReading`::
+  The number of times the HBase replication system detected that it failed to correctly parse a cleanly closed write-ahead-log file. In this circumstance, the system replays the entire log from the beginning, ensuring that no edits fail to be acknowledged by the associated peer. Increments to this metric indicate that the HBase replication system is having difficulty correctly handling failures in the underlying distributed storage system. No dataloss should occur, but you should check Region Server log files for details of the failures.
+
+`source.repeatedLogFileBytes`::
+  When the HBase replication system determines that it needs to replay a given write-ahead-log file, this metric is incremented by the number of bytes the replication system believes had already been acknowledged by the associated peer prior to starting over.
+
+`source.closedLogsWithUnknownFileLength`::
+  Incremented when the HBase replication system believes it is at the end of a write-ahead-log file but it can not determine the length of that file in the underlying distributed storage system. Could indicate dataloss since the replication system is unable to determine if the end of readable entries lines up with the expected end of the file. You should check Region Server log files for details of the failures.
+
 
 === Replication Configuration Options
 
