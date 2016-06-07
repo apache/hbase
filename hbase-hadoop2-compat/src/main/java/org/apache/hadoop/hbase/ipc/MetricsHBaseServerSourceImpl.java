@@ -57,12 +57,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private MetricHistogram requestSize;
   private MetricHistogram responseSize;
 
-  /**
-   * The count of readers currently working parsing a request as opposed to being blocked on the
-   * selector waiting on requests to come in.
-   */
-  private final MutableFastCounter runningReaders;
-
   public MetricsHBaseServerSourceImpl(String metricsName,
                                       String metricsDescription,
                                       String metricsContext,
@@ -92,9 +86,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
     this.exceptionsMultiTooLarge = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
 
-    this.runningReaders = this.getMetricsRegistry()
-        .newCounter(RUNNING_READERS, RUNNING_READERS_DESCRIPTION, 0L);
-
     this.authenticationSuccesses = this.getMetricsRegistry().newCounter(
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0L);
     this.authenticationFailures = this.getMetricsRegistry().newCounter(AUTHENTICATION_FAILURES_NAME,
@@ -115,16 +106,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         REQUEST_SIZE_DESC);
     this.responseSize = this.getMetricsRegistry().newSizeHistogram(RESPONSE_SIZE_NAME,
               RESPONSE_SIZE_DESC);
-  }
-
-  @Override
-  public void incrRunningReaders() {
-    this.runningReaders.incr(+1);
-  }
-
-  @Override
-  public void decrRunningReaders() {
-    this.runningReaders.incr(-1);
   }
 
   @Override
