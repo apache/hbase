@@ -2119,7 +2119,7 @@ This is not necessary on new tables.
 [[ops.date.tiered.config]]
 ====== Configuring Date Tiered Compaction
 
-Each of the settings for date tiered compaction should be configured at the table or column family, after disabling the table.
+Each of the settings for date tiered compaction should be configured at the table or column family level.
 If you use HBase shell, the general command pattern is as follows:
 
 [source,sql]
@@ -2199,7 +2199,6 @@ You can enable stripe compaction for a table or a column family, by setting its 
 You also need to set the `hbase.hstore.blockingStoreFiles` to a high number, such as 100 (rather than the default value of 10).
 
 .Procedure: Enable Stripe Compaction
-. If the table already exists, disable the table.
 . Run one of following commands in the HBase shell.
   Replace the table name `orders_table` with the name of your table.
 +
@@ -2215,7 +2214,6 @@ create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class'
 . Enable the table.
 
 .Procedure: Disable Stripe Compaction
-. Disable the table.
 . Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`.
   Either option has the same effect.
 +
@@ -2232,7 +2230,7 @@ This is not necessary on new tables.
 [[ops.stripe.config]]
 ====== Configuring Stripe Compaction
 
-Each of the settings for stripe compaction should be configured at the table or column family, after disabling the table.
+Each of the settings for stripe compaction should be configured at the table or column family level.
 If you use HBase shell, the general command pattern is as follows:
 
 [source,sql]
