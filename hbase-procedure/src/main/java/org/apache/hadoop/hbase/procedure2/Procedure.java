@@ -79,6 +79,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   private int childrenLatch = 0;
   private long lastUpdate;
 
+  // TODO: it will be nice having pointers to allow the scheduler doing suspend/resume tricks
+  private boolean suspended = false;
+
   private RemoteProcedureException exception = null;
   private byte[] result = null;
 
@@ -94,7 +97,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * @throws InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract Procedure[] execute(TEnvironment env)
-    throws ProcedureYieldException, InterruptedException;
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException;
 
   /**
    * The code to undo what done by the execute() code.
@@ -276,6 +279,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   protected void toStringState(StringBuilder builder) {
     builder.append(getState());
+    if (isSuspended()) {
+      builder.append("|SUSPENDED");
+    }
   }
 
   /**
@@ -319,7 +325,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   public long getParentProcId() {
-    return parentProcId;
+    return parentProcId.longValue();
   }
 
   public NonceKey getNonceKey() {
@@ -371,6 +377,23 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return false;
   }
 
+  /**
+   * @return true if the procedure is in a suspended state,
+   *         waiting for the resources required to execute the procedure will become available.
+   */
+  public synchronized boolean isSuspended() {
+    return suspended;
+  }
+
+  public synchronized void suspend() {
+    suspended = true;
+  }
+
+  public synchronized void resume() {
+    assert isSuspended() : this + " expected suspended state, got " + state;
+    suspended = false;
+  }
+
   public synchronized RemoteProcedureException getException() {
     return exception;
   }
@@ -398,7 +421,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * @return the timeout in msec
    */
   public int getTimeout() {
-    return timeout;
+    return timeout.intValue();
   }
 
   /**
@@ -494,7 +517,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   @InterfaceAudience.Private
   protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     try {
       updateTimestamp();
       return execute(env);
