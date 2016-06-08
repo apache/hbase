@@ -1119,7 +1119,7 @@
     <jamon.plugin.version>2.4.1</jamon.plugin.version>
     <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
-    <maven.site.version>3.3</maven.site.version>
+    <maven.site.version>2.4</maven.site.version>
     <checkstyle.version>6.18</checkstyle.version>
     <javadoc.version>2.9</javadoc.version>
     <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
