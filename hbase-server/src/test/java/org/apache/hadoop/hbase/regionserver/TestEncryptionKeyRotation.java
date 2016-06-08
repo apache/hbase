@@ -80,8 +80,6 @@ public class TestEncryptionKeyRotation {
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    // Enable online schema updates
-    conf.setBoolean("hbase.online.schema.update.enable", true);
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(1);
@@ -229,7 +227,7 @@ public class TestEncryptionKeyRotation {
       }
     }
   }
-  
+
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
     for (Region region:

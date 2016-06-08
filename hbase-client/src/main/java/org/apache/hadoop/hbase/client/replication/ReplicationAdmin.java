@@ -516,9 +516,9 @@ public class ReplicationAdmin implements Closeable {
     if (repPeers == null || repPeers.size() <= 0) {
       throw new IllegalArgumentException("Found no peer cluster for replication.");
     }
-    
+
     final TableName onlyTableNameQualifier = TableName.valueOf(tableName.getQualifierAsString());
-    
+
     for (ReplicationPeer repPeer : repPeers) {
       Map<TableName, List<String>> tableCFMap = repPeer.getTableCFs();
       // TODO Currently peer TableCFs will not include namespace so we need to check only for table
@@ -595,20 +595,11 @@ public class ReplicationAdmin implements Closeable {
       admin = this.connection.getAdmin();
       HTableDescriptor htd = admin.getTableDescriptor(tableName);
       if (isTableRepEnabled(htd) ^ isRepEnabled) {
-        boolean isOnlineSchemaUpdateEnabled =
-            this.connection.getConfiguration()
-                .getBoolean("hbase.online.schema.update.enable", true);
-        if (!isOnlineSchemaUpdateEnabled) {
-          admin.disableTable(tableName);
-        }
         for (HColumnDescriptor hcd : htd.getFamilies()) {
           hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
               : HConstants.REPLICATION_SCOPE_LOCAL);
         }
         admin.modifyTable(tableName, htd);
-        if (!isOnlineSchemaUpdateEnabled) {
-          admin.enableTable(tableName);
-        }
       }
     } finally {
       if (admin != null) {

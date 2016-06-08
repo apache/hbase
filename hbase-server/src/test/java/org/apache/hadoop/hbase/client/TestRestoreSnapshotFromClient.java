@@ -83,7 +83,6 @@ public class TestRestoreSnapshotFromClient {
 
   protected static void setupConf(Configuration conf) {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);

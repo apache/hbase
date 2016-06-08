@@ -1585,16 +1585,6 @@ Set to true to cause the hosting server (master or regionserver)
 `true`
 
 
-[[hbase.online.schema.update.enable]]
-*`hbase.online.schema.update.enable`*::
-+
-.Description
-Set true to enable online schema changes.
-+
-.Default
-`true`
-
-
 [[hbase.table.lock.enable]]
 *`hbase.table.lock.enable`*::
 +

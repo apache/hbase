@@ -88,7 +88,6 @@ public class TestTableLockManager {
   private static final CountDownLatch addColumn = new CountDownLatch(1);
 
   public void prepareMiniCluster() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }

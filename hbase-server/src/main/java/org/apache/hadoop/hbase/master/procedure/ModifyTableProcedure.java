@@ -300,11 +300,6 @@ public class ModifyTableProcedure
 
     if (env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
-      // We only execute this procedure with table online if online schema change config is set.
-      if (!MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
-        throw new TableNotDisabledException(getTableName());
-      }
-
       if (modifiedHTableDescriptor.getRegionReplication() != unmodifiedHTableDescriptor
           .getRegionReplication()) {
         throw new IOException("REGION_REPLICATION change is not supported for enabled tables");

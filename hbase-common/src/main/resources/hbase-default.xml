@@ -562,7 +562,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
-    <description>Rebalance if any regionserver has average + (average * slop) regions. 
+    <description>Rebalance if any regionserver has average + (average * slop) regions.
       The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load balancer),
       while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).</description>
   </property>
@@ -865,7 +865,7 @@ possible configurations would overwhelm and obscure the important.
     Must be a multiple of 1024 else you will run into
     'java.io.IOException: Invalid HFile block magic' when you go to read from cache.
     If you specify no values here, then you pick up the default bucketsizes set
-    in code (See BucketAllocator#DEFAULT_BUCKET_SIZES). 
+    in code (See BucketAllocator#DEFAULT_BUCKET_SIZES).
   </description>
   </property>
   <property>
@@ -1130,11 +1130,6 @@ possible configurations would overwhelm and obscure the important.
       continue execution but the system wide state of the coprocessor in question
       will become inconsistent as it will be properly executing in only a subset
       of servers, so this is most useful for debugging only.</description>
-  </property>
-  <property>
-    <name>hbase.online.schema.update.enable</name>
-    <value>true</value>
-    <description>Set true to enable online schema changes.</description>
   </property>
   <property>
     <name>hbase.table.lock.enable</name>

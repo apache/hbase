@@ -22,19 +22,17 @@ module Shell
     class Alter < Command
       def help
         return <<-EOF
-Alter a table. If the "hbase.online.schema.update.enable" property is set to
-false, then the table must be disabled (see help 'disable'). If the 
-"hbase.online.schema.update.enable" property is set to true, tables can be 
-altered without disabling them first. Altering enabled tables has caused problems 
-in the past, so use caution and test it before using in production. 
+Alter a table. Tables can be altered without disabling them first.
+Altering enabled tables has caused problems
+in the past, so use caution and test it before using in production.
 
-You can use the alter command to add, 
+You can use the alter command to add,
 modify or delete column families or change table configuration options.
 Column families work in a similar way as the 'create' command. The column family
 specification can either be a name string, or a dictionary with the NAME attribute.
 Dictionaries are described in the output of the 'help' command, with no arguments.
 
-For example, to change or add the 'f1' column family in table 't1' from 
+For example, to change or add the 'f1' column family in table 't1' from
 current value to keep a maximum of 5 cell VERSIONS, do:
 
   hbase> alter 't1', NAME => 'f1', VERSIONS => 5
@@ -48,7 +46,7 @@ To delete the 'f1' column family in table 'ns1:t1', use one of:
   hbase> alter 'ns1:t1', NAME => 'f1', METHOD => 'delete'
   hbase> alter 'ns1:t1', 'delete' => 'f1'
 
-You can also change table-scope attributes like MAX_FILESIZE, READONLY, 
+You can also change table-scope attributes like MAX_FILESIZE, READONLY,
 MEMSTORE_FLUSHSIZE, DURABILITY, etc. These can be put at the end;
 for example, to change the max size of a region to 128MB, do:
 
@@ -85,7 +83,7 @@ You can also set REGION_REPLICATION:
 
 There could be more than one alteration in one command:
 
-  hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 }, 
+  hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 },
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
    OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
 EOF
