@@ -3134,6 +3134,35 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         if (coprocessorHost.preBatchMutate(miniBatchOp)) {
           return 0L;
+        } else {
+          for (int i = firstIndex; i < lastIndexExclusive; i++) {
+            if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
+              // lastIndexExclusive was incremented above.
+              continue;
+            }
+            // we pass (i - firstIndex) below since the call expects a relative index
+            Mutation[] cpMutations = miniBatchOp.getOperationsFromCoprocessors(i - firstIndex);
+            if (cpMutations == null) {
+              continue;
+            }
+            // Else Coprocessor added more Mutations corresponding to the Mutation at this index.
+            for (int j = 0; j < cpMutations.length; j++) {
+              Mutation cpMutation = cpMutations[j];
+              Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+              checkAndPrepareMutation(cpMutation, replay, cpFamilyMap, now);
+
+              // Acquire row locks. If not, the whole batch will fail.
+              acquiredRowLocks.add(getRowLockInternal(cpMutation.getRow(), true));
+
+              if (cpMutation.getDurability() == Durability.SKIP_WAL) {
+                recordMutationWithoutWal(cpFamilyMap);
+              }
+
+              // Returned mutations from coprocessor correspond to the Mutation at index i. We can
+              // directly add the cells from those mutations to the familyMaps of this mutation.
+              mergeFamilyMaps(familyMaps[i], cpFamilyMap); // will get added to the memstore later
+            }
+          }
         }
       }
 
@@ -3310,13 +3339,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // call the coprocessor hook to do any finalization steps
         // after the put is done
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
-            new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
-                batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex,
-                lastIndexExclusive);
+          new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
+          batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         coprocessorHost.postBatchMutateIndispensably(miniBatchOp, success);
       }
 
       batchOp.nextIndexToProcess = lastIndexExclusive;
+    }
+  }
+
+  private void mergeFamilyMaps(Map<byte[], List<Cell>> familyMap,
+      Map<byte[], List<Cell>> toBeMerged) {
+    for (Map.Entry<byte[], List<Cell>> entry : toBeMerged.entrySet()) {
+      List<Cell> cells = familyMap.get(entry.getKey());
+      if (cells == null) {
+        familyMap.put(entry.getKey(), entry.getValue());
+      } else {
+        cells.addAll(entry.getValue());
+      }
     }
   }
 
@@ -3348,18 +3388,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     familyMaps[lastIndexExclusive] = familyMap;
 
     try {
-      if (mutation instanceof Put) {
-        // Check the families in the put. If bad, skip this one.
-        if (batchOp.isInReplay()) {
-          removeNonExistentColumnFamilyForReplay(familyMap);
-        } else {
-          checkFamilies(familyMap.keySet());
-        }
-        checkTimestamps(mutation.getFamilyCellMap(), now);
-      } else {
-        prepareDelete((Delete)mutation);
-      }
-      checkRow(mutation.getRow(), "doMiniBatchMutation");
+      checkAndPrepareMutation(mutation, batchOp.isInReplay(), familyMap, now);
     } catch (NoSuchColumnFamilyException nscf) {
       LOG.warn("No such column family in batch mutation", nscf);
       batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
@@ -3377,6 +3406,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       skip = true;
     }
     return skip;
+  }
+
+  private void checkAndPrepareMutation(Mutation mutation, boolean replay,
+      final Map<byte[], List<Cell>> familyMap, final long now)
+          throws IOException {
+    if (mutation instanceof Put) {
+      // Check the families in the put. If bad, skip this one.
+      if (replay) {
+        removeNonExistentColumnFamilyForReplay(familyMap);
+      } else {
+        checkFamilies(familyMap.keySet());
+      }
+      checkTimestamps(mutation.getFamilyCellMap(), now);
+    } else {
+      prepareDelete((Delete)mutation);
+    }
+    checkRow(mutation.getRow(), "doMiniBatchMutation");
   }
 
   /**

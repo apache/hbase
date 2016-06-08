@@ -18,20 +18,22 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
  * Wraps together the mutations which are applied as a batch to the region and their operation
- * status and WALEdits. 
+ * status and WALEdits.
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#preBatchMutate(
  * ObserverContext, MiniBatchOperationInProgress)
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#postBatchMutate(
  * ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("Coprocessors")
 public class MiniBatchOperationInProgress<T> {
   private final T[] operations;
+  private Mutation[][] operationsFromCoprocessors;
   private final OperationStatus[] retCodeDetails;
   private final WALEdit[] walEditsFromCoprocessors;
   private final int firstIndex;
@@ -63,7 +65,7 @@ public class MiniBatchOperationInProgress<T> {
 
   /**
    * Sets the status code for the operation(Mutation) at the specified position.
-   * By setting this status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} 
+   * By setting this status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
    * can make HRegion to skip Mutations.
    * @param index
    * @param opStatus
@@ -102,5 +104,26 @@ public class MiniBatchOperationInProgress<T> {
       throw new ArrayIndexOutOfBoundsException(index);
     }
     return this.firstIndex + index;
+  }
+
+  /**
+   * Add more Mutations corresponding to the Mutation at the given index to be committed atomically
+   * in the same batch. These mutations are applied to the WAL and applied to the memstore as well.
+   * The timestamp of the cells in the given Mutations MUST be obtained from the original mutation.
+   *
+   * @param index the index that corresponds to the original mutation index in the batch
+   * @param newOperations the Mutations to add
+   */
+  public void addOperationsFromCP(int index, Mutation[] newOperations) {
+    if (this.operationsFromCoprocessors == null) {
+      // lazy allocation to save on object allocation in case this is not used
+      this.operationsFromCoprocessors = new Mutation[operations.length][];
+    }
+    this.operationsFromCoprocessors[getAbsoluteIndex(index)] = newOperations;
+  }
+
+  public Mutation[] getOperationsFromCoprocessors(int index) {
+    return operationsFromCoprocessors == null ? null :
+        operationsFromCoprocessors[getAbsoluteIndex(index)];
   }
 }

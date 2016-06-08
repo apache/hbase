@@ -60,7 +60,7 @@ MultiRowMutationProcessorResponse> {
   public boolean readOnly() {
     return false;
   }
-  
+
   @Override
   public MultiRowMutationProcessorResponse getResult() {
     return MultiRowMutationProcessorResponse.getDefaultInstance();
