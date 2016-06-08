@@ -48,77 +48,66 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
 
   /**
    * Update the heap occupancy histogram
-   * 
    * @param heapOccupancyPercent the percentage of heap usage: Used / Committed.
    */
   void updateHeapOccupancy(float heapOccupancyPercent);
 
   /**
    * Update the cache evicted count histogram
-   * 
    * @param cacheEvictedCount the number of cache eviction since last tuning.
    */
   void updateCacheEvictCount(long cacheEvictedCount);
 
   /**
    * Update the cache miss count histogram
-   * 
    * @param cacheMissCount the number of cache miss since last tuning.
    */
   void updateCacheMissCount(long cacheMissCount);
 
   /**
    * Update the blocked flush count histogram
-   * 
    * @param bFlushCount the number of blocked flush since last tuning.
    */
   void updateBlockedFlushCount(long bFlushCount);
 
   /**
    * Update the unblocked flush count histogram
-   * 
    * @param unbFlushCount the number of unblocked flush since last tuning.
    */
   void updateUnblockedFlushCount(long unbFlushCount);
 
   /**
    * Update the current blockcache(in percentage) used histogram
-   * 
    * @param curBlockCacheUsed the current memory usage in blockcache.
    */
   void updateCurBlockCachePercentage(float curBlockCacheUsed);
 
   /**
    * Update the current memstore used(in percentage) histogram
-   * 
    * @param curMemStoreUsed the current memory usage in memstore.
    */
   void updateCurMemStorePercentage(float curMemStoreUsed);
 
   /**
    * Update the current blockcache(in size) used histogram
-   * 
    * @param blockcacheSize
    */
   void updateCurBlockCacheSize(long blockcacheSize);
 
   /**
    * Update the current memstore used(in size) histogram
-   * 
    * @param memstoreSize
    */
   void updateCurMemStoreSize(long memstoreSize);
 
   /**
    * Update the increase/decrease memstore size histogram
-   * 
    * @param deltaMemStoreSize the tuning result of memstore.
    */
   void updateDeltaMemStoreSize(int deltaMemStoreSize);
 
   /**
    * Update the increase/decrease blockcache size histogram
-   * 
    * @param deltaBlockCacheSize the tuning result of blockcache.
    */
   void updateDeltaBlockCacheSize(int deltaBlockCacheSize);

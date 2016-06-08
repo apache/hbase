@@ -72,7 +72,7 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
     this.wrapper = wrapper;
 
     LOG.debug("Creating new MetricsHeapMemoryManagerSourceImpl for RegionServer "
-        + wrapper.getServerName() + " of Cluster " + wrapper.getClusterId());
+        + wrapper.getServerName());
 
     heapCurUsedHisto = getMetricsRegistry()
         .newSizeHistogram(HEAP_SIZE_NAME, HEAP_SIZE_DESC);

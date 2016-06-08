@@ -26,11 +26,6 @@ public interface MetricsHeapMemoryManagerWrapper {
   String getServerName();
 
   /**
-   * Get the Cluster ID
-   */
-  String getClusterId();
-
-  /**
    * Get Max heap size
    */
   long getMaxHeap();

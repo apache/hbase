@@ -32,13 +32,13 @@ public class MetricsHeapMemoryManagerWrapperImpl
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
-  private final HRegionServer server;
+  private final Server server;
   private final RegionServerAccounting rsAccounting;
   private final ResizableBlockCache blockCache;
 
   public MetricsHeapMemoryManagerWrapperImpl(final Server server,
       final RegionServerAccounting rsAccounting, ResizableBlockCache blockCache) {
-    this.server = (HRegionServer) server;
+    this.server = server;
     this.rsAccounting = rsAccounting;
     this.blockCache = blockCache;
   }
@@ -50,11 +50,6 @@ public class MetricsHeapMemoryManagerWrapperImpl
       return "";
     }
     return serverName.getServerName();
-  }
-
-  @Override
-  public String getClusterId() {
-    return server.getClusterId();
   }
 
   @Override

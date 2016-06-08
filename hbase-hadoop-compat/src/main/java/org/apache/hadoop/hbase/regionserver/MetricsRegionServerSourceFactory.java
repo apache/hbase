@@ -57,7 +57,6 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Get a MetricsHeapMemoryManagerSource from MetricsHeapMemoryManagerWrapper
-   * 
    * @param wrapper The wrapped heap memory manger
    * @return A metrics heap memory manager source
    */

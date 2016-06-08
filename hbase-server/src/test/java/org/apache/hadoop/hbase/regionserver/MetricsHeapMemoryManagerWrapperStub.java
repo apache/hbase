@@ -26,11 +26,6 @@ public class MetricsHeapMemoryManagerWrapperStub implements MetricsHeapMemoryMan
   }
 
   @Override
-  public String getClusterId() {
-    return "tClusterId";
-  }
-
-  @Override
   public long getMaxHeap() {
     return 1024;
   }
