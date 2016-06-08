@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 
@@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This can be used for HMaster, where no prioritization is needed.
  */
 public class FifoRpcScheduler extends RpcScheduler {
+  private static final Log LOG = LogFactory.getLog(FifoRpcScheduler.class);
   private final int handlerCount;
   private final int maxQueueLength;
   private final AtomicInteger queueSize = new AtomicInteger(0);
@@ -41,6 +44,8 @@ public class FifoRpcScheduler extends RpcScheduler {
     this.handlerCount = handlerCount;
     this.maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    LOG.info("Using " + this.getClass().getSimpleName() + " as user call queue; handlerCount=" +
+        handlerCount + "; maxQueueLength=" + maxQueueLength);
   }
 
   @Override
