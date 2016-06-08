@@ -19,38 +19,29 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
-import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 
-/** Constructs a {@link SimpleRpcScheduler}.
+/**
+ * Factory to use when you want to use the {@link FifoRpcScheduler}
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
-  @Override
-  @Deprecated
-  public RpcScheduler create(Configuration conf, PriorityFunction priority) {
-	  return create(conf, priority, null);
-  }
-
+public class FifoRpcSchedulerFactory implements RpcSchedulerFactory {
   @Override
   public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-    return new SimpleRpcScheduler(
-      conf,
-      handlerCount,
-      conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
-      conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
-      priority,
-      server,
-      HConstants.QOS_THRESHOLD);
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    return new FifoRpcScheduler(conf, handlerCount);
+  }
+
+  @Deprecated
+  @Override
+  public RpcScheduler create(Configuration conf, PriorityFunction priority) {
+    return create(conf, priority, null);
   }
 }
