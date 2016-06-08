@@ -1,3 +1,21 @@
+/*
+ * Copyright The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
@@ -9,8 +27,12 @@ import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
-public class MetricsHeapMemoryManagerSourceImpl 
-  extends BaseSourceImpl implements MetricsHeapMemoryManagerSource {
+/**
+ * Hadoop2 implementation of MetricsHeapMemoryManagerSource. Implements BaseSource through
+ * BaseSourceImpl, following the pattern
+ */
+public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implements
+    MetricsHeapMemoryManagerSource {
 
   private static final Log LOG = LogFactory.getLog(MetricsHeapMemoryManagerSourceImpl.class);
   private static final int CONVERT_TO_PERCENTAGE = 100;
@@ -29,7 +51,7 @@ public class MetricsHeapMemoryManagerSourceImpl
   private final MetricHistogram drcMemStoreSizeHisto;
   private final MetricHistogram incBlockCacheSizeHisto;
   private final MetricHistogram drcBlockCacheSizeHisto;
-  
+
   private final MutableFastCounter blockedFlushCounter;
   private final MutableFastCounter unblockedFlushCounter;
   private final MutableFastCounter cacheEvictedCounter;
@@ -37,22 +59,21 @@ public class MetricsHeapMemoryManagerSourceImpl
   private final MutableFastCounter memStoreIncCounter;
   private final MutableFastCounter blockCacheInrCounter;
   private final MutableFastCounter noChangeCounter;
-  
+
   private final MetricsHeapMemoryManagerWrapper wrapper;
 
   public MetricsHeapMemoryManagerSourceImpl(MetricsHeapMemoryManagerWrapper wrapper) {
-    this(METRICS_NAME, METRICS_DESCRIPTION, 
-      METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
+    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
   }
-  
+
   public MetricsHeapMemoryManagerSourceImpl(String metricsName, String metricsDescription,
       String metricsContext, String metricsJmxContext, MetricsHeapMemoryManagerWrapper wrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.wrapper = wrapper;
-    
-    LOG.debug("Creating new MetricsHeapMemoryManagerSourceImpl for RegionServer " +
-        wrapper.getServerName() + " of Cluster " + wrapper.getClusterId());
-    
+
+    LOG.debug("Creating new MetricsHeapMemoryManagerSourceImpl for RegionServer "
+        + wrapper.getServerName() + " of Cluster " + wrapper.getClusterId());
+
     heapCurUsedHisto = getMetricsRegistry()
         .newSizeHistogram(HEAP_SIZE_NAME, HEAP_SIZE_DESC);
     heapOccupancyHisto = getMetricsRegistry()
@@ -81,7 +102,7 @@ public class MetricsHeapMemoryManagerSourceImpl
         .newSizeHistogram(INC_BLOCKCACHE_TUNING_NAME, INC_BLOCKCACHE_TUNING_DESC);
     drcBlockCacheSizeHisto = getMetricsRegistry()
         .newSizeHistogram(DRC_BLOCKCACHE_TUNING_NAME, DRC_BLOCKCACHE_TUNING_DESC);
-    
+
     cacheEvictedCounter = getMetricsRegistry()
         .newCounter(CACHE_EVICTED_COUNTER_NAME, CACHE_EVICTED_COUNTER_DESC, 0L);
     cacheMissCounter = getMetricsRegistry()
@@ -97,7 +118,7 @@ public class MetricsHeapMemoryManagerSourceImpl
     noChangeCounter = getMetricsRegistry()
         .newCounter(INC_NOCHANGE_COUNTER_NAME, INC_NOCHANGE_COUNTER_DESC, 0L);
   }
-  
+
   @Override
   public void updateCurHeapSize(long heapSize) {
     heapCurUsedHisto.add(heapSize);
@@ -171,16 +192,16 @@ public class MetricsHeapMemoryManagerSourceImpl
       drcBlockCacheSizeHisto.add(-deltaBlockCacheSize);
     }
   }
-  
+
   @Override
   public void updateHeapMemoryNoChangeCount() {
     noChangeCounter.incr();
   }
-  
+
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
-    
+
     if (wrapper != null) {
       mrb.addGauge(Interns.info(MAX_HEAP_SIZE_NAME, MAX_HEAP_SIZE_DESC), wrapper.getMaxHeap())
           .addGauge(Interns.info(HEAP_USE_SIZE_NAME, HEAP_USE_SIZE_DESC), wrapper.getHeapUsedSize())
@@ -195,7 +216,7 @@ public class MetricsHeapMemoryManagerSourceImpl
           .addGauge(Interns.info(MEMSTORE_PERCENT_NAME, MEMSTORE_PERCENT_DESC),
             wrapper.getMemStoreUsed());
     }
-    
+
     metricsRegistry.snapshot(mrb, all);
   }
 }

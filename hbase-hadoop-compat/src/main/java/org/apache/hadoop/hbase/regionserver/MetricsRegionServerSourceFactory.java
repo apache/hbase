@@ -54,7 +54,7 @@ public interface MetricsRegionServerSourceFactory {
    * @return A metrics table aggregate source
    */
   MetricsTableAggregateSource getTableAggregate();
-  
+
   /**
    * Get a MetricsHeapMemoryManagerSource from MetricsHeapMemoryManagerWrapper
    * 

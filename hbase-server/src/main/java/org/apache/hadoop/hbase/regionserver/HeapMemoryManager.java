@@ -84,7 +84,7 @@ public class HeapMemoryManager {
   private final float heapOccupancyLowWatermark;
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-  
+
   private MetricsHeapMemoryManager metricsHeapMemoryManager;
   private MetricsHeapMemoryManagerWrapper metricsHeapMemoryManagerWrapper;
 
@@ -208,7 +208,7 @@ public class HeapMemoryManager {
     LOG.info("Stoping HeapMemoryTuner chore.");
     this.heapMemTunerChore.cancel(true);
   }
-  
+
   public MetricsHeapMemoryManager getMetrics() {
     return metricsHeapMemoryManager;
   }
