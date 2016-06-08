@@ -56,7 +56,7 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * Update the cache evicted count histogram
    * 
-   * @param evictCount the number of cache eviction since last tuning.
+   * @param cacheEvictedCount the number of cache eviction since last tuning.
    */
   void updateCacheEvictCount(long cacheEvictedCount);
 
