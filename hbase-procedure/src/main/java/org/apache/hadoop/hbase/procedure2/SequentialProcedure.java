@@ -42,7 +42,7 @@ public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvir
 
   @Override
   protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     updateTimestamp();
     try {
       Procedure[] children = !executed ? execute(env) : null;

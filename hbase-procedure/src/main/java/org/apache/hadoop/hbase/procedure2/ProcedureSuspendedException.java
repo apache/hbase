@@ -16,34 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-/**
- * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...)
- * must implement this interface to allow the system handle the lock/concurrency problems.
- */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface TableProcedureInterface {
-  public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
-    SPLIT, MERGE, ASSIGN, UNASSIGN, /* region operations */
-  };
+@InterfaceStability.Stable
+public class ProcedureSuspendedException extends ProcedureException {
+  /** default constructor */
+  public ProcedureSuspendedException() {
+    super();
+  }
 
   /**
-   * @return the name of the table the procedure is operating on
+   * Constructor
+   * @param s message
    */
-  TableName getTableName();
-
-  /**
-   * Given an operation type we can take decisions about what to do with pending operations.
-   * e.g. if we get a delete and we have some table operation pending (e.g. add column)
-   * we can abort those operations.
-   * @return the operation type that the procedure is executing.
-   */
-  TableOperationType getTableOperationType();
+  public ProcedureSuspendedException(String s) {
+    super(s);
+  }
 }

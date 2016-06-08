@@ -505,15 +505,25 @@ public class ProcedureExecutor<TEnvironment> {
       }
     };
 
+    long st, et;
+
     // Acquire the store lease.
+    st = EnvironmentEdgeManager.currentTime();
     store.recoverLease();
+    et = EnvironmentEdgeManager.currentTime();
+    LOG.info(String.format("recover procedure store (%s) lease: %s",
+      store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // TODO: Split in two steps.
     // TODO: Handle corrupted procedures (currently just a warn)
     // The first one will make sure that we have the latest id,
     // so we can start the threads and accept new procedures.
     // The second step will do the actual load of old procedures.
+    st = EnvironmentEdgeManager.currentTime();
     load(abortOnCorruption);
+    et = EnvironmentEdgeManager.currentTime();
+    LOG.info(String.format("load procedure store (%s): %s",
+      store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // Start the executors. Here we must have the lastProcId set.
     for (int i = 0; i < threads.length; ++i) {
@@ -840,7 +850,7 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       // Execute the procedure
-      assert proc.getState() == ProcedureState.RUNNABLE;
+      assert proc.getState() == ProcedureState.RUNNABLE : proc;
       if (proc.acquireLock(getEnvironment())) {
         execProcedure(procStack, proc);
         proc.releaseLock(getEnvironment());
@@ -1042,6 +1052,7 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE);
 
     // Execute the procedure
+    boolean isSuspended = false;
     boolean reExecute = false;
     Procedure[] subprocs = null;
     do {
@@ -1051,6 +1062,8 @@ public class ProcedureExecutor<TEnvironment> {
         if (subprocs != null && subprocs.length == 0) {
           subprocs = null;
         }
+      } catch (ProcedureSuspendedException e) {
+        isSuspended = true;
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Yield procedure: " + procedure + ": " + e.getMessage());
@@ -1086,7 +1099,7 @@ public class ProcedureExecutor<TEnvironment> {
                 break;
               }
 
-              assert subproc.getState() == ProcedureState.INITIALIZING;
+              assert subproc.getState() == ProcedureState.INITIALIZING : subproc;
               subproc.setParentProcId(procedure.getProcId());
               subproc.setProcId(nextProcId());
             }
@@ -1107,7 +1120,7 @@ public class ProcedureExecutor<TEnvironment> {
           }
         } else if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
           waitingTimeout.add(procedure);
-        } else {
+        } else if (!isSuspended) {
           // No subtask, so we are done
           procedure.setState(ProcedureState.FINISHED);
         }
