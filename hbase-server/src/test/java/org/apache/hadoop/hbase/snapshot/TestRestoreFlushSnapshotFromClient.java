@@ -70,7 +70,6 @@ public class TestRestoreFlushSnapshotFromClient {
   }
 
   protected static void setupConf(Configuration conf) {
-    UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);

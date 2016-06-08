@@ -85,7 +85,6 @@ public class TestAdmin1 {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
@@ -503,8 +502,6 @@ public class TestAdmin1 {
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("changeTableSchemaOnline");
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
@@ -586,45 +583,6 @@ public class TestAdmin1 {
     this.admin.deleteTable(tableName);
     this.admin.listTables();
     assertFalse(this.admin.tableExists(tableName));
-  }
-
-  @Test (timeout=300000)
-  public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
-      throws Exception {
-    final TableName tableName = TableName.valueOf("changeTableSchemaOnlineFailure");
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", false);
-    HTableDescriptor[] tables = admin.listTables();
-    int numTables = tables.length;
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    tables = this.admin.listTables();
-    assertEquals(numTables + 1, tables.length);
-
-    // FIRST, do htabledescriptor changes.
-    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
-    // Make a copy and assert copy is good.
-    HTableDescriptor copy = new HTableDescriptor(htd);
-    assertTrue(htd.equals(copy));
-    // Now amend the copy. Introduce differences.
-    long newFlushSize = htd.getMemStoreFlushSize() / 2;
-    if (newFlushSize <=0) {
-      newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
-    }
-    copy.setMemStoreFlushSize(newFlushSize);
-    final String key = "anyoldkey";
-    assertTrue(htd.getValue(key) == null);
-    copy.setValue(key, key);
-    boolean expectedException = false;
-    try {
-      admin.modifyTable(tableName, copy);
-    } catch (TableNotDisabledException re) {
-      expectedException = true;
-    }
-    assertTrue("Online schema update should not happen.", expectedException);
-
-    // Reset the value for the other tests
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
   }
 
   protected void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator, int

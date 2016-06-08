@@ -67,7 +67,6 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    conf.setBoolean("hbase.online.schema.update.enable", true);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);

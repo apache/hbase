@@ -70,8 +70,6 @@ public class TestFromClientSide3 {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(
-        "hbase.online.schema.update.enable", true);
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 

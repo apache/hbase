@@ -56,14 +56,6 @@ public final class MasterDDLOperationHelper {
   private MasterDDLOperationHelper() {}
 
   /**
-   * Check whether online schema change is allowed from config
-   **/
-  public static boolean isOnlineSchemaChangeAllowed(final MasterProcedureEnv env) {
-    return env.getMasterServices().getConfiguration()
-        .getBoolean("hbase.online.schema.update.enable", false);
-  }
-
-  /**
    * Check whether a table is modifiable - exists and either offline or online with config set
    * @param env MasterProcedureEnv
    * @param tableName name of the table
@@ -74,13 +66,6 @@ public final class MasterDDLOperationHelper {
     // Checks whether the table exists
     if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
-    }
-
-    // We only execute this procedure with table online if online schema change config is set.
-    if (!env.getMasterServices().getTableStateManager()
-        .isTableState(tableName, TableState.State.DISABLED)
-        && !MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
-      throw new TableNotDisabledException(tableName);
     }
   }
 

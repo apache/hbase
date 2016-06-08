@@ -103,7 +103,6 @@ public class TestChangingEncoding {
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     // ((Log4JLogger)RpcServerImplementation.LOG).getLogger().setLevel(Level.TRACE);
     // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.TRACE);
-    conf.setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.startMiniCluster();
   }
 

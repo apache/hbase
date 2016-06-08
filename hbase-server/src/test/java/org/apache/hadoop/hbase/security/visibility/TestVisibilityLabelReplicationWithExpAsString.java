@@ -80,7 +80,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     // setup configuration
     conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    conf.setBoolean("hbase.online.schema.update.enable", true);
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf.setInt("replication.source.size.capacity", 10240);
