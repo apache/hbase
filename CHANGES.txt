@@ -51,6 +51,7 @@ Release 0.98.20 - 6/13/2016
 ** Task
     * [HBASE-4368] - Expose processlist in shell (per regionserver and perhaps by cluster)
     * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
+    * [HBASE-159870 - [0.98] Downgrade to maven-site-plugin version 2.4
 
 
 Release 0.98.19 - 4/29/2016
