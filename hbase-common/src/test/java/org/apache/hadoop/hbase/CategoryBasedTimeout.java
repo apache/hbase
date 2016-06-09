@@ -49,6 +49,11 @@ public class CategoryBasedTimeout extends Timeout {
     super(builder);
   }
 
+  public static Timeout forClass(Class<?> clazz) {
+    return CategoryBasedTimeout.builder().withTimeout(clazz).withLookingForStuckThread(true)
+      .build();
+  }
+
   public static Builder builder() {
     return new CategoryBasedTimeout.Builder();
   }
