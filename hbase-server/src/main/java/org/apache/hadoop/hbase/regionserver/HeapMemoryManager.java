@@ -283,8 +283,8 @@ public class HeapMemoryManager {
       // while remaining in the limits
       long curEvictCount;
       long curCacheMisCount;
-      long bFlushCount;
-      long unbFlushCount;
+      long blockedFlushCnt;
+      long unblockedFlushCnt;
       float curBlockCacheUsed;
       float curMemStoreUsed;
       curEvictCount = blockCache.getStats().getEvictedCount();
@@ -295,12 +295,12 @@ public class HeapMemoryManager {
       tunerContext.setCacheMissCount(curCacheMisCount-cacheMissCount);
       metricsHeapMemoryManager.updateCacheMissCount(curCacheMisCount - cacheMissCount);
       cacheMissCount = curCacheMisCount;
-      bFlushCount = blockedFlushCount.getAndSet(0);
-      tunerContext.setBlockedFlushCount(bFlushCount);
-      metricsHeapMemoryManager.updateBlockedFlushCount(bFlushCount);
-      unbFlushCount = unblockedFlushCount.getAndSet(0);
-      tunerContext.setUnblockedFlushCount(unbFlushCount);
-      metricsHeapMemoryManager.updateUnblockedFlushCount(unbFlushCount);
+      blockedFlushCnt = blockedFlushCount.getAndSet(0);
+      tunerContext.setBlockedFlushCount(blockedFlushCnt);
+      metricsHeapMemoryManager.updateBlockedFlushCount(blockedFlushCnt);
+      unblockedFlushCnt = unblockedFlushCount.getAndSet(0);
+      tunerContext.setUnblockedFlushCount(unblockedFlushCnt);
+      metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
       curBlockCacheUsed = (float)blockCache.getCurrentSize() / maxHeapSize;
       tunerContext.setCurBlockCacheUsed(curBlockCacheUsed);
       metricsHeapMemoryManager.updateCurBlockCache(curBlockCacheUsed, blockCache.getCurrentSize());

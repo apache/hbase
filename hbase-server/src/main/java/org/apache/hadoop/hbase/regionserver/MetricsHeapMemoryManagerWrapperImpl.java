@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 public class MetricsHeapMemoryManagerWrapperImpl
     implements MetricsHeapMemoryManagerWrapper {
 
-  private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+  private MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 
   private final Server server;
   private final RegionServerAccounting rsAccounting;
@@ -54,23 +54,22 @@ public class MetricsHeapMemoryManagerWrapperImpl
 
   @Override
   public long getMaxHeap() {
-    return maxHeapSize;
+    return memUsage.getMax();
   }
 
   @Override
   public float getHeapUsed() {
-    MemoryUsage memUsage = getMemoryUsage();
     return (float) memUsage.getUsed() / (float) memUsage.getCommitted();
   }
 
   @Override
   public long getHeapUsedSize() {
-    return getMemoryUsage().getUsed();
+    return memUsage.getUsed();
   }
 
   @Override
   public float getBlockCacheUsed() {
-    return (float) getBlockCacheUsedSize() / (float) maxHeapSize;
+    return (float) getBlockCacheUsedSize() / (float) memUsage.getMax();
   }
 
   @Override
@@ -80,15 +79,11 @@ public class MetricsHeapMemoryManagerWrapperImpl
 
   @Override
   public float getMemStoreUsed() {
-    return (float) getMemStoreUsedSize() / (float) maxHeapSize;
+    return (float) getMemStoreUsedSize() / (float) memUsage.getMax();
   }
 
   @Override
   public long getMemStoreUsedSize() {
     return rsAccounting.getGlobalMemstoreSize();
-  }
-
-  private MemoryUsage getMemoryUsage() {
-    return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
   }
 }
