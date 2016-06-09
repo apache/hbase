@@ -55,35 +55,36 @@ public class TestHTableDescriptor {
   public void testAddCoprocessorWithSpecStr() throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     String cpName = "a.b.c.d";
-    boolean expected = false;
     try {
       htd.addCoprocessorWithSpec(cpName);
+      fail();
     } catch (IllegalArgumentException iae) {
-      expected = true;
+      // Expected as cpName is invalid
     }
-    if (!expected) fail();
+
     // Try minimal spec.
     try {
       htd.addCoprocessorWithSpec("file:///some/path" + "|" + cpName);
+      fail();
     } catch (IllegalArgumentException iae) {
-      expected = false;
+      // Expected to be invalid
     }
-    if (expected) fail();
+
     // Try more spec.
     String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
     try {
       htd.addCoprocessorWithSpec(spec);
     } catch (IllegalArgumentException iae) {
-      expected = false;
+      fail();
     }
-    if (expected) fail();
+
     // Try double add of same coprocessor
     try {
       htd.addCoprocessorWithSpec(spec);
+      fail();
     } catch (IOException ioe) {
-      expected = true;
+      // Expect that the coprocessor already exists
     }
-    if (!expected) fail();
   }
 
   @Test
