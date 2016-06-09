@@ -123,6 +123,12 @@ public interface ReplicationQueues {
   void addPeerToHFileRefs(String peerId) throws ReplicationException;
 
   /**
+   * Remove a peer from hfile reference queue.
+   * @param peerId peer cluster id to be removed
+   */
+  void removePeerFromHFileRefs(String peerId);
+
+  /**
    * Add new hfile references to the queue.
    * @param peerId peer cluster id to which the hfiles need to be replicated
    * @param files list of hfile references to be added

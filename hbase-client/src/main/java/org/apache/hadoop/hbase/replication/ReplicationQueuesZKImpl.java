@@ -89,12 +89,14 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       throw new ReplicationException("Could not initialize replication queues.", e);
     }
-    // Irrespective of bulk load hfile replication is enabled or not we add peerId node to
-    // hfile-refs node -- HBASE-15397
-    try {
-      ZKUtil.createWithParents(this.zookeeper, this.hfileRefsZNode);
-    } catch (KeeperException e) {
-      throw new ReplicationException("Could not initialize hfile references replication queue.", e);
+    if (conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+      HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT)) {
+      try {
+        ZKUtil.createWithParents(this.zookeeper, this.hfileRefsZNode);
+      } catch (KeeperException e) {
+        throw new ReplicationException("Could not initialize hfile references replication queue.",
+            e);
+      }
     }
   }
 
@@ -502,6 +504,25 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to add peer " + peerId + " to hfile reference queue.",
           e);
+    }
+  }
+
+  @Override
+  public void removePeerFromHFileRefs(String peerId) {
+    final String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    try {
+      if (ZKUtil.checkExists(this.zookeeper, peerZnode) == -1) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Peer " + peerZnode + " not found in hfile reference queue.");
+        }
+        return;
+      } else {
+        LOG.info("Removing peer " + peerZnode + " from hfile reference queue.");
+        ZKUtil.deleteNodeRecursively(this.zookeeper, peerZnode);
+      }
+    } catch (KeeperException e) {
+      LOG.error("Ignoring the exception to remove peer " + peerId + " from hfile reference queue.",
+        e);
     }
   }
 }

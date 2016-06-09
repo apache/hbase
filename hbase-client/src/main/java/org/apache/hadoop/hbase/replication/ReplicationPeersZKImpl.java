@@ -129,17 +129,6 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
-      // Irrespective of bulk load hfile replication is enabled or not we add peerId node to
-      // hfile-refs node -- HBASE-15397
-      try {
-        String peerId = ZKUtil.joinZNode(this.hfileRefsZNode, id);
-        LOG.info("Adding peer " + peerId + " to hfile reference queue.");
-        ZKUtil.createWithParents(this.zookeeper, peerId);
-      } catch (KeeperException e) {
-        throw new ReplicationException("Failed to add peer with id=" + id
-            + ", node under hfile references node.", e);
-      }
-
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
       ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
         ReplicationSerDeHelper.toByteArray(peerConfig));
@@ -166,16 +155,6 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
             + " because that id does not exist.");
       }
       ZKUtil.deleteNodeRecursively(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id));
-      // Delete peerId node from hfile-refs node irrespective of whether bulk loaded hfile
-      // replication is enabled or not
-
-      String peerId = ZKUtil.joinZNode(this.hfileRefsZNode, id);
-      try {
-        LOG.info("Removing peer " + peerId + " from hfile reference queue.");
-        ZKUtil.deleteNodeRecursively(this.zookeeper, peerId);
-      } catch (NoNodeException e) {
-        LOG.info("Did not find node " + peerId + " to delete.", e);
-      }
     } catch (KeeperException e) {
       throw new ReplicationException("Could not remove peer with id=" + id, e);
     }
