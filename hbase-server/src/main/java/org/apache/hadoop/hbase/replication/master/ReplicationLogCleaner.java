@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import java.io.IOException;
 import java.util.Collections;
@@ -67,7 +68,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     try {
       // The concurrently created new WALs may not be included in the return list,
       // but they won't be deleted because they're not in the checking set.
-      wals = loadWALsFromQueues();
+      wals = replicationQueues.getAllWALs();
     } catch (KeeperException e) {
       LOG.warn("Failed to read zookeeper, skipping checking deletable files");
       return Collections.emptyList();
@@ -86,43 +87,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         }
        return !logInReplicationQueue;
       }});
-  }
-
-  /**
-   * Load all wals in all replication queues from ZK. This method guarantees to return a
-   * snapshot which contains all WALs in the zookeeper at the start of this call even there
-   * is concurrent queue failover. However, some newly created WALs during the call may
-   * not be included.
-   */
-  private Set<String> loadWALsFromQueues() throws KeeperException {
-    for (int retry = 0; ; retry++) {
-      int v0 = replicationQueues.getQueuesZNodeCversion();
-      List<String> rss = replicationQueues.getListOfReplicators();
-      if (rss == null) {
-        LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
-        return ImmutableSet.of();
-      }
-      Set<String> wals = Sets.newHashSet();
-      for (String rs : rss) {
-        List<String> listOfPeers = replicationQueues.getAllQueues(rs);
-        // if rs just died, this will be null
-        if (listOfPeers == null) {
-          continue;
-        }
-        for (String id : listOfPeers) {
-          List<String> peersWals = replicationQueues.getLogsInQueue(rs, id);
-          if (peersWals != null) {
-            wals.addAll(peersWals);
-          }
-        }
-      }
-      int v1 = replicationQueues.getQueuesZNodeCversion();
-      if (v0 == v1) {
-        return wals;
-      }
-      LOG.info(String.format("Replication queue node cversion changed from %d to %d, retry = %d",
-          v0, v1, retry));
-    }
   }
 
   @Override
@@ -148,10 +112,10 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     super.setConf(conf);
     try {
       this.zkw = zk;
-      this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(zkw, conf,
-          new WarnOnlyAbortable());
+      this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(
+          new ReplicationQueuesClientArguments(conf, new WarnOnlyAbortable(), zkw));
       this.replicationQueues.init();
-    } catch (ReplicationException e) {
+    } catch (Exception e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }

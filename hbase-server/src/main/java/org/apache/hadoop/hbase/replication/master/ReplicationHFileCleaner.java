@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -141,15 +142,16 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
     super.setConf(conf);
     try {
       initReplicationQueuesClient(conf, zk);
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
 
   private void initReplicationQueuesClient(Configuration conf, ZooKeeperWatcher zk)
-      throws ZooKeeperConnectionException, IOException {
+      throws Exception {
     this.zkw = zk;
-    this.rqc = ReplicationFactory.getReplicationQueuesClient(zkw, conf, new WarnOnlyAbortable());
+    this.rqc = ReplicationFactory.getReplicationQueuesClient(new ReplicationQueuesClientArguments(
+        conf, new WarnOnlyAbortable(), zkw));
   }
 
   @Override

@@ -96,11 +96,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
       rq1 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds1, zkw));
       rq2 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds2, zkw));
       rq3 = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, ds3, zkw));
+      rqc = ReplicationFactory.getReplicationQueuesClient(
+        new ReplicationQueuesClientArguments(conf, ds1, zkw));
     } catch (Exception e) {
-      // This should not occur, because getReplicationQueues() only throws for ReplicationQueuesHBaseImpl
+      // This should not occur, because getReplicationQueues() only throws for
+      // TableBasedReplicationQueuesImpl
       fail("ReplicationFactory.getReplicationQueues() threw an IO Exception");
     }
-    rqc = ReplicationFactory.getReplicationQueuesClient(zkw, conf, ds1);
     rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);
     rqZK = new ReplicationQueuesZKImpl(zkw, conf, ds1);
