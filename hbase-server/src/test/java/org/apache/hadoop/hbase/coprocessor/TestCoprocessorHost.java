@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,9 +53,8 @@ public class TestCoprocessorHost {
       return this.aborted;
     }
   }
-
   @Test
-  public void testDoubleLoading() {
+  public void testDoubleLoadingAndPriorityValue() {
     final Configuration conf = HBaseConfiguration.create();
     CoprocessorHost<CoprocessorEnvironment> host =
         new CoprocessorHost<CoprocessorEnvironment>(new TestAbortable()) {
@@ -61,7 +62,7 @@ public class TestCoprocessorHost {
 
       @Override
       public CoprocessorEnvironment createEnvironment(Class<?> implClass,
-          final Coprocessor instance, int priority, int sequence, Configuration conf) {
+          final Coprocessor instance, final int priority, int sequence, Configuration conf) {
         return new CoprocessorEnvironment() {
           final Coprocessor envInstance = instance;
 
@@ -82,7 +83,7 @@ public class TestCoprocessorHost {
 
           @Override
           public int getPriority() {
-            return 0;
+            return priority;
           }
 
           @Override
@@ -115,10 +116,19 @@ public class TestCoprocessorHost {
     };
     final String key = "KEY";
     final String coprocessor = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
-    // Try and load coprocessor three times.
-    conf.setStrings(key, coprocessor, coprocessor, coprocessor);
+    // Try and load a coprocessor three times
+    conf.setStrings(key, coprocessor, coprocessor, coprocessor, SimpleRegionObserverV2.class.getName());
     host.loadSystemCoprocessors(conf, key);
-    // Only one coprocessor loaded
-    Assert.assertEquals(1, host.coprocessors.size());
+    // Two coprocessors(SimpleRegionObserver and SimpleRegionObserverV2) loaded
+    Assert.assertEquals(2, host.coprocessors.size());
+    // Check the priority value
+    CoprocessorEnvironment simpleEnv = host.findCoprocessorEnvironment(SimpleRegionObserver.class.getName());
+    CoprocessorEnvironment simpleEnv_v2 = host.findCoprocessorEnvironment(SimpleRegionObserverV2.class.getName());
+    assertNotNull(simpleEnv);
+    assertNotNull(simpleEnv_v2);
+    assertEquals(Coprocessor.PRIORITY_SYSTEM, simpleEnv.getPriority());
+    assertEquals(Coprocessor.PRIORITY_SYSTEM + 1, simpleEnv_v2.getPriority());
+  }
+  public static class SimpleRegionObserverV2 extends SimpleRegionObserver {
   }
 }

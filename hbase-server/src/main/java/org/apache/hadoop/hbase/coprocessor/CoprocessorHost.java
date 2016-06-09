@@ -159,9 +159,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         implClass = cl.loadClass(className);
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
         // in the configuration
-        this.coprocessors.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
+        this.coprocessors.add(loadInstance(implClass, priority, conf));
         LOG.info("System coprocessor " + className + " was loaded " +
-            "successfully with priority (" + priority++ + ").");
+            "successfully with priority (" + priority + ").");
+        ++priority;
       } catch (Throwable t) {
         // We always abort if system coprocessors cannot be loaded
         abortServer(className, t);
