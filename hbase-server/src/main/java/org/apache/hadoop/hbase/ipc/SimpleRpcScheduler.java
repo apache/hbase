@@ -34,11 +34,8 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
- * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
- * high-priority ('priority'), and replication ('replication') requests. Default behavior is to
- * balance the requests across handlers. Add configs to enable balancing by read vs writes, etc.
- * See below article for explanation of options.
- * @see <a href="http://blog.cloudera.com/blog/2014/12/new-in-cdh-5-2-improvements-for-running-multiple-workloads-on-a-single-hbase-cluster/">Overview on Request Queuing</a>
+ * A scheduler that maintains isolated handler pools for general,
+ * high-priority, and replication requests.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
@@ -52,8 +49,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
       "hbase.ipc.server.callqueue.handler.factor";
 
-  /** If set to 'deadline', the default, uses a priority queue and deprioritizes long-running scans
-   */
+  /** If set to 'deadline', uses a priority queue and deprioritize long-running scans */
   public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
   public static final String CALL_QUEUE_TYPE_CODEL_CONF_VALUE = "codel";
   public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
@@ -194,56 +190,52 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
     int numCallQueues = Math.max(1, (int)Math.round(handlerCount * callQueuesHandlersFactor));
-    LOG.info("Using " + callQueueType + " as user call queue; numCallQueues=" + numCallQueues +
-        "; callQReadShare=" + callqReadShare + ", callQScanShare=" + callqScanShare);
+
+    LOG.info("Using " + callQueueType + " as user call queue, count=" + numCallQueues);
+
     if (numCallQueues > 1 && callqReadShare > 0) {
       // multiple read/write queues
-      if (isDeadlineQueueType(callQueueType)) {
+      if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new RWQueueRpcExecutor("RWQ.default", handlerCount, numCallQueues,
+        callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
             callqReadShare, callqScanShare, maxQueueLength, conf, abortable,
             BoundedPriorityBlockingQueue.class, callPriority);
       } else if (callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE)) {
         Object[] callQueueInitArgs = {maxQueueLength, codelTargetDelay, codelInterval,
           codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches};
-        callExecutor = new RWQueueRpcExecutor("RWQ.default", handlerCount,
+        callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount,
           numCallQueues, callqReadShare, callqScanShare,
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs,
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs);
       } else {
-        callExecutor = new RWQueueRpcExecutor("RWQ.default", handlerCount, numCallQueues,
+        callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
           callqReadShare, callqScanShare, maxQueueLength, conf, abortable);
       }
     } else {
       // multiple queues
-      if (isDeadlineQueueType(callQueueType)) {
+      if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor =
-          new BalancedQueueRpcExecutor("BalancedQ.default", handlerCount, numCallQueues,
-            conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
+        callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount, numCallQueues,
+          conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else if (callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE)) {
-        callExecutor =
-          new BalancedQueueRpcExecutor("BalancedQ.default", handlerCount, numCallQueues,
-            conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
-            codelTargetDelay, codelInterval, codelLifoThreshold,
-            numGeneralCallsDropped, numLifoModeSwitches);
+        callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount, numCallQueues,
+          conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
+          codelTargetDelay, codelInterval, codelLifoThreshold,
+          numGeneralCallsDropped, numLifoModeSwitches);
       } else {
-        callExecutor = new BalancedQueueRpcExecutor("BalancedQ.default", handlerCount,
+        callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount,
             numCallQueues, maxQueueLength, conf, abortable);
       }
     }
+
     // Create 2 queues to help priorityExecutor be more scalable.
     this.priorityExecutor = priorityHandlerCount > 0 ?
-      new BalancedQueueRpcExecutor("BalancedQ.priority", priorityHandlerCount, 2,
-          maxPriorityQueueLength):
-      null;
-   this.replicationExecutor =
-     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("BalancedQ.replication",
-       replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
-  }
+        new BalancedQueueRpcExecutor("Priority", priorityHandlerCount, 2, maxPriorityQueueLength) :
+        null;
 
-  private static boolean isDeadlineQueueType(final String callQueueType) {
-    return callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+   this.replicationExecutor =
+     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
+       replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
   }
 
   public SimpleRpcScheduler(

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ipc.RpcScheduler;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public interface RpcSchedulerFactory {
+
   /**
    * Constructs a {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
    */
@@ -38,4 +39,5 @@ public interface RpcSchedulerFactory {
 
   @Deprecated
   RpcScheduler create(Configuration conf, PriorityFunction priority);
+
 }
