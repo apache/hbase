@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class BalancedQueueRpcExecutor extends RpcExecutor {
+  private static final Log LOG = LogFactory.getLog(BalancedQueueRpcExecutor.class);
 
   protected final List<BlockingQueue<CallRunner>> queues;
   private final QueueBalancer balancer;
@@ -62,6 +65,7 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
     queues = new ArrayList<BlockingQueue<CallRunner>>(numQueues);
     this.balancer = getBalancer(numQueues);
     initializeQueues(numQueues, queueClass, initargs);
+    LOG.debug(name + " queues=" + numQueues + " handlerCount=" + handlerCount);
   }
 
   protected void initializeQueues(final int numQueues,
