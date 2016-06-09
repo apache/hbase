@@ -30,6 +30,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     private Object aggLock = new Object();
     private MetricsRegionAggregateSourceImpl aggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
+    private MetricsHeapMemoryManagerSourceImpl hMemMngImpl;
   }
 
   private synchronized MetricsRegionAggregateSourceImpl getAggregate() {
@@ -50,6 +51,17 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
       return FactoryStorage.INSTANCE.tblAggImpl;
     }
   }
+  
+  @Override
+  public synchronized MetricsHeapMemoryManagerSource
+      getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
+    synchronized (FactoryStorage.INSTANCE.hMemMngImpl) {
+      if (FactoryStorage.INSTANCE.hMemMngImpl == null) {
+        return new MetricsHeapMemoryManagerSourceImpl(wrapper);
+      }
+      return FactoryStorage.INSTANCE.hMemMngImpl;
+    }
+  }
 
   @Override
   public synchronized MetricsRegionServerSource createServer(MetricsRegionServerWrapper regionServerWrapper) {
@@ -64,11 +76,5 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   @Override
   public MetricsTableSource createTable(String table, MetricsTableWrapperAggregate wrapper) {
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
-  }
-
-  @Override
-  public synchronized MetricsHeapMemoryManagerSource
-      getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
-    return new MetricsHeapMemoryManagerSourceImpl(wrapper);
   }
 }
