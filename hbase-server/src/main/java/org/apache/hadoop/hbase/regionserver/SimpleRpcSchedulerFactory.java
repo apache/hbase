@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 
-/** Constructs a {@link SimpleRpcScheduler}.
- */
+/** Constructs a {@link SimpleRpcScheduler}. */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
+
   @Override
   @Deprecated
   public RpcScheduler create(Configuration conf, PriorityFunction priority) {
@@ -41,7 +41,8 @@ public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
   @Override
   public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+		HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+
     return new SimpleRpcScheduler(
       conf,
       handlerCount,
@@ -53,4 +54,5 @@ public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
       server,
       HConstants.QOS_THRESHOLD);
   }
+
 }
