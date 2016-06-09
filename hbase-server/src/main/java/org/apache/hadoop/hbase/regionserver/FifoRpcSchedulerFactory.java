@@ -19,23 +19,29 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 
 /**
- * A factory class that constructs an {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
+ * Factory to use when you want to use the {@link FifoRpcScheduler}
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface RpcSchedulerFactory {
-  /**
-   * Constructs a {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
-   */
-  RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server);
+public class FifoRpcSchedulerFactory implements RpcSchedulerFactory {
+  @Override
+  public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
+    int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    return new FifoRpcScheduler(conf, handlerCount);
+  }
 
   @Deprecated
-  RpcScheduler create(Configuration conf, PriorityFunction priority);
+  @Override
+  public RpcScheduler create(Configuration conf, PriorityFunction priority) {
+    return create(conf, priority, null);
+  }
 }
