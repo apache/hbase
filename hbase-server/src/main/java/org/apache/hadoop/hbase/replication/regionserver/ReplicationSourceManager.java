@@ -115,6 +115,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final ThreadPoolExecutor executor;
 
   private final Random rand;
+  private final boolean replicationForBulkLoadDataEnabled;
 
 
   /**
@@ -166,6 +167,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.executor.setThreadFactory(tfb.build());
     this.rand = new Random();
     this.latestPaths = Collections.synchronizedSet(new HashSet<Path>());
+    replicationForBulkLoadDataEnabled =
+        conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+          HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
   }
 
   /**
@@ -227,9 +231,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * old region server wal queues
    */
   protected void init() throws IOException, ReplicationException {
-    boolean replicationForBulkLoadDataEnabled =
-        conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
-          HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     for (String id : this.replicationPeers.getPeerIds()) {
       addSource(id);
       if (replicationForBulkLoadDataEnabled) {
@@ -582,6 +583,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   @Override
   public void peerRemoved(String peerId) {
     removePeer(peerId);
+    this.replicationQueues.removePeerFromHFileRefs(peerId);
   }
 
   @Override
@@ -591,6 +593,9 @@ public class ReplicationSourceManager implements ReplicationListener {
         boolean added = this.replicationPeers.peerAdded(id);
         if (added) {
           addSource(id);
+          if (replicationForBulkLoadDataEnabled) {
+            this.replicationQueues.addPeerToHFileRefs(id);
+          }
         }
       } catch (Exception e) {
         LOG.error("Error while adding a new peer", e);

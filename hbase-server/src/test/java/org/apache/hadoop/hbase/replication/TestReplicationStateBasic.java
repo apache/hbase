@@ -204,6 +204,7 @@ public abstract class TestReplicationStateBasic {
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
     rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE), null);
+    rq1.addPeerToHFileRefs(ID_ONE);
     rq1.addHFileRefs(ID_ONE, files1);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
@@ -231,18 +232,22 @@ public abstract class TestReplicationStateBasic {
     files1.add("file_1");
     files1.add("file_2");
     files1.add("file_3");
+    rq1.addPeerToHFileRefs(ID_ONE);
     rq1.addHFileRefs(ID_ONE, files1);
+    rq1.addPeerToHFileRefs(ID_TWO);
     rq1.addHFileRefs(ID_TWO, files1);
     assertEquals(2, rqc.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
     assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
 
     rp.removePeer(ID_ONE);
+    rq1.removePeerFromHFileRefs(ID_ONE);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
 
     rp.removePeer(ID_TWO);
+    rq1.removePeerFromHFileRefs(ID_TWO);
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
     assertNull(rqc.getReplicableHFiles(ID_TWO));
   }
