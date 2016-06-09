@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
@@ -122,7 +123,8 @@ public class ReplicationAdmin implements Closeable {
       zkw = createZooKeeperWatcher();
       try {
         this.replicationQueuesClient =
-            ReplicationFactory.getReplicationQueuesClient(zkw, conf, this.connection);
+            ReplicationFactory.getReplicationQueuesClient(new ReplicationQueuesClientArguments(conf,
+            this.connection, zkw));
         this.replicationQueuesClient.init();
         this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf,
           this.replicationQueuesClient, this.connection);

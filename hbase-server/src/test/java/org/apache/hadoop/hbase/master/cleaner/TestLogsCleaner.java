@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -167,7 +168,7 @@ public class TestLogsCleaner {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
     cleaner.setConf(conf);
 
-    ReplicationQueuesClient rqcMock = Mockito.mock(ReplicationQueuesClient.class);
+    ReplicationQueuesClientZKImpl rqcMock = Mockito.mock(ReplicationQueuesClientZKImpl.class);
     Mockito.when(rqcMock.getQueuesZNodeCversion()).thenReturn(1, 2, 3, 4);
 
     Field rqc = ReplicationLogCleaner.class.getDeclaredField("replicationQueues");

@@ -19,7 +19,12 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -31,6 +36,12 @@ import org.apache.zookeeper.data.Stat;
 @InterfaceAudience.Private
 public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implements
     ReplicationQueuesClient {
+
+  Log LOG = LogFactory.getLog(ReplicationQueuesClientZKImpl.class);
+
+  public ReplicationQueuesClientZKImpl(ReplicationQueuesClientArguments args) {
+    this(args.getZk(), args.getConf(), args.getAbortable());
+  }
 
   public ReplicationQueuesClientZKImpl(final ZooKeeperWatcher zk, Configuration conf,
       Abortable abortable) {
@@ -74,7 +85,45 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
     return result;
   }
 
-  @Override public int getQueuesZNodeCversion() throws KeeperException {
+  @Override
+  public Set<String> getAllWALs() throws KeeperException {
+    /**
+     * Load all wals in all replication queues from ZK. This method guarantees to return a
+     * snapshot which contains all WALs in the zookeeper at the start of this call even there
+     * is concurrent queue failover. However, some newly created WALs during the call may
+     * not be included.
+     */
+    for (int retry = 0; ; retry++) {
+      int v0 = getQueuesZNodeCversion();
+      List<String> rss = getListOfReplicators();
+      if (rss == null) {
+        LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
+        return ImmutableSet.of();
+      }
+      Set<String> wals = Sets.newHashSet();
+      for (String rs : rss) {
+        List<String> listOfPeers = getAllQueues(rs);
+        // if rs just died, this will be null
+        if (listOfPeers == null) {
+          continue;
+        }
+        for (String id : listOfPeers) {
+          List<String> peersWals = getLogsInQueue(rs, id);
+          if (peersWals != null) {
+            wals.addAll(peersWals);
+          }
+        }
+      }
+      int v1 = getQueuesZNodeCversion();
+      if (v0 == v1) {
+        return wals;
+      }
+      LOG.info(String.format("Replication queue node cversion changed from %d to %d, retry = %d",
+        v0, v1, retry));
+    }
+  }
+
+  public int getQueuesZNodeCversion() throws KeeperException {
     try {
       Stat stat = new Stat();
       ZKUtil.getDataNoWatch(this.zookeeper, this.queuesZNode, stat);

@@ -38,9 +38,12 @@ public class ReplicationFactory {
     return (ReplicationQueues) ConstructorUtils.invokeConstructor(classToBuild, args);
   }
 
-  public static ReplicationQueuesClient getReplicationQueuesClient(final ZooKeeperWatcher zk,
-      Configuration conf, Abortable abortable) {
-    return new ReplicationQueuesClientZKImpl(zk, conf, abortable);
+  public static ReplicationQueuesClient getReplicationQueuesClient(
+      ReplicationQueuesClientArguments args)
+    throws Exception {
+    Class<?> classToBuild = args.getConf().getClass("hbase.region.replica." +
+      "replication.ReplicationQueuesClientType", ReplicationQueuesClientZKImpl.class);
+    return (ReplicationQueuesClient) ConstructorUtils.invokeConstructor(classToBuild, args);
   }
 
   public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
