@@ -302,6 +302,12 @@ public class ReplicationQueuesHBaseImpl implements ReplicationQueues {
   }
 
   @Override
+  public void removePeerFromHFileRefs(String peerId) {
+    // TODO
+    throw new NotImplementedException();
+  }
+
+  @Override
   public void addHFileRefs(String peerId, List<String> files) throws ReplicationException {
     // TODO
     throw new NotImplementedException();
