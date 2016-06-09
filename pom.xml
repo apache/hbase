@@ -1212,6 +1212,13 @@
     <!-- Dependencies -->
     <hadoop-two.version>2.7.1</hadoop-two.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
+    <!-- These must be defined here for downstream build tools that don't look at profiles.
+         They ought to match the values found in our default hadoop profile, which is
+         currently "hadoop-2.0". See HBASE-15925 for more info. -->
+    <hadoop.version>${hadoop-two.version}</hadoop.version>
+    <compat.module>hbase-hadoop2-compat</compat.module>
+    <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+    <!-- end HBASE-15925 default hadoop compatibility values -->
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.9</commons-codec.version>
     <!-- pretty outdated -->
