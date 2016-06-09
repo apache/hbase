@@ -201,10 +201,11 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
-
     if (wrapper != null) {
-      mrb.addGauge(Interns.info(MAX_HEAP_SIZE_NAME, MAX_HEAP_SIZE_DESC), wrapper.getMaxHeap())
-          .addGauge(Interns.info(HEAP_USE_SIZE_NAME, HEAP_USE_SIZE_DESC), wrapper.getHeapUsedSize())
+      mrb.addGauge(Interns.info(MAX_HEAP_SIZE_NAME, MAX_HEAP_SIZE_DESC),
+            wrapper.getMaxHeap())
+          .addGauge(Interns.info(HEAP_USE_SIZE_NAME, HEAP_USE_SIZE_DESC),
+            wrapper.getHeapUsedSize())
           .addGauge(Interns.info(HEAP_USE_PERCENT_NAME, HEAP_USE_PERCENT_DESC),
             wrapper.getHeapUsed())
           .addGauge(Interns.info(BLOCKCACHE_SIZE_NAME, BLOCKCACHE_SIZE_DESC),
@@ -216,7 +217,6 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
           .addGauge(Interns.info(MEMSTORE_PERCENT_NAME, MEMSTORE_PERCENT_DESC),
             wrapper.getMemStoreUsed());
     }
-
     metricsRegistry.snapshot(mrb, all);
   }
 }

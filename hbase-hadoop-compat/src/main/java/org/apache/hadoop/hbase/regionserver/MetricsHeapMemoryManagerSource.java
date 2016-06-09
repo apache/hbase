@@ -117,87 +117,87 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
    */
   void updateHeapMemoryNoChangeCount();
 
-  String HEAP_SIZE_NAME = "Heap Size in Use";
-  String HEAP_SIZE_DESC = "Heap used currently";
+  String HEAP_SIZE_NAME = "heapSizeInUse";
+  String HEAP_SIZE_DESC = "Heap size in use currently";
 
-  String HEAP_OCCUPANCY_NAME = "Heap Occupancy";
-  String HEAP_OCCUPANCY_DESC = "Used Heap / Commited Heap";
+  String HEAP_OCCUPANCY_NAME = "heapOccupancy";
+  String HEAP_OCCUPANCY_DESC = "Heap Used / Heap Commited";
 
-  String CACHE_EVICTED_NAME = "Cache Block Evicted";
+  String CACHE_EVICTED_NAME = "cacheBlockEvicted";
   String CACHE_EVICTED_DESC = "The occurrence of cache block evicted since last tuning";
 
-  String CACHE_MISS_NAME = "Cache Miss";
+  String CACHE_MISS_NAME = "cacheMiss";
   String CACHE_MISS_DESC = "The occurrence of cache miss since last tuning";
 
-  String BLOCKED_FLUSH_NAME = "Blocked Flush";
+  String BLOCKED_FLUSH_NAME = "blockedFlush";
   String BLOCKED_FLUSH_DESC = "The occurrence of blocked flush since last tuning";
 
-  String UNBLOCKED_FLUSH_NAME = "Unblocked Flush";
+  String UNBLOCKED_FLUSH_NAME = "unblockedFlush";
   String UNBLOCKED_FLUSH_DESC = "The occurrence of unblocked flush since last tuning";
 
-  String CUR_MEMSTORE_USED_NAME = "MemStore Usage in Percentage";
+  String CUR_MEMSTORE_USED_NAME = "memStoreUsageInPercentage";
   String CUR_MEMSTORE_USED_DESC = "(Used MemStore size / Max heap size) * 100";
 
-  String CUR_BLOCKCACHE_USED_NAME = "BlockCache Usage in Percentage";
+  String CUR_BLOCKCACHE_USED_NAME = "blockCacheUsageInPercentage";
   String CUR_BLOCKCACHE_USED_DESC = "(Used BlockCache size / Max heap size) * 100";
 
-  String CUR_MEMSTORE_SIZE_NAME = "MemStore Usage in Size";
+  String CUR_MEMSTORE_SIZE_NAME = "memStoreUsageInSize";
   String CUR_MEMSTORE_SIZE_DESC = "Used MemStore size";
 
-  String CUR_BLOCKCACHE_SIZE_NAME = "BlockCache Usage in Size";
+  String CUR_BLOCKCACHE_SIZE_NAME = "blockCacheUsageInSize";
   String CUR_BLOCKCACHE_SIZE_DESC = "Used BlockCache size";
 
-  String INC_MEMSTORE_TUNING_NAME = "Increase MemStore size";
+  String INC_MEMSTORE_TUNING_NAME = "increaseMemStoreSize";
   String INC_MEMSTORE_TUNING_DESC = "The tuning result is to increase memstore size";
 
-  String DRC_MEMSTORE_TUNING_NAME = "Decrease MemStore size";
+  String DRC_MEMSTORE_TUNING_NAME = "decreaseMemStoreSize";
   String DRC_MEMSTORE_TUNING_DESC = "The tuning result is to decrease memstore size";
 
-  String INC_MEMSTORE_COUNTER_NAME = "MemStore Increase Counter";
+  String INC_MEMSTORE_COUNTER_NAME = "memStoreIncrementCounter";
   String INC_MEMSTORE_COUNTER_DESC = "The number of times that the memstore needs to expand";
 
-  String INC_BLOCKCACHE_TUNING_NAME = "Increase BlockCache size";
+  String INC_BLOCKCACHE_TUNING_NAME = "increaseBlockCacheSize";
   String INC_BLOCKCACHE_TUNING_DESC = "The tuning result is to increase blockcache size";
 
-  String DRC_BLOCKCACHE_TUNING_NAME = "Decrease BlockCache size";
+  String DRC_BLOCKCACHE_TUNING_NAME = "decreaseBlockCacheSize";
   String DRC_BLOCKCACHE_TUNING_DESC = "The tuning result is to decrease memstore size";
 
-  String INC_BLOCKCACHE_COUNTER_NAME = "BlockCache Increase Counter";
+  String INC_BLOCKCACHE_COUNTER_NAME = "blockCacheIncrementCounter";
   String INC_BLOCKCACHE_COUNTER_DESC = "The number of times that the blockcache needs to expand";
 
-  String INC_NOCHANGE_COUNTER_NAME = "NoChange Increase Counter";
+  String INC_NOCHANGE_COUNTER_NAME = "noChangeCounter";
   String INC_NOCHANGE_COUNTER_DESC = "The number of times that the heap memory needs no change";
 
-  String CACHE_EVICTED_COUNTER_NAME = "Total Cache Block Evicted";
+  String CACHE_EVICTED_COUNTER_NAME = "totalCacheBlockEvicted";
   String CACHE_EVICTED_COUNTER_DESC = "Total occurrence of cache block evicted";
 
-  String CACHE_MISS_COUNTER_NAME = "Total Cache Miss";
+  String CACHE_MISS_COUNTER_NAME = "totalCacheMiss";
   String CACHE_MISS_COUNTER_DESC = "Total occurrence of cache miss";
 
-  String BLOCKED_FLUSH_COUNTER_NAME = "Total Blocked Flush count";
+  String BLOCKED_FLUSH_COUNTER_NAME = "totalBlockedFlushCount";
   String BLOCKED_FLUSH_COUNTER_DESC = "Total occurrence of blocked flush";
 
-  String UNBLOCKED_FLUSH_COUNTER_NAME = "Total Unblocked Flush count";
+  String UNBLOCKED_FLUSH_COUNTER_NAME = "totalUnblockedFlushCount";
   String UNBLOCKED_FLUSH_COUNTER_DESC = "Total occurrence of unblocked flush";
 
-  String MAX_HEAP_SIZE_NAME = "Max Heap Size";
+  String MAX_HEAP_SIZE_NAME = "maxHeapSize";
   String MAX_HEAP_SIZE_DESC = "Max heap size can be used";
 
-  String HEAP_USE_PERCENT_NAME = "Used Heap in percentage";
-  String HEAP_USE_PERCENT_DESC = "Heap are used by the RegionServer";
+  String HEAP_USE_PERCENT_NAME = "usedHeapInPercentage";
+  String HEAP_USE_PERCENT_DESC = "Heap Used / Heap Committed";
 
-  String HEAP_USE_SIZE_NAME = "Used Heap in size";
-  String HEAP_USE_SIZE_DESC = "Heap size are used by the RegionServer";
+  String HEAP_USE_SIZE_NAME = "usedHeapInSize";
+  String HEAP_USE_SIZE_DESC = "Heap are used in size by the RegionServer";
 
-  String BLOCKCACHE_SIZE_NAME = "Size of BlockCache in Use";
-  String BLOCKCACHE_SIZE_DESC = "In use BlockCache size";
+  String BLOCKCACHE_SIZE_NAME = "blockCacheUsedInSize";
+  String BLOCKCACHE_SIZE_DESC = "BlockCache are used in size by the RegionServer";
 
-  String BLOCKCACHE_PERCENT_NAME = "BlockCache Used in Percentage";
+  String BLOCKCACHE_PERCENT_NAME = "blockCacheUsedInPercentage";
   String BLOCKCACHE_PERCENT_DESC = "BlockCache Used / Max Heap";
 
-  String MEMSTORE_SIZE_NAME = "Size of MemStore in Use";
-  String MEMSTORE_SIZE_DESC = "In use MemStore size";
+  String MEMSTORE_SIZE_NAME = "memStoreUsedInSize";
+  String MEMSTORE_SIZE_DESC = "MemStore are used in size by the RegionServer";
 
-  String MEMSTORE_PERCENT_NAME = "MemStore Used in Percentage";
+  String MEMSTORE_PERCENT_NAME = "memStoreUsedInPercentage";
   String MEMSTORE_PERCENT_DESC = "MemStore Used / Max Heap";
 }

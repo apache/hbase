@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,11 +40,6 @@ public class TestMetricsHeapMemoryManager {
   private MetricsHeapMemoryManager hmm;
   private MetricsHeapMemoryManagerSource source;
 
-  @BeforeClass
-  public static void classSetUp() {
-    HELPER.init();
-  }
-
   @Before
   public void setUp() {
     wrapper = new MetricsHeapMemoryManagerWrapperStub();
@@ -54,27 +48,25 @@ public class TestMetricsHeapMemoryManager {
   }
 
   @Test
+  public void testConstuctor() {
+    assertNotNull("There should be a hadoop1/hadoop2 metrics source", source);
+    assertNotNull("The RegionServerMetricsWrapper should be accessable", wrapper);
+  }
+
+  @Test
   public void testWrapperSource() {
     HELPER.assertTag("serverName", "test", source);
-    HELPER.assertTag("clusterId", "tClusterId", source);
-    HELPER.assertGauge("maxHeap", 1024, source);
-    HELPER.assertGauge("heapUsed", 0.5f, source);
-    HELPER.assertGauge("heapUsedSize", 512, source);
-    HELPER.assertGauge("blockCacheUsed", 0.25f, source);
-    HELPER.assertGauge("blockCacheUsedSize", 256, source);
-    HELPER.assertGauge("memStoreUsed", 0.25f, source);
-    HELPER.assertGauge("memStoreUsedSize", 256, source);
+    HELPER.assertGauge("maxHeapSize", 1024, source);
+    HELPER.assertGauge("usedHeapInPercentage", 0.5f, source);
+    HELPER.assertGauge("usedHeapInSize", 512, source);
+    HELPER.assertGauge("blockCacheUsedInPercentage", 0.25f, source);
+    HELPER.assertGauge("blockCacheUsedInSize", 256, source);
+    HELPER.assertGauge("memStoreUsedInPercentage", 0.25f, source);
+    HELPER.assertGauge("memStoreUsedInSize", 256, source);
   }
 
   @Test
-  public void testConstuctor() {
-    assertNotNull("There should be a hadoop1/hadoop2 metrics source", hmm.getMetricsSource());
-    assertNotNull("The RegionServerMetricsWrapper should be accessable",
-      hmm.getHeapMemoryManagerWrapper());
-  }
-
-  @Test
-  public void testMemoryAndCacheCounter() {
+  public void testCounter() {
     for (int i = 0; i < 10; i++) {
       hmm.updateCacheEvictedCount(5);
       hmm.updateCacheMissCount(6);

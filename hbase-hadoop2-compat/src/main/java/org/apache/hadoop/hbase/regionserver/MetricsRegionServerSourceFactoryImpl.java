@@ -51,13 +51,13 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
       return FactoryStorage.INSTANCE.tblAggImpl;
     }
   }
-  
+
   @Override
   public synchronized MetricsHeapMemoryManagerSource
       getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
-    synchronized (FactoryStorage.INSTANCE.hMemMngImpl) {
+    synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.hMemMngImpl == null) {
-        return new MetricsHeapMemoryManagerSourceImpl(wrapper);
+        FactoryStorage.INSTANCE.hMemMngImpl = new MetricsHeapMemoryManagerSourceImpl(wrapper);
       }
       return FactoryStorage.INSTANCE.hMemMngImpl;
     }
