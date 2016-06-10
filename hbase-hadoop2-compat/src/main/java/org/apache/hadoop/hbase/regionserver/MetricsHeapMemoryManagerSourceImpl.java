@@ -215,7 +215,9 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
           .addGauge(Interns.info(MEMSTORE_SIZE_NAME, MEMSTORE_SIZE_DESC),
             wrapper.getMemStoreUsedSize())
           .addGauge(Interns.info(MEMSTORE_PERCENT_NAME, MEMSTORE_PERCENT_DESC),
-            wrapper.getMemStoreUsed());
+            wrapper.getMemStoreUsed())
+          .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC),
+            wrapper.getServerName());
     }
     metricsRegistry.snapshot(mrb, all);
   }

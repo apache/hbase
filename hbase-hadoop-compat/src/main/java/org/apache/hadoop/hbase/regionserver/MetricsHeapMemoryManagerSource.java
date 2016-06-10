@@ -95,15 +95,15 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
 
   /**
    * Update the current blockcache(in size) used histogram
-   * @param blockcacheSize the current memory usage in blockcache in size.
+   * @param blockCacheSize the current memory usage in blockcache in size.
    */
-  void updateCurBlockCacheSize(long blockcacheSize);
+  void updateCurBlockCacheSize(long blockCacheSize);
 
   /**
    * Update the current memstore used(in size) histogram
-   * @param memstoreSize the current memory usage in memstore in size.
+   * @param memStoreSize the current memory usage in memstore in size.
    */
-  void updateCurMemStoreSize(long memstoreSize);
+  void updateCurMemStoreSize(long memStoreSize);
 
   /**
    * Update the increase/decrease memstore size histogram
@@ -121,6 +121,9 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
    * Update the counter for no change situation to the tuning result.
    */
   void updateHeapMemoryNoChangeCount();
+
+  String SERVER_NAME_NAME = "serverName";
+  String SERVER_NAME_DESC = "Server Name";
 
   String HEAP_SIZE_NAME = "heapSizeInUse";
   String HEAP_SIZE_DESC = "Heap size in use currently";
@@ -159,7 +162,7 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String DRC_MEMSTORE_TUNING_DESC = "The tuning result is to decrease memstore size";
 
   String INC_MEMSTORE_COUNTER_NAME = "memStoreIncrementCounter";
-  String INC_MEMSTORE_COUNTER_DESC = "The number of times that the memstore needs to expand";
+  String INC_MEMSTORE_COUNTER_DESC = "The number of occurrences that the memstore needs to expand";
 
   String INC_BLOCKCACHE_TUNING_NAME = "increaseBlockCacheSize";
   String INC_BLOCKCACHE_TUNING_DESC = "The tuning result is to increase blockcache size";
@@ -168,22 +171,23 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String DRC_BLOCKCACHE_TUNING_DESC = "The tuning result is to decrease memstore size";
 
   String INC_BLOCKCACHE_COUNTER_NAME = "blockCacheIncrementCounter";
-  String INC_BLOCKCACHE_COUNTER_DESC = "The number of times that the blockcache needs to expand";
+  String INC_BLOCKCACHE_COUNTER_DESC =
+      "The number of occurrences that the blockcache needs to expand";
 
   String INC_NOCHANGE_COUNTER_NAME = "noChangeCounter";
-  String INC_NOCHANGE_COUNTER_DESC = "The number of times that the heap memory needs no change";
+  String INC_NOCHANGE_COUNTER_DESC = "The number of occurrences that the heap memory needs no change";
 
   String CACHE_EVICTED_COUNTER_NAME = "totalCacheBlockEvicted";
-  String CACHE_EVICTED_COUNTER_DESC = "Total occurrence of cache block evicted";
+  String CACHE_EVICTED_COUNTER_DESC = "Total occurrences of cache block evicted";
 
   String CACHE_MISS_COUNTER_NAME = "totalCacheMiss";
-  String CACHE_MISS_COUNTER_DESC = "Total occurrence of cache miss";
+  String CACHE_MISS_COUNTER_DESC = "Total occurrences of cache miss";
 
   String BLOCKED_FLUSH_COUNTER_NAME = "totalBlockedFlushCount";
-  String BLOCKED_FLUSH_COUNTER_DESC = "Total occurrence of blocked flush";
+  String BLOCKED_FLUSH_COUNTER_DESC = "Total occurrences of blocked flush";
 
   String UNBLOCKED_FLUSH_COUNTER_NAME = "totalUnblockedFlushCount";
-  String UNBLOCKED_FLUSH_COUNTER_DESC = "Total occurrence of unblocked flush";
+  String UNBLOCKED_FLUSH_COUNTER_DESC = "Total occurrences of unblocked flush";
 
   String MAX_HEAP_SIZE_NAME = "maxHeapSize";
   String MAX_HEAP_SIZE_DESC = "Max heap size can be used";

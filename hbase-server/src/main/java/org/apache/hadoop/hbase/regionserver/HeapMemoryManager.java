@@ -352,9 +352,9 @@ public class HeapMemoryManager {
           // TODO can adjust the value so as not exceed 80%. Is that correct? may be.
         } else {
           int memStoreDeltaSize =
-              (int) (memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE;
+              (int) ((memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE);
           int blockCacheDeltaSize =
-              (int) (blockCacheSize - blockCachePercent) * CONVERT_TO_PERCENTAGE;
+              (int) ((blockCacheSize - blockCachePercent) * CONVERT_TO_PERCENTAGE);
           metricsHeapMemoryManager.updateMemStoreDeltaSize(memStoreDeltaSize);
           metricsHeapMemoryManager.updateBlockCacheDeltaSize(blockCacheDeltaSize);
           long newBlockCacheSize = (long) (maxHeapSize * blockCacheSize);
