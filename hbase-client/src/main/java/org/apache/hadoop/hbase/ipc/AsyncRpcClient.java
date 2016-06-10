@@ -347,13 +347,13 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
     // do not close global EventLoopGroup.
     if (!useGlobalEventLoopGroup) {
-      bootstrap.group().shutdownGracefully();
+      bootstrap.config().group().shutdownGracefully();
     }
   }
 
   @Override
   public EventLoop getEventExecutor() {
-    return this.bootstrap.group().next();
+    return this.bootstrap.config().group().next();
   }
 
   /**
