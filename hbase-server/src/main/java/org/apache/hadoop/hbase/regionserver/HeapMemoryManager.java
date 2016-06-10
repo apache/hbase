@@ -246,7 +246,7 @@ public class HeapMemoryManager {
       // Sample heap occupancy
       MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
       heapOccupancyPercent = (float)memUsage.getUsed() / (float)memUsage.getCommitted();
-      metricsHeapMemoryManager.updateHeapOccupancy(heapOccupancyPercent, memUsage.getUsed());
+      metricsHeapMemoryManager.updateHeapOccupancyPercent(heapOccupancyPercent, memUsage.getUsed());
       // If we are above the heap occupancy alarm low watermark, switch to short
       // sleeps for close monitoring. Stop autotuning, we are in a danger zone.
       if (heapOccupancyPercent >= heapOccupancyLowWatermark) {
@@ -351,12 +351,12 @@ public class HeapMemoryManager {
               + blockCacheSize);
           // TODO can adjust the value so as not exceed 80%. Is that correct? may be.
         } else {
-          int deltaMemStoreSize =
+          int memStoreDeltaSize =
               (int) (memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE;
-          int deltaBlockCacheSize =
+          int blockCacheDeltaSize =
               (int) (blockCacheSize - blockCachePercent) * CONVERT_TO_PERCENTAGE;
-          metricsHeapMemoryManager.updateDeltaMemStoreSize(deltaMemStoreSize);
-          metricsHeapMemoryManager.updateDeltaBlockCacheSize(deltaBlockCacheSize);
+          metricsHeapMemoryManager.updateMemStoreDeltaSize(memStoreDeltaSize);
+          metricsHeapMemoryManager.updateBlockCacheDeltaSize(blockCacheDeltaSize);
           long newBlockCacheSize = (long) (maxHeapSize * blockCacheSize);
           long newMemstoreSize = (long) (maxHeapSize * memstoreSize);
           LOG.info("Setting block cache heap size to " + newBlockCacheSize

@@ -53,8 +53,8 @@ public class MetricsHeapMemoryManager {
     return wrapper;
   }
 
-  public void updateHeapOccupancy(final float heapOccupancyPercent, final long heapUsed) {
-    source.updateHeapOccupancy(heapOccupancyPercent);
+  public void updateHeapOccupancyPercent(final float heapOccupancyPercent, final long heapUsed) {
+    source.updateHeapOccupancyPercent(heapOccupancyPercent);
     source.updateCurHeapSize(heapUsed);
   }
 
@@ -84,12 +84,12 @@ public class MetricsHeapMemoryManager {
     source.updateCurMemStoreSize(memstoreSize);
   }
 
-  public void updateDeltaMemStoreSize(final int deltaMemStoreSize) {
-    source.updateDeltaMemStoreSize(deltaMemStoreSize);
+  public void updateMemStoreDeltaSize(final int memStoreDeltaSize) {
+    source.updateMemStoreDeltaSize(memStoreDeltaSize);
   }
 
-  public void updateDeltaBlockCacheSize(final int deltaBlockCacheSize) {
-    source.updateDeltaBlockCacheSize(deltaBlockCacheSize);
+  public void updateBlockCacheDeltaSize(final int blockCacheDeltaSize) {
+    source.updateBlockCacheDeltaSize(blockCacheDeltaSize);
   }
 
   public void updateHeapMemoryNoChangeCount() {

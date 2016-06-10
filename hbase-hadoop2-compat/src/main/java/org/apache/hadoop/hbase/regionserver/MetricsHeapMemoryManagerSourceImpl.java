@@ -125,7 +125,7 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   }
 
   @Override
-  public void updateHeapOccupancy(float heapOccupancyPercent) {
+  public void updateHeapOccupancyPercent(float heapOccupancyPercent) {
     heapOccupancyHisto.add((long) (heapOccupancyPercent * CONVERT_TO_PERCENTAGE));
   }
 
@@ -174,22 +174,22 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   }
 
   @Override
-  public void updateDeltaMemStoreSize(int deltaMemStoreSize) {
-    if (deltaMemStoreSize > 0) {
-      incMemStoreSizeHisto.add(deltaMemStoreSize);
+  public void updateMemStoreDeltaSize(int memStoreDeltaSize) {
+    if (memStoreDeltaSize > 0) {
+      incMemStoreSizeHisto.add(memStoreDeltaSize);
       memStoreIncCounter.incr();
     } else {
-      drcMemStoreSizeHisto.add(-deltaMemStoreSize);
+      drcMemStoreSizeHisto.add(-memStoreDeltaSize);
     }
   }
 
   @Override
-  public void updateDeltaBlockCacheSize(int deltaBlockCacheSize) {
-    if (deltaBlockCacheSize > 0) {
-      incBlockCacheSizeHisto.add(deltaBlockCacheSize);
+  public void updateBlockCacheDeltaSize(int blockCacheDeltaSize) {
+    if (blockCacheDeltaSize > 0) {
+      incBlockCacheSizeHisto.add(blockCacheDeltaSize);
       blockCacheInrCounter.incr();
     } else {
-      drcBlockCacheSizeHisto.add(-deltaBlockCacheSize);
+      drcBlockCacheSizeHisto.add(-blockCacheDeltaSize);
     }
   }
 
