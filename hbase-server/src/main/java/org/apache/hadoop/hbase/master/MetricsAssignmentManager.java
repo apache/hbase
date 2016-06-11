@@ -29,6 +29,10 @@ public class MetricsAssignmentManager {
         MetricsAssignmentManagerSource.class);
   }
 
+  public MetricsAssignmentManagerSource getMetricsProcSource() {
+    return assignmentManagerSource;
+  }
+
   public void updateAssignmentTime(long time) {
     assignmentManagerSource.updateAssignmentTime(time);
   }
