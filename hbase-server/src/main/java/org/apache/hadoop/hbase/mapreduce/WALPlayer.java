@@ -295,7 +295,7 @@ public class WALPlayer extends Configured implements Tool {
     }
     String codecCls = WALCellCodec.getWALCellCodecClass(conf);
     try {
-      TableMapReduceUtil.addDependencyJars(conf, Class.forName(codecCls));
+      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Class.forName(codecCls));
     } catch (Exception e) {
       throw new IOException("Cannot determine wal codec class " + codecCls, e);
     }
