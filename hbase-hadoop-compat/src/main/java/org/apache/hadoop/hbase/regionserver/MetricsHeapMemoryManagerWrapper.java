@@ -21,42 +21,24 @@ package org.apache.hadoop.hbase.regionserver;
 public interface MetricsHeapMemoryManagerWrapper {
 
   /**
-   * Get ServerName
+   * (the occupied size of the block cache in bytes) /
+   * (the maximum amount of memory in bytes that can be used)
    */
-  String getServerName();
+  float getBlockCacheUsedPercent();
 
   /**
-   * Get Max heap size
-   */
-  long getMaxHeap();
-
-  /**
-   * Get Heap Used in percentage
-   */
-  float getHeapUsed();
-
-  /**
-   * Get Heap Used in size
-   */
-  long getHeapUsedSize();
-
-  /**
-   * Get BlockCache used in percentage
-   */
-  float getBlockCacheUsed();
-
-  /**
-   * Get BlockCached used in size
+   * Returns the occupied size of the block cache, in bytes.
    */
   long getBlockCacheUsedSize();
 
   /**
-   * Get MemStore used in percentage
+   * (the global Memstore size in bytes) /
+   * (the maximum amount of memory in bytes that can be used)
    */
-  float getMemStoreUsed();
+  float getMemStoreUsedPercent();
 
   /**
-   * Get MemStore used in size
+   * Return the global Memstore size in bytes in the RegionServer
    */
   long getMemStoreUsedSize();
 }

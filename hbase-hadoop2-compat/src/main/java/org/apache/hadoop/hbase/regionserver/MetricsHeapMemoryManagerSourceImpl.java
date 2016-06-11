@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -34,31 +32,23 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implements
     MetricsHeapMemoryManagerSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsHeapMemoryManagerSourceImpl.class);
   private static final int CONVERT_TO_PERCENTAGE = 100;
 
-  private final MetricHistogram heapCurUsedHisto;
-  private final MetricHistogram heapOccupancyHisto;
   private final MetricHistogram cacheEvictedHisto;
   private final MetricHistogram cacheMissHisto;
   private final MetricHistogram blockedFlushHisto;
   private final MetricHistogram unblockedFlushHisto;
-  private final MetricHistogram curMemStoreUsedHisto;
-  private final MetricHistogram curBlockCacheUsedHisto;
-  private final MetricHistogram curMemStoreSizeHisto;
-  private final MetricHistogram curBlockCacheSizeHisto;
+  private final MetricHistogram curMemStoreUsedPercentHisto;
+  private final MetricHistogram curBlockCacheUsedPercentHisto;
+  private final MetricHistogram curMemStoreUsedSizeHisto;
+  private final MetricHistogram curBlockCacheUsedSizeHisto;
   private final MetricHistogram incMemStoreSizeHisto;
-  private final MetricHistogram drcMemStoreSizeHisto;
   private final MetricHistogram incBlockCacheSizeHisto;
-  private final MetricHistogram drcBlockCacheSizeHisto;
 
-  private final MutableFastCounter blockedFlushCounter;
-  private final MutableFastCounter unblockedFlushCounter;
-  private final MutableFastCounter cacheEvictedCounter;
-  private final MutableFastCounter cacheMissCounter;
   private final MutableFastCounter memStoreIncCounter;
   private final MutableFastCounter blockCacheInrCounter;
-  private final MutableFastCounter noChangeCounter;
+  private final MutableFastCounter doNothingCounter;
+  private final MutableFastCounter aboveHeapOccupancyLowWatermarkCounter;
 
   private final MetricsHeapMemoryManagerWrapper wrapper;
 
@@ -71,13 +61,6 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.wrapper = wrapper;
 
-    LOG.debug("Creating new MetricsHeapMemoryManagerSourceImpl for RegionServer "
-        + wrapper.getServerName());
-
-    heapCurUsedHisto = getMetricsRegistry()
-        .newSizeHistogram(HEAP_SIZE_NAME, HEAP_SIZE_DESC);
-    heapOccupancyHisto = getMetricsRegistry()
-        .newSizeHistogram(HEAP_OCCUPANCY_NAME, HEAP_OCCUPANCY_DESC);
     cacheEvictedHisto = getMetricsRegistry()
         .newSizeHistogram(CACHE_EVICTED_NAME, CACHE_EVICTED_DESC);
     cacheMissHisto = getMetricsRegistry()
@@ -86,91 +69,68 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
         .newSizeHistogram(BLOCKED_FLUSH_NAME, BLOCKED_FLUSH_DESC);
     unblockedFlushHisto = getMetricsRegistry()
         .newSizeHistogram(UNBLOCKED_FLUSH_NAME, UNBLOCKED_FLUSH_DESC);
-    curMemStoreUsedHisto = getMetricsRegistry()
-        .newSizeHistogram(CUR_MEMSTORE_USED_NAME, CUR_MEMSTORE_USED_DESC);
-    curBlockCacheUsedHisto = getMetricsRegistry()
-        .newSizeHistogram(CUR_BLOCKCACHE_USED_NAME, CUR_BLOCKCACHE_USED_DESC);
-    curMemStoreSizeHisto = getMetricsRegistry()
+    curMemStoreUsedPercentHisto = getMetricsRegistry()
+        .newSizeHistogram(CUR_MEMSTORE_PERCENT_NAME, CUR_MEMSTORE_PERCENT_DESC);
+    curBlockCacheUsedPercentHisto = getMetricsRegistry()
+        .newSizeHistogram(CUR_BLOCKCACHE_PERCENT_NAME, CUR_BLOCKCACHE_PERCENT_DESC);
+    curMemStoreUsedSizeHisto = getMetricsRegistry()
         .newSizeHistogram(CUR_MEMSTORE_SIZE_NAME, CUR_MEMSTORE_SIZE_DESC);
-    curBlockCacheSizeHisto = getMetricsRegistry()
+    curBlockCacheUsedSizeHisto = getMetricsRegistry()
         .newSizeHistogram(CUR_BLOCKCACHE_SIZE_NAME, CUR_BLOCKCACHE_SIZE_DESC);
     incMemStoreSizeHisto = getMetricsRegistry()
         .newSizeHistogram(INC_MEMSTORE_TUNING_NAME, INC_MEMSTORE_TUNING_DESC);
-    drcMemStoreSizeHisto = getMetricsRegistry()
-        .newSizeHistogram(DRC_MEMSTORE_TUNING_NAME, DRC_MEMSTORE_TUNING_DESC);
     incBlockCacheSizeHisto = getMetricsRegistry()
         .newSizeHistogram(INC_BLOCKCACHE_TUNING_NAME, INC_BLOCKCACHE_TUNING_DESC);
-    drcBlockCacheSizeHisto = getMetricsRegistry()
-        .newSizeHistogram(DRC_BLOCKCACHE_TUNING_NAME, DRC_BLOCKCACHE_TUNING_DESC);
 
-    cacheEvictedCounter = getMetricsRegistry()
-        .newCounter(CACHE_EVICTED_COUNTER_NAME, CACHE_EVICTED_COUNTER_DESC, 0L);
-    cacheMissCounter = getMetricsRegistry()
-        .newCounter(CACHE_MISS_COUNTER_NAME, CACHE_MISS_COUNTER_DESC, 0L);
-    blockedFlushCounter = getMetricsRegistry()
-        .newCounter(BLOCKED_FLUSH_COUNTER_NAME, BLOCKED_FLUSH_COUNTER_DESC, 0L);
-    unblockedFlushCounter = getMetricsRegistry()
-        .newCounter(UNBLOCKED_FLUSH_COUNTER_NAME, UNBLOCKED_FLUSH_COUNTER_DESC, 0L);
     memStoreIncCounter = getMetricsRegistry()
         .newCounter(INC_MEMSTORE_COUNTER_NAME, INC_MEMSTORE_COUNTER_DESC, 0L);
     blockCacheInrCounter = getMetricsRegistry()
         .newCounter(INC_BLOCKCACHE_COUNTER_NAME, INC_BLOCKCACHE_COUNTER_DESC, 0L);
-    noChangeCounter = getMetricsRegistry()
-        .newCounter(INC_NOCHANGE_COUNTER_NAME, INC_NOCHANGE_COUNTER_DESC, 0L);
+    doNothingCounter = getMetricsRegistry()
+        .newCounter(DO_NOTHING_COUNTER_NAME, DO_NOTHING_COUNTER_DESC, 0L);
+    aboveHeapOccupancyLowWatermarkCounter =
+        getMetricsRegistry().newCounter(ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME,
+          ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC, 0L);
   }
 
   @Override
-  public void updateCurHeapSize(long heapSize) {
-    heapCurUsedHisto.add(heapSize);
-  }
-
-  @Override
-  public void updateHeapOccupancyPercent(float heapOccupancyPercent) {
-    heapOccupancyHisto.add((long) (heapOccupancyPercent * CONVERT_TO_PERCENTAGE));
-  }
-
-  @Override
-  public void updateCacheEvictCount(long cacheEvictCount) {
+  public void updateCacheEvictedCount(long cacheEvictCount) {
     cacheEvictedHisto.add(cacheEvictCount);
-    cacheEvictedCounter.incr(cacheEvictCount);
   }
 
   @Override
   public void updateCacheMissCount(long cacheMissCount) {
     cacheMissHisto.add(cacheMissCount);
-    cacheMissCounter.incr(cacheMissCount);
   }
 
   @Override
   public void updateBlockedFlushCount(long bFlushCount) {
     blockedFlushHisto.add(bFlushCount);
-    blockedFlushCounter.incr(bFlushCount);
   }
 
   @Override
   public void updateUnblockedFlushCount(long unbFlushCount) {
     unblockedFlushHisto.add(unbFlushCount);
-    unblockedFlushCounter.incr(unbFlushCount);
   }
 
   @Override
-  public void updateCurBlockCachePercentage(float curBlockCacheUsed) {
-    curBlockCacheUsedHisto.add((long) (curBlockCacheUsed * CONVERT_TO_PERCENTAGE));
+  public void updateCurBlockCachePercent(float curBlockCacheUsed) {
+    curBlockCacheUsedPercentHisto.add((long) (curBlockCacheUsed * CONVERT_TO_PERCENTAGE));
   }
 
   @Override
-  public void updateCurMemStorePercentage(float curMemStoreUsed) {
-    curMemStoreUsedHisto.add((long) (curMemStoreUsed * CONVERT_TO_PERCENTAGE));
+  public void updateCurMemStorePercent(float curMemStoreUsed) {
+    curMemStoreUsedPercentHisto.add((long) (curMemStoreUsed * CONVERT_TO_PERCENTAGE));
   }
 
   @Override
   public void updateCurBlockCacheSize(long blockcacheSize) {
-    curBlockCacheSizeHisto.add(blockcacheSize);
+    curBlockCacheUsedSizeHisto.add(blockcacheSize);
   }
 
   @Override
   public void updateCurMemStoreSize(long memstoreSize) {
-    curMemStoreSizeHisto.add(memstoreSize);
+    curMemStoreUsedSizeHisto.add(memstoreSize);
   }
 
   @Override
@@ -178,8 +138,6 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
     if (memStoreDeltaSize > 0) {
       incMemStoreSizeHisto.add(memStoreDeltaSize);
       memStoreIncCounter.incr();
-    } else {
-      drcMemStoreSizeHisto.add(-memStoreDeltaSize);
     }
   }
 
@@ -188,36 +146,31 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
     if (blockCacheDeltaSize > 0) {
       incBlockCacheSizeHisto.add(blockCacheDeltaSize);
       blockCacheInrCounter.incr();
-    } else {
-      drcBlockCacheSizeHisto.add(-blockCacheDeltaSize);
     }
   }
 
   @Override
-  public void updateHeapMemoryNoChangeCount() {
-    noChangeCounter.incr();
+  public void updateTunerDoNothingCount() {
+    doNothingCounter.incr();
+  }
+
+  @Override
+  public void updateAboveHeapOccupancyLowWatermarkCount() {
+    aboveHeapOccupancyLowWatermarkCounter.incr();
   }
 
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
     if (wrapper != null) {
-      mrb.addGauge(Interns.info(MAX_HEAP_SIZE_NAME, MAX_HEAP_SIZE_DESC),
-            wrapper.getMaxHeap())
-          .addGauge(Interns.info(HEAP_USE_SIZE_NAME, HEAP_USE_SIZE_DESC),
-            wrapper.getHeapUsedSize())
-          .addGauge(Interns.info(HEAP_USE_PERCENT_NAME, HEAP_USE_PERCENT_DESC),
-            wrapper.getHeapUsed())
-          .addGauge(Interns.info(BLOCKCACHE_SIZE_NAME, BLOCKCACHE_SIZE_DESC),
+      mrb.addGauge(Interns.info(BLOCKCACHE_SIZE_NAME, BLOCKCACHE_SIZE_DESC),
             wrapper.getBlockCacheUsedSize())
           .addGauge(Interns.info(BLOCKCACHE_PERCENT_NAME, BLOCKCACHE_PERCENT_DESC),
-            wrapper.getBlockCacheUsed())
+            wrapper.getBlockCacheUsedPercent())
           .addGauge(Interns.info(MEMSTORE_SIZE_NAME, MEMSTORE_SIZE_DESC),
             wrapper.getMemStoreUsedSize())
           .addGauge(Interns.info(MEMSTORE_PERCENT_NAME, MEMSTORE_PERCENT_DESC),
-            wrapper.getMemStoreUsed())
-          .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC),
-            wrapper.getServerName());
+            wrapper.getMemStoreUsedPercent());
     }
     metricsRegistry.snapshot(mrb, all);
   }

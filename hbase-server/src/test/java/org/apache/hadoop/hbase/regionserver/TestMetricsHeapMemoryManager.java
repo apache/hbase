@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -56,13 +55,9 @@ public class TestMetricsHeapMemoryManager {
 
   @Test
   public void testWrapperSource() {
-    HELPER.assertTag("serverName", "test", source);
-    HELPER.assertGauge("maxHeapSize", 1024, source);
-    HELPER.assertGauge("usedHeapInPercentage", 0.5f, source);
-    HELPER.assertGauge("usedHeapInSize", 512, source);
-    HELPER.assertGauge("blockCacheUsedInPercentage", 0.25f, source);
-    HELPER.assertGauge("blockCacheUsedInSize", 256, source);
-    HELPER.assertGauge("memStoreUsedInPercentage", 0.25f, source);
-    HELPER.assertGauge("memStoreUsedInSize", 256, source);
+    HELPER.assertGauge("blockCacheUsedInPercent", 0.3f, source);
+    HELPER.assertGauge("blockCacheUsedInSize", (long) (0.3 * 1024 * 1024), source);
+    HELPER.assertGauge("memStoreUsedInPercent", 0.4f, source);
+    HELPER.assertGauge("memStoreUsedInSize", (long) (0.4 * 1024 * 1024), source);
   }
 }

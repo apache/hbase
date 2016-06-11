@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 
@@ -32,43 +30,17 @@ public class MetricsHeapMemoryManagerWrapperImpl
 
   private MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 
-  private final Server server;
-  private final RegionServerAccounting rsAccounting;
+  private final RegionServerAccounting regionServerAccounting;
   private final ResizableBlockCache blockCache;
 
-  public MetricsHeapMemoryManagerWrapperImpl(final Server server,
-      final RegionServerAccounting rsAccounting, ResizableBlockCache blockCache) {
-    this.server = server;
-    this.rsAccounting = rsAccounting;
+  public MetricsHeapMemoryManagerWrapperImpl(final RegionServerAccounting regionServerAccounting,
+      final ResizableBlockCache blockCache) {
+    this.regionServerAccounting = regionServerAccounting;
     this.blockCache = blockCache;
   }
 
   @Override
-  public String getServerName() {
-    ServerName serverName = server.getServerName();
-    if (serverName == null) {
-      return "";
-    }
-    return serverName.getServerName();
-  }
-
-  @Override
-  public long getMaxHeap() {
-    return memUsage.getMax();
-  }
-
-  @Override
-  public float getHeapUsed() {
-    return (float) memUsage.getUsed() / (float) memUsage.getCommitted();
-  }
-
-  @Override
-  public long getHeapUsedSize() {
-    return memUsage.getUsed();
-  }
-
-  @Override
-  public float getBlockCacheUsed() {
+  public float getBlockCacheUsedPercent() {
     return (float) getBlockCacheUsedSize() / (float) memUsage.getMax();
   }
 
@@ -78,12 +50,12 @@ public class MetricsHeapMemoryManagerWrapperImpl
   }
 
   @Override
-  public float getMemStoreUsed() {
+  public float getMemStoreUsedPercent() {
     return (float) getMemStoreUsedSize() / (float) memUsage.getMax();
   }
 
   @Override
   public long getMemStoreUsedSize() {
-    return rsAccounting.getGlobalMemstoreSize();
+    return regionServerAccounting.getGlobalMemstoreSize();
   }
 }

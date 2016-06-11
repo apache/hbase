@@ -23,10 +23,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * <p>
  * This class is for maintaining the various regionserver's heap memory manager statistics
  * and publishing them through the metrics interfaces.
- * </p>
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
@@ -53,13 +51,8 @@ public class MetricsHeapMemoryManager {
     return wrapper;
   }
 
-  public void updateHeapOccupancyPercent(final float heapOccupancyPercent, final long heapUsed) {
-    source.updateHeapOccupancyPercent(heapOccupancyPercent);
-    source.updateCurHeapSize(heapUsed);
-  }
-
   public void updateCacheEvictedCount(final long cacheEvictedCount) {
-    source.updateCacheEvictCount(cacheEvictedCount);
+    source.updateCacheEvictedCount(cacheEvictedCount);
   }
 
   public void updateCacheMissCount(final long cacheMissCount) {
@@ -74,14 +67,14 @@ public class MetricsHeapMemoryManager {
     source.updateUnblockedFlushCount(unbFlushCount);
   }
 
-  public void updateCurBlockCache(final float curBlockCacheUsed, final long blockcacheSize) {
-    source.updateCurBlockCachePercentage(curBlockCacheUsed);
-    source.updateCurBlockCacheSize(blockcacheSize);
+  public void updateCurBlockCache(final float curBlockCacheUsed, final long blockCacheSize) {
+    source.updateCurBlockCachePercent(curBlockCacheUsed);
+    source.updateCurBlockCacheSize(blockCacheSize);
   }
 
-  public void updateCurMemStore(final float curMemStoreUsed, final long memstoreSize) {
-    source.updateCurMemStorePercentage(curMemStoreUsed);
-    source.updateCurMemStoreSize(memstoreSize);
+  public void updateCurMemStore(final float curMemStoreUsed, final long memStoreSize) {
+    source.updateCurMemStorePercent(curMemStoreUsed);
+    source.updateCurMemStoreSize(memStoreSize);
   }
 
   public void updateMemStoreDeltaSize(final int memStoreDeltaSize) {
@@ -92,7 +85,11 @@ public class MetricsHeapMemoryManager {
     source.updateBlockCacheDeltaSize(blockCacheDeltaSize);
   }
 
-  public void updateHeapMemoryNoChangeCount() {
-    source.updateHeapMemoryNoChangeCount();
+  public void updateTunerDoNothingCount() {
+    source.updateTunerDoNothingCount();
+  }
+
+  public void updateAboveHeapOccupancyLowWatermarkCount() {
+    source.updateAboveHeapOccupancyLowWatermarkCount();
   }
 }

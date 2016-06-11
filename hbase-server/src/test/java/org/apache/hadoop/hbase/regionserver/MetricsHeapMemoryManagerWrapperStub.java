@@ -21,42 +21,22 @@ package org.apache.hadoop.hbase.regionserver;
 public class MetricsHeapMemoryManagerWrapperStub implements MetricsHeapMemoryManagerWrapper {
 
   @Override
-  public String getServerName() {
-    return "test";
-  }
-
-  @Override
-  public long getMaxHeap() {
-    return 1024;
-  }
-
-  @Override
-  public float getHeapUsed() {
-    return 0.5f;
-  }
-
-  @Override
-  public long getHeapUsedSize() {
-    return 512;
-  }
-
-  @Override
-  public float getBlockCacheUsed() {
-    return 0.25f;
+  public float getBlockCacheUsedPercent() {
+    return 0.3f;
   }
 
   @Override
   public long getBlockCacheUsedSize() {
-    return 256;
+    return (long) (0.3 * 1024 * 1024);
   }
 
   @Override
-  public float getMemStoreUsed() {
-    return 0.25f;
+  public float getMemStoreUsedPercent() {
+    return 0.4f;
   }
 
   @Override
   public long getMemStoreUsedSize() {
-    return 256;
+    return (long) (0.4 * 1024 * 1024);
   }
 }

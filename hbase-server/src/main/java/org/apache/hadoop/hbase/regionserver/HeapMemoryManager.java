@@ -112,7 +112,7 @@ public class HeapMemoryManager {
     this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
       HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
     metricsHeapMemoryManagerWrapper =
-        new MetricsHeapMemoryManagerWrapperImpl(server, regionServerAccounting, blockCache);
+        new MetricsHeapMemoryManagerWrapperImpl(regionServerAccounting, blockCache);
     metricsHeapMemoryManager = new MetricsHeapMemoryManager(metricsHeapMemoryManagerWrapper);
   }
 
@@ -246,7 +246,6 @@ public class HeapMemoryManager {
       // Sample heap occupancy
       MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
       heapOccupancyPercent = (float)memUsage.getUsed() / (float)memUsage.getCommitted();
-      metricsHeapMemoryManager.updateHeapOccupancyPercent(heapOccupancyPercent, memUsage.getUsed());
       // If we are above the heap occupancy alarm low watermark, switch to short
       // sleeps for close monitoring. Stop autotuning, we are in a danger zone.
       if (heapOccupancyPercent >= heapOccupancyLowWatermark) {
@@ -255,6 +254,7 @@ public class HeapMemoryManager {
             " is above heap occupancy alarm watermark (" + heapOccupancyLowWatermark + ")");
           alarming = true;
         }
+        metricsHeapMemoryManager.updateAboveHeapOccupancyLowWatermarkCount();
         triggerNow();
         try {
           // Need to sleep ourselves since we've told the chore's sleeper
@@ -368,7 +368,7 @@ public class HeapMemoryManager {
         }
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("No changes made by HeapMemoryTuner.");
-        metricsHeapMemoryManager.updateHeapMemoryNoChangeCount();
+        metricsHeapMemoryManager.updateTunerDoNothingCount();
       }
     }
 
