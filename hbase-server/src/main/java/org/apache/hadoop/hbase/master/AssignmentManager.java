@@ -331,6 +331,10 @@ public class AssignmentManager extends ZooKeeperListener {
     useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
   }
 
+  MetricsAssignmentManager getAssignmentManagerMetrics() {
+    return this.metricsAssignmentManager;
+  }
+
   /**
    * Add the listener to the notification list.
    * @param listener The AssignmentListener to register
