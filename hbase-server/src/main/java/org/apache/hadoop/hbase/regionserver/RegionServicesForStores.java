@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +42,7 @@ public class RegionServicesForStores {
   private static final int POOL_SIZE = 10;
   private static final ThreadPoolExecutor INMEMORY_COMPACTION_POOL =
       new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 60, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
+          new StealJobQueue<Runnable>().getStealFromQueue(),
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
