@@ -1,5 +1,72 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.2.2 06/20/2016
+
+** Sub-task
+    * [HBASE-15386] - PREFETCH_BLOCKS_ON_OPEN in HColumnDescriptor is ignored
+    * [HBASE-15640] - L1 cache doesn't give fair warning that it is showing partial stats only when it hits limit
+    * [HBASE-15872] - Split TestWALProcedureStore
+    * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
+
+** Bug
+    * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum
+    * [HBASE-13627] - Terminating RS results in redundant CLOSE RPC
+    * [HBASE-14644] - Region in transition metric is broken
+    * [HBASE-14818] - user_permission does not list namespace permissions
+    * [HBASE-15234] - ReplicationLogCleaner can abort due to transient ZK issues
+    * [HBASE-15465] - userPermission returned by getUserPermission() for the selected namespace does not have namespace set
+    * [HBASE-15485] - Filter.reset() should not be called between batches
+    * [HBASE-15587] - FSTableDescriptors.getDescriptor() logs stack trace erronously
+    * [HBASE-15596] - hbAdmin is not closed after LoadIncrementalHFiles completes
+    * [HBASE-15613] - TestNamespaceCommand times out
+    * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
+    * [HBASE-15617] - Canary in regionserver mode might not enumerate all regionservers
+    * [HBASE-15621] - Suppress Hbase SnapshotHFile cleaner error  messages when a snaphot is going on
+    * [HBASE-15622] - Superusers does not consider the keytab credentials
+    * [HBASE-15627] -  Miss space and closing quote in AccessController#checkSystemOrSuperUser
+    * [HBASE-15636] - hard coded wait time out value in HBaseTestingUtility#waitUntilAllRegionsAssigned might cause test failure
+    * [HBASE-15645] - hbase.rpc.timeout is not used in operations of HTable
+    * [HBASE-15670] - Add missing Snapshot.proto to the maven profile for compiling protobuf
+    * [HBASE-15674] - HRegionLocator#getAllRegionLocations should put the results in cache
+    * [HBASE-15676] - FuzzyRowFilter fails and matches all the rows in the table if the mask consists of all 0s
+    * [HBASE-15693] - Reconsider the ImportOrder rule of checkstyle
+    * [HBASE-15698] - Increment TimeRange not serialized to server
+    * [HBASE-15738] - Ensure artifacts in project dist area include required md5 file
+    * [HBASE-15742] - Reduce allocation of objects in metrics
+    * [HBASE-15755] - SnapshotDescriptionUtils and SnapshotTestingUtils do not have any Interface audience marked
+    * [HBASE-15801] - Upgrade checkstyle for all branches
+    * [HBASE-15811] - Batch Get after batch Put does not fetch all Cells
+    * [HBASE-15818] - Shell create ‘t1’, ‘f1’, ‘f2’, ‘f3’ wrong number of arguments
+    * [HBASE-15824] - LocalHBaseCluster gets bind exception in master info port
+    * [HBASE-15827] - Backport HBASE-15125 'HBaseFsck's adoptHdfsOrphan function creates region with wrong end key boundary' to 1.2
+    * [HBASE-15841] - Performance Evaluation tool total rows may not be set correctly
+    * [HBASE-15850] - Localize the configuration change in testCheckTableLocks to reduce flakiness of TestHBaseFsck test suite
+    * [HBASE-15856] - Cached Connection instances can wind up with addresses never resolved
+    * [HBASE-15873] - ACL for snapshot restore / clone is not enforced
+    * [HBASE-15880] - RpcClientImpl#tracedWriteRequest incorrectly closes HTrace span
+    * [HBASE-15920] - Backport submit-patch.py to branch-1 and earlier branches.
+    * [HBASE-15925] - compat-module maven variable not evaluated
+    * [HBASE-15946] - Eliminate possible security concerns in RS web UI's store file metrics
+    * [HBASE-15954] - REST server should log requests with TRACE instead of DEBUG
+    * [HBASE-15955] - Disable action in CatalogJanitor#setEnabled should wait for active cleanup scan to finish
+    * [HBASE-15957] - RpcClientImpl.close never ends in some circumstances
+    * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-16016] - AssignmentManager#waitForAssignment could have unexpected negative deadline
+
+** Improvement
+    * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-15551] - Make call queue too big exception use servername
+    * [HBASE-15569] - Make Bytes.toStringBinary faster
+    * [HBASE-15720] - Print row locks at the debug dump page
+    * [HBASE-15791] - Improve javadoc in ScheduledChore
+    * [HBASE-15808] - Reduce potential bulk load intermediate space usage and waste
+    * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
+    * [HBASE-15854] - Log the cause of SASL connection failures
+
+** Task
+    * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
+    * [HBASE-16019] - Cut HBase 1.2.2 release
+
 Release Notes - HBase - Version 1.2.1 04/05/2016
 
 ** Sub-task
