@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * An {@link RpcExecutor} that will balance requests evenly across all its queues, but still remains
- * efficient with a single queue via an inlinable queue balancing mechanism.
+ * efficient with a single queue via an inlinable queue balancing mechanism. Defaults to FIFO but
+ * you can pass an alternate queue class to use.
  */
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
