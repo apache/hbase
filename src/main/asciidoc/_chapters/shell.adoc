@@ -352,6 +352,68 @@ hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UT
 
 To output in a format that is exactly like that of the HBase log format will take a little messing with link:http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html[SimpleDateFormat].
 
+[[tricks.pre-split]]
+=== Pre-splitting tables with the HBase Shell
+You can use a variety of options to pre-split tables when creating them via the HBase Shell `create` command.
+
+The simplest approach is to specify an array of split points when creating the table. Note that when specifying string literals as split points, these will create split points based on the underlying byte representation of the string. So when specifying a split point of '10', we are actually specifying the byte split point '\x31\30'.
+
+The split points will define `n+1` regions where `n` is the number of split points. The lowest region will contain all keys from the lowest possible key up to but not including the first split point key.
+The next region will contain keys from the first split point up to, but not including the next split point key.
+This will continue for all split points up to the last. The last region will be defined from the last split point up to the maximum possible key.
+
+[source]
+----
+hbase>create 't1','f',SPLITS => ['10','20',30']
+----
+
+In the above example, the table 't1' will be created with column family 'f', pre-split to four regions. Note the first region will contain all keys from '\x00' up to '\x30' (as '\x31' is the ASCII code for '1').
+
+You can pass the split points in a file using following variation. In this example, the splits are read from a file corresponding to the local path on the local filesystem. Each line in the file specifies a split point key.
+
+[source]
+----
+hbase>create 't14','f',SPLITS_FILE=>'splits.txt'
+----
+
+The other options are to automatically compute splits based on a desired number of regions and a splitting algorithm.
+HBase supplies algorithms for splitting the key range based on uniform splits or based on hexadecimal keys, but you can provide your own splitting algorithm to subdivide the key range.
+
+[source]
+----
+# create table with four regions based on random bytes keys
+hbase>create 't2','f1', { NUMREGIONS => 4 , SPLITALGO => 'UniformSplit' }
+
+# create table with five regions based on hex keys
+hbase>create 't3','f1', { NUMREGIONS => 5, SPLITALGO => 'HexStringSplit' }
+----
+
+As the HBase Shell is effectively a Ruby environment, you can use simple Ruby scripts to compute splits algorithmically.
+
+[source]
+----
+# generate splits for long (Ruby fixnum) key range from start to end key
+hbase(main):070:0> def gen_splits(start_key,end_key,num_regions)
+hbase(main):071:1>   results=[]
+hbase(main):072:1>   range=end_key-start_key
+hbase(main):073:1>   incr=(range/num_regions).floor
+hbase(main):074:1>   for i in 1 .. num_regions-1
+hbase(main):075:2>     results.push([i*incr+start_key].pack("N"))
+hbase(main):076:2>   end
+hbase(main):077:1>   return results
+hbase(main):078:1> end
+hbase(main):079:0>
+hbase(main):080:0> splits=gen_splits(1,2000000,10)
+=> ["\000\003\r@", "\000\006\032\177", "\000\t'\276", "\000\f4\375", "\000\017B<", "\000\022O{", "\000\025\\\272", "\000\030i\371", "\000\ew8"]
+hbase(main):081:0> create 'test_splits','f',SPLITS=>splits
+0 row(s) in 0.2670 seconds
+
+=> Hbase::Table - test_splits
+----
+
+Note that the HBase Shell command `truncate` effectively drops and recreates the table with default options which will discard any pre-splitting.
+If you need to truncate a pre-split table, you must drop and recreate the table explicitly to re-specify custom split options.
+
 === Debug
 
 ==== Shell debug switch

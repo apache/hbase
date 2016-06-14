@@ -222,8 +222,8 @@ Use the following legend to interpret this table:
 |Hadoop-0.23.x | S | X | X | X | X
 |Hadoop-2.0.x-alpha | NT | X | X | X | X
 |Hadoop-2.1.0-beta | NT | X | X | X | X
-|Hadoop-2.2.0 | NT | S | NT | NT | NT
-|Hadoop-2.3.x | NT | S | NT | NT | NT
+|Hadoop-2.2.0 | NT | S | NT | NT | X 
+|Hadoop-2.3.x | NT | S | NT | NT | X 
 |Hadoop-2.4.x | NT | S | S | S | S
 |Hadoop-2.5.x | NT | S | S | S | S
 |Hadoop-2.6.0 | X | X | X | X | X
@@ -411,7 +411,7 @@ Set [var]+JAVA_HOME+ to point at the root of your +java+ install.
 This is the default mode.
 Standalone mode is what is described in the <<quickstart,quickstart>> section.
 In standalone mode, HBase does not use HDFS -- it uses the local filesystem instead -- and it runs all HBase daemons and a local ZooKeeper all up in the same JVM.
-Zookeeper binds to a well known port so clients may talk to HBase.
+ZooKeeper binds to a well known port so clients may talk to HBase.
 
 [[distributed]]
 === Distributed
@@ -453,7 +453,7 @@ In addition, the cluster is configured so that multiple cluster nodes enlist as 
 These configuration basics are all demonstrated in <<quickstart_fully_distributed,quickstart-fully-distributed>>.
 
 .Distributed RegionServers
-Typically, your cluster will contain multiple RegionServers all running on different servers, as well as primary and backup Master and Zookeeper daemons.
+Typically, your cluster will contain multiple RegionServers all running on different servers, as well as primary and backup Master and ZooKeeper daemons.
 The _conf/regionservers_ file on the master server contains a list of hosts whose RegionServers are associated with this cluster.
 Each host is on a separate line.
 All hosts listed in this file will have their RegionServer processes started and stopped when the master server starts or stops.
@@ -703,8 +703,8 @@ Below we show what the main configuration files -- _hbase-site.xml_, _regionserv
     <name>hbase.cluster.distributed</name>
     <value>true</value>
     <description>The mode the cluster will be in. Possible values are
-      false: standalone and pseudo-distributed setups with managed Zookeeper
-      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
+      false: standalone and pseudo-distributed setups with managed ZooKeeper
+      true: fully-distributed with unmanaged ZooKeeper Quorum (see hbase-env.sh)
     </description>
   </property>
 </configuration>
@@ -1110,6 +1110,37 @@ In the HBase shell, there are new operators, `update_config` and `update_all_con
 Only a subset of all configurations can currently be changed in the running server.
 Here is an incomplete list: `hbase.regionserver.thread.compaction.large`, `hbase.regionserver.thread.compaction.small`, `hbase.regionserver.thread.split`, `hbase.regionserver.thread.merge`, as well as compaction policy and configurations and adjustment to offpeak hours.
 For the full list consult the patch attached to  link:https://issues.apache.org/jira/browse/HBASE-12147[HBASE-12147 Porting Online Config Change from 89-fb].
+
+[[amazon_s3_configuration]]
+== Using Amazon S3 Storage
+
+HBase is designed to be tightly coupled with HDFS, and testing of other filesystems
+has not been thorough.
+
+The following limitations have been reported:
+
+- RegionServers should be deployed in Amazon EC2 to mitigate latency and bandwidth
+limitations when accessing the filesystem, and RegionServers must remain available
+to preserve data locality.
+- S3 writes each inbound and outbound file to disk, which adds overhead to each operation.
+- The best performance is achieved when all clients and servers are in the Amazon
+cloud, rather than a heterogenous architecture.
+- You must be aware of the location of `hadoop.tmp.dir` so that the local `/tmp/`
+directory is not filled to capacity.
+- HBase has a different file usage pattern than MapReduce jobs and has been optimized for
+HDFS, rather than distant networked storage.
+- The `s3a://` protocol is strongly recommended. The `s3n://` and `s3://` protocols have serious
+limitations and do not use the Amazon AWS SDK. The `s3a://` protocol is supported
+for use with HBase if you use Hadoop 2.6.1 or higher with HBase 1.2 or higher. Hadoop
+2.6.0 is not supported with HBase at all.
+
+Configuration details for Amazon S3 and associated Amazon services such as EMR are
+out of the scope of the HBase documentation. See the
+link:https://wiki.apache.org/hadoop/AmazonS3[Hadoop Wiki entry on Amazon S3 Storage]
+and
+link:http://docs.aws.amazon.com/ElasticMapReduce/latest/DeveloperGuide/emr-hbase.html[Amazon's documentation for deploying HBase in EMR].
+
+One use case that is well-suited for Amazon S3 is storing snapshots. See <<snapshots_s3>>.
 
 ifdef::backend-docbook[]
 [index]

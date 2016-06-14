@@ -207,6 +207,11 @@ tableDesc.addFamily(cfDesc);
 See the API documentation for
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
 
+To see prefetch in operation, enable TRACE level logging on
+`org.apache.hadoop.hbase.io.hfile.HFileReaderImpl` in hbase-2.0+
+or on `org.apache.hadoop.hbase.io.hfile.HFileReaderV2` in earlier versions, hbase-1.x, of HBase.
+
+
 [[perf.rs.memstore.size]]
 === `hbase.regionserver.global.memstore.size`
 
@@ -333,7 +338,7 @@ HBase includes some tuning mechanisms for folding the Bloom filter to reduce the
 
 Bloom filters were introduced in link:https://issues.apache.org/jira/browse/HBASE-1200[HBASE-1200].
 Since HBase 0.96, row-based Bloom filters are enabled by default.
-(link:https://issues.apache.org/jira/browse/HBASE-8450[HBASE-])
+(link:https://issues.apache.org/jira/browse/HBASE-8450[HBASE-8450])
 
 For more information on Bloom filters in relation to HBase, see <<blooms>> for more information, or the following Quora discussion: link:http://www.quora.com/How-are-bloom-filters-used-in-HBase[How are bloom filters used in HBase?].
 
@@ -361,7 +366,7 @@ Bloom filters need to be rebuilt upon deletion, so may not be appropriate in env
 
 Bloom filters are enabled on a Column Family.
 You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API.
-Valid values are `NONE` (the default), `ROW`, or `ROWCOL`.
+Valid values are `NONE`, `ROW` (default), or `ROWCOL`.
 See <<bloom.filters.when>> for more information on `ROW` versus `ROWCOL`.
 See also the API documentation for link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
@@ -382,17 +387,17 @@ You can configure the following settings in the _hbase-site.xml_.
 | Default
 | Description
 
-| io.hfile.bloom.enabled
+| io.storefile.bloom.enabled
 | yes
 | Set to no to kill bloom filters server-wide if something goes wrong
 
-| io.hfile.bloom.error.rate
+| io.storefile.bloom.error.rate
 | .01
 | The average false positive rate for bloom filters. Folding is used to
                   maintain the false positive rate. Expressed as a decimal representation of a
                   percentage.
 
-| io.hfile.bloom.max.fold
+| io.storefile.bloom.max.fold
 | 7
 | The guaranteed maximum fold rate. Changing this setting should not be
                   necessary and is not recommended.
@@ -406,7 +411,7 @@ You can configure the following settings in the _hbase-site.xml_.
 | Master switch to enable Delete Family Bloom filters and store them in the StoreFile.
 
 | io.storefile.bloom.block.size
-| 65536
+| 131072
 | Target Bloom block size. Bloom filter blocks of approximately this size
                   are interleaved with data blocks.
 
@@ -494,7 +499,7 @@ For bulk imports, this means that all clients will write to the same region unti
 A useful pattern to speed up the bulk import process is to pre-create empty regions.
 Be somewhat conservative in this, because too-many regions can actually degrade performance.
 
-There are two different approaches to pre-creating splits.
+There are two different approaches to pre-creating splits using the HBase API.
 The first approach is to rely on the default `Admin` strategy (which is implemented in `Bytes.split`)...
 
 [source,java]
@@ -506,7 +511,7 @@ int numberOfRegions = ...;  // # of regions to create
 admin.createTable(table, startKey, endKey, numberOfRegions);
 ----
 
-And the other approach is to define the splits yourself...
+And the other approach, using the HBase API, is to define the splits yourself...
 
 [source,java]
 ----
@@ -514,8 +519,23 @@ byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 ----
 
+You can achieve a similar effect using the HBase Shell to create tables by specifying split options. 
+
+[source]
+----
+# create table with specific split points
+hbase>create 't1','f1',SPLITS => ['\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00']
+
+# create table with four regions based on random bytes keys
+hbase>create 't2','f1', { NUMREGIONS => 4 , SPLITALGO => 'UniformSplit' }
+
+# create table with five regions based on hex keys
+create 't3','f1', { NUMREGIONS => 5, SPLITALGO => 'HexStringSplit' }
+----
+
 See <<rowkey.regionsplits>> for issues related to understanding your keyspace and pre-creating regions.
 See <<manual_region_splitting_decisions,manual region splitting decisions>>  for discussion on manually pre-splitting regions.
+See <<tricks.pre-split>> for more details of using the HBase Shell to pre-split tables.
 
 [[def.log.flush]]
 ===  Table Creation: Deferred Log Flush
@@ -713,20 +733,20 @@ Stored in the LRU cache, if it is enabled (It's enabled by default).
 [[config.bloom]]
 ==== Bloom Filter Configuration
 
-===== `io.hfile.bloom.enabled` global kill switch
+===== `io.storefile.bloom.enabled` global kill switch
 
-`io.hfile.bloom.enabled` in `Configuration` serves as the kill switch in case something goes wrong.
+`io.storefile.bloom.enabled` in `Configuration` serves as the kill switch in case something goes wrong.
 Default = `true`.
 
-===== `io.hfile.bloom.error.rate`
+===== `io.storefile.bloom.error.rate`
 
-`io.hfile.bloom.error.rate` = average false positive rate.
+`io.storefile.bloom.error.rate` = average false positive rate.
 Default = 1%. Decrease rate by ½ (e.g.
 to .5%) == +1 bit per bloom entry.
 
-===== `io.hfile.bloom.max.fold`
+===== `io.storefile.bloom.max.fold`
 
-`io.hfile.bloom.max.fold` = guaranteed minimum fold rate.
+`io.storefile.bloom.max.fold` = guaranteed minimum fold rate.
 Most people should leave this alone.
 Default = 7, or can collapse to at least 1/128th of original size.
 See the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] for more on what this option means.

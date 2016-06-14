@@ -108,7 +108,7 @@ If running zookeeper 3.5+, you can ask hbase to make use of the new multi operat
 .ZooKeeper Maintenance
 [CAUTION]
 ====
-Be sure to set up the data dir cleaner described under link:http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance[Zookeeper
+Be sure to set up the data dir cleaner described under link:http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance[ZooKeeper
         Maintenance] else you could have 'interesting' problems a couple of months in; i.e.
 zookeeper could start dropping sessions if it has to run through a directory of hundreds of thousands of logs which is wont to do around leader reelection time -- a process rare but run on occasion whether because a machine is dropped or happens to hiccup.
 ====
@@ -120,7 +120,7 @@ To point HBase at an existing ZooKeeper cluster, one that is not managed by HBas
 ----
 
   ...
-  # Tell HBase whether it should manage its own instance of Zookeeper or not.
+  # Tell HBase whether it should manage its own instance of ZooKeeper or not.
   export HBASE_MANAGES_ZK=false
 ----
 
@@ -145,10 +145,10 @@ Additionally, see the link:http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKee
 [[zk.sasl.auth]]
 == SASL Authentication with ZooKeeper
 
-Newer releases of Apache HBase (>= 0.92) will support connecting to a ZooKeeper Quorum that supports SASL authentication (which is available in Zookeeper versions 3.4.0 or later).
+Newer releases of Apache HBase (>= 0.92) will support connecting to a ZooKeeper Quorum that supports SASL authentication (which is available in ZooKeeper versions 3.4.0 or later).
 
 This describes how to set up HBase to mutually authenticate with a ZooKeeper Quorum.
-ZooKeeper/HBase mutual authentication (link:https://issues.apache.org/jira/browse/HBASE-2418[HBASE-2418]) is required as part of a complete secure HBase configuration (link:https://issues.apache.org/jira/browse/HBASE-3025[HBASE-3025]). For simplicity of explication, this section ignores additional configuration required (Secure HDFS and Coprocessor configuration). It's recommended to begin with an HBase-managed Zookeeper configuration (as opposed to a standalone Zookeeper quorum) for ease of learning.
+ZooKeeper/HBase mutual authentication (link:https://issues.apache.org/jira/browse/HBASE-2418[HBASE-2418]) is required as part of a complete secure HBase configuration (link:https://issues.apache.org/jira/browse/HBASE-3025[HBASE-3025]). For simplicity of explication, this section ignores additional configuration required (Secure HDFS and Coprocessor configuration). It's recommended to begin with an HBase-managed ZooKeeper configuration (as opposed to a standalone ZooKeeper quorum) for ease of learning.
 
 === Operating System Prerequisites
 
@@ -165,7 +165,7 @@ Each user who will be an HBase client should also be given a Kerberos principal.
 This principal should usually have a password assigned to it (as opposed to, as with the HBase servers, a keytab file) which only this user knows.
 The client's principal's `maxrenewlife` should be set so that it can be renewed enough so that the user can complete their HBase client processes.
 For example, if a user runs a long-running HBase client process that takes at most 3 days, we might create this user's principal within `kadmin` with: `addprinc -maxrenewlife 3days`.
-The Zookeeper client and server libraries manage their own ticket refreshment by running threads that wake up periodically to do the refreshment.
+The ZooKeeper client and server libraries manage their own ticket refreshment by running threads that wake up periodically to do the refreshment.
 
 On each host that will run an HBase client (e.g. `hbase shell`), add the following file to the HBase home directory's _conf_ directory:
 
@@ -181,7 +181,7 @@ Client {
 
 We'll refer to this JAAS configuration file as _$CLIENT_CONF_        below.
 
-=== HBase-managed Zookeeper Configuration
+=== HBase-managed ZooKeeper Configuration
 
 On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
 
@@ -207,7 +207,7 @@ Client {
 
 where the _$PATH_TO_HBASE_KEYTAB_ and _$PATH_TO_ZOOKEEPER_KEYTAB_ files are what you created above, and `$HOST` is the hostname for that node.
 
-The `Server` section will be used by the Zookeeper quorum server, while the `Client` section will be used by the HBase master and regionservers.
+The `Server` section will be used by the ZooKeeper quorum server, while the `Client` section will be used by the HBase master and regionservers.
 The path to this file should be substituted for the text _$HBASE_SERVER_CONF_ in the _hbase-env.sh_ listing below.
 
 The path to this file should be substituted for the text _$CLIENT_CONF_ in the _hbase-env.sh_ listing below.
@@ -255,7 +255,7 @@ Modify your _hbase-site.xml_ on each node that will run zookeeper, master or reg
 </configuration>
 ----
 
-where `$ZK_NODES` is the comma-separated list of hostnames of the Zookeeper Quorum hosts.
+where `$ZK_NODES` is the comma-separated list of hostnames of the ZooKeeper Quorum hosts.
 
 Start your hbase cluster by running one or more of the following set of commands on the appropriate hosts:
 
@@ -266,7 +266,7 @@ bin/hbase master start
 bin/hbase regionserver start
 ----
 
-=== External Zookeeper Configuration
+=== External ZooKeeper Configuration
 
 Add a JAAS configuration file that looks like:
 
@@ -326,7 +326,7 @@ Modify your _hbase-site.xml_ on each node that will run a master or regionserver
 </configuration>
 ----
 
-where `$ZK_NODES` is the comma-separated list of hostnames of the Zookeeper Quorum hosts.
+where `$ZK_NODES` is the comma-separated list of hostnames of the ZooKeeper Quorum hosts.
 
 Also on each of these hosts, create a JAAS configuration file containing:
 
@@ -346,7 +346,7 @@ Server {
 where `$HOST` is the hostname of each Quorum host.
 We will refer to the full pathname of this file as _$ZK_SERVER_CONF_ below.
 
-Start your Zookeepers on each Zookeeper Quorum host with:
+Start your ZooKeepers on each ZooKeeper Quorum host with:
 
 [source,bourne]
 ----
@@ -362,9 +362,9 @@ bin/hbase master start
 bin/hbase regionserver start
 ----
 
-=== Zookeeper Server Authentication Log Output
+=== ZooKeeper Server Authentication Log Output
 
-If the configuration above is successful, you should see something similar to the following in your Zookeeper server logs:
+If the configuration above is successful, you should see something similar to the following in your ZooKeeper server logs:
 
 ----
 
@@ -382,9 +382,9 @@ If the configuration above is successful, you should see something similar to th
 11/12/05 22:43:59 INFO server.ZooKeeperServer: adding SASL authorization for authorizationID: hbase
 ----
 
-=== Zookeeper Client Authentication Log Output
+=== ZooKeeper Client Authentication Log Output
 
-On the Zookeeper client side (HBase master or regionserver), you should see something similar to the following:
+On the ZooKeeper client side (HBase master or regionserver), you should see something similar to the following:
 
 ----
 

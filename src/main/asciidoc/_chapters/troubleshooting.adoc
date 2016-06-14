@@ -859,11 +859,14 @@ Snapshots::
   HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
 
 WAL::
-  Write-ahead logs (WALs) are stored in subdirectories of `/hbase/.logs/`, depending
-  on their status. Already-processed WALs are stored in `/hbase/.logs/oldWALs/` and
-  corrupt WALs are stored in `/hbase/.logs/.corrupt/` for examination.
-  If the size of any subdirectory of `/hbase/.logs/` is growing, examine the HBase
+  Write-ahead logs (WALs) are stored in subdirectories of the HBase root directory,
+  typically `/hbase/`, depending on their status. Already-processed WALs are stored
+  in `/hbase/oldWALs/` and corrupt WALs are stored in `/hbase/.corrupt/` for examination.
+  If the size of one of these subdirectories is growing, examine the HBase
   server logs to find the root cause for why WALs are not being processed correctly.
++
+If you use replication and `/hbase/oldWALs/` is using more space than you expect,
+remember that WALs are saved when replication is disabled, as long as there are peers.
 
 *Do not* manage WALs manually via HDFS.
 

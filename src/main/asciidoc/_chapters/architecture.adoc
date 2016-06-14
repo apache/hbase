@@ -2060,6 +2060,107 @@ Why?
 
 NOTE: This information is now included in the configuration parameter table in <<compaction.parameters>>.
 
+[[ops.date.tiered]]
+===== Date Tiered Compaction
+
+Date tiered compaction is a date-aware store file compaction strategy that is beneficial for time-range scans for time-series data.
+
+[[ops.date.tiered.when]]
+===== When To Use Date Tiered Compactions
+
+Consider using Date Tiered Compaction for reads for limited time ranges, especially scans of recent data
+
+Don't use it for
+
+* random gets without a limited time range
+* frequent deletes and updates
+* Frequent out of order data writes creating long tails, especially writes with future timestamps
+* frequent bulk loads with heavily overlapping time ranges
+
+.Performance Improvements
+Performance testing has shown that the performance of time-range scans improve greatly for limited time ranges, especially scans of recent data.
+
+[[ops.date.tiered.enable]]
+====== Enabling Date Tiered Compaction
+
+You can enable Date Tiered compaction for a table or a column family, by setting its `hbase.hstore.engine.class` to `org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine`.
+
+You also need to set `hbase.hstore.blockingStoreFiles` to a high number, such as 60, if using all default settings, rather than the default value of 12). Use 1.5~2 x projected file count if changing the parameters, Projected file count = windows per tier x tier count + incoming window min + files older than max age
+
+You also need to set `hbase.hstore.compaction.max` to the same value as `hbase.hstore.blockingStoreFiles` to unblock major compaction.
+
+.Procedure: Enable Date Tiered Compaction
+. Run one of following commands in the HBase shell.
+  Replace the table name `orders_table` with the name of your table.
++
+[source,sql]
+----
+alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
+alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}}
+create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
+----
+
+. Configure other options if needed.
+  See <<ops.date.tiered.config>> for more information.
+
+.Procedure: Disable Date Tiered Compaction
+. Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`.
+  Either option has the same effect.
+  Make sure you set the other options you changed to the original settings too.
++
+[source,sql]
+----
+alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine'， 'hbase.hstore.blockingStoreFiles' => '12', 'hbase.hstore.compaction.min'=>'6', 'hbase.hstore.compaction.max'=>'12'}}
+----
+
+When you change the store engine either way, a major compaction will likely be performed on most regions.
+This is not necessary on new tables.
+
+[[ops.date.tiered.config]]
+====== Configuring Date Tiered Compaction
+
+Each of the settings for date tiered compaction should be configured at the table or column family level.
+If you use HBase shell, the general command pattern is as follows:
+
+[source,sql]
+----
+alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
+----
+
+[[ops.date.tiered.config.parameters]]
+.Tier Parameters
+
+You can configure your date tiers by changing the settings for the following parameters:
+
+.Date Tier Parameters
+[cols="1,1a", frame="all", options="header"]
+|===
+| Setting
+| Notes
+
+|`hbase.hstore.compaction.date.tiered.max.storefile.age.millis`
+|Files with max-timestamp smaller than this will no longer be compacted.Default at Long.MAX_VALUE.
+
+| `hbase.hstore.compaction.date.tiered.base.window.millis`
+| Base window size in milliseconds. Default at 6 hours.
+
+| `hbase.hstore.compaction.date.tiered.windows.per.tier`
+| Number of windows per tier. Default at 4.
+
+| `hbase.hstore.compaction.date.tiered.incoming.window.min`
+| Minimal number of files to compact in the incoming window. Set it to expected number of files in the window to avoid wasteful compaction. Default at 6.
+
+| `hbase.hstore.compaction.date.tiered.window.policy.class`
+| The policy to select store files within the same time window. It doesn’t apply to the incoming window. Default at exploring compaction. This is to avoid wasteful compaction.
+|===
+
+[[ops.date.tiered.config.compaction.throttler]]
+.Compaction Throttler
+
+With tiered compaction all servers in the cluster will promote windows to higher tier at the same time, so using a compaction throttle is recommended:
+Set `hbase.regionserver.throughput.controller` to `org.apache.hadoop.hbase.regionserver.compactions.PressureAwareCompactionThroughputController`.
+
+NOTE: For more information about date tiered compaction, please refer to the design specification at https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8
 [[ops.stripe]]
 ===== Experimental: Stripe Compactions
 
@@ -2098,7 +2199,6 @@ You can enable stripe compaction for a table or a column family, by setting its 
 You also need to set the `hbase.hstore.blockingStoreFiles` to a high number, such as 100 (rather than the default value of 10).
 
 .Procedure: Enable Stripe Compaction
-. If the table already exists, disable the table.
 . Run one of following commands in the HBase shell.
   Replace the table name `orders_table` with the name of your table.
 +
@@ -2114,7 +2214,6 @@ create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class'
 . Enable the table.
 
 .Procedure: Disable Stripe Compaction
-. Disable the table.
 . Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`.
   Either option has the same effect.
 +
@@ -2131,7 +2230,7 @@ This is not necessary on new tables.
 [[ops.stripe.config]]
 ====== Configuring Stripe Compaction
 
-Each of the settings for stripe compaction should be configured at the table or column family, after disabling the table.
+Each of the settings for stripe compaction should be configured at the table or column family level.
 If you use HBase shell, the general command pattern is as follows:
 
 [source,sql]
