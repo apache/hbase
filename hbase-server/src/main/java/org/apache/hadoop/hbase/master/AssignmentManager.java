@@ -2700,6 +2700,9 @@ public class AssignmentManager extends ZooKeeperListener {
       final boolean waitTillAllAssigned, final int reassigningRegions,
       final long minEndTime) throws InterruptedException {
     long deadline = minEndTime + bulkPerRegionOpenTimeGuesstimate * (reassigningRegions + 1);
+    if (deadline < 0) { // Overflow
+      deadline = Long.MAX_VALUE; // wait forever
+    }
     return waitForAssignment(regionSet, waitTillAllAssigned, deadline);
   }
 
