@@ -101,7 +101,7 @@ if [ "$localhostname" == "$hostname" ]; then
   local=true
 fi
 
-if [ $nob == "true"  ]; then
+if [ "$nob" == "true"  ]; then
   log "[ $0 ] skipping disabling balancer -nob argument is used"
   HBASE_BALANCER_STATE=false
 else
@@ -175,7 +175,7 @@ if [ "$restart" != "" ]; then
 fi
 
 # Restore balancer state
-if [ $HBASE_BALANCER_STATE != "false" ] && [ $nob != "true"  ]; then
+if [ "$HBASE_BALANCER_STATE" != "false" ] && [ "$nob" != "true"  ]; then
   log "Restoring balancer state to $HBASE_BALANCER_STATE"
   echo "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
 else
