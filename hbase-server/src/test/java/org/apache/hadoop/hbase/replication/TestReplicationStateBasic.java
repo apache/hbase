@@ -165,7 +165,7 @@ public abstract class TestReplicationStateBasic {
     rp.init();
 
     try {
-      rp.addPeer(ID_ONE,
+      rp.registerPeer(ID_ONE,
         new ReplicationPeerConfig().setClusterKey("hostname1.example.org:1234:hbase"));
       fail("Should throw an IllegalArgumentException because "
             + "zookeeper.znode.parent is missing leading '/'.");
@@ -174,7 +174,7 @@ public abstract class TestReplicationStateBasic {
     }
 
     try {
-      rp.addPeer(ID_ONE,
+      rp.registerPeer(ID_ONE,
         new ReplicationPeerConfig().setClusterKey("hostname1.example.org:1234:/"));
       fail("Should throw an IllegalArgumentException because zookeeper.znode.parent is missing.");
     } catch (IllegalArgumentException e) {
@@ -182,7 +182,7 @@ public abstract class TestReplicationStateBasic {
     }
 
     try {
-      rp.addPeer(ID_ONE,
+      rp.registerPeer(ID_ONE,
         new ReplicationPeerConfig().setClusterKey("hostname1.example.org::/hbase"));
       fail("Should throw an IllegalArgumentException because "
           + "hbase.zookeeper.property.clientPort is missing.");
@@ -203,7 +203,7 @@ public abstract class TestReplicationStateBasic {
     files1.add("file_3");
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
-    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
+    rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
     rq1.addPeerToHFileRefs(ID_ONE);
     rq1.addHFileRefs(ID_ONE, files1);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
@@ -216,7 +216,7 @@ public abstract class TestReplicationStateBasic {
     files2.add(removedString);
     rq1.removeHFileRefs(ID_ONE, files2);
     assertEquals(0, rqc.getReplicableHFiles(ID_ONE).size());
-    rp.removePeer(ID_ONE);
+    rp.unregisterPeer(ID_ONE);
   }
 
   @Test
@@ -225,9 +225,9 @@ public abstract class TestReplicationStateBasic {
     rqc.init();
 
     rp.init();
-    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
+    rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
     rq1.addPeerToHFileRefs(ID_ONE);
-    rp.addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
+    rp.registerPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
     rq1.addPeerToHFileRefs(ID_TWO);
 
     List<String> files1 = new ArrayList<String>(3);
@@ -240,13 +240,13 @@ public abstract class TestReplicationStateBasic {
     assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
     assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
 
-    rp.removePeer(ID_ONE);
+    rp.unregisterPeer(ID_ONE);
     rq1.removePeerFromHFileRefs(ID_ONE);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(3, rqc.getReplicableHFiles(ID_TWO).size());
 
-    rp.removePeer(ID_TWO);
+    rp.unregisterPeer(ID_TWO);
     rq1.removePeerFromHFileRefs(ID_TWO);
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
     assertNull(rqc.getReplicableHFiles(ID_TWO));
@@ -258,7 +258,7 @@ public abstract class TestReplicationStateBasic {
 
     // Test methods with non-existent peer ids
     try {
-      rp.removePeer("bogus");
+      rp.unregisterPeer("bogus");
       fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
     } catch (IllegalArgumentException e) {
     }
@@ -277,16 +277,16 @@ public abstract class TestReplicationStateBasic {
       fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
     } catch (IllegalArgumentException e) {
     }
-    assertFalse(rp.peerAdded("bogus"));
-    rp.peerRemoved("bogus");
+    assertFalse(rp.peerConnected("bogus"));
+    rp.peerDisconnected("bogus");
 
     assertNull(rp.getPeerConf("bogus"));
     assertNumberOfPeers(0);
 
     // Add some peers
-    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
+    rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
     assertNumberOfPeers(1);
-    rp.addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
+    rp.registerPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
     assertNumberOfPeers(2);
 
     // Test methods with a peer that is added but not connected
@@ -296,13 +296,13 @@ public abstract class TestReplicationStateBasic {
     } catch (IllegalArgumentException e) {
     }
     assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(rp.getPeerConf(ID_ONE).getSecond()));
-    rp.removePeer(ID_ONE);
-    rp.peerRemoved(ID_ONE);
+    rp.unregisterPeer(ID_ONE);
+    rp.peerDisconnected(ID_ONE);
     assertNumberOfPeers(1);
 
     // Add one peer
-    rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
-    rp.peerAdded(ID_ONE);
+    rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
+    rp.peerConnected(ID_ONE);
     assertNumberOfPeers(2);
     assertTrue(rp.getStatusOfPeer(ID_ONE));
     rp.disablePeer(ID_ONE);
@@ -311,7 +311,7 @@ public abstract class TestReplicationStateBasic {
     assertConnectedPeerStatus(true, ID_ONE);
 
     // Disconnect peer
-    rp.peerRemoved(ID_ONE);
+    rp.peerDisconnected(ID_ONE);
     assertNumberOfPeers(2);
     try {
       rp.getStatusOfPeer(ID_ONE);
@@ -361,7 +361,7 @@ public abstract class TestReplicationStateBasic {
         rq3.addLog("qId" + i, "filename" + j);
       }
       //Add peers for the corresponding queues so they are not orphans
-      rp.addPeer("qId" + i, new ReplicationPeerConfig().setClusterKey("localhost:2818:/bogus" + i));
+      rp.registerPeer("qId" + i, new ReplicationPeerConfig().setClusterKey("localhost:2818:/bogus" + i));
     }
   }
 }

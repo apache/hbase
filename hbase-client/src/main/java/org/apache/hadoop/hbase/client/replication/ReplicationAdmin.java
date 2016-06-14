@@ -183,7 +183,7 @@ public class ReplicationAdmin implements Closeable {
     if (tableCfs != null) {
       peerConfig.setTableCFsMap(tableCfs);
     }
-    this.replicationPeers.addPeer(id, peerConfig);
+    this.replicationPeers.registerPeer(id, peerConfig);
   }
 
   /**
@@ -192,7 +192,7 @@ public class ReplicationAdmin implements Closeable {
    * @param peerConfig configuration for the replication slave cluster
    */
   public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException {
-    this.replicationPeers.addPeer(id, peerConfig);
+    this.replicationPeers.registerPeer(id, peerConfig);
   }
 
   /**
@@ -212,7 +212,7 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short name that identifies the cluster
    */
   public void removePeer(String id) throws ReplicationException {
-    this.replicationPeers.removePeer(id);
+    this.replicationPeers.unregisterPeer(id);
   }
 
   /**
@@ -556,7 +556,7 @@ public class ReplicationAdmin implements Closeable {
 
   @VisibleForTesting
   public void peerAdded(String id) throws ReplicationException {
-    this.replicationPeers.peerAdded(id);
+    this.replicationPeers.peerConnected(id);
   }
 
   @VisibleForTesting

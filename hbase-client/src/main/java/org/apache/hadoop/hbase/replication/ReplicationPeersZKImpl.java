@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
  * This class provides an implementation of the ReplicationPeers interface using ZooKeeper. The
@@ -105,7 +104,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void addPeer(String id, ReplicationPeerConfig peerConfig)
+  public void registerPeer(String id, ReplicationPeerConfig peerConfig)
       throws ReplicationException {
     try {
       if (peerExists(id)) {
@@ -148,7 +147,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void removePeer(String id) throws ReplicationException {
+  public void unregisterPeer(String id) throws ReplicationException {
     try {
       if (!peerExists(id)) {
         throw new IllegalArgumentException("Cannot remove peer with id=" + id
@@ -219,7 +218,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   public boolean getStatusOfPeer(String id) {
     ReplicationPeer replicationPeer = this.peerClusters.get(id);
     if (replicationPeer == null) {
-      throw new IllegalArgumentException("Peer with id= " + id + " is not connected");
+      throw new IllegalArgumentException("Peer with id= " + id + " is not cached");
     }
     return replicationPeer.getPeerState() == PeerState.ENABLED;
   }
@@ -270,12 +269,12 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public ReplicationPeer getPeer(String peerId) {
+  public ReplicationPeer getConnectedPeer(String peerId) {
     return peerClusters.get(peerId);
   }
 
   @Override
-  public Set<String> getPeerIds() {
+  public Set<String> getConnectedPeerIds() {
     return peerClusters.keySet(); // this is not thread-safe
   }
 
@@ -342,7 +341,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   @Override
   public void updatePeerConfig(String id, ReplicationPeerConfig newConfig)
       throws ReplicationException {
-    ReplicationPeer peer = getPeer(id);
+    ReplicationPeer peer = getConnectedPeer(id);
     if (peer == null){
       throw new ReplicationException("Could not find peer Id " + id);
     }
@@ -411,12 +410,12 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public boolean peerAdded(String peerId) throws ReplicationException {
+  public boolean peerConnected(String peerId) throws ReplicationException {
     return createAndAddPeer(peerId);
   }
 
   @Override
-  public void peerRemoved(String peerId) {
+  public void peerDisconnected(String peerId) {
     ReplicationPeer rp = this.peerClusters.get(peerId);
     if (rp != null) {
       ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).remove(peerId, rp);
