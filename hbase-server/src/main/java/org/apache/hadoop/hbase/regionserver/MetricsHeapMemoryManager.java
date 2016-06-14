@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * This class is for maintaining the various regionserver's heap memory manager statistics
  * and publishing them through the metrics interfaces.
  */
-@InterfaceStability.Evolving
 @InterfaceAudience.Private
 public class MetricsHeapMemoryManager {
   private final MetricsHeapMemoryManagerSource source;
@@ -51,45 +50,66 @@ public class MetricsHeapMemoryManager {
     return wrapper;
   }
 
-  public void updateCacheEvictedCount(final long cacheEvictedCount) {
-    source.updateCacheEvictedCount(cacheEvictedCount);
+  /**
+   * Update/Set the blocked flush count histogram/gauge
+   * @param blockedFlushCount the number of blocked flush since last tuning.
+   */
+  public void updateBlockedFlushCount(final long blockedFlushCount) {
+    source.updateBlockedFlushCount(blockedFlushCount);
   }
 
-  public void updateCacheMissCount(final long cacheMissCount) {
-    source.updateCacheMissCount(cacheMissCount);
+  /**
+   * Update/Set the unblocked flush count histogram/gauge
+   * @param unblockedFlushCount the number of unblocked flush since last tuning.
+   */
+  public void updateUnblockedFlushCount(final long unblockedFlushCount) {
+    source.updateUnblockedFlushCount(unblockedFlushCount);
   }
 
-  public void updateBlockedFlushCount(final long bFlushCount) {
-    source.updateBlockedFlushCount(bFlushCount);
-  }
-
-  public void updateUnblockedFlushCount(final long unbFlushCount) {
-    source.updateUnblockedFlushCount(unbFlushCount);
-  }
-
-  public void updateCurBlockCache(final float curBlockCacheUsed, final long blockCacheSize) {
-    source.updateCurBlockCachePercent(curBlockCacheUsed);
+  /**
+   * Update/Set the current blockcache(in size) used histogram/gauge
+   * @param blockCacheSize the current memory usage in blockcache in size.
+   */
+  public void updateCurBlockCacheSize(final long blockCacheSize) {
     source.updateCurBlockCacheSize(blockCacheSize);
   }
 
-  public void updateCurMemStore(final float curMemStoreUsed, final long memStoreSize) {
-    source.updateCurMemStorePercent(curMemStoreUsed);
+  /**
+   * Update/Set the current global memstore used(in size) histogram/gauge
+   * @param memStoreSize the current memory usage in memstore in size.
+   */
+  public void updateCurMemStoreSize(final long memStoreSize) {
     source.updateCurMemStoreSize(memStoreSize);
   }
 
-  public void updateMemStoreDeltaSize(final int memStoreDeltaSize) {
-    source.updateMemStoreDeltaSize(memStoreDeltaSize);
+  /**
+   * Update the increase/decrease memstore size histogram
+   * @param memStoreDeltaSize the tuning result of memstore.
+   */
+  public void updateMemStoreDeltaSizeHistogram(final int memStoreDeltaSize) {
+    source.updateMemStoreDeltaSizeHistogram(memStoreDeltaSize);
   }
 
-  public void updateBlockCacheDeltaSize(final int blockCacheDeltaSize) {
-    source.updateBlockCacheDeltaSize(blockCacheDeltaSize);
+  /**
+   * Update the increase/decrease blockcache size histogram
+   * @param blockCacheDeltaSize the tuning result of blockcache.
+   */
+  public void updateBlockCacheDeltaSizeHistogram(final int blockCacheDeltaSize) {
+    source.updateBlockCacheDeltaSizeHistogram(blockCacheDeltaSize);
   }
 
-  public void updateTunerDoNothingCount() {
-    source.updateTunerDoNothingCount();
+  /**
+   * Increase the counter for tuner neither expanding memstore global size limit nor expanding
+   * blockcache max size.
+   */
+  public void increaseTunerDoNothingCounter() {
+    source.increaseTunerDoNothingCounter();
   }
 
-  public void updateAboveHeapOccupancyLowWatermarkCount() {
-    source.updateAboveHeapOccupancyLowWatermarkCount();
+  /**
+   * Increase the counter for heap occupancy percent above low watermark
+   */
+  public void increaseAboveHeapOccupancyLowWatermarkCounter() {
+    source.increaseAboveHeapOccupancyLowWatermarkCounter();
   }
 }

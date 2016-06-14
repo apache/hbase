@@ -18,12 +18,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
  * This interface will be implemented by a MetricsSource that will export metrics from
  * HeapMemoryManager in RegionServer into the hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * The name of the metrics
@@ -46,49 +48,25 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
   /**
-   * Update the cache evicted count histogram
-   * @param cacheEvictedCount the number of cache block evicted since last tuning.
-   */
-  void updateCacheEvictedCount(long cacheEvictedCount);
-
-  /**
-   * Update the cache miss count histogram
-   * @param cacheMissCount the number of cache miss since last tuning.
-   */
-  void updateCacheMissCount(long cacheMissCount);
-
-  /**
-   * Update the blocked flush count histogram
+   * Update/Set the blocked flush count histogram/gauge
    * @param blockedFlushCount the number of blocked flush since last tuning.
    */
   void updateBlockedFlushCount(long blockedFlushCount);
 
   /**
-   * Update the unblocked flush count histogram
+   * Update/Set the unblocked flush count histogram/gauge
    * @param unblockedFlushCount the number of unblocked flush since last tuning.
    */
   void updateUnblockedFlushCount(long unblockedFlushCount);
 
   /**
-   * Update the current blockcache(in percent) used histogram
-   * @param curBlockCacheUsed the current memory usage in blockcache. Used / Max Heap.
-   */
-  void updateCurBlockCachePercent(float curBlockCacheUsed);
-
-  /**
-   * Update the current memstore used(in percent) histogram
-   * @param curMemStoreUsed the current memory usage in memstore. Used / Max Heap.
-   */
-  void updateCurMemStorePercent(float curMemStoreUsed);
-
-  /**
-   * Update the current blockcache(in size) used histogram
+   * Update/Set the current blockcache(in size) used histogram/gauge
    * @param blockCacheSize the current memory usage in blockcache in size.
    */
   void updateCurBlockCacheSize(long blockCacheSize);
 
   /**
-   * Update the current memstore used(in size) histogram
+   * Update/Set the current global memstore used(in size) histogram/gauge
    * @param memStoreSize the current memory usage in memstore in size.
    */
   void updateCurMemStoreSize(long memStoreSize);
@@ -97,55 +75,70 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
    * Update the increase/decrease memstore size histogram
    * @param memStoreDeltaSize the tuning result of memstore.
    */
-  void updateMemStoreDeltaSize(int memStoreDeltaSize);
+  void updateMemStoreDeltaSizeHistogram(int memStoreDeltaSize);
 
   /**
    * Update the increase/decrease blockcache size histogram
    * @param blockCacheDeltaSize the tuning result of blockcache.
    */
-  void updateBlockCacheDeltaSize(int blockCacheDeltaSize);
+  void updateBlockCacheDeltaSizeHistogram(int blockCacheDeltaSize);
 
   /**
-   * Update the counter for tuner neither expanding memstore global size limit nor expanding
+   * Increase the counter for tuner neither expanding memstore global size limit nor expanding
    * blockcache max size.
    */
-  void updateTunerDoNothingCount();
+  void increaseTunerDoNothingCounter();
 
   /**
-   * Update the counter for heap occupancy percent above low watermark
+   * Increase the counter for heap occupancy percent above low watermark
    */
-  void updateAboveHeapOccupancyLowWatermarkCount();
+  void increaseAboveHeapOccupancyLowWatermarkCounter();
 
-  String CACHE_EVICTED_NAME = "cacheBlockEvicted";
-  String CACHE_EVICTED_DESC = "Histogram for number of cache blocks evicted";
-  String CACHE_MISS_NAME = "cacheMiss";
-  String CACHE_MISS_DESC = "Histogram for number of cache miss";
+  // Histograms
   String BLOCKED_FLUSH_NAME = "blockedFlushes";
   String BLOCKED_FLUSH_DESC = "Histogram for number of blocked flushes in the memstore";
   String UNBLOCKED_FLUSH_NAME = "unblockedFlushes";
   String UNBLOCKED_FLUSH_DESC = "Histogram for number of unblocked flushes in the memstore";
-  String CUR_MEMSTORE_PERCENT_NAME = "memStoreUsedInPercent";
-  String CUR_MEMSTORE_PERCENT_DESC =
-      "Histogram for percentage of ((Used MemStore size / Max heap size) * 100)";
-  String CUR_BLOCKCACHE_PERCENT_NAME = "blockCacheUsedInPercent";
-  String CUR_BLOCKCACHE_PERCENT_DESC =
-      "Histogram for percentage of ((Used BlockCache size / Max heap size) * 100)";
   String CUR_MEMSTORE_SIZE_NAME = "memStoreUsedInSize";
-  String CUR_MEMSTORE_SIZE_DESC = "Histogram for memstore usage in bytes";
+  String CUR_MEMSTORE_SIZE_DESC = "Histogram for global memstore usage in bytes";
   String CUR_BLOCKCACHE_SIZE_NAME = "blockCacheUsedInSize";
   String CUR_BLOCKCACHE_SIZE_DESC = "Histogram for blockcache usage in bytes";
   String INC_MEMSTORE_TUNING_NAME = "increaseMemStoreSize";
   String INC_MEMSTORE_TUNING_DESC =
       "Histogram for the heap memory tuner expanding memstore global size limit in bytes";
+  String DEC_MEMSTORE_TUNING_NAME = "decreaseMemStoreSize";
+  String DEC_MEMSTORE_TUNING_DESC =
+      "Histogram for the heap memory tuner shrinking memstore global size limit in bytes";
   String INC_BLOCKCACHE_TUNING_NAME = "increaseBlockCacheSize";
   String INC_BLOCKCACHE_TUNING_DESC =
       "Histogram for the heap memory tuner expanding blockcache max heap size in bytes";
+  String DEC_BLOCKCACHE_TUNING_NAME = "decreaseBlockCacheSize";
+  String DEC_BLOCKCACHE_TUNING_DESC =
+      "Histogram for the heap memory tuner shrinking blockcache max heap size in bytes";
+
+  // Gauges
+  String BLOCKED_FLUSH_GAUGE_NAME = "blockedFlushGauge";
+  String BLOCKED_FLUSH_GAUGE_DESC = "Gauge for the blocked flush count for the last tuner run";
+  String UNBLOCKED_FLUSH_GAUGE_NAME = "unblockedFlushGauge";
+  String UNBLOCKED_FLUSH_GAUGE_DESC = "Gauge for the unblocked flush count for the last tuner run";
+  String MEMSTORE_SIZE_GAUGE_NAME = "memStoreSizeGauge";
+  String MEMSTORE_SIZE_GAUGE_DESC = "Gauge for the memstore size for the last tuner run";
+  String BLOCKCACHE_SIZE_GAUGE_NAME = "blockCacheSizeGauge";
+  String BLOCKCACHE_SIZE_GAUGE_DESC = "Gauge for the blockcache size for the last tuner run";
+
+  // Counters
   String INC_MEMSTORE_COUNTER_NAME = "memStoreIncrementCounter";
   String INC_MEMSTORE_COUNTER_DESC =
       "The number of times that tuner expands memstore global size limit";
+  String DEC_MEMSTORE_COUNTER_NAME = "memStoreDecrementCounter";
+  String DEC_MEMSTORE_COUNTER_DESC =
+      "The number of times that tuner shrinks memstore global size limit";
   String INC_BLOCKCACHE_COUNTER_NAME = "blockCacheIncrementCounter";
   String INC_BLOCKCACHE_COUNTER_DESC =
       "The number of times that tuner expands blockcache max heap size";
+  String DEC_BLOCKCACHE_COUNTER_NAME = "blockCacheDecrementCounter";
+  String DEC_BLOCKCACHE_COUNTER_DESC =
+      "The number of times that tuner shrinks blockcache max heap size";
   String DO_NOTHING_COUNTER_NAME = "tunerDoNothingCounter";
   String DO_NOTHING_COUNTER_DESC =
       "The number of times that tuner neither expands memstore global size limit nor expands blockcache max size";
@@ -153,12 +146,13 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC =
       "The number of times that heap occupancy percent is above low watermark";
 
+  // Metrics
   String BLOCKCACHE_SIZE_NAME = "blockCacheUsedInSize";
-  String BLOCKCACHE_SIZE_DESC = "BlockCache are used in bytes by the RegionServer";
+  String BLOCKCACHE_SIZE_DESC = "BlockCache used in bytes by the RegionServer";
   String BLOCKCACHE_PERCENT_NAME = "blockCacheUsedInPercent";
   String BLOCKCACHE_PERCENT_DESC = "BlockCache Used / Max Heap";
   String MEMSTORE_SIZE_NAME = "memStoreUsedInSize";
-  String MEMSTORE_SIZE_DESC = "MemStore are used in bytes by the RegionServer";
+  String MEMSTORE_SIZE_DESC = "Global MemStore used in bytes by the RegionServer";
   String MEMSTORE_PERCENT_NAME = "memStoreUsedInPercent";
-  String MEMSTORE_PERCENT_DESC = "MemStore Used / Max Heap";
+  String MEMSTORE_PERCENT_DESC = "Global MemStore Used / Max Heap";
 }

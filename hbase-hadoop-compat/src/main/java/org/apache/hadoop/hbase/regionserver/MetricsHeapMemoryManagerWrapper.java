@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsHeapMemoryManagerWrapper {
 
   /**
@@ -32,13 +35,13 @@ public interface MetricsHeapMemoryManagerWrapper {
   long getBlockCacheUsedSize();
 
   /**
-   * (the global Memstore size in bytes) /
+   * (the global memstore size in bytes) /
    * (the maximum amount of memory in bytes that can be used)
    */
   float getMemStoreUsedPercent();
 
   /**
-   * Return the global Memstore size in bytes in the RegionServer
+   * Return the global memstore size in bytes in the RegionServer
    */
   long getMemStoreUsedSize();
 }

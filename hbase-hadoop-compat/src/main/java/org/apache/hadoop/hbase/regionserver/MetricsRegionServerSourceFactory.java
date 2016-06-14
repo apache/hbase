@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * Interface of a factory to create Metrics Sources used inside of regionservers.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerSourceFactory {
 
   /**
@@ -57,7 +60,7 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Get a MetricsHeapMemoryManagerSource from MetricsHeapMemoryManagerWrapper
-   * @param wrapper The wrapped heap memory manger
+   * @param wrapper The wrapped heap memory manager
    * @return A metrics heap memory manager source
    */
   MetricsHeapMemoryManagerSource getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper);
