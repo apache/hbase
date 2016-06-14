@@ -4129,12 +4129,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
-      // Can be null if we're calling close on a region that's not online
-      final HRegion region = this.getFromOnlineRegions(encodedRegionName);
-      if ((region  != null) && (region .getCoprocessorHost() != null)) {
-        region.getCoprocessorHost().preClose(false);
-      }
-
       requestCount.increment();
       LOG.info("Close " + encodedRegionName + ", via zk=" + (zk ? "yes" : "no") +
         ", znode version=" + versionOfClosingNode + ", on " + sn);
