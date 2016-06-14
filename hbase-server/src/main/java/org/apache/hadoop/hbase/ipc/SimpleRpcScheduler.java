@@ -222,11 +222,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       if (isDeadlineQueueType(callQueueType)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
         callExecutor =
-          new BalancedQueueRpcExecutor("DeadlineBQ.default", handlerCount, numCallQueues,
+          new BalancedQueueRpcExecutor("BQDeadline.default", handlerCount, numCallQueues,
             conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else if (isCodelQueueType(callQueueType)) {
         callExecutor =
-          new BalancedQueueRpcExecutor("CodelBQ.default", handlerCount, numCallQueues,
+          new BalancedQueueRpcExecutor("BQCodel.default", handlerCount, numCallQueues,
             conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
             codelTargetDelay, codelInterval, codelLifoThreshold,
             numGeneralCallsDropped, numLifoModeSwitches);
@@ -240,7 +240,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     // Create 2 queues to help priorityExecutor be more scalable.
     this.priorityExecutor = priorityHandlerCount > 0?
       new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.priority", priorityHandlerCount,
-         2, maxPriorityQueueLength, conf, abortable): null;
+        2, maxPriorityQueueLength, conf, abortable): null;
     this.replicationExecutor = replicationHandlerCount > 0?
       new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.replication",
         replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
