@@ -44,7 +44,11 @@ public class ByteBufferOutputStream extends OutputStream
   // http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8-b132/java/util/ArrayList.java#221
   private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-  protected ByteBuffer buf;
+  protected ByteBuffer curBuf = null;
+
+  ByteBufferOutputStream() {
+
+  }
 
   public ByteBufferOutputStream(int capacity) {
     this(capacity, false);
@@ -66,12 +70,12 @@ public class ByteBufferOutputStream extends OutputStream
    */
   public ByteBufferOutputStream(final ByteBuffer bb) {
     assert bb.order() == ByteOrder.BIG_ENDIAN;
-    this.buf = bb;
-    this.buf.clear();
+    this.curBuf = bb;
+    this.curBuf.clear();
   }
 
   public int size() {
-    return buf.position();
+    return curBuf.position();
   }
 
   private static ByteBuffer allocate(final int capacity, final boolean useDirectByteBuffer) {
@@ -86,25 +90,25 @@ public class ByteBufferOutputStream extends OutputStream
    * @return ByteBuffer
    */
   public ByteBuffer getByteBuffer() {
-    buf.flip();
-    return buf;
+    curBuf.flip();
+    return curBuf;
   }
 
-  private void checkSizeAndGrow(int extra) {
-    long capacityNeeded = buf.position() + (long) extra;
-    if (capacityNeeded > buf.limit()) {
+  protected void checkSizeAndGrow(int extra) {
+    long capacityNeeded = curBuf.position() + (long) extra;
+    if (capacityNeeded > curBuf.limit()) {
       // guarantee it's possible to fit
       if (capacityNeeded > MAX_ARRAY_SIZE) {
         throw new BufferOverflowException();
       }
       // double until hit the cap
-      long nextCapacity = Math.min(buf.capacity() * 2L, MAX_ARRAY_SIZE);
+      long nextCapacity = Math.min(curBuf.capacity() * 2L, MAX_ARRAY_SIZE);
       // but make sure there is enough if twice the existing capacity is still too small
       nextCapacity = Math.max(nextCapacity, capacityNeeded);
-      ByteBuffer newBuf = allocate((int) nextCapacity, buf.isDirect());
-      buf.flip();
-      ByteBufferUtils.copyFromBufferToBuffer(buf, newBuf);
-      buf = newBuf;
+      ByteBuffer newBuf = allocate((int) nextCapacity, curBuf.isDirect());
+      curBuf.flip();
+      ByteBufferUtils.copyFromBufferToBuffer(curBuf, newBuf);
+      curBuf = newBuf;
     }
   }
 
@@ -112,7 +116,7 @@ public class ByteBufferOutputStream extends OutputStream
   @Override
   public void write(int b) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_BYTE);
-    buf.put((byte)b);
+    curBuf.put((byte)b);
   }
 
  /**
@@ -122,9 +126,9 @@ public class ByteBufferOutputStream extends OutputStream
   * @param      out   the output stream to which to write the data.
   * @exception  IOException  if an I/O error occurs.
   */
-  public synchronized void writeTo(OutputStream out) throws IOException {
+  public void writeTo(OutputStream out) throws IOException {
     WritableByteChannel channel = Channels.newChannel(out);
-    ByteBuffer bb = buf.duplicate();
+    ByteBuffer bb = curBuf.duplicate();
     bb.flip();
     channel.write(bb);
   }
@@ -137,12 +141,12 @@ public class ByteBufferOutputStream extends OutputStream
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
     checkSizeAndGrow(len);
-    ByteBufferUtils.copyFromArrayToBuffer(buf, b, off, len);
+    ByteBufferUtils.copyFromArrayToBuffer(curBuf, b, off, len);
   }
 
   public void write(ByteBuffer b, int off, int len) throws IOException {
     checkSizeAndGrow(len);
-    ByteBufferUtils.copyFromBufferToBuffer(b, buf, off, len);
+    ByteBufferUtils.copyFromBufferToBuffer(b, curBuf, off, len);
   }
 
   /**
@@ -153,7 +157,7 @@ public class ByteBufferOutputStream extends OutputStream
    */
   public void writeInt(int i) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_INT);
-    ByteBufferUtils.putInt(this.buf, i);
+    ByteBufferUtils.putInt(this.curBuf, i);
   }
 
   @Override
@@ -167,7 +171,7 @@ public class ByteBufferOutputStream extends OutputStream
   }
 
   public byte[] toByteArray(int offset, int length) {
-    ByteBuffer bb = buf.duplicate();
+    ByteBuffer bb = curBuf.duplicate();
     bb.flip();
 
     byte[] chunk = new byte[length];
