@@ -96,7 +96,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY,
       CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
 
-    if (callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE)) {
+    if (isCodelQueueType(callQueueType)) {
       // update CoDel Scheduler tunables
       int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
         CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY);
@@ -200,49 +200,58 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     if (numCallQueues > 1 && callqReadShare > 0) {
       // multiple read/write queues
-      if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
+      if (isDeadlineQueueType(callQueueType)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new RWQueueRpcExecutor("RW.deadline.Q", handlerCount, numCallQueues,
+        callExecutor = new RWQueueRpcExecutor("DeadlineRWQ.default", handlerCount, numCallQueues,
             callqReadShare, callqScanShare, maxQueueLength, conf, abortable,
             BoundedPriorityBlockingQueue.class, callPriority);
-      } else if (callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE)) {
+      } else if (isCodelQueueType(callQueueType)) {
         Object[] callQueueInitArgs = {maxQueueLength, codelTargetDelay, codelInterval,
           codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches};
-        callExecutor = new RWQueueRpcExecutor("RW.codel.Q", handlerCount,
+        callExecutor = new RWQueueRpcExecutor("CodelRWQ.default", handlerCount,
           numCallQueues, callqReadShare, callqScanShare,
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs,
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs);
       } else {
-        callExecutor = new RWQueueRpcExecutor("RW.fifo.Q", handlerCount, numCallQueues,
+        // FifoWFPBQ = FifoWithFastPathBalancedQueueRpcExecutor
+        callExecutor = new RWQueueRpcExecutor("FifoRWQ.default", handlerCount, numCallQueues,
           callqReadShare, callqScanShare, maxQueueLength, conf, abortable);
       }
     } else {
       // multiple queues
-      if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
+      if (isDeadlineQueueType(callQueueType)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
         callExecutor =
-          new BalancedQueueRpcExecutor("B.deadline.Q", handlerCount, numCallQueues,
+          new BalancedQueueRpcExecutor("DeadlineBQ.default", handlerCount, numCallQueues,
             conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
-      } else if (callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE)) {
+      } else if (isCodelQueueType(callQueueType)) {
         callExecutor =
-          new BalancedQueueRpcExecutor("B.codel.Q", handlerCount, numCallQueues,
+          new BalancedQueueRpcExecutor("CodelBQ.default", handlerCount, numCallQueues,
             conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
             codelTargetDelay, codelInterval, codelLifoThreshold,
             numGeneralCallsDropped, numLifoModeSwitches);
       } else {
-        callExecutor = new BalancedQueueRpcExecutor("B.fifo.Q", handlerCount,
-            numCallQueues, maxQueueLength, conf, abortable);
+        // FifoWFPBQ = FifoWithFastPathBalancedQueueRpcExecutor
+        callExecutor = new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.default",
+            handlerCount, numCallQueues, maxQueueLength, conf, abortable);
       }
     }
 
     // Create 2 queues to help priorityExecutor be more scalable.
-    this.priorityExecutor = priorityHandlerCount > 0 ?
-      new BalancedQueueRpcExecutor("B.priority.fifo.Q", priorityHandlerCount, 2,
-          maxPriorityQueueLength):
-      null;
-   this.replicationExecutor =
-     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("B.replication.fifo.Q",
-       replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
+    this.priorityExecutor = priorityHandlerCount > 0?
+      new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.priority", priorityHandlerCount,
+         2, maxPriorityQueueLength, conf, abortable): null;
+    this.replicationExecutor = replicationHandlerCount > 0?
+      new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.replication",
+        replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
+  }
+
+  private static boolean isDeadlineQueueType(final String callQueueType) {
+    return callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+  }
+
+  private static boolean isCodelQueueType(final String callQueueType) {
+    return callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
   }
 
   public SimpleRpcScheduler(

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -30,15 +31,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
+/**
+ * Runs the CallRunners passed here via {@link #dispatch(CallRunner)}. Subclass and add particular
+ * scheduling behavior.
+ */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public abstract class RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RpcExecutor.class);
 
@@ -47,7 +50,7 @@ public abstract class RpcExecutor {
   protected volatile int currentQueueLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
-  private final List<Thread> handlers;
+  private final List<Handler> handlers;
   private final int handlerCount;
   private final String name;
   private final AtomicInteger failedHandlerCount = new AtomicInteger(0);
@@ -58,7 +61,7 @@ public abstract class RpcExecutor {
   private Abortable abortable = null;
 
   public RpcExecutor(final String name, final int handlerCount) {
-    this.handlers = new ArrayList<Thread>(handlerCount);
+    this.handlers = new ArrayList<Handler>(handlerCount);
     this.handlerCount = handlerCount;
     this.name = Strings.nullToEmpty(name);
   }
@@ -100,75 +103,111 @@ public abstract class RpcExecutor {
     startHandlers(null, handlerCount, callQueues, 0, callQueues.size(), port);
   }
 
+  /**
+   * Override if providing alternate Handler implementation.
+   */
+  protected Handler getHandler(final String name, final double handlerFailureThreshhold,
+      final BlockingQueue<CallRunner> q) {
+    return new Handler(name, handlerFailureThreshhold, q);
+  }
+
+  /**
+   * Start up our handlers.
+   */
   protected void startHandlers(final String nameSuffix, final int numHandlers,
       final List<BlockingQueue<CallRunner>> callQueues,
       final int qindex, final int qsize, final int port) {
     final String threadPrefix = name + Strings.nullToEmpty(nameSuffix);
-    for (int i = 0; i < numHandlers; i++) {
-      final int index = qindex + (i % qsize);
-      Thread t = new Thread(new Runnable() {
-        @Override
-        public void run() {
-          consumerLoop(callQueues.get(index));
-        }
-      });
-      t.setDaemon(true);
-      t.setName(threadPrefix + "RpcServer.handler=" + handlers.size() +
-        ",queue=" + index + ",port=" + port);
-      t.start();
-      LOG.debug(threadPrefix + " Start Handler index=" + handlers.size() + " queue=" + index);
-      handlers.add(t);
-    }
-  }
-
-  protected void consumerLoop(final BlockingQueue<CallRunner> myQueue) {
-    boolean interrupted = false;
     double handlerFailureThreshhold =
         conf == null ? 1.0 : conf.getDouble(HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
           HConstants.DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT);
-    try {
-      while (running) {
-        try {
-          MonitoredRPCHandler status = RpcServer.getStatus();
-          CallRunner task = myQueue.take();
-          task.setStatus(status);
+    for (int i = 0; i < numHandlers; i++) {
+      final int index = qindex + (i % qsize);
+      String name = "RpcServer." + threadPrefix + ".handler=" + handlers.size() + ",queue=" +
+          index + ",port=" + port;
+      Handler handler = getHandler(name, handlerFailureThreshhold, callQueues.get(index));
+      handler.start();
+      LOG.debug("Started " + name);
+      handlers.add(handler);
+    }
+  }
+
+  /**
+   * Handler thread run the {@link CallRunner#run()} in.
+   */
+  protected class Handler extends Thread {
+    /**
+     * Q to find CallRunners to run in.
+     */
+    final BlockingQueue<CallRunner> q;
+
+    final double handlerFailureThreshhold;
+
+    Handler(final String name, final double handlerFailureThreshhold,
+        final BlockingQueue<CallRunner> q) {
+      super(name);
+      setDaemon(true);
+      this.q = q;
+      this.handlerFailureThreshhold = handlerFailureThreshhold;
+    }
+
+    /**
+     * @return A {@link CallRunner}
+     * @throws InterruptedException
+     */
+    protected CallRunner getCallRunner() throws InterruptedException {
+      return this.q.take();
+    }
+
+    @Override
+    public void run() {
+      boolean interrupted = false;
+      try {
+        while (running) {
           try {
-            activeHandlerCount.incrementAndGet();
-            task.run();
-          } catch (Throwable e) {
-            if (e instanceof Error) {
-              int failedCount = failedHandlerCount.incrementAndGet();
-              if (handlerFailureThreshhold >= 0
-                  && failedCount > handlerCount * handlerFailureThreshhold) {
-                String message =
-                    "Number of failed RpcServer handler exceeded threshhold "
-                        + handlerFailureThreshhold + "  with failed reason: "
-                        + StringUtils.stringifyException(e);
-                if (abortable != null) {
-                  abortable.abort(message, e);
-                } else {
-                  LOG.error("Received " + StringUtils.stringifyException(e)
-                    + " but not aborting due to abortable being null");
-                  throw e;
-                }
-              } else {
-                LOG.warn("RpcServer handler threads encountered errors "
-                    + StringUtils.stringifyException(e));
-              }
-            } else {
-              LOG.warn("RpcServer handler threads encountered exceptions "
-                  + StringUtils.stringifyException(e));
-            }
-          } finally {
-            activeHandlerCount.decrementAndGet();
+            run(getCallRunner());
+          } catch (InterruptedException e) {
+            interrupted = true;
           }
-        } catch (InterruptedException e) {
-          interrupted = true;
+        }
+      } catch (Exception e) {
+        LOG.warn(e);
+        throw e;
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
         }
       }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
+    }
+
+    private void run(CallRunner cr) {
+      MonitoredRPCHandler status = RpcServer.getStatus();
+      cr.setStatus(status);
+      try {
+        activeHandlerCount.incrementAndGet();
+        cr.run();
+      } catch (Throwable e) {
+        if (e instanceof Error) {
+          int failedCount = failedHandlerCount.incrementAndGet();
+          if (this.handlerFailureThreshhold >= 0 &&
+              failedCount > handlerCount * this.handlerFailureThreshhold) {
+            String message = "Number of failed RpcServer handler runs exceeded threshhold " +
+              this.handlerFailureThreshhold + "; reason: " + StringUtils.stringifyException(e);
+            if (abortable != null) {
+              abortable.abort(message, e);
+            } else {
+              LOG.error("Error but can't abort because abortable is null: " +
+                  StringUtils.stringifyException(e));
+              throw e;
+            }
+          } else {
+            LOG.warn("Handler errors " + StringUtils.stringifyException(e));
+          }
+        } else {
+          LOG.warn("Handler  exception " + StringUtils.stringifyException(e));
+        }
+      } finally {
+        activeHandlerCount.decrementAndGet();
       }
     }
   }
@@ -193,7 +232,6 @@ public abstract class RpcExecutor {
    * All requests go to the first queue, at index 0
    */
   private static QueueBalancer ONE_QUEUE = new QueueBalancer() {
-
     @Override
     public int getNextQueue() {
       return 0;
