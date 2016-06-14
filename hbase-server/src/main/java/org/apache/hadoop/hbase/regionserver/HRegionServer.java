@@ -2815,6 +2815,7 @@ public class HRegionServer extends HasThread implements
       throws NotServingRegionException, RegionAlreadyInTransitionException {
     //Check for permissions to close.
     Region actualRegion = this.getFromOnlineRegions(encodedName);
+    // Can be null if we're calling close on a region that's not online
     if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
       try {
         actualRegion.getCoprocessorHost().preClose(false);
