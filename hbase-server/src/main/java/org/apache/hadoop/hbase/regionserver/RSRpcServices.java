@@ -1324,12 +1324,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
-      // Can be null if we're calling close on a region that's not online
-      final Region region = regionServer.getFromOnlineRegions(encodedRegionName);
-      if ((region  != null) && (region .getCoprocessorHost() != null)) {
-        region.getCoprocessorHost().preClose(false);
-      }
-
       requestCount.increment();
       LOG.info("Close " + encodedRegionName + ", moving to " + sn);
       boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
