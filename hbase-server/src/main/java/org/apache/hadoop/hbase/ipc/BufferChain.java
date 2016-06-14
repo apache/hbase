@@ -46,6 +46,13 @@ class BufferChain {
     this.buffers = bbs.toArray(new ByteBuffer[bbs.size()]);
   }
 
+  BufferChain(List<ByteBuffer> buffers) {
+    for (ByteBuffer b : buffers) {
+      this.remaining += b.remaining();
+    }
+    this.buffers = buffers.toArray(new ByteBuffer[buffers.size()]);
+  }
+
   /**
    * Expensive.  Makes a new buffer to hold a copy of what is in contained ByteBuffers.  This
    * call drains this instance; it cannot be used subsequent to the call.

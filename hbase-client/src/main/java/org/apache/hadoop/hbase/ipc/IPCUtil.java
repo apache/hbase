@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
-import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CodecPool;
@@ -90,30 +90,7 @@ public class IPCUtil {
    */
   @SuppressWarnings("resource")
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-    final CellScanner cellScanner)
-  throws IOException {
-    return buildCellBlock(codec, compressor, cellScanner, null);
-  }
-
-  /**
-   * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
-   * <code>compressor</code>.
-   * @param codec to use for encoding
-   * @param compressor to use for encoding
-   * @param cellScanner to encode
-   * @param pool Pool of ByteBuffers to make use of. Can be null and then we'll allocate
-   *   our own ByteBuffer.
-   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
-   *   passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
-   *   flipped and is ready for reading.  Use limit to find total size. If <code>pool</code> was not
-   *   null, then this returned ByteBuffer came from there and should be returned to the pool when
-   *   done.
-   * @throws IOException if encoding the cells fail
-   */
-  @SuppressWarnings("resource")
-  public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-    final CellScanner cellScanner, final BoundedByteBufferPool pool)
-  throws IOException {
+      final CellScanner cellScanner) throws IOException {
     if (cellScanner == null) {
       return null;
     }
@@ -121,25 +98,25 @@ public class IPCUtil {
       throw new CellScannerButNoCodecException();
     }
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
-    ByteBufferOutputStream baos;
-    if (pool != null) {
-      ByteBuffer bb = pool.getBuffer();
-      bufferSize = bb.capacity();
-      baos = new ByteBufferOutputStream(bb);
-    } else {
-      // Then we need to make our own to return.
-      if (cellScanner instanceof HeapSize) {
-        long longSize = ((HeapSize)cellScanner).heapSize();
-        // Just make sure we don't have a size bigger than an int.
-        if (longSize > Integer.MAX_VALUE) {
-          throw new IOException("Size " + longSize + " > " + Integer.MAX_VALUE);
-        }
-        bufferSize = ClassSize.align((int)longSize);
+    ByteBufferOutputStream baos = new ByteBufferOutputStream(bufferSize);
+    encodeCellsTo(baos, cellScanner, codec, compressor);
+    if (LOG.isTraceEnabled()) {
+      if (bufferSize < baos.size()) {
+        LOG.trace("Buffer grew from initial bufferSize=" + bufferSize + " to " + baos.size()
+            + "; up hbase.ipc.cellblock.building.initial.buffersize?");
       }
-      baos = new ByteBufferOutputStream(bufferSize);
     }
+    ByteBuffer bb = baos.getByteBuffer();
+    // If no cells, don't mess around. Just return null (could be a bunch of existence checking
+    // gets or something -- stuff that does not return a cell).
+    if (!bb.hasRemaining()) return null;
+    return bb;
+  }
+
+  private void encodeCellsTo(ByteBufferOutputStream bbos, CellScanner cellScanner, Codec codec,
+      CompressionCodec compressor) throws IOException {
+    OutputStream os = bbos;
     Compressor poolCompressor = null;
-    OutputStream os = baos;
     try  {
       if (compressor != null) {
         if (compressor instanceof Configurable) {
@@ -149,33 +126,51 @@ public class IPCUtil {
         os = compressor.createOutputStream(os, poolCompressor);
       }
       Codec.Encoder encoder = codec.getEncoder(os);
-      int count = 0;
       while (cellScanner.advance()) {
         encoder.write(cellScanner.current());
-        count++;
       }
       encoder.flush();
-      // If no cells, don't mess around.  Just return null (could be a bunch of existence checking
-      // gets or something -- stuff that does not return a cell).
-      if (count == 0) {
-        return null;
-      }
     } catch (BufferOverflowException e) {
       throw new DoNotRetryIOException(e);
     } finally {
       os.close();
-
       if (poolCompressor != null) {
         CodecPool.returnCompressor(poolCompressor);
       }
     }
-    if (LOG.isTraceEnabled()) {
-      if (bufferSize < baos.size()) {
-        LOG.trace("Buffer grew from initial bufferSize=" + bufferSize + " to " + baos.size() +
-          "; up hbase.ipc.cellblock.building.initial.buffersize?");
-      }
+  }
+
+  /**
+   * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
+   * <code>compressor</code>.
+   * @param codec to use for encoding
+   * @param compressor to use for encoding
+   * @param cellScanner to encode
+   * @param pool Pool of ByteBuffers to make use of.
+   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
+   *   passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
+   *   flipped and is ready for reading.  Use limit to find total size. If <code>pool</code> was not
+   *   null, then this returned ByteBuffer came from there and should be returned to the pool when
+   *   done.
+   * @throws IOException if encoding the cells fail
+   */
+  @SuppressWarnings("resource")
+  public ByteBufferListOutputStream buildCellBlockStream(Codec codec, CompressionCodec compressor,
+      CellScanner cellScanner, ByteBufferPool pool) throws IOException {
+    if (cellScanner == null) {
+      return null;
     }
-    return baos.getByteBuffer();
+    if (codec == null) {
+      throw new CellScannerButNoCodecException();
+    }
+    assert pool != null;
+    ByteBufferListOutputStream bbos = new ByteBufferListOutputStream(pool);
+    encodeCellsTo(bbos, cellScanner, codec, compressor);
+    if (bbos.size() == 0) {
+      bbos.releaseResources();
+      return null;
+    }
+    return bbos;
   }
 
   /**

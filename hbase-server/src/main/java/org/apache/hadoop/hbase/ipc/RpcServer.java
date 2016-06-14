@@ -85,9 +85,10 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
-import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -289,7 +290,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
   private UserProvider userProvider;
 
-  private final BoundedByteBufferPool reservoir;
+  private final ByteBufferPool reservoir;
 
   private volatile boolean allowFallbackToSimpleAuth;
 
@@ -320,7 +321,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected long size;                          // size of current call
     protected boolean isError;
     protected TraceInfo tinfo;
-    private ByteBuffer cellBlock = null;
+    private ByteBufferListOutputStream cellBlockStream = null;
 
     private User user;
     private InetAddress remoteAddress;
@@ -362,10 +363,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
         justification="Presume the lock on processing request held by caller is protection enough")
     void done() {
-      if (this.cellBlock != null && reservoir != null) {
-        // Return buffer to reservoir now we are done with it.
-        reservoir.putBuffer(this.cellBlock);
-        this.cellBlock = null;
+      if (this.cellBlockStream != null) {
+        this.cellBlockStream.releaseResources();// This will return back the BBs which we
+                                                // got from pool.
+        this.cellBlockStream = null;
       }
       this.connection.decRpcCount();  // Say that we're done with this call.
     }
@@ -425,38 +426,43 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         // Call id.
         headerBuilder.setCallId(this.id);
         if (t != null) {
-          ExceptionResponse.Builder exceptionBuilder = ExceptionResponse.newBuilder();
-          exceptionBuilder.setExceptionClassName(t.getClass().getName());
-          exceptionBuilder.setStackTrace(errorMsg);
-          exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException);
-          if (t instanceof RegionMovedException) {
-            // Special casing for this exception.  This is only one carrying a payload.
-            // Do this instead of build a generic system for allowing exceptions carry
-            // any kind of payload.
-            RegionMovedException rme = (RegionMovedException)t;
-            exceptionBuilder.setHostname(rme.getHostname());
-            exceptionBuilder.setPort(rme.getPort());
-          }
-          // Set the exception as the result of the method invocation.
-          headerBuilder.setException(exceptionBuilder.build());
+          setExceptionResponse(t, errorMsg, headerBuilder);
         }
         // Pass reservoir to buildCellBlock. Keep reference to returne so can add it back to the
         // reservoir when finished. This is hacky and the hack is not contained but benefits are
         // high when we can avoid a big buffer allocation on each rpc.
-        this.cellBlock = ipcUtil.buildCellBlock(this.connection.codec,
-          this.connection.compressionCodec, cells, reservoir);
-        if (this.cellBlock != null) {
+        List<ByteBuffer> cellBlock = null;
+        int cellBlockSize = 0;
+        if (reservoir != null) {
+          this.cellBlockStream = ipcUtil.buildCellBlockStream(this.connection.codec,
+              this.connection.compressionCodec, cells, reservoir);
+          if (this.cellBlockStream != null) {
+            cellBlock = this.cellBlockStream.getByteBuffers();
+            cellBlockSize = this.cellBlockStream.size();
+          }
+        } else {
+          ByteBuffer b = ipcUtil.buildCellBlock(this.connection.codec,
+              this.connection.compressionCodec, cells);
+          if (b != null) {
+            cellBlockSize = b.remaining();
+            cellBlock = new ArrayList<ByteBuffer>(1);
+            cellBlock.add(b);
+          }
+        }
+
+        if (cellBlockSize > 0) {
           CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
           // Presumes the cellBlock bytebuffer has been flipped so limit has total size in it.
-          cellBlockBuilder.setLength(this.cellBlock.limit());
+          cellBlockBuilder.setLength(cellBlockSize);
           headerBuilder.setCellBlockMeta(cellBlockBuilder.build());
         }
         Message header = headerBuilder.build();
-
-        byte[] b = createHeaderAndMessageBytes(result, header);
-
-        bc = new BufferChain(ByteBuffer.wrap(b), this.cellBlock);
-
+        byte[] b = createHeaderAndMessageBytes(result, header, cellBlockSize);
+        List<ByteBuffer> responseBufs = new ArrayList<ByteBuffer>(
+            (cellBlock == null ? 1 : cellBlock.size()) + 1);
+        responseBufs.add(ByteBuffer.wrap(b));
+        if (cellBlock != null) responseBufs.addAll(cellBlock);
+        bc = new BufferChain(responseBufs);
         if (connection.useWrap) {
           bc = wrapWithSasl(bc);
         }
@@ -476,7 +482,25 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       }
     }
 
-    private byte[] createHeaderAndMessageBytes(Message result, Message header)
+    private void setExceptionResponse(Throwable t, String errorMsg,
+        ResponseHeader.Builder headerBuilder) {
+      ExceptionResponse.Builder exceptionBuilder = ExceptionResponse.newBuilder();
+      exceptionBuilder.setExceptionClassName(t.getClass().getName());
+      exceptionBuilder.setStackTrace(errorMsg);
+      exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException);
+      if (t instanceof RegionMovedException) {
+        // Special casing for this exception.  This is only one carrying a payload.
+        // Do this instead of build a generic system for allowing exceptions carry
+        // any kind of payload.
+        RegionMovedException rme = (RegionMovedException)t;
+        exceptionBuilder.setHostname(rme.getHostname());
+        exceptionBuilder.setPort(rme.getPort());
+      }
+      // Set the exception as the result of the method invocation.
+      headerBuilder.setException(exceptionBuilder.build());
+    }
+
+    private byte[] createHeaderAndMessageBytes(Message result, Message header, int cellBlockSize)
         throws IOException {
       // Organize the response as a set of bytebuffers rather than collect it all together inside
       // one big byte array; save on allocations.
@@ -493,7 +517,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       // calculate the total size
       int totalSize = headerSerializedSize + headerVintSize
           + (resultSerializedSize + resultVintSize)
-          + (this.cellBlock == null ? 0 : this.cellBlock.limit());
+          + cellBlockSize;
       // The byte[] should also hold the totalSize of the header, message and the cellblock
       byte[] b = new byte[headerSerializedSize + headerVintSize + resultSerializedSize
           + resultVintSize + Bytes.SIZEOF_INT];
@@ -1084,6 +1108,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       } finally {
         if (error) {
           LOG.debug(getName() + call.toShortString() + ": output error -- closing");
+          // We will be closing this connection itself. Mark this call as done so that all the
+          // buffer(s) it got from pool can get released
+          call.done();
           closeConnection(call.connection);
         }
       }
@@ -1998,11 +2025,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       RpcScheduler scheduler)
       throws IOException {
     if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
-      this.reservoir = new BoundedByteBufferPool(
-          conf.getInt("hbase.ipc.server.reservoir.max.buffer.size", 1024 * 1024),
-          conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
-          // Make the max twice the number of handlers to be safe.
-          conf.getInt("hbase.ipc.server.reservoir.initial.max",
+      this.reservoir = new ByteBufferPool(
+          conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY, ByteBufferPool.DEFAULT_BUFFER_SIZE),
+          conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
               conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
                   HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
     } else {
