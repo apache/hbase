@@ -147,9 +147,9 @@ public class TestReplicationTrackerZKImpl {
 
   @Test(timeout = 30000)
   public void testPeerRemovedEvent() throws Exception {
-    rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+    rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     rt.registerListener(new DummyReplicationListener());
-    rp.removePeer("5");
+    rp.unregisterPeer("5");
     // wait for event
     while (peerRemovedCount.get() < 1) {
       Thread.sleep(5);
@@ -160,7 +160,7 @@ public class TestReplicationTrackerZKImpl {
   @Test(timeout = 30000)
   public void testPeerListChangedEvent() throws Exception {
     // add a peer
-    rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+    rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     zkw.getRecoverableZooKeeper().getZooKeeper().getChildren("/hbase/replication/peers/5", true);
     rt.registerListener(new DummyReplicationListener());
     rp.disablePeer("5");
@@ -177,23 +177,23 @@ public class TestReplicationTrackerZKImpl {
 
     // clean up
     //ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
-    rp.removePeer("5");
+    rp.unregisterPeer("5");
   }
 
   @Test(timeout = 30000)
   public void testPeerNameControl() throws Exception {
     int exists = 0;
     int hyphen = 0;
-    rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+    rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     
     try{
-      rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+      rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     }catch(IllegalArgumentException e){
       exists++;
     }
 
     try{
-      rp.addPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+      rp.registerPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     }catch(IllegalArgumentException e){
       hyphen++;
     }
@@ -201,7 +201,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals(1, hyphen);
     
     // clean up
-    rp.removePeer("6");
+    rp.unregisterPeer("6");
   }
   
   private class DummyReplicationListener implements ReplicationListener {
@@ -217,7 +217,7 @@ public class TestReplicationTrackerZKImpl {
     public void peerRemoved(String peerId) {
       peerRemovedData = peerId;
       peerRemovedCount.getAndIncrement();
-      LOG.debug("Received peerRemoved event: " + peerId);
+      LOG.debug("Received peerDisconnected event: " + peerId);
     }
 
     @Override

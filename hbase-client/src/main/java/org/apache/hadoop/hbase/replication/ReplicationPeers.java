@@ -51,18 +51,30 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
    */
-  void addPeer(String peerId, ReplicationPeerConfig peerConfig)
+  void registerPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException;
 
   /**
    * Removes a remote slave cluster and stops the replication to it.
    * @param peerId a short that identifies the cluster
    */
-  void removePeer(String peerId) throws ReplicationException;
+  void unregisterPeer(String peerId) throws ReplicationException;
 
-  boolean peerAdded(String peerId) throws ReplicationException;
+  /**
+   * Method called after a peer has been connected. It will create a ReplicationPeer to track the
+   * newly connected cluster.
+   * @param peerId a short that identifies the cluster
+   * @return whether a ReplicationPeer was successfully created
+   * @throws ReplicationException
+   */
+  boolean peerConnected(String peerId) throws ReplicationException;
 
-  void peerRemoved(String peerId);
+  /**
+   * Method called after a peer has been disconnected. It will remove the ReplicationPeer that
+   * tracked the disconnected cluster.
+   * @param peerId a short that identifies the cluster
+   */
+  void peerDisconnected(String peerId);
 
   /**
    * Restart the replication to the specified remote slave cluster.
@@ -77,14 +89,14 @@ public interface ReplicationPeers {
   void disablePeer(String peerId) throws ReplicationException;
 
   /**
-   * Get the table and column-family list string of the peer from ZK.
+   * Get the table and column-family list string of the peer from the underlying storage.
    * @param peerId a short that identifies the cluster
    */
   public Map<TableName, List<String>> getPeerTableCFsConfig(String peerId)
       throws ReplicationException;
 
   /**
-   * Set the table and column-family list string of the peer to ZK.
+   * Set the table and column-family list string of the peer to the underlying storage.
    * @param peerId a short that identifies the cluster
    * @param tableCFs the table and column-family list which will be replicated for this peer
    */
@@ -93,17 +105,20 @@ public interface ReplicationPeers {
       throws ReplicationException;
 
   /**
-   * Returns the ReplicationPeer
+   * Returns the ReplicationPeer for the specified connected peer. This ReplicationPeer will
+   * continue to track changes to the Peer's state and config. This method returns null if no
+   * peer has been connected with the given peerId.
    * @param peerId id for the peer
    * @return ReplicationPeer object
    */
-  ReplicationPeer getPeer(String peerId);
+  ReplicationPeer getConnectedPeer(String peerId);
 
   /**
-   * Returns the set of peerIds defined
+   * Returns the set of peerIds of the clusters that have been connected and have an underlying
+   * ReplicationPeer.
    * @return a Set of Strings for peerIds
    */
-  public Set<String> getPeerIds();
+  public Set<String> getConnectedPeerIds();
 
   /**
    * Get the replication status for the specified connected remote slave cluster.
@@ -152,5 +167,11 @@ public interface ReplicationPeers {
    */
   Pair<ReplicationPeerConfig, Configuration> getPeerConf(String peerId) throws ReplicationException;
 
+  /**
+   * Update the peerConfig for the a given peer cluster
+   * @param id a short that identifies the cluster
+   * @param peerConfig new config for the peer cluster
+   * @throws ReplicationException
+   */
   void updatePeerConfig(String id, ReplicationPeerConfig peerConfig) throws ReplicationException;
 }

@@ -230,7 +230,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * old region server wal queues
    */
   protected void init() throws IOException, ReplicationException {
-    for (String id : this.replicationPeers.getPeerIds()) {
+    for (String id : this.replicationPeers.getConnectedPeerIds()) {
       addSource(id);
       if (replicationForBulkLoadDataEnabled) {
         // Check if peer exists in hfile-refs queue, if not add it. This can happen in the case
@@ -264,7 +264,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   protected ReplicationSourceInterface addSource(String id) throws IOException,
       ReplicationException {
     ReplicationPeerConfig peerConfig = replicationPeers.getReplicationPeerConfig(id);
-    ReplicationPeer peer = replicationPeers.getPeer(id);
+    ReplicationPeer peer = replicationPeers.getConnectedPeer(id);
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
           this.replicationPeers, server, id, this.clusterId, peerConfig, peer);
@@ -306,7 +306,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void deleteSource(String peerId, boolean closeConnection) {
     this.replicationQueues.removeQueue(peerId);
     if (closeConnection) {
-      this.replicationPeers.peerRemoved(peerId);
+      this.replicationPeers.peerDisconnected(peerId);
     }
   }
 
@@ -381,7 +381,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // update replication queues on ZK
     synchronized (replicationPeers) {// synchronize on replicationPeers to avoid adding source for
                                      // the to-be-removed peer
-      for (String id : replicationPeers.getPeerIds()) {
+      for (String id : replicationPeers.getConnectedPeerIds()) {
         try {
           this.replicationQueues.addLog(id, logName);
         } catch (ReplicationException e) {
@@ -586,7 +586,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void peerListChanged(List<String> peerIds) {
     for (String id : peerIds) {
       try {
-        boolean added = this.replicationPeers.peerAdded(id);
+        boolean added = this.replicationPeers.peerConnected(id);
         if (added) {
           addSource(id);
           if (replicationForBulkLoadDataEnabled) {
@@ -659,7 +659,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           // there is not an actual peer defined corresponding to peerId for the failover.
           ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
           String actualPeerId = replicationQueueInfo.getPeerId();
-          ReplicationPeer peer = replicationPeers.getPeer(actualPeerId);
+          ReplicationPeer peer = replicationPeers.getConnectedPeer(actualPeerId);
           ReplicationPeerConfig peerConfig = null;
           try {
             peerConfig = replicationPeers.getReplicationPeerConfig(actualPeerId);
@@ -688,7 +688,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           ReplicationSourceInterface src =
               getReplicationSource(conf, fs, ReplicationSourceManager.this, this.rq, this.rp,
                 server, peerId, this.clusterId, peerConfig, peer);
-          if (!this.rp.getPeerIds().contains((src.getPeerClusterId()))) {
+          if (!this.rp.getConnectedPeerIds().contains((src.getPeerClusterId()))) {
             src.terminate("Recovered queue doesn't belong to any current peer");
             break;
           }
