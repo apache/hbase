@@ -53,11 +53,11 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   @Override
   public synchronized MetricsHeapMemoryManagerSource getHeapMemoryManager(
-      float globalMemStorePercent, float blockCachePercent) {
+      long globalMemStoreSize, long blockCacheSize) {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.heapMemMngImpl == null) {
         FactoryStorage.INSTANCE.heapMemMngImpl =
-            new MetricsHeapMemoryManagerSourceImpl(globalMemStorePercent, blockCachePercent);
+            new MetricsHeapMemoryManagerSourceImpl(globalMemStoreSize, blockCacheSize);
       }
       return FactoryStorage.INSTANCE.heapMemMngImpl;
     }

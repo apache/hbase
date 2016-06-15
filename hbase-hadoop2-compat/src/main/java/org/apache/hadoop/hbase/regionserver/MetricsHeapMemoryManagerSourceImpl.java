@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.lang.management.ManagementFactory;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -33,8 +31,6 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 @InterfaceAudience.Private
 public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implements
     MetricsHeapMemoryManagerSource {
-  
-  private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
   private final MetricHistogram blockedFlushHistogram;
   private final MetricHistogram unblockedFlushHistogram;
@@ -53,14 +49,13 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   private final MutableFastCounter doNothingCounter;
   private final MutableFastCounter aboveHeapOccupancyLowWatermarkCounter;
 
-  public MetricsHeapMemoryManagerSourceImpl(float globalMemStorePercent, float blockCachePercent) {
+  public MetricsHeapMemoryManagerSourceImpl(long globalMemStoreSize, long blockCacheSize) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT,
-        globalMemStorePercent, blockCachePercent);
+        globalMemStoreSize, blockCacheSize);
   }
 
   public MetricsHeapMemoryManagerSourceImpl(String metricsName, String metricsDescription,
-      String metricsContext, String metricsJmxContext, float globalMemStorePercent,
-      float blockCachePercent) {
+      String metricsContext, String metricsJmxContext, long globalMemStoreSize, long blockCacheSize) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // Histograms
@@ -88,17 +83,17 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
         .newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
     newGlobalMemStoreSizeGauge = getMetricsRegistry()
         .newGauge(NEW_MEMSTORE_SIZE_GAUGE_NAME, NEW_MEMSTORE_SIZE_GAUGE_DESC,
-                            (long) (maxHeapSize * globalMemStorePercent));
+          globalMemStoreSize);
     newBlockCacheSizeGauge = getMetricsRegistry()
         .newGauge(NEW_BLOCKCACHE_SIZE_GAUGE_NAME, NEW_BLOCKCACHE_SIZE_GAUGE_DESC,
-                            (long) (maxHeapSize * blockCachePercent));
+          blockCacheSize);
 
     // Counters
     doNothingCounter = getMetricsRegistry()
         .newCounter(DO_NOTHING_COUNTER_NAME, DO_NOTHING_COUNTER_DESC, 0L);
     aboveHeapOccupancyLowWatermarkCounter = getMetricsRegistry()
-        .newCounter(ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME, 
-                              ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC, 0L);
+        .newCounter(ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME,
+          ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC, 0L);
   }
 
   @Override
@@ -124,13 +119,13 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   }
 
   @Override
-  public void setNewBlockCacheMaxSizeGauge(float newMaxBlockCacheSize) {
-    newBlockCacheSizeGauge.set((long) (newMaxBlockCacheSize * maxHeapSize));
+  public void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize) {
+    newBlockCacheSizeGauge.set(newMaxBlockCacheSize);
   }
 
   @Override
-  public void setNewGlobalMemStoreSizeLimitGauge(float newGlobalMemStoreSize) {
-    newGlobalMemStoreSizeGauge.set((long) (newGlobalMemStoreSize * maxHeapSize));
+  public void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize) {
+    newGlobalMemStoreSizeGauge.set(newGlobalMemStoreSize);
   }
 
   @Override

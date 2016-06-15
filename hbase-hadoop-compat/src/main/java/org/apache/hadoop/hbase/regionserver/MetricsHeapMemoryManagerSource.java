@@ -71,15 +71,15 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
 
   /**
    * Set the new max blockcache size gauge after tuning
-   * @param newMaxBlockCacheSize
+   * @param newMaxBlockCacheSize the new blockcache max size, in bytes.
    */
-  void setNewBlockCacheMaxSizeGauge(float newMaxBlockCacheSize);
+  void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize);
 
   /**
-   * Set the new global memstore size limit gauge after tuning
-   * @param newGlobalMemStoreSize
+   * Set the new global memstore size gauge after tuning
+   * @param newGlobalMemStoreSize the new global memstore size, in bytes.
    */
-  void setNewGlobalMemStoreSizeLimitGauge(float newGlobalMemStoreSize);
+  void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize);
 
   /**
    * Update the increase/decrease memstore size histogram

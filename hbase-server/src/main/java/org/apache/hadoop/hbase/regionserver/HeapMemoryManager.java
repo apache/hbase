@@ -110,7 +110,9 @@ public class HeapMemoryManager {
       HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD);
     this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
       HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
-    metricsHeapMemoryManager = new MetricsHeapMemoryManager(globalMemStorePercent, blockCachePercent);
+    metricsHeapMemoryManager = new MetricsHeapMemoryManager(
+      (long) (globalMemStorePercent * maxHeapSize),
+      (long) (blockCachePercent * maxHeapSize));
   }
 
   private boolean doInit(Configuration conf) {
@@ -360,7 +362,7 @@ public class HeapMemoryManager {
           metricsHeapMemoryManager.setNewBlockCacheMaxSizeGauge(newBlockCacheSize);
           globalMemStorePercent = memstoreSize;
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
-          metricsHeapMemoryManager.setNewGlobalMemStoreSizeLimitGauge(newMemstoreSize);
+          metricsHeapMemoryManager.setNewGlobalMemStoreSizeGauge(newMemstoreSize);
         }
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("No changes made by HeapMemoryTuner.");

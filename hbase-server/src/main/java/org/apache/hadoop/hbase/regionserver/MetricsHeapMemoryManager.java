@@ -31,18 +31,13 @@ import com.google.common.annotations.VisibleForTesting;
 public class MetricsHeapMemoryManager {
   private final MetricsHeapMemoryManagerSource source;
 
-  public MetricsHeapMemoryManager(final float globalMemStorePercent, final float blockCachePercent) {
+  public MetricsHeapMemoryManager(final long globalMemStoreSize, final long blockCacheSize) {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .getHeapMemoryManager(globalMemStorePercent, blockCachePercent));
+        .getHeapMemoryManager(globalMemStoreSize, blockCacheSize));
   }
 
   public MetricsHeapMemoryManager(MetricsHeapMemoryManagerSource source) {
     this.source = source;
-  }
-
-  @VisibleForTesting
-  public MetricsHeapMemoryManager() {
-    this(0.4f, 0.4f);
   }
 
   public MetricsHeapMemoryManagerSource getMetricsSource() {
@@ -83,18 +78,18 @@ public class MetricsHeapMemoryManager {
 
   /**
    * Set the new max blockcache size gauge after tuning
-   * @param newMaxBlockCacheSize
+   * @param newMaxBlockCacheSize the new blockcache max size, in bytes.
    */
-  public void setNewBlockCacheMaxSizeGauge(float newMaxBlockCacheSize) {
+  public void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize) {
     source.setNewBlockCacheMaxSizeGauge(newMaxBlockCacheSize);
   }
 
   /**
-   * Set the new global memstore size limit gauge after tuning
-   * @param newGlobalMemStoreSize
+   * Set the new global memstore size gauge after tuning
+   * @param newGlobalMemStoreSize the new global memstore size, in bytes.
    */
-  public void setNewGlobalMemStoreSizeLimitGauge(float newGlobalMemStoreSize) {
-    source.setNewGlobalMemStoreSizeLimitGauge(newGlobalMemStoreSize);
+  public void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize) {
+    source.setNewGlobalMemStoreSizeGauge(newGlobalMemStoreSize);
   }
 
   /**
