@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -82,10 +84,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
@@ -110,6 +114,7 @@ import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
@@ -131,10 +136,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import com.google.common.collect.Multimap;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
 
 /**
  * This tests HBaseFsck's ability to detect reasons for inconsistent tables.
@@ -2859,56 +2860,6 @@ public class TestHBaseFsck {
       }
       cleanupTable(table);
     }
-  }
-
-
-  /**
-  *  See HBASE-15406
-  * */
-  @Test
-  public void testSplitOrMergeStatWhenHBCKAbort() throws Exception {
-    admin.setSplitOrMergeEnabled(true, false, true,
-        Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
-    boolean oldSplit = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    boolean oldMerge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
-
-    assertTrue(oldSplit);
-    assertTrue(oldMerge);
-
-    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
-    HBaseFsck hbck = new HBaseFsck(conf, exec);
-    HBaseFsck.setDisplayFullReport(); // i.e. -details
-    final HBaseFsck spiedHbck = spy(hbck);
-    doAnswer(new Answer() {
-        @Override
-        public Object answer(InvocationOnMock invocation) throws Throwable {
-            // we close splitOrMerge flag in hbck, so in finally hbck will not set splitOrMerge back.
-              spiedHbck.setDisableSplitAndMerge(false);
-            return null;
-          }
-      }).when(spiedHbck).onlineConsistencyRepair();
-    spiedHbck.setDisableSplitAndMerge();
-    spiedHbck.connect();
-    spiedHbck.onlineHbck();
-    spiedHbck.close();
-
-    boolean split = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    boolean merge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
-    assertFalse(split);
-    assertFalse(merge);
-
-    // rerun hbck to repair the switches state
-    hbck = new HBaseFsck(conf, exec);
-    hbck.setDisableSplitAndMerge();
-    hbck.connect();
-    hbck.onlineHbck();
-    hbck.close();
-
-    split = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT);
-    merge = admin.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE);
-
-    assertTrue(split);
-    assertTrue(merge);
   }
 
 

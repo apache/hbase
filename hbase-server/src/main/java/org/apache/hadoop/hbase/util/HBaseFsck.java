@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.TreeMultimap;
-import com.google.protobuf.ServiceException;
-
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -147,6 +137,15 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.TreeMultimap;
+import com.google.protobuf.ServiceException;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -311,7 +310,6 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
 
-  ZooKeeperWatcher zkw = null;
   /**
    * List of orphaned table ZNodes
    */
@@ -357,7 +355,6 @@ public class HBaseFsck extends Configured implements Closeable {
         "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
       getConf().getInt(
         "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
-    zkw = createZooKeeperWatcher();
   }
 
   private class FileLockCallable implements Callable<FSDataOutputStream> {
@@ -699,8 +696,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
     boolean[] oldSplitAndMerge = null;
     if (shouldDisableSplitAndMerge()) {
-      admin.releaseSplitOrMergeLockAndRollback();
-      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false, false,
+      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false,
         Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
     }
 
@@ -717,7 +713,14 @@ public class HBaseFsck extends Configured implements Closeable {
 
       if (shouldDisableSplitAndMerge()) {
         if (oldSplitAndMerge != null) {
-          admin.releaseSplitOrMergeLockAndRollback();
+          if (oldSplitAndMerge[0] && oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false,
+              Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
+          } else if (oldSplitAndMerge[0]) {
+            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.SPLIT);
+          } else if (oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.MERGE);
+          }
         }
       }
     }
@@ -754,10 +757,6 @@ public class HBaseFsck extends Configured implements Closeable {
 
   @Override
   public void close() throws IOException {
-    if (zkw != null) {
-      zkw.close();
-      zkw = null;
-    }
     IOUtils.closeQuietly(admin);
     IOUtils.closeQuietly(meta);
     IOUtils.closeQuietly(connection);
@@ -1645,6 +1644,7 @@ public class HBaseFsck extends Configured implements Closeable {
     HConnectionManager.execute(new HConnectable<Void>(getConf()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
+        ZooKeeperWatcher zkw = createZooKeeperWatcher();
         try {
           for (TableName tableName :
               ZKTableStateClientSideReader.getDisabledOrDisablingTables(zkw)) {
@@ -1654,6 +1654,8 @@ public class HBaseFsck extends Configured implements Closeable {
           throw new IOException(ke);
         } catch (InterruptedException e) {
           throw new InterruptedIOException();
+        } finally {
+          zkw.close();
         }
         return null;
       }
@@ -1775,7 +1777,14 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private ServerName getMetaRegionServerName(int replicaId)
   throws IOException, KeeperException {
-    return new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    ServerName sn = null;
+    try {
+      sn = new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
+    } finally {
+      zkw.close();
+    }
+    return sn;
   }
 
   /**
@@ -3221,21 +3230,32 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixTableLocks() throws IOException {
-    TableLockChecker checker = new TableLockChecker(zkw, errors);
-    checker.checkTableLocks();
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
 
-    if (this.fixTableLocks) {
-      checker.fixExpiredTableLocks();
+    try {
+      TableLockChecker checker = new TableLockChecker(zkw, errors);
+      checker.checkTableLocks();
+
+      if (this.fixTableLocks) {
+        checker.fixExpiredTableLocks();
+      }
+    } finally {
+      zkw.close();
     }
   }
 
   private void checkAndFixReplication() throws IOException {
-    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
-    checker.checkUnDeletedQueues();
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    try {
+      ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+      checker.checkUnDeletedQueues();
 
-    if (checker.hasUnDeletedQueues() && this.fixReplication) {
-      checker.fixUnDeletedQueues();
-      setShouldRerun();
+      if (checker.hasUnDeletedQueues() && this.fixReplication) {
+        checker.fixUnDeletedQueues();
+        setShouldRerun();
+      }
+    } finally {
+      zkw.close();
     }
   }
 
@@ -3247,41 +3267,47 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void checkAndFixOrphanedTableZNodes()
       throws IOException, KeeperException, InterruptedException {
-    Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
-    String msg;
-    TableInfo tableInfo;
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
 
-    for (TableName tableName : enablingTables) {
-      // Check whether the table exists in hbase
-      tableInfo = tablesInfo.get(tableName);
-      if (tableInfo != null) {
-        // Table exists.  This table state is in transit.  No problem for this table.
-        continue;
+    try {
+      Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
+      String msg;
+      TableInfo tableInfo;
+
+      for (TableName tableName : enablingTables) {
+        // Check whether the table exists in hbase
+        tableInfo = tablesInfo.get(tableName);
+        if (tableInfo != null) {
+          // Table exists.  This table state is in transit.  No problem for this table.
+          continue;
+        }
+
+        msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
+        LOG.warn(msg);
+        orphanedTableZNodes.add(tableName);
+        errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
       }
 
-      msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
-      LOG.warn(msg);
-      orphanedTableZNodes.add(tableName);
-      errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
-    }
+      if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
+        ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
 
-    if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
-      ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
-
-      for (TableName tableName : orphanedTableZNodes) {
-        try {
-          // Set the table state to be disabled so that if we made mistake, we can trace
-          // the history and figure it out.
-          // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
-          // Both approaches works.
-          zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
-        } catch (CoordinatedStateException e) {
-          // This exception should not happen here
-          LOG.error(
-            "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
-            e);
+        for (TableName tableName : orphanedTableZNodes) {
+          try {
+            // Set the table state to be disabled so that if we made mistake, we can trace
+            // the history and figure it out.
+            // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
+            // Both approaches works.
+            zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
+          } catch (CoordinatedStateException e) {
+            // This exception should not happen here
+            LOG.error(
+              "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
+              e);
+          }
         }
       }
+    } finally {
+      zkw.close();
     }
   }
 
@@ -3351,7 +3377,12 @@ public class HBaseFsck extends Configured implements Closeable {
   private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
   KeeperException {
     undeployRegions(hi);
-    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    try {
+      ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    } finally {
+      zkw.close();
+    }
   }
 
   private void assignMetaReplica(int replicaId)
@@ -4230,12 +4261,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Disable the split and merge
    */
   public static void setDisableSplitAndMerge() {
-    setDisableSplitAndMerge(true);
-  }
-
-  @VisibleForTesting
-  public static void setDisableSplitAndMerge(boolean flag) {
-    disableSplitAndMerge = flag;
+    disableSplitAndMerge = true;
   }
 
   /**
