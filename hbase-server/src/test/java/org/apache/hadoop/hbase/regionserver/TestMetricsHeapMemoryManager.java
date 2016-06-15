@@ -36,28 +36,41 @@ public class TestMetricsHeapMemoryManager {
   public static MetricsAssertHelper HELPER = CompatibilitySingletonFactory
       .getInstance(MetricsAssertHelper.class);
 
-  private MetricsHeapMemoryManagerWrapperStub wrapper;
   private MetricsHeapMemoryManager hmm;
   private MetricsHeapMemoryManagerSource source;
 
   @Before
   public void setUp() {
-    wrapper = new MetricsHeapMemoryManagerWrapperStub();
-    hmm = new MetricsHeapMemoryManager(wrapper);
+    hmm = new MetricsHeapMemoryManager();
     source = hmm.getMetricsSource();
   }
 
   @Test
   public void testConstuctor() {
     assertNotNull("There should be a hadoop1/hadoop2 metrics source", source);
-    assertNotNull("The RegionServerMetricsWrapper should be accessable", wrapper);
   }
 
   @Test
-  public void testWrapperSource() {
-    HELPER.assertGauge("blockCacheUsedInPercent", 0.3f, source);
-    HELPER.assertGauge("blockCacheUsedInSize", (long) (0.3 * 1024 * 1024), source);
-    HELPER.assertGauge("memStoreUsedInPercent", 0.4f, source);
-    HELPER.assertGauge("memStoreUsedInSize", (long) (0.4 * 1024 * 1024), source);
+  public void testCounter() {
+    for (int i = 0; i < 10; i++) {
+      hmm.increaseAboveHeapOccupancyLowWatermarkCounter();
+    }
+    HELPER.assertCounter("aboveHeapOccupancyLowWaterMarkCounter", 10L, source);
+    for (int i = 0; i < 11; i++) {
+      hmm.increaseTunerDoNothingCounter();
+    }
+    HELPER.assertCounter("tunerDoNothingCounter", 11L, source);
+  }
+
+  @Test
+  public void testGauge() {
+    hmm.updateBlockedFlushCount(200);
+    HELPER.assertGauge("blockedFlushCount", 200, source);
+    hmm.updateUnblockedFlushCount(50);
+    HELPER.assertGauge("unblockedFlushCount", 50, source);
+    hmm.setCurMemStoreSizeGauge(256 * 1024 * 1024);
+    HELPER.assertGauge("memStoreSize", 256 * 1024 * 1024, source);
+    hmm.setCurBlockCacheSizeGauge(100 * 1024 * 1024);
+    HELPER.assertGauge("blockCacheSize", 100 * 1024 * 1024, source);
   }
 }

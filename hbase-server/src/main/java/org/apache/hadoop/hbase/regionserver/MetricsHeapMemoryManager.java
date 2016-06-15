@@ -20,39 +20,38 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
- * This class is for maintaining the various regionserver's heap memory manager statistics
- * and publishing them through the metrics interfaces.
+ * This class is for maintaining the various regionserver's heap memory manager statistics and
+ * publishing them through the metrics interfaces.
  */
 @InterfaceAudience.Private
 public class MetricsHeapMemoryManager {
   private final MetricsHeapMemoryManagerSource source;
-  private MetricsHeapMemoryManagerWrapper wrapper;
 
-  public MetricsHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
-    this(wrapper, CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .getHeapMemoryManager(wrapper));
+  public MetricsHeapMemoryManager(final float globalMemStorePercent, final float blockCachePercent) {
+    this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
+        .getHeapMemoryManager(globalMemStorePercent, blockCachePercent));
   }
 
-  public MetricsHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper,
-      MetricsHeapMemoryManagerSource source) {
-    this.wrapper = wrapper;
+  public MetricsHeapMemoryManager(MetricsHeapMemoryManagerSource source) {
     this.source = source;
+  }
+
+  @VisibleForTesting
+  public MetricsHeapMemoryManager() {
+    this(0.4f, 0.4f);
   }
 
   public MetricsHeapMemoryManagerSource getMetricsSource() {
     return source;
   }
 
-  public MetricsHeapMemoryManagerWrapper getHeapMemoryManagerWrapper() {
-    return wrapper;
-  }
-
   /**
    * Update/Set the blocked flush count histogram/gauge
-   * @param blockedFlushCount the number of blocked flush since last tuning.
+   * @param blockedFlushCount the number of blocked memstore flush since last tuning.
    */
   public void updateBlockedFlushCount(final long blockedFlushCount) {
     source.updateBlockedFlushCount(blockedFlushCount);
@@ -60,26 +59,42 @@ public class MetricsHeapMemoryManager {
 
   /**
    * Update/Set the unblocked flush count histogram/gauge
-   * @param unblockedFlushCount the number of unblocked flush since last tuning.
+   * @param unblockedFlushCount the number of unblocked memstore flush since last tuning.
    */
   public void updateUnblockedFlushCount(final long unblockedFlushCount) {
     source.updateUnblockedFlushCount(unblockedFlushCount);
   }
 
   /**
-   * Update/Set the current blockcache(in size) used histogram/gauge
-   * @param blockCacheSize the current memory usage in blockcache in size.
+   * Set the current blockcache size used gauge
+   * @param blockCacheSize the current memory usage in blockcache, in bytes.
    */
-  public void updateCurBlockCacheSize(final long blockCacheSize) {
-    source.updateCurBlockCacheSize(blockCacheSize);
+  public void setCurBlockCacheSizeGauge(final long blockCacheSize) {
+    source.setCurBlockCacheSizeGauge(blockCacheSize);
   }
 
   /**
-   * Update/Set the current global memstore used(in size) histogram/gauge
-   * @param memStoreSize the current memory usage in memstore in size.
+   * Set the current global memstore size used gauge
+   * @param memStoreSize the current memory usage in memstore, in bytes.
    */
-  public void updateCurMemStoreSize(final long memStoreSize) {
-    source.updateCurMemStoreSize(memStoreSize);
+  public void setCurMemStoreSizeGauge(final long memStoreSize) {
+    source.setCurMemStoreSizeGauge(memStoreSize);
+  }
+
+  /**
+   * Set the new max blockcache size gauge after tuning
+   * @param newMaxBlockCacheSize
+   */
+  public void setNewBlockCacheMaxSizeGauge(float newMaxBlockCacheSize) {
+    source.setNewBlockCacheMaxSizeGauge(newMaxBlockCacheSize);
+  }
+
+  /**
+   * Set the new global memstore size limit gauge after tuning
+   * @param newGlobalMemStoreSize
+   */
+  public void setNewGlobalMemStoreSizeLimitGauge(float newGlobalMemStoreSize) {
+    source.setNewGlobalMemStoreSizeLimitGauge(newGlobalMemStoreSize);
   }
 
   /**

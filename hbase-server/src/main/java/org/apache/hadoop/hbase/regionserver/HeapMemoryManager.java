@@ -86,7 +86,6 @@ public class HeapMemoryManager {
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
   private MetricsHeapMemoryManager metricsHeapMemoryManager;
-  private MetricsHeapMemoryManagerWrapper metricsHeapMemoryManagerWrapper;
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
@@ -111,9 +110,7 @@ public class HeapMemoryManager {
       HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD);
     this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
       HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
-    metricsHeapMemoryManagerWrapper =
-        new MetricsHeapMemoryManagerWrapperImpl(regionServerAccounting, blockCache);
-    metricsHeapMemoryManager = new MetricsHeapMemoryManager(metricsHeapMemoryManagerWrapper);
+    metricsHeapMemoryManager = new MetricsHeapMemoryManager(globalMemStorePercent, blockCachePercent);
   }
 
   private boolean doInit(Configuration conf) {
@@ -298,9 +295,9 @@ public class HeapMemoryManager {
       tunerContext.setUnblockedFlushCount(unblockedFlushCnt);
       metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
       tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
-      metricsHeapMemoryManager.updateCurBlockCacheSize(blockCache.getCurrentSize());
+      metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
       tunerContext.setCurMemStoreUsed((float)regionServerAccounting.getGlobalMemstoreSize() / maxHeapSize);
-      metricsHeapMemoryManager.updateCurMemStoreSize(regionServerAccounting.getGlobalMemstoreSize());
+      metricsHeapMemoryManager.setCurMemStoreSizeGauge(regionServerAccounting.getGlobalMemstoreSize());
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
       TunerResult result = null;
@@ -360,8 +357,10 @@ public class HeapMemoryManager {
               + " and memstore heap size to " + newMemstoreSize);
           blockCachePercent = blockCacheSize;
           blockCache.setMaxSize(newBlockCacheSize);
+          metricsHeapMemoryManager.setNewBlockCacheMaxSizeGauge(newBlockCacheSize);
           globalMemStorePercent = memstoreSize;
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
+          metricsHeapMemoryManager.setNewGlobalMemStoreSizeLimitGauge(newMemstoreSize);
         }
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("No changes made by HeapMemoryTuner.");

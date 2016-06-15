@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -53,11 +52,12 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   }
 
   @Override
-  public synchronized MetricsHeapMemoryManagerSource
-      getHeapMemoryManager(MetricsHeapMemoryManagerWrapper wrapper) {
+  public synchronized MetricsHeapMemoryManagerSource getHeapMemoryManager(
+      float globalMemStorePercent, float blockCachePercent) {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.heapMemMngImpl == null) {
-        FactoryStorage.INSTANCE.heapMemMngImpl = new MetricsHeapMemoryManagerSourceImpl(wrapper);
+        FactoryStorage.INSTANCE.heapMemMngImpl =
+            new MetricsHeapMemoryManagerSourceImpl(globalMemStorePercent, blockCachePercent);
       }
       return FactoryStorage.INSTANCE.heapMemMngImpl;
     }
