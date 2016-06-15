@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.filter.RandomRowFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -362,7 +363,7 @@ public class TestPartialResultsFromClientSide {
     if (CELL_HEAP_SIZE == -1) {
       // Do a partial scan that will return a single result with a single cell
       Scan scan = new Scan();
-      scan.setMaxResultSize(1);
+      scan.setMaxResultSize(2);
       scan.setAllowPartialResults(true);
       ResultScanner scanner = TABLE.getScanner(scan);
 
@@ -372,7 +373,11 @@ public class TestPartialResultsFromClientSide {
       assertTrue(result.rawCells() != null);
       assertTrue(result.rawCells().length == 1);
 
-      CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0]);
+      // Estimate the cell heap size. One difference is that on server side, the KV Heap size is
+      // estimated differently in case the cell is backed up by MSLAB byte[] (no overhead for
+      // backing array). Thus below calculation is a bit brittle.
+      CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0])
+          - (ClassSize.ARRAY+3);
       if (LOG.isInfoEnabled()) LOG.info("Cell heap size: " + CELL_HEAP_SIZE);
       scanner.close();
     }

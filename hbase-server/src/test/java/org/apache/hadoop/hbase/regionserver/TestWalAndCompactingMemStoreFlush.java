@@ -72,8 +72,6 @@ public class TestWalAndCompactingMemStoreFlush {
   public static final byte[] FAMILY2 = FAMILIES[1];
   public static final byte[] FAMILY3 = FAMILIES[2];
 
-
-
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     int i=0;
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
@@ -90,8 +88,6 @@ public class TestWalAndCompactingMemStoreFlush {
     return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
   }
 
-
-
   // A helper function to create puts.
   private Put createPut(int familyNum, int putNum) {
     byte[] qf  = Bytes.toBytes("q" + familyNum);
@@ -101,7 +97,6 @@ public class TestWalAndCompactingMemStoreFlush {
     p.addColumn(FAMILIES[familyNum - 1], qf, val);
     return p;
   }
-
 
   // A helper function to create double puts, so something can be compacted later.
   private Put createDoublePut(int familyNum, int putNum) {
@@ -115,15 +110,11 @@ public class TestWalAndCompactingMemStoreFlush {
     return p;
   }
 
-
   // A helper function to create gets.
   private Get createGet(int familyNum, int putNum) {
     byte[] row = Bytes.toBytes("row" + familyNum + "-" + putNum);
     return new Get(row);
   }
-
-
-
 
   // A helper function to verify edits.
   void verifyEdit(int familyNum, int putNum, Table table) throws IOException {
@@ -138,10 +129,6 @@ public class TestWalAndCompactingMemStoreFlush {
       Arrays.equals(r.getFamilyMap(family).get(qf), val));
   }
 
-
-
-
-
   @Test(timeout = 180000)
   public void testSelectiveFlushWhenEnabled() throws IOException {
 
@@ -150,7 +137,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushNonSloppyStoresFirstPolicy.class
         .getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 300 *
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 200 *
         1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
 
@@ -388,14 +375,6 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-
-
-
-
-
-
-
-
   @Test(timeout = 180000)
   public void testSelectiveFlushWhenEnabledAndWALinCompaction() throws IOException {
     // Set up the configuration
@@ -403,7 +382,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushNonSloppyStoresFirstPolicy.class
         .getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 300 *
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 200 *
         1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
 
@@ -535,10 +514,6 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-
-
-
-
   // Find the (first) region which has the specified name.
   private static Pair<Region, HRegionServer> getRegionWithName(TableName tableName) {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
@@ -552,7 +527,6 @@ public class TestWalAndCompactingMemStoreFlush {
     return null;
   }
 
-
   private WAL getWAL(Region region) {
     return ((HRegion)region).getWAL();
   }
@@ -560,6 +534,4 @@ public class TestWalAndCompactingMemStoreFlush {
   private int getNumRolledLogFiles(Region region) {
     return ((FSHLog)getWAL(region)).getNumRolledLogFiles();
   }
-
-
 }

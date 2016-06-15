@@ -823,9 +823,9 @@ public class TestHFileBlock {
 
   protected void testBlockHeapSizeInternals() {
     if (ClassSize.is32BitJVM()) {
-      assertTrue(HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE == 64);
+      assertEquals(64, HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE);
     } else {
-      assertTrue(HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE == 104);
+      assertEquals(72, HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE);
     }
 
     for (int size : new int[] { 100, 256, 12345 }) {
