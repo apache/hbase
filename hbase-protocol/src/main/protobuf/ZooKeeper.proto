@@ -174,11 +174,3 @@ message TableLock {
 message SwitchState {
   optional bool enabled = 1;
 }
-
-/**
- * State for split and merge, used in hbck
- */
-message SplitAndMergeState {
-  optional bool split_enabled = 1;
-  optional bool merge_enabled = 2;
-}

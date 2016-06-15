@@ -280,7 +280,6 @@ message SetSplitOrMergeEnabledRequest {
   required bool enabled = 1;
   optional bool synchronous = 2;
   repeated MasterSwitchType switch_types = 3;
-  optional bool skip_lock = 4;
 }
 
 message SetSplitOrMergeEnabledResponse {
@@ -293,12 +292,6 @@ message IsSplitOrMergeEnabledRequest {
 
 message IsSplitOrMergeEnabledResponse {
   required bool enabled = 1;
-}
-
-message ReleaseSplitOrMergeLockAndRollbackRequest {
-}
-
-message ReleaseSplitOrMergeLockAndRollbackResponse {
 }
 
 message NormalizeRequest {
@@ -658,12 +651,6 @@ service MasterService {
    */
   rpc IsSplitOrMergeEnabled(IsSplitOrMergeEnabledRequest)
     returns(IsSplitOrMergeEnabledResponse);
-
-  /**
-   * Release lock and rollback state.
-   */
-  rpc ReleaseSplitOrMergeLockAndRollback(ReleaseSplitOrMergeLockAndRollbackRequest)
-    returns(ReleaseSplitOrMergeLockAndRollbackResponse);
 
   /**
    * Run region normalizer. Can NOT run for various reasons. Check logs.
