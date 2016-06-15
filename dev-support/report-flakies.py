@@ -55,7 +55,11 @@ def get_bad_tests(build_url):
         logger.info("Skipping this build since it is in progress.")
         return {}
     console_url = build_url + "/consoleText"
-    return findHangingTests.get_bad_tests(console_url)
+    result = findHangingTests.get_bad_tests(console_url)
+    if not result:
+        logger.info("Ignoring build {}".format(build_url))
+        return {}
+    return result
 
 
 # If any url is of type multi-configuration project (i.e. has key 'activeConfigurations'),
