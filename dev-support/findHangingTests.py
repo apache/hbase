@@ -23,6 +23,14 @@ import re
 import requests
 import sys
 
+
+# If any of these strings appear in the console output, it's a build one should probably ignore
+# for analyzing failed/hanging tests.
+BAD_RUN_STRINGS = [
+    "Slave went offline during the build",  # Machine went down, can't do anything about it.
+    "The forked VM terminated without properly saying goodbye",  # JVM crashed.
+]
+
 # Returns [[all tests], [failed tests], [timeout tests], [hanging tests]]
 # Definitions:
 # All tests: All testcases which were run.
@@ -66,6 +74,10 @@ def get_bad_tests(console_url):
         if result3:
             test_case = result3.group(1)
             timeout_tests.add(test_case)
+        for bad_string in BAD_RUN_STRINGS:
+            if re.match(".*" + bad_string + ".*", line):
+                print "Bad string found in build:\n > {}".format(line)
+                return
     print "Result > total tests: {:4}   failed : {:4}  timedout : {:4}  hanging : {:4}".format(
           len(all_tests), len(failed_tests), len(timeout_tests), len(hanging_tests))
     return [all_tests, failed_tests, timeout_tests, hanging_tests]
@@ -76,7 +88,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print "Fetching {}".format(sys.argv[1])
-    [all_tests, failed_tests, timedout_tests, hanging_tests] = get_bad_tests(sys.argv[1])
+    result = get_bad_tests(sys.argv[1])
+    if not result:
+        sys.exit(1)
+    [all_tests, failed_tests, timedout_tests, hanging_tests] = result
+
     print "Found {} hanging tests:".format(len(hanging_tests))
     for test in hanging_tests:
         print test
