@@ -39,6 +39,7 @@ org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.TableName;
 org.apache.hadoop.hbase.client.Admin;
+org.apache.hadoop.hbase.client.MasterSwitchType;
 org.apache.hadoop.hbase.client.SnapshotDescription;
 org.apache.hadoop.hbase.master.AssignmentManager;
 org.apache.hadoop.hbase.master.DeadServer;
@@ -166,6 +167,20 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             The Load Balancer is not enabled which will eventually cause performance degradation
             in HBase as Regions will not be distributed across all RegionServers. The balancer
             is only expected to be disabled during rolling upgrade scenarios.
+          </div>
+        </%if>
+        <%if !master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT) %>
+          <div class="alert alert-warning">
+            Region splits are disabled. This may be the result of HBCK aborting while
+            running in repair mode. Manually enable splits from the HBase shell,
+            or re-run HBCK in repair mode.
+          </div>
+        </%if>
+        <%if !master.isSplitOrMergeEnabled(MasterSwitchType.MERGE) %>
+          <div class="alert alert-warning">
+            Region merges are disabled. This may be the result of HBCK aborting while
+            running in repair mode. Manually enable merges from the HBase shell,
+            or re-run HBCK in repair mode.
           </div>
         </%if>
 
