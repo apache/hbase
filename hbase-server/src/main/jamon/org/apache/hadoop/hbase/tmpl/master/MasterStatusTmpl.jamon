@@ -169,6 +169,20 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             is only expected to be disabled during rolling upgrade scenarios.
           </div>
         </%if>
+        <%if !master.isSplitOrMergeEnabled(Admin.MasterSwitchType.SPLIT) %>
+          <div class="alert alert-warning">
+            Region splits are disabled. This may be the result of HBCK aborting while
+            running in repair mode. Manually enable splits from the HBase shell,
+            or re-run HBCK in repair mode.
+          </div>
+        </%if>
+        <%if !master.isSplitOrMergeEnabled(Admin.MasterSwitchType.MERGE) %>
+          <div class="alert alert-warning">
+            Region merges are disabled. This may be the result of HBCK aborting while
+            running in repair mode. Manually enable merges from the HBase shell,
+            or re-run HBCK in repair mode.
+          </div>
+        </%if>
 
         <section>
             <h2>Region Servers</h2>
