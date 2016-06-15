@@ -23,6 +23,10 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
+/**
+ * Wrapper around common arguments used to construct ReplicationQueues. Used to construct various
+ * ReplicationQueues Implementations with different constructor arguments by reflection.
+ */
 @InterfaceAudience.Private
 public class ReplicationQueuesArguments {
 

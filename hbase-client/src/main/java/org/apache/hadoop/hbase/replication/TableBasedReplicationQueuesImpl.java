@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -105,7 +106,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
 
   @Override
   public void addLog(String queueId, String filename) throws ReplicationException {
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
       if (!checkQueueExists(queueId)) {
         // Each queue will have an Owner, OwnerHistory, and a collection of [WAL:offset] key values
         Put putNewQueue = new Put(Bytes.toBytes(buildQueueRowKey(queueId)));
@@ -140,7 +141,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
 
   @Override
   public void setLogPosition(String queueId, String filename, long position) {
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
       byte[] rowKey = queueIdToRowKey(queueId);
       // Check that the log exists. addLog() must have been called before setLogPosition().
       Get checkLogExists = new Get(rowKey);
@@ -190,8 +191,31 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
 
   @Override
   public List<String> getLogsInQueue(String queueId) {
+    String errMsg = "Failed getting logs in queue queueId=" + queueId;
     byte[] rowKey = queueIdToRowKey(queueId);
-    return getLogsInQueueAndCheckOwnership(rowKey);
+    List<String> logs = new ArrayList<String>();
+    try {
+      Get getQueue = new Get(rowKey);
+      Result queue = getResultIfOwner(getQueue);
+      if (queue == null || queue.isEmpty()) {
+        String errMsgLostOwnership = "Failed getting logs for queue queueId=" +
+            Bytes.toString(rowKey) + " because the queue was missing or we lost ownership";
+        abortable.abort(errMsg, new ReplicationException(errMsgLostOwnership));
+        return null;
+      }
+      Map<byte[], byte[]> familyMap = queue.getFamilyMap(CF_QUEUE);
+      for(byte[] cQualifier : familyMap.keySet()) {
+        if (Arrays.equals(cQualifier, COL_QUEUE_OWNER) || Arrays.equals(cQualifier,
+            COL_QUEUE_OWNER_HISTORY)) {
+          continue;
+        }
+        logs.add(Bytes.toString(cQualifier));
+      }
+    } catch (IOException e) {
+      abortable.abort(errMsg, e);
+      return null;
+    }
+    return logs;
   }
 
   @Override
@@ -207,7 +231,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     }
     ResultScanner queuesToClaim = null;
     try {
-      queuesToClaim = getAllQueuesScanner(regionserver);
+      queuesToClaim = getQueuesBelongingToServer(regionserver);
       for (Result queue : queuesToClaim) {
         if (attemptToClaimQueue(queue, regionserver)) {
           String rowKey = Bytes.toString(queue.getRow());
@@ -240,24 +264,6 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     return queues;
   }
 
-  /**
-   * Get the QueueIds belonging to the named server from the ReplicationTableBase
-   *
-   * @param server name of the server
-   * @return a ResultScanner over the QueueIds belonging to the server
-   * @throws IOException
-   */
-  private ResultScanner getAllQueuesScanner(String server) throws IOException {
-    Scan scan = new Scan();
-    SingleColumnValueFilter filterMyQueues = new SingleColumnValueFilter(CF_QUEUE, COL_QUEUE_OWNER,
-      CompareFilter.CompareOp.EQUAL, Bytes.toBytes(server));
-    scan.setFilter(filterMyQueues);
-    scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER);
-    scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER_HISTORY);
-    ResultScanner results = replicationTable.getScanner(scan);
-    return results;
-  }
-
   @Override
   public boolean isThisOurRegionServer(String regionserver) {
     return this.serverName.equals(regionserver);
@@ -285,33 +291,6 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
   public void removeHFileRefs(String peerId, List<String> files) {
     // TODO
     throw new NotImplementedException();
-  }
-
-  private List<String> getLogsInQueueAndCheckOwnership(byte[] rowKey) {
-    String errMsg = "Failed getting logs in queue queueId=" + Bytes.toString(rowKey);
-    List<String> logs = new ArrayList<String>();
-    try {
-      Get getQueue = new Get(rowKey);
-      Result queue = getResultIfOwner(getQueue);
-      if (queue == null || queue.isEmpty()) {
-        String errMsgLostOwnership = "Failed getting logs for queue queueId=" +
-          Bytes.toString(rowKey) + " because the queue was missing or we lost ownership";
-        abortable.abort(errMsg, new ReplicationException(errMsgLostOwnership));
-        return null;
-      }
-      Map<byte[], byte[]> familyMap = queue.getFamilyMap(CF_QUEUE);
-      for(byte[] cQualifier : familyMap.keySet()) {
-        if (Arrays.equals(cQualifier, COL_QUEUE_OWNER) || Arrays.equals(cQualifier,
-            COL_QUEUE_OWNER_HISTORY)) {
-          continue;
-        }
-        logs.add(Bytes.toString(cQualifier));
-      }
-    } catch (IOException e) {
-      abortable.abort(errMsg, e);
-      return null;
-    }
-    return logs;
   }
 
   private String buildQueueRowKey(String queueId) {
@@ -358,11 +337,13 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
    * @param mutate Mutation to perform on a given queue
    */
   private void safeQueueUpdate(RowMutations mutate) throws ReplicationException, IOException{
-    boolean updateSuccess = replicationTable.checkAndMutate(mutate.getRow(), CF_QUEUE,
-        COL_QUEUE_OWNER, CompareFilter.CompareOp.EQUAL, serverNameBytes, mutate);
-    if (!updateSuccess) {
-      throw new ReplicationException("Failed to update Replication Table because we lost queue " +
-        " ownership");
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
+      boolean updateSuccess = replicationTable.checkAndMutate(mutate.getRow(),
+          CF_QUEUE, COL_QUEUE_OWNER, CompareFilter.CompareOp.EQUAL, serverNameBytes, mutate);
+      if (!updateSuccess) {
+        throw new ReplicationException("Failed to update Replication Table because we lost queue " +
+            " ownership");
+      }
     }
   }
 
@@ -374,8 +355,10 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
    * @throws IOException
    */
   private boolean checkQueueExists(String queueId) throws IOException {
-    byte[] rowKey = queueIdToRowKey(queueId);
-    return replicationTable.exists(new Get(rowKey));
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
+      byte[] rowKey = queueIdToRowKey(queueId);
+      return replicationTable.exists(new Get(rowKey));
+    }
   }
 
   /**
@@ -399,9 +382,12 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     // Attempt to claim ownership for this queue by checking if the current OWNER is the original
     // server. If it is not then another RS has already claimed it. If it is we set ourselves as the
     // new owner and update the queue's history
-    boolean success = replicationTable.checkAndMutate(queue.getRow(), CF_QUEUE, COL_QUEUE_OWNER,
-      CompareFilter.CompareOp.EQUAL, Bytes.toBytes(originalServer), claimAndRenameQueue);
-    return success;
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
+      boolean success = replicationTable.checkAndMutate(queue.getRow(),
+          CF_QUEUE, COL_QUEUE_OWNER, CompareFilter.CompareOp.EQUAL, Bytes.toBytes(originalServer),
+          claimAndRenameQueue);
+      return success;
+    }
   }
 
   /**
@@ -424,7 +410,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
       CompareFilter.CompareOp.EQUAL, serverNameBytes);
     scan.setFilter(checkOwner);
     ResultScanner scanner = null;
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
       scanner = replicationTable.getScanner(scan);
       Result result = scanner.next();
       return (result == null || result.isEmpty()) ? null : result;

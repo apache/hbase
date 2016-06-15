@@ -238,19 +238,11 @@ public class ReplicationSourceManager implements ReplicationListener {
         this.replicationQueues.addPeerToHFileRefs(id);
       }
     }
-    List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
-    if (currentReplicators == null || currentReplicators.size() == 0) {
-      return;
-    }
-    List<String> otherRegionServers = replicationTracker.getListOfRegionServers();
-    LOG.info("Current list of replicators: " + currentReplicators + " other RSs: "
-        + otherRegionServers);
-
-    // Look if there's anything to process after a restart
-    for (String rs : currentReplicators) {
-      if (!otherRegionServers.contains(rs)) {
-        transferQueues(rs);
-      }
+    AdoptAbandonedQueuesWorker adoptionWorker = new AdoptAbandonedQueuesWorker();
+    try {
+      this.executor.execute(adoptionWorker);
+    } catch (RejectedExecutionException ex) {
+      LOG.info("Cancelling the adoption of abandoned queues because of " + ex.getMessage());
     }
   }
 
@@ -704,6 +696,31 @@ public class ReplicationSourceManager implements ReplicationListener {
       }
     }
   }
+
+  class AdoptAbandonedQueuesWorker extends Thread{
+
+    public AdoptAbandonedQueuesWorker() {}
+
+    @Override
+    public void run() {
+      List<String> currentReplicators = replicationQueues.getListOfReplicators();
+      if (currentReplicators == null || currentReplicators.size() == 0) {
+        return;
+      }
+      List<String> otherRegionServers = replicationTracker.getListOfRegionServers();
+      LOG.info("Current list of replicators: " + currentReplicators + " other RSs: "
+        + otherRegionServers);
+
+      // Look if there's anything to process after a restart
+      for (String rs : currentReplicators) {
+        if (!otherRegionServers.contains(rs)) {
+          transferQueues(rs);
+        }
+      }
+    }
+  }
+
+
 
   /**
    * Get the directory where wals are archived
