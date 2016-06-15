@@ -53,7 +53,7 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   protected static class TableRecordWriter implements RecordWriter<ImmutableBytesWritable, Put> {
     private BufferedMutator m_mutator;
-
+    private Connection connection;
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing. Assumes control over the
      * lifecycle of {@code conn}.
@@ -62,8 +62,19 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       this.m_mutator = mutator;
     }
 
+    public TableRecordWriter(JobConf job) throws IOException {
+      // expecting exactly one path
+      TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
+      connection = ConnectionFactory.createConnection(job);
+      m_mutator = connection.getBufferedMutator(tableName);
+    }
+
     public void close(Reporter reporter) throws IOException {
       this.m_mutator.close();
+      if (connection != null) {
+        connection.close();
+        connection = null;
+      }
     }
 
     public void write(ImmutableBytesWritable key, Put value) throws IOException {
@@ -90,14 +101,7 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
       Progressable progress)
   throws IOException {
-    // expecting exactly one path
-    TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
-    BufferedMutator mutator =  null;
-    // Connection is not closed. Dies with JVM.  No possibility for cleanup.
-    Connection connection = ConnectionFactory.createConnection(job);
-    mutator = connection.getBufferedMutator(tableName);
-    // Clear write buffer on fail is true by default so no need to reset it.
-    return new TableRecordWriter(mutator);
+    return new TableRecordWriter(job);
   }
 
   @Override
