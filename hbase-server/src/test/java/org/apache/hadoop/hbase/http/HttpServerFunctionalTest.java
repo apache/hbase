@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.http.HttpServer.Builder;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URL;
 import java.net.MalformedURLException;
@@ -92,6 +93,15 @@ public class HttpServerFunctionalTest extends Assert {
       String[] pathSpecs) throws IOException {
     prepareTestWebapp();
     return createServer(TEST, conf, pathSpecs);
+  }
+
+  public static HttpServer createTestServerWithSecurity(Configuration conf) throws IOException {
+    prepareTestWebapp();
+    return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
+        // InfoServer normally sets these for us
+        .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
+        .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
+        .build();
   }
 
   /**
@@ -225,5 +235,38 @@ public class HttpServerFunctionalTest extends Assert {
       len = in.read(buffer);
     }
     return out.toString();
+  }
+
+  /**
+   * Recursively deletes a {@link File}.
+   */
+  protected static void deleteRecursively(File d) {
+    if (d.isDirectory()) {
+      for (String name : d.list()) {
+        File child = new File(d, name);
+        if (child.isFile()) {
+          child.delete();
+        } else {
+          deleteRecursively(d);
+        }
+      }
+    }
+    d.delete();
+  }
+
+  /**
+   * Picks a free port on the host by binding a Socket to '0'.
+   */
+  protected static int getFreePort() throws IOException {
+    ServerSocket s = new ServerSocket(0);
+    try {
+      s.setReuseAddress(true);
+      int port = s.getLocalPort();
+      return port;
+    } finally {
+      if (null != s) {
+        s.close();
+      }
+    }
   }
 }

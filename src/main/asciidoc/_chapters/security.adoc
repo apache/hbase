@@ -69,6 +69,59 @@ See Nick Dimiduk's contribution on this link:http://stackoverflow.com/questions/
 If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
 ====
 
+[[hbase.secure.spnego.ui]]
+== Using SPNEGO for Kerberos authentication with Web UIs
+
+Kerberos-authentication to HBase Web UIs can be enabled via configuring SPNEGO with the `hbase.security.authentication.ui`
+property in _hbase-site.xml_. Enabling this authentication requires that HBase is also configured to use Kerberos authentication
+for RPCs (e.g `hbase.security.authentication` = `kerberos`).
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ui</name>
+  <value>kerberos</value>
+  <description>Controls what kind of authentication should be used for the HBase web UIs.</description>
+</property>
+<property>
+  <name>hbase.security.authentication</name>
+  <value>kerberos</value>
+  <description>The Kerberos keytab file to use for SPNEGO authentication by the web server.</description>
+</property>
+----
+
+A number of properties exist to configure SPNEGO authentication for the web server:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.principal</name>
+  <value>HTTP/_HOST@EXAMPLE.COM</value>
+  <description>Required for SPNEGO, the Kerberos principal to use for SPNEGO authentication by the
+  web server. The _HOST keyword will be automatically substituted with the node's
+  hostname.</description>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.keytab</name>
+  <value>/etc/security/keytabs/spnego.service.keytab</value>
+  <description>Required for SPNEGO, the Kerberos keytab file to use for SPNEGO authentication by the
+  web server.</description>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.name.rules</name>
+  <value></value>
+  <description>Optional, Hadoop-style `auth_to_local` rules which will be parsed and used in the
+  handling of Kerberos principals</description>
+</property>
+<property>
+  <name>hbase.security.authentication.signature.secret.file</name>
+  <value></value>
+  <description>Optional, a file whose contents will be used as a secret to sign the HTTP cookies
+  as a part of the SPNEGO authentication handshake. If this is not provided, Java's `Random` library
+  will be used for the secret.</description>
+</property>
+----
+
 [[hbase.secure.configuration]]
 == Secure Client Access to Apache HBase
 
