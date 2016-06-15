@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class ClassSize {
   private static final Log LOG = LogFactory.getLog(ClassSize.class);
 
-  private static int nrOfRefsPerObj = 2;
-
   /** Array overhead */
   public static final int ARRAY;
 
@@ -125,34 +123,124 @@ public class ClassSize {
   }
 
   /**
+   * MemoryLayout abstracts details about the JVM object layout. Default implementation is used in
+   * case Unsafe is not available.
+   */
+  private static class MemoryLayout {
+    int headerSize() {
+      return 2 * oopSize();
+    }
+
+    int arrayHeaderSize() {
+      return (int) align(3 * oopSize());
+    }
+
+    /**
+     * Return the size of an "ordinary object pointer". Either 4 or 8, depending on 32/64 bit,
+     * and CompressedOops
+     */
+    int oopSize() {
+      return is32BitJVM() ? 4 : 8;
+    }
+
+    /**
+     * Aligns a number to 8.
+     * @param num number to align to 8
+     * @return smallest number &gt;= input that is a multiple of 8
+     */
+    public long align(long num) {
+      //The 7 comes from that the alignSize is 8 which is the number of bytes
+      //stored and sent together
+      return  ((num + 7) >> 3) << 3;
+    }
+
+    long sizeOf(byte[] b, int len) {
+      return align(arrayHeaderSize() + len);
+    }
+  }
+
+  /**
+   * UnsafeLayout uses Unsafe to guesstimate the object-layout related parameters like object header
+   * sizes and oop sizes
+   * See HBASE-15950.
+   */
+  private static class UnsafeLayout extends MemoryLayout {
+    @SuppressWarnings("unused")
+    private static final class HeaderSize {
+      private byte a;
+    }
+
+    public UnsafeLayout() {
+    }
+
+    @Override
+    int headerSize() {
+      try {
+        return (int) UnsafeAccess.theUnsafe.objectFieldOffset(
+          HeaderSize.class.getDeclaredField("a"));
+      } catch (NoSuchFieldException | SecurityException e) {
+        LOG.error(e);
+      }
+      return super.headerSize();
+    }
+
+    @Override
+    int arrayHeaderSize() {
+      return UnsafeAccess.theUnsafe.arrayBaseOffset(byte[].class);
+    }
+
+    @Override
+    @SuppressWarnings("static-access")
+    int oopSize() {
+      // Unsafe.addressSize() returns 8, even with CompressedOops. This is how many bytes each
+      // element is allocated in an Object[].
+      return UnsafeAccess.theUnsafe.ARRAY_OBJECT_INDEX_SCALE;
+    }
+
+    @Override
+    @SuppressWarnings("static-access")
+    long sizeOf(byte[] b, int len) {
+      return align(arrayHeaderSize() + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
+    }
+  }
+
+  private static MemoryLayout getMemoryLayout() {
+    // Have a safeguard in case Unsafe estimate is wrong. This is static context, there is
+    // no configuration, so we look at System property.
+    String enabled = System.getProperty("hbase.memorylayout.use.unsafe");
+    if (UnsafeAvailChecker.isAvailable() && (enabled == null || Boolean.parseBoolean(enabled))) {
+      LOG.debug("Using Unsafe to estimate memory layout");
+      return new UnsafeLayout();
+    }
+    LOG.debug("Not using Unsafe to estimate memory layout");
+    return new MemoryLayout();
+  }
+
+  private static final MemoryLayout memoryLayout = getMemoryLayout();
+
+  /**
    * Method for reading the arc settings and setting overheads according
    * to 32-bit or 64-bit architecture.
    */
   static {
-    //Default value is set to 8, covering the case when arcModel is unknown
-    if (is32BitJVM()) {
-      REFERENCE = 4;
-    } else {
-      REFERENCE = 8;
-    }
+    REFERENCE = memoryLayout.oopSize();
 
-    OBJECT = 2 * REFERENCE;
+    OBJECT = memoryLayout.headerSize();
 
-    ARRAY = align(3 * REFERENCE);
+    ARRAY = memoryLayout.arrayHeaderSize();
 
-    ARRAYLIST = align(OBJECT + align(REFERENCE) + align(ARRAY) +
-        (2 * Bytes.SIZEOF_INT));
+    ARRAYLIST = align(OBJECT + REFERENCE + (2 * Bytes.SIZEOF_INT)) + align(ARRAY);
 
     //noinspection PointlessArithmeticExpression
-    BYTE_BUFFER = align(OBJECT + align(REFERENCE) + align(ARRAY) +
+    BYTE_BUFFER = align(OBJECT + REFERENCE +
         (5 * Bytes.SIZEOF_INT) +
-        (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG);
+        (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG) + align(ARRAY);
 
     INTEGER = align(OBJECT + Bytes.SIZEOF_INT);
 
     MAP_ENTRY = align(OBJECT + 5 * REFERENCE + Bytes.SIZEOF_BOOLEAN);
 
-    TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
+    TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + 7 * REFERENCE);
 
     // STRING is different size in jdk6 and jdk7. Just use what we estimate as size rather than
     // have a conditional on whether jdk7.
@@ -172,9 +260,9 @@ public class ClassSize {
     // The size changes from jdk7 to jdk8, estimate the size rather than use a conditional
     CONCURRENT_SKIPLISTMAP = (int) estimateBase(ConcurrentSkipListMap.class, false);
 
-    CONCURRENT_SKIPLISTMAP_ENTRY = align(
+    CONCURRENT_SKIPLISTMAP_ENTRY =
         align(OBJECT + (3 * REFERENCE)) + /* one node per entry */
-        align((OBJECT + (3 * REFERENCE))/2)); /* one index per two entries */
+        align((OBJECT + (3 * REFERENCE))/2); /* one index per two entries */
 
     REENTRANT_LOCK = align(OBJECT + (3 * REFERENCE));
 
@@ -214,8 +302,7 @@ public class ClassSize {
   private static int [] getSizeCoefficients(Class cl, boolean debug) {
     int primitives = 0;
     int arrays = 0;
-    //The number of references that a new object takes
-    int references = nrOfRefsPerObj;
+    int references = 0;
     int index = 0;
 
     for ( ; null != cl; cl = cl.getSuperclass()) {
@@ -271,15 +358,14 @@ public class ClassSize {
    * @return the size estimate, in bytes
    */
   private static long estimateBaseFromCoefficients(int [] coeff, boolean debug) {
-    long prealign_size = coeff[0] + align(coeff[1] * ARRAY) + coeff[2] * REFERENCE;
+    long prealign_size = OBJECT + coeff[0] + coeff[2] * REFERENCE;
 
     // Round up to a multiple of 8
-    long size = align(prealign_size);
-    if(debug) {
+    long size = align(prealign_size) + align(coeff[1] * ARRAY);
+    if (debug) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Primitives=" + coeff[0] + ", arrays=" + coeff[1] +
-            ", references(includes " + nrOfRefsPerObj +
-            " for object overhead)=" + coeff[2] + ", refSize " + REFERENCE +
+            ", references=" + coeff[2] + ", refSize " + REFERENCE +
             ", size=" + size + ", prealign_size=" + prealign_size);
       }
     }
@@ -317,9 +403,7 @@ public class ClassSize {
    * @return smallest number &gt;= input that is a multiple of 8
    */
   public static long align(long num) {
-    //The 7 comes from that the alignSize is 8 which is the number of bytes
-    //stored and sent together
-    return  ((num + 7) >> 3) << 3;
+    return memoryLayout.align(num);
   }
 
   /**
@@ -329,6 +413,10 @@ public class ClassSize {
   public static boolean is32BitJVM() {
     final String model = System.getProperty("sun.arch.data.model");
     return model != null && model.equals("32");
+  }
+
+  public static long sizeOf(byte[] b, int len) {
+    return memoryLayout.sizeOf(b, len);
   }
 
 }

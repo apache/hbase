@@ -343,7 +343,7 @@ public class TestPartialResultsFromClientSide {
       // 2. It is the first result we have seen for that row and thus may have been fetched as
       // the last group of cells that fit inside the maxResultSize
       assertTrue(
-          "Result's cell count differed from expected number. result: " + result,
+          "Result's cell count differed from expected number. result: " + result.rawCells().length,
           result.rawCells().length == expectedNumberOfCells || !result.isPartial()
               || !Bytes.equals(prevRow, result.getRow()));
       prevRow = result.getRow();
@@ -362,7 +362,7 @@ public class TestPartialResultsFromClientSide {
     if (CELL_HEAP_SIZE == -1) {
       // Do a partial scan that will return a single result with a single cell
       Scan scan = new Scan();
-      scan.setMaxResultSize(1);
+      scan.setMaxResultSize(2);
       scan.setAllowPartialResults(true);
       ResultScanner scanner = TABLE.getScanner(scan);
 
@@ -372,6 +372,9 @@ public class TestPartialResultsFromClientSide {
       assertTrue(result.rawCells() != null);
       assertTrue(result.rawCells().length == 1);
 
+      // Estimate the cell heap size. One difference is that on server side, the KV Heap size is
+      // estimated differently in case the cell is backed up by MSLAB byte[] (no overhead for
+      // backing array). Thus below calculation is a bit brittle.
       CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0]);
       if (LOG.isInfoEnabled()) LOG.info("Cell heap size: " + CELL_HEAP_SIZE);
       scanner.close();

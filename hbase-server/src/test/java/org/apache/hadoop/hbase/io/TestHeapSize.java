@@ -55,6 +55,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
@@ -66,17 +67,17 @@ public class TestHeapSize  {
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, WALKey
-  
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // Print detail on jvm so we know what is different should below test fail.
     RuntimeMXBean b = ManagementFactory.getRuntimeMXBean();
-    LOG.info("name=" + b.getName()); 
-    LOG.info("specname=" + b.getSpecName()); 
-    LOG.info("specvendor=" + b.getSpecVendor()); 
+    LOG.info("name=" + b.getName());
+    LOG.info("specname=" + b.getSpecName());
+    LOG.info("specvendor=" + b.getSpecVendor());
     LOG.info("vmname=" + b.getVmName());
-    LOG.info("vmversion=" + b.getVmVersion()); 
-    LOG.info("vmvendor=" + b.getVmVendor()); 
+    LOG.info("vmversion=" + b.getVmVersion());
+    LOG.info("vmvendor=" + b.getVmVendor());
     Map<String, String> p = b.getSystemProperties();
     LOG.info("properties=" + p);
   }
@@ -130,7 +131,7 @@ public class TestHeapSize  {
     // Object
     cl = Object.class;
     expected = ClassSize.estimateBase(cl, false);
-    actual = ClassSize.OBJECT;
+    actual = ClassSize.align(ClassSize.OBJECT);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
@@ -389,6 +390,26 @@ public class TestHeapSize  {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
+  }
+
+  @Test
+  public void testReferenceSize() {
+    LOG.info("ClassSize.REFERENCE is " + ClassSize.REFERENCE);
+    // oop should be either 4 or 8
+    assertTrue(ClassSize.REFERENCE == 4 || ClassSize.REFERENCE == 8);
+  }
+
+  @Test
+  public void testObjectSize() throws IOException {
+    LOG.info("header:" + ClassSize.OBJECT);
+    LOG.info("array header:" + ClassSize.ARRAY);
+
+    if (ClassSize.is32BitJVM()) {
+      assertEquals(ClassSize.OBJECT, 8);
+    } else {
+      assertTrue(ClassSize.OBJECT == 12 || ClassSize.OBJECT == 16); // depending on CompressedOops
+    }
+    assertEquals(ClassSize.OBJECT + 4, ClassSize.ARRAY);
   }
 
 }
