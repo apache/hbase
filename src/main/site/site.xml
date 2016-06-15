@@ -43,6 +43,7 @@
     </fluidoSkin>
   </custom>
   <bannerLeft>
+    <name/>
     <height>0</height>
     <width>0</width>
   </bannerLeft>
