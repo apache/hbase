@@ -80,12 +80,12 @@ public class TestReplicationStateHBaseImpl {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     utility = new HBaseTestingUtility();
-    utility.startMiniCluster();
     conf = utility.getConfiguration();
     conf.setClass("hbase.region.replica.replication.ReplicationQueuesType",
       TableBasedReplicationQueuesImpl.class, ReplicationQueues.class);
     conf.setClass("hbase.region.replica.replication.ReplicationQueuesClientType",
       TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
+    utility.startMiniCluster();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
     replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
@@ -73,7 +74,7 @@ public class TableBasedReplicationQueuesClientImpl extends ReplicationTableBase
   public Set<String> getAllWALs() {
     Set<String> allWals = new HashSet<String>();
     ResultScanner allQueues = null;
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
       allQueues = replicationTable.getScanner(new Scan());
       for (Result queue : allQueues) {
         for (String wal : readWALsFromResult(queue)) {

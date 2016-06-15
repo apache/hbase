@@ -18,12 +18,14 @@
 */
 package org.apache.hadoop.hbase.replication;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -42,12 +44,18 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /*
  * Abstract class that provides an interface to the Replication Table. Which is currently
@@ -59,8 +67,10 @@ import java.util.Set;
  *  COL_QUEUE_OWNER_HISTORY: a "|" delimited list of the previous server's that have owned this
  *    queue. The most recent previous owner is the leftmost entry.
  * They will also have columns mapping [WAL filename : offset]
+ * The most flexible method of interacting with the Replication Table is by calling
+ * getOrBlockOnReplicationTable() which will return a new copy of the Replication Table. It is up
+ * to the caller to close the returned table.
  */
-
 @InterfaceAudience.Private
 abstract class ReplicationTableBase {
 
@@ -99,20 +109,23 @@ abstract class ReplicationTableBase {
   private static final int RPC_TIMEOUT = 2000;
   private static final int OPERATION_TIMEOUT = CLIENT_RETRIES * RPC_TIMEOUT;
 
-  protected final Table replicationTable;
+  // We only need a single thread to initialize the Replication Table
+  private static final int NUM_INITIALIZE_WORKERS = 1;
+
   protected final Configuration conf;
   protected final Abortable abortable;
-  private final Admin admin;
   private final Connection connection;
+  private final Executor executor;
+  private volatile CountDownLatch replicationTableInitialized;
 
   public ReplicationTableBase(Configuration conf, Abortable abort) throws IOException {
     this.conf = new Configuration(conf);
     this.abortable = abort;
     decorateConf();
     this.connection = ConnectionFactory.createConnection(this.conf);
-    this.admin = connection.getAdmin();
-    this.replicationTable = createAndGetReplicationTable();
-    setTableTimeOuts();
+    this.executor = setUpExecutor();
+    this.replicationTableInitialized = new CountDownLatch(1);
+    createReplicationTableInBackground();
   }
 
   /**
@@ -124,11 +137,34 @@ abstract class ReplicationTableBase {
   }
 
   /**
+   * Sets up the thread pool executor used to build the Replication Table in the background
+   * @return the configured executor
+   */
+  private Executor setUpExecutor() {
+    ThreadPoolExecutor tempExecutor = new ThreadPoolExecutor(NUM_INITIALIZE_WORKERS,
+        NUM_INITIALIZE_WORKERS, 100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+    ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
+    tfb.setNameFormat("ReplicationTableExecutor-%d");
+    tfb.setDaemon(true);
+    tempExecutor.setThreadFactory(tfb.build());
+    return tempExecutor;
+  }
+
+  /**
+   * Get whether the Replication Table has been successfully initialized yet
+   * @return whether the Replication Table is initialized
+   */
+  public boolean getInitializationStatus() {
+    return replicationTableInitialized.getCount() == 0;
+  }
+
+  /**
    * Increases the RPC and operations timeouts for the Replication Table
    */
-  private void setTableTimeOuts() {
+  private Table setReplicationTableTimeOuts(Table replicationTable) {
     replicationTable.setRpcTimeout(RPC_TIMEOUT);
     replicationTable.setOperationTimeout(OPERATION_TIMEOUT);
+    return replicationTable;
   }
 
   /**
@@ -189,7 +225,7 @@ abstract class ReplicationTableBase {
     // scan all of the queues and return a list of all unique OWNER values
     Set<String> peerServers = new HashSet<String>();
     ResultScanner allQueuesInCluster = null;
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()){
       Scan scan = new Scan();
       scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER);
       allQueuesInCluster = replicationTable.getScanner(scan);
@@ -244,7 +280,7 @@ abstract class ReplicationTableBase {
 
   protected List<String> getLogsInQueue(byte[] rowKey) {
     String errMsg = "Failed getting logs in queue queueId=" + Bytes.toString(rowKey);
-    try {
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
       Get getQueue = new Get(rowKey);
       Result queue = replicationTable.get(getQueue);
       if (queue == null || queue.isEmpty()) {
@@ -286,66 +322,120 @@ abstract class ReplicationTableBase {
    * @return a ResultScanner over the QueueIds belonging to the server
    * @throws IOException
    */
-  private ResultScanner getQueuesBelongingToServer(String server) throws IOException {
+  protected ResultScanner getQueuesBelongingToServer(String server) throws IOException {
     Scan scan = new Scan();
     SingleColumnValueFilter filterMyQueues = new SingleColumnValueFilter(CF_QUEUE, COL_QUEUE_OWNER,
       CompareFilter.CompareOp.EQUAL, Bytes.toBytes(server));
     scan.setFilter(filterMyQueues);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER_HISTORY);
-    ResultScanner results = replicationTable.getScanner(scan);
-    return results;
+    try (Table replicationTable = getOrBlockOnReplicationTable()) {
+      ResultScanner results = replicationTable.getScanner(scan);
+      return results;
+    }
   }
 
   /**
-   * Gets the Replication Table. Builds and blocks until the table is available if the Replication
-   * Table does not exist.
+   * Attempts to acquire the Replication Table. This operation will block until it is assigned by
+   * the CreateReplicationWorker thread. It is up to the caller of this method to close the
+   * returned Table
+   * @return the Replication Table when it is created
+   * @throws IOException
+   */
+  protected Table getOrBlockOnReplicationTable() throws IOException {
+    // Sleep until the Replication Table becomes available
+    try {
+      replicationTableInitialized.await();
+    } catch (InterruptedException e) {
+      String errMsg = "Unable to acquire the Replication Table due to InterruptedException: " +
+          e.getMessage();
+      throw new InterruptedIOException(errMsg);
+    }
+    return getAndSetUpReplicationTable();
+  }
+
+  /**
+   * Creates a new copy of the Replication Table and sets up the proper Table time outs for it
+   *
+   * @return the Replication Table
+   * @throws IOException
+   */
+  private Table getAndSetUpReplicationTable() throws IOException {
+    Table replicationTable = connection.getTable(REPLICATION_TABLE_NAME);
+    setReplicationTableTimeOuts(replicationTable);
+    return replicationTable;
+  }
+
+  /**
+   * Builds the Replication Table in a background thread. Any method accessing the Replication Table
+   * should do so through getOrBlockOnReplicationTable()
    *
    * @return the Replication Table
    * @throws IOException if the Replication Table takes too long to build
    */
-  private Table createAndGetReplicationTable() throws IOException {
-    if (!replicationTableExists()) {
-      createReplicationTable();
-    }
-    int maxRetries = conf.getInt("replication.queues.createtable.retries.number", 100);
-    RetryCounterFactory counterFactory = new RetryCounterFactory(maxRetries, 100);
-    RetryCounter retryCounter = counterFactory.create();
-    while (!replicationTableExists()) {
+  private void createReplicationTableInBackground() throws IOException {
+    executor.execute(new CreateReplicationTableWorker());
+  }
+
+  /**
+   * Attempts to build the Replication Table. Will continue blocking until we have a valid
+   * Table for the Replication Table.
+   */
+  private class CreateReplicationTableWorker implements Runnable {
+
+    private Admin admin;
+
+    @Override
+    public void run() {
       try {
-        retryCounter.sleepUntilNextRetry();
-        if (!retryCounter.shouldRetry()) {
-          throw new IOException("Unable to acquire the Replication Table");
+        admin = connection.getAdmin();
+        if (!replicationTableExists()) {
+          createReplicationTable();
         }
-      } catch (InterruptedException e) {
-        return null;
+        int maxRetries = conf.getInt("hbase.replication.queues.createtable.retries.number",
+            CLIENT_RETRIES);
+        RetryCounterFactory counterFactory = new RetryCounterFactory(maxRetries, RPC_TIMEOUT);
+        RetryCounter retryCounter = counterFactory.create();
+        while (!replicationTableExists()) {
+          retryCounter.sleepUntilNextRetry();
+          if (!retryCounter.shouldRetry()) {
+            throw new IOException("Unable to acquire the Replication Table");
+          }
+        }
+        replicationTableInitialized.countDown();
+      } catch (IOException | InterruptedException e) {
+        abortable.abort("Failed building Replication Table", e);
       }
     }
-    return connection.getTable(REPLICATION_TABLE_NAME);
-  }
 
-  /**
-   * Create the replication table with the provided HColumnDescriptor REPLICATION_COL_DESCRIPTOR
-   * in TableBasedReplicationQueuesImpl
-   * @throws IOException
-   */
-  private void createReplicationTable() throws IOException {
-    HTableDescriptor replicationTableDescriptor = new HTableDescriptor(REPLICATION_TABLE_NAME);
-    replicationTableDescriptor.addFamily(REPLICATION_COL_DESCRIPTOR);
-    admin.createTable(replicationTableDescriptor);
-  }
+    /**
+     * Create the replication table with the provided HColumnDescriptor REPLICATION_COL_DESCRIPTOR
+     * in TableBasedReplicationQueuesImpl
+     *
+     * @throws IOException
+     */
+    private void createReplicationTable() throws IOException {
+      HTableDescriptor replicationTableDescriptor = new HTableDescriptor(REPLICATION_TABLE_NAME);
+      replicationTableDescriptor.addFamily(REPLICATION_COL_DESCRIPTOR);
+      try {
+        admin.createTable(replicationTableDescriptor);
+      } catch (TableExistsException e) {
+        // In this case we can just continue as normal
+      }
+    }
 
-  /**
-   * Checks whether the Replication Table exists yet
-   *
-   * @return whether the Replication Table exists
-   * @throws IOException
-   */
-  private boolean replicationTableExists() {
-    try {
-      return admin.tableExists(REPLICATION_TABLE_NAME);
-    } catch (IOException e) {
-      return false;
+    /**
+     * Checks whether the Replication Table exists yet
+     *
+     * @return whether the Replication Table exists
+     * @throws IOException
+     */
+    private boolean replicationTableExists() {
+      try {
+        return admin.tableExists(REPLICATION_TABLE_NAME);
+      } catch (IOException e) {
+        return false;
+      }
     }
   }
 }
