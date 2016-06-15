@@ -110,7 +110,7 @@ public class HttpServer implements FilterContainer {
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
 
   public static final String HTTP_UI_AUTHENTICATION = "hbase.security.authentication.ui";
-  static final String HTTP_AUTHENTICATION_PREFIX = "hbase.security.authentication.spnego.";
+  static final String HTTP_AUTHENTICATION_PREFIX = "hbase.security.authentication.";
   static final String HTTP_SPNEGO_AUTHENTICATION_PREFIX = HTTP_AUTHENTICATION_PREFIX
       + "spnego.";
   static final String HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX = "kerberos.principal";
