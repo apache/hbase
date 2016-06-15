@@ -56,7 +56,7 @@ public interface MetricsRegionServerSourceFactory {
   MetricsTableAggregateSource getTableAggregate();
 
   /**
-   * Get a MetricsHeapMemoryManagerSource from MetricsHeapMemoryManagerWrapper
+   * Get a MetricsHeapMemoryManagerSource
    * @param globalMemStorePercent Global memstore configured size as percentage of total heap
    * @param blockCachePercent BlockCache configured size as percentage of total heap
    * @return A metrics heap memory manager source
