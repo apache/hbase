@@ -296,7 +296,7 @@ public class ProcedureTestingUtility {
 
     @Override
     public void setMaxProcId(long maxProcId) {
-      maxProcId = maxProcId;
+      this.maxProcId = maxProcId;
     }
 
     @Override
