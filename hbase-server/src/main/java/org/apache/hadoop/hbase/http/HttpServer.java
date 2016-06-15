@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -102,10 +103,29 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 @InterfaceStability.Evolving
 public class HttpServer implements FilterContainer {
   private static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final String EMPTY_STRING = "";
 
   static final String FILTER_INITIALIZERS_PROPERTY
       = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
+
+  public static final String HTTP_UI_AUTHENTICATION = "hbase.security.authentication.ui";
+  static final String HTTP_AUTHENTICATION_PREFIX = "hbase.security.authentication.spnego.";
+  static final String HTTP_SPNEGO_AUTHENTICATION_PREFIX = HTTP_AUTHENTICATION_PREFIX
+      + "spnego.";
+  static final String HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX = "kerberos.principal";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY =
+      HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX;
+  static final String HTTP_SPNEGO_AUTHENTICATION_KEYTAB_SUFFIX = "kerberos.keytab";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY =
+      HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_KEYTAB_SUFFIX;
+  static final String HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_SUFFIX = "kerberos.name.rules";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_KEY =
+      HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_SUFFIX;
+  static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX =
+      "signature.secret.file";
+  public static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY =
+      HTTP_AUTHENTICATION_PREFIX + HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -174,6 +194,9 @@ public class HttpServer implements FilterContainer {
 
     // The -keypass option in keytool
     private String keyPassword;
+
+    private String kerberosNameRulesKey;
+    private String signatureSecretFileKey;
 
     @Deprecated
     private String name;
@@ -302,6 +325,16 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
+    public Builder setKerberosNameRulesKey(String kerberosNameRulesKey) {
+      this.kerberosNameRulesKey = kerberosNameRulesKey;
+      return this;
+    }
+
+    public Builder setSignatureSecretFileKey(String signatureSecretFileKey) {
+      this.signatureSecretFileKey = signatureSecretFileKey;
+      return this;
+    }
+
     public Builder setAppDir(String appDir) {
         this.appDir = appDir;
         return this;
@@ -344,7 +377,8 @@ public class HttpServer implements FilterContainer {
       HttpServer server = new HttpServer(this);
 
       if (this.securityEnabled) {
-        server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
+        server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey, kerberosNameRulesKey,
+            signatureSecretFileKey);
       }
 
       if (connector != null) {
@@ -927,21 +961,60 @@ public class HttpServer implements FilterContainer {
   }
 
   private void initSpnego(Configuration conf, String hostName,
-      String usernameConfKey, String keytabConfKey) throws IOException {
+      String usernameConfKey, String keytabConfKey, String kerberosNameRuleKey,
+      String signatureSecretKeyFileKey) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    String principalInConf = conf.get(usernameConfKey);
-    if (principalInConf != null && !principalInConf.isEmpty()) {
-      params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
+    String principalInConf = getOrEmptyString(conf, usernameConfKey);
+    if (!principalInConf.isEmpty()) {
+      params.put(HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX, SecurityUtil.getServerPrincipal(
           principalInConf, hostName));
     }
-    String httpKeytab = conf.get(keytabConfKey);
-    if (httpKeytab != null && !httpKeytab.isEmpty()) {
-      params.put("kerberos.keytab", httpKeytab);
+    String httpKeytab = getOrEmptyString(conf, keytabConfKey);
+    if (!httpKeytab.isEmpty()) {
+      params.put(HTTP_SPNEGO_AUTHENTICATION_KEYTAB_SUFFIX, httpKeytab);
+    }
+    String kerberosNameRule = getOrEmptyString(conf, kerberosNameRuleKey);
+    if (!kerberosNameRule.isEmpty()) {
+      params.put(HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_SUFFIX, kerberosNameRule);
+    }
+    String signatureSecretKeyFile = getOrEmptyString(conf, signatureSecretKeyFileKey);
+    if (!signatureSecretKeyFile.isEmpty()) {
+      params.put(HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX,
+          signatureSecretKeyFile);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
 
-    defineFilter(webAppContext, SPNEGO_FILTER,
-                 AuthenticationFilter.class.getName(), params, null);
+    // Verify that the required options were provided
+    if (isMissing(params.get(HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX)) ||
+            isMissing(params.get(HTTP_SPNEGO_AUTHENTICATION_KEYTAB_SUFFIX))) {
+      throw new IllegalArgumentException(usernameConfKey + " and "
+          + keytabConfKey + " are both required in the configuration "
+          + "to enable SPNEGO/Kerberos authentication for the Web UI");
+    }
+
+    addGlobalFilter(SPNEGO_FILTER, AuthenticationFilter.class.getName(), params);
+  }
+
+  /**
+   * Returns true if the argument is non-null and not whitespace
+   */
+  private boolean isMissing(String value) {
+    if (null == value) {
+      return true;
+    }
+    return value.trim().isEmpty();
+  }
+
+  /**
+   * Extracts the value for the given key from the configuration of returns a string of
+   * zero length.
+   */
+  private String getOrEmptyString(Configuration conf, String key) {
+    if (null == key) {
+      return EMPTY_STRING;
+    }
+    final String value = conf.get(key.trim());
+    return null == value ? EMPTY_STRING : value;
   }
 
   /**
