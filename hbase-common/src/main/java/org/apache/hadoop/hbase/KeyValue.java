@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
-
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -2598,11 +2597,18 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     int sum = 0;
     sum += ClassSize.OBJECT;// the KeyValue object itself
     sum += ClassSize.REFERENCE;// pointer to "bytes"
-    sum += ClassSize.align(ClassSize.ARRAY);// "bytes"
-    sum += ClassSize.align(length);// number of bytes of data in the "bytes" array
     sum += 2 * Bytes.SIZEOF_INT;// offset, length
     sum += Bytes.SIZEOF_LONG;// memstoreTS
-    return ClassSize.align(sum);
+
+    /*
+     * Deep object overhead for this KV consists of two parts. The first part is the KV object
+     * itself, while the second part is the backing byte[]. We will only count the array overhead
+     * from the byte[] only if this is the first KV in there.
+     */
+    return ClassSize.align(sum) +
+        (offset == 0
+          ? ClassSize.sizeOf(bytes, length) // count both length and object overhead
+          : length);                        // only count the number of bytes
   }
 
   /**

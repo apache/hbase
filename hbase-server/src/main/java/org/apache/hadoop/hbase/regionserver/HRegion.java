@@ -5262,8 +5262,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void releaseRowLocks(List<RowLock> rowLocks) {
     if (rowLocks != null) {
-      for (RowLock rowLock : rowLocks) {
-        rowLock.release();
+      for (int i = 0; i < rowLocks.size(); i++) {
+        rowLocks.get(i).release();
       }
       rowLocks.clear();
     }
