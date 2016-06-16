@@ -392,6 +392,10 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        if (cmd.startsWith("--")) {
+          printUsage("Invalid argument '" + cmd + "'");
+        }
+
         if (i == args.length-2) {
           peerId = cmd;
         }
@@ -427,7 +431,7 @@ public class VerifyReplication extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: verifyrep [--starttime=X]" +
-        " [--stoptime=Y] [--families=A] [--row-prefixes=B] <peerid> <tablename>");
+        " [--endtime=Y] [--families=A] [--row-prefixes=B] <peerid> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
