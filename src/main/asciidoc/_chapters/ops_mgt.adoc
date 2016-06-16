@@ -1651,9 +1651,9 @@ The following metrics are exposed at the global region server level and (since H
 | hbase.replication
 | Whether replication is enabled or disabled on a given
                 cluster
-| false
+| true
 
-| eplication.sleep.before.failover
+| replication.sleep.before.failover
 | How many milliseconds a worker should sleep before attempting to replicate
                 a dead region server's WAL queues.
 |
