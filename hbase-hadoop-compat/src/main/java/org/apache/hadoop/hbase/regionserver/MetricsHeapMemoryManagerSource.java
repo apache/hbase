@@ -18,12 +18,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
  * This interface will be implemented by a MetricsSource that will export metrics from
  * HeapMemoryManager in RegionServer into the hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * The name of the metrics
@@ -68,18 +70,6 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
    * @param memStoreSize the current memory usage in memstore, in bytes.
    */
   void setCurMemStoreSizeGauge(long memStoreSize);
-
-  /**
-   * Set the new max blockcache size gauge after tuning
-   * @param newMaxBlockCacheSize the new blockcache max size, in bytes.
-   */
-  void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize);
-
-  /**
-   * Set the new global memstore size gauge after tuning
-   * @param newGlobalMemStoreSize the new global memstore size, in bytes.
-   */
-  void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize);
 
   /**
    * Update the increase/decrease memstore size histogram
@@ -131,10 +121,6 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String MEMSTORE_SIZE_GAUGE_DESC = "Global MemStore used in bytes by the RegionServer";
   String BLOCKCACHE_SIZE_GAUGE_NAME = "blockCacheSize";
   String BLOCKCACHE_SIZE_GAUGE_DESC = "BlockCache used in bytes by the RegionServer";
-  String NEW_MEMSTORE_SIZE_GAUGE_NAME = "newGlobalMemStoreSize";
-  String NEW_MEMSTORE_SIZE_GAUGE_DESC = "New global MemStore size after tuning";
-  String NEW_BLOCKCACHE_SIZE_GAUGE_NAME = "newBlockCacheSize";
-  String NEW_BLOCKCACHE_SIZE_GAUGE_DESC = "New BlockCache max size after tuning";
 
   // Counters
   String DO_NOTHING_COUNTER_NAME = "tunerDoNothingCounter";

@@ -41,7 +41,7 @@ public class TestMetricsHeapMemoryManager {
 
   @Before
   public void setUp() {
-    hmm = new MetricsHeapMemoryManager(256 * 1024 * 1024, 256* 1024 * 1024);
+    hmm = new MetricsHeapMemoryManager();
     source = hmm.getMetricsSource();
   }
 
@@ -69,14 +69,10 @@ public class TestMetricsHeapMemoryManager {
     hmm.updateUnblockedFlushCount(50);
     hmm.setCurMemStoreSizeGauge(256 * 1024 * 1024);
     hmm.setCurBlockCacheSizeGauge(100 * 1024 * 1024);
-    hmm.setNewBlockCacheMaxSizeGauge(128 * 1024 * 1024);
-    hmm.setNewGlobalMemStoreSizeGauge(384 * 1024 * 1024);
 
     HELPER.assertGauge("blockedFlushCount", 200, source);
     HELPER.assertGauge("unblockedFlushCount", 50, source);
     HELPER.assertGauge("memStoreSize", 256 * 1024 * 1024, source);
     HELPER.assertGauge("blockCacheSize", 100 * 1024 * 1024, source);
-    HELPER.assertGauge("newBlockCacheSize", 128 * 1024 * 1024, source);
-    HELPER.assertGauge("newGlobalMemStoreSize", 384 * 1024 * 1024, source);
   }
 }

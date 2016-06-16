@@ -43,19 +43,16 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   private final MutableGaugeLong unblockedFlushGauge;
   private final MutableGaugeLong memStoreSizeGauge;
   private final MutableGaugeLong blockCacheSizeGauge;
-  private final MutableGaugeLong newGlobalMemStoreSizeGauge;
-  private final MutableGaugeLong newBlockCacheSizeGauge;
 
   private final MutableFastCounter doNothingCounter;
   private final MutableFastCounter aboveHeapOccupancyLowWatermarkCounter;
 
-  public MetricsHeapMemoryManagerSourceImpl(long globalMemStoreSize, long blockCacheSize) {
-    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT,
-        globalMemStoreSize, blockCacheSize);
+  public MetricsHeapMemoryManagerSourceImpl() {
+    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
   public MetricsHeapMemoryManagerSourceImpl(String metricsName, String metricsDescription,
-      String metricsContext, String metricsJmxContext, long globalMemStoreSize, long blockCacheSize) {
+      String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // Histograms
@@ -81,12 +78,6 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
         .newGauge(MEMSTORE_SIZE_GAUGE_NAME, MEMSTORE_SIZE_GAUGE_DESC, 0L);
     blockCacheSizeGauge = getMetricsRegistry()
         .newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
-    newGlobalMemStoreSizeGauge = getMetricsRegistry()
-        .newGauge(NEW_MEMSTORE_SIZE_GAUGE_NAME, NEW_MEMSTORE_SIZE_GAUGE_DESC,
-          globalMemStoreSize);
-    newBlockCacheSizeGauge = getMetricsRegistry()
-        .newGauge(NEW_BLOCKCACHE_SIZE_GAUGE_NAME, NEW_BLOCKCACHE_SIZE_GAUGE_DESC,
-          blockCacheSize);
 
     // Counters
     doNothingCounter = getMetricsRegistry()
@@ -116,16 +107,6 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   @Override
   public void setCurMemStoreSizeGauge(long memstoreSize) {
     memStoreSizeGauge.set(memstoreSize);
-  }
-
-  @Override
-  public void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize) {
-    newBlockCacheSizeGauge.set(newMaxBlockCacheSize);
-  }
-
-  @Override
-  public void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize) {
-    newGlobalMemStoreSizeGauge.set(newGlobalMemStoreSize);
   }
 
   @Override

@@ -57,10 +57,7 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Get a MetricsHeapMemoryManagerSource
-   * @param globalMemStoreSize Global memstore configured size
-   * @param blockCacheSize BlockCache configured size
    * @return A metrics heap memory manager source
    */
-  MetricsHeapMemoryManagerSource getHeapMemoryManager(long globalMemStoreSize,
-      long blockCacheSize);
+  MetricsHeapMemoryManagerSource getHeapMemoryManager();
 }

@@ -31,9 +31,9 @@ import com.google.common.annotations.VisibleForTesting;
 public class MetricsHeapMemoryManager {
   private final MetricsHeapMemoryManagerSource source;
 
-  public MetricsHeapMemoryManager(final long globalMemStoreSize, final long blockCacheSize) {
+  public MetricsHeapMemoryManager() {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .getHeapMemoryManager(globalMemStoreSize, blockCacheSize));
+        .getHeapMemoryManager());
   }
 
   public MetricsHeapMemoryManager(MetricsHeapMemoryManagerSource source) {
@@ -74,22 +74,6 @@ public class MetricsHeapMemoryManager {
    */
   public void setCurMemStoreSizeGauge(final long memStoreSize) {
     source.setCurMemStoreSizeGauge(memStoreSize);
-  }
-
-  /**
-   * Set the new max blockcache size gauge after tuning
-   * @param newMaxBlockCacheSize the new blockcache max size, in bytes.
-   */
-  public void setNewBlockCacheMaxSizeGauge(long newMaxBlockCacheSize) {
-    source.setNewBlockCacheMaxSizeGauge(newMaxBlockCacheSize);
-  }
-
-  /**
-   * Set the new global memstore size gauge after tuning
-   * @param newGlobalMemStoreSize the new global memstore size, in bytes.
-   */
-  public void setNewGlobalMemStoreSizeGauge(long newGlobalMemStoreSize) {
-    source.setNewGlobalMemStoreSizeGauge(newGlobalMemStoreSize);
   }
 
   /**
