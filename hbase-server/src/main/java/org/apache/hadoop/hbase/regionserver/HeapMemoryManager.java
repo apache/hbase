@@ -206,10 +206,6 @@ public class HeapMemoryManager {
     this.heapMemTunerChore.cancel(true);
   }
 
-  public MetricsHeapMemoryManager getMetricsHeapMemoryManager() {
-    return metricsHeapMemoryManager;
-  }
-
   // Used by the test cases.
   boolean isTunerOn() {
     return this.tunerOn;
@@ -345,12 +341,8 @@ public class HeapMemoryManager {
               (int) ((memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE);
           int blockCacheDeltaSize =
               (int) ((blockCacheSize - blockCachePercent) * CONVERT_TO_PERCENTAGE);
-          if (memStoreDeltaSize == 0 && blockCacheDeltaSize == 0) {
-            metricsHeapMemoryManager.increaseTunerDoNothingCounter();
-          } else {
-            metricsHeapMemoryManager.updateMemStoreDeltaSizeHistogram(memStoreDeltaSize);
-            metricsHeapMemoryManager.updateBlockCacheDeltaSizeHistogram(blockCacheDeltaSize);
-          }
+          metricsHeapMemoryManager.updateMemStoreDeltaSizeHistogram(memStoreDeltaSize);
+          metricsHeapMemoryManager.updateBlockCacheDeltaSizeHistogram(blockCacheDeltaSize);
           long newBlockCacheSize = (long) (maxHeapSize * blockCacheSize);
           long newMemstoreSize = (long) (maxHeapSize * memstoreSize);
           LOG.info("Setting block cache heap size to " + newBlockCacheSize
