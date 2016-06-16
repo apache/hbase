@@ -68,10 +68,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
@@ -86,7 +83,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -2220,13 +2216,9 @@ public class RpcServer implements RpcServerInterface {
       if (tooSlow || tooLarge) {
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
-        StringBuilder buffer = new StringBuilder(256);
-        buffer.append(md.getName());
-        buffer.append("(");
-        buffer.append(param.getClass().getName());
-        buffer.append(")");
-        logResponse(new Object[]{param},
-            md.getName(), buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
+        logResponse(param,
+            md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
+            (tooLarge ? "TooLarge" : "TooSlow"),
             status.getClient(), startTime, processingTime, qTime,
             responseSize);
       }
@@ -2251,7 +2243,7 @@ public class RpcServer implements RpcServerInterface {
   /**
    * Logs an RPC response to the LOG file, producing valid JSON objects for
    * client Operations.
-   * @param params The parameters received in the call.
+   * @param param The parameters received in the call.
    * @param methodName The name of the method invoked
    * @param call The string representation of the call
    * @param tag  The tag that will be used to indicate this event in the log.
@@ -2262,7 +2254,7 @@ public class RpcServer implements RpcServerInterface {
    *                        prior to being initiated, in ms.
    * @param responseSize    The size in bytes of the response buffer.
    */
-  void logResponse(Object[] params, String methodName, String call, String tag,
+  void logResponse(Message param, String methodName, String call, String tag,
       String clientAddress, long startTime, int processingTime, int qTime,
       long responseSize)
           throws IOException {
@@ -2275,32 +2267,9 @@ public class RpcServer implements RpcServerInterface {
     responseInfo.put("client", clientAddress);
     responseInfo.put("class", serverInstance == null? "": serverInstance.getClass().getSimpleName());
     responseInfo.put("method", methodName);
-    if (params.length == 2 && serverInstance instanceof HRegionServer &&
-        params[0] instanceof byte[] &&
-        params[1] instanceof Operation) {
-      // if the slow process is a query, we want to log its table as well
-      // as its own fingerprint
-      TableName tableName = TableName.valueOf(
-          HRegionInfo.parseRegionName((byte[]) params[0])[0]);
-      responseInfo.put("table", tableName.getNameAsString());
-      // annotate the response map with operation details
-      responseInfo.putAll(((Operation) params[1]).toMap());
-      // report to the log file
-      LOG.warn("(operation" + tag + "): " +
-               MAPPER.writeValueAsString(responseInfo));
-    } else if (params.length == 1 && serverInstance instanceof HRegionServer &&
-        params[0] instanceof Operation) {
-      // annotate the response map with operation details
-      responseInfo.putAll(((Operation) params[0]).toMap());
-      // report to the log file
-      LOG.warn("(operation" + tag + "): " +
-               MAPPER.writeValueAsString(responseInfo));
-    } else {
-      // can't get JSON details, so just report call.toString() along with
-      // a more generic tag.
-      responseInfo.put("call", call);
-      LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
-    }
+    responseInfo.put("call", call);
+    responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
   }
 
   /** Stops the service.  No new calls will be handled after this is called. */
