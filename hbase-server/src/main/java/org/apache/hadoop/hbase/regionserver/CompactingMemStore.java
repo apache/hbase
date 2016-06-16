@@ -253,10 +253,11 @@ public class CompactingMemStore extends AbstractMemStore {
       * in exclusive mode while this method (checkActiveSize) is invoked holding updatesLock
       * in the shared mode. */
       InMemoryFlushRunnable runnable = new InMemoryFlushRunnable();
-      LOG.info("Dispatching the MemStore in-memory flush for store " + store.getColumnFamilyName());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(
+          "Dispatching the MemStore in-memory flush for store " + store.getColumnFamilyName());
+      }
       getPool().execute(runnable);
-      // guard against queuing same old compactions over and over again
-      inMemoryFlushInProgress.set(true);
     }
   }
 
@@ -277,10 +278,9 @@ public class CompactingMemStore extends AbstractMemStore {
     }
     // Phase II: Compact the pipeline
     try {
-      if (allowCompaction.get()) {
+      if (allowCompaction.get() && inMemoryFlushInProgress.compareAndSet(false, true)) {
         // setting the inMemoryFlushInProgress flag again for the case this method is invoked
         // directly (only in tests) in the common path setting from true to true is idempotent
-        inMemoryFlushInProgress.set(true);
         // Speculative compaction execution, may be interrupted if flush is forced while
         // compaction is in progress
         compactor.startCompaction();
