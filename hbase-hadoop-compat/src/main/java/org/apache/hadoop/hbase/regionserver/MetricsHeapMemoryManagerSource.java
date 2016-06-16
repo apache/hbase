@@ -18,14 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
  * This interface will be implemented by a MetricsSource that will export metrics from
  * HeapMemoryManager in RegionServer into the hadoop metrics system.
  */
-@InterfaceAudience.Private
 public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * The name of the metrics
