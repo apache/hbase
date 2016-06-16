@@ -73,6 +73,9 @@ public class TestFastFail {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // Just to prevent fastpath FIFO from picking calls up bypassing the queue.
+    TEST_UTIL.getConfiguration().set(
+      SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
