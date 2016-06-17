@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -297,7 +298,13 @@ public class WALProcedureStore extends ProcedureStoreBase {
       FileStatus[] oldLogs = getLogFiles();
       while (isRunning()) {
         // Get Log-MaxID and recover lease on old logs
-        flushLogId = initOldLogs(oldLogs);
+        try {
+          flushLogId = initOldLogs(oldLogs);
+        } catch (FileNotFoundException e) {
+          LOG.warn("someone else is active and deleted logs. retrying.", e);
+          oldLogs = getLogFiles();
+          continue;
+        }
 
         // Create new state-log
         if (!rollWriter(flushLogId + 1)) {
@@ -928,15 +935,29 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return Long.parseLong(name.substring(start, end));
   }
 
+  private static final PathFilter WALS_PATH_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path path) {
+      String name = path.getName();
+      return name.startsWith("state-") && name.endsWith(".log");
+    }
+  };
+
+  private static final Comparator<FileStatus> FILE_STATUS_ID_COMPARATOR =
+      new Comparator<FileStatus>() {
+    @Override
+    public int compare(FileStatus a, FileStatus b) {
+      final long aId = getLogIdFromName(a.getPath().getName());
+      final long bId = getLogIdFromName(b.getPath().getName());
+      return Long.compare(aId, bId);
+    }
+  };
+
   private FileStatus[] getLogFiles() throws IOException {
     try {
-      return fs.listStatus(logDir, new PathFilter() {
-        @Override
-        public boolean accept(Path path) {
-          String name = path.getName();
-          return name.startsWith("state-") && name.endsWith(".log");
-        }
-      });
+      FileStatus[] files = fs.listStatus(logDir, WALS_PATH_FILTER);
+      Arrays.sort(files, FILE_STATUS_ID_COMPARATOR);
+      return files;
     } catch (FileNotFoundException e) {
       LOG.warn("Log directory not found: " + e.getMessage());
       return null;
