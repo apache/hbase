@@ -5523,26 +5523,39 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // by the filter to operate (scanners list) and all others (joinedScanners list).
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
       List<KeyValueScanner> joinedScanners = new ArrayList<KeyValueScanner>();
-      if (additionalScanners != null) {
+      // Store all already instantiated scanners for exception handling
+      List<KeyValueScanner> instantiatedScanners = new ArrayList<KeyValueScanner>();
+      // handle additionalScanners
+      if (additionalScanners != null && !additionalScanners.isEmpty()) {
         scanners.addAll(additionalScanners);
+        instantiatedScanners.addAll(additionalScanners);
       }
 
-      for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
-        Store store = stores.get(entry.getKey());
-        KeyValueScanner scanner;
-        try {
-          scanner = store.getScanner(scan, entry.getValue(), this.readPt);
-        } catch (FileNotFoundException e) {
-          throw handleFileNotFound(e);
+      try {
+        for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
+          Store store = stores.get(entry.getKey());
+          KeyValueScanner scanner;
+          try {
+            scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+          } catch (FileNotFoundException e) {
+            throw handleFileNotFound(e);
+          }
+          instantiatedScanners.add(scanner);
+          if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
+              || this.filter.isFamilyEssential(entry.getKey())) {
+            scanners.add(scanner);
+          } else {
+            joinedScanners.add(scanner);
+          }
         }
-        if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
-          || this.filter.isFamilyEssential(entry.getKey())) {
-          scanners.add(scanner);
-        } else {
-          joinedScanners.add(scanner);
+        initializeKVHeap(scanners, joinedScanners, region);
+      } catch (IOException e) {
+        // close all already instantiated scanners before throwing the exception
+        for (KeyValueScanner scanner : instantiatedScanners) {
+          scanner.close();
         }
+        throw e;
       }
-      initializeKVHeap(scanners, joinedScanners, region);
     }
 
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
