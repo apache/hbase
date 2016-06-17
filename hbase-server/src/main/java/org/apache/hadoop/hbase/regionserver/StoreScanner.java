@@ -207,24 +207,31 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     this.store.addChangedReaderObserver(this);
 
-    // Pass columns to try to filter out unnecessary StoreFiles.
-    List<KeyValueScanner> scanners = getScannersNoCompaction();
+    try {
+      // Pass columns to try to filter out unnecessary StoreFiles.
+      List<KeyValueScanner> scanners = getScannersNoCompaction();
 
-    // Seek all scanners to the start of the Row (or if the exact matching row
-    // key does not exist, then to the start of the next matching Row).
-    // Always check bloom filter to optimize the top row seek for delete
-    // family marker.
-    seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery
-        && lazySeekEnabledGlobally, isParallelSeekEnabled);
+      // Seek all scanners to the start of the Row (or if the exact matching row
+      // key does not exist, then to the start of the next matching Row).
+      // Always check bloom filter to optimize the top row seek for delete
+      // family marker.
+      seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
+        parallelSeekEnabled);
 
-    // set storeLimit
-    this.storeLimit = scan.getMaxResultsPerColumnFamily();
+      // set storeLimit
+      this.storeLimit = scan.getMaxResultsPerColumnFamily();
 
-    // set rowOffset
-    this.storeOffset = scan.getRowOffsetPerColumnFamily();
+      // set rowOffset
+      this.storeOffset = scan.getRowOffsetPerColumnFamily();
 
-    // Combine all seeked scanners with a heap
-    resetKVHeap(scanners, store.getComparator());
+      // Combine all seeked scanners with a heap
+      resetKVHeap(scanners, store.getComparator());
+    } catch (IOException e) {
+      // remove us from the HStore#changedReaderObservers here or we'll have no chance to
+      // and might cause memory leak
+      this.store.deleteChangedReaderObserver(this);
+      throw e;
+    }
   }
 
   /**
