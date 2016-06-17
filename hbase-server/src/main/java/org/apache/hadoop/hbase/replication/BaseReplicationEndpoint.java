@@ -68,27 +68,19 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   @Override
   public WALEntryFilter getWALEntryfilter() {
     ArrayList<WALEntryFilter> filters = Lists.newArrayList();
-    WALEntryFilter scopeFilter = getScopeWALEntryFilter();
-    if (scopeFilter != null) {
-      filters.add(scopeFilter);
-    }
-    WALEntryFilter tableCfFilter = getTableCfWALEntryFilter();
-    if (tableCfFilter != null) {
-      filters.add(tableCfFilter);
+    TableCFScopeFilter tableScopeWALEntryFilter = getTableScopeWALEntryFilter();
+    if (tableScopeWALEntryFilter != null && tableScopeWALEntryFilter.isAnyFilterSet()) {
+      filters.add(tableScopeWALEntryFilter);
     }
     return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
   }
 
   /** Returns a WALEntryFilter for checking the scope. Subclasses can
-   * return null if they don't want this filter */
-  protected WALEntryFilter getScopeWALEntryFilter() {
-    return new ScopeWALEntryFilter();
-  }
-
+   * can pass false if they don't want one */
   /** Returns a WALEntryFilter for checking replication per table and CF. Subclasses can
-   * return null if they don't want this filter */
-  protected WALEntryFilter getTableCfWALEntryFilter() {
-    return new TableCfWALEntryFilter(ctx.getReplicationPeer());
+   * can pass false if they don't want this filter */
+  protected TableCFScopeFilter getTableScopeWALEntryFilter() {
+    return new TableCFScopeFilter(ctx.getReplicationPeer());
   }
 
   @Override

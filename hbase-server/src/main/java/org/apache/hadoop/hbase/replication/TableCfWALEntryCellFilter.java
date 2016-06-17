@@ -18,68 +18,45 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NavigableMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.util.Bytes;
 
-/**
- * Keeps KVs that are scoped other than local
- */
-@InterfaceAudience.Private
-public class ScopeWALEntryFilter implements WALEntryFilter {
-  private static final Log LOG = LogFactory.getLog(ScopeWALEntryFilter.class);
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-  @Override
-  public Entry filter(Entry entry) {
-    NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
-    if (scopes == null || scopes.isEmpty()) {
-      return null;
-    }
-    ArrayList<Cell> cells = entry.getEdit().getCells();
-    int size = cells.size();
-    byte[] fam;
-    for (int i = size - 1; i >= 0; i--) {
-      Cell cell = cells.get(i);
-      // If a bulk load entry has a scope then that means user has enabled replication for bulk load
-      // hfiles.
-      // TODO There is a similar logic in TableCfWALEntryFilter but data structures are different so
-      // cannot refactor into one now, can revisit and see if any way to unify them.
-      if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-        Cell filteredBulkLoadEntryCell = filterBulkLoadEntries(scopes, cell);
-        if (filteredBulkLoadEntryCell != null) {
-          cells.set(i, filteredBulkLoadEntryCell);
-        } else {
-          cells.remove(i);
-        }
-      } else {
-        // The scope will be null or empty if
-        // there's nothing to replicate in that WALEdit
-        fam = CellUtil.cloneFamily(cell);
-        if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
-          cells.remove(i);
-        }
-      }
-    }
-    if (cells.size() < size / 2) {
-      cells.trimToSize();
-    }
-    return entry;
+public class TableCfWALEntryCellFilter implements WallEntryCellFilter {
+
+  private static final Log LOG = LogFactory.getLog(TableCfWALEntryCellFilter.class);
+  private final List<String> cfs;
+
+  public TableCfWALEntryCellFilter(List<String> cfs) {
+    this.cfs = cfs;
   }
 
-  private Cell filterBulkLoadEntries(NavigableMap<byte[], Integer> scopes, Cell cell) {
+  @Override
+  public Cell filterCell(Cell cell) {
+    if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+      return filterBulkLoadEntries(cfs, cell);
+    } else {
+      // ignore(remove) kv if its cf isn't in the replicable cf list
+      // (empty cfs means all cfs of this table are replicable)
+      if ((cfs != null) && !cfs.contains(Bytes.toString(cell.getFamilyArray(),
+          cell.getFamilyOffset(), cell.getFamilyLength()))) {
+        return null;
+      }
+    }
+    return cell;
+  }
+
+  private Cell filterBulkLoadEntries(List<String> cfs, Cell cell) {
     byte[] fam;
     BulkLoadDescriptor bld = null;
     try {
@@ -96,7 +73,7 @@ public class ScopeWALEntryFilter implements WALEntryFilter {
     while (copiedStoresListIterator.hasNext()) {
       StoreDescriptor sd = copiedStoresListIterator.next();
       fam = sd.getFamilyName().toByteArray();
-      if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
+      if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
         copiedStoresListIterator.remove();
         anyStoreRemoved = true;
       }
@@ -114,6 +91,6 @@ public class ScopeWALEntryFilter implements WALEntryFilter {
     newDesc.addAllStores(copiedStoresList);
     BulkLoadDescriptor newBulkLoadDescriptor = newDesc.build();
     return CellUtil.createCell(CellUtil.cloneRow(cell), WALEdit.METAFAMILY, WALEdit.BULK_LOAD,
-      cell.getTimestamp(), cell.getTypeByte(), newBulkLoadDescriptor.toByteArray());
+        cell.getTimestamp(), cell.getTypeByte(), newBulkLoadDescriptor.toByteArray());
   }
 }

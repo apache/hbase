@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
+import org.apache.hadoop.hbase.replication.TableCFScopeFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.wal.WALSplitter.OutputSink;
@@ -306,9 +307,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   }
 
   @Override
-  protected WALEntryFilter getScopeWALEntryFilter() {
+  protected TableCFScopeFilter getTableScopeWALEntryFilter() {
     // we do not care about scope. We replicate everything.
-    return null;
+    TableCFScopeFilter tableScopeWALEntryFilter = super.getTableScopeWALEntryFilter();
+    tableScopeWALEntryFilter.setScopeMatters(false);
+    return tableScopeWALEntryFilter;
   }
 
   static class RegionReplicaOutputSink extends OutputSink {
