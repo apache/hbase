@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -39,7 +41,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * all the family members, as they may have been last updated at different
  * times.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values.
