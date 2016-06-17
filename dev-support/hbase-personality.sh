@@ -36,8 +36,12 @@
 
 personality_plugins "all"
 
+## @description  Globals specific to this personality
+## @audience     private
+## @stability    evolving
 function personality_globals
 {
+  BUILDTOOL=maven
   #shellcheck disable=SC2034
   PROJECT_NAME=hbase
   #shellcheck disable=SC2034
@@ -58,6 +62,11 @@ function personality_globals
 
 }
 
+## @description  Queue up modules for this personality
+## @audience     private
+## @stability    evolving
+## @param        repostatus
+## @param        testtype
 function personality_modules
 {
   local repostatus=$1
@@ -71,13 +80,14 @@ function personality_modules
   extra="-DHBasePatchProcess"
 
   if [[ ${repostatus} == branch
-     && ${testtype} == mvninstall ]];then
-     personality_enqueue_module . ${extra}
-     return
+     && ${testtype} == mvninstall ]] ||
+     [[ "${BUILDMODE}" == full ]];then
+    personality_enqueue_module . ${extra}
+    return
   fi
 
   if [[ ${testtype} = findbugs ]]; then
-    for module in ${CHANGED_MODULES}; do
+    for module in "${CHANGED_MODULES[@]}"; do
       # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
       # in src/main/java where findbugs goes to look
       if [[ ${module} == hbase-shell ]]; then
@@ -130,7 +140,7 @@ function personality_modules
     fi
   fi
 
-  for module in ${CHANGED_MODULES}; do
+  for module in "${CHANGED_MODULES[@]}"; do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
   done
@@ -146,6 +156,10 @@ function personality_modules
 
 add_test_type hadoopcheck
 
+## @description  hadoopcheck file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hadoopcheck_filefilter
 {
   local filename=$1
@@ -155,6 +169,10 @@ function hadoopcheck_filefilter
   fi
 }
 
+## @description  hadoopcheck test
+## @audience     private
+## @stability    evolving
+## @param        repostatus
 function hadoopcheck_rebuild
 {
   local repostatus=$1
@@ -178,7 +196,7 @@ function hadoopcheck_rebuild
         -Dhadoop-two.version="${hadoopver}"
     count=$(${GREP} -c ERROR "${logfile}")
     if [[ ${count} -gt 0 ]]; then
-      add_vote_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${hadoopver}."
+      add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
       ((result=result+1))
     fi
   done
@@ -193,9 +211,13 @@ function hadoopcheck_rebuild
 
 ######################################
 
-# TODO if we need th protoc check, we probably need to check building all the modules that rely on hbase-protocol
+# TODO if we need the protoc check, we probably need to check building all the modules that rely on hbase-protocol
 add_test_type hbaseprotoc
 
+## @description  hbaseprotoc file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseprotoc_filefilter
 {
   local filename=$1
@@ -205,14 +227,19 @@ function hbaseprotoc_filefilter
   fi
 }
 
+## @description  hadoopcheck test
+## @audience     private
+## @stability    evolving
+## @param        repostatus
 function hbaseprotoc_rebuild
 {
-  local i=0
-  local fn
-  local module
-  local logfile
-  local count
-  local result
+  declare repostatus=$1
+  declare i=0
+  declare fn
+  declare module
+  declare logfile
+  declare count
+  declare result
 
   if [[ "${repostatus}" = branch ]]; then
     return 0
@@ -223,7 +250,7 @@ function hbaseprotoc_rebuild
     return 0
   fi
 
-  big_console_header "Patch HBase protoc plugin"
+  big_console_header "HBase protoc plugin: ${BUILDMODE}"
 
   start_clock
 
@@ -232,7 +259,7 @@ function hbaseprotoc_rebuild
   modules_workers patch hbaseprotoc compile -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
-  until [[ $i -eq ${#MODULE[@]} ]]; do
+  until [[ $i -eq "${#MODULE[@]}" ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
       ((result=result+1))
       ((i=i+1))
@@ -263,6 +290,10 @@ function hbaseprotoc_rebuild
 
 add_test_type hbaseanti
 
+## @description  hbaseanti file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseanti_filefilter
 {
   local filename=$1
@@ -272,11 +303,19 @@ function hbaseanti_filefilter
   fi
 }
 
+## @description  hbaseanti patch file check
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseanti_patchfile
 {
   local patchfile=$1
   local warnings
   local result
+
+  if [[ "${BUILDMODE}" = full ]]; then
+    return 0
+  fi
 
   verify_needed_test hbaseanti
   if [[ $? == 0 ]]; then
@@ -307,7 +346,11 @@ function hbaseanti_patchfile
   return 0
 }
 
-# Work around HBASE-15042
+
+## @description  hbase custom mvnsite file filter.  See HBASE-15042
+## @audience     private
+## @stability    evolving
+## @param        filename
 function mvnsite_filefilter
 {
   local filename=$1
