@@ -247,7 +247,7 @@ public class HttpServerFunctionalTest extends Assert {
         if (child.isFile()) {
           child.delete();
         } else {
-          deleteRecursively(d);
+          deleteRecursively(child);
         }
       }
     }
