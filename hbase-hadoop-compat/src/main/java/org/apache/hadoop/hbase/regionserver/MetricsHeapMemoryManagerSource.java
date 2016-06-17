@@ -28,7 +28,7 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  String METRICS_NAME = "Heap Memory";
+  String METRICS_NAME = "Memory";
 
   /**
    * The name of the metrics context that metrics will be under.
@@ -38,7 +38,7 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer's heap memory";
+  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer's memory";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
