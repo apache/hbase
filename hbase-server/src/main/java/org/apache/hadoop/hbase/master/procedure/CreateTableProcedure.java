@@ -445,6 +445,10 @@ public class CreateTableProcedure
       final TableName tableName, final List<HRegionInfo> regions) throws IOException {
     ProcedureSyncWait.waitRegionServers(env);
 
+    // Mark the table as Enabling
+    env.getMasterServices().getTableStateManager()
+      .setTableState(tableName, TableState.State.ENABLING);
+
     // Trigger immediate assignment of the regions in round-robin fashion
     final AssignmentManager assignmentManager = env.getMasterServices().getAssignmentManager();
     ModifyRegionUtils.assignRegions(assignmentManager, regions);
