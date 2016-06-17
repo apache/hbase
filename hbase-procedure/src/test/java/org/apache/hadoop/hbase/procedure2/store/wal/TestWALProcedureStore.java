@@ -320,6 +320,46 @@ public class TestWALProcedureStore {
     assertEquals(1, procStore.getActiveLogs().size());
   }
 
+  @Test
+  public void testFileNotFoundDuringLeaseRecovery() throws IOException {
+    TestProcedure[] procs = new TestProcedure[3];
+    for (int i = 0; i < procs.length; ++i) {
+      procs[i] = new TestProcedure(i + 1, 0);
+      procStore.insert(procs[i], null);
+    }
+    procStore.rollWriterForTesting();
+    for (int i = 0; i < procs.length; ++i) {
+      procStore.update(procs[i]);
+      procStore.rollWriterForTesting();
+    }
+    procStore.stop(false);
+
+    FileStatus[] status = fs.listStatus(logDir);
+    assertEquals(procs.length + 2, status.length);
+
+    // simulate another active master removing the wals
+    procStore = new WALProcedureStore(htu.getConfiguration(), fs, logDir,
+        new WALProcedureStore.LeaseRecovery() {
+      private int count = 0;
+
+      @Override
+      public void recoverFileLease(FileSystem fs, Path path) throws IOException {
+        if (++count <= 2) {
+          fs.delete(path, false);
+          LOG.debug("Simulate FileNotFound at count=" + count + " for " + path);
+          throw new FileNotFoundException("test file not found " + path);
+        }
+        LOG.debug("Simulate recoverFileLease() at count=" + count + " for " + path);
+      }
+    });
+
+    procStore.start(PROCEDURE_STORE_SLOTS);
+    procStore.recoverLease();
+    int countProcs = countProcedures(procStore.load());
+    assertEquals(procs.length - 1, countProcs);
+    assertTrue(procStore.getCorruptedLogs() == null);
+  }
+
   private void corruptLog(final FileStatus logFile, final long dropBytes)
       throws IOException {
     assertTrue(logFile.getLen() > dropBytes);
