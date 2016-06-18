@@ -149,6 +149,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -431,8 +432,9 @@ public class TestHRegion {
       fail("Should have failed with IOException");
     } catch (IOException expected) {
     }
-    assertEquals("memstoreSize should be incremented", onePutSize * 2, region.getMemstoreSize());
-    assertEquals("flushable size should be incremented", onePutSize * 2, store.getFlushableSize());
+    long expectedSize = onePutSize * 2 - ClassSize.ARRAY;
+    assertEquals("memstoreSize should be incremented", expectedSize, region.getMemstoreSize());
+    assertEquals("flushable size should be incremented", expectedSize, store.getFlushableSize());
 
     region.setCoprocessorHost(null);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -508,13 +510,14 @@ public class TestHRegion {
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual2, 2, (byte[])null));
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual3, 3, (byte[])null));
           region.put(p2);
-          Assert.assertEquals(sizeOfOnePut * 3, region.getMemstoreSize());
+          long expectedSize = sizeOfOnePut * 3- ClassSize.ARRAY;
+          Assert.assertEquals(expectedSize, region.getMemstoreSize());
           // Do a successful flush.  It will clear the snapshot only.  Thats how flushes work.
           // If already a snapshot, we clear it else we move the memstore to be snapshot and flush
           // it
           region.flush(true);
           // Make sure our memory accounting is right.
-          Assert.assertEquals(sizeOfOnePut * 2, region.getMemstoreSize());
+          Assert.assertEquals(sizeOfOnePut * 2 - ClassSize.ARRAY, region.getMemstoreSize());
         } catch (Exception e) {
           int x = 0;
         } finally {
