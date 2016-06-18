@@ -94,7 +94,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -1201,9 +1200,9 @@ public class HBaseFsck extends Configured implements Closeable {
         modTInfo = new TableInfo(tableName);
         tablesInfo.put(tableName, modTInfo);
         try {
-          TableDescriptor htd =
+          HTableDescriptor htd =
               FSTableDescriptors.getTableDescriptorFromFs(fs, hbaseRoot, tableName);
-          modTInfo.htds.add(htd.getHTableDescriptor());
+          modTInfo.htds.add(htd);
         } catch (IOException ioe) {
           if (!orphanTableDirs.containsKey(tableName)) {
             LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
@@ -1258,7 +1257,7 @@ public class HBaseFsck extends Configured implements Closeable {
     for (String columnfamimly : columns) {
       htd.addFamily(new HColumnDescriptor(columnfamimly));
     }
-    fstd.createTableDescriptor(new TableDescriptor(htd), true);
+    fstd.createTableDescriptor(htd, true);
     return true;
   }
 
@@ -1306,7 +1305,7 @@ public class HBaseFsck extends Configured implements Closeable {
           if (tableName.equals(htds[j].getTableName())) {
             HTableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
-            fstd.createTableDescriptor(new TableDescriptor(htd), true);
+            fstd.createTableDescriptor(htd, true);
             j++;
             iter.remove();
           }

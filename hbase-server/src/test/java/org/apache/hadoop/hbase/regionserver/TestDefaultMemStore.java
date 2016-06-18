@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Before;
 import org.junit.Rule;
@@ -431,6 +431,7 @@ public class TestDefaultMemStore {
       this.startSeqNum = startSeqNum;
     }
 
+    @Override
     public void run() {
       try {
         internalRun();
@@ -961,7 +962,7 @@ public class TestDefaultMemStore {
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, null, "1234");
     HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, TableDescriptor.metaTableDescriptor(conf),
+        conf, FSTableDescriptors.createMetaTableDescriptor(conf),
         wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
             getEncodedNameAsBytes()));
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),

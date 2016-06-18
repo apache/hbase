@@ -133,7 +133,7 @@ public class TestHColumnDescriptorDefaultVersions {
       admin.deleteTable(TABLE_NAME);
     }
   }
-  
+
   @Test
   public void testHColumnDescriptorCachedMaxVersions() throws Exception {
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -159,8 +159,8 @@ public class TestHColumnDescriptorDefaultVersions {
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
-    hcds = td.getHTableDescriptor().getColumnFamilies();
+    HTableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    hcds = td.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);
   }
 

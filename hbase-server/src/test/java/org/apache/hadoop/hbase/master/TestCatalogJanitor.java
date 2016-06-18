@@ -26,7 +26,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -47,10 +46,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -59,12 +56,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -75,9 +68,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
-import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,7 +84,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 @Category({MasterTests.class, SmallTests.class})
@@ -264,21 +254,15 @@ public class TestCatalogJanitor {
           return null;
         }
 
-        @Override public Map<String, TableDescriptor> getAllDescriptors() throws IOException {
+        @Override public Map<String, HTableDescriptor> getAllDescriptors() throws IOException {
           // noop
           return null;
         }
 
         @Override
         public HTableDescriptor get(TableName tablename)
-        throws IOException {
-          return createHTableDescriptor();
-        }
-
-        @Override
-        public TableDescriptor getDescriptor(TableName tablename)
             throws IOException {
-          return createTableDescriptor();
+          return createHTableDescriptor();
         }
 
         @Override
@@ -288,11 +272,6 @@ public class TestCatalogJanitor {
 
         @Override
         public void add(HTableDescriptor htd) throws IOException {
-          // noop
-        }
-
-        @Override
-        public void add(TableDescriptor htd) throws IOException {
           // noop
         }
 
@@ -865,10 +844,6 @@ public class TestCatalogJanitor {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("t"));
     htd.addFamily(new HColumnDescriptor("f"));
     return htd;
-  }
-
-  private TableDescriptor createTableDescriptor() {
-    return new TableDescriptor(createHTableDescriptor());
   }
 
   private MultiResponse buildMultiResponse(MultiRequest req) {

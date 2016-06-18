@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -364,11 +363,10 @@ public class CreateTableProcedure
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    TableDescriptor underConstruction = new TableDescriptor(hTableDescriptor);
     final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
         .createTableDescriptorForTableDirectory(
-          tempTableDir, underConstruction, false);
+          tempTableDir, hTableDescriptor, false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,

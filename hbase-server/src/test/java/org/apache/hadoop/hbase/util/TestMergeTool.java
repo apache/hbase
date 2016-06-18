@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -67,6 +66,7 @@ public class TestMergeTool extends HBaseTestCase {
   private MiniDFSCluster dfsCluster = null;
   private WALFactory wals;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // Set the timeout down else this test will take a while to complete.
@@ -149,8 +149,7 @@ public class TestMergeTool extends HBaseTestCase {
     try {
       // Create meta region
       createMetaRegion();
-      new FSTableDescriptors(this.conf, this.fs, testDir).createTableDescriptor(
-          new TableDescriptor(this.desc));
+      new FSTableDescriptors(this.conf, this.fs, testDir).createTableDescriptor(this.desc);
       /*
        * Create the regions we will merge
        */
@@ -178,6 +177,7 @@ public class TestMergeTool extends HBaseTestCase {
     }
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();

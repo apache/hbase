@@ -30,18 +30,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public interface TableDescriptors {
   /**
    * @param tableName
-   * @return HTableDescriptor for tablename
-   * @throws IOException
-   */
-  HTableDescriptor get(final TableName tableName)
-  throws IOException;
-
-  /**
-   * @param tableName
    * @return TableDescriptor for tablename
    * @throws IOException
    */
-  TableDescriptor getDescriptor(final TableName tableName)
+  HTableDescriptor get(final TableName tableName)
       throws IOException;
 
   /**
@@ -67,7 +59,7 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  Map<String, TableDescriptor> getAllDescriptors()
+  Map<String, HTableDescriptor> getAllDescriptors()
       throws IOException;
 
   /**
@@ -77,14 +69,6 @@ public interface TableDescriptors {
    */
   void add(final HTableDescriptor htd)
   throws IOException;
-
-  /**
-   * Add or update descriptor
-   * @param htd Descriptor to set into TableDescriptors
-   * @throws IOException
-   */
-  void add(final TableDescriptor htd)
-      throws IOException;
 
   /**
    * @param tablename
