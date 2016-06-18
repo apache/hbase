@@ -3126,575 +3126,6 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.TableState)
   }
 
-  public interface TableDescriptorOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-
-    // required .hbase.pb.TableSchema schema = 1;
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    boolean hasSchema();
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getSchema();
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getSchemaOrBuilder();
-  }
-  /**
-   * Protobuf type {@code hbase.pb.TableDescriptor}
-   *
-   * <pre>
-   ** On HDFS representation of table state. 
-   * </pre>
-   */
-  public static final class TableDescriptor extends
-      com.google.protobuf.GeneratedMessage
-      implements TableDescriptorOrBuilder {
-    // Use TableDescriptor.newBuilder() to construct.
-    private TableDescriptor(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
-    }
-    private TableDescriptor(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final TableDescriptor defaultInstance;
-    public static TableDescriptor getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public TableDescriptor getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private TableDescriptor(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = schema_.toBuilder();
-              }
-              schema_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(schema_);
-                schema_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableDescriptor_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableDescriptor_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<TableDescriptor> PARSER =
-        new com.google.protobuf.AbstractParser<TableDescriptor>() {
-      public TableDescriptor parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TableDescriptor(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<TableDescriptor> getParserForType() {
-      return PARSER;
-    }
-
-    private int bitField0_;
-    // required .hbase.pb.TableSchema schema = 1;
-    public static final int SCHEMA_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema schema_;
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    public boolean hasSchema() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getSchema() {
-      return schema_;
-    }
-    /**
-     * <code>required .hbase.pb.TableSchema schema = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getSchemaOrBuilder() {
-      return schema_;
-    }
-
-    private void initFields() {
-      schema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      if (!hasSchema()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getSchema().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, schema_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, schema_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor) obj;
-
-      boolean result = true;
-      result = result && (hasSchema() == other.hasSchema());
-      if (hasSchema()) {
-        result = result && getSchema()
-            .equals(other.getSchema());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-
-    private int memoizedHashCode = 0;
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasSchema()) {
-        hash = (37 * hash) + SCHEMA_FIELD_NUMBER;
-        hash = (53 * hash) + getSchema().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code hbase.pb.TableDescriptor}
-     *
-     * <pre>
-     ** On HDFS representation of table state. 
-     * </pre>
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptorOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableDescriptor_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableDescriptor_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getSchemaFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        if (schemaBuilder_ == null) {
-          schema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
-        } else {
-          schemaBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableDescriptor_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor build() {
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (schemaBuilder_ == null) {
-          result.schema_ = schema_;
-        } else {
-          result.schema_ = schemaBuilder_.build();
-        }
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor.getDefaultInstance()) return this;
-        if (other.hasSchema()) {
-          mergeSchema(other.getSchema());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasSchema()) {
-          
-          return false;
-        }
-        if (!getSchema().isInitialized()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableDescriptor) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      // required .hbase.pb.TableSchema schema = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema schema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> schemaBuilder_;
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public boolean hasSchema() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getSchema() {
-        if (schemaBuilder_ == null) {
-          return schema_;
-        } else {
-          return schemaBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public Builder setSchema(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema value) {
-        if (schemaBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          schema_ = value;
-          onChanged();
-        } else {
-          schemaBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public Builder setSchema(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder builderForValue) {
-        if (schemaBuilder_ == null) {
-          schema_ = builderForValue.build();
-          onChanged();
-        } else {
-          schemaBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public Builder mergeSchema(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema value) {
-        if (schemaBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              schema_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance()) {
-            schema_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.newBuilder(schema_).mergeFrom(value).buildPartial();
-          } else {
-            schema_ = value;
-          }
-          onChanged();
-        } else {
-          schemaBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public Builder clearSchema() {
-        if (schemaBuilder_ == null) {
-          schema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
-          onChanged();
-        } else {
-          schemaBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder getSchemaBuilder() {
-        bitField0_ |= 0x00000001;
-        onChanged();
-        return getSchemaFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getSchemaOrBuilder() {
-        if (schemaBuilder_ != null) {
-          return schemaBuilder_.getMessageOrBuilder();
-        } else {
-          return schema_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableSchema schema = 1;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
-          getSchemaFieldBuilder() {
-        if (schemaBuilder_ == null) {
-          schemaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>(
-                  schema_,
-                  getParentForChildren(),
-                  isClean());
-          schema_ = null;
-        }
-        return schemaBuilder_;
-      }
-
-      // @@protoc_insertion_point(builder_scope:hbase.pb.TableDescriptor)
-    }
-
-    static {
-      defaultInstance = new TableDescriptor(true);
-      defaultInstance.initFields();
-    }
-
-    // @@protoc_insertion_point(class_scope:hbase.pb.TableDescriptor)
-  }
-
   public interface ColumnFamilySchemaOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -20113,11 +19544,6 @@ public final class HBaseProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_TableState_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_TableDescriptor_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_TableDescriptor_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ColumnFamilySchema_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -20246,60 +19672,59 @@ public final class HBaseProtos {
       "ameStringPair\"x\n\nTableState\022)\n\005state\030\001 \002" +
       "(\0162\032.hbase.pb.TableState.State\"?\n\005State\022" +
       "\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020",
-      "\002\022\014\n\010ENABLING\020\003\"8\n\017TableDescriptor\022%\n\006sc" +
-      "hema\030\001 \002(\0132\025.hbase.pb.TableSchema\"\201\001\n\022Co" +
-      "lumnFamilySchema\022\014\n\004name\030\001 \002(\014\022,\n\nattrib" +
-      "utes\030\002 \003(\0132\030.hbase.pb.BytesBytesPair\022/\n\r" +
-      "configuration\030\003 \003(\0132\030.hbase.pb.NameStrin" +
-      "gPair\"\243\001\n\nRegionInfo\022\021\n\tregion_id\030\001 \002(\004\022" +
-      "\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableName" +
-      "\022\021\n\tstart_key\030\003 \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007" +
-      "offline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\022\025\n\nreplica_" +
-      "id\030\007 \001(\005:\0010\":\n\014FavoredNodes\022*\n\014favored_n",
-      "ode\030\001 \003(\0132\024.hbase.pb.ServerName\"\236\001\n\017Regi" +
-      "onSpecifier\022;\n\004type\030\001 \002(\0162-.hbase.pb.Reg" +
-      "ionSpecifier.RegionSpecifierType\022\r\n\005valu" +
-      "e\030\002 \002(\014\"?\n\023RegionSpecifierType\022\017\n\013REGION" +
-      "_NAME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002\"%\n\tTime" +
-      "Range\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"W\n\025Colum" +
-      "nFamilyTimeRange\022\025\n\rcolumn_family\030\001 \002(\014\022" +
-      "\'\n\ntime_range\030\002 \002(\0132\023.hbase.pb.TimeRange" +
-      "\"A\n\nServerName\022\021\n\thost_name\030\001 \002(\t\022\014\n\004por" +
-      "t\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033\n\013Coprocess",
-      "or\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004na" +
-      "me\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair" +
-      "\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBy" +
-      "tesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\"," +
-      "\n\rNameInt64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002" +
-      " \001(\003\"\325\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002" +
-      "(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003" +
-      ":\0010\0227\n\004type\030\004 \001(\0162\".hbase.pb.SnapshotDes" +
-      "cription.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005\022\r\n" +
-      "\005owner\030\006 \001(\t\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FL",
-      "USH\020\001\022\r\n\tSKIPFLUSH\020\002\"\206\001\n\024ProcedureDescri" +
-      "ption\022\021\n\tsignature\030\001 \002(\t\022\020\n\010instance\030\002 \001" +
-      "(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022/\n\rconfigur" +
-      "ation\030\004 \003(\0132\030.hbase.pb.NameStringPair\"\n\n" +
-      "\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030\001 \002(\003\"\037" +
-      "\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'\n\rBigDe" +
-      "cimalMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"5\n\004UUID" +
-      "\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_sig_bit" +
-      "s\030\002 \002(\004\"T\n\023NamespaceDescriptor\022\014\n\004name\030\001" +
-      " \002(\014\022/\n\rconfiguration\030\002 \003(\0132\030.hbase.pb.N",
-      "ameStringPair\"\235\001\n\013VersionInfo\022\017\n\007version" +
-      "\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revision\030\003 \002(\t\022\014\n" +
-      "\004user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014src_checksu" +
-      "m\030\006 \002(\t\022\025\n\rversion_major\030\007 \001(\r\022\025\n\rversio" +
-      "n_minor\030\010 \001(\r\"Q\n\020RegionServerInfo\022\020\n\010inf" +
-      "oPort\030\001 \001(\005\022+\n\014version_info\030\002 \001(\0132\025.hbas" +
-      "e.pb.VersionInfo*r\n\013CompareType\022\010\n\004LESS\020" +
-      "\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_E" +
-      "QUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020" +
-      "\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS\020",
-      "\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013\n" +
-      "\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DA" +
-      "YS\020\007B>\n*org.apache.hadoop.hbase.protobuf" +
-      ".generatedB\013HBaseProtosH\001\240\001\001"
+      "\002\022\014\n\010ENABLING\020\003\"\201\001\n\022ColumnFamilySchema\022\014" +
+      "\n\004name\030\001 \002(\014\022,\n\nattributes\030\002 \003(\0132\030.hbase" +
+      ".pb.BytesBytesPair\022/\n\rconfiguration\030\003 \003(" +
+      "\0132\030.hbase.pb.NameStringPair\"\243\001\n\nRegionIn" +
+      "fo\022\021\n\tregion_id\030\001 \002(\004\022\'\n\ntable_name\030\002 \002(" +
+      "\0132\023.hbase.pb.TableName\022\021\n\tstart_key\030\003 \001(" +
+      "\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005s" +
+      "plit\030\006 \001(\010\022\025\n\nreplica_id\030\007 \001(\005:\0010\":\n\014Fav" +
+      "oredNodes\022*\n\014favored_node\030\001 \003(\0132\024.hbase." +
+      "pb.ServerName\"\236\001\n\017RegionSpecifier\022;\n\004typ",
+      "e\030\001 \002(\0162-.hbase.pb.RegionSpecifier.Regio" +
+      "nSpecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionS" +
+      "pecifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED" +
+      "_REGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 \001(" +
+      "\004\022\n\n\002to\030\002 \001(\004\"W\n\025ColumnFamilyTimeRange\022\025" +
+      "\n\rcolumn_family\030\001 \002(\014\022\'\n\ntime_range\030\002 \002(" +
+      "\0132\023.hbase.pb.TimeRange\"A\n\nServerName\022\021\n\t" +
+      "host_name\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_c" +
+      "ode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-" +
+      "\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030",
+      "\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005" +
+      "value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001" +
+      " \002(\014\022\016\n\006second\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n" +
+      "\004name\030\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\325\001\n\023SnapshotD" +
+      "escription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022" +
+      "\030\n\rcreation_time\030\003 \001(\003:\0010\0227\n\004type\030\004 \001(\0162" +
+      "\".hbase.pb.SnapshotDescription.Type:\005FLU" +
+      "SH\022\017\n\007version\030\005 \001(\005\022\r\n\005owner\030\006 \001(\t\".\n\004Ty" +
+      "pe\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH" +
+      "\020\002\"\206\001\n\024ProcedureDescription\022\021\n\tsignature",
+      "\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreation_tim" +
+      "e\030\003 \001(\003:\0010\022/\n\rconfiguration\030\004 \003(\0132\030.hbas" +
+      "e.pb.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongM" +
+      "sg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndou" +
+      "ble_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdec" +
+      "imal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits" +
+      "\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"T\n\023Namespa" +
+      "ceDescriptor\022\014\n\004name\030\001 \002(\014\022/\n\rconfigurat" +
+      "ion\030\002 \003(\0132\030.hbase.pb.NameStringPair\"\235\001\n\013" +
+      "VersionInfo\022\017\n\007version\030\001 \002(\t\022\013\n\003url\030\002 \002(",
+      "\t\022\020\n\010revision\030\003 \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004dat" +
+      "e\030\005 \002(\t\022\024\n\014src_checksum\030\006 \002(\t\022\025\n\rversion" +
+      "_major\030\007 \001(\r\022\025\n\rversion_minor\030\010 \001(\r\"Q\n\020R" +
+      "egionServerInfo\022\020\n\010infoPort\030\001 \001(\005\022+\n\014ver" +
+      "sion_info\030\002 \001(\0132\025.hbase.pb.VersionInfo*r" +
+      "\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL" +
+      "\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_" +
+      "OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010Ti" +
+      "meUnit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECONDS\020" +
+      "\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINU",
+      "TES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\013HBaseP" +
+      "rotosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -20324,140 +19749,134 @@ public final class HBaseProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_TableState_descriptor,
               new java.lang.String[] { "State", });
-          internal_static_hbase_pb_TableDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(3);
-          internal_static_hbase_pb_TableDescriptor_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_TableDescriptor_descriptor,
-              new java.lang.String[] { "Schema", });
           internal_static_hbase_pb_ColumnFamilySchema_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(3);
           internal_static_hbase_pb_ColumnFamilySchema_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ColumnFamilySchema_descriptor,
               new java.lang.String[] { "Name", "Attributes", "Configuration", });
           internal_static_hbase_pb_RegionInfo_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(4);
           internal_static_hbase_pb_RegionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionInfo_descriptor,
               new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", "ReplicaId", });
           internal_static_hbase_pb_FavoredNodes_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(5);
           internal_static_hbase_pb_FavoredNodes_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FavoredNodes_descriptor,
               new java.lang.String[] { "FavoredNode", });
           internal_static_hbase_pb_RegionSpecifier_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_hbase_pb_RegionSpecifier_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionSpecifier_descriptor,
               new java.lang.String[] { "Type", "Value", });
           internal_static_hbase_pb_TimeRange_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_TimeRange_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_TimeRange_descriptor,
               new java.lang.String[] { "From", "To", });
           internal_static_hbase_pb_ColumnFamilyTimeRange_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_hbase_pb_ColumnFamilyTimeRange_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ColumnFamilyTimeRange_descriptor,
               new java.lang.String[] { "ColumnFamily", "TimeRange", });
           internal_static_hbase_pb_ServerName_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_hbase_pb_ServerName_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ServerName_descriptor,
               new java.lang.String[] { "HostName", "Port", "StartCode", });
           internal_static_hbase_pb_Coprocessor_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_hbase_pb_Coprocessor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Coprocessor_descriptor,
               new java.lang.String[] { "Name", });
           internal_static_hbase_pb_NameStringPair_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_hbase_pb_NameStringPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_NameStringPair_descriptor,
               new java.lang.String[] { "Name", "Value", });
           internal_static_hbase_pb_NameBytesPair_descriptor =
-            getDescriptor().getMessageTypes().get(13);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_hbase_pb_NameBytesPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_NameBytesPair_descriptor,
               new java.lang.String[] { "Name", "Value", });
           internal_static_hbase_pb_BytesBytesPair_descriptor =
-            getDescriptor().getMessageTypes().get(14);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_hbase_pb_BytesBytesPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BytesBytesPair_descriptor,
               new java.lang.String[] { "First", "Second", });
           internal_static_hbase_pb_NameInt64Pair_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_hbase_pb_NameInt64Pair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_NameInt64Pair_descriptor,
               new java.lang.String[] { "Name", "Value", });
           internal_static_hbase_pb_SnapshotDescription_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SnapshotDescription_descriptor,
               new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", });
           internal_static_hbase_pb_ProcedureDescription_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_hbase_pb_ProcedureDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ProcedureDescription_descriptor,
               new java.lang.String[] { "Signature", "Instance", "CreationTime", "Configuration", });
           internal_static_hbase_pb_EmptyMsg_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_hbase_pb_EmptyMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_EmptyMsg_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_LongMsg_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_hbase_pb_LongMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_LongMsg_descriptor,
               new java.lang.String[] { "LongMsg", });
           internal_static_hbase_pb_DoubleMsg_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_hbase_pb_DoubleMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DoubleMsg_descriptor,
               new java.lang.String[] { "DoubleMsg", });
           internal_static_hbase_pb_BigDecimalMsg_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_hbase_pb_BigDecimalMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BigDecimalMsg_descriptor,
               new java.lang.String[] { "BigdecimalMsg", });
           internal_static_hbase_pb_UUID_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_hbase_pb_UUID_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_UUID_descriptor,
               new java.lang.String[] { "LeastSigBits", "MostSigBits", });
           internal_static_hbase_pb_NamespaceDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(23);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_NamespaceDescriptor_descriptor,
               new java.lang.String[] { "Name", "Configuration", });
           internal_static_hbase_pb_VersionInfo_descriptor =
-            getDescriptor().getMessageTypes().get(24);
+            getDescriptor().getMessageTypes().get(23);
           internal_static_hbase_pb_VersionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_VersionInfo_descriptor,
               new java.lang.String[] { "Version", "Url", "Revision", "User", "Date", "SrcChecksum", "VersionMajor", "VersionMinor", });
           internal_static_hbase_pb_RegionServerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(25);
+            getDescriptor().getMessageTypes().get(24);
           internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionServerInfo_descriptor,

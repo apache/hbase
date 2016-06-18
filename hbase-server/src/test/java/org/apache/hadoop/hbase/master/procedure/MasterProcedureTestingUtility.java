@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
@@ -119,9 +118,7 @@ public class MasterProcedureTestingUtility {
     assertEquals(regions.length, countMetaRegions(master, tableName));
 
     // check htd
-    TableDescriptor tableDesc = master.getTableDescriptors().getDescriptor(tableName);
-    assertTrue("table descriptor not found", tableDesc != null);
-    HTableDescriptor htd = tableDesc.getHTableDescriptor();
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue("table descriptor not found", htd != null);
     for (int i = 0; i < family.length; ++i) {
       assertTrue("family not found " + family[i], htd.getFamily(Bytes.toBytes(family[i])) != null);
@@ -142,7 +139,7 @@ public class MasterProcedureTestingUtility {
 
     // check htd
     assertTrue("found htd of deleted table",
-      master.getTableDescriptors().getDescriptor(tableName) == null);
+      master.getTableDescriptors().get(tableName) == null);
   }
 
   private static int countMetaRegions(final HMaster master, final TableName tableName)
@@ -368,18 +365,18 @@ public class MasterProcedureTestingUtility {
 
   public static void validateColumnFamilyAddition(final HMaster master, final TableName tableName,
       final String family) throws IOException {
-    TableDescriptor htd = master.getTableDescriptors().getDescriptor(tableName);
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    assertTrue(htd.getHTableDescriptor().hasFamily(family.getBytes()));
+    assertTrue(htd.hasFamily(family.getBytes()));
   }
 
   public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
       final String family) throws IOException {
     // verify htd
-    TableDescriptor htd = master.getTableDescriptors().getDescriptor(tableName);
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
-    assertFalse(htd.getHTableDescriptor().hasFamily(family.getBytes()));
+    assertFalse(htd.hasFamily(family.getBytes()));
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -393,10 +390,10 @@ public class MasterProcedureTestingUtility {
   public static void validateColumnFamilyModification(final HMaster master,
       final TableName tableName, final String family, HColumnDescriptor columnDescriptor)
       throws IOException {
-    TableDescriptor htd = master.getTableDescriptors().getDescriptor(tableName);
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    HColumnDescriptor hcfd = htd.getHTableDescriptor().getFamily(family.getBytes());
+    HColumnDescriptor hcfd = htd.getFamily(family.getBytes());
     assertTrue(hcfd.equals(columnDescriptor));
   }
 

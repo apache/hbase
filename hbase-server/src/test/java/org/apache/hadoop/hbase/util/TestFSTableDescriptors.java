@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -75,15 +74,14 @@ public class TestFSTableDescriptors {
   public void testCreateAndUpdate() throws IOException {
     Path testdir = UTIL.getDataTestDir("testCreateAndUpdate");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCreate"));
-    TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
-    assertTrue(fstd.createTableDescriptor(td));
-    assertFalse(fstd.createTableDescriptor(td));
+    assertTrue(fstd.createTableDescriptor(htd));
+    assertFalse(fstd.createTableDescriptor(htd));
     FileStatus [] statuses = fs.listStatus(testdir);
     assertTrue("statuses.length="+statuses.length, statuses.length == 1);
     for (int i = 0; i < 10; i++) {
-      fstd.updateTableDescriptor(td);
+      fstd.updateTableDescriptor(htd);
     }
     statuses = fs.listStatus(testdir);
     assertTrue(statuses.length == 1);
@@ -97,29 +95,27 @@ public class TestFSTableDescriptors {
     Path testdir = UTIL.getDataTestDir("testSequenceidAdvancesOnTableInfo");
     HTableDescriptor htd = new HTableDescriptor(
         TableName.valueOf("testSequenceidAdvancesOnTableInfo"));
-    TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
-    Path p0 = fstd.updateTableDescriptor(td);
+    Path p0 = fstd.updateTableDescriptor(htd);
     int i0 = FSTableDescriptors.getTableInfoSequenceId(p0);
-    Path p1 = fstd.updateTableDescriptor(td);
+    Path p1 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p0));
     int i1 = FSTableDescriptors.getTableInfoSequenceId(p1);
     assertTrue(i1 == i0 + 1);
-    Path p2 = fstd.updateTableDescriptor(td);
+    Path p2 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p1));
     int i2 = FSTableDescriptors.getTableInfoSequenceId(p2);
     assertTrue(i2 == i1 + 1);
-    td = new TableDescriptor(htd);
-    Path p3 = fstd.updateTableDescriptor(td);
+    Path p3 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p2));
     int i3 = FSTableDescriptors.getTableInfoSequenceId(p3);
     assertTrue(i3 == i2 + 1);
-    TableDescriptor descriptor = fstd.getDescriptor(htd.getTableName());
-    assertEquals(descriptor, td);
+    HTableDescriptor descriptor = fstd.get(htd.getTableName());
+    assertEquals(descriptor, htd);
   }
 
   @Test
@@ -171,13 +167,12 @@ public class TestFSTableDescriptors {
     final String name = "testReadingHTDFromFS";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    TableDescriptor td = new TableDescriptor(htd);
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    fstd.createTableDescriptor(td);
-    TableDescriptor td2 =
+    fstd.createTableDescriptor(htd);
+    HTableDescriptor td2 =
       FSTableDescriptors.getTableDescriptorFromFs(fs, rootdir, htd.getTableName());
-    assertTrue(td.equals(td2));
+    assertTrue(htd.equals(td2));
   }
 
   @Test public void testReadingOldHTDFromFS() throws IOException, DeserializationException {
@@ -186,22 +181,21 @@ public class TestFSTableDescriptors {
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    TableDescriptor td = new TableDescriptor(htd);
-    Path descriptorFile = fstd.updateTableDescriptor(td);
+    Path descriptorFile = fstd.updateTableDescriptor(htd);
     try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
       out.write(htd.toByteArray());
     }
     FSTableDescriptors fstd2 = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    TableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
-    assertEquals(td, td2);
+    HTableDescriptor td2 = fstd2.get(htd.getTableName());
+    assertEquals(htd, td2);
     FileStatus descriptorFile2 =
         FSTableDescriptors.getTableInfoPath(fs, fstd2.getTableDir(htd.getTableName()));
-    byte[] buffer = td.toByteArray();
+    byte[] buffer = htd.toByteArray();
     try (FSDataInputStream in = fs.open(descriptorFile2.getPath())) {
       in.readFully(buffer);
     }
-    TableDescriptor td3 = TableDescriptor.parseFrom(buffer);
-    assertEquals(td, td3);
+    HTableDescriptor td3 = HTableDescriptor.parseFrom(buffer);
+    assertEquals(htd, td3);
   }
 
   @Test public void testHTableDescriptors()
@@ -221,7 +215,7 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      TableDescriptor htd = new TableDescriptor(
+      HTableDescriptor htd = new HTableDescriptor(
           new HTableDescriptor(TableName.valueOf(name + i)));
       htds.createTableDescriptor(htd);
     }
@@ -236,7 +230,7 @@ public class TestFSTableDescriptors {
     for (int i = 0; i < count; i++) {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name + i));
       htd.addFamily(new HColumnDescriptor("" + i));
-      htds.updateTableDescriptor(new TableDescriptor(htd));
+      htds.updateTableDescriptor(htd);
     }
     // Wait a while so mod time we write is for sure different.
     Thread.sleep(100);
@@ -274,7 +268,7 @@ public class TestFSTableDescriptors {
     for (int i = 0; i < count; i++) {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name + i));
       htd.addFamily(new HColumnDescriptor("" + i));
-      htds.updateTableDescriptor(new TableDescriptor(htd));
+      htds.updateTableDescriptor(htd);
     }
     for (int i = 0; i < count; i++) {
       assertNotNull("Expected HTD, got null instead", htds.get(TableName.valueOf(name + i)));
@@ -300,7 +294,7 @@ public class TestFSTableDescriptors {
       htds.createTableDescriptor(htd);
     }
     // add hbase:meta
-    HTableDescriptor htd = new HTableDescriptor(HTableDescriptor.META_TABLEDESC.getTableName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     htds.createTableDescriptor(htd);
 
     assertEquals("getAll() didn't return all TableDescriptors, expected: " +
@@ -335,7 +329,7 @@ public class TestFSTableDescriptors {
     assertTrue(nonchtds.getAll().size() == chtds.getAll().size());
 
     // add a new entry for hbase:meta
-    HTableDescriptor htd = new HTableDescriptor(HTableDescriptor.META_TABLEDESC.getTableName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     nonchtds.createTableDescriptor(htd);
 
     // hbase:meta will only increase the cachehit by 1
@@ -419,19 +413,18 @@ public class TestFSTableDescriptors {
     Path testdir = UTIL.getDataTestDir("testCreateTableDescriptorUpdatesIfThereExistsAlready");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(
         "testCreateTableDescriptorUpdatesIfThereExistsAlready"));
-    TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
-    assertTrue(fstd.createTableDescriptor(td));
-    assertFalse(fstd.createTableDescriptor(td));
+    assertTrue(fstd.createTableDescriptor(htd));
+    assertFalse(fstd.createTableDescriptor(htd));
     htd.setValue(Bytes.toBytes("mykey"), Bytes.toBytes("myValue"));
-    assertTrue(fstd.createTableDescriptor(td)); //this will re-create
+    assertTrue(fstd.createTableDescriptor(htd)); //this will re-create
     Path tableDir = fstd.getTableDir(htd.getTableName());
     Path tmpTableDir = new Path(tableDir, FSTableDescriptors.TMP_DIR);
     FileStatus[] statuses = fs.listStatus(tmpTableDir);
     assertTrue(statuses.length == 0);
 
-    assertEquals(td, FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir));
+    assertEquals(htd, FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir));
   }
 
   private static class FSTableDescriptorsTest extends FSTableDescriptors {

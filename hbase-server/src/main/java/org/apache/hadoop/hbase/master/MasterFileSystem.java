@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -214,8 +213,7 @@ public class MasterFileSystem {
     // meta table is a system table, so descriptors are predefined,
     // we should get them from registry.
     FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
-    fsd.createTableDescriptor(
-        new TableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
+    fsd.createTableDescriptor(fsd.get(TableName.META_TABLE_NAME));
 
     return rd;
   }

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -275,9 +274,9 @@ public class TestTableDescriptorModificationFromClient {
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    TableDescriptor td =
+    HTableDescriptor td =
         FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
-    verifyTableDescriptor(td.getHTableDescriptor(), tableName, families);
+    verifyTableDescriptor(td, tableName, families);
   }
 
   private void verifyTableDescriptor(final HTableDescriptor htd,

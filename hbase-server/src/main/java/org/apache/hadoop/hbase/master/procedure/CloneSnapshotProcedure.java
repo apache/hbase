@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -481,7 +480,7 @@ public class CloneSnapshotProcedure
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    TableDescriptor underConstruction = new TableDescriptor(hTableDescriptor);
+    HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
     final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir, underConstruction, false);

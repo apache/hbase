@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -1420,49 +1419,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     TableName name = TableName.valueOf(tableName);
     return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
               new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
-  }
-
-  /** Table descriptor for <code>hbase:meta</code> catalog table
-   * Deprecated, use TableDescriptors#get(TableName.META_TABLE) or
-   * Admin#getTableDescriptor(TableName.META_TABLE) instead.
-   */
-  @Deprecated
-  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
-      TableName.META_TABLE_NAME,
-      new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-              // Ten is arbitrary number.  Keep versions to help debugging.
-              .setMaxVersions(10)
-              .setInMemory(true)
-              .setBlocksize(8 * 1024)
-              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-              // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-              .setBloomFilterType(BloomType.NONE)
-              // Enable cache of data blocks in L1 if more than one caching tier deployed:
-              // e.g. if using CombinedBlockCache (BucketCache).
-              .setCacheDataInL1(true),
-          new HColumnDescriptor(HConstants.TABLE_FAMILY)
-              // Ten is arbitrary number.  Keep versions to help debugging.
-              .setMaxVersions(10)
-              .setInMemory(true)
-              .setBlocksize(8 * 1024)
-              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                  // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-              .setBloomFilterType(BloomType.NONE)
-                  // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                  // e.g. if using CombinedBlockCache (BucketCache).
-              .setCacheDataInL1(true)
-      });
-
-  static {
-    try {
-      META_TABLEDESC.addCoprocessor(
-          "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
-          null, Coprocessor.PRIORITY_SYSTEM, null);
-    } catch (IOException ex) {
-      //LOG.warn("exception in loading coprocessor for the hbase:meta table");
-      throw new RuntimeException(ex);
-    }
   }
 
   public final static String NAMESPACE_FAMILY_INFO = "info";

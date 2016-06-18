@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -1353,6 +1352,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return true;
   }
 
+  @Override
   @VisibleForTesting
   public RegionNormalizer getRegionNormalizer() {
     return this.normalizer;
@@ -1384,10 +1384,10 @@ public class HMaster extends HRegionServer implements MasterServices {
       Collections.shuffle(allEnabledTables);
 
       for (TableName table : allEnabledTables) {
-        TableDescriptor tblDesc = getTableDescriptors().getDescriptor(table);
+        HTableDescriptor tblDesc = getTableDescriptors().get(table);
         if (table.isSystemTable() || (tblDesc != null &&
-            tblDesc.getHTableDescriptor() != null &&
-            !tblDesc.getHTableDescriptor().isNormalizationEnabled())) {
+            tblDesc != null &&
+            !tblDesc.isNormalizationEnabled())) {
           LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
               + " table or doesn't have auto normalization turned on");
           continue;
@@ -2346,6 +2346,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *
    * @return true if active master, false if not.
    */
+  @Override
   public boolean isActiveMaster() {
     return isActiveMaster;
   }
@@ -2490,6 +2491,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * @return the underlying snapshot manager
    */
+  @Override
   public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
   }
@@ -2497,6 +2499,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * @return the underlying MasterProcedureManagerHost
    */
+  @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return mpmHost;
   }
