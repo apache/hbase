@@ -1960,6 +1960,15 @@ However any substantive discussion (as with any off-list project-related discuss
 
 Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at link:http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&fc_project=HBase[Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo]                
 
+[[hbase.archetypes.development]]
+=== Development of HBase-related Maven archetypes
+
+The development of HBase-related Maven archetypes was begun with
+link:https://issues.apache.org/jira/browse/HBASE-14876[HBASE-14876].
+For an overview of the hbase-archetypes infrastructure and instructions
+for developing new HBase-related Maven archetypes, please see
+`hbase/hbase-archetypes/README.md`.
+
 ifdef::backend-docbook[]
 [index]
 == Index
