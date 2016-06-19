@@ -41,6 +41,7 @@
     <temp.exemplar.subdir>target/temp</temp.exemplar.subdir>
     <temp.archetype.subdir>target/temp-arch</temp.archetype.subdir>
     <hbase-client.dir>hbase-client-project</hbase-client.dir>
+    <hbase-shaded-client.dir>hbase-shaded-client-project</hbase-shaded-client.dir>
     <!-- For new archetype, add corresponding *.dir property above this comment.
          (See hbase-archetypes/README.txt for details on adding new archetype.) -->
   </properties>
@@ -52,7 +53,7 @@
         <version>2.7</version>
         <executions>
           <!-- maven-resources-plugin copies each exemplar project's src directory to
-            ${build.archetype.subdir} subdirectory, and copy each project's pom.xml file
+            ${build.archetype.subdir} subdirectory, and copies each project's pom.xml file
             to ${temp.exemplar.subdir} subdirectory. (Filtering during copy replaces
             ${project-version} with literal value). The pom.xml files are processed
             further using xml-maven-plugin for xslt transformation, below. -->
@@ -93,6 +94,43 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>hbase-shaded-client__copy-src-to-build-archetype-subdir</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${build.archetype.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-shaded-client.dir}</directory>
+                  <includes>
+                    <include>src/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>hbase-shaded-client__copy-pom-to-temp-for-xslt-processing</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.exemplar.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-shaded-client.dir}</directory>
+                  <filtering>true</filtering> <!-- filtering replaces ${project.version} with literal -->
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                 </resource>
+              </resources>
+            </configuration>
+          </execution>
           <!-- For new archetype, add pair of <execution> elements (modeled on existing elements) above this comment. -->
 
           <!-- maven-resources-plugin copies each archetype project's pom.xml file
@@ -109,6 +147,24 @@
               <resources>
                 <resource>
                   <directory>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</directory>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                 </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>hbase-shaded-client-ARCHETYPE__copy-pom-to-temp-for-xslt-processing</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.archetype.subdir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>/${project.basedir}/../${hbase-shaded-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</directory>
                   <includes>
                     <include>pom.xml</include>
                   </includes>
@@ -142,6 +198,14 @@
                   <outputDir>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}</outputDir>
                   <stylesheet>modify_exemplar_pom.xsl</stylesheet>
                 </transformationSet>
+                <transformationSet>
+                  <dir>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.exemplar.subdir}</dir>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                  <outputDir>/${project.basedir}/../${hbase-shaded-client.dir}/${build.archetype.subdir}</outputDir>
+                  <stylesheet>modify_exemplar_pom.xsl</stylesheet>
+                </transformationSet>
                 <!-- For new archetype, add <transformationSet> element (modeled on existing elements) above this comment. -->
               </transformationSets>
             </configuration>
@@ -162,6 +226,14 @@
                     <include>pom.xml</include>
                   </includes>
                   <outputDir>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</outputDir>
+                  <stylesheet>modify_archetype_pom.xsl</stylesheet>
+                </transformationSet>
+                <transformationSet>
+                  <dir>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.archetype.subdir}</dir>
+                  <includes>
+                    <include>pom.xml</include>
+                  </includes>
+                  <outputDir>/${project.basedir}/../${hbase-shaded-client.dir}/${build.archetype.subdir}/${archetype.source.subdir}</outputDir>
                   <stylesheet>modify_archetype_pom.xsl</stylesheet>
                 </transformationSet>
                 <!-- For new archetype, add <transformationSet> element (modeled on existing elements) above this comment. -->

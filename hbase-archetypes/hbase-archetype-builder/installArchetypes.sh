@@ -26,6 +26,10 @@ archetypeSourceSubdir=target/generated-sources/archetype
 cd /"$workingDir"/../hbase-client-project/$buildArchetypeSubdir/$archetypeSourceSubdir
 mvn install
 
+# INSTALL hbase-shaded-client archetype
+cd /"$workingDir"/../hbase-shaded-client-project/$buildArchetypeSubdir/$archetypeSourceSubdir
+mvn install
+
 # add entries for additional archetypes above this comment (modeled on entries above)
 
 cd "$workingDir"
