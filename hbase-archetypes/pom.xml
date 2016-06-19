@@ -36,8 +36,9 @@
 
   <modules>
     <module>hbase-client-project</module>
+    <module>hbase-shaded-client-project</module>
     <!-- For new archetype, add exemplar project above this comment.
-         (See hbase-archetypes/README.txt for details on adding new archetype.)  -->
+         (See hbase-archetypes/README.md for details on adding new archetype.)  -->
     <module>hbase-archetype-builder</module>
   </modules>
 

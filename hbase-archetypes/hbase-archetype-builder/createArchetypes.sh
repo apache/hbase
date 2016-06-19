@@ -25,6 +25,10 @@ buildArchetypeSubdir=target/build-archetype
 cd /"$workingDir"/../hbase-client-project/$buildArchetypeSubdir
 mvn archetype:create-from-project
 
+# CREATE hbase-shaded-client archetype
+cd /"$workingDir"/../hbase-shaded-client-project/$buildArchetypeSubdir
+mvn archetype:create-from-project
+
 # add entries for additional archetypes above this comment (modeled on entries above)
 
 cd "$workingDir"
