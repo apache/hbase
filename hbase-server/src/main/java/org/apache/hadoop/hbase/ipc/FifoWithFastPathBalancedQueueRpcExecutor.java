@@ -74,7 +74,7 @@ public class FifoWithFastPathBalancedQueueRpcExecutor extends BalancedQueueRpcEx
     // if an empty queue of CallRunners so we are available for direct handoff when one comes in.
     final Deque<FastPathHandler> fastPathHandlerStack;
     // Semaphore to coordinate loading of fastpathed loadedTask and our running it.
-    private Semaphore semaphore = new Semaphore(1);
+    private Semaphore semaphore = new Semaphore(0);
     // The task we get when fast-pathing.
     private CallRunner loadedCallRunner;
 
@@ -82,7 +82,6 @@ public class FifoWithFastPathBalancedQueueRpcExecutor extends BalancedQueueRpcEx
         final Deque<FastPathHandler> fastPathHandlerStack) {
       super(name, handlerFailureThreshhold, q);
       this.fastPathHandlerStack = fastPathHandlerStack;
-      this.semaphore.drainPermits();
     }
 
     protected CallRunner getCallRunner() throws InterruptedException {
@@ -95,6 +94,7 @@ public class FifoWithFastPathBalancedQueueRpcExecutor extends BalancedQueueRpcEx
           this.fastPathHandlerStack.push(this);
           this.semaphore.acquire();
           cr = this.loadedCallRunner;
+          this.loadedCallRunner = null;
         } else {
           // No fastpath available. Block until a task comes available.
           cr = super.getCallRunner();
