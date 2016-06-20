@@ -374,6 +374,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     if (opts.inMemoryCF) {
       family.setInMemory(true);
     }
+    if(opts.inMemoryCompaction) {
+      family.setInMemoryCompaction(true);
+    }
     desc.addFamily(family);
     if (opts.replicas != DEFAULT_OPTS.replicas) {
       desc.setRegionReplication(opts.replicas);
@@ -630,6 +633,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int columns = 1;
     int caching = 30;
     boolean addColumns = true;
+    boolean inMemoryCompaction = false;
 
     public TestOptions() {}
 
@@ -674,6 +678,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.addColumns = that.addColumns;
       this.columns = that.columns;
       this.caching = that.caching;
+      this.inMemoryCompaction = that.inMemoryCompaction;
     }
 
     public int getCaching() {
@@ -962,6 +967,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setAddColumns(boolean addColumns) {
       this.addColumns = addColumns;
+    }
+
+    public void setInMemoryCompaction(boolean inMemoryCompaction) {
+      this.inMemoryCompaction = inMemoryCompaction;
+    }
+
+    public boolean getInMemoryCompaction() {
+      return this.inMemoryCompaction;
     }
   }
 
@@ -1869,6 +1882,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "from memory.  Default: false");
     System.err.println(" bloomFilter      Bloom filter type, one of "
         + Arrays.toString(BloomType.values()));
+    System.err.println(" inmemoryCompaction  Makes the column family to do inmemory flushes/compactions. "
+        + "Uses the CompactingMemstore");
     System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
@@ -2101,6 +2116,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String addColumns = "--addColumns=";
       if (cmd.startsWith(addColumns)) {
         opts.addColumns = Boolean.parseBoolean(cmd.substring(addColumns.length()));
+        continue;
+      }
+
+      final String inMemoryCompaction = "--inmemoryCompaction=";
+      if (cmd.startsWith(inMemoryCompaction)) {
+        opts.inMemoryCompaction = Boolean.parseBoolean(cmd.substring(inMemoryCompaction.length()));
         continue;
       }
 
