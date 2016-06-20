@@ -447,10 +447,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
 
-    // Do Metrics periodically
-    periodicDoMetricsChore = new PeriodicDoMetrics(msgInterval, this);
-    getChoreService().scheduleChore(periodicDoMetricsChore);
-
     // Some unit tests don't need a cluster, so no zookeeper at all
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
       activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
@@ -811,6 +807,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
     getChoreService().scheduleChore(catalogJanitorChore);
+
+    // Do Metrics periodically
+    periodicDoMetricsChore = new PeriodicDoMetrics(msgInterval, this);
+    getChoreService().scheduleChore(periodicDoMetricsChore);
 
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
