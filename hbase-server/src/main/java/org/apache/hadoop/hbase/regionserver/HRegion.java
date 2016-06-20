@@ -324,7 +324,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
-  private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  // Map of outstanding region scanners to their mvcc read point. Used figuring what is oldest
+  // outstanding read point
+  private final Map<RegionScanner, Long> scannerReadPoints =
+      new ConcurrentHashMap<RegionScanner, Long>();
 
   /**
    * The sequence ID that was encountered when this region was opened.
@@ -682,7 +685,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.rsServices = rsServices;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     setHTableSpecificConf();
-    this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
     this.busyWaitDuration = conf.getLong(
       "hbase.busy.wait.duration", DEFAULT_BUSY_WAIT_DURATION);
@@ -5631,9 +5633,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * If the joined heap data gathering is interrupted due to scan limits, this will
      * contain the row for which we are populating the values.*/
     protected Cell joinedContinuationRow = null;
-    private boolean filterClosed = false;
+    private volatile boolean closed = false;
 
-    protected final int isScan;
+    protected final int scan;
     protected final byte[] stopRow;
     protected final HRegion region;
 
@@ -5671,7 +5673,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       // If we are doing a get, we want to be [startRow,endRow] normally
       // it is [startRow,endRow) and if startRow=endRow we get nothing.
-      this.isScan = scan.isGetScan() ? -1 : 0;
+      this.scan = scan.isGetScan() ? -1 : 0;
 
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
@@ -5751,9 +5753,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     @Override
-    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
+    public boolean next(List<Cell> outResults, ScannerContext scannerContext)
     throws IOException {
-      if (this.filterClosed) {
+      if (this.closed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
             "or a lengthy garbage collection");
@@ -6187,11 +6189,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return currentRow == null ||
           (stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length,
-            currentRow, offset, length) <= isScan);
+            currentRow, offset, length) <= scan);
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
+      this.closed = true;
       if (storeHeap != null) {
         storeHeap.close();
         storeHeap = null;
@@ -6200,11 +6203,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         joinedHeap.close();
         joinedHeap = null;
       }
-      // no need to synchronize here.
       scannerReadPoints.remove(this);
-      this.filterClosed = true;
     }
 
+    @VisibleForTesting
     KeyValueHeap getStoreHeapForTesting() {
       return storeHeap;
     }
