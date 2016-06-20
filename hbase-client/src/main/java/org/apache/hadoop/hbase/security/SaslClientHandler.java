@@ -331,6 +331,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
       ByteBuf in = (ByteBuf) msg;
       byte[] unwrapped = new byte[in.readableBytes()];
       in.readBytes(unwrapped);
+      // release the memory
+      in.release();
 
       try {
         saslToken = saslClient.wrap(unwrapped, 0, unwrapped.length);
