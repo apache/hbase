@@ -277,9 +277,8 @@ public class WALFactory {
     return createReader(fs, path, reporter, true);
   }
 
-  public Reader createReader(final FileSystem fs, final Path path,
-      CancelableProgressable reporter, boolean allowCustom)
-      throws IOException {
+  public Reader createReader(final FileSystem fs, final Path path, CancelableProgressable reporter,
+      boolean allowCustom) throws IOException {
     Class<? extends AbstractFSWALProvider.Reader> lrClass =
         allowCustom ? logReaderClass : ProtobufLogReader.class;
 
@@ -291,11 +290,12 @@ public class WALFactory {
       long openTimeout = timeoutMillis + startWaiting;
       int nbAttempt = 0;
       FSDataInputStream stream = null;
+      AbstractFSWALProvider.Reader reader = null;
       while (true) {
         try {
           if (lrClass != ProtobufLogReader.class) {
             // User is overriding the WAL reader, let them.
-            AbstractFSWALProvider.Reader reader = lrClass.newInstance();
+            reader = lrClass.newInstance();
             reader.init(fs, path, conf, null);
             return reader;
           } else {
@@ -305,26 +305,36 @@ public class WALFactory {
             // rid of the old reader entirely, we need to handle 0-size files differently from
             // merely non-PB files.
             byte[] magic = new byte[ProtobufLogReader.PB_WAL_MAGIC.length];
-            boolean isPbWal = (stream.read(magic) == magic.length)
-                && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
-            AbstractFSWALProvider.Reader reader =
-                isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
+            boolean isPbWal =
+                (stream.read(magic) == magic.length)
+                    && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
+            reader = isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
             reader.init(fs, path, conf, stream);
             return reader;
           }
         } catch (IOException e) {
-          try {
-            if (stream != null) {
+          if (stream != null) {
+            try {
               stream.close();
+            } catch (IOException exception) {
+              LOG.warn("Could not close AbstractFSWALProvider.Reader" + exception.getMessage());
+              LOG.debug("exception details", exception);
             }
-          } catch (IOException exception) {
-            LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
-            LOG.debug("exception details", exception);
           }
+          if (reader != null) {
+            try {
+              reader.close();
+            } catch (IOException exception) {
+              LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
+              LOG.debug("exception details", exception);
+            }
+          }
+
           String msg = e.getMessage();
-          if (msg != null && (msg.contains("Cannot obtain block length")
-              || msg.contains("Could not obtain the last block")
-              || msg.matches("Blocklist for [^ ]* has changed.*"))) {
+          if (msg != null
+              && (msg.contains("Cannot obtain block length")
+                  || msg.contains("Could not obtain the last block") || msg
+                    .matches("Blocklist for [^ ]* has changed.*"))) {
             if (++nbAttempt == 1) {
               LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
             }
@@ -333,8 +343,7 @@ public class WALFactory {
             }
             if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
               LOG.error("Can't open after " + nbAttempt + " attempts and "
-                + (EnvironmentEdgeManager.currentTime() - startWaiting)
-                + "ms " + " for " + path);
+                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
             } else {
               try {
                 Thread.sleep(nbAttempt < 3 ? 500 : 1000);
