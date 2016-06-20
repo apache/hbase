@@ -234,7 +234,8 @@ for ref in 1 2; do
   JARS[${ref}]=$(paste -s -d , <(echo "${JARS}"))
 done
 
-# Download the Java API Compliance Checker (Java ACC) into /dev-support/target/compatibility.
+# Download the Java API Compliance Checker (Java ACC) v. 1.7 (see HBASE-16073) into
+# /dev-support/target/compatibility.
 # Note: Java API Compliance Checker (Java ACC) is licensed under the GNU GPL or LGPL. For more
 #       information, visit http://ispras.linuxbase.org/index.php/Java_API_Compliance_Checker .
 
@@ -242,7 +243,7 @@ done
 if [ ! -d ${SCRIPT_DIRECTORY}/target/compatibility/javaACC ] || [ -n "${FORCE_DOWNLOAD}" ]; then
   echo "Downloading Java API Compliance Checker..."
   rm -rf ${SCRIPT_DIRECTORY}/target/compatibility/javaACC
-  if ! git clone https://github.com/lvc/japi-compliance-checker.git \
+  if ! git clone https://github.com/lvc/japi-compliance-checker.git -b 1.7 \
       ${SCRIPT_DIRECTORY}/target/compatibility/javaACC; then
     echo "Failed to download Java API Compliance Checker. Exiting..." >&2
     exit 2
