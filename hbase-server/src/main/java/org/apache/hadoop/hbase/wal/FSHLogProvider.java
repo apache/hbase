@@ -55,12 +55,20 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass = conf.getClass("hbase.regionserver.hlog.writer.impl",
       ProtobufLogWriter.class, Writer.class);
+    Writer writer = null;
     try {
-      Writer writer = logWriterClass.newInstance();
+      writer = logWriterClass.newInstance();
       writer.init(fs, path, conf, overwritable);
       return writer;
-    } catch (Exception e) {
-      LOG.debug("Error instantiating log writer.", e);
+    } catch (Exception e) { 
+      LOG.debug("Error instantiating log writer.", e);            
+      if (writer != null) {
+        try{
+          writer.close();
+        } catch(IOException ee){
+          LOG.error("cannot close log writer", ee);
+        }
+      }
       throw new IOException("cannot get log writer", e);
     }
   }
