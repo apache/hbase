@@ -42,7 +42,6 @@ public class MultiRowResource extends ResourceBase implements Constants {
 
   TableResource tableResource;
   Integer versions = null;
-  String[] columns = null;
 
   /**
    * Constructor
@@ -51,14 +50,9 @@ public class MultiRowResource extends ResourceBase implements Constants {
    * @param versions
    * @throws java.io.IOException
    */
-  public MultiRowResource(TableResource tableResource, String versions, String columnsStr)
-      throws IOException {
+  public MultiRowResource(TableResource tableResource, String versions) throws IOException {
     super();
     this.tableResource = tableResource;
-
-    if (columnsStr != null && !columnsStr.equals("")) {
-      this.columns = columnsStr.split(",");
-    }
 
     if (versions != null) {
       this.versions = Integer.valueOf(versions);
@@ -80,13 +74,6 @@ public class MultiRowResource extends ResourceBase implements Constants {
         if (this.versions != null) {
           rowSpec.setMaxVersions(this.versions);
         }
-
-        if (this.columns != null) {
-          for (int i = 0; i < this.columns.length; i++) {
-            rowSpec.addColumn(this.columns[i].getBytes());
-          }
-        }
-
         ResultGenerator generator =
           ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null,
             !params.containsKey(NOCACHE_PARAM_NAME));
