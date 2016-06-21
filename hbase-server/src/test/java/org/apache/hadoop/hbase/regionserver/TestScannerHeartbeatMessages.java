@@ -95,7 +95,7 @@ public class TestScannerHeartbeatMessages {
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[][] ROWS = HTestConst.makeNAscii(ROW, NUM_ROWS);
 
-  private static int NUM_FAMILIES = 3;
+  private static int NUM_FAMILIES = 4;
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[][] FAMILIES = HTestConst.makeNAscii(FAMILY, NUM_FAMILIES);
 
@@ -106,19 +106,23 @@ public class TestScannerHeartbeatMessages {
   private static int VALUE_SIZE = 128;
   private static byte[] VALUE = Bytes.createMaxByteArray(VALUE_SIZE);
 
-
-  private static int SERVER_TIMEOUT = 6000;
+  // The time limit should be based on the rpc timeout at client, or the client will regards
+  // the request as timeout before server return a heartbeat.
+  private static int SERVER_TIMEOUT = 60000;
 
   // Time, in milliseconds, that the client will wait for a response from the server before timing
   // out. This value is used server side to determine when it is necessary to send a heartbeat
-  // message to the client
-  private static int CLIENT_TIMEOUT = SERVER_TIMEOUT / 3;
+  // message to the client. Time limit will be 500 ms.
+  private static int CLIENT_TIMEOUT = 1000;
 
-  // By default, at most one row's worth of cells will be retrieved before the time limit is reached
-  private static int DEFAULT_ROW_SLEEP_TIME = CLIENT_TIMEOUT / 5;
-  // By default, at most cells for two column families are retrieved before the time limit is
-  // reached
-  private static int DEFAULT_CF_SLEEP_TIME = DEFAULT_ROW_SLEEP_TIME / NUM_FAMILIES;
+  // In this test, we sleep after reading each row. So we should make sure after we get some number
+  // of rows and sleep same times we must reach time limit, and do not timeout after next sleeping.
+  // So set this to 200, we will get 3 rows and reach time limit at the start of 4th row, then sleep
+  // for the 4th time. Total time is 800 ms so we will not timeout.
+  private static int DEFAULT_ROW_SLEEP_TIME = 200;
+
+  // Similar with row sleep time.
+  private static int DEFAULT_CF_SLEEP_TIME = 200;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
