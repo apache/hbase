@@ -48,12 +48,15 @@ public interface AccessControlConstants {
   public static final String OP_ATTRIBUTE_ACL = "acl";
   /** Cell level ACL evaluation strategy */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final String OP_ATTRIBUTE_ACL_STRATEGY = "acl.strategy";
   /** Default cell ACL evaluation strategy: Table and CF first, then ACL */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final byte[] OP_ATTRIBUTE_ACL_STRATEGY_DEFAULT = new byte[] { 0 };
   /** Alternate cell ACL evaluation strategy: Cell ACL first, then table and CF */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final byte[] OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST = new byte[] { 1 };
 
 }
