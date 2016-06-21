@@ -45,11 +45,4 @@ public interface AccessControlConstants {
 
   /** Cell level ACL */
   public static final String OP_ATTRIBUTE_ACL = "acl";
-  /** Cell level ACL evaluation strategy */
-  public static final String OP_ATTRIBUTE_ACL_STRATEGY = "acl.strategy";
-  /** Default cell ACL evaluation strategy: Table and CF first, then ACL */
-  public static final byte[] OP_ATTRIBUTE_ACL_STRATEGY_DEFAULT = new byte[] { 0 };
-  /** Alternate cell ACL evaluation strategy: Cell ACL first, then table and CF */
-  public static final byte[] OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST = new byte[] { 1 };
-
 }
