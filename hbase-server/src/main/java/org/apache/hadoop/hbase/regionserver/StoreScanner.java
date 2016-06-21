@@ -216,7 +216,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Always check bloom filter to optimize the top row seek for delete
       // family marker.
       seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
-        parallelSeekEnabled);
+        isParallelSeekEnabled);
 
       // set storeLimit
       this.storeLimit = scan.getMaxResultsPerColumnFamily();
