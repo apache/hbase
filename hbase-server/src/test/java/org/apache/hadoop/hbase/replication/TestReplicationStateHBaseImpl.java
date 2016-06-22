@@ -81,9 +81,9 @@ public class TestReplicationStateHBaseImpl {
   public static void setUpBeforeClass() throws Exception {
     utility = new HBaseTestingUtility();
     conf = utility.getConfiguration();
-    conf.setClass("hbase.region.replica.replication.ReplicationQueuesType",
+    conf.setClass("hbase.region.replica.replication.replicationQueues.class",
       TableBasedReplicationQueuesImpl.class, ReplicationQueues.class);
-    conf.setClass("hbase.region.replica.replication.ReplicationQueuesClientType",
+    conf.setClass("hbase.region.replica.replication.replicationQueuesClient.class",
       TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
     utility.startMiniCluster();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);

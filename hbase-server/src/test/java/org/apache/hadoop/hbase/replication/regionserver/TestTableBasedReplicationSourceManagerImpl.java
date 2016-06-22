@@ -48,9 +48,9 @@ public class TestTableBasedReplicationSourceManagerImpl extends TestReplicationS
     conf.setLong("replication.sleep.before.failover", 2000);
     conf.setInt("replication.source.maxretriesmultiplier", 10);
 
-    conf.setClass("hbase.region.replica.replication.ReplicationQueuesType",
+    conf.setClass("hbase.region.replica.replication.replicationQueues.class",
       TableBasedReplicationQueuesImpl.class, ReplicationQueues.class);
-    conf.setClass("hbase.region.replica.replication.ReplicationQueuesClientType",
+    conf.setClass("hbase.region.replica.replication.replicationQueuesClient.class",
       TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
     utility = new HBaseTestingUtility(conf);
     utility.startMiniCluster();
