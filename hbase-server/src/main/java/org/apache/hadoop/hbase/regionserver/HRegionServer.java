@@ -2651,12 +2651,6 @@ public class HRegionServer extends HasThread implements
   static private void createNewReplicationInstance(Configuration conf,
     HRegionServer server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException{
 
-    // If replication is not enabled, then return immediately.
-    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
-        HConstants.REPLICATION_ENABLE_DEFAULT)) {
-      return;
-    }
-
     // read in the name of the source replication class from the config file.
     String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
                                HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);

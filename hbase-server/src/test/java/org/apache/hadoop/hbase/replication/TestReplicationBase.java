@@ -97,7 +97,6 @@ public class TestReplicationBase {
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setInt("zookeeper.recovery.retry", 1);
     conf1.setInt("zookeeper.recovery.retry.intervalmill", 10);
-    conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
@@ -120,7 +119,6 @@ public class TestReplicationBase {
     conf2 = HBaseConfiguration.create(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     conf2.setBoolean("dfs.support.append", true);
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 

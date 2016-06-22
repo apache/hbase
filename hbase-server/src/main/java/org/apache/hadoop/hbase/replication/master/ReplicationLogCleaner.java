@@ -91,12 +91,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @Override
   public void setConf(Configuration config) {
-    // If replication is disabled, keep all members null
-    if (!config.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
-        HConstants.REPLICATION_ENABLE_DEFAULT)) {
-      LOG.warn("Not configured - allowing all wals to be deleted");
-      return;
-    }
     // Make my own Configuration.  Then I'll have my own connection to zk that
     // I can close myself when comes time.
     Configuration conf = new Configuration(config);

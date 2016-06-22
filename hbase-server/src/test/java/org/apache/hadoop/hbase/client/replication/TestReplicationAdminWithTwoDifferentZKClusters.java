@@ -45,7 +45,6 @@ public class TestReplicationAdminWithTwoDifferentZKClusters {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniCluster();
     admin = new ReplicationAdmin(conf1);

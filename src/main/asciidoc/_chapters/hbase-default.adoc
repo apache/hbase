@@ -2063,8 +2063,7 @@ Fully qualified name of class implementing coordinated state manager.
       have region replication > 1. If this is enabled once, disabling this replication also
       requires disabling the replication peer using shell or ReplicationAdmin java class.
       Replication to secondary region replicas works over standard inter-cluster replication.
-      So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"
-      to true for this feature to work.
+
 
 +
 .Default

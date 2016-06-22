@@ -117,12 +117,11 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
   @Override
   public void setConf(Configuration config) {
     // If either replication or replication of bulk load hfiles is disabled, keep all members null
-    if (!(config.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
-      HConstants.REPLICATION_ENABLE_DEFAULT) && config.getBoolean(
+    if (!(config.getBoolean(
       HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
       HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT))) {
-      LOG.warn(HConstants.REPLICATION_ENABLE_KEY
-          + " is not enabled so allowing all hfile references to be deleted. Better to remove "
+      LOG.warn(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
+          + " is not enabled. Better to remove "
           + ReplicationHFileCleaner.class + " from " + HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS
           + " configuration.");
       return;

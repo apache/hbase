@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
-import static org.apache.hadoop.hbase.HConstants.REPLICATION_ENABLE_KEY;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,7 +71,6 @@ public class Replication extends WALActionsListener.Base implements
   ReplicationSourceService, ReplicationSinkService {
   private static final Log LOG =
       LogFactory.getLog(Replication.class);
-  private boolean replication;
   private boolean replicationForBulkLoadData;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueues replicationQueues;
@@ -110,7 +108,6 @@ public class Replication extends WALActionsListener.Base implements
       final Path logDir, final Path oldLogDir) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
-    this.replication = isReplication(this.conf);
     this.replicationForBulkLoadData = isReplicationForBulkLoadDataEnabled(this.conf);
     this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
@@ -125,49 +122,34 @@ public class Replication extends WALActionsListener.Base implements
             + " is set to true.");
       }
     }
-    if (replication) {
-      try {
-        this.replicationQueues =
-            ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, this.server,
-              server.getZooKeeper()));
-        this.replicationQueues.init(this.server.getServerName().toString());
-        this.replicationPeers =
-            ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf, this.server);
-        this.replicationPeers.init();
-        this.replicationTracker =
-            ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,
-              this.conf, this.server, this.server);
-      } catch (Exception e) {
-        throw new IOException("Failed replication handler create", e);
-      }
-      UUID clusterId = null;
-      try {
-        clusterId = ZKClusterId.getUUIDForCluster(this.server.getZooKeeper());
-      } catch (KeeperException ke) {
-        throw new IOException("Could not read cluster id", ke);
-      }
-      this.replicationManager =
-          new ReplicationSourceManager(replicationQueues, replicationPeers, replicationTracker,
-              conf, this.server, fs, logDir, oldLogDir, clusterId);
-      this.statsThreadPeriod =
-          this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-      LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
-      this.replicationLoad = new ReplicationLoad();
-    } else {
-      this.replicationManager = null;
-      this.replicationQueues = null;
-      this.replicationPeers = null;
-      this.replicationTracker = null;
-      this.replicationLoad = null;
-    }
-  }
 
-   /**
-    * @param c Configuration to look at
-    * @return True if replication is enabled.
-    */
-  public static boolean isReplication(final Configuration c) {
-    return c.getBoolean(REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
+    try {
+      this.replicationQueues =
+          ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, this.server,
+            server.getZooKeeper()));
+      this.replicationQueues.init(this.server.getServerName().toString());
+      this.replicationPeers =
+          ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf, this.server);
+      this.replicationPeers.init();
+      this.replicationTracker =
+          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,
+            this.conf, this.server, this.server);
+    } catch (Exception e) {
+      throw new IOException("Failed replication handler create", e);
+    }
+    UUID clusterId = null;
+    try {
+      clusterId = ZKClusterId.getUUIDForCluster(this.server.getZooKeeper());
+    } catch (KeeperException ke) {
+      throw new IOException("Could not read cluster id", ke);
+    }
+    this.replicationManager =
+        new ReplicationSourceManager(replicationQueues, replicationPeers, replicationTracker,
+            conf, this.server, fs, logDir, oldLogDir, clusterId);
+    this.statsThreadPeriod =
+        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
+    this.replicationLoad = new ReplicationLoad();
   }
 
   /**
@@ -196,11 +178,9 @@ public class Replication extends WALActionsListener.Base implements
    * Join with the replication threads
    */
   public void join() {
-    if (this.replication) {
-      this.replicationManager.join();
-      if (this.replicationSink != null) {
-        this.replicationSink.stopReplicationSinkServices();
-      }
+    this.replicationManager.join();
+    if (this.replicationSink != null) {
+      this.replicationSink.stopReplicationSinkServices();
     }
     scheduleThreadPool.shutdown();
   }
@@ -221,10 +201,8 @@ public class Replication extends WALActionsListener.Base implements
   public void replicateLogEntries(List<WALEntry> entries, CellScanner cells,
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
-    if (this.replication) {
-      this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-        sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
-    }
+    this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
+      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
   }
 
   /**
@@ -233,17 +211,15 @@ public class Replication extends WALActionsListener.Base implements
    * @throws IOException
    */
   public void startReplicationService() throws IOException {
-    if (this.replication) {
-      try {
-        this.replicationManager.init();
-      } catch (ReplicationException e) {
-        throw new IOException(e);
-      }
-      this.replicationSink = new ReplicationSink(this.conf, this.server);
-      this.scheduleThreadPool.scheduleAtFixedRate(
-        new ReplicationStatisticsThread(this.replicationSink, this.replicationManager),
-        statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
+    try {
+      this.replicationManager.init();
+    } catch (ReplicationException e) {
+      throw new IOException(e);
     }
+    this.replicationSink = new ReplicationSink(this.conf, this.server);
+    this.scheduleThreadPool.scheduleAtFixedRate(
+      new ReplicationStatisticsThread(this.replicationSink, this.replicationManager),
+      statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
   }
 
   /**
@@ -335,9 +311,6 @@ public class Replication extends WALActionsListener.Base implements
    * @param conf
    */
   public static void decorateMasterConfiguration(Configuration conf) {
-    if (!isReplication(conf)) {
-      return;
-    }
     String plugins = conf.get(HBASE_MASTER_LOGCLEANER_PLUGINS);
     String cleanerClass = ReplicationLogCleaner.class.getCanonicalName();
     if (!plugins.contains(cleanerClass)) {

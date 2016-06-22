@@ -117,8 +117,6 @@ public class TestMasterReplication {
     baseConfiguration.setLong("replication.source.sleepforretries", 100);
     baseConfiguration.setInt("hbase.regionserver.maxlogs", 10);
     baseConfiguration.setLong("hbase.master.logcleaner.ttl", 10);
-    baseConfiguration.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
-      HConstants.REPLICATION_ENABLE_DEFAULT);
     baseConfiguration.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     baseConfiguration.set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
@@ -423,29 +421,6 @@ public class TestMasterReplication {
       int[] expectedCounts = new int[] { 1, 3, 3 };
       validateCounts(htables, put, expectedCounts);
       validateCounts(htables, delete, expectedCounts);
-    } finally {
-      close(htables);
-      shutDownMiniClusters();
-    }
-  }
-
-  /*
-   * Test RSRpcServices#replicateWALEntry when replication is disabled. This is to simulate
-   * HBASE-14840
-   */
-  @Test(timeout = 180000, expected = ServiceException.class)
-  public void testReplicateWALEntryWhenReplicationIsDisabled() throws Exception {
-    LOG.info("testSimplePutDelete");
-    baseConfiguration.setBoolean(HConstants.REPLICATION_ENABLE_KEY, false);
-    Table[] htables = null;
-    try {
-      startMiniClusters(1);
-      createTableOnClusters(table);
-      htables = getHTablesOnClusters(tableName);
-
-      HRegionServer rs = utilities[0].getRSForFirstRegionInTable(tableName);
-      RSRpcServices rsrpc = new RSRpcServices(rs);
-      rsrpc.replicateWALEntry(null, null);
     } finally {
       close(htables);
       shutDownMiniClusters();
