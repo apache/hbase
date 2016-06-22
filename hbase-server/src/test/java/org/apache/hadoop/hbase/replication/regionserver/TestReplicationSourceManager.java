@@ -345,8 +345,7 @@ public abstract class TestReplicationSourceManager {
     NodeFailoverWorker w1 =
         manager.new NodeFailoverWorker(server.getServerName().getServerName(), rq1, rp1, new UUID(
             new Long(1), new Long(2)));
-    w1.start();
-    w1.join(10000);
+    w1.run();
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
