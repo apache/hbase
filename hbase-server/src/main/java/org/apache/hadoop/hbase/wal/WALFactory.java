@@ -290,11 +290,12 @@ public class WALFactory {
       long openTimeout = timeoutMillis + startWaiting;
       int nbAttempt = 0;
       FSDataInputStream stream = null;
+      DefaultWALProvider.Reader reader = null;
       while (true) {
         try {
           if (lrClass != ProtobufLogReader.class) {
             // User is overriding the WAL reader, let them.
-            DefaultWALProvider.Reader reader = lrClass.newInstance();
+            reader = lrClass.newInstance();
             reader.init(fs, path, conf, null);
             return reader;
           } else {
@@ -306,19 +307,27 @@ public class WALFactory {
             byte[] magic = new byte[ProtobufLogReader.PB_WAL_MAGIC.length];
             boolean isPbWal = (stream.read(magic) == magic.length)
                 && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
-            DefaultWALProvider.Reader reader =
+            reader =
                 isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
             reader.init(fs, path, conf, stream);
             return reader;
           }
         } catch (IOException e) {
-          try {
-            if (stream != null) {
+          if (stream != null) {
+            try {
               stream.close();
+            } catch (IOException exception) {
+              LOG.warn("Could not close DefaultWALProvider.Reader" + exception.getMessage());
+              LOG.debug("exception details", exception);
             }
-          } catch (IOException exception) {
-            LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
-            LOG.debug("exception details", exception);
+          }
+          if (reader != null) {
+            try {
+              reader.close();
+            } catch (IOException exception) {
+              LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
+              LOG.debug("exception details", exception);
+            }
           }
           String msg = e.getMessage();
           if (msg != null && (msg.contains("Cannot obtain block length")
@@ -332,8 +341,7 @@ public class WALFactory {
             }
             if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
               LOG.error("Can't open after " + nbAttempt + " attempts and "
-                + (EnvironmentEdgeManager.currentTime() - startWaiting)
-                + "ms " + " for " + path);
+                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
             } else {
               try {
                 Thread.sleep(nbAttempt < 3 ? 500 : 1000);
