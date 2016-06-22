@@ -1016,6 +1016,19 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return tables != null && tables.length > 0;
   }
 
+  public static boolean userTablesOnMaster(Configuration conf) {
+    String[] tables = getTablesOnMaster(conf);
+    if (tables == null || tables.length == 0) {
+      return false;
+    }
+    for (String tn:tables) {
+      if (!tn.startsWith("hbase:")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public void setConf(Configuration conf) {
     setSlop(conf);

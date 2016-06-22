@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -2650,6 +2651,11 @@ public class HRegionServer extends HasThread implements
    */
   static private void createNewReplicationInstance(Configuration conf,
     HRegionServer server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException{
+
+    if ((server instanceof HMaster) &&
+        (!BaseLoadBalancer.userTablesOnMaster(conf))) {
+      return;
+    }
 
     // read in the name of the source replication class from the config file.
     String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
