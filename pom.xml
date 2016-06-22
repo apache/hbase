@@ -302,6 +302,14 @@
       <organizationUrl>http://www.continuuity.com</organizationUrl>
     </developer>
     <developer>
+      <id>jingchengdu</id>
+      <name>Jingcheng Du</name>
+      <email>jingchengdu@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Intel</organization>
+      <organizationUrl>http://www.intel.com</organizationUrl>
+    </developer>
+    <developer>
       <id>esteban</id>
       <name>Esteban Gutierrez</name>
       <email>esteban@apache.org</email>
