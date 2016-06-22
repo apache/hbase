@@ -89,7 +89,6 @@ public class TestRegionReplicaReplicationEndpoint {
     conf.setLong("hbase.master.logcleaner.ttl", 10);
     conf.setInt("zookeeper.recovery.retry", 1);
     conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf.setInt("replication.stats.thread.period.seconds", 5);

@@ -108,7 +108,6 @@ public class TestRegionReplicaFailover {
     Configuration conf = HTU.getConfiguration();
    // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
     conf.setInt("replication.stats.thread.period.seconds", 5);

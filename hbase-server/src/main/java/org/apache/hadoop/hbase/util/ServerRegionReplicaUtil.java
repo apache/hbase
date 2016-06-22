@@ -47,8 +47,6 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * have region replication &gt; 1. If this is enabled once, disabling this replication also
    * requires disabling the replication peer using shell or ReplicationAdmin java class.
    * Replication to secondary region replicas works over standard inter-cluster replication.·
-   * So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"·
-   * to true for this feature to work.
    */
   public static final String REGION_REPLICA_REPLICATION_CONF_KEY
     = "hbase.region.replica.replication.enabled";

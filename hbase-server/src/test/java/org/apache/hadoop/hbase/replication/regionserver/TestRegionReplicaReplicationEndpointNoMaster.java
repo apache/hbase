@@ -98,7 +98,6 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = HTU.getConfiguration();
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, false);
 

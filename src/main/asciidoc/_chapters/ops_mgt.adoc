@@ -1648,11 +1648,6 @@ The following metrics are exposed at the global region server level and (since H
 | The name of the rs znode
 | rs
 
-| hbase.replication
-| Whether replication is enabled or disabled on a given
-                cluster
-| true
-
 | replication.sleep.before.failover
 | How many milliseconds a worker should sleep before attempting to replicate
                 a dead region server's WAL queues.

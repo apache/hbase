@@ -93,7 +93,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     setVisibilityLabelServiceImpl(conf, ExpAsStringVisibilityLabelServiceImpl.class);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     conf.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
@@ -124,7 +123,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf1.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
             TestCoprocessorForTagsAtSink.class.getName());

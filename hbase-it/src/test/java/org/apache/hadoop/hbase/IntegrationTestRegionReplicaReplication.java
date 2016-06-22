@@ -98,7 +98,6 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
     // enable async wal replication to region replicas for unit tests
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
 
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024L * 1024 * 4); // flush every 4 MB
     conf.setInt("hbase.hstore.blockingStoreFiles", 100);

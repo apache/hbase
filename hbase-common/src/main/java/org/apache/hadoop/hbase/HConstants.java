@@ -839,10 +839,6 @@ public final class HConstants {
    * cluster replication constants.
    */
   public static final String
-      REPLICATION_ENABLE_KEY = "hbase.replication";
-  public static final boolean
-      REPLICATION_ENABLE_DEFAULT = true;
-  public static final String
       REPLICATION_SOURCE_SERVICE_CLASSNAME = "hbase.replication.source.service";
   public static final String
       REPLICATION_SINK_SERVICE_CLASSNAME = "hbase.replication.sink.service";

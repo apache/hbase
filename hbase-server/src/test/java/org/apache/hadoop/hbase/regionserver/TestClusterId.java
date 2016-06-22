@@ -96,7 +96,6 @@ public class TestClusterId {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
     TEST_UTIL.createRootDir();
-    TEST_UTIL.getConfiguration().setBoolean("hbase.replication", true);
     Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(TEST_UTIL.getConfiguration());
     Path filePath = new Path(rootDir, HConstants.CLUSTER_ID_FILE_NAME);
