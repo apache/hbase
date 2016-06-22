@@ -73,7 +73,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private AtomicBoolean resetDelay = new AtomicBoolean(true);
 
   // if we're in this mode, "long" calls are getting dropped
-  private volatile boolean isOverloaded;
+  private AtomicBoolean isOverloaded = new AtomicBoolean(false);
 
   public AdaptiveLifoCoDelCallQueue(int capacity, int targetDelay, int interval,
       double lifoThreshold, AtomicLong numGeneralCallsDropped, AtomicLong numLifoModeSwitches) {
@@ -126,6 +126,34 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     }
   }
 
+  @Override
+  public CallRunner poll() {
+    CallRunner cr;
+    boolean switched = false;
+    while(true) {
+      if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
+        // Only count once per switch.
+        if (!switched) {
+          switched = true;
+          numLifoModeSwitches.incrementAndGet();
+        }
+        cr = queue.pollLast();
+      } else {
+        switched = false;
+        cr = queue.pollFirst();
+      }
+      if (cr == null) {
+        return cr;
+      }
+      if (needToDrop(cr)) {
+        numGeneralCallsDropped.incrementAndGet();
+        cr.drop();
+      } else {
+        return cr;
+      }
+    }
+  }
+
   /**
    * @param callRunner to validate
    * @return true if this call needs to be skipped based on call timestamp
@@ -136,28 +164,28 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     long callDelay = now - callRunner.getCall().timestamp;
 
     long localMinDelay = this.minDelay;
-    if (now > intervalTime && !resetDelay.getAndSet(true)) {
+
+    // Try and determine if we should reset
+    // the delay time and determine overload
+    if (now > intervalTime &&
+        !resetDelay.get() &&
+        !resetDelay.getAndSet(true)) {
       intervalTime = now + codelInterval;
 
-      if (localMinDelay > codelTargetDelay) {
-        isOverloaded = true;
-      } else {
-        isOverloaded = false;
-      }
+      isOverloaded.set(localMinDelay > codelTargetDelay);
     }
 
-    if (resetDelay.getAndSet(false)) {
+    // If it looks like we should reset the delay
+    // time do it only once on one thread
+    if (resetDelay.get() && resetDelay.getAndSet(false)) {
       minDelay = callDelay;
+      // we just reset the delay dunno about how this will work
       return false;
     } else if (callDelay < localMinDelay) {
       minDelay = callDelay;
     }
 
-    if (isOverloaded && callDelay > 2 * codelTargetDelay) {
-      return true;
-    } else {
-      return false;
-    }
+    return isOverloaded.get() && callDelay > 2 * codelTargetDelay;
   }
 
   // Generic BlockingQueue methods we support
@@ -185,11 +213,6 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
       + " but take() and offer() methods");
   }
 
-  @Override
-  public CallRunner poll() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
-  }
 
   @Override
   public CallRunner peek() {

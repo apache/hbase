@@ -75,7 +75,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public static final String CALL_QUEUE_CODEL_LIFO_THRESHOLD =
     "hbase.ipc.server.callqueue.codel.lifo.threshold";
 
-  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 5;
+  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 100;
   public static final int CALL_QUEUE_CODEL_DEFAULT_INTERVAL = 100;
   public static final double CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD = 0.8;
 
@@ -215,7 +215,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs,
           AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs);
       } else {
-        // FifoWFPBQ = FifoWithFastPathBalancedQueueRpcExecutor
+        // FifoWFPBQ = FastPathBalancedQueueRpcExecutor
         callExecutor = new RWQueueRpcExecutor("FifoRWQ.default", handlerCount, numCallQueues,
           callqReadShare, callqScanShare, maxQueueLength, conf, abortable);
       }
@@ -228,22 +228,22 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
             conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else if (isCodelQueueType(callQueueType)) {
         callExecutor =
-          new BalancedQueueRpcExecutor("CodelBQ.default", handlerCount, numCallQueues,
+          new FastPathBalancedQueueRpcExecutor("CodelFPBQ.default", handlerCount, numCallQueues,
             conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
             codelTargetDelay, codelInterval, codelLifoThreshold,
             numGeneralCallsDropped, numLifoModeSwitches);
       } else {
-        // FifoWFPBQ = FifoWithFastPathBalancedQueueRpcExecutor
-        callExecutor = new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.default",
+        // FifoWFPBQ = FastPathBalancedQueueRpcExecutor
+        callExecutor = new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.default",
             handlerCount, numCallQueues, maxQueueLength, conf, abortable);
       }
     }
     // Create 2 queues to help priorityExecutor be more scalable.
     this.priorityExecutor = priorityHandlerCount > 0?
-      new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.priority", priorityHandlerCount,
+      new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.priority", priorityHandlerCount,
          2, maxPriorityQueueLength, conf, abortable): null;
     this.replicationExecutor = replicationHandlerCount > 0?
-      new FifoWithFastPathBalancedQueueRpcExecutor("FifoWFPBQ.replication",
+      new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.replication",
         replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
   }
 
