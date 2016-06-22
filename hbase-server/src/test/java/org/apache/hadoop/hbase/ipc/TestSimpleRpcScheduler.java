@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -398,7 +399,8 @@ public class TestSimpleRpcScheduler {
     @Override
     public long currentTime() {
       for (String threadNamePrefix : threadNamePrefixs) {
-        if (Thread.currentThread().getName().startsWith(threadNamePrefix)) {
+        String threadName = Thread.currentThread().getName();
+        if (threadName.startsWith(threadNamePrefix)) {
           return timeQ.poll().longValue() + offset;
         }
       }
@@ -409,9 +411,9 @@ public class TestSimpleRpcScheduler {
   @Test
   public void testCoDelScheduling() throws Exception {
     CoDelEnvironmentEdge envEdge = new CoDelEnvironmentEdge();
-    envEdge.threadNamePrefixs.add("RW.default");
-    envEdge.threadNamePrefixs.add("B.default");
+    envEdge.threadNamePrefixs.add("RpcServer.CodelBQ.default.handler");
     Configuration schedConf = HBaseConfiguration.create();
+    schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
 
     schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY,
       SimpleRpcScheduler.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
@@ -429,8 +431,7 @@ public class TestSimpleRpcScheduler {
       for (int i = 0; i < 100; i++) {
         long time = System.currentTimeMillis();
         envEdge.timeQ.put(time);
-        CallRunner cr = getMockedCallRunner(time);
-        Thread.sleep(5);
+        CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
       }
       // make sure fast calls are handled
@@ -439,13 +440,12 @@ public class TestSimpleRpcScheduler {
       assertEquals("None of these calls should have been discarded", 0,
         scheduler.getNumGeneralCallsDropped());
 
-      envEdge.offset = 6;
+      envEdge.offset = 151;
       // calls slower than min delay, but not individually slow enough to be dropped
       for (int i = 0; i < 20; i++) {
         long time = System.currentTimeMillis();
         envEdge.timeQ.put(time);
-        CallRunner cr = getMockedCallRunner(time);
-        Thread.sleep(6);
+        CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
       }
 
@@ -455,35 +455,58 @@ public class TestSimpleRpcScheduler {
       assertEquals("None of these calls should have been discarded", 0,
         scheduler.getNumGeneralCallsDropped());
 
-      envEdge.offset = 12;
+      envEdge.offset = 2000;
       // now slow calls and the ones to be dropped
-      for (int i = 0; i < 20; i++) {
+      for (int i = 0; i < 60; i++) {
         long time = System.currentTimeMillis();
         envEdge.timeQ.put(time);
-        CallRunner cr = getMockedCallRunner(time);
-        Thread.sleep(12);
+        CallRunner cr = getMockedCallRunner(time, 100);
         scheduler.dispatch(cr);
       }
 
       // make sure somewhat slow calls are handled
       waitUntilQueueEmpty(scheduler);
       Thread.sleep(100);
-      assertTrue("There should have been at least 12 calls dropped",
-        scheduler.getNumGeneralCallsDropped() > 12);
+      assertTrue(
+          "There should have been at least 12 calls dropped however there were "
+              + scheduler.getNumGeneralCallsDropped(),
+          scheduler.getNumGeneralCallsDropped() > 12);
     } finally {
       scheduler.stop();
     }
   }
 
-  private CallRunner getMockedCallRunner(long timestamp) throws IOException {
-    CallRunner putCallTask = mock(CallRunner.class);
-    RpcServer.Call putCall = mock(RpcServer.Call.class);
-    putCall.param = RequestConverter.buildMutateRequest(
-      Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
-    RPCProtos.RequestHeader putHead = RPCProtos.RequestHeader.newBuilder().setMethodName("mutate").build();
-    when(putCallTask.getCall()).thenReturn(putCall);
-    when(putCall.getHeader()).thenReturn(putHead);
+  // Get mocked call that has the CallRunner sleep for a while so that the fast
+  // path isn't hit.
+  private CallRunner getMockedCallRunner(long timestamp, final long sleepTime) throws IOException {
+    final RpcServer.Call putCall = mock(RpcServer.Call.class);
+
     putCall.timestamp = timestamp;
-    return putCallTask;
+    putCall.param = RequestConverter.buildMutateRequest(
+        Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
+
+    RPCProtos.RequestHeader putHead = RPCProtos.RequestHeader.newBuilder()
+                                                             .setMethodName("mutate")
+                                                             .build();
+    when(putCall.getSize()).thenReturn(9L);
+    when(putCall.getHeader()).thenReturn(putHead);
+
+    CallRunner cr = new CallRunner(null, putCall) {
+      public void run() {
+        try {
+          LOG.warn("Sleeping for " + sleepTime);
+          Thread.sleep(sleepTime);
+          LOG.warn("Done Sleeping for " + sleepTime);
+        } catch (InterruptedException e) {
+        }
+      }
+      public Call getCall() {
+        return putCall;
+      }
+
+      public void drop() {}
+    };
+
+    return cr;
   }
 }

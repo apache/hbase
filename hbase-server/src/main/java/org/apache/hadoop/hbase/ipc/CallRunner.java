@@ -64,7 +64,9 @@ public class CallRunner {
     this.call = call;
     this.rpcServer = rpcServer;
     // Add size of the call to queue size.
-    this.rpcServer.addCallSize(call.getSize());
+    if (call != null && rpcServer != null) {
+      this.rpcServer.addCallSize(call.getSize());
+    }
   }
 
   public Call getCall() {
