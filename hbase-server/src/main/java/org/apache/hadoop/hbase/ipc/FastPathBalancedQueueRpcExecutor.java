@@ -22,20 +22,21 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * FIFO balanced queue executor with a fastpath. Because this is FIFO, it has no respect for
+ * Balanced queue executor with a fastpath. Because this is FIFO, it has no respect for
  * ordering so a fast path skipping the queuing of Calls if an Handler is available, is possible.
  * Just pass the Call direct to waiting Handler thread. Try to keep the hot Handlers bubbling
  * rather than let them go cold and lose context. Idea taken from Apace Kudu (incubating). See
  * https://gerrit.cloudera.org/#/c/2938/7/src/kudu/rpc/service_queue.h
  */
 @InterfaceAudience.Private
-public class FifoWithFastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
+public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   // Depends on default behavior of BalancedQueueRpcExecutor being FIFO!
 
   /*
@@ -43,11 +44,20 @@ public class FifoWithFastPathBalancedQueueRpcExecutor extends BalancedQueueRpcEx
    */
   private final Deque<FastPathHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
 
-  public FifoWithFastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final int numQueues, final int maxQueueLength, final Configuration conf,
-      final Abortable abortable) {
+  public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
+                                          final int numQueues, final int maxQueueLength, final Configuration conf,
+                                          final Abortable abortable) {
     super(name, handlerCount, numQueues, conf, abortable, LinkedBlockingQueue.class,
         maxQueueLength);
+  }
+
+  public FastPathBalancedQueueRpcExecutor(String name, int handlerCount,
+                                          int numCallQueues,
+                                          Configuration conf,
+                                          Abortable abortable,
+                                          Class<? extends BlockingQueue> queueClass,
+                                          Object... args) {
+    super(name, handlerCount, numCallQueues, conf, abortable, queueClass, args);
   }
 
   @Override
