@@ -34,7 +34,7 @@ public class ReplicationFactory {
   public static ReplicationQueues getReplicationQueues(ReplicationQueuesArguments args)
       throws Exception {
     Class<?> classToBuild = args.getConf().getClass("hbase.region.replica." +
-        "replication.ReplicationQueuesType", ReplicationQueuesZKImpl.class);
+        "replication.replicationQueues.class", ReplicationQueuesZKImpl.class);
     return (ReplicationQueues) ConstructorUtils.invokeConstructor(classToBuild, args);
   }
 
@@ -42,7 +42,7 @@ public class ReplicationFactory {
       ReplicationQueuesClientArguments args)
     throws Exception {
     Class<?> classToBuild = args.getConf().getClass("hbase.region.replica." +
-      "replication.ReplicationQueuesClientType", ReplicationQueuesClientZKImpl.class);
+      "replication.replicationQueuesClient.class", ReplicationQueuesClientZKImpl.class);
     return (ReplicationQueuesClient) ConstructorUtils.invokeConstructor(classToBuild, args);
   }
 
