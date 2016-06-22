@@ -4105,12 +4105,8 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
         initializeKVHeap(scanners, joinedScanners, region);
-      } catch (IOException e) {
-        // close all already instantiated scanners before throwing the exception
-        for (KeyValueScanner scanner : instantiatedScanners) {
-          scanner.close();
-        }
-        throw e;
+      } catch (Throwable t) {
+        throw handleException(instantiatedScanners, t);
       }
     }
 
@@ -4125,6 +4121,26 @@ public class HRegion implements HeapSize { // , Writable{
       if (!joinedScanners.isEmpty()) {
         this.joinedHeap = new KeyValueHeap(joinedScanners, region.comparator);
       }
+    }
+
+    private IOException handleException(List<KeyValueScanner> instantiatedScanners,
+        Throwable t) {
+      // remove scaner read point before throw the exception
+      scannerReadPoints.remove(this);
+      if (storeHeap != null) {
+        storeHeap.close();
+        storeHeap = null;
+        if (joinedHeap != null) {
+          joinedHeap.close();
+          joinedHeap = null;
+        }
+      } else {
+        // close all already instantiated scanners before throwing the exception
+        for (KeyValueScanner scanner : instantiatedScanners) {
+          scanner.close();
+        }
+      }
+      return t instanceof IOException ? (IOException) t : new IOException(t);
     }
 
     @Override

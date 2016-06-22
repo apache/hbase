@@ -2634,19 +2634,23 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         RegionScanner s = rsh.s;
         LOG.info("Scanner " + this.scannerName + " lease expired on region "
             + s.getRegionInfo().getRegionNameAsString());
+        HRegion region = null;
         try {
-          HRegion region = getRegion(s.getRegionInfo().getRegionName());
+          region = getRegion(s.getRegionInfo().getRegionName());
           if (region != null && region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().preScannerClose(s);
           }
-
-          s.close();
-          if (region != null && region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().postScannerClose(s);
-          }
         } catch (IOException e) {
-          LOG.error("Closing scanner for "
-              + s.getRegionInfo().getRegionNameAsString(), e);
+          LOG.error("Closing scanner for " + s.getRegionInfo().getRegionNameAsString(), e);
+        } finally {
+          try {
+            s.close();
+            if (region != null && region.getCoprocessorHost() != null) {
+              region.getCoprocessorHost().postScannerClose(s);
+            }
+          } catch (IOException e) {
+            LOG.error("Closing scanner for " + s.getRegionInfo().getRegionNameAsString(), e);
+          }
         }
       } else {
         LOG.info("Scanner " + this.scannerName + " lease expired");
