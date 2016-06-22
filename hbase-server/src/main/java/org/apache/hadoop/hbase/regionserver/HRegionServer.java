@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -447,7 +448,7 @@ public class HRegionServer extends HasThread implements
   private RegionServerCoprocessorHost rsHost;
 
   private RegionServerProcedureManagerHost rspmHost;
-  
+
   private RegionServerQuotaManager rsQuotaManager;
 
   // Table level lock manager for locking for region operations
@@ -873,7 +874,7 @@ public class HRegionServer extends HasThread implements
 
     // Setup the Quota Manager
     rsQuotaManager = new RegionServerQuotaManager(this);
-    
+
     // Setup RPC client for master communication
     rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
         rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
@@ -942,7 +943,7 @@ public class HRegionServer extends HasThread implements
         // since the server is ready to run
         rspmHost.start();
       }
-      
+
       // Start the Quota Manager
       if (this.rsQuotaManager != null) {
         rsQuotaManager.start(getRpcServer().getScheduler());
@@ -1036,7 +1037,7 @@ public class HRegionServer extends HasThread implements
     if (rsQuotaManager != null) {
       rsQuotaManager.stop();
     }
-    
+
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
     if (rspmHost != null) {
       rspmHost.stop(this.abortRequested || this.killed);
@@ -2600,7 +2601,7 @@ public class HRegionServer extends HasThread implements
   public ChoreService getChoreService() {
     return choreService;
   }
-  
+
   @Override
   public RegionServerQuotaManager getRegionServerQuotaManager() {
     return rsQuotaManager;
@@ -2619,6 +2620,11 @@ public class HRegionServer extends HasThread implements
     // If replication is not enabled, then return immediately.
     if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
         HConstants.REPLICATION_ENABLE_DEFAULT)) {
+      return;
+    }
+
+    if ((server instanceof HMaster) &&
+        (!BaseLoadBalancer.userTablesOnMaster(conf))) {
       return;
     }
 
@@ -2723,7 +2729,7 @@ public class HRegionServer extends HasThread implements
      }
      return tableRegions;
    }
-  
+
   /**
    * Gets the online tables in this RS.
    * This method looks at the in-memory onlineRegions.
