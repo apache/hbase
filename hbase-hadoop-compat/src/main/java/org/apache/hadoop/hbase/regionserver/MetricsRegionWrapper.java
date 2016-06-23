@@ -100,6 +100,13 @@ public interface MetricsRegionWrapper {
 
   long getNumCompactionsCompleted();
 
+  /**
+   * Returns the total number of compactions that have been reported as failed on this region.
+   * Note that a given compaction can be reported as both completed and failed if an exception
+   * is thrown in the processing after {@code HRegion.compact()}.
+   */
+  long getNumCompactionsFailed();
+
   int getRegionHashCode();
 
   /**
