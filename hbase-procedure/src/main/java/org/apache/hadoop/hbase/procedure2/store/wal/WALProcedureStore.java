@@ -70,33 +70,33 @@ public class WALProcedureStore extends ProcedureStoreBase {
     void recoverFileLease(FileSystem fs, Path path) throws IOException;
   }
 
-  private static final String MAX_RETRIES_BEFORE_ROLL_CONF_KEY =
+  public static final String MAX_RETRIES_BEFORE_ROLL_CONF_KEY =
     "hbase.procedure.store.wal.max.retries.before.roll";
   private static final int DEFAULT_MAX_RETRIES_BEFORE_ROLL = 3;
 
-  private static final String WAIT_BEFORE_ROLL_CONF_KEY =
+  public static final String WAIT_BEFORE_ROLL_CONF_KEY =
     "hbase.procedure.store.wal.wait.before.roll";
   private static final int DEFAULT_WAIT_BEFORE_ROLL = 500;
 
-  private static final String ROLL_RETRIES_CONF_KEY =
+  public static final String ROLL_RETRIES_CONF_KEY =
     "hbase.procedure.store.wal.max.roll.retries";
   private static final int DEFAULT_ROLL_RETRIES = 3;
 
-  private static final String MAX_SYNC_FAILURE_ROLL_CONF_KEY =
+  public static final String MAX_SYNC_FAILURE_ROLL_CONF_KEY =
     "hbase.procedure.store.wal.sync.failure.roll.max";
   private static final int DEFAULT_MAX_SYNC_FAILURE_ROLL = 3;
 
-  private static final String PERIODIC_ROLL_CONF_KEY =
+  public static final String PERIODIC_ROLL_CONF_KEY =
     "hbase.procedure.store.wal.periodic.roll.msec";
   private static final int DEFAULT_PERIODIC_ROLL = 60 * 60 * 1000; // 1h
 
-  private static final String SYNC_WAIT_MSEC_CONF_KEY = "hbase.procedure.store.wal.sync.wait.msec";
+  public static final String SYNC_WAIT_MSEC_CONF_KEY = "hbase.procedure.store.wal.sync.wait.msec";
   private static final int DEFAULT_SYNC_WAIT_MSEC = 100;
 
-  private static final String USE_HSYNC_CONF_KEY = "hbase.procedure.store.wal.use.hsync";
+  public static final String USE_HSYNC_CONF_KEY = "hbase.procedure.store.wal.use.hsync";
   private static final boolean DEFAULT_USE_HSYNC = true;
 
-  private static final String ROLL_THRESHOLD_CONF_KEY = "hbase.procedure.store.wal.roll.threshold";
+  public static final String ROLL_THRESHOLD_CONF_KEY = "hbase.procedure.store.wal.roll.threshold";
   private static final long DEFAULT_ROLL_THRESHOLD = 32 * 1024 * 1024; // 32M
 
   private final LinkedList<ProcedureWALFile> logs = new LinkedList<ProcedureWALFile>();
