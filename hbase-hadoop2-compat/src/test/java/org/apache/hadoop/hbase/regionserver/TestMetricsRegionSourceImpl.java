@@ -149,5 +149,10 @@ public class TestMetricsRegionSourceImpl {
     public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
       return null;
     }
+    
+    @Override
+    public long getNumCompactionsFailed() {
+      return 0;
+    }
   }
 }

@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -295,6 +296,48 @@ public class TestCompaction {
     latch.await();
 
     thread.interruptIfNecessary();
+  }
+
+  @Test
+  public void testCompactionFailure() throws Exception {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+
+    // setup a region/store with some files
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < HStore.DEFAULT_BLOCKING_STOREFILE_COUNT - 1; i++) {
+      createStoreFile(r);
+    }
+
+    HRegion mockRegion = Mockito.spy(r);
+    Mockito.when(mockRegion.checkSplit()).thenThrow(new IndexOutOfBoundsException());
+
+    MetricsRegionWrapper metricsWrapper = new MetricsRegionWrapperImpl(r);
+
+    long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+    long preFailedCount = metricsWrapper.getNumCompactionsFailed();
+
+    CountDownLatch latch = new CountDownLatch(1);
+    TrackableCompactionRequest request = new TrackableCompactionRequest(latch);
+    thread.requestCompaction(mockRegion, store, "test custom comapction", Store.PRIORITY_USER,
+        request, null);
+    // wait for the latch to complete.
+    latch.await(120, TimeUnit.SECONDS);
+
+    // compaction should have completed and been marked as failed due to error in split request
+    long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+    long postFailedCount = metricsWrapper.getNumCompactionsFailed();
+
+    assertTrue("Completed count should have increased (pre=" + preCompletedCount +
+        ", post="+postCompletedCount+")",
+        postCompletedCount > preCompletedCount);
+    assertTrue("Failed count should have increased (pre=" + preFailedCount +
+        ", post=" + postFailedCount + ")",
+        postFailedCount > preFailedCount);
   }
 
   /**

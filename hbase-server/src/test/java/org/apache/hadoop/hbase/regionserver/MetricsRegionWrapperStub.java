@@ -109,4 +109,9 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
     return new HashMap<String, DescriptiveStatistics>();
   }
+
+  @Override
+  public long getNumCompactionsFailed() {
+    return 0;
+  }
 }

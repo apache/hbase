@@ -291,6 +291,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   // Compaction counters
   final AtomicLong compactionsFinished = new AtomicLong(0L);
+  final AtomicLong compactionsFailed = new AtomicLong(0L);
   final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
   final AtomicLong compactionNumBytesCompacted = new AtomicLong(0L);
 
@@ -5946,7 +5947,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      42 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      43 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (12 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
@@ -5963,7 +5964,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
       ClassSize.OBJECT + // closeLock
       (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
-      (3 * ClassSize.ATOMIC_LONG) + // memStoreSize, numPutsWithoutWAL, dataInMemoryWithoutWAL
+      (4 * ClassSize.ATOMIC_LONG) + // memStoreSize, numPutsWithoutWAL, dataInMemoryWithoutWAL,
+                                    // compactionsFailed
       (2 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, scannerReadPoints
       WriteState.HEAP_SIZE + // writestate
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
@@ -6568,6 +6570,10 @@ public class HRegion implements HeapSize { // , Writable{
     compactionNumBytesCompacted.addAndGet(filesSizeCompacted);
 
     assert newValue >= 0;
+  }
+
+  public void reportCompactionRequestFailure() {
+    compactionsFailed.incrementAndGet();
   }
 
   /**

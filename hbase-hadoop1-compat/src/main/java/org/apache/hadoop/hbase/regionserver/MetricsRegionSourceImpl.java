@@ -199,6 +199,9 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     mrb.addCounter(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
         MetricsRegionSource.COMPACTIONS_COMPLETED_DESC,
         this.regionWrapper.getNumCompactionsCompleted());
+    mrb.addCounter(regionNamePrefix + MetricsRegionSource.COMPACTIONS_FAILED_COUNT,
+        MetricsRegionSource.COMPACTIONS_FAILED_DESC,
+        this.regionWrapper.getNumCompactionsFailed());
     mrb.addCounter(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
         MetricsRegionSource.NUM_BYTES_COMPACTED_DESC,
         this.regionWrapper.getNumBytesCompacted());

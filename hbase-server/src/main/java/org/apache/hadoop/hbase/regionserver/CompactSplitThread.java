@@ -518,9 +518,11 @@ public class CompactSplitThread implements CompactionRequestor {
         if (remoteEx != ex) {
           LOG.info("Compaction failed at original callstack: " + formatStackTrace(ex));
         }
+        region.reportCompactionRequestFailure();
         server.checkFileSystem();
       } catch (Exception ex) {
         LOG.error("Compaction failed " + this, ex);
+        region.reportCompactionRequestFailure();
         server.checkFileSystem();
       } finally {
         LOG.debug("CompactSplitThread Status: " + CompactSplitThread.this);
