@@ -62,9 +62,9 @@ public class TestStressWALProcedureStore {
   private Path logDir;
 
   private void setupConfiguration(Configuration conf) {
-    conf.setBoolean("hbase.procedure.store.wal.use.hsync", false);
-    conf.setInt("hbase.procedure.store.wal.periodic.roll.msec", 5000);
-    conf.setInt("hbase.procedure.store.wal.roll.threshold", 128 * 1024);
+    conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
+    conf.setInt(WALProcedureStore.PERIODIC_ROLL_CONF_KEY, 5000);
+    conf.setInt(WALProcedureStore.ROLL_THRESHOLD_CONF_KEY, 128 * 1024);
   }
 
   @Before

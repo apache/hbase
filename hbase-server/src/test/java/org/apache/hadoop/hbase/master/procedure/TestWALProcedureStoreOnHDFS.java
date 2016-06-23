@@ -88,9 +88,9 @@ public class TestWALProcedureStoreOnHDFS {
     conf.setInt("dfs.namenode.replication.min", 3);
 
     // increase the value for slow test-env
-    conf.setInt("hbase.procedure.store.wal.wait.before.roll", 1000);
-    conf.setInt("hbase.procedure.store.wal.max.roll.retries", 10);
-    conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 10);
+    conf.setInt(WALProcedureStore.WAIT_BEFORE_ROLL_CONF_KEY, 1000);
+    conf.setInt(WALProcedureStore.ROLL_RETRIES_CONF_KEY, 10);
+    conf.setInt(WALProcedureStore.MAX_SYNC_FAILURE_ROLL_CONF_KEY, 10);
   }
 
   public void setup() throws Exception {
