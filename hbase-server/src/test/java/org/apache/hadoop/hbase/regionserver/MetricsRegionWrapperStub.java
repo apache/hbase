@@ -116,6 +116,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getNumCompactionsFailed() {
+    return 0;
+  }
+
+  @Override
   public int getRegionHashCode() {
     return 42;
   }

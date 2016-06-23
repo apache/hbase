@@ -149,6 +149,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getNumCompactionsFailed() {
+      return 0;
+    }
+
+    @Override
     public int getRegionHashCode() {
       return regionName.hashCode();
     }
