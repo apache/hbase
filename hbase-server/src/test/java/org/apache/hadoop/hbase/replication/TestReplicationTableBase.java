@@ -54,9 +54,9 @@ public class TestReplicationTableBase {
     utility = new HBaseTestingUtility();
     utility.startMiniZKCluster();
     conf = utility.getConfiguration();
-    conf.setClass("hbase.region.replica.replication.replicationQueues.class",
+    conf.setClass("hbase.region.replica.replication.ReplicationQueuesType",
       TableBasedReplicationQueuesImpl.class, ReplicationQueues.class);
-    conf.setClass("hbase.region.replica.replication.replicationQueuesClient.class",
+    conf.setClass("hbase.region.replica.replication.ReplicationQueuesClientType",
       TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     utility.waitFor(0, TIME_OUT_MILLIS, new Waiter.ExplainingPredicate<Exception>() {
