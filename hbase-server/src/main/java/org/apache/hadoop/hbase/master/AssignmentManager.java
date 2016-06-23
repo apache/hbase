@@ -3757,9 +3757,20 @@ public class AssignmentManager extends ZooKeeperListener {
     if (!org.apache.commons.lang.StringUtils.isEmpty(s)) {
       return s;
     }
+
+    // Always bring the parent back online. Even if it's not offline
+    // There's no harm in making it online again.
     regionOnline(p, sn);
-    regionOffline(a);
-    regionOffline(b);
+
+    // Only offline the region if they are known to exist.
+    RegionState regionStateA = regionStates.getRegionState(a);
+    RegionState regionStateB = regionStates.getRegionState(b);
+    if (regionStateA != null) {
+      regionOffline(a);
+    }
+    if (regionStateB != null) {
+      regionOffline(b);
+    }
 
     if (getTableStateManager().isTableState(p.getTable(),
         ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
