@@ -74,10 +74,10 @@ public class TestMasterFailoverWithProcedures {
 
   private static void setupConf(Configuration conf) {
     // don't waste time retrying with the roll, the test is already slow enough.
-    conf.setInt("hbase.procedure.store.wal.max.retries.before.roll", 1);
-    conf.setInt("hbase.procedure.store.wal.wait.before.roll", 0);
-    conf.setInt("hbase.procedure.store.wal.max.roll.retries", 1);
-    conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 1);
+    conf.setInt(WALProcedureStore.MAX_RETRIES_BEFORE_ROLL_CONF_KEY, 1);
+    conf.setInt(WALProcedureStore.WAIT_BEFORE_ROLL_CONF_KEY, 0);
+    conf.setInt(WALProcedureStore.ROLL_RETRIES_CONF_KEY, 1);
+    conf.setInt(WALProcedureStore.MAX_SYNC_FAILURE_ROLL_CONF_KEY, 1);
   }
 
   @Before
@@ -198,7 +198,7 @@ public class TestMasterFailoverWithProcedures {
     HMaster firstMaster = UTIL.getHBaseCluster().getMaster();
 
     // cause WAL rolling after a delete in WAL:
-    firstMaster.getConfiguration().setLong("hbase.procedure.store.wal.roll.threshold", 1);
+    firstMaster.getConfiguration().setLong(WALProcedureStore.ROLL_THRESHOLD_CONF_KEY, 1);
 
     HMaster backupMaster3 = Mockito.mock(HMaster.class);
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();

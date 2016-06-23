@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
@@ -61,7 +62,7 @@ public class TestProcedureReplayOrder {
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
-    htu.getConfiguration().setInt("hbase.procedure.store.wal.sync.wait.msec", 25);
+    htu.getConfiguration().setInt(WALProcedureStore.SYNC_WAIT_MSEC_CONF_KEY, 25);
 
     testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
