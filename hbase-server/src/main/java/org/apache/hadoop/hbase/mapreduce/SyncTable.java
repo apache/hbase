@@ -653,9 +653,16 @@ public class SyncTable extends Configured implements Tool {
             scan.setStopRow(nextSourceKey.copyBytes());
           }
           
-          ResultScanner targetScanner = targetTable.getScanner(scan);
-          for (Result row : targetScanner) {
-            targetHasher.hashResult(row);          
+          ResultScanner targetScanner = null;
+          try {
+            targetScanner = targetTable.getScanner(scan);
+            for (Result row : targetScanner) {
+              targetHasher.hashResult(row);
+            }
+          } finally {
+            if (targetScanner != null) {
+              targetScanner.close();
+            }
           }
         } // else current batch ends exactly at split end row
 
