@@ -141,6 +141,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getNumCompactionsFailed() {
+    return this.region.compactionsFailed.get();
+  }
+
+  @Override
   public long getMaxStoreFileAge() {
     return maxStoreFileAge;
   }

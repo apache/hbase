@@ -28,9 +28,11 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String OPS_SAMPLE_NAME = "ops";
   String SIZE_VALUE_NAME = "size";
   String COMPACTIONS_COMPLETED_COUNT = "compactionsCompletedCount";
+  String COMPACTIONS_FAILED_COUNT = "compactionsFailedCount";
   String NUM_BYTES_COMPACTED_COUNT = "numBytesCompactedCount";
   String NUM_FILES_COMPACTED_COUNT = "numFilesCompactedCount";
   String COMPACTIONS_COMPLETED_DESC = "Number of compactions that have completed.";
+  String COMPACTIONS_FAILED_DESC = "Number of compactions that have failed.";
   String  NUM_BYTES_COMPACTED_DESC =
       "Sum of filesize on all files entering a finished, successful or aborted, compaction";
   String NUM_FILES_COMPACTED_DESC =
