@@ -1,22 +1,25 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.2 06/20/2016
+Release Notes - HBase - Version 1.2.2 07/02/2016
 
 ** Sub-task
     * [HBASE-15386] - PREFETCH_BLOCKS_ON_OPEN in HColumnDescriptor is ignored
     * [HBASE-15640] - L1 cache doesn't give fair warning that it is showing partial stats only when it hits limit
     * [HBASE-15872] - Split TestWALProcedureStore
     * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
+    * [HBASE-16034] - Fix ProcedureTestingUtility#LoadCounter.setMaxProcId()
+    * [HBASE-16056] - Procedure v2 - fix master crash for FileNotFound
 
 ** Bug
     * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum
-    * [HBASE-13627] - Terminating RS results in redundant CLOSE RPC
     * [HBASE-14644] - Region in transition metric is broken
     * [HBASE-14818] - user_permission does not list namespace permissions
     * [HBASE-15234] - ReplicationLogCleaner can abort due to transient ZK issues
     * [HBASE-15465] - userPermission returned by getUserPermission() for the selected namespace does not have namespace set
     * [HBASE-15485] - Filter.reset() should not be called between batches
+    * [HBASE-15582] - SnapshotManifestV1 too verbose when there are no regions
     * [HBASE-15587] - FSTableDescriptors.getDescriptor() logs stack trace erronously
+    * [HBASE-15591] - ServerCrashProcedure not yielding
     * [HBASE-15596] - hbAdmin is not closed after LoadIncrementalHFiles completes
     * [HBASE-15613] - TestNamespaceCommand times out
     * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
@@ -33,10 +36,10 @@ Release Notes - HBase - Version 1.2.2 06/20/2016
     * [HBASE-15698] - Increment TimeRange not serialized to server
     * [HBASE-15738] - Ensure artifacts in project dist area include required md5 file
     * [HBASE-15742] - Reduce allocation of objects in metrics
+    * [HBASE-15746] - Remove extra RegionCoprocessor preClose() in RSRpcServices#closeRegion
     * [HBASE-15755] - SnapshotDescriptionUtils and SnapshotTestingUtils do not have any Interface audience marked
     * [HBASE-15801] - Upgrade checkstyle for all branches
     * [HBASE-15811] - Batch Get after batch Put does not fetch all Cells
-    * [HBASE-15818] - Shell create ‘t1’, ‘f1’, ‘f2’, ‘f3’ wrong number of arguments
     * [HBASE-15824] - LocalHBaseCluster gets bind exception in master info port
     * [HBASE-15827] - Backport HBASE-15125 'HBaseFsck's adoptHdfsOrphan function creates region with wrong end key boundary' to 1.2
     * [HBASE-15841] - Performance Evaluation tool total rows may not be set correctly
@@ -51,7 +54,10 @@ Release Notes - HBase - Version 1.2.2 06/20/2016
     * [HBASE-15955] - Disable action in CatalogJanitor#setEnabled should wait for active cleanup scan to finish
     * [HBASE-15957] - RpcClientImpl.close never ends in some circumstances
     * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-16012] - Major compaction can't work due to obsolete scanner read point in RegionServer
     * [HBASE-16016] - AssignmentManager#waitForAssignment could have unexpected negative deadline
+    * [HBASE-16032] - Possible memory leak in StoreScanner
+    * [HBASE-16062] - Improper error handling in WAL Reader/Writer creation
 
 ** Improvement
     * [HBASE-13532] - Make UnknownScannerException logging less scary
@@ -62,6 +68,9 @@ Release Notes - HBase - Version 1.2.2 06/20/2016
     * [HBASE-15808] - Reduce potential bulk load intermediate space usage and waste
     * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
     * [HBASE-15854] - Log the cause of SASL connection failures
+
+** New Feature
+    * [HBASE-15592] - Print Procedure WAL content
 
 ** Task
     * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
