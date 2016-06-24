@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -110,6 +111,8 @@ public class MetricsHBaseServer {
         source.failedSanityException();
       } else if (throwable instanceof MultiActionResultTooLarge) {
         source.multiActionTooLargeException();
+      } else if (throwable instanceof CallQueueTooBigException) {
+        source.callQueueTooBigException();
       }
     }
   }

@@ -49,6 +49,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableFastCounter exceptionsNSRE;
   private final MutableFastCounter exceptionsMoved;
   private final MutableFastCounter exceptionsMultiTooLarge;
+  private final MutableFastCounter exceptionsCallQueueTooBig;
 
 
   private MetricHistogram queueCallTime;
@@ -85,6 +86,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         .newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsMultiTooLarge = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
+    this.exceptionsCallQueueTooBig = this.getMetricsRegistry().newCounter(
+      EXCEPTIONS_CALL_QUEUE_TOO_BIG, EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC, 0L);
 
     this.authenticationSuccesses = this.getMetricsRegistry().newCounter(
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0L);
@@ -166,6 +169,11 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void multiActionTooLargeException() {
     exceptionsMultiTooLarge.incr();
+  }
+
+  @Override
+  public void callQueueTooBigException() {
+    exceptionsCallQueueTooBig.incr();
   }
 
   @Override
