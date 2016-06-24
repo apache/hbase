@@ -6295,20 +6295,6 @@ public final class ProcedureProtos {
      * <code>optional uint64 proc_id = 3;</code>
      */
     long getProcId();
-
-    // repeated uint64 child_id = 4;
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    java.util.List<java.lang.Long> getChildIdList();
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    int getChildIdCount();
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    long getChildId(int index);
   }
   /**
    * Protobuf type {@code hbase.pb.ProcedureWALEntry}
@@ -6385,27 +6371,6 @@ public final class ProcedureProtos {
               procId_ = input.readUInt64();
               break;
             }
-            case 32: {
-              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-                childId_ = new java.util.ArrayList<java.lang.Long>();
-                mutable_bitField0_ |= 0x00000008;
-              }
-              childId_.add(input.readUInt64());
-              break;
-            }
-            case 34: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008) && input.getBytesUntilLimit() > 0) {
-                childId_ = new java.util.ArrayList<java.lang.Long>();
-                mutable_bitField0_ |= 0x00000008;
-              }
-              while (input.getBytesUntilLimit() > 0) {
-                childId_.add(input.readUInt64());
-              }
-              input.popLimit(limit);
-              break;
-            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -6416,9 +6381,6 @@ public final class ProcedureProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
           procedure_ = java.util.Collections.unmodifiableList(procedure_);
-        }
-        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-          childId_ = java.util.Collections.unmodifiableList(childId_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -6638,34 +6600,10 @@ public final class ProcedureProtos {
       return procId_;
     }
 
-    // repeated uint64 child_id = 4;
-    public static final int CHILD_ID_FIELD_NUMBER = 4;
-    private java.util.List<java.lang.Long> childId_;
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    public java.util.List<java.lang.Long>
-        getChildIdList() {
-      return childId_;
-    }
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    public int getChildIdCount() {
-      return childId_.size();
-    }
-    /**
-     * <code>repeated uint64 child_id = 4;</code>
-     */
-    public long getChildId(int index) {
-      return childId_.get(index);
-    }
-
     private void initFields() {
       type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.PROCEDURE_WAL_EOF;
       procedure_ = java.util.Collections.emptyList();
       procId_ = 0L;
-      childId_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6698,9 +6636,6 @@ public final class ProcedureProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt64(3, procId_);
       }
-      for (int i = 0; i < childId_.size(); i++) {
-        output.writeUInt64(4, childId_.get(i));
-      }
       getUnknownFields().writeTo(output);
     }
 
@@ -6721,15 +6656,6 @@ public final class ProcedureProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(3, procId_);
-      }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < childId_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt64SizeNoTag(childId_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getChildIdList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6766,8 +6692,6 @@ public final class ProcedureProtos {
         result = result && (getProcId()
             == other.getProcId());
       }
-      result = result && getChildIdList()
-          .equals(other.getChildIdList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -6792,10 +6716,6 @@ public final class ProcedureProtos {
       if (hasProcId()) {
         hash = (37 * hash) + PROC_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getProcId());
-      }
-      if (getChildIdCount() > 0) {
-        hash = (37 * hash) + CHILD_ID_FIELD_NUMBER;
-        hash = (53 * hash) + getChildIdList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -6917,8 +6837,6 @@ public final class ProcedureProtos {
         }
         procId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
-        childId_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -6964,11 +6882,6 @@ public final class ProcedureProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.procId_ = procId_;
-        if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          childId_ = java.util.Collections.unmodifiableList(childId_);
-          bitField0_ = (bitField0_ & ~0x00000008);
-        }
-        result.childId_ = childId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7016,16 +6929,6 @@ public final class ProcedureProtos {
         }
         if (other.hasProcId()) {
           setProcId(other.getProcId());
-        }
-        if (!other.childId_.isEmpty()) {
-          if (childId_.isEmpty()) {
-            childId_ = other.childId_;
-            bitField0_ = (bitField0_ & ~0x00000008);
-          } else {
-            ensureChildIdIsMutable();
-            childId_.addAll(other.childId_);
-          }
-          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7373,72 +7276,6 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // repeated uint64 child_id = 4;
-      private java.util.List<java.lang.Long> childId_ = java.util.Collections.emptyList();
-      private void ensureChildIdIsMutable() {
-        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
-          childId_ = new java.util.ArrayList<java.lang.Long>(childId_);
-          bitField0_ |= 0x00000008;
-         }
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public java.util.List<java.lang.Long>
-          getChildIdList() {
-        return java.util.Collections.unmodifiableList(childId_);
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public int getChildIdCount() {
-        return childId_.size();
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public long getChildId(int index) {
-        return childId_.get(index);
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public Builder setChildId(
-          int index, long value) {
-        ensureChildIdIsMutable();
-        childId_.set(index, value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public Builder addChildId(long value) {
-        ensureChildIdIsMutable();
-        childId_.add(value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public Builder addAllChildId(
-          java.lang.Iterable<? extends java.lang.Long> values) {
-        ensureChildIdIsMutable();
-        super.addAll(values, childId_);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint64 child_id = 4;</code>
-       */
-      public Builder clearChildId() {
-        childId_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000008);
-        onChanged();
-        return this;
-      }
-
       // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureWALEntry)
     }
 
@@ -7518,19 +7355,19 @@ public final class ProcedureProtos {
       "eTracker\0229\n\004node\030\001 \003(\0132+.hbase.pb.Proced" +
       "ureStoreTracker.TrackerNode\032A\n\013TrackerNo" +
       "de\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004\022\017\n" +
-      "\007deleted\030\003 \003(\004\"\257\002\n\021ProcedureWALEntry\022.\n\004",
+      "\007deleted\030\003 \003(\004\"\235\002\n\021ProcedureWALEntry\022.\n\004",
       "type\030\001 \002(\0162 .hbase.pb.ProcedureWALEntry." +
       "Type\022&\n\tprocedure\030\002 \003(\0132\023.hbase.pb.Proce" +
-      "dure\022\017\n\007proc_id\030\003 \001(\004\022\020\n\010child_id\030\004 \003(\004\"" +
-      "\236\001\n\004Type\022\025\n\021PROCEDURE_WAL_EOF\020\001\022\026\n\022PROCE" +
-      "DURE_WAL_INIT\020\002\022\030\n\024PROCEDURE_WAL_INSERT\020" +
-      "\003\022\030\n\024PROCEDURE_WAL_UPDATE\020\004\022\030\n\024PROCEDURE" +
-      "_WAL_DELETE\020\005\022\031\n\025PROCEDURE_WAL_COMPACT\020\006" +
-      "*p\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010" +
-      "RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEO" +
-      "UT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*or",
-      "g.apache.hadoop.hbase.protobuf.generated" +
-      "B\017ProcedureProtosH\001\210\001\001\240\001\001"
+      "dure\022\017\n\007proc_id\030\003 \001(\004\"\236\001\n\004Type\022\025\n\021PROCED" +
+      "URE_WAL_EOF\020\001\022\026\n\022PROCEDURE_WAL_INIT\020\002\022\030\n" +
+      "\024PROCEDURE_WAL_INSERT\020\003\022\030\n\024PROCEDURE_WAL" +
+      "_UPDATE\020\004\022\030\n\024PROCEDURE_WAL_DELETE\020\005\022\031\n\025P" +
+      "ROCEDURE_WAL_COMPACT\020\006*p\n\016ProcedureState" +
+      "\022\020\n\014INITIALIZING\020\001\022\014\n\010RUNNABLE\020\002\022\013\n\007WAIT" +
+      "ING\020\003\022\023\n\017WAITING_TIMEOUT\020\004\022\016\n\nROLLEDBACK" +
+      "\020\005\022\014\n\010FINISHED\020\006BE\n*org.apache.hadoop.hb",
+      "ase.protobuf.generatedB\017ProcedureProtosH" +
+      "\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7584,7 +7421,7 @@ public final class ProcedureProtos {
           internal_static_hbase_pb_ProcedureWALEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ProcedureWALEntry_descriptor,
-              new java.lang.String[] { "Type", "Procedure", "ProcId", "ChildId", });
+              new java.lang.String[] { "Type", "Procedure", "ProcId", });
           return null;
         }
       };

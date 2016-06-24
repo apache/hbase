@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -230,10 +229,6 @@ public class ProcedureTestingUtility {
       addStackIndex(index);
     }
 
-    public void setFinishedState() {
-      setState(ProcedureState.FINISHED);
-    }
-
     @Override
     protected Procedure[] execute(Void env) { return null; }
 
@@ -252,8 +247,7 @@ public class ProcedureTestingUtility {
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
     private final ArrayList<Procedure> corrupted = new ArrayList<Procedure>();
-    private final ArrayList<ProcedureInfo> completed = new ArrayList<ProcedureInfo>();
-    private final ArrayList<Procedure> runnable = new ArrayList<Procedure>();
+    private final ArrayList<Procedure> loaded = new ArrayList<Procedure>();
 
     private Set<Long> procIds;
     private long maxProcId = 0;
@@ -272,8 +266,7 @@ public class ProcedureTestingUtility {
 
     public void reset(final Set<Long> procIds) {
       corrupted.clear();
-      completed.clear();
-      runnable.clear();
+      loaded.clear();
       this.procIds = procIds;
       this.maxProcId = 0;
     }
@@ -282,24 +275,12 @@ public class ProcedureTestingUtility {
       return maxProcId;
     }
 
-    public ArrayList<Procedure> getRunnables() {
-      return runnable;
-    }
-
-    public int getRunnableCount() {
-      return runnable.size();
-    }
-
-    public ArrayList<ProcedureInfo> getCompleted() {
-      return completed;
-    }
-
-    public int getCompletedCount() {
-      return completed.size();
+    public ArrayList<Procedure> getLoaded() {
+      return loaded;
     }
 
     public int getLoadedCount() {
-      return runnable.size() + completed.size();
+      return loaded.size();
     }
 
     public ArrayList<Procedure> getCorrupted() {
@@ -318,21 +299,13 @@ public class ProcedureTestingUtility {
     @Override
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        long procId;
-        if (procIter.isNextCompleted()) {
-          ProcedureInfo proc = procIter.nextAsProcedureInfo();
-          procId = proc.getProcId();
-          LOG.debug("loading completed procId=" + procId + ": " + proc);
-          completed.add(proc);
-        } else {
-          Procedure proc = procIter.nextAsProcedure();
-          procId = proc.getProcId();
-          LOG.debug("loading runnable procId=" + procId + ": " + proc);
-          runnable.add(proc);
-        }
+        Procedure proc = procIter.nextAsProcedure();
+        LOG.debug("loading procId=" + proc.getProcId() + ": " + proc);
         if (procIds != null) {
-          assertTrue("procId=" + procId + " unexpected", procIds.contains(procId));
+          assertTrue("procId=" + proc.getProcId() + " unexpected",
+                     procIds.contains(proc.getProcId()));
         }
+        loaded.add(proc);
       }
     }
 
