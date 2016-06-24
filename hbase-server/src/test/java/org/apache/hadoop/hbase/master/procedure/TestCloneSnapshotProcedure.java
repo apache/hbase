@@ -142,8 +142,11 @@ public class TestCloneSnapshotProcedure {
     final TableName clonedTableName = TableName.valueOf("testCloneSnapshot2");
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
+    // take the snapshot
+    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+
     long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()));
+      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
     MasterProcedureTestingUtility.validateTableIsEnabled(
       UTIL.getHBaseCluster().getMaster(),
@@ -156,10 +159,13 @@ public class TestCloneSnapshotProcedure {
     final TableName clonedTableName = TableName.valueOf("testCloneSnapshotTwiceWithSameNonce");
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
+    // take the snapshot
+    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+
     long procId1 = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
     long procId2 = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
 
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
@@ -172,12 +178,15 @@ public class TestCloneSnapshotProcedure {
 
   @Test(timeout=60000)
   public void testCloneSnapshotToSameTable() throws Exception {
+    // take the snapshot
+    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final TableName clonedTableName = TableName.valueOf(getSnapshot().getTable());
+    final TableName clonedTableName = TableName.valueOf(snapshotDesc.getTable());
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
     long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()));
+      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
     ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
     LOG.debug("Clone snapshot failed with exception: " + result.getExceptionFullMessage());
@@ -191,11 +200,14 @@ public class TestCloneSnapshotProcedure {
     final TableName clonedTableName = TableName.valueOf("testRecoveryAndDoubleExecution");
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
+    // take the snapshot
+    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Clone snapshot procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
     int numberOfSteps = CloneSnapshotState.values().length;
@@ -216,12 +228,15 @@ public class TestCloneSnapshotProcedure {
     final TableName clonedTableName = TableName.valueOf("testRollbackAndDoubleExecution");
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
+    // take the snapshot
+    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Clone snapshot procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, getSnapshot()), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
 
     int numberOfSteps = CloneSnapshotState.values().length - 2; // failing in the middle of proc
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
