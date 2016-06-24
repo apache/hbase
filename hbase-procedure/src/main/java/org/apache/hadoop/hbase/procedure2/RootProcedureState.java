@@ -19,9 +19,7 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,8 +49,7 @@ class RootProcedureState {
     ROLLINGBACK,     // The Procedure failed and the execution was rolledback
   }
 
-  private Set<Procedure> subprocs = null;
-  private ArrayList<Procedure> subprocStack = null;
+  private ArrayList<Procedure> subprocedures = null;
   private State state = State.RUNNING;
   private int running = 0;
 
@@ -90,23 +87,13 @@ class RootProcedureState {
     state = State.FAILED;
   }
 
-  protected synchronized long[] getSubprocedureIds() {
-    if (subprocs == null) return null;
-    int index = 0;
-    final long[] subIds = new long[subprocs.size()];
-    for (Procedure proc: subprocs) {
-      subIds[index++] = proc.getProcId();
-    }
-    return subIds;
-  }
-
-  protected synchronized List<Procedure> getSubproceduresStack() {
-    return subprocStack;
+  protected synchronized List<Procedure> getSubprocedures() {
+    return subprocedures;
   }
 
   protected synchronized RemoteProcedureException getException() {
-    if (subprocStack != null) {
-      for (Procedure proc: subprocStack) {
+    if (subprocedures != null) {
+      for (Procedure proc: subprocedures) {
         if (proc.hasException()) {
           return proc.getException();
         }
@@ -146,19 +133,11 @@ class RootProcedureState {
     if (proc.isFailed()) {
       state = State.FAILED;
     }
-    if (subprocStack == null) {
-      subprocStack = new ArrayList<Procedure>();
+    if (subprocedures == null) {
+      subprocedures = new ArrayList<Procedure>();
     }
-    proc.addStackIndex(subprocStack.size());
-    subprocStack.add(proc);
-  }
-
-  protected synchronized void addSubProcedure(final Procedure proc) {
-    if (!proc.hasParent()) return;
-    if (subprocs == null) {
-      subprocs = new HashSet<Procedure>();
-    }
-    subprocs.add(proc);
+    proc.addStackIndex(subprocedures.size());
+    subprocedures.add(proc);
   }
 
   /**
@@ -169,19 +148,18 @@ class RootProcedureState {
    * on load we recreate the full stack by aggregating each procedure stack-positions.
    */
   protected synchronized void loadStack(final Procedure proc) {
-    addSubProcedure(proc);
     int[] stackIndexes = proc.getStackIndexes();
     if (stackIndexes != null) {
-      if (subprocStack == null) {
-        subprocStack = new ArrayList<Procedure>();
+      if (subprocedures == null) {
+        subprocedures = new ArrayList<Procedure>();
       }
-      int diff = (1 + stackIndexes[stackIndexes.length - 1]) - subprocStack.size();
+      int diff = (1 + stackIndexes[stackIndexes.length - 1]) - subprocedures.size();
       if (diff > 0) {
-        subprocStack.ensureCapacity(1 + stackIndexes[stackIndexes.length - 1]);
-        while (diff-- > 0) subprocStack.add(null);
+        subprocedures.ensureCapacity(1 + stackIndexes[stackIndexes.length - 1]);
+        while (diff-- > 0) subprocedures.add(null);
       }
       for (int i = 0; i < stackIndexes.length; ++i) {
-        subprocStack.set(stackIndexes[i], proc);
+        subprocedures.set(stackIndexes[i], proc);
       }
     }
     if (proc.getState() == ProcedureState.ROLLEDBACK) {
@@ -195,8 +173,8 @@ class RootProcedureState {
    * Called on store load by the ProcedureExecutor to validate the procedure stack.
    */
   protected synchronized boolean isValid() {
-    if (subprocStack != null) {
-      for (Procedure proc: subprocStack) {
+    if (subprocedures != null) {
+      for (Procedure proc: subprocedures) {
         if (proc == null) {
           return false;
         }

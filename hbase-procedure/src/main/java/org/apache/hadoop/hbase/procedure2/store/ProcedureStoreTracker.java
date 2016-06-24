@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.procedure2.store;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -393,14 +392,6 @@ public class ProcedureStoreTracker {
     }
 
     trackProcIds(procId);
-  }
-
-  public void delete(long[] procIds) {
-    // TODO: optimize
-    Arrays.sort(procIds);
-    for (int i = 0; i < procIds.length; ++i) {
-      delete(procIds[i]);
-    }
   }
 
   private void trackProcIds(long procId) {
