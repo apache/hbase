@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.mapreduce.TestImportTSVWithTTLs.TTLCheckingObserver;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -183,11 +184,78 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  private void setupRandomGeneratorMapper(Job job) {
-    job.setInputFormatClass(NMapInputFormat.class);
-    job.setMapperClass(RandomKVGeneratingMapper.class);
-    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-    job.setMapOutputValueClass(KeyValue.class);
+  /**
+   * Simple mapper that makes Put output.
+   */
+  static class RandomPutGeneratingMapper
+      extends Mapper<NullWritable, NullWritable,
+                 ImmutableBytesWritable, Put> {
+
+    private int keyLength;
+    private static final int KEYLEN_DEFAULT=10;
+    private static final String KEYLEN_CONF="randomkv.key.length";
+
+    private int valLength;
+    private static final int VALLEN_DEFAULT=10;
+    private static final String VALLEN_CONF="randomkv.val.length";
+    private static final byte [] QUALIFIER = Bytes.toBytes("data");
+
+    @Override
+    protected void setup(Context context) throws IOException,
+        InterruptedException {
+      super.setup(context);
+
+      Configuration conf = context.getConfiguration();
+      keyLength = conf.getInt(KEYLEN_CONF, KEYLEN_DEFAULT);
+      valLength = conf.getInt(VALLEN_CONF, VALLEN_DEFAULT);
+    }
+
+    @Override
+    protected void map(
+        NullWritable n1, NullWritable n2,
+        Mapper<NullWritable, NullWritable,
+               ImmutableBytesWritable,Put>.Context context)
+        throws java.io.IOException ,InterruptedException
+    {
+
+      byte keyBytes[] = new byte[keyLength];
+      byte valBytes[] = new byte[valLength];
+
+      int taskId = context.getTaskAttemptID().getTaskID().getId();
+      assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
+
+      Random random = new Random();
+      for (int i = 0; i < ROWSPERSPLIT; i++) {
+
+        random.nextBytes(keyBytes);
+        // Ensure that unique tasks generate unique keys
+        keyBytes[keyLength - 1] = (byte)(taskId & 0xFF);
+        random.nextBytes(valBytes);
+        ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
+
+        for (byte[] family : TestHFileOutputFormat2.FAMILIES) {
+          Put p = new Put(keyBytes);
+          p.addColumn(family, QUALIFIER, valBytes);
+          // set TTL to very low so that the scan does not return any value
+          p.setTTL(1l);
+          context.write(key, p);
+        }
+      }
+    }
+  }
+
+  private void setupRandomGeneratorMapper(Job job, boolean putSortReducer) {
+    if (putSortReducer) {
+      job.setInputFormatClass(NMapInputFormat.class);
+      job.setMapperClass(RandomPutGeneratingMapper.class);
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+      job.setMapOutputValueClass(Put.class);
+    } else {
+      job.setInputFormatClass(NMapInputFormat.class);
+      job.setMapperClass(RandomKVGeneratingMapper.class);
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+      job.setMapOutputValueClass(KeyValue.class);
+    }
   }
 
   /**
@@ -325,7 +393,7 @@ public class TestHFileOutputFormat2  {
     conf.setLong(HConstants.HREGION_MAX_FILESIZE, 64 * 1024);
 
     Job job = new Job(conf, "testWritingPEData");
-    setupRandomGeneratorMapper(job);
+    setupRandomGeneratorMapper(job, false);
     // This partitioner doesn't work well for number keys but using it anyways
     // just to demonstrate how to configure it.
     byte[] startKey = new byte[RandomKVGeneratingMapper.KEYLEN_DEFAULT];
@@ -438,13 +506,13 @@ public class TestHFileOutputFormat2  {
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
-    doIncrementalLoadTest(false, false);
+    doIncrementalLoadTest(false, false, false, "testMRIncrementalLoad");
   }
 
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
-    doIncrementalLoadTest(true, false);
+    doIncrementalLoadTest(true, false, false, "testMRIncrementalLoadWithSplit");
   }
 
   /**
@@ -458,12 +526,18 @@ public class TestHFileOutputFormat2  {
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoadWithLocality() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithLocality\n");
-    doIncrementalLoadTest(false, true);
-    doIncrementalLoadTest(true, true);
+    doIncrementalLoadTest(false, true, false, "testMRIncrementalLoadWithLocality1");
+    doIncrementalLoadTest(true, true, false, "testMRIncrementalLoadWithLocality2");
   }
 
-  private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality)
-      throws Exception {
+  @Test
+  public void testMRIncrementalLoadWithPutSortReducer() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoadWithPutSortReducer\n");
+    doIncrementalLoadTest(false, false, true, "testMRIncrementalLoadWithPutSortReducer");
+  }
+
+  private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
+      boolean putSortReducer, String tableStr) throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
@@ -491,7 +565,8 @@ public class TestHFileOutputFormat2  {
       assertEquals("Should make " + regionNum + " regions", numRegions, regionNum);
 
       // Generate the bulk load files
-      runIncrementalPELoad(conf, table.getTableDescriptor(), table.getRegionLocator(), testDir);
+      runIncrementalPELoad(conf, table.getTableDescriptor(), table.getRegionLocator(), testDir,
+        putSortReducer);
       // This doesn't write into the table, just makes files
       assertEquals("HFOF should not touch actual table", 0, util.countRows(table));
 
@@ -526,21 +601,28 @@ public class TestHFileOutputFormat2  {
       // Perform the actual load
       new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
 
-      // Ensure data shows up
-      int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
-        util.countRows(table));
-      Scan scan = new Scan();
-      ResultScanner results = table.getScanner(scan);
-      for (Result res : results) {
-        assertEquals(FAMILIES.length, res.rawCells().length);
-        Cell first = res.rawCells()[0];
-        for (Cell kv : res.rawCells()) {
-          assertTrue(CellUtil.matchingRow(first, kv));
-          assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
+      int expectedRows = 0;
+      if (putSortReducer) {
+        // no rows should be extracted
+        assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
+          util.countRows(table));
+      } else {
+        // Ensure data shows up
+        expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
+        assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
+          util.countRows(table));
+        Scan scan = new Scan();
+        ResultScanner results = table.getScanner(scan);
+        for (Result res : results) {
+          assertEquals(FAMILIES.length, res.rawCells().length);
+          Cell first = res.rawCells()[0];
+          for (Cell kv : res.rawCells()) {
+            assertTrue(CellUtil.matchingRow(first, kv));
+            assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
+          }
         }
+        results.close();
       }
-      results.close();
       String tableDigestBefore = util.checksumRows(table);
 
       // Check region locality
@@ -572,14 +654,14 @@ public class TestHFileOutputFormat2  {
   }
 
   private void runIncrementalPELoad(Configuration conf, HTableDescriptor tableDescriptor,
-      RegionLocator regionLocator, Path outDir) throws IOException, UnsupportedEncodingException,
-      InterruptedException, ClassNotFoundException {
+      RegionLocator regionLocator, Path outDir, boolean putSortReducer) throws IOException,
+      UnsupportedEncodingException, InterruptedException, ClassNotFoundException {
     Job job = new Job(conf, "testLocalMRIncrementalLoad");
     job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
     job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
-    setupRandomGeneratorMapper(job);
+    setupRandomGeneratorMapper(job, putSortReducer);
     HFileOutputFormat2.configureIncrementalLoad(job, tableDescriptor, regionLocator);
     FileOutputFormat.setOutputPath(job, outDir);
 
@@ -931,7 +1013,7 @@ public class TestHFileOutputFormat2  {
       conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
-      setupRandomGeneratorMapper(job);
+      setupRandomGeneratorMapper(job, false);
       HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
       FileOutputFormat.setOutputPath(job, dir);
       context = createTestTaskAttemptContext(job);
@@ -1033,7 +1115,7 @@ public class TestHFileOutputFormat2  {
       for (int i = 0; i < 2; i++) {
         Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
         runIncrementalPELoad(conf, table.getTableDescriptor(), conn.getRegionLocator(TABLE_NAME),
-            testDir);
+            testDir, false);
         // Perform the actual load
         new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
       }
@@ -1125,7 +1207,7 @@ public class TestHFileOutputFormat2  {
           true);
 
       RegionLocator regionLocator = conn.getRegionLocator(TABLE_NAME);
-      runIncrementalPELoad(conf, table.getTableDescriptor(), regionLocator, testDir);
+      runIncrementalPELoad(conf, table.getTableDescriptor(), regionLocator, testDir, false);
 
       // Perform the actual load
       new LoadIncrementalHFiles(conf).doBulkLoad(testDir, admin, table, regionLocator);
@@ -1196,7 +1278,7 @@ public class TestHFileOutputFormat2  {
           Admin admin = c.getAdmin();
           RegionLocator regionLocator = c.getRegionLocator(tname)) {
         Path outDir = new Path("incremental-out");
-        runIncrementalPELoad(conf, admin.getTableDescriptor(tname), regionLocator, outDir);
+        runIncrementalPELoad(conf, admin.getTableDescriptor(tname), regionLocator, outDir, false);
       }
     } else {
       throw new RuntimeException(

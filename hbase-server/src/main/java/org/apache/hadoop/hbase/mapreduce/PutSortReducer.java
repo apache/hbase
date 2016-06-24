@@ -18,17 +18,25 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
 
@@ -44,7 +52,17 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Stable
 public class PutSortReducer extends
     Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue> {
-  
+  // the cell creator
+  private CellCreator kvCreator;
+
+  @Override
+  protected void
+      setup(Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
+          throws IOException, InterruptedException {
+    Configuration conf = context.getConfiguration();
+    this.kvCreator = new CellCreator(conf);
+  }
+
   @Override
   protected void reduce(
       ImmutableBytesWritable row,
@@ -61,11 +79,48 @@ public class PutSortReducer extends
       TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
+      List<Tag> tags = new ArrayList<Tag>();
       while (iter.hasNext() && curSize < threshold) {
+        // clear the tags
+        tags.clear();
         Put p = iter.next();
+        long t = p.getTTL();
+        if (t != Long.MAX_VALUE) {
+          // add TTL tag if found
+          tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(t)));
+        }
+        byte[] acl = p.getACL();
+        if (acl != null) {
+          // add ACL tag if found
+          tags.add(new Tag(TagType.ACL_TAG_TYPE, acl));
+        }
+        try {
+          CellVisibility cellVisibility = p.getCellVisibility();
+          if (cellVisibility != null) {
+            // add the visibility labels if any
+            tags.addAll(kvCreator.getVisibilityExpressionResolver()
+                .createVisibilityExpTags(cellVisibility.getExpression()));
+          }
+        } catch (DeserializationException e) {
+          // We just throw exception here. Should we allow other mutations to proceed by
+          // just ignoring the bad one?
+          throw new IOException("Invalid visibility expression found in mutation " + p, e);
+        }
         for (List<Cell> cells: p.getFamilyCellMap().values()) {
           for (Cell cell: cells) {
-            KeyValue kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
+            // Creating the KV which needs to be directly written to HFiles. Using the Facade
+            // KVCreator for creation of kvs.
+            KeyValue kv = null;
+            Tag.carryForwardTags(tags, cell);
+            if (!tags.isEmpty()) {
+              kv = (KeyValue) kvCreator.create(cell.getRowArray(), cell.getRowOffset(),
+                cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(),
+                cell.getFamilyLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
+                cell.getQualifierLength(), cell.getTimestamp(), cell.getValueArray(),
+                cell.getValueOffset(), cell.getValueLength(), tags);
+            } else {
+              kv = KeyValueUtil.ensureKeyValueTypeForMR(cell);
+            }
             if (map.add(kv)) {// don't count duplicated kv into size
               curSize += kv.heapSize();
             }
