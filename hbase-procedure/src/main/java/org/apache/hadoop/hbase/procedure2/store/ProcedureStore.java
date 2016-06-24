@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 
 /**
@@ -188,12 +188,4 @@ public interface ProcedureStore {
    * @param procId the ID of the procedure to remove.
    */
   void delete(long procId);
-
-  /**
-   * The parent procedure completed.
-   * Update the state and mark all the child deleted.
-   * @param parentProc the parent procedure to serialize and write to the store.
-   * @param subProcIds the IDs of the sub-procedure to remove.
-   */
-  void delete(Procedure parentProc, long[] subProcIds);
 }

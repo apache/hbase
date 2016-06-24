@@ -18,18 +18,16 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,6 +54,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Thread Pool that executes the submitted procedures.
@@ -314,7 +314,7 @@ public class ProcedureExecutor<TEnvironment> {
           corruptedCount++;
         }
         if (abortOnCorruption && corruptedCount > 0) {
-          throw new IOException("found " + corruptedCount + " corrupted procedure(s) on replay");
+          throw new IOException("found " + corruptedCount + " procedures on replay");
         }
       }
     });
@@ -388,10 +388,10 @@ public class ProcedureExecutor<TEnvironment> {
         continue;
       }
 
-      if (proc.hasParent()) {
+      if (proc.hasParent() && !proc.isFinished()) {
         Procedure parent = procedures.get(proc.getParentProcId());
         // corrupted procedures are handled later at step 3
-        if (parent != null && !proc.isFinished()) {
+        if (parent != null) {
           parent.incChildrenLatch();
         }
       }
@@ -403,11 +403,6 @@ public class ProcedureExecutor<TEnvironment> {
         case RUNNABLE:
           runnableList.add(proc);
           break;
-        case WAITING:
-          if (!proc.hasChildren()) {
-            runnableList.add(proc);
-          }
-          break;
         case WAITING_TIMEOUT:
           if (waitingSet == null) {
             waitingSet = new HashSet<Procedure>();
@@ -418,8 +413,8 @@ public class ProcedureExecutor<TEnvironment> {
           if (proc.hasException()) {
             // add the proc to the runnables to perform the rollback
             runnables.addBack(proc);
+            break;
           }
-          break;
         case ROLLEDBACK:
         case INITIALIZING:
           String msg = "Unexpected " + proc.getState() + " state for " + proc;
@@ -438,7 +433,7 @@ public class ProcedureExecutor<TEnvironment> {
       RootProcedureState procStack = entry.getValue();
       if (procStack.isValid()) continue;
 
-      for (Procedure proc: procStack.getSubproceduresStack()) {
+      for (Procedure proc: procStack.getSubprocedures()) {
         LOG.error("corrupted procedure: " + proc);
         procedures.remove(proc.getProcId());
         runnableList.remove(proc);
@@ -945,7 +940,7 @@ public class ProcedureExecutor<TEnvironment> {
       store.update(rootProc);
     }
 
-    List<Procedure> subprocStack = procStack.getSubproceduresStack();
+    List<Procedure> subprocStack = procStack.getSubprocedures();
     assert subprocStack != null : "Called rollback with no steps executed rootProc=" + rootProc;
 
     int stackTail = subprocStack.size();
@@ -1027,12 +1022,7 @@ public class ProcedureExecutor<TEnvironment> {
         store.delete(proc.getProcId());
         procedures.remove(proc.getProcId());
       } else {
-        final long[] childProcIds = rollbackStack.get(proc.getProcId()).getSubprocedureIds();
-        if (childProcIds != null) {
-          store.delete(proc, childProcIds);
-        } else {
-          store.update(proc);
-        }
+        store.update(proc);
       }
     } else {
       store.update(proc);
@@ -1112,7 +1102,6 @@ public class ProcedureExecutor<TEnvironment> {
               assert subproc.getState() == ProcedureState.INITIALIZING : subproc;
               subproc.setParentProcId(procedure.getProcId());
               subproc.setProcId(nextProcId());
-              procStack.addSubProcedure(subproc);
             }
 
             if (!procedure.isFailed()) {
@@ -1149,7 +1138,17 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       // Commit the transaction
-      updateStoreOnExec(procStack, procedure, subprocs);
+      if (subprocs != null && !procedure.isFailed()) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Store add " + procedure + " children " + Arrays.toString(subprocs));
+        }
+        store.insert(procedure, subprocs);
+      } else {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Store update " + procedure);
+        }
+        store.update(procedure);
+      }
 
       // if the store is not running we are aborting
       if (!store.isRunning()) {
@@ -1195,34 +1194,6 @@ public class ProcedureExecutor<TEnvironment> {
           LOG.trace(parent + " all the children finished their work, resume.");
         }
         return;
-      }
-    }
-  }
-
-  private void updateStoreOnExec(final RootProcedureState procStack,
-      final Procedure procedure, final Procedure[] subprocs) {
-    if (subprocs != null && !procedure.isFailed()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Store add " + procedure + " children " + Arrays.toString(subprocs));
-      }
-      store.insert(procedure, subprocs);
-    } else {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Store update " + procedure);
-      }
-      if (procedure.isFinished() && !procedure.hasParent()) {
-        // remove child procedures
-        final long[] childProcIds = procStack.getSubprocedureIds();
-        if (childProcIds != null) {
-          store.delete(procedure, childProcIds);
-          for (int i = 0; i < childProcIds.length; ++i) {
-            procedures.remove(childProcIds[i]);
-          }
-        } else {
-          store.update(procedure);
-        }
-      } else {
-        store.update(procedure);
       }
     }
   }
