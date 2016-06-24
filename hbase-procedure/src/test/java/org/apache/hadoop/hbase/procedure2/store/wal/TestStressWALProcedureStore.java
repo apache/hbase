@@ -106,7 +106,9 @@ public class TestStressWALProcedureStore {
           Random rand = new Random();
           TestProcedure proc;
           do {
-            proc = new TestProcedure(procCounter.addAndGet(1));
+            // After HBASE- there may be gap in the procId sequence, trying to simulate that.
+            long procId = procCounter.addAndGet(1 + rand.nextInt(3));
+            proc = new TestProcedure(procId);
             // Insert
             procStore.insert(proc, null);
             // Update

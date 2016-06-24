@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -32,8 +34,6 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Helper class that loads the procedures stored in a WAL
@@ -209,15 +209,34 @@ public class ProcedureWALFormatReader {
   }
 
   private void readDeleteEntry(final ProcedureWALEntry entry) throws IOException {
-    assert entry.getProcedureCount() == 0 : "Expected no procedures";
     assert entry.hasProcId() : "expected ProcID";
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("read delete entry " + entry.getProcId());
+
+    if (entry.getChildIdCount() > 0) {
+      assert entry.getProcedureCount() == 1 : "Expected only one procedure";
+
+      // update the parent procedure
+      loadProcedure(entry, entry.getProcedure(0));
+
+      // remove the child procedures of entry.getProcId()
+      for (int i = 0, count = entry.getChildIdCount(); i < count; ++i) {
+        deleteEntry(entry.getChildId(i));
+      }
+    } else {
+      assert entry.getProcedureCount() == 0 : "Expected no procedures";
+
+      // delete the procedure
+      deleteEntry(entry.getProcId());
     }
-    maxProcId = Math.max(maxProcId, entry.getProcId());
-    localProcedureMap.remove(entry.getProcId());
-    assert !procedureMap.contains(entry.getProcId());
-    tracker.setDeleted(entry.getProcId(), true);
+  }
+
+  private void deleteEntry(final long procId) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("delete entry " + procId);
+    }
+    maxProcId = Math.max(maxProcId, procId);
+    localProcedureMap.remove(procId);
+    assert !procedureMap.contains(procId);
+    tracker.setDeleted(procId, true);
   }
 
   private boolean isDeleted(final long procId) {
@@ -269,6 +288,8 @@ public class ProcedureWALFormatReader {
 
     public boolean isCompleted() {
       if (!hasParent()) {
+        // we only consider 'root' procedures. because for the user 'completed'
+        // means when everything up to the 'root' is complete.
         switch (proto.getState()) {
           case ROLLEDBACK:
             return true;
@@ -294,7 +315,15 @@ public class ProcedureWALFormatReader {
 
     @Override
     public String toString() {
-      return "Entry(" + getProcId() + ", parentId=" + getParentId() + ")";
+      final StringBuilder sb = new StringBuilder();
+      sb.append("Entry(");
+      sb.append(getProcId());
+      sb.append(", parentId=");
+      sb.append(getParentId());
+      sb.append(", class=");
+      sb.append(proto.getClassName());
+      sb.append(")");
+      return sb.toString();
     }
   }
 
@@ -603,6 +632,22 @@ public class ProcedureWALFormatReader {
      * There is a gap between A stackIds so something was executed in between.
      */
     private boolean checkReadyToRun(Entry rootEntry) {
+      assert !rootEntry.hasParent() : "expected root procedure, got " + rootEntry;
+
+      if (rootEntry.isCompleted()) {
+        // if the root procedure is completed, sub-procedures should be gone
+        if (rootEntry.childHead != null) {
+          LOG.error("unexpected active children for root-procedure: " + rootEntry);
+          for (Entry p = rootEntry.childHead; p != null; p = p.linkNext) {
+            LOG.error("unexpected active children: " + p);
+          }
+        }
+
+        assert rootEntry.childHead == null : "unexpected children on root completion. " + rootEntry;
+        rootEntry.ready = true;
+        return true;
+      }
+
       int stackIdSum = 0;
       int maxStackId = 0;
       for (int i = 0; i < rootEntry.proto.getStackIdCount(); ++i) {
