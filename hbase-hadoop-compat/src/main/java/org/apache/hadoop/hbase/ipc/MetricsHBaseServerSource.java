@@ -83,6 +83,8 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String EXCEPTIONS_MULTI_TOO_LARGE_NAME = "exceptions.multiResponseTooLarge";
   String EXCEPTIONS_MULTI_TOO_LARGE_DESC = "A response to a multi request was too large and the " +
       "rest of the requests will have to be retried.";
+  String EXCEPTIONS_CALL_QUEUE_TOO_BIG = "exceptions.callQueueTooBig";
+  String EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC = "Call queue is full";
 
   void authorizationSuccess();
 
@@ -106,6 +108,7 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void unknownScannerException();
   void tooBusyException();
   void multiActionTooLargeException();
+  void callQueueTooBigException();
 
   void sentBytes(long count);
 
