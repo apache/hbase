@@ -59,7 +59,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   protected boolean isStopRow(byte[] currentRow, int offset, short length) {
     return currentRow == null
         || (super.stopRow != null && region.getComparator().compareRows(
-            stopRow, 0, stopRow.length, currentRow, offset, length) >= super.scan);
+            stopRow, 0, stopRow.length, currentRow, offset, length) >= super.isScan);
   }
 
   @Override
