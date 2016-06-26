@@ -6,7 +6,6 @@
 /.idea/
 /logs
 *target/
-*.iml
 *.orig
 *~
 hbase-*/test
