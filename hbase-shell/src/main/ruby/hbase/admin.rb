@@ -490,7 +490,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name_str)
-      puts "Truncating '#{table}' table (it may take a while):"
+      puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
       locator = @connection.getRegionLocator(table_name)
       begin
