@@ -111,7 +111,7 @@ interface.
 using HBase Shell. For more details see <<cp_loading,Loading Coprocessors>>.
 
 . Call the coprocessor from your client-side code. HBase handles the coprocessor
-trapsparently.
+transparently.
 
 The framework API is provided in the
 link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]
