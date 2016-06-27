@@ -29,6 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -154,7 +157,7 @@ implements Configurable {
   }
 
   /**
-   * Checks if the output target exists.
+   * Checks if the output table exists and is enabled.
    *
    * @param context  The current context.
    * @throws IOException When the check fails.
@@ -164,8 +167,19 @@ implements Configurable {
   @Override
   public void checkOutputSpecs(JobContext context) throws IOException,
       InterruptedException {
-    // TODO Check if the table exists?
 
+    try (Admin admin = ConnectionFactory.createConnection(getConf()).getAdmin()) {
+      TableName tableName = TableName.valueOf(this.conf.get(OUTPUT_TABLE));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException("Can't write, table does not exist:" +
+            tableName.getNameAsString());
+      }
+
+      if (!admin.isTableEnabled(tableName)) {
+        throw new TableNotEnabledException("Can't write, table is not enabled: " +
+            tableName.getNameAsString());
+      }
+    }
   }
 
   /**

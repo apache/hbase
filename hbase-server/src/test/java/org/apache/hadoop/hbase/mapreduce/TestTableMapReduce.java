@@ -31,6 +31,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,6 +44,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -122,6 +127,27 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
         FileUtil.fullyDelete(
           new File(job.getConfiguration().get("hadoop.tmp.dir")));
       }
+    }
+  }
+
+  @Test(expected = TableNotEnabledException.class)
+  public void testWritingToDisabledTable() throws IOException {
+
+    try (Admin admin = UTIL.getConnection().getAdmin();
+        HTable table = new HTable(UTIL.getConfiguration(), TABLE_FOR_NEGATIVE_TESTS)) {
+      admin.disableTable(table.getName());
+      runTestOnTable(table);
+      fail("Should not have reached here, should have thrown an exception");
+    }
+  }
+
+  @Test(expected = TableNotFoundException.class)
+  public void testWritingToNonExistentTable() throws IOException {
+
+    try (HTable table = new HTable(UTIL.getConfiguration(),
+        TableName.valueOf("table-does-not-exist"))) {
+      runTestOnTable(table);
+      fail("Should not have reached here, should have thrown an exception");
     }
   }
 }
