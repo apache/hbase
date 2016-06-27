@@ -190,7 +190,7 @@ for ref in 1 2; do
       exit 2
     fi
     echo "Building ${COMMIT[${ref}]}..."
-    if ! mvn clean package -DskipTests; then
+    if ! mvn clean package --batch-mode -DskipTests; then
       echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
       exit 2
     fi
@@ -211,7 +211,7 @@ for ref in 1 2; do
         pushd ${SCRIPT_DIRECTORY}/target/compatibility/${ref} > /dev/null
         echo "The --no-checkout option was specified, but no JARs were found." \
             "Attempting to build ${COMMIT[${ref}]}..."
-        if ! mvn clean package -DskipTests; then
+        if ! mvn clean package --batch-mode -DskipTests; then
           echo "Maven could not successfully package ${COMMIT[${ref}]}. Exiting..." >&2
           exit 2
         fi
