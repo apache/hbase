@@ -436,7 +436,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   protected String clusterId = null;
 
-  protected void retrieveClusterId() {
+  protected void retrieveClusterId() throws IOException {
     if (clusterId != null) {
       return;
     }

@@ -53,27 +53,31 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   protected static class TableRecordWriter implements RecordWriter<ImmutableBytesWritable, Put> {
     private BufferedMutator m_mutator;
-    private Connection connection;
-    /**
-     * Instantiate a TableRecordWriter with the HBase HClient for writing. Assumes control over the
-     * lifecycle of {@code conn}.
-     */
-    public TableRecordWriter(final BufferedMutator mutator) throws IOException {
-      this.m_mutator = mutator;
-    }
+    private Connection conn;
 
+    /**
+     * Instantiate a TableRecordWriter with a BufferedMutator for batch writing.
+     */
     public TableRecordWriter(JobConf job) throws IOException {
       // expecting exactly one path
       TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
-      connection = ConnectionFactory.createConnection(job);
-      m_mutator = connection.getBufferedMutator(tableName);
+      try {
+        this.conn = ConnectionFactory.createConnection(job);
+        this.m_mutator = conn.getBufferedMutator(tableName);
+      } finally {
+        if (this.m_mutator == null) {
+          conn.close();
+          conn = null;
+        }
+      }
     }
 
     public void close(Reporter reporter) throws IOException {
-      this.m_mutator.close();
-      if (connection != null) {
-        connection.close();
-        connection = null;
+      if (this.m_mutator != null) {
+        this.m_mutator.close();
+      }
+      if (conn != null) {
+        this.conn.close();
       }
     }
 
@@ -101,6 +105,7 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
       Progressable progress)
   throws IOException {
+    // Clear write buffer on fail is true by default so no need to reset it.
     return new TableRecordWriter(job);
   }
 

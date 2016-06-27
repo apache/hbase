@@ -32,7 +32,7 @@ interface Registry {
   /**
    * @param connection
    */
-  void init(Connection connection);
+  void init(Connection connection) throws IOException;
 
   /**
    * @return Meta region location
@@ -43,7 +43,7 @@ interface Registry {
   /**
    * @return Cluster id.
    */
-  String getClusterId();
+  String getClusterId() throws IOException;
 
   /**
    * @return Count of 'running' regionservers
