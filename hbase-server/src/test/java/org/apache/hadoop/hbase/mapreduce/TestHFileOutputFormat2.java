@@ -530,7 +530,7 @@ public class TestHFileOutputFormat2  {
     doIncrementalLoadTest(true, true, false, "testMRIncrementalLoadWithLocality2");
   }
 
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoadWithPutSortReducer() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithPutSortReducer\n");
     doIncrementalLoadTest(false, false, true, "testMRIncrementalLoadWithPutSortReducer");
