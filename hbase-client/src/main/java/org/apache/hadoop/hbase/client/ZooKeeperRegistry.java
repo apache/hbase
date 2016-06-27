@@ -92,7 +92,7 @@ class ZooKeeperRegistry implements Registry {
   private String clusterId = null;
 
   @Override
-  public String getClusterId() {
+  public String getClusterId() throws IOException  {
     if (this.clusterId != null) return this.clusterId;
     // No synchronized here, worse case we will retrieve it twice, that's
     //  not an issue.
@@ -105,8 +105,10 @@ class ZooKeeperRegistry implements Registry {
       }
     } catch (KeeperException e) {
       LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
+      throw new IOException("ZooKeeperException ", e);
     } catch (IOException e) {
       LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
+      throw e;
     } finally {
       if (zkw != null) zkw.close();
     }
