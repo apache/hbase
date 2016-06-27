@@ -58,6 +58,7 @@ public abstract class TestTableMapReduceBase {
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
+  protected static final TableName TABLE_FOR_NEGATIVE_TESTS = TableName.valueOf("testfailuretable");
   protected static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   protected static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
@@ -83,10 +84,12 @@ public abstract class TestTableMapReduceBase {
         UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
             OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
+    UTIL.createTable(TABLE_FOR_NEGATIVE_TESTS, new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY });
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    UTIL.deleteTable(TABLE_FOR_NEGATIVE_TESTS);
     UTIL.shutdownMiniCluster();
   }
 
