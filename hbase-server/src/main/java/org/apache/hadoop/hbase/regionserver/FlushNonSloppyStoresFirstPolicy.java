@@ -20,12 +20,16 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Collection;
 import java.util.HashSet;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * A {@link FlushPolicy} that only flushes store larger than a given threshold. If no store is large
  * enough, then all stores will be flushed.
  * Gives priority to selecting regular stores first, and only if no other
  * option, selects sloppy stores which normaly require more memory.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
 
   private Collection<Store> regularStores = new HashSet<>();
