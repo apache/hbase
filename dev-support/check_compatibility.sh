@@ -70,12 +70,14 @@ Options:
   -f, --force-download          Download dependencies (i.e. Java ACC), even if they are
                                 already present.
   -h, --help                    Show this screen.
+  -j, --java-acc                Specify which version of Java ACC to use to run the analysis. This
+                                can be a tag, branch, or commit hash. Defaults to master.
   -n, --no-checkout             Run the tool without first using Git to checkout the two
                                 HBase versions. If this option is selected,
-			        dev-support/target/compatibility/1 and
-				dev-support/target compatibility/2 must each be Git repositories.
-				Also note that the references must still be specified as these are
-			        used when naming the compatibility report.
+                                dev-support/target/compatibility/1 and
+                                dev-support/target compatibility/2 must each be Git repositories.
+                                Also note that the references must still be specified as these are
+                                used when naming the compatibility report.
   -o <opts>, --options=<opts>   A comma-separated list of options to pass directly to Java ACC.
   -q, --quick                   Runs Java ACC in quick analysis mode, which disables a
                                 number of checks for things that may break compatibility.
@@ -89,13 +91,17 @@ __EOF
 GETOPT=${GETOPT:-/usr/bin/env getopt}
 
 # Parse command line arguments and check for proper syntax.
-if ! ARG_LIST=$(${GETOPT} -q -o abfhno:qr:s \
-    -l all,binary-only,force-download,help,no-checkout,options:,quick,repo:,source-only \
+if ! ARG_LIST=$(${GETOPT} -q -o abfhj:no:qr:s \
+    -l all,binary-only,force-download,help,java-acc:,no-checkout,options:,quick,repo:,source-only \
     -- "${@}"); then
   usage >&2
   exit 2
 fi
 eval set -- "${ARG_LIST[@]}"
+
+# Set defaults for options in case they're not specified on the command line.
+JAVA_ACC_COMMIT="master"
+REPO_URL="https://github.com/apache/hbase.git"
 
 while ((${#})); do
   case "${1}" in
@@ -111,6 +117,9 @@ while ((${#})); do
     -h | --help           )
       usage
       exit 0 ;;
+    -j | --java-acc       )
+      JAVA_ACC_COMMIT="${2}"
+      shift 2 ;;
     -n | --no-checkout    )
       NO_CHECKOUT=true
       shift 1 ;;
@@ -133,12 +142,12 @@ while ((${#})); do
       shift 1
       # If there is one positional argument, only <ref1> was specified.
       if [ ${#} -eq 1 ]; then
-	COMMIT[1]="${1}"
-	COMMIT[2]=master
-	shift 1
+        COMMIT[1]="${1}"
+        COMMIT[2]=master
+        shift 1
       # If there are two positional arguments, <ref1> and <ref2> were both specified.
       elif [ ${#} -eq 2 ]; then
-	COMMIT[1]="${1}"
+        COMMIT[1]="${1}"
         COMMIT[2]="${2}"
         shift 2
       # If there are no positional arguments or too many, someone needs to reread the usage
@@ -151,9 +160,6 @@ while ((${#})); do
   esac
 done
 
-# Set defaults for options if they're not specified on the command line.
-REPO_URL=${REPO_URL:-https://github.com/apache/hbase.git}
-
 # Do identical operations for both HBase versions in a for loop to save some lines of code.
 for ref in 1 2; do
   if ! [ "${NO_CHECKOUT}" ]; then
@@ -165,8 +171,8 @@ for ref in 1 2; do
     if [ "${ref}" = "1" ]; then
       echo "Cloning ${REPO_URL} into ${SCRIPT_DIRECTORY}/target/compatibility/${ref}..."
       if ! git clone ${REPO_URL} ${SCRIPT_DIRECTORY}/target/compatibility/${ref}; then
-	echo "Error while cloning ${REPO_URL}. Exiting..." >&2
-	exit 2
+        echo "Error while cloning ${REPO_URL}. Exiting..." >&2
+        exit 2
       fi
     elif [ "${ref}" = "2" ]; then
       # Avoid cloning from Git twice by copying first repo into different folder.
@@ -215,7 +221,7 @@ for ref in 1 2; do
 
       JARS=$(find ${SCRIPT_DIRECTORY}/target/compatibility/${ref} "${JAR_FIND_EXPRESSION[@]}")
       if [ ${#JARS[@]} -eq 0 ]; then
-	echo "Unable to find any JARs matching the find expression. Exiting..." >&2
+        echo "Unable to find any JARs matching the find expression. Exiting..." >&2
         exit 2
       fi
 
@@ -225,17 +231,21 @@ for ref in 1 2; do
     fi
   fi
 
+  # Create an XML descriptor containing paths to the JARs for Java ACC to use (support for
+  # comma-separated lists of JARs was removed, as described on their issue tracker:
+  # https://github.com/lvc/japi-compliance-checker/issues/27).
+  DESCRIPTOR_PATH="${SCRIPT_DIRECTORY}/target/compatibility/${ref}.xml"
+  echo "<version>${COMMIT[${ref}]}${SHA[${ref}]+"/${SHA[${ref}]}"}</version>" > "${DESCRIPTOR_PATH}"
+  echo "<archives>" >> "${DESCRIPTOR_PATH}"
+
   echo "The JARs to be analyzed from ${COMMIT[${ref}]} are:"
   for jar in ${JARS}; do
-    echo "  ${jar}"
+    echo "  ${jar}" | tee -a "${DESCRIPTOR_PATH}"
   done
-  # Generate a comma-separated list of packages by using process substitution and passing
-  # the result to paste.
-  JARS[${ref}]=$(paste -s -d , <(echo "${JARS}"))
+  echo "</archives>" >> "${DESCRIPTOR_PATH}"
 done
 
-# Download the Java API Compliance Checker (Java ACC) v. 1.7 (see HBASE-16073) into
-# /dev-support/target/compatibility.
+# Download the Java API Compliance Checker (Java ACC) into /dev-support/target/compatibility.
 # Note: Java API Compliance Checker (Java ACC) is licensed under the GNU GPL or LGPL. For more
 #       information, visit http://ispras.linuxbase.org/index.php/Java_API_Compliance_Checker .
 
@@ -243,7 +253,7 @@ done
 if [ ! -d ${SCRIPT_DIRECTORY}/target/compatibility/javaACC ] || [ -n "${FORCE_DOWNLOAD}" ]; then
   echo "Downloading Java API Compliance Checker..."
   rm -rf ${SCRIPT_DIRECTORY}/target/compatibility/javaACC
-  if ! git clone https://github.com/lvc/japi-compliance-checker.git -b 1.7 \
+  if ! git clone https://github.com/lvc/japi-compliance-checker.git -b "${JAVA_ACC_COMMIT}" \
       ${SCRIPT_DIRECTORY}/target/compatibility/javaACC; then
     echo "Failed to download Java API Compliance Checker. Exiting..." >&2
     exit 2
@@ -253,8 +263,8 @@ fi
 # Generate annotation list dynamically; this way, there's no chance the file
 # gets stale and you have better visiblity into what classes are actually analyzed.
 declare -a ANNOTATION_LIST
-ANNOTATION_LIST+=(InterfaceAudience.Public)
-ANNOTATION_LIST+=(InterfaceAudience.LimitedPrivate)
+ANNOTATION_LIST+=(org.apache.hadoop.hbase.classification.InterfaceAudience.Public)
+ANNOTATION_LIST+=(org.apache.hadoop.hbase.classification.InterfaceAudience.LimitedPrivate)
 if ! [ -f ${SCRIPT_DIRECTORY}/target/compatibility/annotations ]; then
   cat > ${SCRIPT_DIRECTORY}/target/compatibility/annotations << __EOF
 $(tr " " "\n" <<< "${ANNOTATION_LIST[@]}")
@@ -263,9 +273,8 @@ fi
 
 # Generate command line arguments for Java ACC.
 JAVA_ACC_COMMAND+=(-l HBase)
-JAVA_ACC_COMMAND+=(-v1 ${COMMIT[1]}${SHA[1]+"/${SHA[1]}"})
-JAVA_ACC_COMMAND+=(-v2 ${COMMIT[2]}${SHA[2]+"/${SHA[2]}"})
-JAVA_ACC_COMMAND+=(-d1 ${JARS[1]} -d2 ${JARS[2]})
+JAVA_ACC_COMMAND+=(-old "${SCRIPT_DIRECTORY}/target/compatibility/1.xml")
+JAVA_ACC_COMMAND+=(-new "${SCRIPT_DIRECTORY}/target/compatibility/2.xml")
 JAVA_ACC_COMMAND+=(-report-path \
     ${SCRIPT_DIRECTORY}/target/compatibility/report/${COMMIT[1]}_${COMMIT[2]}_compat_report.html)
 if [ "${ALL}" != "true" ] ; then
