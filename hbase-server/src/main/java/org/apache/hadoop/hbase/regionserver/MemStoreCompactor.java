@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Threads safety: It is assumed that the compaction pipeline is immutable,
  * therefore no special synchronization is required.
  */
+@InterfaceAudience.Private
 class MemStoreCompactor {
 
   private static final Log LOG = LogFactory.getLog(MemStoreCompactor.class);
