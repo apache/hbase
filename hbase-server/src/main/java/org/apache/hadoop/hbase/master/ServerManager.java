@@ -150,8 +150,7 @@ public class ServerManager {
   private final ArrayList<ServerName> drainingServers =
     new ArrayList<ServerName>();
 
-  private final Server master;
-  private final MasterServices services;
+  private final MasterServices master;
   private final ClusterConnection connection;
 
   private final DeadServer deadservers = new DeadServer();
@@ -204,18 +203,14 @@ public class ServerManager {
   /**
    * Constructor.
    * @param master
-   * @param services
    * @throws ZooKeeperConnectionException
    */
-  public ServerManager(final Server master, final MasterServices services)
-      throws IOException {
-    this(master, services, true);
+  public ServerManager(final MasterServices master) throws IOException {
+    this(master, true);
   }
 
-  ServerManager(final Server master, final MasterServices services,
-      final boolean connect) throws IOException {
+  ServerManager(final MasterServices master, final boolean connect) throws IOException {
     this.master = master;
-    this.services = services;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
@@ -430,7 +425,7 @@ public class ServerManager {
     }
     // remove dead server with same hostname and port of newly checking in rs after master
     // initialization.See HBASE-5916 for more information.
-    if ((this.services == null || this.services.isInitialized())
+    if ((this.master == null || this.master.isInitialized())
         && this.deadservers.cleanPreviousInstance(serverName)) {
       // This server has now become alive after we marked it as dead.
       // We removed it's previous entry from the dead list to reflect it.
@@ -595,7 +590,7 @@ public class ServerManager {
       }
       return;
     }
-    if (!services.isServerCrashProcessingEnabled()) {
+    if (!master.isServerCrashProcessingEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
       this.queuedDeadServers.add(serverName);
@@ -620,8 +615,8 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
-    this.services.getMasterProcedureExecutor().
+    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
+    this.master.getMasterProcedureExecutor().
       submitProcedure(new ServerCrashProcedure(serverName, true, carryingMeta));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
@@ -659,13 +654,13 @@ public class ServerManager {
     // We should not wait in the server shutdown handler thread since it can clog
     // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
-    if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
       requeuedDeadServers.put(serverName, shouldSplitWal);
       return;
     }
 
     this.deadservers.add(serverName);
-    this.services.getMasterProcedureExecutor().
+    this.master.getMasterProcedureExecutor().
     submitProcedure(new ServerCrashProcedure(serverName, shouldSplitWal, false));
   }
 
@@ -674,7 +669,7 @@ public class ServerManager {
    * called after HMaster#assignMeta and AssignmentManager#joinCluster.
    * */
   synchronized void processQueuedDeadServers() {
-    if (!services.isServerCrashProcessingEnabled()) {
+    if (!master.isServerCrashProcessingEnabled()) {
       LOG.info("Master hasn't enabled ServerShutdownHandler");
     }
     Iterator<ServerName> serverIterator = queuedDeadServers.iterator();
@@ -685,7 +680,7 @@ public class ServerManager {
       requeuedDeadServers.remove(tmpServerName);
     }
 
-    if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
       LOG.info("AssignmentManager hasn't finished failover cleanup; waiting");
     }
 
@@ -753,7 +748,7 @@ public class ServerManager {
     }
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
       region, favoredNodes,
-      (RecoveryMode.LOG_REPLAY == this.services.getMasterWalManager().getLogRecoveryMode()));
+      (RecoveryMode.LOG_REPLAY == this.master.getMasterWalManager().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -781,7 +776,7 @@ public class ServerManager {
     }
 
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, regionOpenInfos,
-      (RecoveryMode.LOG_REPLAY == this.services.getMasterWalManager().getLogRecoveryMode()));
+      (RecoveryMode.LOG_REPLAY == this.master.getMasterWalManager().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningStateList(response);
