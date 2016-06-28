@@ -52,6 +52,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -1020,26 +1021,16 @@ public class HBaseFsck extends Configured implements Closeable {
    * Lingering reference file prevents a region from opening. It has to
    * be fixed before a cluster can start properly.
    */
-  private void offlineReferenceFileRepair() throws IOException {
+  private void offlineReferenceFileRepair() throws IOException, InterruptedException {
     Configuration conf = getConf();
     Path hbaseRoot = FSUtils.getRootDir(conf);
     FileSystem fs = hbaseRoot.getFileSystem(conf);
     LOG.info("Computing mapping of all store files");
-    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot, errors);
+    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot,
+      new FSUtils.ReferenceFileFilter(fs), executor, errors);
     errors.print("");
     LOG.info("Validating mapping using HDFS state");
     for (Path path: allFiles.values()) {
-      boolean isReference = false;
-      try {
-        isReference = StoreFileInfo.isReference(path);
-      } catch (Throwable t) {
-        // Ignore. Some files may not be store files at all.
-        // For example, files under .oldlogs folder in hbase:meta
-        // Warning message is already logged by
-        // StoreFile#isReference.
-      }
-      if (!isReference) continue;
-
       Path referredToFile = StoreFileInfo.getReferredToFile(path);
       if (fs.exists(referredToFile)) continue;  // good, expected
 
@@ -1714,23 +1705,22 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     }
 
-    // level 1:  <HBASE_DIR>/*
-    List<WorkItemHdfsDir> dirs = new ArrayList<WorkItemHdfsDir>(tableDirs.size());
-    List<Future<Void>> dirsFutures;
-
+    // Avoid multithreading at table-level because already multithreaded internally at
+    // region-level.  Additionally multithreading at table-level can lead to deadlock
+    // if there are many tables in the cluster.  Since there are a limited # of threads
+    // in the executor's thread pool and if we multithread at the table-level by putting
+    // WorkItemHdfsDir callables into the executor, then we will have some threads in the
+    // executor tied up solely in waiting for the tables' region-level calls to complete.
+    // If there are enough tables then there will be no actual threads in the pool left
+    // for the region-level callables to be serviced.
     for (FileStatus tableDir : tableDirs) {
       LOG.debug("Loading region dirs from " +tableDir.getPath());
-      dirs.add(new WorkItemHdfsDir(this, fs, errors, tableDir));
-    }
-
-    // Invoke and wait for Callables to complete
-    dirsFutures = executor.invokeAll(dirs);
-
-    for(Future<Void> f: dirsFutures) {
+      WorkItemHdfsDir item = new WorkItemHdfsDir(fs, errors, tableDir);
       try {
-        f.get();
-      } catch(ExecutionException e) {
-        LOG.warn("Could not load region dir " , e.getCause());
+        item.call();
+      } catch (ExecutionException e) {
+        LOG.warn("Could not completely load table dir " +
+            tableDir.getPath(), e.getCause());
       }
     }
     errors.print("");
@@ -4048,70 +4038,117 @@ public class HBaseFsck extends Configured implements Closeable {
    * Contact hdfs and get all information about specified table directory into
    * regioninfo list.
    */
-  static class WorkItemHdfsDir implements Callable<Void> {
-    private HBaseFsck hbck;
+  class WorkItemHdfsDir implements Callable<Void> {
     private FileStatus tableDir;
     private ErrorReporter errors;
     private FileSystem fs;
 
-    WorkItemHdfsDir(HBaseFsck hbck, FileSystem fs, ErrorReporter errors,
+    WorkItemHdfsDir(FileSystem fs, ErrorReporter errors,
                     FileStatus status) {
-      this.hbck = hbck;
       this.fs = fs;
       this.tableDir = status;
       this.errors = errors;
     }
 
     @Override
-    public synchronized Void call() throws IOException {
+    public synchronized Void call() throws InterruptedException, ExecutionException {
+      final Vector<Exception> exceptions = new Vector<Exception>();
+
       try {
-        // level 2: <HBASE_DIR>/<table>/*
-        FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
-        for (FileStatus regionDir : regionDirs) {
+        final FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
+        final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.length);
+
+        for (final FileStatus regionDir : regionDirs) {
           errors.progress();
-          String encodedName = regionDir.getPath().getName();
+          final String encodedName = regionDir.getPath().getName();
           // ignore directories that aren't hexadecimal
           if (!encodedName.toLowerCase(Locale.ROOT).matches("[0-9a-f]+")) {
             continue;
           }
 
-          LOG.debug("Loading region info from hdfs:"+ regionDir.getPath());
-          HbckInfo hbi = hbck.getOrCreateInfo(encodedName);
-          HdfsEntry he = new HdfsEntry();
-          synchronized (hbi) {
-            if (hbi.getHdfsRegionDir() != null) {
-              errors.print("Directory " + encodedName + " duplicate??" +
-                           hbi.getHdfsRegionDir());
-            }
+          if (!exceptions.isEmpty()) {
+            break;
+          }
 
-            he.hdfsRegionDir = regionDir.getPath();
-            he.hdfsRegionDirModTime = regionDir.getModificationTime();
-            Path regioninfoFile = new Path(he.hdfsRegionDir, HRegionFileSystem.REGION_INFO_FILE);
-            he.hdfsRegioninfoFilePresent = fs.exists(regioninfoFile);
-            // we add to orphan list when we attempt to read .regioninfo
+          futures.add(executor.submit(new Runnable() {
+            @Override
+            public void run() {
+              try {
+                LOG.debug("Loading region info from hdfs:"+ regionDir.getPath());
 
-            // Set a flag if this region contains only edits
-            // This is special case if a region is left after split
-            he.hdfsOnlyEdits = true;
-            FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
-            Path ePath = WALSplitter.getRegionDirRecoveredEditsDir(regionDir.getPath());
-            for (FileStatus subDir : subDirs) {
-              errors.progress();
-              String sdName = subDir.getPath().getName();
-              if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
-                he.hdfsOnlyEdits = false;
-                break;
+                Path regioninfoFile = new Path(regionDir.getPath(), HRegionFileSystem.REGION_INFO_FILE);
+                boolean regioninfoFileExists = fs.exists(regioninfoFile);
+
+                if (!regioninfoFileExists) {
+                  // As tables become larger it is more and more likely that by the time you
+                  // reach a given region that it will be gone due to region splits/merges.
+                  if (!fs.exists(regionDir.getPath())) {
+                    LOG.warn("By the time we tried to process this region dir it was already gone: "
+                        + regionDir.getPath());
+                    return;
+                  }
+                }
+
+                HbckInfo hbi = HBaseFsck.this.getOrCreateInfo(encodedName);
+                HdfsEntry he = new HdfsEntry();
+                synchronized (hbi) {
+                  if (hbi.getHdfsRegionDir() != null) {
+                    errors.print("Directory " + encodedName + " duplicate??" +
+                                 hbi.getHdfsRegionDir());
+                  }
+
+                  he.hdfsRegionDir = regionDir.getPath();
+                  he.hdfsRegionDirModTime = regionDir.getModificationTime();
+                  he.hdfsRegioninfoFilePresent = regioninfoFileExists;
+                  // we add to orphan list when we attempt to read .regioninfo
+
+                  // Set a flag if this region contains only edits
+                  // This is special case if a region is left after split
+                  he.hdfsOnlyEdits = true;
+                  FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
+                  Path ePath = WALSplitter.getRegionDirRecoveredEditsDir(regionDir.getPath());
+                  for (FileStatus subDir : subDirs) {
+                    errors.progress();
+                    String sdName = subDir.getPath().getName();
+                    if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
+                      he.hdfsOnlyEdits = false;
+                      break;
+                    }
+                  }
+                  hbi.hdfsEntry = he;
+                }
+              } catch (Exception e) {
+                LOG.error("Could not load region dir", e);
+                exceptions.add(e);
               }
             }
-            hbi.hdfsEntry = he;
+          }));
+        }
+
+        // Ensure all pending tasks are complete (or that we run into an exception)
+        for (Future<?> f : futures) {
+          if (!exceptions.isEmpty()) {
+            break;
           }
+          try {
+            f.get();
+          } catch (ExecutionException e) {
+            LOG.error("Unexpected exec exception!  Should've been caught already.  (Bug?)", e);
+            // Shouldn't happen, we already logged/caught any exceptions in the Runnable
+          };
         }
       } catch (IOException e) {
-        // unable to connect to the region server.
-        errors.reportError(ERROR_CODE.RS_CONNECT_FAILURE, "Table Directory: "
-            + tableDir.getPath().getName()
-            + " Unable to fetch region information. " + e);
-        throw e;
+        LOG.error("Cannot execute WorkItemHdfsDir for " + tableDir, e);
+        exceptions.add(e);
+      } finally {
+        if (!exceptions.isEmpty()) {
+          errors.reportError(ERROR_CODE.RS_CONNECT_FAILURE, "Table Directory: "
+              + tableDir.getPath().getName()
+              + " Unable to fetch all HDFS region information. ");
+          // Just throw the first exception as an indication something bad happened
+          // Don't need to propagate all the exceptions, we already logged them all anyway
+          throw new ExecutionException("First exception in WorkItemHdfsDir", exceptions.firstElement());
+        }
       }
       return null;
     }

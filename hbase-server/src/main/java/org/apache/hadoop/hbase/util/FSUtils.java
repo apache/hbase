@@ -31,14 +31,21 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -82,7 +89,11 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -1176,7 +1187,7 @@ public abstract class FSUtils {
   /**
    * A {@link PathFilter} that returns only regular files.
    */
-  static class FileFilter implements PathFilter {
+  static class FileFilter extends AbstractFileStatusFilter {
     private final FileSystem fs;
 
     public FileFilter(final FileSystem fs) {
@@ -1184,11 +1195,11 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path p) {
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
       try {
-        return fs.isFile(p);
+        return isFile(fs, isDir, p);
       } catch (IOException e) {
-        LOG.debug("unable to verify if path=" + p + " is a regular file", e);
+        LOG.warn("unable to verify if path=" + p + " is a regular file", e);
         return false;
       }
     }
@@ -1197,7 +1208,7 @@ public abstract class FSUtils {
   /**
    * Directory filter that doesn't include any of the directories in the specified blacklist
    */
-  public static class BlackListDirFilter implements PathFilter {
+  public static class BlackListDirFilter extends AbstractFileStatusFilter {
     private final FileSystem fs;
     private List<String> blacklist;
 
@@ -1216,19 +1227,18 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path p) {
-      boolean isValid = false;
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+      if (!isValidName(p.getName())) {
+        return false;
+      }
+
       try {
-        if (isValidName(p.getName())) {
-          isValid = fs.getFileStatus(p).isDirectory();
-        } else {
-          isValid = false;
-        }
+        return isDirectory(fs, isDir, p);
       } catch (IOException e) {
         LOG.warn("An error occurred while verifying if [" + p.toString()
             + "] is a valid directory. Returning 'not valid' and continuing.", e);
+        return false;
       }
-      return isValid;
     }
 
     protected boolean isValidName(final String name) {
@@ -1366,7 +1376,7 @@ public abstract class FSUtils {
   /**
    * Filter for all dirs that don't start with '.'
    */
-  public static class RegionDirFilter implements PathFilter {
+  public static class RegionDirFilter extends AbstractFileStatusFilter {
     // This pattern will accept 0.90+ style hex region dirs and older numeric region dir names.
     final public static Pattern regionDirPattern = Pattern.compile("^[0-9a-f]*$");
     final FileSystem fs;
@@ -1376,16 +1386,16 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path rd) {
-      if (!regionDirPattern.matcher(rd.getName()).matches()) {
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+      if (!regionDirPattern.matcher(p.getName()).matches()) {
         return false;
       }
 
       try {
-        return fs.getFileStatus(rd).isDirectory();
+        return isDirectory(fs, isDir, p);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
-        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        LOG.warn("Skipping file " + p +" due to IOException", ioe);
         return false;
       }
     }
@@ -1401,8 +1411,11 @@ public abstract class FSUtils {
    */
   public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir) throws IOException {
     // assumes we are in a table dir.
-    FileStatus[] rds = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    List<Path> regionDirs = new ArrayList<Path>(rds.length);
+    List<FileStatus> rds = listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
+    if (rds == null) {
+      return new ArrayList<Path>();
+    }
+    List<Path> regionDirs = new ArrayList<Path>(rds.size());
     for (FileStatus rdfs: rds) {
       Path rdPath = rdfs.getPath();
       regionDirs.add(rdPath);
@@ -1414,7 +1427,7 @@ public abstract class FSUtils {
    * Filter for all dirs that are legal column family names.  This is generally used for colfam
    * dirs &lt;hbase.rootdir&gt;/&lt;tabledir&gt;/&lt;regiondir&gt;/&lt;colfamdir&gt;.
    */
-  public static class FamilyDirFilter implements PathFilter {
+  public static class FamilyDirFilter extends AbstractFileStatusFilter {
     final FileSystem fs;
 
     public FamilyDirFilter(FileSystem fs) {
@@ -1422,20 +1435,20 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path rd) {
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
       try {
         // throws IAE if invalid
-        HColumnDescriptor.isLegalFamilyName(Bytes.toBytes(rd.getName()));
+        HColumnDescriptor.isLegalFamilyName(Bytes.toBytes(p.getName()));
       } catch (IllegalArgumentException iae) {
         // path name is an invalid family name and thus is excluded.
         return false;
       }
 
       try {
-        return fs.getFileStatus(rd).isDirectory();
+        return isDirectory(fs, isDir, p);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
-        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        LOG.warn("Skipping file " + p +" due to IOException", ioe);
         return false;
       }
     }
@@ -1461,8 +1474,11 @@ public abstract class FSUtils {
   }
 
   public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
-    FileStatus[] fds = fs.listStatus(familyDir, new ReferenceFileFilter(fs));
-    List<Path> referenceFiles = new ArrayList<Path>(fds.length);
+    List<FileStatus> fds = listStatusWithStatusFilter(fs, familyDir, new ReferenceFileFilter(fs));
+    if (fds == null) {
+      return new ArrayList<Path>();
+    }
+    List<Path> referenceFiles = new ArrayList<Path>(fds.size());
     for (FileStatus fdfs: fds) {
       Path fdPath = fdfs.getPath();
       referenceFiles.add(fdPath);
@@ -1473,7 +1489,7 @@ public abstract class FSUtils {
   /**
    * Filter for HFiles that excludes reference files.
    */
-  public static class HFileFilter implements PathFilter {
+  public static class HFileFilter extends AbstractFileStatusFilter {
     final FileSystem fs;
 
     public HFileFilter(FileSystem fs) {
@@ -1481,19 +1497,22 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path rd) {
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+      if (!StoreFileInfo.isHFile(p)) {
+        return false;
+      }
+
       try {
-        // only files
-        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isHFile(rd);
+        return isFile(fs, isDir, p);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
-        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        LOG.warn("Skipping file " + p +" due to IOException", ioe);
         return false;
       }
     }
   }
 
-  public static class ReferenceFileFilter implements PathFilter {
+  public static class ReferenceFileFilter extends AbstractFileStatusFilter {
 
     private final FileSystem fs;
 
@@ -1502,13 +1521,17 @@ public abstract class FSUtils {
     }
 
     @Override
-    public boolean accept(Path rd) {
+    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+      if (!StoreFileInfo.isReference(p)) {
+        return false;
+      }
+
       try {
         // only files can be references.
-        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isReference(rd);
+        return isFile(fs, isDir, p);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
-        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        LOG.warn("Skipping file " + p +" due to IOException", ioe);
         return false;
       }
     }
@@ -1540,70 +1563,149 @@ public abstract class FSUtils {
    * @param tableName name of the table to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
+   * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
   final FileSystem fs, final Path hbaseRootDir, TableName tableName)
-  throws IOException {
-    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null);
+  throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null, null, null);
   }
 
   /**
    * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
+   * table StoreFile names to the full Path.  Note that because this method can be called
+   * on a 'live' HBase system that we will skip files that no longer exist by the time
+   * we traverse them and similarly the user of the result needs to consider that some
+   * entries in this map may not exist by the time this call completes.
    * <br>
    * Example...<br>
    * Key = 3944417774205889744  <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
    *
-   * @param map map to add values.  If null, this method will create and populate one to return
+   * @param resultMap map to add values.  If null, this method will create and populate one to return
    * @param fs  The file system to use.
    * @param hbaseRootDir  The root directory to scan.
    * @param tableName name of the table to scan.
+   * @param sfFilter optional path filter to apply to store files
+   * @param executor optional executor service to parallelize this operation
    * @param errors ErrorReporter instance or null
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
+   * @throws InterruptedException
    */
-  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
-  final FileSystem fs, final Path hbaseRootDir, TableName tableName, ErrorReporter errors)
-  throws IOException {
-    if (map == null) {
-      map = new HashMap<String, Path>();
-    }
+  public static Map<String, Path> getTableStoreFilePathMap(
+      Map<String, Path> resultMap,
+      final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
+      ExecutorService executor, final ErrorReporter errors) throws IOException, InterruptedException {
+
+    final Map<String, Path> finalResultMap =
+        resultMap == null ? new ConcurrentHashMap<String, Path>(128, 0.75f, 32) : resultMap;
 
     // only include the directory paths to tables
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
     // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
     // should be regions.
-    PathFilter familyFilter = new FamilyDirFilter(fs);
-    FileStatus[] regionDirs = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    for (FileStatus regionDir : regionDirs) {
-      if (null != errors) {
-        errors.progress();
+    final FamilyDirFilter familyFilter = new FamilyDirFilter(fs);
+    final Vector<Exception> exceptions = new Vector<Exception>();
+
+    try {
+      List<FileStatus> regionDirs = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
+      if (regionDirs == null) {
+        return finalResultMap;
       }
-      Path dd = regionDir.getPath();
-      // else its a region name, now look in region for families
-      FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
-      for (FileStatus familyDir : familyDirs) {
+
+      final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.size());
+
+      for (FileStatus regionDir : regionDirs) {
         if (null != errors) {
           errors.progress();
         }
-        Path family = familyDir.getPath();
-        if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
-          continue;
+        final Path dd = regionDir.getPath();
+
+        if (!exceptions.isEmpty()) {
+          break;
         }
-        // now in family, iterate over the StoreFiles and
-        // put in map
-        FileStatus[] familyStatus = fs.listStatus(family);
-        for (FileStatus sfStatus : familyStatus) {
-          if (null != errors) {
-            errors.progress();
+
+        Runnable getRegionStoreFileMapCall = new Runnable() {
+          @Override
+          public void run() {
+            try {
+              HashMap<String,Path> regionStoreFileMap = new HashMap<String, Path>();
+              List<FileStatus> familyDirs = FSUtils.listStatusWithStatusFilter(fs, dd, familyFilter);
+              if (familyDirs == null) {
+                if (!fs.exists(dd)) {
+                  LOG.warn("Skipping region because it no longer exists: " + dd);
+                } else {
+                  LOG.warn("Skipping region because it has no family dirs: " + dd);
+                }
+                return;
+              }
+              for (FileStatus familyDir : familyDirs) {
+                if (null != errors) {
+                  errors.progress();
+                }
+                Path family = familyDir.getPath();
+                if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
+                  continue;
+                }
+                // now in family, iterate over the StoreFiles and
+                // put in map
+                FileStatus[] familyStatus = fs.listStatus(family);
+                for (FileStatus sfStatus : familyStatus) {
+                  if (null != errors) {
+                    errors.progress();
+                  }
+                  Path sf = sfStatus.getPath();
+                  if (sfFilter == null || sfFilter.accept(sf)) {
+                    regionStoreFileMap.put( sf.getName(), sf);
+                  }
+                }
+              }
+              finalResultMap.putAll(regionStoreFileMap);
+            } catch (Exception e) {
+              LOG.error("Could not get region store file map for region: " + dd, e);
+              exceptions.add(e);
+            }
           }
-          Path sf = sfStatus.getPath();
-          map.put( sf.getName(), sf);
+        };
+
+        // If executor is available, submit async tasks to exec concurrently, otherwise
+        // just do serial sync execution
+        if (executor != null) {
+          Future<?> future = executor.submit(getRegionStoreFileMapCall);
+          futures.add(future);
+        } else {
+          FutureTask<?> future = new FutureTask<Object>(getRegionStoreFileMapCall, null);
+          future.run();
+          futures.add(future);
         }
       }
+
+      // Ensure all pending tasks are complete (or that we run into an exception)
+      for (Future<?> f : futures) {
+        if (!exceptions.isEmpty()) {
+          break;
+        }
+        try {
+          f.get();
+        } catch (ExecutionException e) {
+          LOG.error("Unexpected exec exception!  Should've been caught already.  (Bug?)", e);
+          // Shouldn't happen, we already logged/caught any exceptions in the Runnable
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Cannot execute getTableStoreFilePathMap for " + tableName, e);
+      exceptions.add(e);
+    } finally {
+      if (!exceptions.isEmpty()) {
+        // Just throw the first exception as an indication something bad happened
+        // Don't need to propagate all the exceptions, we already logged them all anyway
+        Throwables.propagateIfInstanceOf(exceptions.firstElement(), IOException.class);
+        throw Throwables.propagate(exceptions.firstElement());
+      }
     }
-    return map;
+
+    return finalResultMap;
   }
 
   public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
@@ -1630,11 +1732,12 @@ public abstract class FSUtils {
    * @param hbaseRootDir  The root directory to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
+   * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(
     final FileSystem fs, final Path hbaseRootDir)
-  throws IOException {
-    return getTableStoreFilePathMap(fs, hbaseRootDir, null);
+  throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, null);
   }
 
   /**
@@ -1647,14 +1750,18 @@ public abstract class FSUtils {
    *
    * @param fs  The file system to use.
    * @param hbaseRootDir  The root directory to scan.
+   * @param sfFilter optional path filter to apply to store files
+   * @param executor optional executor service to parallelize this operation
    * @param errors ErrorReporter instance or null
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
+   * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(
-    final FileSystem fs, final Path hbaseRootDir, ErrorReporter errors)
-  throws IOException {
-    Map<String, Path> map = new HashMap<String, Path>();
+    final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
+    ExecutorService executor, ErrorReporter errors)
+  throws IOException, InterruptedException {
+    ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<String, Path>(1024, 0.75f, 32);
 
     // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
@@ -1662,9 +1769,42 @@ public abstract class FSUtils {
     // only include the directory paths to tables
     for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
       getTableStoreFilePathMap(map, fs, hbaseRootDir,
-          FSUtils.getTableName(tableDir), errors);
+          FSUtils.getTableName(tableDir), sfFilter, executor, errors);
     }
     return map;
+  }
+
+  /**
+   * Filters FileStatuses in an array and returns a list
+   *
+   * @param input   An array of FileStatuses
+   * @param filter  A required filter to filter the array
+   * @return        A list of FileStatuses
+   */
+  public static List<FileStatus> filterFileStatuses(FileStatus[] input,
+      FileStatusFilter filter) {
+    if (input == null) return null;
+    return filterFileStatuses(Iterators.forArray(input), filter);
+  }
+
+  /**
+   * Filters FileStatuses in an iterator and returns a list
+   *
+   * @param input   An iterator of FileStatuses
+   * @param filter  A required filter to filter the array
+   * @return        A list of FileStatuses
+   */
+  public static List<FileStatus> filterFileStatuses(Iterator<FileStatus> input,
+      FileStatusFilter filter) {
+    if (input == null) return null;
+    ArrayList<FileStatus> results = new ArrayList<FileStatus>();
+    while (input.hasNext()) {
+      FileStatus f = input.next();
+      if (filter.accept(f)) {
+        results.add(f);
+      }
+    }
+    return results;
   }
 
   /**
@@ -1672,6 +1812,48 @@ public abstract class FSUtils {
    * This accommodates differences between hadoop versions, where hadoop 1
    * does not throw a FileNotFoundException, and return an empty FileStatus[]
    * while Hadoop 2 will throw FileNotFoundException.
+   *
+   * @param fs file system
+   * @param dir directory
+   * @param filter file status filter
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus list
+   */
+  public static List<FileStatus> listStatusWithStatusFilter(final FileSystem fs,
+      final Path dir, final FileStatusFilter filter) throws IOException {
+    FileStatus [] status = null;
+    try {
+      status = fs.listStatus(dir);
+    } catch (FileNotFoundException fnfe) {
+      // if directory doesn't exist, return null
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(dir + " doesn't exist");
+      }
+    }
+
+    if (status == null || status.length < 1)  {
+      return null;
+    }
+
+    if (filter == null) {
+      return Arrays.asList(status);
+    } else {
+      List<FileStatus> status2 = filterFileStatuses(status, filter);
+      if (status2 == null || status2.isEmpty()) {
+        return null;
+      } else {
+        return status2;
+      }
+    }
+  }
+
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This accommodates differences between hadoop versions, where hadoop 1
+   * does not throw a FileNotFoundException, and return an empty FileStatus[]
+   * while Hadoop 2 will throw FileNotFoundException.
+   *
+   * Where possible, prefer {@link #listStatusWithStatusFilter(FileSystem,
+   * Path, FileStatusFilter)} instead.
    *
    * @param fs file system
    * @param dir directory

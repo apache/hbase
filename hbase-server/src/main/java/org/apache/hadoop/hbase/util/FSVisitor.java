@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +55,7 @@ public final class FSVisitor {
    */
   public static void visitTableStoreFiles(final FileSystem fs, final Path tableDir,
       final StoreFileVisitor visitor) throws IOException {
-    FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
+    List<FileStatus> regions = FSUtils.listStatusWithStatusFilter(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No regions under directory:" + tableDir);
@@ -77,7 +78,7 @@ public final class FSVisitor {
    */
   public static void visitRegionStoreFiles(final FileSystem fs, final Path regionDir,
       final StoreFileVisitor visitor) throws IOException {
-    FileStatus[] families = FSUtils.listStatus(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
+    List<FileStatus> families = FSUtils.listStatusWithStatusFilter(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
     if (families == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No families under region directory:" + regionDir);

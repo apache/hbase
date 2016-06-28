@@ -152,9 +152,9 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   protected void checkColFamDir(Path cfDir) throws IOException {
-    FileStatus[] hfs = null;
+    FileStatus[] statuses = null;
     try {
-      hfs = fs.listStatus(cfDir, new HFileFilter(fs)); // use same filter as scanner.
+      statuses = fs.listStatus(cfDir); // use same filter as scanner.
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
       LOG.warn("Colfam Directory " + cfDir +
@@ -163,8 +163,9 @@ public class HFileCorruptionChecker {
       return;
     }
 
+    List<FileStatus> hfs = FSUtils.filterFileStatuses(statuses, new HFileFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (hfs.length == 0 && !fs.exists(cfDir)) {
+    if (hfs.size() == 0 && !fs.exists(cfDir)) {
       LOG.warn("Colfam Directory " + cfDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(cfDir);
@@ -184,9 +185,9 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   protected void checkRegionDir(Path regionDir) throws IOException {
-    FileStatus[] cfs = null;
+    FileStatus[] statuses = null;
     try {
-      cfs = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+      statuses = fs.listStatus(regionDir);
     } catch (FileNotFoundException fnfe) {
       // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
       LOG.warn("Region Directory " + regionDir +
@@ -195,8 +196,9 @@ public class HFileCorruptionChecker {
       return;
     }
 
+    List<FileStatus> cfs = FSUtils.filterFileStatuses(statuses, new FamilyDirFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (cfs.length == 0 && !fs.exists(regionDir)) {
+    if (cfs.size() == 0 && !fs.exists(regionDir)) {
       LOG.warn("Region Directory " + regionDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);
@@ -217,12 +219,13 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   void checkTableDir(Path tableDir) throws IOException {
-    FileStatus[] rds = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    if (rds.length == 0 && !fs.exists(tableDir)) {
-      // interestingly listStatus does not throw an exception if the path does not exist.
-      LOG.warn("Table Directory " + tableDir +
-          " does not exist.  Likely due to concurrent delete. Skipping.");
-      missing.add(tableDir);
+    List<FileStatus> rds = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
+    if (rds == null) {
+      if (!fs.exists(tableDir)) {
+        LOG.warn("Table Directory " + tableDir +
+            " does not exist.  Likely due to concurrent delete. Skipping.");
+        missing.add(tableDir);
+      }
       return;
     }
 
