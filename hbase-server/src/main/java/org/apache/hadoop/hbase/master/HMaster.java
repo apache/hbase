@@ -689,7 +689,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Publishing Cluster ID in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
 
-    this.serverManager = createServerManager(this, this);
+    this.serverManager = createServerManager(this);
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
@@ -881,13 +881,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * Create a {@link ServerManager} instance.
    */
-  ServerManager createServerManager(final Server master,
-      final MasterServices services)
-  throws IOException {
+  ServerManager createServerManager(final MasterServices master) throws IOException {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up ServerManager.
     setupClusterConnection();
-    return new ServerManager(master, services);
+    return new ServerManager(master);
   }
 
   private void unassignExcessMetaReplica(ZooKeeperWatcher zkw, int numMetaReplicasConfigured) {

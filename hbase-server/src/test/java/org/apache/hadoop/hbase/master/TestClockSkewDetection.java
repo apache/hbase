@@ -51,66 +51,14 @@ public class TestClockSkewDetection {
   @Test
   public void testClockSkewDetection() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    ServerManager sm = new ServerManager(new Server() {
-      @Override
-      public ClusterConnection getConnection() {
-        return null;
-      }
-
-      @Override
-      public MetaTableLocator getMetaTableLocator() {
-        return null;
-      }
-
-      @Override
-      public Configuration getConfiguration() {
-        return conf;
-      }
-
-      @Override
-      public ServerName getServerName() {
-        return null;
-      }
-
-      @Override
-      public ZooKeeperWatcher getZooKeeper() {
-        return null;
-      }
-
-      @Override
-      public CoordinatedStateManager getCoordinatedStateManager() {
-        return null;
-      }
-
-      @Override
-      public void abort(String why, Throwable e) {}
-
-      @Override
-      public boolean isAborted() {
-        return false;
-      }
-
-      @Override
-      public boolean isStopped() {
-        return false;
-      }
-
-      @Override
-      public void stop(String why) {
-      }
-
-      @Override
-      public ChoreService getChoreService() {
-        return null;
-      }
-
+    ServerManager sm = new ServerManager(new MockNoopMasterServices(conf) {
       @Override
       public ClusterConnection getClusterConnection() {
         ClusterConnection conn = mock(ClusterConnection.class);
         when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
         return conn;
       }
-    }, null, true);
+    }, true);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();
