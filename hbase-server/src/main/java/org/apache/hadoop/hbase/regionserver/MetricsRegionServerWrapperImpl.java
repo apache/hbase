@@ -505,7 +505,6 @@ class MetricsRegionServerWrapperImpl
     synchronized public void run() {
       try {
         initBlockCache();
-        cacheStats = blockCache.getStats();
 
         HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
         HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
