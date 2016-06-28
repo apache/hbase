@@ -631,7 +631,6 @@ class MetricsRegionServerWrapperImpl
       try {
         initBlockCache();
         initMobFileCache();
-        cacheStats = blockCache.getStats();
 
         HDFSBlocksDistribution hdfsBlocksDistribution =
             new HDFSBlocksDistribution();
