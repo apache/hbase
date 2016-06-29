@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -190,14 +189,6 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long heapSize() {
     return getActive().getSize();
-  }
-
-  /**
-   * @return a list containing a single memstore scanner.
-   */
-  @Override
-  public List<KeyValueScanner> getScanners(long readPt) throws IOException {
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(this, readPt));
   }
 
   @Override
@@ -439,13 +430,6 @@ public abstract class AbstractMemStore implements MemStore {
    * Check whether anything need to be done based on the current active set size
    */
   protected abstract void checkActiveSize();
-
-  /**
-   * Returns a list of Store segment scanners, one per each store segment
-   * @param readPt the version number required to initialize the scanners
-   * @return a list of Store segment scanners, one per each store segment
-   */
-  protected abstract List<SegmentScanner> getListOfScanners(long readPt) throws IOException;
 
   /**
    * Returns an ordered list of segments from most recent to oldest in memstore
