@@ -50,9 +50,9 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class EnableTableProcedure
@@ -67,7 +67,7 @@ public class EnableTableProcedure
 
   private TableName tableName;
   private boolean skipTableStateCheck;
-  private UserGroupInformation user;
+  private User user;
 
   private Boolean traceEnabled = null;
 
@@ -103,8 +103,8 @@ public class EnableTableProcedure
       final ProcedurePrepareLatch syncLatch) throws IOException {
     this.tableName = tableName;
     this.skipTableStateCheck = skipTableStateCheck;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
 
     // Compatible with 1.0: We use latch to make sure that this procedure implementation is
     // compatible with 1.0 asynchronized operations. We need to lock the table and check
@@ -561,22 +561,16 @@ public class EnableTableProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case ENABLE_TABLE_PRE_OPERATION:
-            cpHost.preEnableTableAction(getTableName());
-            break;
-          case ENABLE_TABLE_POST_OPERATION:
-            cpHost.postCompletedEnableTableAction(getTableName());
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case ENABLE_TABLE_PRE_OPERATION:
+          cpHost.preEnableTableAction(getTableName(), user);
+          break;
+        case ENABLE_TABLE_POST_OPERATION:
+          cpHost.postCompletedEnableTableAction(getTableName(), user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 }

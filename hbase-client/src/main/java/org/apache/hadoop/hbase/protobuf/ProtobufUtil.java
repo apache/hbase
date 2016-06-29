@@ -159,6 +159,7 @@ import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -1874,12 +1875,12 @@ public final class ProtobufUtil {
   public static void mergeRegions(final RpcController controller,
       final AdminService.BlockingInterface admin,
       final HRegionInfo region_a, final HRegionInfo region_b,
-      final boolean forcible, final UserGroupInformation user) throws IOException {
+      final boolean forcible, final User user) throws IOException {
     final MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
         region_a.getRegionName(), region_b.getRegionName(),forcible);
     if (user != null) {
       try {
-        user.doAs(new PrivilegedExceptionAction<Void>() {
+        user.runAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
             admin.mergeRegions(controller, request);

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -39,7 +38,7 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.AddColumnFamilyState;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * The procedure to add a column family to an existing table.
@@ -55,7 +54,7 @@ public class AddColumnFamilyProcedure
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
   private HColumnDescriptor cfDescriptor;
-  private UserGroupInformation user;
+  private User user;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
@@ -72,8 +71,8 @@ public class AddColumnFamilyProcedure
       final HColumnDescriptor cfDescriptor) throws IOException {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
@@ -378,22 +377,16 @@ public class AddColumnFamilyProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case ADD_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preAddColumnFamilyAction(tableName, cfDescriptor);
-            break;
-          case ADD_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postCompletedAddColumnFamilyAction(tableName, cfDescriptor);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case ADD_COLUMN_FAMILY_PRE_OPERATION:
+          cpHost.preAddColumnFamilyAction(tableName, cfDescriptor, user);
+          break;
+        case ADD_COLUMN_FAMILY_POST_OPERATION:
+          cpHost.postCompletedAddColumnFamilyAction(tableName, cfDescriptor, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 

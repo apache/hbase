@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyColumnFamilyState;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * The procedure to modify a column family from an existing table.
@@ -55,7 +55,7 @@ public class ModifyColumnFamilyProcedure
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
   private HColumnDescriptor cfDescriptor;
-  private UserGroupInformation user;
+  private User user;
 
   private Boolean traceEnabled;
 
@@ -70,8 +70,8 @@ public class ModifyColumnFamilyProcedure
       final HColumnDescriptor cfDescriptor) throws IOException {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.traceEnabled = null;
   }
@@ -359,22 +359,16 @@ public class ModifyColumnFamilyProcedure
       final ModifyColumnFamilyState state) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preModifyColumnFamilyAction(tableName, cfDescriptor);
-            break;
-          case MODIFY_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postCompletedModifyColumnFamilyAction(tableName, cfDescriptor);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
+          cpHost.preModifyColumnFamilyAction(tableName, cfDescriptor, user);
+          break;
+        case MODIFY_COLUMN_FAMILY_POST_OPERATION:
+          cpHost.postCompletedModifyColumnFamilyAction(tableName, cfDescriptor, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 }

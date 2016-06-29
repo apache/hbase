@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyTableState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure
@@ -62,7 +62,7 @@ public class ModifyTableProcedure
 
   private HTableDescriptor unmodifiedHTableDescriptor = null;
   private HTableDescriptor modifiedHTableDescriptor;
-  private UserGroupInformation user;
+  private User user;
   private boolean deleteColumnFamilyInModify;
 
   private List<HRegionInfo> regionInfoList;
@@ -77,8 +77,8 @@ public class ModifyTableProcedure
     final HTableDescriptor htd) throws IOException {
     initilize();
     this.modifiedHTableDescriptor = htd;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
   }
 
   private void initilize() {
@@ -467,22 +467,16 @@ public class ModifyTableProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case MODIFY_TABLE_PRE_OPERATION:
-            cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor);
-            break;
-          case MODIFY_TABLE_POST_OPERATION:
-            cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case MODIFY_TABLE_PRE_OPERATION:
+          cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor, user);
+          break;
+        case MODIFY_TABLE_POST_OPERATION:
+          cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 

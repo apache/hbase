@@ -53,12 +53,12 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class RestoreSnapshotProcedure
@@ -75,7 +75,7 @@ public class RestoreSnapshotProcedure
   private Map<String, Pair<String, String>> parentsToChildrenPairMap =
     new HashMap<String, Pair<String, String>>();
 
-  private UserGroupInformation user;
+  private User user;
   private SnapshotDescription snapshot;
 
   // Monitor
@@ -106,8 +106,8 @@ public class RestoreSnapshotProcedure
     // Snapshot information
     this.snapshot = snapshot;
     // User and owner information
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
 
     // Monitor
     getMonitorStatus();

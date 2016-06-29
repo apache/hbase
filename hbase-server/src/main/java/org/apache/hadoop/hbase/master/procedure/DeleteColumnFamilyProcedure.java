@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteColumnFamilyState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * The procedure to delete a column family from an existing table.
@@ -57,7 +57,7 @@ public class DeleteColumnFamilyProcedure
   private TableName tableName;
   private byte [] familyName;
   private boolean hasMob;
-  private UserGroupInformation user;
+  private User user;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
@@ -74,8 +74,8 @@ public class DeleteColumnFamilyProcedure
       final byte[] familyName) throws IOException {
     this.tableName = tableName;
     this.familyName = familyName;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
@@ -403,22 +403,16 @@ public class DeleteColumnFamilyProcedure
       final DeleteColumnFamilyState state) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case DELETE_COLUMN_FAMILY_PRE_OPERATION:
-            cpHost.preDeleteColumnFamilyAction(tableName, familyName);
-            break;
-          case DELETE_COLUMN_FAMILY_POST_OPERATION:
-            cpHost.postCompletedDeleteColumnFamilyAction(tableName, familyName);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case DELETE_COLUMN_FAMILY_PRE_OPERATION:
+          cpHost.preDeleteColumnFamilyAction(tableName, familyName, user);
+          break;
+        case DELETE_COLUMN_FAMILY_POST_OPERATION:
+          cpHost.postCompletedDeleteColumnFamilyAction(tableName, familyName, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 

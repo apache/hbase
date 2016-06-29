@@ -151,7 +151,7 @@ public class SecureBulkLoadManager {
 
     if (bulkLoadObservers != null && bulkLoadObservers.size() != 0) {
       ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>();
+          new ObserverContext<RegionCoprocessorEnvironment>(getActiveUser());
       ctx.prepare((RegionCoprocessorEnvironment) region.getCoprocessorHost()
           .findCoprocessorEnvironment(BulkLoadObserver.class).get(0));
 
@@ -173,7 +173,7 @@ public class SecureBulkLoadManager {
 
     if (bulkLoadObservers != null && bulkLoadObservers.size() != 0) {
       ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>();
+          new ObserverContext<RegionCoprocessorEnvironment>(getActiveUser());
       ctx.prepare((RegionCoprocessorEnvironment) region.getCoprocessorHost()
         .findCoprocessorEnvironment(BulkLoadObserver.class).get(0));
 

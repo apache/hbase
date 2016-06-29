@@ -228,26 +228,9 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        // TODO: Remove one of these
-        parent.getCoprocessorHost().preSplit();
-        parent.getCoprocessorHost().preSplit(splitrow);
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              parent.getCoprocessorHost().preSplit();
-              parent.getCoprocessorHost().preSplit(splitrow);
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      // TODO: Remove one of these
+      parent.getCoprocessorHost().preSplit(user);
+      parent.getCoprocessorHost().preSplit(splitrow, user);
     }
 
     transition(SplitTransactionPhase.AFTER_PRE_SPLIT_HOOK);
@@ -264,22 +247,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     final List<Mutation> metaEntries = new ArrayList<Mutation>();
     boolean ret = false;
     if (this.parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        ret = parent.getCoprocessorHost().preSplitBeforePONR(splitrow, metaEntries);
-      } else {
-        try {
-          ret = user.getUGI().doAs(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-              return parent.getCoprocessorHost().preSplitBeforePONR(splitrow, metaEntries);
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      ret = parent.getCoprocessorHost().preSplitBeforePONR(splitrow, metaEntries, user);
       if (ret) {
           throw new IOException("Coprocessor bypassing region "
             + parent.getRegionInfo().getRegionNameAsString() + " split.");
@@ -510,23 +478,7 @@ public class SplitTransactionImpl implements SplitTransaction {
       final RegionServerServices services, final PairOfSameType<Region> regions, User user)
       throws IOException {
     if (this.parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        parent.getCoprocessorHost().preSplitAfterPONR();
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              parent.getCoprocessorHost().preSplitAfterPONR();
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      parent.getCoprocessorHost().preSplitAfterPONR(user);
     }
 
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
@@ -535,23 +487,7 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     // Coprocessor callback
     if (parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        this.parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      this.parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond(), user);
     }
 
     transition(SplitTransactionPhase.AFTER_POST_SPLIT_HOOK);
@@ -780,23 +716,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     this.rsServices = services;
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        this.parent.getCoprocessorHost().preRollBackSplit();
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              parent.getCoprocessorHost().preRollBackSplit();
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      this.parent.getCoprocessorHost().preRollBackSplit(user);
     }
 
     boolean result = true;
@@ -875,23 +795,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     }
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      if (user == null) {
-        this.parent.getCoprocessorHost().postRollBackSplit();
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              parent.getCoprocessorHost().postRollBackSplit();
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      this.parent.getCoprocessorHost().postRollBackSplit(user);
     }
     return result;
   }

@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DispatchMergingRegionsState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * The procedure to Merge a region in a table.
@@ -66,7 +66,7 @@ implements TableProcedureInterface {
   private String regionsToMergeListFullName;
   private String regionsToMergeListEncodedName;
 
-  private UserGroupInformation user;
+  private User user;
   private TableName tableName;
   private HRegionInfo [] regionsToMerge;
   private boolean forcible;
@@ -94,8 +94,8 @@ implements TableProcedureInterface {
     this.regionsToMerge = regionsToMerge;
     this.forcible = forcible;
 
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
 
     this.timeout = -1;
     this.regionsToMergeListFullName = getRegionsToMergeListFullNameString();

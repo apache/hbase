@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -62,7 +63,6 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.base.Preconditions;
 
@@ -74,7 +74,7 @@ public class CloneSnapshotProcedure
 
   private final AtomicBoolean aborted = new AtomicBoolean(false);
 
-  private UserGroupInformation user;
+  private User user;
   private HTableDescriptor hTableDescriptor;
   private SnapshotDescription snapshot;
   private List<HRegionInfo> newRegions = null;
@@ -106,8 +106,8 @@ public class CloneSnapshotProcedure
       throws IOException {
     this.hTableDescriptor = hTableDescriptor;
     this.snapshot = snapshot;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
 
     getMonitorStatus();
   }
@@ -372,13 +372,7 @@ public class CloneSnapshotProcedure
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          cpHost.preCreateTableAction(hTableDescriptor, null);
-          return null;
-        }
-      });
+      cpHost.preCreateTableAction(hTableDescriptor, null, user);
     }
   }
 
@@ -394,13 +388,7 @@ public class CloneSnapshotProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = (newRegions == null) ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          cpHost.postCompletedCreateTableAction(hTableDescriptor, regions);
-          return null;
-        }
-      });
+      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, user);
     }
   }
 

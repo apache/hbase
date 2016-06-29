@@ -247,23 +247,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     }
     final HRegion mergedRegion = createMergedRegion(server, services, user);
     if (rsCoprocessorHost != null) {
-      if (user == null) {
-        rsCoprocessorHost.postMergeCommit(this.region_a, this.region_b, mergedRegion);
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              rsCoprocessorHost.postMergeCommit(region_a, region_b, mergedRegion);
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      rsCoprocessorHost.postMergeCommit(this.region_a, this.region_b, mergedRegion, user);
     }
     stepsAfterPONR(server, services, mergedRegion, user);
 
@@ -277,23 +261,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       final HRegion mergedRegion, User user) throws IOException {
     openMergedRegion(server, services, mergedRegion);
     if (rsCoprocessorHost != null) {
-      if (user == null) {
-        rsCoprocessorHost.postMerge(region_a, region_b, mergedRegion);
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              rsCoprocessorHost.postMerge(region_a, region_b, mergedRegion);
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      rsCoprocessorHost.postMerge(region_a, region_b, mergedRegion, user);
     }
   }
 
@@ -315,23 +283,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     }
 
     if (rsCoprocessorHost != null) {
-      boolean ret = false;
-      if (user == null) {
-        ret = rsCoprocessorHost.preMerge(region_a, region_b);
-      } else {
-        try {
-          ret = user.getUGI().doAs(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-              return rsCoprocessorHost.preMerge(region_a, region_b);
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      boolean ret = rsCoprocessorHost.preMerge(region_a, region_b, user);
       if (ret) {
         throw new IOException("Coprocessor bypassing regions " + this.region_a + " "
             + this.region_b + " merge.");
@@ -347,23 +299,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     @MetaMutationAnnotation
     final List<Mutation> metaEntries = new ArrayList<Mutation>();
     if (rsCoprocessorHost != null) {
-      boolean ret = false;
-      if (user == null) {
-        ret = rsCoprocessorHost.preMergeCommit(region_a, region_b, metaEntries);
-      } else {
-        try {
-          ret = user.getUGI().doAs(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-              return rsCoprocessorHost.preMergeCommit(region_a, region_b, metaEntries);
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      boolean ret = rsCoprocessorHost.preMergeCommit(region_a, region_b, metaEntries, user);
 
       if (ret) {
         throw new IOException("Coprocessor bypassing regions " + this.region_a + " "
@@ -658,23 +594,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     this.rsServices = services;
     // Coprocessor callback
     if (rsCoprocessorHost != null) {
-      if (user == null) {
-        rsCoprocessorHost.preRollBackMerge(region_a, region_b);
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              rsCoprocessorHost.preRollBackMerge(region_a, region_b);
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      rsCoprocessorHost.preRollBackMerge(region_a, region_b, user);
     }
 
     boolean result = true;
@@ -759,23 +679,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     }
     // Coprocessor callback
     if (rsCoprocessorHost != null) {
-      if (user == null) {
-        rsCoprocessorHost.postRollBackMerge(region_a, region_b);
-      } else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              rsCoprocessorHost.postRollBackMerge(region_a, region_b);
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          InterruptedIOException iioe = new InterruptedIOException();
-          iioe.initCause(ie);
-          throw iioe;
-        }
-      }
+      rsCoprocessorHost.postRollBackMerge(region_a, region_b, user);
     }
 
     return result;

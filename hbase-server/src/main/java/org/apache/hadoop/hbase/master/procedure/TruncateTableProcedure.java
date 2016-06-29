@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class TruncateTableProcedure
@@ -52,7 +52,7 @@ public class TruncateTableProcedure
 
   private boolean preserveSplits;
   private List<HRegionInfo> regions;
-  private UserGroupInformation user;
+  private User user;
   private HTableDescriptor hTableDescriptor;
   private TableName tableName;
 
@@ -64,8 +64,8 @@ public class TruncateTableProcedure
       boolean preserveSplits) throws IOException {
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
   }
 
   @Override
@@ -261,13 +261,7 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          cpHost.preTruncateTableAction(tableName);
-          return null;
-        }
-      });
+      cpHost.preTruncateTableAction(tableName, user);
     }
     return true;
   }
@@ -277,13 +271,7 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          cpHost.postCompletedTruncateTableAction(tableName);
-          return null;
-        }
-      });
+      cpHost.postCompletedTruncateTableAction(tableName, user);
     }
   }
 }
