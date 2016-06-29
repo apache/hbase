@@ -243,7 +243,7 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
-    return true;
+    return getSegment().shouldSeek(scan,oldestUnexpiredTS);
   }
   /**
    * This scanner is working solely on the in-memory MemStore therefore this
@@ -303,14 +303,6 @@ public class SegmentScanner implements KeyValueScanner {
   @Override
   public void shipped() throws IOException {
     // do nothing
-  }
-
-  /**
-   * Returns whether the given scan should seek in this segment
-   * @return whether the given scan should seek in this segment
-   */
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return getSegment().shouldSeek(scan,oldestUnexpiredTS);
   }
 
   protected Segment getSegment(){

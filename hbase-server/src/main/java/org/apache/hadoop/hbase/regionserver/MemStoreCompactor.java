@@ -67,7 +67,7 @@ class MemStoreCompactor {
   public boolean startCompaction() throws IOException {
     if (!compactingMemStore.hasCompactibleSegments()) return false;  // no compaction on empty
 
-    List<SegmentScanner> scanners = new ArrayList<SegmentScanner>();
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
     // get the list of segments from the pipeline
     versionedList = compactingMemStore.getCompactibleSegments();
     // the list is marked with specific version

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -113,18 +114,19 @@ public class DefaultMemStore extends AbstractMemStore {
   /*
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
-  protected List<SegmentScanner> getListOfScanners(long readPt) throws IOException {
-    List<SegmentScanner> list = new ArrayList<SegmentScanner>(2);
-    list.add(0, getActive().getSegmentScanner(readPt, 1));
-    list.add(1, getSnapshot().getSegmentScanner(readPt, 0));
-    return list;
+  public List<KeyValueScanner> getScanners(long readPt) throws IOException {
+    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(2);
+    list.add(getActive().getSegmentScanner(readPt, 1));
+    list.add(getSnapshot().getSegmentScanner(readPt, 0));
+    return Collections.<KeyValueScanner> singletonList(
+      new MemStoreScanner((AbstractMemStore) this, list, readPt));
   }
 
   @Override
   protected List<Segment> getSegments() throws IOException {
     List<Segment> list = new ArrayList<Segment>(2);
-    list.add(0, getActive());
-    list.add(1, getSnapshot());
+    list.add(getActive());
+    list.add(getSnapshot());
     return list;
   }
 
