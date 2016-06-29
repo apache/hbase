@@ -37,6 +37,7 @@ EOF
       end
 
       def command(args = {})
+        now = Time.now
         formatter.header(["OWNER", "QUOTAS"])
 
         #actually do the scanning
@@ -44,7 +45,7 @@ EOF
           formatter.row([ row, cells ])
         end
 
-        formatter.footer(count)
+        formatter.footer(now, count)
       end
     end
   end

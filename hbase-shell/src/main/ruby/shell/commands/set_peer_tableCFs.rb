@@ -38,7 +38,9 @@ module Shell
       end
 
       def command(id, peer_table_cfs = nil)
-        replication_admin.set_peer_tableCFs(id, peer_table_cfs)
+        format_simple_command do
+          replication_admin.set_peer_tableCFs(id, peer_table_cfs)
+        end
       end
     end
   end

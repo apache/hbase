@@ -40,14 +40,16 @@ EOF
       end
 
       def command(table_regex=nil)
+        #format_simple_command do
         #admin.user_permission(table_regex)
+        now = Time.now
         formatter.header(["User", "Namespace,Table,Family,Qualifier:Permission"])
 
         count = security_admin.user_permission(table_regex) do |user, permission|
           formatter.row([ user, permission])
         end
 
-        formatter.footer(count)
+        formatter.footer(now, count)
       end
     end
   end

@@ -38,7 +38,9 @@ EOF
       end
 
       def command(encoded_region_name, server_name = nil)
-        admin.move(encoded_region_name, server_name)
+        format_simple_command do
+          admin.move(encoded_region_name, server_name)
+        end
       end
     end
   end

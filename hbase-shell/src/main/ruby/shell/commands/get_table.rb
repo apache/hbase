@@ -38,7 +38,9 @@ EOF
       end
 
       def command(table, *args)
-        table(table)
+        format_and_return_simple_command do
+          table(table)
+        end
       end
     end
   end

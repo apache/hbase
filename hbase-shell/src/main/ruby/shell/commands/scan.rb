@@ -104,17 +104,16 @@ EOF
 
       #internal command that actually does the scanning
       def scan(table, args = {})
+        now = Time.now
         formatter.header(["ROW", "COLUMN+CELL"])
 
         scan = table._hash_to_scan(args)
         #actually do the scanning
-        @start_time = Time.now
         count, is_stale = table._scan_internal(args, scan) do |row, cells|
           formatter.row([ row, cells ])
         end
-        @end_time = Time.now
 
-        formatter.footer(count, is_stale)
+        formatter.footer(now, count, is_stale)
         # if scan metrics were enabled, print them after the results
         if (scan != nil && scan.isScanMetricsEnabled())
           formatter.scan_metrics(scan.getScanMetrics(), args["METRICS"])

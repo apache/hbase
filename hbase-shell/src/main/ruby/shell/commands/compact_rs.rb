@@ -34,7 +34,9 @@ module Shell
       end
 
       def command(regionserver, major = false)
-        admin.compactRegionserver(regionserver, major)
+        format_simple_command do
+          admin.compact_regionserver(regionserver, major)
+        end
       end
     end
   end

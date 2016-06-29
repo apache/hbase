@@ -51,15 +51,16 @@ EOF
         puts "No snapshots matched the table name regular expression #{tableNameregex.to_s} and the snapshot name regular expression #{snapshotNameRegex.to_s}" if count == 0
         return unless answer =~ /y.*/i
 
-        @start_time = Time.now
-        list.each do |deleteSnapshot|
-          begin
-            admin.delete_snapshot(deleteSnapshot.getName)
-            puts "Successfully deleted snapshot: #{deleteSnapshot.getName}"
-            puts "\n"
-          rescue RuntimeError
-            puts "Failed to delete snapshot: #{deleteSnapshot.getName}, due to below exception,\n" + $!
-            puts "\n"
+        format_simple_command do
+          list.each do |deleteSnapshot|
+            begin
+              admin.delete_snapshot(deleteSnapshot.getName)
+              puts "Successfully deleted snapshot: #{deleteSnapshot.getName}"
+              puts "\n"
+            rescue RuntimeError
+              puts "Failed to delete snapshot: #{deleteSnapshot.getName}, due to below exception,\n" + $!
+              puts "\n"
+            end
           end
         end
       end

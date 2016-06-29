@@ -34,6 +34,7 @@ EOF
       end
 
       def command(regex = ".*")
+        now = Time.now
         formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
 
         list = admin.list_snapshot(regex)
@@ -42,7 +43,7 @@ EOF
           formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
         end
 
-        formatter.footer(list.size)
+        formatter.footer(now, list.size)
         return list.map { |s| s.getName() }
       end
     end

@@ -40,15 +40,16 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column,
-                  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+      def command(table, row, column, 
+      				timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
         delete(table(table), row, column, timestamp, args)
       end
 
-      def delete(table, row, column,
-                 timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
-        @start_time = Time.now
-        table._delete_internal(row, column, timestamp, args)
+      def delete(table, row, column, 
+      				timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+        format_simple_command do
+          table._delete_internal(row, column, timestamp, args)
+        end
       end
     end
   end

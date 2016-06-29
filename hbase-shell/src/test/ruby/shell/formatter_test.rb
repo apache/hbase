@@ -63,6 +63,6 @@ class ShellFormatterTest < Test::Unit::TestCase
   end
 
   define_test "Froematter#footer should work" do
-    formatter.footer()
+    formatter.footer(Time.now - 5)
   end
 end

@@ -36,7 +36,9 @@ EOF
       end
 
       def command(region_name, force = 'false')
-        admin.unassign(region_name, force)
+        format_simple_command do
+          admin.unassign(region_name, force)
+        end
       end
     end
   end

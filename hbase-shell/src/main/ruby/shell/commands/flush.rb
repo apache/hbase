@@ -32,7 +32,9 @@ EOF
       end
 
       def command(table_or_region_name)
-        admin.flush(table_or_region_name)
+        format_simple_command do
+          admin.flush(table_or_region_name)
+        end
       end
     end
   end

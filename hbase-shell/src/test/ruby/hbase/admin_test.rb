@@ -41,21 +41,21 @@ module Hbase
     end
 
     define_test "exists? should return true when a table exists" do
-      assert(command(:exists, 'hbase:meta'))
+      assert(admin.exists?('hbase:meta'))
     end
 
     define_test "exists? should return false when a table exists" do
-      assert(!command(:exists, 'NOT.EXISTS'))
+      assert(!admin.exists?('NOT.EXISTS'))
     end
 
     define_test "enabled? should return true for enabled tables" do
-      command(:enable, @test_name)
-      assert(command(:is_enabled, @test_name))
+      admin.enable(@test_name)
+      assert(admin.enabled?(@test_name))
     end
 
     define_test "enabled? should return false for disabled tables" do
-      command(:disable, @test_name)
-      assert(!command(:is_enabled, @test_name))
+      admin.disable(@test_name)
+      assert(!admin.enabled?(@test_name))
     end
   end
 
@@ -78,67 +78,63 @@ module Hbase
     end
 
     define_test "list should return a list of tables" do
-      list = command(:list)
-      assert(list.member?(@test_name))
+      assert(admin.list.member?(@test_name))
     end
 
     define_test "list should not return meta tables" do
-      list = command(:list)
-      assert(!list.member?('hbase:meta'))
+      assert(!admin.list.member?('hbase:meta'))
     end
 
     define_test "list_namespace_tables for the system namespace should return a list of tables" do
-      list = command(:list_namespace_tables, 'hbase')
-      assert(list.count > 0)
+      assert(admin.list_namespace_tables('hbase').count > 0)
     end
 
     define_test "list_namespace_tables for the default namespace should return a list of tables" do
-      list = command(:list_namespace_tables, 'default')
-      assert(list.count > 0)
+      assert(admin.list_namespace_tables('default').count > 0)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "flush should work" do
-      command(:flush, 'hbase:meta')
+      admin.flush('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "compact should work" do
-      command(:compact, 'hbase:meta')
+      admin.compact('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "major_compact should work" do
-      command(:major_compact, 'hbase:meta')
+      admin.major_compact('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "split should work" do
-      command(:split, 'hbase:meta', nil)
+      admin.split('hbase:meta', nil)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "drop should fail on non-existent tables" do
       assert_raise(ArgumentError) do
-        command(:drop, 'NOT.EXISTS')
+        admin.drop('NOT.EXISTS')
       end
     end
 
     define_test "drop should fail on enabled tables" do
       assert_raise(ArgumentError) do
-        command(:drop, @test_name)
+        admin.drop(@test_name)
       end
     end
 
     define_test "drop should drop tables" do
-      command(:disable, @test_name)
-      command(:drop, @test_name)
-      assert(!command(:exists, @test_name))
+      admin.disable(@test_name)
+      admin.drop(@test_name)
+      assert(!admin.exists?(@test_name))
     end
 
     #-------------------------------------------------------------------------------
@@ -151,46 +147,45 @@ module Hbase
 
     define_test "create should fail with non-string table names" do
       assert_raise(ArgumentError) do
-        command(:create, 123, 'xxx')
+        admin.create(123, 'xxx')
       end
     end
 
     define_test "create should fail with non-string/non-hash column args" do
       assert_raise(ArgumentError) do
-        command(:create, @create_test_name, 123)
+        admin.create(@create_test_name, 123)
       end
     end
 
     define_test "create should fail without columns" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
-        command(:create, @create_test_name)
+        admin.create(@create_test_name)
       end
     end
     
     define_test "create should fail without columns when called with options" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
-        command(:create, @create_test_name, { OWNER => 'a' })
+        admin.create(@create_test_name, { OWNER => 'a' })
       end
     end
 
     define_test "create should work with string column args" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, 'a', 'b')
+      admin.create(@create_test_name, 'a', 'b')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
      end
 
     define_test "create should work with hash column args" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, { NAME => 'a'}, { NAME => 'b'})
+      admin.create(@create_test_name, { NAME => 'a'}, { NAME => 'b'})
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
     
     define_test "create should be able to set table options" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678,
-              OWNER => '987654321')
+      admin.create(@create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678, OWNER => '987654321')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
       assert_match(/987654321/, admin.describe(@create_test_name))
@@ -198,15 +193,14 @@ module Hbase
         
     define_test "create should ignore table_att" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, 'a', 'b', METHOD => 'table_att', OWNER => '987654321')
+      admin.create(@create_test_name, 'a', 'b', METHOD => 'table_att', OWNER => '987654321')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/987654321/, admin.describe(@create_test_name))
     end
     
     define_test "create should work with SPLITALGO" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, 'a', 'b',
-              {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
+      admin.create(@create_test_name, 'a', 'b', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
 
@@ -229,13 +223,17 @@ module Hbase
       table(@test_name).put(2, "x:a", 2)
       assert_equal(2, table(@test_name)._count_internal)
       # This is hacky.  Need to get the configuration into admin instance
-      command(:truncate, @test_name)
+      admin.truncate(@test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(0, table(@test_name)._count_internal)
     end
 
     define_test "truncate should yield log records" do
-      output = capture_stdout { command(:truncate, @test_name) }
-      assert(!output.empty?)
+      logs = []
+      admin.truncate(@test_name, $TEST_CLUSTER.getConfiguration) do |log|
+        assert_kind_of(String, log)
+        logs << log
+      end
+      assert(!logs.empty?)
     end
   end
 
@@ -259,68 +257,77 @@ module Hbase
 
     define_test "alter should fail with non-string table names" do
       assert_raise(ArgumentError) do
-        command(:alter, 123, METHOD => 'delete', NAME => 'y')
+        admin.alter(123, true, METHOD => 'delete', NAME => 'y')
       end
     end
 
     define_test "alter should fail with non-existing tables" do
       assert_raise(ArgumentError) do
-        command(:alter, 'NOT.EXISTS', METHOD => 'delete', NAME => 'y')
+        admin.alter('NOT.EXISTS', true, METHOD => 'delete', NAME => 'y')
       end
     end
 
     define_test "alter should not fail with enabled tables" do
-      command(:enable, @test_name)
-      command(:alter, @test_name, METHOD => 'delete', NAME => 'y')
+      admin.enable(@test_name)
+      admin.alter(@test_name, true, METHOD => 'delete', NAME => 'y')
     end
 
     define_test "alter should be able to delete column families" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      command(:alter, @test_name, METHOD => 'delete', NAME => 'y')
-      command(:enable, @test_name)
+      admin.alter(@test_name, true, METHOD => 'delete', NAME => 'y')
+      admin.enable(@test_name)
       assert_equal(['x:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to add column families" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      command(:alter, @test_name, NAME => 'z')
-      command(:enable, @test_name)
+      admin.alter(@test_name, true, NAME => 'z')
+      admin.enable(@test_name)
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to add column families (name-only alter spec)" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      command(:alter, @test_name, 'z')
-      command(:enable, @test_name)
+      admin.alter(@test_name, true, 'z')
+      admin.enable(@test_name)
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should support more than one alteration in one call" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      alterOutput = capture_stdout {
-        command(:alter, @test_name, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' },
-                'MAX_FILESIZE' => 12345678) }
-      command(:enable, @test_name)
+      alterOutput = capture_stdout { admin.alter(@test_name, true, { NAME => 'z' },
+        { METHOD => 'delete', NAME => 'y' }, 'MAX_FILESIZE' => 12345678) }
+      admin.enable(@test_name)
       assert_equal(1, /Updating all regions/.match(alterOutput).size,
         "HBASE-15641 - Should only perform one table modification per alter.")
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
+    def capture_stdout
+      begin
+        old_stdout = $stdout
+        $stdout = StringIO.new('','w')
+        yield
+        $stdout.string
+      ensure
+        $stdout = old_stdout
+      end
+    end
 
     define_test 'alter should support shortcut DELETE alter specs' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      command(:alter, @test_name, 'delete' => 'y')
+      admin.alter(@test_name, true, 'delete' => 'y')
       assert_equal(['x:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to change table options" do
-      command(:alter, @test_name, METHOD => 'table_att', 'MAX_FILESIZE' => 12345678)
+      admin.alter(@test_name, true, METHOD => 'table_att', 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
     define_test "alter should be able to change table options w/o table_att" do
-      command(:alter, @test_name, 'MAX_FILESIZE' => 12345678)
+      admin.alter(@test_name, true, 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
     end
     
@@ -336,7 +343,7 @@ module Hbase
       # eval() is used to convert a string to regex
       assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + cp_key + "/"), admin.describe(@test_name))
-      command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => cp_value)
+      admin.alter(@test_name, true, 'METHOD' => 'table_att', cp_key => cp_value)
       assert_match(eval("/" + class_name + "/"), admin.describe(@test_name))
       assert_match(eval("/" + cp_key + "\\$(\\d+)/"), admin.describe(@test_name))
     end
@@ -346,12 +353,12 @@ module Hbase
       create_test_table(@test_name)
 
       key = "MAX_FILESIZE"
-      command(:alter, @test_name, 'METHOD' => 'table_att', key => 12345678)
+      admin.alter(@test_name, true, 'METHOD' => 'table_att', key => 12345678)
 
       # eval() is used to convert a string to regex
       assert_match(eval("/" + key + "/"), admin.describe(@test_name))
 
-      command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => key)
+      admin.alter(@test_name, true, 'METHOD' => 'table_att_unset', 'NAME' => key)
       assert_no_match(eval("/" + key + "/"), admin.describe(@test_name))
     end
 
@@ -360,13 +367,13 @@ module Hbase
 
       key_1 = "TestAttr1"
       key_2 = "TestAttr2"
-      command(:create, @test_name, { NAME => 'i'}, METADATA => { key_1 => 1, key_2 => 2 })
+      admin.create(@test_name, { NAME => 'i'}, METADATA => { key_1 => 1, key_2 => 2 })
 
       # eval() is used to convert a string to regex
       assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
       assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
 
-      command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => [ key_1, key_2 ])
+      admin.alter(@test_name, true, 'METHOD' => 'table_att_unset', 'NAME' => [ key_1, key_2 ])
       assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
@@ -414,66 +421,66 @@ module Hbase
     #-------------------------------------------------------------------------------
     define_test "Snapshot should fail with non-string snapshot name" do
       assert_raise(NoMethodError) do
-        command(:snapshot, @create_test_snapshot, 123)
+        admin.snapshot(123, 'xxx')
       end
     end
 
     define_test "Snapshot should fail with non-string table name" do
       assert_raise(NoMethodError) do
-        command(:snapshot, 123, 'xxx')
+        admin.snapshot(@create_test_snapshot, 123)
       end
     end
 
     define_test "Snapshot should fail without table name" do
       assert_raise(ArgumentError) do
-        command(:snapshot, "hbase_create_test_snapshot")
+        admin.snapshot("hbase_create_test_snapshot")
       end
     end
 
     define_test "Snapshot should work with string args" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot)
-      list = command(:list_snapshots, @create_test_snapshot)
+      admin.snapshot(@test_name, @create_test_snapshot)
+      list = admin.list_snapshot(@create_test_snapshot)
       assert_equal(1, list.size)
     end
 
     define_test "Snapshot should work when SKIP_FLUSH args" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot, {SKIP_FLUSH => true})
-      list = command(:list_snapshots, @create_test_snapshot)
+      admin.snapshot(@test_name, @create_test_snapshot, {SKIP_FLUSH => true})
+      list = admin.list_snapshot(@create_test_snapshot)
       assert_equal(1, list.size)
     end
 
     define_test "List snapshot without any args" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot)
-      list = command(:list_snapshots)
+      admin.snapshot(@test_name, @create_test_snapshot)
+      list = admin.list_snapshot()
       assert_equal(1, list.size)
     end
 
     define_test "List snapshot for a non-existing snapshot" do
-      list = command(:list_snapshots, "xyz")
+      list = admin.list_snapshot("xyz")
       assert_equal(0, list.size)
     end
 
     define_test "Restore snapshot without any args" do
       assert_raise(ArgumentError) do
-        command(:restore_snapshot)
+        admin.restore_snapshot()
       end
     end
 
     define_test "Restore snapshot should work" do
       drop_test_snapshot()
       restore_table = "test_restore_snapshot_table"
-      command(:create, restore_table, 'f1', 'f2')
+      admin.create(restore_table, 'f1', 'f2')
       assert_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
       assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
-      command(:snapshot, restore_table, @create_test_snapshot)
-      command(:alter, restore_table, METHOD => 'delete', NAME => 'f1')
+      admin.snapshot(restore_table, @create_test_snapshot)
+      admin.alter(restore_table, true, METHOD => 'delete', NAME => 'f1')
       assert_no_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
       assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
       drop_test_table(restore_table)
-      command(:restore_snapshot, @create_test_snapshot)
+      admin.restore_snapshot(@create_test_snapshot)
       assert_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
       assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
       drop_test_table(restore_table)
@@ -481,13 +488,13 @@ module Hbase
 
     define_test "Clone snapshot without any args" do
       assert_raise(ArgumentError) do
-        command(:restore_snapshot)
+        admin.restore_snapshot()
       end
     end
 
     define_test "Clone snapshot without table name args" do
       assert_raise(ArgumentError) do
-        command(:clone_snapshot, @create_test_snapshot)
+        admin.clone_snapshot(@create_test_snapshot)
       end
     end
 
@@ -496,8 +503,8 @@ module Hbase
       clone_table = "test_clone_snapshot_table"
       assert_match(eval("/" + "x" + "/"), admin.describe(@test_name))
       assert_match(eval("/" + "y" + "/"), admin.describe(@test_name))
-      command(:snapshot, @test_name, @create_test_snapshot)
-      command(:clone_snapshot, @create_test_snapshot, clone_table)
+      admin.snapshot(@test_name, @create_test_snapshot)
+      admin.clone_snapshot(@create_test_snapshot, clone_table)
       assert_match(eval("/" + "x" + "/"), admin.describe(clone_table))
       assert_match(eval("/" + "y" + "/"), admin.describe(clone_table))
       drop_test_table(clone_table)
@@ -511,11 +518,11 @@ module Hbase
 
     define_test "Delete snapshot should work" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot)
-      list = command(:list_snapshots)
+      admin.snapshot(@test_name, @create_test_snapshot)
+      list = admin.list_snapshot()
       assert_equal(1, list.size)
       admin.delete_snapshot(@create_test_snapshot)
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(0, list.size)
     end
 
@@ -527,17 +534,17 @@ module Hbase
 
     define_test "Delete all snapshots should work" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, "delete_all_snapshot1")
-      command(:snapshot, @test_name, "delete_all_snapshot2")
-      command(:snapshot, @test_name, "snapshot_delete_all_1")
-      command(:snapshot, @test_name, "snapshot_delete_all_2")
-      list = command(:list_snapshots)
+      admin.snapshot(@test_name, "delete_all_snapshot1")
+      admin.snapshot(@test_name, "delete_all_snapshot2")
+      admin.snapshot(@test_name, "snapshot_delete_all_1")
+      admin.snapshot(@test_name, "snapshot_delete_all_2")
+      list = admin.list_snapshot()
       assert_equal(4, list.size)
       admin.delete_all_snapshot("d.*")
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(2, list.size)
       admin.delete_all_snapshot(".*")
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(0, list.size)
     end
 
@@ -549,48 +556,48 @@ module Hbase
 
     define_test "Delete table snapshots should work" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, "delete_table_snapshot1")
-      command(:snapshot, @test_name, "delete_table_snapshot2")
-      command(:snapshot, @test_name, "snapshot_delete_table1")
+      admin.snapshot(@test_name, "delete_table_snapshot1")
+      admin.snapshot(@test_name, "delete_table_snapshot2")
+      admin.snapshot(@test_name, "snapshot_delete_table1")
       new_table = "test_delete_table_snapshots_table"
-      command(:create, new_table, 'f1')
-      command(:snapshot, new_table, "delete_table_snapshot3")
-      list = command(:list_snapshots)
+      admin.create(new_table, 'f1')
+      admin.snapshot(new_table, "delete_table_snapshot3")
+      list = admin.list_snapshot()
       assert_equal(4, list.size)
       admin.delete_table_snapshots(@test_name, "d.*")
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(2, list.size)
       admin.delete_table_snapshots(@test_name)
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(1, list.size)
       admin.delete_table_snapshots(".*", "d.*")
-      list = command(:list_snapshots)
+      list = admin.list_snapshot()
       assert_equal(0, list.size)
       drop_test_table(new_table)
     end
 
     define_test "List table snapshots without any args" do
       assert_raise(ArgumentError) do
-        command(:list_table_snapshots)
+        admin.list_table_snapshots()
       end
     end
 
     define_test "List table snapshots should work" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, "delete_table_snapshot1")
-      command(:snapshot, @test_name, "delete_table_snapshot2")
-      command(:snapshot, @test_name, "snapshot_delete_table1")
+      admin.snapshot(@test_name, "delete_table_snapshot1")
+      admin.snapshot(@test_name, "delete_table_snapshot2")
+      admin.snapshot(@test_name, "snapshot_delete_table1")
       new_table = "test_list_table_snapshots_table"
-      command(:create, new_table, 'f1')
-      command(:snapshot, new_table, "delete_table_snapshot3")
-      list = command(:list_table_snapshots, ".*")
+      admin.create(new_table, 'f1')
+      admin.snapshot(new_table, "delete_table_snapshot3")
+      list = admin.list_table_snapshots(".*")
       assert_equal(4, list.size)
-      list = command(:list_table_snapshots, @test_name, "d.*")
+      list = admin.list_table_snapshots(@test_name, "d.*")
       assert_equal(2, list.size)
-      list = command(:list_table_snapshots, @test_name)
+      list = admin.list_table_snapshots(@test_name)
       assert_equal(3, list.size)
       admin.delete_table_snapshots(".*")
-      list = command(:list_table_snapshots, ".*", ".*")
+      list = admin.list_table_snapshots(".*", ".*")
       assert_equal(0, list.size)
       drop_test_table(new_table)
     end

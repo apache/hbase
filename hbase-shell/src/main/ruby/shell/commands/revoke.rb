@@ -39,7 +39,9 @@ EOF
       end
 
       def command(user, table_name=nil, family=nil, qualifier=nil)
-        security_admin.revoke(user, table_name, family, qualifier)
+        format_simple_command do
+          security_admin.revoke(user, table_name, family, qualifier)
+        end
       end
     end
   end

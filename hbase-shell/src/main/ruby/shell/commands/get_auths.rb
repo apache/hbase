@@ -31,11 +31,12 @@ EOF
       end
 
       def command(user)
-        list = visibility_labels_admin.get_auths(user)
-        list.each do |auths|
-          formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(auths.toByteArray)])
+        format_simple_command do
+          list = visibility_labels_admin.get_auths(user)
+          list.each do |auths|
+            formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(auths.toByteArray)])
+          end  
         end
-        list
       end
     end
   end

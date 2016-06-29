@@ -32,7 +32,9 @@ EOF
       end
 
       def command(snapshot_name, table)
-        admin.clone_snapshot(snapshot_name, table)
+        format_simple_command do
+          admin.clone_snapshot(snapshot_name, table)
+        end
       end
 
       def handle_exceptions(cause, *args)

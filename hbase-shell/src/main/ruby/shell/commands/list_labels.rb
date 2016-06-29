@@ -32,9 +32,11 @@ EOF
       end
 
       def command(regex = ".*")
-        list = visibility_labels_admin.list_labels(regex)
-        list.each do |label|
-          formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(label.toByteArray)])
+        format_simple_command do
+          list = visibility_labels_admin.list_labels(regex)
+          list.each do |label|
+            formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(label.toByteArray)])
+          end
         end
       end
     end

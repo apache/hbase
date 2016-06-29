@@ -30,13 +30,14 @@ EOF
       end
 
       def command(table, row_key)
+        now = Time.now
+
         region_location = admin.locate_region(table, row_key)
         hri = region_location.getRegionInfo()
 
         formatter.header([ "HOST", "REGION" ])
         formatter.row([region_location.getHostnamePort(), hri.toString()])
-        formatter.footer(1)
-        region_location
+        formatter.footer(now, 1)
       end
     end
   end

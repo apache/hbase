@@ -35,14 +35,14 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table_name, row, column, value, args={})
-        table = table(table_name)
-        @start_time = Time.now
-        append(table, row, column, value, args)
+      def command(table, row, column, value, args={})
+        append(table(table), row, column, value, args)
       end
 
       def append(table, row, column, value, args={})
-        table._append_internal(row, column, value, args)
+      	format_simple_command do
+        	table._append_internal(row, column, value, args)
+        end
       end
     end
   end

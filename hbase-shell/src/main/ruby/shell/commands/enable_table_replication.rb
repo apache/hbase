@@ -30,8 +30,10 @@ EOF
       end
 
       def command(table_name)
-        replication_admin.enable_tablerep(table_name)
-        puts "The replication of table '#{table_name}' successfully enabled"
+        format_simple_command do
+          replication_admin.enable_tablerep(table_name)
+        end
+        puts "The replication swith of table '#{table_name}' successfully enabled"
       end
     end
   end

@@ -30,10 +30,11 @@ EOF
       end
 
       def command(server_name)
-        admin.wal_roll(server_name)
+        format_simple_command do
+          admin.wal_roll(server_name)
+        end
       end
     end
-
     #TODO remove old HLog version
     class HlogRoll < WalRoll
     end

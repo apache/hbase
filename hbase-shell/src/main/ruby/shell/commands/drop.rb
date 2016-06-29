@@ -29,7 +29,9 @@ EOF
       end
 
       def command(table)
-        admin.drop(table)
+        format_simple_command do
+          admin.drop(table)
+        end
       end
     end
   end

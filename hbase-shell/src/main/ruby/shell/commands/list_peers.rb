@@ -30,6 +30,7 @@ EOF
       end
 
       def command()
+        now = Time.now
         peers = replication_admin.list_peers
 
         formatter.header(["PEER_ID", "CLUSTER_KEY", "STATE", "TABLE_CFS"])
@@ -40,8 +41,7 @@ EOF
           formatter.row([ e.key, e.value, state, tableCFs ])
         end
 
-        formatter.footer()
-        peers
+        formatter.footer(now)
       end
     end
   end

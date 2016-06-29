@@ -40,7 +40,9 @@ module Shell
       end
 
       def command(table_or_region_name, family = nil)
-        admin.major_compact(table_or_region_name, family)
+        format_simple_command do
+          admin.major_compact(table_or_region_name, family)
+        end
       end
     end
   end

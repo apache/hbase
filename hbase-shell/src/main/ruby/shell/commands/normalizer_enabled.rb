@@ -30,7 +30,11 @@ EOF
       end
 
       def command()
-        formatter.row([admin.normalizer_enabled?.to_s])
+        format_simple_command do
+          formatter.row([
+            admin.normalizer_enabled?.to_s
+          ])
+        end
       end
     end
   end

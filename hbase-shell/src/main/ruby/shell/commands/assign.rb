@@ -32,7 +32,9 @@ EOF
       end
 
       def command(region_name)
-        admin.assign(region_name)
+        format_simple_command do
+          admin.assign(region_name)
+        end
       end
     end
   end

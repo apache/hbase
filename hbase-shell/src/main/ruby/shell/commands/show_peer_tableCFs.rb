@@ -30,9 +30,7 @@ module Shell
       end
 
       def command(id)
-        peer_table_cfs = replication_admin.show_peer_tableCFs(id)
-        puts peer_table_cfs
-        peer_table_cfs
+        puts replication_admin.show_peer_tableCFs(id)
       end
     end
   end

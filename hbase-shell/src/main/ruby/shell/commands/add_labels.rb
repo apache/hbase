@@ -31,7 +31,9 @@ EOF
       end
 
       def command(*args)
-        visibility_labels_admin.add_labels(args)
+        format_simple_command do
+          visibility_labels_admin.add_labels(args)
+        end
       end
     end
   end

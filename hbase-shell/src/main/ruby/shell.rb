@@ -81,9 +81,8 @@ module Shell
       self.interactive = interactive
     end
 
-    # Returns Admin class from admin.rb
-    def admin
-      @admin ||= hbase.admin()
+    def hbase_admin
+      @hbase_admin ||= hbase.admin()
     end
 
     def hbase_taskmonitor
@@ -130,17 +129,9 @@ module Shell
       ::Shell.commands[command.to_s].new(self)
     end
 
-    # call the method 'command' on the specified command
-    # If interactive is enabled, then we suppress the return value. The command should have
-    # printed relevant output.
-    # Return value is only useful in non-interactive mode, for e.g. tests.
+    #call the method 'command' on the specified command
     def command(command, *args)
-      ret = internal_command(command, :command, *args)
-      if self.interactive
-        return nil
-      else
-        return ret
-      end
+      internal_command(command, :command, *args)
     end
 
     # call a specific internal method in the command instance
@@ -148,7 +139,7 @@ module Shell
     # method_name - name of the method on the command to call. Defaults to just 'command'
     # args - to be passed to the named method
     def internal_command(command, method_name= :command, *args)
-      command_instance(command).command_safe(self.debug, method_name, *args)
+      command_instance(command).command_safe(self.debug,method_name, *args)
     end
 
     def print_banner

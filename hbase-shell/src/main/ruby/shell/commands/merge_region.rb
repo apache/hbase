@@ -40,7 +40,9 @@ EOF
       end
 
       def command(encoded_region_a_name, encoded_region_b_name, force = 'false')
-        admin.merge_region(encoded_region_a_name, encoded_region_b_name, force)
+        format_simple_command do
+          admin.merge_region(encoded_region_a_name, encoded_region_b_name, force)
+        end
       end
     end
   end

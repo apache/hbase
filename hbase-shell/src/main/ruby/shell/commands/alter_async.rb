@@ -56,7 +56,9 @@ EOF
       end
 
       def command(table, *args)
-        admin.alter(table, false, *args)
+        format_simple_command do
+          admin.alter(table, false, *args)
+        end
       end
     end
   end

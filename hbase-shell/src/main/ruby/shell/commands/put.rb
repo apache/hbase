@@ -45,8 +45,9 @@ EOF
       end
 
       def put(table, row, column, value, timestamp = nil, args = {})
-        @start_time = Time.now
-        table._put_internal(row, column, value, timestamp, args)
+        format_simple_command do
+          table._put_internal(row, column, value, timestamp, args)
+        end
       end
     end
   end

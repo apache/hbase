@@ -31,6 +31,7 @@ EOF
       end
 
       def command(regex = ".*")
+        now = Time.now
         formatter.header([ "NAMESPACE" ])
 
         list = admin.list_namespace(regex)
@@ -38,7 +39,7 @@ EOF
           formatter.row([ table ])
         end
 
-        formatter.footer(list.size)
+        formatter.footer(now, list.size)
       end
     end
   end

@@ -32,7 +32,9 @@ EOF
       end
 
       def command(id)
-        replication_admin.disable_peer(id)
+        format_simple_command do
+          replication_admin.disable_peer(id)
+        end
       end
     end
   end

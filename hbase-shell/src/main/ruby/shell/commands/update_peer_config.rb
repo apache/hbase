@@ -40,7 +40,9 @@ To update TABLE_CFs, see the append_peer_tableCFs and remove_peer_tableCFs comma
       end
 
       def command(id, args = {})
-        replication_admin.update_peer_config(id, args)
+        format_simple_command do
+          replication_admin.update_peer_config(id, args)
+        end
       end
     end
   end

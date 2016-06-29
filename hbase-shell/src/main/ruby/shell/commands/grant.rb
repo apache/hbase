@@ -74,8 +74,9 @@ EOF
               end
             end
           end
-          @start_time = Time.now
-          security_admin.grant(user, permissions, table_name, family, qualifier)
+          format_simple_command do
+            security_admin.grant(user, permissions, table_name, family, qualifier)
+          end
 
         elsif args[1].kind_of?(Hash)
 
@@ -91,7 +92,7 @@ EOF
           raise(ArgumentError, "Scanner specification is not a Hash") unless scan.kind_of?(Hash)
 
           t = table(table_name)
-          @start_time = Time.now
+          now = Time.now
           scanner = t._get_scanner(scan)
           count = 0
           iter = scanner.iterator
@@ -105,7 +106,7 @@ EOF
             end
             count += 1
           end
-          formatter.footer(count)
+          formatter.footer(now, count)
 
         else
           raise(ArgumentError, "Second argument should be a String or Hash")

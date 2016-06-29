@@ -51,7 +51,7 @@ EOF
 
       def command(table, visibility, scan)
         t = table(table)
-        @start_time = Time.now
+        now = Time.now
         scanner = t._get_scanner(scan)
         count = 0
         iter = scanner.iterator
@@ -65,7 +65,7 @@ EOF
           end
           count += 1
         end
-        formatter.footer(count)
+        formatter.footer(now, count)
       end
 
     end

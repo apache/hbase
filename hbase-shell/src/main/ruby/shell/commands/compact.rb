@@ -39,7 +39,9 @@ module Shell
       end
 
       def command(table_or_region_name, family = nil)
-        admin.compact(table_or_region_name, family)
+        format_simple_command do
+          admin.compact(table_or_region_name, family)
+        end
       end
     end
   end

@@ -41,9 +41,9 @@ EOF
         answer = gets.chomp unless count == 0
         puts "No snapshots matched the regex #{regex.to_s}" if count == 0
         return unless answer =~ /y.*/i
-        @start_time = Time.now
-        admin.delete_all_snapshot(regex)
-        @end_time = Time.now
+        format_simple_command do
+          admin.delete_all_snapshot(regex)
+        end
         list = admin.list_snapshot(regex)
         leftOverSnapshotCount = list.size
         successfullyDeleted = count - leftOverSnapshotCount

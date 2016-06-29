@@ -26,12 +26,12 @@ class ShellTest < Test::Unit::TestCase
     @shell = Shell::Shell.new(@hbase)
   end
 
-  define_test "Shell::Shell#admin should return an admin instance" do
-    assert_kind_of(Hbase::Admin, @shell.admin)
+  define_test "Shell::Shell#hbase_admin should return an admin instance" do
+    assert_kind_of(Hbase::Admin, @shell.hbase_admin)
   end
 
-  define_test "Shell::Shell#admin should cache admin instances" do
-    assert_same(@shell.admin, @shell.admin)
+  define_test "Shell::Shell#hbase_admin should cache admin instances" do
+    assert_same(@shell.hbase_admin, @shell.hbase_admin)
   end
 
   #-------------------------------------------------------------------------------
@@ -42,10 +42,6 @@ class ShellTest < Test::Unit::TestCase
 
   define_test "Shell::Shell#hbase_table should not cache table instances" do
     assert_not_same(@shell.hbase_table('hbase:meta'), @shell.hbase_table('hbase:meta'))
-  end
-
-  define_test "Shell::Shell#hbase attribute is a HBase instance" do
-    assert_kind_of(Hbase::Hbase, @shell.hbase)
   end
 
   #-------------------------------------------------------------------------------

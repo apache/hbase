@@ -28,7 +28,9 @@ Catalog janitor command to run the (garbage collection) scan from command line.
 EOF
       end
       def command()
-        admin.catalogjanitor_run()
+        format_simple_command do
+          admin.catalogjanitor_run()
+        end
       end
     end
   end

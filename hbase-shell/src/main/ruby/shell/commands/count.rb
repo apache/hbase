@@ -61,12 +61,12 @@ EOF
         }.merge(params)
 
         # Call the counter method
-        @start_time = Time.now
+        now = Time.now
         formatter.header
         count = table._count_internal(params['INTERVAL'].to_i, params['CACHE'].to_i) do |cnt, row|
           formatter.row([ "Current count: #{cnt}, row: #{row}" ])
         end
-        formatter.footer(count)
+        formatter.footer(now, count)
         return count
       end
     end

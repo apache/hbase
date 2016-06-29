@@ -32,7 +32,9 @@ EOF
       end
 
       def command(namespace, *args)
-        admin.create_namespace(namespace, *args)
+        format_simple_command do
+          admin.create_namespace(namespace, *args)
+        end
       end
     end
   end

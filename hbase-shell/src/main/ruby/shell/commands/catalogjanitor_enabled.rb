@@ -29,7 +29,11 @@ EOF
       end
 
       def command()
-        formatter.row([admin.catalogjanitor_enabled()? "true" : "false"])
+        format_simple_command do
+          formatter.row([
+            admin.catalogjanitor_enabled()? "true" : "false"
+          ])
+        end
       end
     end
   end

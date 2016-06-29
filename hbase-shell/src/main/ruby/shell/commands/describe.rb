@@ -33,6 +33,8 @@ EOF
       end
 
       def command(table)
+        now = Time.now
+
         column_families = admin.get_column_families(table)
 
         formatter.header(["Table " + table.to_s + " is " + if admin.enabled?(table) then "ENABLED" else "DISABLED" end])
@@ -41,7 +43,7 @@ EOF
         column_families.each do |column_family|
           formatter.row([ column_family.to_s ], true)
         end
-        formatter.footer()
+        formatter.footer(now)
       end
     end
   end

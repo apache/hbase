@@ -32,7 +32,11 @@ EOF
       end
 
       def command(enableDisable)
-        formatter.row([admin.normalizer_switch(enableDisable)? "true" : "false"])
+        format_simple_command do
+          formatter.row([
+            admin.normalizer_switch(enableDisable)? "true" : "false"
+          ])
+        end
       end
     end
   end

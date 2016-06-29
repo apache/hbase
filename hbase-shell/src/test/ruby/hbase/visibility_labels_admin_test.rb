@@ -45,37 +45,37 @@ module Hbase
     define_test "Labels should be created as specified" do
       label = 'TEST_LABELS'
       count = table('hbase:labels')._count_internal
-      command(:add_labels, 'test_label')
+      visibility_admin.add_labels('test_label')
       assert_equal(count + 1, table('hbase:labels')._count_internal)
     end
 
     define_test "The set/clear methods should work with authorizations" do
       label = 'TEST_AUTHS'
       user = org.apache.hadoop.hbase.security.User.getCurrent().getName();
-      command(:add_labels, label)
+      visibility_admin.add_labels(label)
       $TEST_CLUSTER.waitLabelAvailable(10000, label)
-      count = command(:get_auths, user).length
+      count = visibility_admin.get_auths(user).length
 
       # verifying the set functionality
-      command(:set_auths, user, label)
-      assert_equal(count + 1, command(:get_auths, user).length)
+      visibility_admin.set_auths(user, label)
+      assert_equal(count + 1, visibility_admin.get_auths(user).length)
       assert_block do
-        command(:get_auths, user).any? {
+        visibility_admin.get_auths(user).any? {
           |auth| org.apache.hadoop.hbase.util.Bytes::toStringBinary(auth.toByteArray) == label
         }
       end
 
       # verifying the clear functionality
-      command(:clear_auths, user, label)
-      assert_equal(count, command(:get_auths, user).length)
+      visibility_admin.clear_auths(user, label)
+      assert_equal(count, visibility_admin.get_auths(user).length)
     end
 
     define_test "The get/put methods should work for data written with Visibility" do
       label = 'TEST_VISIBILITY'
       user = org.apache.hadoop.hbase.security.User.getCurrent().getName();
-      command(:add_labels, label)
+      visibility_admin.add_labels(label)
       $TEST_CLUSTER.waitLabelAvailable(10000, label)
-      command(:set_auths, user, label)
+      visibility_admin.set_auths(user, label)
 
       # verifying put functionality
       @test_table.put(1, "x:a", 31, {VISIBILITY=>label})

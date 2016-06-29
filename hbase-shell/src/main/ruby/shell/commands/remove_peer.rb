@@ -30,7 +30,9 @@ EOF
       end
 
       def command(id)
-        replication_admin.remove_peer(id)
+        format_simple_command do
+          replication_admin.remove_peer(id)
+        end
       end
     end
   end

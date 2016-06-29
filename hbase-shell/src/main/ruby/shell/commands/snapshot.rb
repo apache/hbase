@@ -29,7 +29,9 @@ EOF
       end
 
       def command(table, snapshot_name, *args)
-        admin.snapshot(table, snapshot_name, *args)
+        format_simple_command do
+          admin.snapshot(table, snapshot_name, *args)
+        end
       end
     end
   end

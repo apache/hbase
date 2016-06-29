@@ -30,7 +30,9 @@ EOF
       end
 
       def command()
-        admin.update_all_config()
+        format_simple_command do
+          admin.update_all_config()
+        end
       end
     end
   end

@@ -35,7 +35,9 @@ EOF
       end
 
       def command(namespace, *args)
-        admin.alter_namespace(namespace, *args)
+        format_simple_command do
+          admin.alter_namespace(namespace, *args)
+        end
       end
     end
   end

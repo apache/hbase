@@ -29,9 +29,11 @@ EOF
       end
 
       def command(table)
-        enabled = admin.enabled?(table)
-        formatter.row([enabled ? "true" : "false"])
-        enabled
+        format_simple_command do
+          formatter.row([
+            admin.enabled?(table)? "true" : "false"
+          ])
+        end
       end
     end
   end

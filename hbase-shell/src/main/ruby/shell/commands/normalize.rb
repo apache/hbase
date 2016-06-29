@@ -33,7 +33,11 @@ EOF
       end
 
       def command()
-        formatter.row([admin.normalize()? "true": "false"])
+        format_simple_command do
+          formatter.row([
+            admin.normalize()? "true": "false"
+          ])
+        end
       end
     end
   end

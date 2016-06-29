@@ -25,17 +25,18 @@ module Shell
       end
 
       def command
-        peer_configs = replication_admin.list_peer_configs
-        unless peer_configs.nil?
-          peer_configs.each do |peer_config_entry|
-            peer_id = peer_config_entry[0]
-            peer_config = peer_config_entry[1]
-            formatter.row(["PeerId", peer_id])
-            GetPeerConfig.new(@shell).format_peer_config(peer_config)
-            formatter.row([" "])
+        format_simple_command do
+          peer_configs = replication_admin.list_peer_configs
+          unless peer_configs.nil?
+            peer_configs.each do |peer_config_entry|
+              peer_id = peer_config_entry[0]
+              peer_config = peer_config_entry[1]
+              formatter.row(["PeerId", peer_id])
+              GetPeerConfig.new(@shell).format_peer_config(peer_config)
+              formatter.row([" "])
+            end
           end
         end
-        peer_configs
       end
     end
   end
