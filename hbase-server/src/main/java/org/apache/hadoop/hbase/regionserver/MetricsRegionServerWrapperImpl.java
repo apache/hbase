@@ -317,6 +317,9 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getBlockCacheFailedInsertions() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
     return this.cacheStats.getFailedInserts();
   }
 
@@ -505,7 +508,6 @@ class MetricsRegionServerWrapperImpl
     synchronized public void run() {
       try {
         initBlockCache();
-        cacheStats = blockCache.getStats();
 
         HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
         HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
