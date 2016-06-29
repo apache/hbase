@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -2065,7 +2066,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
-        opts.numClientThreads = Integer.parseInt(args.remove());
+        try {
+          opts.numClientThreads = Integer.parseInt(args.remove());
+        } catch (NoSuchElementException | NumberFormatException e) {
+          throw new IllegalArgumentException("Command " + cmd + " does not have threads number", e);
+        }
         int rowsPerGB = getRowsPerGB(opts);
         if (opts.size != DEFAULT_OPTS.size &&
             opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {

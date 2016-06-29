@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.NoSuchElementException;
+import java.util.Queue;
+import java.util.LinkedList;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.codehaus.jackson.JsonGenerationException;
@@ -41,5 +44,47 @@ public class TestPerformanceEvaluation {
     PerformanceEvaluation.TestOptions optionsDeserialized =
         mapper.readValue(optionsString, PerformanceEvaluation.TestOptions.class);
     assertTrue(optionsDeserialized.isAutoFlush());
+  }
+
+  @Test
+  public void testParseOptsWithThreads() {
+    Queue<String> opts = new LinkedList<>();
+    String cmdName = "sequentialWrite";
+    int threads = 1;
+    opts.offer(cmdName);
+    opts.offer(String.valueOf(threads));
+    PerformanceEvaluation.TestOptions options = PerformanceEvaluation.parseOpts(opts);
+    assertNotNull(options);
+    assertNotNull(options.getCmdName());
+    assertEquals(cmdName, options.getCmdName());
+    assertEquals(threads, options.getNumClientThreads());
+  }
+
+  @Test
+  public void testParseOptsWrongThreads() {
+    Queue<String> opts = new LinkedList<>();
+    String cmdName = "sequentialWrite";
+    opts.offer(cmdName);
+    opts.offer("qq");
+    try {
+      PerformanceEvaluation.parseOpts(opts);
+    } catch (IllegalArgumentException e) {
+      System.out.println(e.getMessage());
+      assertEquals("Command " + cmdName + " does not have threads number", e.getMessage());
+      assertTrue(e.getCause() instanceof NumberFormatException);
+    }
+  }
+
+  @Test
+  public void testParseOptsNoThreads() {
+    Queue<String> opts = new LinkedList<>();
+    String cmdName = "sequentialWrite";
+    try {
+      PerformanceEvaluation.parseOpts(opts);
+    } catch (IllegalArgumentException e) {
+      System.out.println(e.getMessage());
+      assertEquals("Command " + cmdName + " does not have threads number", e.getMessage());
+      assertTrue(e.getCause() instanceof NoSuchElementException);
+    }
   }
 }
