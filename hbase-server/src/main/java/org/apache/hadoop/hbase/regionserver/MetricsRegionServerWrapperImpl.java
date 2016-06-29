@@ -362,6 +362,9 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getBlockCacheFailedInsertions() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
     return this.cacheStats.getFailedInserts();
   }
 
