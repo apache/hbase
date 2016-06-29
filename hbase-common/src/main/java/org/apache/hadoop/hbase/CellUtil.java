@@ -1505,6 +1505,10 @@ public final class CellUtil {
     }
     return new FirstOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
+  
+  public static Cell createFirstOnRow(final byte [] row, int roffset, short rlength) {
+    return new FirstOnRowCell(row, roffset, rlength);
+  }
 
   /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell's row.

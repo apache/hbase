@@ -209,7 +209,7 @@ public class Import extends Configured implements Tool {
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null
-            || !filter.filterRowKey(KeyValueUtil.createFirstOnRow(row.get(), row.getOffset(),
+            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
                 (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
@@ -275,7 +275,7 @@ public class Import extends Configured implements Tool {
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null
-            || !filter.filterRowKey(KeyValueUtil.createFirstOnRow(row.get(), row.getOffset(),
+            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
                 (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
@@ -332,7 +332,7 @@ public class Import extends Configured implements Tool {
             + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
       }
       if (filter == null
-          || !filter.filterRowKey(KeyValueUtil.createFirstOnRow(key.get(), key.getOffset(),
+          || !filter.filterRowKey(CellUtil.createFirstOnRow(key.get(), key.getOffset(),
               (short) key.getLength()))) {
         processKV(key, result, context, put, delete);
       }
