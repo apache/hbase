@@ -573,9 +573,10 @@ public class ReplicationSourceManager implements ReplicationListener {
           srcToRemove.add(src);
         }
       }
-      if (srcToRemove.size() == 0) {
-        LOG.error("The queue we wanted to close is missing " + id);
-        return;
+      if (srcToRemove.isEmpty()) {
+        LOG.error("The peer we wanted to remove is missing a ReplicationSourceInterface. " +
+            "This could mean that ReplicationSourceInterface initialization failed for this peer " +
+            "and that replication on this peer may not be caught up. peerId=" + id);
       }
       for (ReplicationSourceInterface toRemove : srcToRemove) {
         toRemove.terminate(terminateMessage);
@@ -751,6 +752,12 @@ public class ReplicationSourceManager implements ReplicationListener {
   public FileSystem getFs() {
     return this.fs;
   }
+
+  /**
+   * Get the ReplicationPeers used by this ReplicationSourceManager
+   * @return the ReplicationPeers used by this ReplicationSourceManager
+   */
+  public ReplicationPeers getReplicationPeers() {return this.replicationPeers;}
 
   /**
    * Get a string representation of all the sources' metrics
