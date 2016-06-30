@@ -111,9 +111,9 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
       "Histogram for the heap memory tuner shrinking blockcache max heap size in bytes";
 
   // Gauges
-  String BLOCKED_FLUSH_GAUGE_NAME = "blockedFlushCount";
+  String BLOCKED_FLUSH_GAUGE_NAME = "blockedFlushGauge";
   String BLOCKED_FLUSH_GAUGE_DESC = "Gauge for the blocked flush count before tuning";
-  String UNBLOCKED_FLUSH_GAUGE_NAME = "unblockedFlushCount";
+  String UNBLOCKED_FLUSH_GAUGE_NAME = "unblockedFlushGauge";
   String UNBLOCKED_FLUSH_GAUGE_DESC = "Gauge for the unblocked flush count before tuning";
   String MEMSTORE_SIZE_GAUGE_NAME = "memStoreSize";
   String MEMSTORE_SIZE_GAUGE_DESC = "Global MemStore used in bytes by the RegionServer";

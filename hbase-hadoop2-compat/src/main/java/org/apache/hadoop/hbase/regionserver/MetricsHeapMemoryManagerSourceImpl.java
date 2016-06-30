@@ -89,14 +89,18 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
 
   @Override
   public void updateBlockedFlushCount(long blockedFlushCount) {
-    blockedFlushHistogram.add(blockedFlushCount);
-    blockedFlushGauge.set(blockedFlushCount);
+    if (blockedFlushCount > 0) {
+      blockedFlushHistogram.add(blockedFlushCount);
+      blockedFlushGauge.set(blockedFlushCount);
+    }
   }
 
   @Override
   public void updateUnblockedFlushCount(long unblockedFlushCount) {
-    unblockedFlushHistogram.add(unblockedFlushCount);
-    unblockedFlushGauge.set(unblockedFlushCount);
+    if (unblockedFlushCount > 0) {
+      unblockedFlushHistogram.add(unblockedFlushCount);
+      unblockedFlushGauge.set(unblockedFlushCount);
+    }
   }
 
   @Override
