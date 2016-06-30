@@ -349,6 +349,7 @@ Shell.load_command_group(
     catalogjanitor_switch
     catalogjanitor_enabled
     compact_rs
+    compaction_state
     trace
     splitormerge_switch
     splitormerge_enabled
