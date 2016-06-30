@@ -65,6 +65,12 @@ module Hbase
       end
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Gets compaction state for specified table
+    def getCompactionState(table_name)
+      @admin.getCompactionState(TableName.valueOf(table_name)).name()
+    end
+
     # Requests to compact all regions on the regionserver
     def compact_regionserver(servername, major = false)
       @admin.compactRegionServer(ServerName.valueOf(servername), major)
