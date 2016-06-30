@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
@@ -422,6 +423,45 @@ public abstract class TestReplicationSourceManager {
     // Assert family with replication scope local is not present in the key scopes
     assertFalse("This family scope is set to local, should not be part of replication key scopes",
       scopes.containsKey(f2));
+  }
+
+  /**
+   * Test whether calling removePeer() on a ReplicationSourceManager that failed on initializing the
+   * corresponding ReplicationSourceInterface correctly cleans up the corresponding
+   * replication queue and ReplicationPeer.
+   * See HBASE-16096.
+   * @throws Exception
+   */
+  @Test
+  public void testPeerRemovalCleanup() throws Exception{
+    String replicationSourceImplName = conf.get("replication.replicationsource.implementation");
+    try {
+      DummyServer server = new DummyServer();
+      ReplicationQueues rq =
+          ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(
+              server.getConfiguration(), server, server.getZooKeeper()));
+      rq.init(server.getServerName().toString());
+      // Purposely fail ReplicationSourceManager.addSource() by causing ReplicationSourceInterface
+      // initialization to throw an exception.
+      conf.set("replication.replicationsource.implementation", "fakeReplicationSourceImpl");
+      ReplicationPeers rp = manager.getReplicationPeers();
+      // Set up the znode and ReplicationPeer for the fake peer
+      rp.registerPeer("FakePeer", new ReplicationPeerConfig().setClusterKey("localhost:1:/hbase"));
+      rp.peerConnected("FakePeer");
+      // Have ReplicationSourceManager add the fake peer. It should fail to initialize a
+      // ReplicationSourceInterface.
+      List<String> fakePeers = new ArrayList<>();
+      fakePeers.add("FakePeer");
+      manager.peerListChanged(fakePeers);
+      // Create a replication queue for the fake peer
+      rq.addLog("FakePeer", "FakeFile");
+      // Removing the peer should remove both the replication queue and the ReplicationPeer
+      manager.removePeer("FakePeer");
+      assertFalse(rq.getAllQueues().contains("FakePeer"));
+      assertNull(rp.getConnectedPeer("FakePeer"));
+    } finally {
+      conf.set("replication.replicationsource.implementation", replicationSourceImplName);
+    }
   }
 
   private WALEdit getBulkLoadWALEdit(NavigableMap<byte[], Integer> scope) {
