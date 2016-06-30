@@ -56,7 +56,7 @@ public class CompactingMemStore extends AbstractMemStore {
           ClassSize.CELL_SKIPLIST_SET + ClassSize.CONCURRENT_SKIPLISTMAP);
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
-      "hbase.memestore.inmemoryflush.threshold.factor";
+      "hbase.memstore.inmemoryflush.threshold.factor";
   private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.25;
 
   private static final Log LOG = LogFactory.getLog(CompactingMemStore.class);
