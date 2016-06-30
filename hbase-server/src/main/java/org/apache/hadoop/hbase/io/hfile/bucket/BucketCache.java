@@ -34,12 +34,14 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -66,14 +68,12 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -186,10 +186,15 @@ public class BucketCache implements BlockCache, HeapSize {
   @VisibleForTesting
   final IdReadWriteLock offsetLock = new IdReadWriteLock();
 
-  private final ConcurrentIndex<String, BlockCacheKey> blocksByHFile =
-      new ConcurrentIndex<String, BlockCacheKey>(new Comparator<BlockCacheKey>() {
+  private final NavigableSet<BlockCacheKey> blocksByHFile =
+      new ConcurrentSkipListSet<BlockCacheKey>(new Comparator<BlockCacheKey>() {
         @Override
         public int compare(BlockCacheKey a, BlockCacheKey b) {
+          int nameComparison = a.getHfileName().compareTo(b.getHfileName());
+          if (nameComparison != 0) {
+            return nameComparison;
+          }
+
           if (a.getOffset() == b.getOffset()) {
             return 0;
           } else if (a.getOffset() < b.getOffset()) {
@@ -384,7 +389,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.blockNumber.incrementAndGet();
       this.heapSize.addAndGet(cachedItem.heapSize());
-      blocksByHFile.put(cacheKey.getHfileName(), cacheKey);
+      blocksByHFile.add(cacheKey);
     }
   }
 
@@ -459,7 +464,7 @@ public class BucketCache implements BlockCache, HeapSize {
   void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
     bucketAllocator.freeBlock(bucketEntry.offset());
     realCacheSize.addAndGet(-1 * bucketEntry.getLength());
-    blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
+    blocksByHFile.remove(cacheKey);
     if (decrementBlockNumber) {
       this.blockNumber.decrementAndGet();
     }
@@ -1106,15 +1111,12 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    // Copy the list to avoid ConcurrentModificationException
-    // as evictBlockKey removes the key from the index
-    Set<BlockCacheKey> keySet = blocksByHFile.values(hfileName);
-    if (keySet == null) {
-      return 0;
-    }
+    Set<BlockCacheKey> keySet = blocksByHFile.subSet(
+        new BlockCacheKey(hfileName, Long.MIN_VALUE), true,
+        new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
+
     int numEvicted = 0;
-    List<BlockCacheKey> keysForHFile = ImmutableList.copyOf(keySet);
-    for (BlockCacheKey key : keysForHFile) {
+    for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
           ++numEvicted;
       }
