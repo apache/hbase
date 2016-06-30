@@ -108,7 +108,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "compaction_state should work" do
-      admin.compaction_state('hbase:meta')
+      admin.getCompactionState('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
