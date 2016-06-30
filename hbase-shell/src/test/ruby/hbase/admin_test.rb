@@ -111,6 +111,12 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test "compaction_state should work" do
+      command(:compaction_state, 'hbase:meta')
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "major_compact should work" do
       command(:major_compact, 'hbase:meta')
     end
