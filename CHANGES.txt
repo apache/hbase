@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.2 07/02/2016
+Release Notes - HBase - Version 1.2.2 07/12/2016
 
 ** Sub-task
     * [HBASE-15386] - PREFETCH_BLOCKS_ON_OPEN in HColumnDescriptor is ignored
@@ -9,6 +9,7 @@ Release Notes - HBase - Version 1.2.2 07/02/2016
     * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
     * [HBASE-16034] - Fix ProcedureTestingUtility#LoadCounter.setMaxProcId()
     * [HBASE-16056] - Procedure v2 - fix master crash for FileNotFound
+    * [HBASE-16068] - Procedure v2 - use consts for conf properties in tests
 
 ** Bug
     * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum
@@ -54,13 +55,17 @@ Release Notes - HBase - Version 1.2.2 07/02/2016
     * [HBASE-15955] - Disable action in CatalogJanitor#setEnabled should wait for active cleanup scan to finish
     * [HBASE-15957] - RpcClientImpl.close never ends in some circumstances
     * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-15976] - RegionServerMetricsWrapperRunnable will be failure  when disable blockcache.
     * [HBASE-16012] - Major compaction can't work due to obsolete scanner read point in RegionServer
     * [HBASE-16016] - AssignmentManager#waitForAssignment could have unexpected negative deadline
     * [HBASE-16032] - Possible memory leak in StoreScanner
     * [HBASE-16062] - Improper error handling in WAL Reader/Writer creation
+    * [HBASE-16093] - Splits failed before creating daughter regions leave meta inconsistent
+    * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
 
 ** Improvement
     * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-15119] - Include git SHA in check_compatibility reports
     * [HBASE-15551] - Make call queue too big exception use servername
     * [HBASE-15569] - Make Bytes.toStringBinary faster
     * [HBASE-15720] - Print row locks at the debug dump page
@@ -68,13 +73,18 @@ Release Notes - HBase - Version 1.2.2 07/02/2016
     * [HBASE-15808] - Reduce potential bulk load intermediate space usage and waste
     * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
     * [HBASE-15854] - Log the cause of SASL connection failures
+    * [HBASE-16124] - Make check_compatibility.sh less verbose when building HBase
+    * [HBASE-16140] - bump owasp.esapi from 2.1.0 to 2.1.0.1
 
 ** New Feature
     * [HBASE-15592] - Print Procedure WAL content
 
 ** Task
+    * [HBASE-15729] - Remove old JDiff wrapper scripts in dev-support
     * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
     * [HBASE-16019] - Cut HBase 1.2.2 release
+    * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
+    * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
 
 Release Notes - HBase - Version 1.2.1 04/05/2016
 
