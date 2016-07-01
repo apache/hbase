@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
@@ -344,6 +345,11 @@ public class ReplicationSourceManager implements ReplicationListener {
     return this.oldsources;
   }
 
+  @VisibleForTesting
+  List<String> getAllQueues() {
+    return replicationQueues.getAllQueues();
+  }
+
   void preLogRoll(Path newLog) throws IOException {
     recordLog(newLog);
     String logName = newLog.getName();
@@ -371,8 +377,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     String logName = logPath.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
     // update replication queues on ZK
-    synchronized (replicationPeers) {// synchronize on replicationPeers to avoid adding source for
-                                     // the to-be-removed peer
+    // synchronize on replicationPeers to avoid adding source for the to-be-removed peer
+    synchronized (replicationPeers) {
       for (String id : replicationPeers.getConnectedPeerIds()) {
         try {
           this.replicationQueues.addLog(id, logName);
@@ -528,24 +534,28 @@ public class ReplicationSourceManager implements ReplicationListener {
         + sources.size() + " and another "
         + oldsources.size() + " that were recovered");
     String terminateMessage = "Replication stream was removed by a user";
-    List<ReplicationSourceInterface> srcToRemove = new ArrayList<ReplicationSourceInterface>();
     List<ReplicationSourceInterface> oldSourcesToDelete =
         new ArrayList<ReplicationSourceInterface>();
-    // First close all the recovered sources for this peer
-    for (ReplicationSourceInterface src : oldsources) {
-      if (id.equals(src.getPeerClusterId())) {
-        oldSourcesToDelete.add(src);
+    // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
+    // see NodeFailoverWorker.run
+    synchronized (oldsources) {
+      // First close all the recovered sources for this peer
+      for (ReplicationSourceInterface src : oldsources) {
+        if (id.equals(src.getPeerClusterId())) {
+          oldSourcesToDelete.add(src);
+        }
       }
-    }
-    for (ReplicationSourceInterface src : oldSourcesToDelete) {
-      src.terminate(terminateMessage);
-      closeRecoveredQueue((src));
+      for (ReplicationSourceInterface src : oldSourcesToDelete) {
+        src.terminate(terminateMessage);
+        closeRecoveredQueue(src);
+      }
     }
     LOG.info("Number of deleted recovered sources for " + id + ": "
         + oldSourcesToDelete.size());
     // Now look for the one on this cluster
-    synchronized (this.replicationPeers) {// synchronize on replicationPeers to avoid adding source
-                                          // for the to-be-removed peer
+    List<ReplicationSourceInterface> srcToRemove = new ArrayList<ReplicationSourceInterface>();
+    // synchronize on replicationPeers to avoid adding source for the to-be-removed peer
+    synchronized (this.replicationPeers) {
       for (ReplicationSourceInterface src : this.sources) {
         if (id.equals(src.getPeerClusterId())) {
           srcToRemove.add(src);
@@ -603,9 +613,12 @@ public class ReplicationSourceManager implements ReplicationListener {
     private final UUID clusterId;
 
     /**
-     *
      * @param rsZnode
      */
+    public NodeFailoverWorker(String rsZnode) {
+      this(rsZnode, replicationQueues, replicationPeers, ReplicationSourceManager.this.clusterId);
+    }
+
     public NodeFailoverWorker(String rsZnode, final ReplicationQueues replicationQueues,
         final ReplicationPeers replicationPeers, final UUID clusterId) {
       super("Failover-for-"+rsZnode);
@@ -661,6 +674,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           }
           if (peer == null || peerConfig == null) {
             LOG.warn("Skipping failover for peer:" + actualPeerId + " of node" + rsZnode);
+            replicationQueues.removeQueue(peerId);
             continue;
           }
           // track sources in walsByIdRecoveredQueues
@@ -680,15 +694,20 @@ public class ReplicationSourceManager implements ReplicationListener {
           ReplicationSourceInterface src =
               getReplicationSource(conf, fs, ReplicationSourceManager.this, this.rq, this.rp,
                 server, peerId, this.clusterId, peerConfig, peer);
-          if (!this.rp.getConnectedPeerIds().contains((src.getPeerClusterId()))) {
-            src.terminate("Recovered queue doesn't belong to any current peer");
-            break;
+          // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
+          // see removePeer
+          synchronized (oldsources) {
+            if (!this.rp.getConnectedPeerIds().contains(src.getPeerClusterId())) {
+              src.terminate("Recovered queue doesn't belong to any current peer");
+              closeRecoveredQueue(src);
+              continue;
+            }
+            oldsources.add(src);
+            for (String wal : walsSet) {
+              src.enqueueLog(new Path(oldLogDir, wal));
+            }
+            src.startup();
           }
-          oldsources.add(src);
-          for (String wal : walsSet) {
-            src.enqueueLog(new Path(oldLogDir, wal));
-          }
-          src.startup();
         } catch (IOException e) {
           // TODO manage it
           LOG.error("Failed creating a source", e);

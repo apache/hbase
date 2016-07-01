@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
@@ -28,7 +27,6 @@ import org.apache.hadoop.hbase.replication.TableBasedReplicationQueuesClientImpl
 import org.apache.hadoop.hbase.replication.TableBasedReplicationQueuesImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 

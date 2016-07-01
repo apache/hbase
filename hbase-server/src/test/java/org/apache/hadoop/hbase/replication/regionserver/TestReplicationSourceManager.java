@@ -84,8 +84,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import com.google.common.collect.Sets;
 
@@ -187,15 +189,24 @@ public abstract class TestReplicationSourceManager {
     utility.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @Rule
+  public TestName testName = new TestName();
+
+  private void cleanLogDir() throws IOException {
     fs.delete(logDir, true);
     fs.delete(oldLogDir, true);
   }
 
+  @Before
+  public void setUp() throws Exception {
+    LOG.info("Start " + testName.getMethodName());
+    cleanLogDir();
+  }
+
   @After
   public void tearDown() throws Exception {
-    setUp();
+    LOG.info("End " + testName.getMethodName());
+    cleanLogDir();
   }
 
   @Test
@@ -274,7 +285,6 @@ public abstract class TestReplicationSourceManager {
 
   @Test
   public void testClaimQueues() throws Exception {
-    LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("hostname0.example.org");
 
@@ -352,6 +362,27 @@ public abstract class TestReplicationSourceManager {
     manager.cleanOldLogs(file2, id, true);
     // log1 should be deleted
     assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
+  }
+
+  @Test
+  public void testCleanupUnknownPeerZNode() throws Exception {
+    final Server server = new DummyServer("hostname2.example.org");
+    ReplicationQueues rq = ReplicationFactory.getReplicationQueues(
+      new ReplicationQueuesArguments(server.getConfiguration(), server, server.getZooKeeper()));
+    rq.init(server.getServerName().toString());
+    // populate some znodes in the peer znode
+    // add log to an unknown peer
+    String group = "testgroup";
+    rq.addLog("2", group + ".log1");
+    rq.addLog("2", group + ".log2");
+
+    NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName().getServerName());
+    w1.run();
+
+    // The log of the unknown peer should be removed from zk
+    for (String peer : manager.getAllQueues()) {
+      assertTrue(peer.startsWith("1"));
+    }
   }
 
   @Test
