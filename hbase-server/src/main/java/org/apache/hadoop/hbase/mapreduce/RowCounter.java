@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +33,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
@@ -95,8 +99,7 @@ public class RowCounter extends Configured implements Tool {
   public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
     String tableName = args[0];
-    String startKey = null;
-    String endKey = null;
+    List<MultiRowRangeFilter.RowRange> rowRangeList = null;
     long startTime = 0;
     long endTime = 0;
 
@@ -110,14 +113,11 @@ public class RowCounter extends Configured implements Tool {
     // First argument is table name, starting from second
     for (int i = 1; i < args.length; i++) {
       if (args[i].startsWith(rangeSwitch)) {
-        String[] startEnd = args[i].substring(rangeSwitch.length()).split(",", 2);
-        if (startEnd.length != 2 || startEnd[1].contains(",")) {
-          printUsage("Please specify range in such format as \"--range=a,b\" " +
-              "or, with only one boundary, \"--range=,b\" or \"--range=a,\"");
+        try {
+          rowRangeList = parseRowRangeParameter(args[i], rangeSwitch);
+        } catch (IllegalArgumentException e) {
           return null;
         }
-        startKey = startEnd[0];
-        endKey = startEnd[1];
         continue;
       }
       if (args[i].startsWith(startTimeArgKey)) {
@@ -146,12 +146,7 @@ public class RowCounter extends Configured implements Tool {
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
-    if (startKey != null && !startKey.equals("")) {
-      scan.setStartRow(Bytes.toBytesBinary(startKey));
-    }
-    if (endKey != null && !endKey.equals("")) {
-      scan.setStopRow(Bytes.toBytesBinary(endKey));
-    }
+    setScanFilter(scan, rowRangeList);
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
         String family = StringUtils.substringBefore(columnName, ":");
@@ -165,13 +160,60 @@ public class RowCounter extends Configured implements Tool {
         }
       }
     }
-    scan.setFilter(new FirstKeyOnlyFilter());
     scan.setTimeRange(startTime, endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
     job.setOutputFormatClass(NullOutputFormat.class);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
       RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
     job.setNumReduceTasks(0);
     return job;
+  }
+
+  private static List<MultiRowRangeFilter.RowRange> parseRowRangeParameter(
+    String arg, String rangeSwitch) {
+    final String[] ranges = arg.substring(rangeSwitch.length()).split(";");
+    final List<MultiRowRangeFilter.RowRange> rangeList = new ArrayList<>();
+    for (String range : ranges) {
+      String[] startEnd = range.split(",", 2);
+      if (startEnd.length != 2 || startEnd[1].contains(",")) {
+        printUsage("Please specify range in such format as \"--range=a,b\" " +
+            "or, with only one boundary, \"--range=,b\" or \"--range=a,\"");
+        throw new IllegalArgumentException("Wrong range specification: " + range);
+      }
+      String startKey = startEnd[0];
+      String endKey = startEnd[1];
+      rangeList.add(new MultiRowRangeFilter.RowRange(
+        Bytes.toBytesBinary(startKey), true,
+        Bytes.toBytesBinary(endKey), false));
+    }
+    return rangeList;
+  }
+
+  /**
+   * Sets filter {@link FilterBase} to the {@link Scan} instance.
+   * If provided rowRangeList contains more than one element,
+   * method sets filter which is instance of {@link MultiRowRangeFilter}.
+   * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}.
+   * If rowRangeList contains exactly one element, startRow and stopRow are set to the scan.
+   * @param scan
+   * @param rowRangeList
+   */
+  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList) {
+    final int size = rowRangeList == null ? 0 : rowRangeList.size();
+    if (size <= 1) {
+      scan.setFilter(new FirstKeyOnlyFilter());
+    }
+    if (size == 1) {
+      MultiRowRangeFilter.RowRange range = rowRangeList.get(0);
+      scan.setStartRow(range.getStartRow()); //inclusive
+      scan.setStopRow(range.getStopRow());   //exclusive
+    } else if (size > 1) {
+      try {
+        scan.setFilter(new MultiRowRangeFilter(rowRangeList));
+      } catch (IOException e) {
+        //the IOException should never be thrown. see HBASE-16145
+        throw new RuntimeException("Cannot instantiate MultiRowRangeFilter");
+      }
+    }
   }
 
   /*
@@ -189,7 +231,7 @@ public class RowCounter extends Configured implements Tool {
   private static void printUsage() {
     System.err.println("Usage: RowCounter [options] <tablename> " +
         "[--starttime=[start] --endtime=[end] " +
-        "[--range=[startKey],[endKey]] [<column1> <column2>...]");
+        "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
     System.err.println("For performance consider the following options:\n"
         + "-Dhbase.client.scanner.caching=100\n"
         + "-Dmapreduce.map.speculative=false");
