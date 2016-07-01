@@ -121,7 +121,7 @@ public class HeapMemoryManager {
     HeapMemorySizeUtil.checkForClusterFreeMemoryLimit(conf);
     // Initialize max and min range for memstore heap space
     globalMemStorePercentMinRange = conf.getFloat(MEMSTORE_SIZE_MIN_RANGE_KEY,
-        globalMemStorePercent);
+        globalMemStorePercent / 3);
     globalMemStorePercentMaxRange = conf.getFloat(MEMSTORE_SIZE_MAX_RANGE_KEY,
         globalMemStorePercent);
     if (globalMemStorePercent < globalMemStorePercentMinRange) {
@@ -143,7 +143,7 @@ public class HeapMemoryManager {
       tuningEnabled = false;
     }
     // Initialize max and min range for block cache
-    blockCachePercentMinRange = conf.getFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercent);
+    blockCachePercentMinRange = conf.getFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercent / 4);
     blockCachePercentMaxRange = conf.getFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercent);
     if (blockCachePercent < blockCachePercentMinRange) {
       LOG.warn("Setting " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " to " + blockCachePercent
