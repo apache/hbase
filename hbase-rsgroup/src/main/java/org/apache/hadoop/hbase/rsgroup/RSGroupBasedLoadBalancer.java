@@ -216,9 +216,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
         List<ServerName> candidateList = filterOfflineServers(info, servers);
         ServerName server = this.internalBalancer.randomAssignment(region,
             candidateList);
-        if (server != null && !assignments.containsKey(server)) {
-          assignments.put(server, new ArrayList<HRegionInfo>());
-        } else if (server != null) {
+        if (server != null) {
+          if (!assignments.containsKey(server)) {
+            assignments.put(server, new ArrayList<HRegionInfo>());
+          }
           assignments.get(server).add(region);
         } else {
           //if not server is available assign to bogus so it ends up in RIT
