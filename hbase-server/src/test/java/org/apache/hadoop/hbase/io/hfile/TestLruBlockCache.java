@@ -44,34 +44,7 @@ import org.junit.experimental.categories.Category;
 @Category({IOTests.class, SmallTests.class})
 public class TestLruBlockCache {
 
-  @Test
-  public void testCurrentSize() throws Exception {
-    long maxSize = 100000;
-    int numBlocks = 9;
-    int testRuns = 10;
-    long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
-    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
-    EvictionThread evictionThread = cache.getEvictionThread();
-    assertTrue(evictionThread != null);
-    while (!evictionThread.isEnteringRun()) {
-      Thread.sleep(1);
-    }
-    int blockCount = 0;
-    String hfileName = "hfile";
-    for (int run = 0; run != testRuns; ++run) {
-      while (!cache.isEvictionInProgress()) {
-        CachedItem block = new CachedItem(hfileName, (int) blockSize, blockCount++);
-        boolean inMemory = Math.random() > 0.5;
-        cache.cacheBlock(block.cacheKey, block, inMemory, false);
-      }
-      assertEquals(true, cache.isEvictionInProgress());
-      cache.evictBlocksByHfileName(hfileName);
-      assertEquals(0, cache.getBlockCount());
-      assertEquals(cache.getOverhead(), cache.getCurrentSize());
-    }
-  }
   @Test
   public void testBackgroundEvictionThread() throws Exception {
     long maxSize = 100000;
@@ -811,11 +784,6 @@ public class TestLruBlockCache {
   private static class CachedItem implements Cacheable {
     BlockCacheKey cacheKey;
     int size;
-
-    CachedItem(String blockName, int size, int offset) {
-      this.cacheKey = new BlockCacheKey(blockName, offset);
-      this.size = size;
-    }
 
     CachedItem(String blockName, int size) {
       this.cacheKey = new BlockCacheKey(blockName, 0);
