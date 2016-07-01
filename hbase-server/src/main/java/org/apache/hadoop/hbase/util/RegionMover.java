@@ -116,7 +116,8 @@ public class RegionMover extends AbstractHBaseTool {
     private String hostname;
     private String filename;
     private String excludeFile = null;
-    private String defaultDir = "/tmp";
+    String defaultDir = System.getProperty("java.io.tmpdir");
+
     private int port = HConstants.DEFAULT_REGIONSERVER_PORT;
 
     /**
@@ -134,7 +135,7 @@ public class RegionMover extends AbstractHBaseTool {
 
     private void setDefaultfilename(String hostname) {
       this.filename =
-          defaultDir + "/" + System.getProperty("user.name") + this.hostname + ":"
+          defaultDir + File.separator + System.getProperty("user.name") + this.hostname + ":"
               + Integer.toString(this.port);
     }
 
