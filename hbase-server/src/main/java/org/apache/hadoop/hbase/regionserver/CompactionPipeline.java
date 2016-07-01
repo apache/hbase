@@ -95,10 +95,12 @@ public class CompactionPipeline {
         return false;
       }
       suffix = versionedList.getStoreSegments();
-      LOG.info("Swapping pipeline suffix with compacted item. "
-          +"Just before the swap the number of segments in pipeline is:"
-          +versionedList.getStoreSegments().size()
-          +", and the number of cells in new segment is:"+segment.getCellsCount());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Swapping pipeline suffix with compacted item. "
+            + "Just before the swap the number of segments in pipeline is:"
+            + versionedList.getStoreSegments().size()
+            + ", and the number of cells in new segment is:" + segment.getCellsCount());
+      }
       swapSuffix(suffix,segment);
     }
     if(region != null) {
@@ -107,8 +109,10 @@ public class CompactionPipeline {
       long newSize = CompactingMemStore.getSegmentSize(segment);
       long delta = suffixSize - newSize;
       long globalMemstoreSize = region.addAndGetGlobalMemstoreSize(-delta);
-      LOG.info("Suffix size: "+ suffixSize+" compacted item size: "+newSize+
-          " globalMemstoreSize: "+globalMemstoreSize);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Suffix size: " + suffixSize + " compacted item size: " + newSize
+            + " globalMemstoreSize: " + globalMemstoreSize);
+      }
     }
     return true;
   }

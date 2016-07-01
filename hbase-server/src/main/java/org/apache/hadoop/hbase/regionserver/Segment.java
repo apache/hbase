@@ -23,7 +23,6 @@ import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.util.ByteRange;
 @InterfaceAudience.Private
 public abstract class Segment {
 
-  private static final Log LOG = LogFactory.getLog(Segment.class);
   private volatile CellSet cellSet;
   private final CellComparator comparator;
   private long minSequenceId;
