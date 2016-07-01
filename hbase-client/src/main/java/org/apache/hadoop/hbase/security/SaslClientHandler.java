@@ -226,6 +226,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
           writeSaslToken(ctx, saslToken);
         }
       }
+      // release the memory
+      in.release();
 
       if (saslClient.isComplete()) {
         String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
@@ -256,6 +258,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
         }
         saslToken = new byte[length];
         in.readBytes(saslToken);
+        // release the memory
+        in.release();
       } catch (IndexOutOfBoundsException e) {
         return;
       }
