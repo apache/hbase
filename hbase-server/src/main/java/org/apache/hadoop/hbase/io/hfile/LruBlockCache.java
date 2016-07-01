@@ -511,7 +511,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    map.remove(block.getCacheKey());
+    boolean found = map.remove(block.getCacheKey()) != null;
+    if (!found) {
+      return 0;
+    }
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
@@ -541,6 +544,16 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     } else {
       evictionThread.evict();
     }
+  }
+
+  @VisibleForTesting
+  boolean isEvictionInProgress() {
+    return evictionInProgress;
+  }
+
+  @VisibleForTesting
+  long getOverhead() {
+    return overhead;
   }
 
   /**
