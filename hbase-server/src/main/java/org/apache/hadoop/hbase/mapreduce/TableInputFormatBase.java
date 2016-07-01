@@ -276,20 +276,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
       }
-      HRegionLocation location = regionLocator.getRegionLocation(keys.getFirst()[i], false);
-      // The below InetSocketAddress creation does a name resolution.
-      InetSocketAddress isa = new InetSocketAddress(location.getHostname(), location.getPort());
-      if (isa.isUnresolved()) {
-        LOG.warn("Failed resolve " + isa);
-      }
-      InetAddress regionAddress = isa.getAddress();
-      String regionLocation;
-      try {
-        regionLocation = reverseDNS(regionAddress);
-      } catch (NamingException e) {
-        LOG.warn("Cannot resolve the host name for " + regionAddress + " because of " + e);
-        regionLocation = location.getHostname();
-      }
 
       byte[] startRow = scan.getStartRow();
       byte[] stopRow = scan.getStopRow();
@@ -305,6 +291,21 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
           keys.getSecond()[i].length > 0 ?
             keys.getSecond()[i] : stopRow;
+
+        HRegionLocation location = regionLocator.getRegionLocation(keys.getFirst()[i], false);
+        // The below InetSocketAddress creation does a name resolution.
+        InetSocketAddress isa = new InetSocketAddress(location.getHostname(), location.getPort());
+        if (isa.isUnresolved()) {
+          LOG.warn("Failed resolve " + isa);
+        }
+        InetAddress regionAddress = isa.getAddress();
+        String regionLocation;
+        try {
+          regionLocation = reverseDNS(regionAddress);
+        } catch (NamingException e) {
+          LOG.warn("Cannot resolve the host name for " + regionAddress + " because of " + e);
+          regionLocation = location.getHostname();
+        }
 
         byte[] regionName = location.getRegionInfo().getRegionName();
         String encodedRegionName = location.getRegionInfo().getEncodedName();
