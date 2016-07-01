@@ -72,7 +72,7 @@ public class TestRowCounter {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), Bytes.toBytes(COL_FAM));
-    writeRows(table);
+    writeRows(table, TOTAL_ROWS, ROWS_WITH_ONE_COL);
     table.close();
   }
 
@@ -154,7 +154,82 @@ public class TestRowCounter {
     runRowCount(args, 8);
   }
 
-   /**
+  /**
+   * Test a case when a range is specified with single range of start-end keys
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterRowSingleRange() throws Exception {
+    String[] args = new String[] {
+        TABLE_NAME, "--range=\\x00row1,\\x00row3"
+    };
+    runRowCount(args, 2);
+  }
+
+  /**
+   * Test a case when a range is specified with single range with end key only
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterRowSingleRangeUpperBound() throws Exception {
+    String[] args = new String[] {
+      TABLE_NAME, "--range=,\\x00row3"
+    };
+    runRowCount(args, 3);
+  }
+
+  /**
+   * Test a case when a range is specified with two ranges where one range is with end key only
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterRowMultiRangeUpperBound() throws Exception {
+    String[] args = new String[] {
+      TABLE_NAME, "--range=,\\x00row3;\\x00row5,\\x00row7"
+    };
+    runRowCount(args, 5);
+  }
+
+  /**
+   * Test a case when a range is specified with multiple ranges of start-end keys
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterRowMultiRange() throws Exception {
+    String[] args = new String[] {
+        TABLE_NAME, "--range=\\x00row1,\\x00row3;\\x00row5,\\x00row8"
+    };
+    runRowCount(args, 5);
+  }
+
+  /**
+   * Test a case when a range is specified with multiple ranges of start-end keys;
+   * one range is filled, another two are not
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterRowMultiEmptyRange() throws Exception {
+    String[] args = new String[] {
+        TABLE_NAME, "--range=\\x00row1,\\x00row3;;"
+    };
+    runRowCount(args, 2);
+  }
+
+  @Test
+  public void testRowCounter10kRowRange() throws Exception {
+    String tableName = TABLE_NAME + "10k";
+
+    try (Table table = TEST_UTIL.createTable(
+      TableName.valueOf(tableName), Bytes.toBytes(COL_FAM))) {
+      writeRows(table, 10000, 0);
+    }
+    String[] args = new String[] {
+      tableName, "--range=\\x00row9872,\\x00row9875"
+    };
+    runRowCount(args, 3);
+  }
+
+  /**
    * Test a case when the timerange is specified with --starttime and --endtime options
    *
    * @throws Exception
@@ -222,7 +297,10 @@ public class TestRowCounter {
    */
   private void runRowCount(String[] args, int expectedCount) throws Exception {
     Job job = RowCounter.createSubmittableJob(TEST_UTIL.getConfiguration(), args);
+    long start = System.currentTimeMillis();
     job.waitForCompletion(true);
+    long duration = System.currentTimeMillis() - start;
+    LOG.debug("row count duration (ms): " + duration);
     assertTrue(job.isSuccessful());
     Counter counter = job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS);
     assertEquals(expectedCount, counter.getValue());
@@ -235,7 +313,7 @@ public class TestRowCounter {
    * @param table
    * @throws IOException
    */
-  private static void writeRows(Table table) throws IOException {
+  private static void writeRows(Table table, int totalRows, int rowsWithOneCol) throws IOException {
     final byte[] family = Bytes.toBytes(COL_FAM);
     final byte[] value = Bytes.toBytes("abcd");
     final byte[] col1 = Bytes.toBytes(COL1);
@@ -244,7 +322,7 @@ public class TestRowCounter {
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     // write few rows with two columns
     int i = 0;
-    for (; i < TOTAL_ROWS - ROWS_WITH_ONE_COL; i++) {
+    for (; i < totalRows - rowsWithOneCol; i++) {
       // Use binary rows values to test for HBASE-15287.
       byte[] row = Bytes.toBytesBinary("\\x00row" + i);
       Put put = new Put(row);
@@ -255,7 +333,7 @@ public class TestRowCounter {
     }
 
     // write few rows with only one column
-    for (; i < TOTAL_ROWS; i++) {
+    for (; i < totalRows; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
       put.addColumn(family, col2, value);
@@ -288,7 +366,7 @@ public class TestRowCounter {
         assertTrue(data.toString().contains(
             "Usage: RowCounter [options] <tablename> " +
             "[--starttime=[start] --endtime=[end] " +
-            "[--range=[startKey],[endKey]] " +
+            "[--range=[startKey],[endKey][;[startKey],[endKey]...]] " +
             "[<column1> <column2>...]"));
         assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
         assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
@@ -308,7 +386,7 @@ public class TestRowCounter {
         assertTrue(data.toString().contains(
             "Usage: RowCounter [options] <tablename> " +
             "[--starttime=[start] --endtime=[end] " +
-            "[--range=[startKey],[endKey]] " +
+            "[--range=[startKey],[endKey][;[startKey],[endKey]...]] " +
             "[<column1> <column2>...]"));
       }
 
