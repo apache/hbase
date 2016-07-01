@@ -84,8 +84,10 @@ class MemStoreCompactor {
     smallestReadPoint = compactingMemStore.getSmallestReadPoint();
     compactingScanner = createScanner(compactingMemStore.getStore());
 
-    LOG.info("Starting the MemStore in-memory compaction for store " +
-        compactingMemStore.getStore().getColumnFamilyName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting the MemStore in-memory compaction for store "
+          + compactingMemStore.getStore().getColumnFamilyName());
+    }
 
     doCompaction();
     return true;

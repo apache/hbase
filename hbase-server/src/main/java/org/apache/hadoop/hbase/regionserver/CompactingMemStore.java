@@ -92,7 +92,7 @@ public class CompactingMemStore extends AbstractMemStore {
     double factor =  conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
         IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
     inmemoryFlushSize *= factor;
-    LOG.debug("Setting in-memory flush size threshold to " + inmemoryFlushSize);
+    LOG.info("Setting in-memory flush size threshold to " + inmemoryFlushSize);
   }
 
   public static long getSegmentSize(Segment segment) {
@@ -150,8 +150,11 @@ public class CompactingMemStore extends AbstractMemStore {
       LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
-      LOG.info("FLUSHING TO DISK: region "+ getRegionServices().getRegionInfo()
-          .getRegionNameAsString() + "store: "+ getFamilyName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("FLUSHING TO DISK: region "
+            + getRegionServices().getRegionInfo().getRegionNameAsString() + "store: "
+            + getFamilyName());
+      }
       stopCompaction();
       pushActiveToPipeline(active);
       snapshotId = EnvironmentEdgeManager.currentTime();
@@ -275,8 +278,10 @@ public class CompactingMemStore extends AbstractMemStore {
     getRegionServices().blockUpdates();
     try {
       MutableSegment active = getActive();
-      LOG.info("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline, " +
-          "and initiating compaction.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline, "
+            + "and initiating compaction.");
+      }
       pushActiveToPipeline(active);
     } finally {
       getRegionServices().unblockUpdates();
@@ -397,14 +402,5 @@ public class CompactingMemStore extends AbstractMemStore {
       }
     }
     return lowest;
-  }
-
-  // debug method
-  private void debug() {
-    String msg = "active size="+getActive().getSize();
-    msg += " threshold="+IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT* inmemoryFlushSize;
-    msg += " allow compaction is "+ (allowCompaction.get() ? "true" : "false");
-    msg += " inMemoryFlushInProgress is "+ (inMemoryFlushInProgress.get() ? "true" : "false");
-    LOG.debug(msg);
   }
 }
