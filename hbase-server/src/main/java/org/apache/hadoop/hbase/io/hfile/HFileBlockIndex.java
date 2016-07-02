@@ -1072,6 +1072,11 @@ public class HFileBlockIndex {
         if (midKeyMetadata != null)
           blockStream.write(midKeyMetadata);
         blockWriter.writeHeaderAndData(out);
+        if (cacheConf != null) {
+          HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
+          cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
+            rootLevelIndexPos, true, blockForCaching.getBlockType()), blockForCaching);
+        }
       }
 
       // Add root index block size
@@ -1167,7 +1172,7 @@ public class HFileBlockIndex {
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
-      if (cacheConf != null) {
+      if (getCacheOnWrite()) {
         HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
         cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
           beginOffset, true, blockForCaching.getBlockType()), blockForCaching);
