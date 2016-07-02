@@ -139,17 +139,16 @@ public class RpcRetryingCaller<T> {
         throw e;
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
-
-        // translateException throws exception when should not retry: i.e. when request is bad.
-        interceptor.handleFailure(context, t);
-        t = translateException(t);
         if (tries > startLogErrorsCnt) {
           LOG.info("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
               (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
               + "cancelled=" + cancelled.get() + ", msg="
-              + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail());
+              + callable.getExceptionMessageAdditionalDetail());
         }
 
+        // translateException throws exception when should not retry: i.e. when request is bad.
+        interceptor.handleFailure(context, t);
+        t = translateException(t);
         callable.throwable(t, retries != 1);
         RetriesExhaustedException.ThrowableWithExtraContext qt =
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
@@ -167,7 +166,7 @@ public class RpcRetryingCaller<T> {
         long duration = singleCallDuration(expectedSleep);
         if (duration > callTimeout) {
           String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration +
-              ": " + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
+              ": " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException)(new SocketTimeoutException(msg).initCause(t));
         }
       } finally {
