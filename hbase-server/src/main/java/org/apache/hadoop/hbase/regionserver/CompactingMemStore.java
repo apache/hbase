@@ -203,8 +203,9 @@ public class CompactingMemStore extends AbstractMemStore {
     this.inMemoryFlushInProgress.set(inMemoryFlushInProgress);
   }
 
-  public void swapCompactedSegments(VersionedSegmentsList versionedList, ImmutableSegment result) {
-    pipeline.swap(versionedList, result);
+  public boolean swapCompactedSegments(VersionedSegmentsList versionedList,
+      ImmutableSegment result) {
+    return pipeline.swap(versionedList, result);
   }
 
   public boolean hasCompactibleSegments() {

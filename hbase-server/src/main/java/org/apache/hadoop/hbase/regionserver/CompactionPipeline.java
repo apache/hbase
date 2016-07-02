@@ -86,7 +86,7 @@ public class CompactionPipeline {
    * @return true iff swapped tail with new compacted segment
    */
   public boolean swap(VersionedSegmentsList versionedList, ImmutableSegment segment) {
-    if(versionedList.getVersion() != version) {
+    if (versionedList.getVersion() != version) {
       return false;
     }
     LinkedList<ImmutableSegment> suffix;
@@ -103,7 +103,7 @@ public class CompactionPipeline {
       }
       swapSuffix(suffix,segment);
     }
-    if(region != null) {
+    if (region != null) {
       // update the global memstore size counter
       long suffixSize = CompactingMemStore.getSegmentsSize(suffix);
       long newSize = CompactingMemStore.getSegmentSize(segment);

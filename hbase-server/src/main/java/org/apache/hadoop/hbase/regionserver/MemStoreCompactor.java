@@ -135,9 +135,16 @@ class MemStoreCompactor {
 
       // Phase II: swap the old compaction pipeline
       if (!isInterrupted.get()) {
-        compactingMemStore.swapCompactedSegments(versionedList, result);
-        // update the wal so it can be truncated and not get too long
-        compactingMemStore.updateLowestUnflushedSequenceIdInWAL(true); // only if greater
+        if (compactingMemStore.swapCompactedSegments(versionedList, result)) {
+          // update the wal so it can be truncated and not get too long
+          compactingMemStore.updateLowestUnflushedSequenceIdInWAL(true); // only if greater
+        } else {
+          // We just ignored the Segment 'result' and swap did not happen.
+          result.close();
+        }
+      } else {
+        // We just ignore the Segment 'result'.
+        result.close();
       }
     } catch (Exception e) {
       LOG.debug("Interrupting the MemStore in-memory compaction for store " + compactingMemStore
