@@ -160,7 +160,7 @@ public class CompactionPipeline {
   }
 
   private boolean addFirst(ImmutableSegment segment) {
-    pipeline.add(0,segment);
+    pipeline.addFirst(segment);
     return true;
   }
 
