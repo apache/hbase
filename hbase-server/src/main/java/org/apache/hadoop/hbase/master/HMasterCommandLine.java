@@ -101,8 +101,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     // minRegionServers used to be minServers.  Support it too.
     if (cmd.hasOption("minServers")) {
       String val = cmd.getOptionValue("minServers");
-      getConf().setInt("hbase.regions.server.count.min",
-                  Integer.parseInt(val));
+      getConf().setInt("hbase.regions.server.count.min", Integer.parseInt(val));
       LOG.debug("minServers set to " + val);
     }
 
