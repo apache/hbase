@@ -302,9 +302,11 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       for (String peerId : peerIdsToProcess) {
         ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
         if (!peerExists(replicationQueueInfo.getPeerId())) {
-          LOG.warn("Peer " + peerId + " didn't exist, skipping the replay");
-          // Protection against moving orphaned queues
-          continue;
+          // the orphaned queues must be moved, otherwise the delete op of dead rs will fail,
+          // this will cause the whole multi op fail.
+          // NodeFailoverWorker will skip the orphaned queues.
+          LOG.warn("Peer " + peerId
+              + " didn't exist, will move its queue to avoid the failure of multi op");
         }
         String newPeerId = peerId + "-" + znode;
         String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
