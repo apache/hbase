@@ -23,6 +23,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -84,10 +86,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Sets;
+import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
 public class TestReplicationSourceManager {
@@ -186,15 +188,24 @@ public class TestReplicationSourceManager {
     utility.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @Rule
+  public TestName testName = new TestName();
+
+  private void cleanLogDir() throws IOException {
     fs.delete(logDir, true);
     fs.delete(oldLogDir, true);
   }
 
+  @Before
+  public void setUp() throws Exception {
+    LOG.info("Start " + testName.getMethodName());
+    cleanLogDir();
+  }
+
   @After
   public void tearDown() throws Exception {
-    setUp();
+    LOG.info("End " + testName.getMethodName());
+    cleanLogDir();
   }
 
   @Test
@@ -268,7 +279,6 @@ public class TestReplicationSourceManager {
 
   @Test
   public void testClaimQueues() throws Exception {
-    LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("hostname0.example.org");
     ReplicationQueues rq =
@@ -423,6 +433,28 @@ public class TestReplicationSourceManager {
     assertEquals(v0 + 1, v1);
 
     s0.abort("", null);
+  }
+
+  @Test
+  public void testCleanupUnknownPeerZNode() throws Exception {
+    final Server server = new DummyServer("hostname2.example.org");
+    ReplicationQueues rq =
+        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
+          server);
+    rq.init(server.getServerName().toString());
+    // populate some znodes in the peer znode
+    // add log to an unknown peer
+    String group = "testgroup";
+    rq.addLog("2", group + ".log1");
+    rq.addLog("2", group + ".log2");
+
+    NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName().getServerName());
+    w1.run();
+
+    // The log of the unknown peer should be removed from zk
+    for (String peer : manager.getAllQueues()) {
+      assertTrue(peer.startsWith("1"));
+    }
   }
 
   @Test
