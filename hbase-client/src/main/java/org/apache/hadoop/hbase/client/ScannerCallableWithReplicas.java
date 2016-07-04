@@ -202,6 +202,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
           updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
         }
         return r == null ? null : r.getFirst(); // great we got an answer
+      } else {
+        throw new IOException("Failed to get result within timeout, timeout="
+            + timeout + "ms");
       }
     } catch (ExecutionException e) {
       RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
@@ -216,7 +219,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       // calls succeeded or failed. In all case, we stop all our tasks.
       cs.cancelAll();
     }
-    return null; // unreachable
+    LOG.error("Imposible? Arrive at an unreachable line..."); // unreachable
+    throw new IOException("Imposible? Arrive at an unreachable line...");
   }
 
   private void updateCurrentlyServingReplica(ScannerCallable scanner, Result[] result,
