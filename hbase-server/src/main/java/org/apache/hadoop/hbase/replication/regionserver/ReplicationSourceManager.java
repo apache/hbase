@@ -389,8 +389,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     String logName = logPath.getName();
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(logName);
     // update replication queues on ZK
-    synchronized (replicationPeers) {// synchronize on replicationPeers to avoid adding source for
-                                     // the to-be-removed peer
+    // synchronize on replicationPeers to avoid adding source for the to-be-removed peer
+    synchronized (replicationPeers) {
       for (String id : replicationPeers.getPeerIds()) {
         try {
           this.replicationQueues.addLog(id, logName);
