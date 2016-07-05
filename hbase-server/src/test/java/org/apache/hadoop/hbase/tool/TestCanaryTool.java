@@ -19,26 +19,21 @@
 
 package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
 import com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.HConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -148,6 +143,28 @@ public class TestCanaryTool {
     }));
   }
 
+  @Test
+  public void testRawScanConfig() throws Exception {
+    TableName tableName = TableName.valueOf("testTableRawScan");
+    Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
+    // insert some test rows
+    for (int i=0; i<1000; i++) {
+      byte[] iBytes = Bytes.toBytes(i);
+      Put p = new Put(iBytes);
+      p.addColumn(FAMILY, COLUMN, iBytes);
+      table.put(p);
+    }
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String[] args = { "-t", "10000", "testTableRawScan" };
+    org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
+    conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
+    ToolRunner.run(conf, canary, args);
+    verify(sink, atLeastOnce())
+        .publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+  }
+  
   private void runRegionserverCanary() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary canary = new Canary(executor, new Canary.RegionServerStdOutSink());
