@@ -88,7 +88,7 @@ public class TestTimeRangeTracker {
     for (int i = 0; i < threads.length; i++) {
       threads[i].join();
     }
-    System.out.println(trr.getMin() + " " + trr.getMax() + " " +
+    System.out.println(trr.getMinimumTimestamp() + " " + trr.getMaximumTimestamp() + " " +
       (System.currentTimeMillis() - start));
   }
 }

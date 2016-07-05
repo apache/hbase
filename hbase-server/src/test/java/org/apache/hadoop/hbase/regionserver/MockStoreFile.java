@@ -109,11 +109,15 @@ public class MockStoreFile extends StoreFile {
   }
 
   public Long getMinimumTimestamp() {
-    return (timeRangeTracker == null) ? null : timeRangeTracker.getMin();
+	    return (timeRangeTracker == null) ?
+	        null :
+	        timeRangeTracker.getMinimumTimestamp();
   }
-
+	  
   public Long getMaximumTimestamp() {
-    return (timeRangeTracker == null) ? null : timeRangeTracker.getMax();
+		    return (timeRangeTracker == null) ?
+		        null :
+		        timeRangeTracker.getMaximumTimestamp();
   }
 
   @Override
@@ -129,6 +133,7 @@ public class MockStoreFile extends StoreFile {
   @Override
   public StoreFile.Reader getReader() {
     final long len = this.length;
+    final TimeRangeTracker timeRange = this.timeRangeTracker;
     final long entries = this.entryCount;
     return new StoreFile.Reader() {
       @Override
@@ -138,7 +143,7 @@ public class MockStoreFile extends StoreFile {
 
       @Override
       public long getMaxTimestamp() {
-        return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
+        return timeRange == null ? Long.MAX_VALUE : timeRange.maximumTimestamp;
       }
 
       @Override

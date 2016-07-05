@@ -36,13 +36,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TimeRange {
-  static final long INITIAL_MIN_TIMESTAMP = 0L;
-  private static final long MIN_TIME = INITIAL_MIN_TIMESTAMP;
-  static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
-  static final long MAX_TIME = INITIAL_MAX_TIMESTAMP;
+  private static final long MIN_TIME = 0L;
+  private static final long MAX_TIME = Long.MAX_VALUE;
   private long minStamp = MIN_TIME;
   private long maxStamp = MAX_TIME;
-  private final boolean allTime;
+  private boolean allTime = false;
 
   /**
    * Default constructor.
@@ -58,7 +56,9 @@ public class TimeRange {
    */
   public TimeRange(long minStamp) {
     this.minStamp = minStamp;
-    this.allTime = this.minStamp == MIN_TIME;
+    if (this.minStamp == MIN_TIME){
+      this.allTime = true;
+    }
   }
 
   /**
@@ -67,7 +67,6 @@ public class TimeRange {
    */
   public TimeRange(byte [] minStamp) {
   	this.minStamp = Bytes.toLong(minStamp);
-  	this.allTime = false;
   }
 
   /**
@@ -82,12 +81,14 @@ public class TimeRange {
       throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
         + ", maxStamp" + maxStamp);
     }
-    if (maxStamp < minStamp) {
+    if(maxStamp < minStamp) {
       throw new IOException("maxStamp is smaller than minStamp");
     }
     this.minStamp = minStamp;
     this.maxStamp = maxStamp;
-    this.allTime = this.minStamp == MIN_TIME && this.maxStamp == MAX_TIME;
+    if (this.minStamp == MIN_TIME && this.maxStamp == MAX_TIME){
+      this.allTime = true;
+    }
   }
 
   /**
@@ -133,24 +134,8 @@ public class TimeRange {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(byte [] bytes, int offset) {
-  	if (allTime) {
-  	  return true;
-  	}
+  	if(allTime) return true;
   	return withinTimeRange(Bytes.toLong(bytes, offset));
-  }
-
-  /**
-   * Check if the range has any overlap with TimeRange
-   * @param tr TimeRange
-   * @return True if there is overlap, false otherwise
-   */
-    // This method came from TimeRangeTracker. We used to go there for this function but better
-    // to come here to the immutable, unsynchronized datastructure at read time.
-  public boolean includesTimeRange(final TimeRange tr) {
-    if (this.allTime) {
-      return true;
-    }
-    return getMin() < tr.getMax() && getMax() >= tr.getMin();
   }
 
   /**

@@ -662,8 +662,9 @@ public class MemStore implements HeapSize {
   public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
     return (timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
         snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange()))
-        && (Math.max(timeRangeTracker.getMax(), snapshotTimeRangeTracker.getMax())
-            >= oldestUnexpiredTS);
+        && (Math.max(timeRangeTracker.getMaximumTimestamp(),
+                     snapshotTimeRangeTracker.getMaximumTimestamp()) >=
+            oldestUnexpiredTS);
   }
 
   public TimeRangeTracker getSnapshotTimeRangeTracker() {

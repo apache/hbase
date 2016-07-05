@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -469,11 +468,15 @@ public class StoreFile {
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
 
     try {
-      this.reader.timeRange = TimeRangeTracker.getTimeRange(metadataMap.get(TIMERANGE_KEY));
+      byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
+      if (timerangeBytes != null) {
+        this.reader.timeRangeTracker = new TimeRangeTracker();
+        Writables.copyWritable(timerangeBytes, this.reader.timeRangeTracker);
+      }
     } catch (IllegalArgumentException e) {
       LOG.error("Error reading timestamp range data from meta -- " +
           "proceeding without", e);
-      this.reader.timeRange = null;
+      this.reader.timeRangeTracker = null;
     }
     return this.reader;
   }
@@ -691,12 +694,17 @@ public class StoreFile {
   }
 
   public Long getMinimumTimestamp() {
-    return getReader().timeRange == null? null: getReader().timeRange.getMin();
+    return (getReader().timeRangeTracker == null) ?
+      null :
+      getReader().timeRangeTracker.getMinimumTimestamp();
   }
 
   public Long getMaximumTimestamp() {
-    return getReader().timeRange == null? null: getReader().timeRange.getMax();
+    return (getReader().timeRangeTracker == null) ?
+      null :
+      getReader().timeRangeTracker.getMaximumTimestamp();
   }
+
 
   /**
    * Gets the approximate mid-point of this file that is optimal for use in splitting it.
@@ -755,14 +763,13 @@ public class StoreFile {
     protected int bytesPerChecksum;
 
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
-    /**
-     * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
-     * When flushing a memstore, we set the TimeRangeTracker that it accumulated during updates to
-     * memstore in here into this Writer and use this variable to indicate that we do not need to
-     * recalculate the timeRangeTracker bounds; it was done already as part of add-to-memstore.
-     * A completed TimeRangeTracker is not set in cases of compactions when it is recalculated.
-     */
-    boolean timeRangeTrackerSet = false;
+    /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
+     * When flushing a memstore, we set TimeRange and use this variable to
+     * indicate that it doesn't need to be calculated again while
+     * appending KeyValues.
+     * It is not set in cases of compactions when it is recalculated using only
+     * the appended KeyValues*/
+    boolean isTimeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
 
@@ -846,16 +853,12 @@ public class StoreFile {
     }
 
     /**
-     * Set TimeRangeTracker.
-     * Called when flushing to pass us a pre-calculated TimeRangeTracker, one made during updates
-     * to memstore so we don't have to make one ourselves as Cells get appended. Call before first
-     * append. If this method is not called, we will calculate our own range of the Cells that
-     * comprise this StoreFile (and write them on the end as metadata). It is good to have this stuff
-     * passed because it is expensive to make.
+     * Set TimeRangeTracker
+     * @param trt
      */
     public void setTimeRangeTracker(final TimeRangeTracker trt) {
       this.timeRangeTracker = trt;
-      timeRangeTrackerSet = true;
+      isTimeRangeTrackerSet = true;
     }
 
     /**
@@ -869,7 +872,7 @@ public class StoreFile {
       if (KeyValue.Type.Put.getCode() == kv.getTypeByte()) {
         earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
       }
-      if (!timeRangeTrackerSet) {
+      if (!isTimeRangeTrackerSet) {
         timeRangeTracker.includeTimestamp(kv);
       }
     }
@@ -1068,7 +1071,7 @@ public class StoreFile {
     protected BloomFilter deleteFamilyBloomFilter = null;
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
-    protected TimeRange timeRange;
+    protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
@@ -1178,9 +1181,13 @@ public class StoreFile {
      *          determined by the column family's TTL
      * @return false if queried keys definitely don't exist in this StoreFile
      */
-    boolean passesTimerangeFilter(TimeRange tr, long oldestUnexpiredTS) {
-      return this.timeRange == null? true:
-        this.timeRange.includesTimeRange(tr) && this.timeRange.getMax() >= oldestUnexpiredTS;
+    boolean passesTimerangeFilter(Scan scan, long oldestUnexpiredTS) {
+      if (timeRangeTracker == null) {
+        return true;
+      } else {
+        return timeRangeTracker.includesTimeRange(scan.getTimeRange()) &&
+            timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
+      }
     }
 
     /**
@@ -1572,7 +1579,7 @@ public class StoreFile {
     }
 
     public long getMaxTimestamp() {
-      return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
+      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
     }
 
     public void setBulkLoaded(boolean bulkLoadResult) {
