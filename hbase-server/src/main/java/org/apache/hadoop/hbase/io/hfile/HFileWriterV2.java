@@ -46,6 +46,8 @@ import org.apache.hadoop.io.Writable;
  * Writes HFile format version 2.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
+  justification="Understood but doing it anyway; HBASE-14730")
 public class HFileWriterV2 extends AbstractHFileWriter {
   static final Log LOG = LogFactory.getLog(HFileWriterV2.class);
 
