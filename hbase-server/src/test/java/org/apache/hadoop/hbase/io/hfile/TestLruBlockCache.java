@@ -25,6 +25,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -43,7 +47,46 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestLruBlockCache {
 
+  @Test
+  public void testCacheEvictionThreadSafe() throws Exception {
+    long maxSize = 100000;
+    int numBlocks = 9;
+    int testRuns = 10;
+    final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
+    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
+    final LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    EvictionThread evictionThread = cache.getEvictionThread();
+    assertTrue(evictionThread != null);
+    while (!evictionThread.isEnteringRun()) {
+      Thread.sleep(1);
+    }
+    final String hfileName = "hfile";
+    int threads = 10;
+    final int blocksPerThread = 5 * numBlocks;
+    for (int run = 0; run != testRuns; ++run) {
+      final AtomicInteger blockCount = new AtomicInteger(0);
+      ExecutorService service = Executors.newFixedThreadPool(threads);
+      for (int i = 0; i != threads; ++i) {
+        service.execute(new Runnable() {
+          @Override
+          public void run() {
+            for (int blockIndex = 0; blockIndex < blocksPerThread || (!cache.isEvictionInProgress()); ++blockIndex) {
+              CachedItem block = new CachedItem(hfileName, (int) blockSize, blockCount.getAndIncrement());
+              boolean inMemory = Math.random() > 0.5;
+              cache.cacheBlock(block.cacheKey, block, inMemory, false);
+            }
+            cache.evictBlocksByHfileName(hfileName);
+          }
+        });
+      }
+      service.shutdown();
+      // The test may fail here if the evict thread frees the blocks too fast
+      service.awaitTermination(10, TimeUnit.MINUTES);
+      assertEquals(0, cache.getBlockCount());
+      assertEquals(cache.getOverhead(), cache.getCurrentSize());
+    }
+  }
   @Test
   public void testBackgroundEvictionThread() throws Exception {
     long maxSize = 100000;
@@ -783,6 +826,11 @@ public class TestLruBlockCache {
   private static class CachedItem implements Cacheable {
     BlockCacheKey cacheKey;
     int size;
+
+    CachedItem(String blockName, int size, int offset) {
+      this.cacheKey = new BlockCacheKey(blockName, offset);
+      this.size = size;
+    }
 
     CachedItem(String blockName, int size) {
       this.cacheKey = new BlockCacheKey(blockName, 0);

@@ -475,8 +475,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public boolean evictBlock(BlockCacheKey cacheKey) {
     LruCachedBlock cb = map.get(cacheKey);
     if (cb == null) return false;
-    evictBlock(cb, false);
-    return true;
+    return evictBlock(cb, false) > 0;
   }
 
   /**
@@ -513,7 +512,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    map.remove(block.getCacheKey());
+    boolean found = map.remove(block.getCacheKey()) != null;
+    if (!found) {
+      return 0;
+    }
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
@@ -543,6 +545,16 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     } else {
       evictionThread.evict();
     }
+  }
+
+  @VisibleForTesting
+  boolean isEvictionInProgress() {
+    return evictionInProgress;
+  }
+
+  @VisibleForTesting
+  long getOverhead() {
+    return overhead;
   }
 
   /**
@@ -652,7 +664,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           remainingBuckets--;
         }
       }
-
       if (LOG.isTraceEnabled()) {
         long single = bucketSingle.totalSize();
         long multi = bucketMulti.totalSize();
