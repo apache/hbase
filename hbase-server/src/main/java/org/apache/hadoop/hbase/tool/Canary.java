@@ -264,12 +264,15 @@ public final class Canary implements Tool {
     private HRegionInfo region;
     private Sink sink;
     private TaskType taskType;
+    private boolean rawScanEnabled;
 
-    RegionTask(Connection connection, HRegionInfo region, Sink sink, TaskType taskType) {
+    RegionTask(Connection connection, HRegionInfo region, Sink sink, TaskType taskType,
+        boolean rawScanEnabled) {
       this.connection = connection;
       this.region = region;
       this.sink = sink;
       this.taskType = taskType;
+      this.rawScanEnabled = rawScanEnabled;
     }
 
     @Override
@@ -323,7 +326,11 @@ public final class Canary implements Tool {
           get.addFamily(column.getName());
         } else {
           scan = new Scan();
-          scan.setRaw(true);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("rawScan : %s for table: %s", rawScanEnabled,
+              tableDesc.getTableName()));
+          }
+          scan.setRaw(rawScanEnabled);
           scan.setCaching(1);
           scan.setCacheBlocks(false);
           scan.setFilter(new FirstKeyOnlyFilter());
@@ -749,6 +756,8 @@ public final class Canary implements Tool {
     System.err.println("   -treatFailureAsError treats read / write failure as error");
     System.err.println("   -writeTable    The table used for write sniffing."
         + " Default is hbase:canary");
+    System.err.println("   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test"
+        + " Default is false and raw is not enabled during scan");
     System.err
         .println("   -D<configProperty>=<value> assigning or override the configuration params");
     System.exit(USAGE_EXIT_CODE);
@@ -873,6 +882,7 @@ public final class Canary implements Tool {
     private float regionsLowerLimit;
     private float regionsUpperLimit;
     private int checkPeriod;
+    private boolean rawScanEnabled;
 
     public RegionMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
         Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName,
@@ -890,6 +900,7 @@ public final class Canary implements Tool {
       this.checkPeriod =
           conf.getInt(HConstants.HBASE_CANARY_WRITE_TABLE_CHECK_PERIOD_KEY,
             DEFAULT_WRITE_TABLE_CHECK_PERIOD);
+      this.rawScanEnabled = conf.getBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, false);
     }
 
     @Override
@@ -901,7 +912,8 @@ public final class Canary implements Tool {
             String[] tables = generateMonitorTables(this.targets);
             this.initialized = true;
             for (String table : tables) {
-              taskFutures.addAll(Canary.sniff(admin, sink, table, executor, TaskType.READ));
+              taskFutures.addAll(Canary.sniff(admin, sink, table, executor, TaskType.READ,
+                this.rawScanEnabled));
             }
           } else {
             taskFutures.addAll(sniff(TaskType.READ));
@@ -917,8 +929,8 @@ public final class Canary implements Tool {
               lastCheckTime = EnvironmentEdgeManager.currentTime();
             }
             // sniff canary table with write operation
-            taskFutures.addAll(Canary.sniff(admin, sink,
-              admin.getTableDescriptor(writeTableName), executor, TaskType.WRITE));
+            taskFutures.addAll(Canary.sniff(admin, sink, admin.getTableDescriptor(writeTableName),
+              executor, TaskType.WRITE, this.rawScanEnabled));
           }
 
           for (Future<Void> future : taskFutures) {
@@ -990,7 +1002,7 @@ public final class Canary implements Tool {
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
-          taskFutures.addAll(Canary.sniff(admin, sink, table, executor, taskType));
+          taskFutures.addAll(Canary.sniff(admin, sink, table, executor, taskType, this.rawScanEnabled));
         }
       }
       return taskFutures;
@@ -1056,23 +1068,43 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
+  public static void sniff(final Admin admin, TableName tableName, boolean rawScanEnabled)
+      throws Exception {
+    sniff(admin, tableName, TaskType.READ, rawScanEnabled);
+  }
+  
+  /**
+   * Canary entry point for specified table.
+   * Keeping this method backward compatibility
+   * @throws Exception
+   */
   public static void sniff(final Admin admin, TableName tableName)
       throws Exception {
-    sniff(admin, tableName, TaskType.READ);
+    sniff(admin, tableName, TaskType.READ, false);
   }
 
   /**
    * Canary entry point for specified table with task type(read/write)
    * @throws Exception
    */
-  public static void sniff(final Admin admin, TableName tableName, TaskType taskType)
-      throws Exception {
+  public static void sniff(final Admin admin, TableName tableName, TaskType taskType,
+      boolean rawScanEnabled)   throws Exception {
     List<Future<Void>> taskFutures =
         Canary.sniff(admin, new StdOutSink(), tableName.getNameAsString(),
-          new ScheduledThreadPoolExecutor(1), taskType);
+          new ScheduledThreadPoolExecutor(1), taskType, rawScanEnabled);
     for (Future<Void> future : taskFutures) {
       future.get();
     }
+  }
+  
+  /**
+   * Canary entry point for specified table with task type(read/write)
+   * Keeping this method backward compatible
+   * @throws Exception
+   */
+  public static void sniff(final Admin admin, TableName tableName, TaskType taskType)
+      throws Exception {
+    Canary.sniff(admin, tableName, taskType, false);
   }
 
   /**
@@ -1080,14 +1112,14 @@ public final class Canary implements Tool {
    * @throws Exception
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink, String tableName,
-      ExecutorService executor, TaskType taskType) throws Exception {
+      ExecutorService executor, TaskType taskType, boolean rawScanEnabled) throws Exception {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("checking table is enabled and getting table descriptor for table %s",
         tableName));
     }
     if (admin.isTableEnabled(TableName.valueOf(tableName))) {
       return Canary.sniff(admin, sink, admin.getTableDescriptor(TableName.valueOf(tableName)),
-        executor, taskType);
+        executor, taskType, rawScanEnabled);
     } else {
       LOG.warn(String.format("Table %s is not enabled", tableName));
     }
@@ -1098,7 +1130,8 @@ public final class Canary implements Tool {
    * Loops over regions that owns this table, and output some information abouts the state.
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink,
-      HTableDescriptor tableDesc, ExecutorService executor, TaskType taskType) throws Exception {
+      HTableDescriptor tableDesc, ExecutorService executor, TaskType taskType,
+      boolean rawScanEnabled) throws Exception {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("reading list of regions for table %s", tableDesc.getTableName()));
@@ -1112,8 +1145,8 @@ public final class Canary implements Tool {
     }
     List<RegionTask> tasks = new ArrayList<RegionTask>();
     try {
-      for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {
-        tasks.add(new RegionTask(admin.getConnection(), region, sink, taskType));
+      for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {        
+        tasks.add(new RegionTask(admin.getConnection(), region, sink, taskType, rawScanEnabled));
       }
     } finally {
       table.close();
