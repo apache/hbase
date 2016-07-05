@@ -100,7 +100,7 @@ TEST(CellTest, MultipleCellsTest) {
 
 TEST(CellTest, CellRowTest) {
   std::string row = "only-row";
-  std::string family = "";
+  std::string family = "D";
   std::string column = "";
   std::string value = "";
   long timestamp = std::numeric_limits<long>::max();

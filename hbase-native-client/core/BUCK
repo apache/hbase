@@ -20,6 +20,7 @@ cxx_library(
     name="core",
     exported_headers=[
         "client.h",
+        "cell.h",
         "hbase_macros.h",
         "region-location.h",
         "location-cache.h",
@@ -28,6 +29,7 @@ cxx_library(
         "meta-utils.h",
     ],
     srcs=[
+        "cell.cc",
         "client.cc",
         "location-cache.cc",
         "meta-utils.cc",
@@ -50,6 +52,12 @@ cxx_test(name="location-cache-test",
          ],
          deps=[":core",
                "//test-util:test-util", ],
+         run_test_separately=True, )
+cxx_test(name="cell-test",
+         srcs=[
+             "cell-test.cc",
+         ],
+         deps=[":core", ],
          run_test_separately=True, )
 cxx_binary(name="simple-client",
            srcs=["simple-client.cc", ],
