@@ -264,12 +264,15 @@ public final class Canary implements Tool {
     private HRegionInfo region;
     private Sink sink;
     private TaskType taskType;
+    private boolean rawScanEnabled;
 
-    RegionTask(HConnection connection, HRegionInfo region, Sink sink, TaskType taskType) {
+    RegionTask(HConnection connection, HRegionInfo region, Sink sink, TaskType taskType,
+        boolean rawScanEnabled) {
       this.connection = connection;
       this.region = region;
       this.sink = sink;
       this.taskType = taskType;
+      this.rawScanEnabled = rawScanEnabled;
     }
 
     @Override
@@ -323,6 +326,11 @@ public final class Canary implements Tool {
           get.addFamily(column.getName());
         } else {
           scan = new Scan();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("rawScan : %s for table: %s", rawScanEnabled,
+              tableDesc.getTableName()));
+          }
+          scan.setRaw(rawScanEnabled);
           scan.setCaching(1);
           scan.setCacheBlocks(false);
           scan.setFilter(new FirstKeyOnlyFilter());
@@ -733,6 +741,8 @@ public final class Canary implements Tool {
     System.err.println("   -treatFailureAsError treats read / write failure as error");
     System.err.println("   -writeTable    The table used for write sniffing."
         + " Default is hbase:canary");
+    System.err.println("   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test"
+        + " Default is false and raw is not enabled during scan");
     System.err
         .println("   -D<configProperty>=<value> assigning or override the configuration params");
     System.exit(USAGE_EXIT_CODE);
@@ -855,6 +865,7 @@ public final class Canary implements Tool {
     private float regionsLowerLimit;
     private float regionsUpperLimit;
     private int checkPeriod;
+    private boolean rawScanEnabled;
 
     public RegionMonitor(HConnection connection, String[] monitorTargets, boolean useRegExp,
         Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName,
@@ -872,6 +883,7 @@ public final class Canary implements Tool {
       this.checkPeriod =
           conf.getInt(HConstants.HBASE_CANARY_WRITE_TABLE_CHECK_PERIOD_KEY,
             DEFAULT_WRITE_TABLE_CHECK_PERIOD);
+      this.rawScanEnabled = conf.getBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, false);
     }
 
     @Override
@@ -883,7 +895,8 @@ public final class Canary implements Tool {
             String[] tables = generateMonitorTables(this.targets);
             this.initialized = true;
             for (String table : tables) {
-              taskFutures.addAll(Canary.sniff(connection, sink, table, executor, TaskType.READ));
+              taskFutures.addAll(Canary.sniff(connection, sink, table, executor, TaskType.READ,
+                this.rawScanEnabled));
             }
           } else {
             taskFutures.addAll(sniff(TaskType.READ));
@@ -899,8 +912,8 @@ public final class Canary implements Tool {
               lastCheckTime = EnvironmentEdgeManager.currentTimeMillis();
             }
             // sniff canary table with write operation
-            taskFutures.addAll(Canary.sniff(connection, sink,
-              writeTableName.getNameAsString(), executor, TaskType.WRITE));
+            taskFutures.addAll(Canary.sniff(connection, sink, writeTableName.getNameAsString(),
+              executor, TaskType.WRITE, this.rawScanEnabled));
           }
 
           for (Future<Void> future : taskFutures) {
@@ -973,7 +986,7 @@ public final class Canary implements Tool {
         if (connection.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
           taskFutures.addAll(Canary.sniff(connection, sink, table.getTableName(), executor,
-            taskType));
+            taskType, this.rawScanEnabled));
         }
       }
       return taskFutures;
@@ -1033,14 +1046,24 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  public static void sniff(final HConnection connection, TableName tableName, TaskType taskType)
-      throws Exception {
+  public static void sniff(final HConnection connection, TableName tableName, TaskType taskType,
+      boolean rawScanEnabled) throws Exception {
     List<Future<Void>> taskFutures =
         Canary.sniff(connection, new StdOutSink(), tableName.getNameAsString(),
-          new ScheduledThreadPoolExecutor(1), taskType);
+          new ScheduledThreadPoolExecutor(1), taskType, rawScanEnabled);
     for (Future<Void> future : taskFutures) {
       future.get();
     }
+  }
+  
+  /**
+   * Canary entry point for specified table with task type(read/write)
+   * Keeping this method backward compatible
+   * @throws Exception
+   */
+  public static void sniff(final HConnection connection, TableName tableName, TaskType taskType)
+      throws Exception {
+    Canary.sniff(connection, tableName, taskType, false);
   }
 
   /**
@@ -1048,14 +1071,15 @@ public final class Canary implements Tool {
    * @throws Exception
    */
   private static List<Future<Void>> sniff(final HConnection connection, final Sink sink,
-    String tableName, ExecutorService executor, TaskType taskType) throws Exception {
+      String tableName, ExecutorService executor, TaskType taskType, boolean rawScanEnabled)
+      throws Exception {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("checking table is enabled and getting table descriptor for table %s",
         tableName));
     }
     if (connection.isTableEnabled(TableName.valueOf(tableName))) {
-      return Canary.sniff(connection, sink, TableName.valueOf(tableName), executor,
-        taskType);
+      return Canary.sniff(connection, sink, TableName.valueOf(tableName), executor, taskType,
+        rawScanEnabled);
     } else {
       LOG.warn(String.format("Table %s is not enabled", tableName));
     }
@@ -1066,7 +1090,8 @@ public final class Canary implements Tool {
    * Loops over regions that owns this table, and output some information abouts the state.
    */
   private static List<Future<Void>> sniff(final HConnection connection, final Sink sink,
-      TableName tableName, ExecutorService executor, TaskType taskType) throws Exception {
+      TableName tableName, ExecutorService executor, TaskType taskType, boolean rawScanEnabled)
+      throws Exception {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("reading list of regions for table %s", tableName));
     }
@@ -1079,7 +1104,7 @@ public final class Canary implements Tool {
     List<RegionTask> tasks = new ArrayList<RegionTask>();
     try {
       for (HRegionInfo region : ((HTable)table).getRegionLocations().keySet()) {
-        tasks.add(new RegionTask(connection, region, sink, taskType));
+        tasks.add(new RegionTask(connection, region, sink, taskType, rawScanEnabled));
       }
     } finally {
       table.close();

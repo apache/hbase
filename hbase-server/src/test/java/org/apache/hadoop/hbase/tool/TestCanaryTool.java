@@ -140,6 +140,28 @@ public class TestCanaryTool {
     }));
   }
 
+  @Test
+  public void testRawScanConfig() throws Exception {
+    TableName tableName = TableName.valueOf("testTableRawScan");
+    HTable table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
+    // insert some test rows
+    for (int i=0; i<1000; i++) {
+      byte[] iBytes = Bytes.toBytes(i);
+      Put p = new Put(iBytes);
+      p.add(FAMILY, COLUMN, iBytes);
+      table.put(p);
+    }
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String[] args = { "-t", "10000", "testTableRawScan" };
+    org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
+    conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
+    ToolRunner.run(conf, canary, args);
+    verify(sink, atLeastOnce())
+        .publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+  }
+  
   private void runRegionserverCanary() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary canary = new Canary(executor, new Canary.RegionServerStdOutSink());
