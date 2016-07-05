@@ -162,6 +162,10 @@
       <artifactId>hbase-server</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-thrift</artifactId>
+    </dependency>
+    <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
