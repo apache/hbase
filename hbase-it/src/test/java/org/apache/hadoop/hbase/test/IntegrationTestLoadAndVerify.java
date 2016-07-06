@@ -549,7 +549,8 @@ public void cleanUpCluster() throws Exception {
     getTestingUtil(getConf()).deleteTable(htd.getTableName());
   }
 
-  public void usage() {
+  @Override
+  public void printUsage() {
     System.err.println(this.getClass().getSimpleName()
       + " [-Doptions] <load|verify|loadAndVerify|search>");
     System.err.println("  Loads a table with row dependencies and verifies the dependency chains");
@@ -571,8 +572,8 @@ public void cleanUpCluster() throws Exception {
 
     String[] args = cmd.getArgs();
     if (args == null || args.length < 1) {
-      usage();
-      throw new RuntimeException("Incorrect Number of args.");
+      printUsage("bin/hbase " + getClass().getName() + " <options>", "Options:", "");
+      System.exit(EXIT_FAILURE);
     }
     toRun = args[0];
     if (toRun.equalsIgnoreCase("search")) {
@@ -608,7 +609,7 @@ public void cleanUpCluster() throws Exception {
       }
     } else {
       System.err.println("Invalid argument " + toRun);
-      usage();
+      printUsage();
       return 1;
     }
 
