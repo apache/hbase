@@ -163,7 +163,7 @@ public class IntegrationTestRpcClient {
 
         TestRpcServer rpcServer = new TestRpcServer(conf);
         rpcServer.start();
-        InetSocketAddress address = rpcServer.getListenerAddress();        
+        InetSocketAddress address = rpcServer.getListenerAddress();
         if (address == null) {
           throw new IOException("Listener channel is closed");
         }
@@ -296,6 +296,7 @@ public class IntegrationTestRpcClient {
       this.cluster = cluster;
       this.rpcClient = rpcClient;
       this.id = id;
+      this.setName(id);
     }
 
     @Override
@@ -371,7 +372,7 @@ public class IntegrationTestRpcClient {
   }
 
 
-  @Test (timeout = 900000)
+  @Test (timeout = 1800000)
   public void testRpcWithChaosMonkeyWithSyncClient() throws Throwable {
     for (int i = 0; i < numIterations; i++) {
       TimeoutThread.runWithTimeout(new Callable<Void>() {
@@ -388,7 +389,7 @@ public class IntegrationTestRpcClient {
           }
           return null;
         }
-      }, 90000);
+      }, 180000);
     }
   }
 
