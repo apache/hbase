@@ -153,7 +153,6 @@ class MemStoreCompactor {
       return;
     } finally {
       releaseResources();
-      compactingMemStore.setInMemoryFlushInProgress(false);
     }
 
   }
