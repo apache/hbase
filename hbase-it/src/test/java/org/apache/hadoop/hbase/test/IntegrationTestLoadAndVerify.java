@@ -551,10 +551,11 @@ public void cleanUpCluster() throws Exception {
 
   @Override
   public void printUsage() {
-    System.err.println(this.getClass().getSimpleName()
-      + " [-Doptions] <load|verify|loadAndVerify|search>");
+    printUsage(this.getClass().getSimpleName() + " <options>"
+        + " [-Doptions] <load|verify|loadAndVerify|search>", "Options", "");
+    System.err.println("");
     System.err.println("  Loads a table with row dependencies and verifies the dependency chains");
-    System.err.println("Options");
+    System.err.println("Doptions");
     System.err.println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
     System.err.println("  -Dloadmapper.backrefs=<n>        Number of backreferences per row (default 50)");
     System.err.println("  -Dloadmapper.num_to_write=<n>    Number of rows per mapper (default 100,000 per mapper)");
@@ -572,7 +573,7 @@ public void cleanUpCluster() throws Exception {
 
     String[] args = cmd.getArgs();
     if (args == null || args.length < 1) {
-      printUsage("bin/hbase " + getClass().getName() + " <options>", "Options:", "");
+      printUsage();
       System.exit(EXIT_FAILURE);
     }
     toRun = args[0];
