@@ -25,13 +25,17 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -202,12 +206,12 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     // TableAction has implemented selectTable() shared by multiple table Actions
     protected HTableDescriptor selectTable(ConcurrentHashMap<TableName, HTableDescriptor> tableMap)
     {
-      // randomly select table from tableMap
-      if (tableMap.isEmpty()){
-        return null;
-      }
       // synchronization to prevent removal from multiple threads
       synchronized (tableMap){
+        // randomly select table from tableMap
+        if (tableMap.isEmpty()) {
+          return null;
+        }
         ArrayList<TableName> tableList = new ArrayList<TableName>(tableMap.keySet());
         TableName randomKey = tableList.get(RandomUtils.nextInt(tableList.size()));
         HTableDescriptor randomHtd = tableMap.get(randomKey);
