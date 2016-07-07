@@ -18,25 +18,17 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.security.visibility.CellVisibility;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
 
@@ -52,17 +44,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Stable
 public class PutSortReducer extends
     Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue> {
-  // the cell creator
-  private CellCreator kvCreator;
-
-  @Override
-  protected void
-      setup(Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
-          throws IOException, InterruptedException {
-    Configuration conf = context.getConfiguration();
-    this.kvCreator = new CellCreator(conf);
-  }
-
+  
   @Override
   protected void reduce(
       ImmutableBytesWritable row,
