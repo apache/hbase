@@ -464,6 +464,10 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_CLIENT_PAUSE, 1); // don't wait between retries.
     c2.setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 0); // Server do not really expire
     c2.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, allowsInterrupt);
+    // to avoid the client to be stuck when do the Get
+    c2.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 10000);
+    c2.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 10000);
+    c2.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 5000);
 
     Connection connection = ConnectionFactory.createConnection(c2);
     final Table table = connection.getTable(tableName);
@@ -488,6 +492,9 @@ public class TestHCM {
             done++;
             if (done % 100 == 0)
               LOG.info("done=" + done);
+            // without the sleep, will cause the exception for too many files in
+            // org.apache.hadoop.hdfs.server.datanode.DataXceiver
+            Thread.sleep(100);
           }
         } catch (Throwable t) {
           failed.set(t);
