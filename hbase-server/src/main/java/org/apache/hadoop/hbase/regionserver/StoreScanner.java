@@ -398,8 +398,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     // We can only exclude store files based on TTL if minVersions is set to 0.
     // Otherwise, we might have to return KVs that have technically expired.
-    long expiredTimestampCutoff = minVersions == 0 ? oldestUnexpiredTS :
-        Long.MIN_VALUE;
+    long expiredTimestampCutoff = minVersions == 0 ? oldestUnexpiredTS: Long.MIN_VALUE;
 
     // include only those scan files which pass all filters
     for (KeyValueScanner kvs : allScanners) {

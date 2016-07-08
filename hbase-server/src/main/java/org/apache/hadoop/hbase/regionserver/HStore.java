@@ -999,6 +999,23 @@ public class HStore implements Store {
       boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
       boolean shouldDropBehind)
   throws IOException {
+    return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
+        includesTag, shouldDropBehind, null);
+  }
+
+  /*
+   * @param maxKeyCount
+   * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
+   * @param includesMVCCReadPoint - whether to include MVCC or not
+   * @param includesTag - includesTag or not
+   * @return Writer for a new StoreFile in the tmp dir.
+   */
+  @Override
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
+      boolean shouldDropBehind, final TimeRangeTracker trt)
+  throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
       // Don't cache data on write on compactions.
@@ -1014,7 +1031,7 @@ public class HStore implements Store {
     }
     HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag,
       cryptoContext);
-    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
+    StoreFile.WriterBuilder builder = new StoreFile.WriterBuilder(conf, writerCacheConf,
         this.getFileSystem())
             .withFilePath(fs.createTempName())
             .withComparator(comparator)
@@ -1022,9 +1039,11 @@ public class HStore implements Store {
             .withMaxKeyCount(maxKeyCount)
             .withFavoredNodes(favoredNodes)
             .withFileContext(hFileContext)
-            .withShouldDropCacheBehind(shouldDropBehind)
-            .build();
-    return w;
+            .withShouldDropCacheBehind(shouldDropBehind);
+    if (trt != null) {
+      builder.withTimeRangeTracker(trt);
+    }
+    return builder.build();
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
