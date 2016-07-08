@@ -617,12 +617,24 @@ public class StoreFile {
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
+    private TimeRangeTracker trt;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
       this.conf = conf;
       this.cacheConf = cacheConf;
       this.fs = fs;
+    }
+
+    /**
+     * @param trt A premade TimeRangeTracker to use rather than build one per append (building one
+     * of these is expensive so good to pass one in if you have one).
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withTimeRangeTracker(final TimeRangeTracker trt) {
+      Preconditions.checkNotNull(trt);
+      this.trt = trt;
+      return this;
     }
 
     /**
@@ -718,7 +730,7 @@ public class StoreFile {
         comparator = KeyValue.COMPARATOR;
       }
       return new Writer(fs, filePath,
-          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext);
+          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext, trt);
     }
   }
 
@@ -794,7 +806,6 @@ public class StoreFile {
     private Cell lastDeleteFamilyCell = null;
     private long deleteFamilyCnt = 0;
 
-    TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /**
      * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
      * When flushing a memstore, we set the TimeRangeTracker that it accumulated during updates to
@@ -802,7 +813,8 @@ public class StoreFile {
      * recalculate the timeRangeTracker bounds; it was done already as part of add-to-memstore.
      * A completed TimeRangeTracker is not set in cases of compactions when it is recalculated.
      */
-    boolean timeRangeTrackerSet = false;
+    private final boolean timeRangeTrackerSet;
+    final TimeRangeTracker timeRangeTracker;
 
     protected HFile.Writer writer;
 
@@ -825,6 +837,36 @@ public class StoreFile {
         final KVComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext)
             throws IOException {
+      this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
+          null);
+    }
+
+    /**
+     * Creates an HFile.Writer that also write helpful meta data.
+     * @param fs file system to write to
+     * @param path file name to create
+     * @param conf user configuration
+     * @param comparator key comparator
+     * @param bloomType bloom filter setting
+     * @param maxKeys the expected maximum number of keys to be added. Was used
+     *        for Bloom filter size in {@link HFile} format version 1.
+     * @param favoredNodes
+     * @param fileContext - The HFile context
+   * @param trt Ready-made timetracker to use.
+     * @throws IOException problem writing to FS
+     */
+    private Writer(FileSystem fs, Path path,
+        final Configuration conf,
+        CacheConfig cacheConf,
+        final KVComparator comparator, BloomType bloomType, long maxKeys,
+        InetSocketAddress[] favoredNodes, HFileContext fileContext,
+        final TimeRangeTracker trt)
+            throws IOException {
+      // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
+      // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
+      // it no longer writable.
+      this.timeRangeTrackerSet = trt != null;
+      this.timeRangeTracker = this.timeRangeTrackerSet? trt: new TimeRangeTracker();
       writer = HFile.getWriterFactory(conf, cacheConf)
           .withPath(fs, path)
           .withComparator(comparator)
@@ -883,19 +925,6 @@ public class StoreFile {
     public void appendTrackedTimestampsToMetadata() throws IOException {
       appendFileInfo(TIMERANGE_KEY,WritableUtils.toByteArray(timeRangeTracker));
       appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
-    }
-
-    /**
-     * Set TimeRangeTracker.
-     * Called when flushing to pass us a pre-calculated TimeRangeTracker, one made during updates
-     * to memstore so we don't have to make one ourselves as Cells get appended. Call before first
-     * append. If this method is not called, we will calculate our own range of the Cells that
-     * comprise this StoreFile (and write them on the end as metadata). It is good to have this stuff
-     * passed because it is expensive to make.
-     */
-    public void setTimeRangeTracker(final TimeRangeTracker trt) {
-      this.timeRangeTracker = trt;
-      timeRangeTrackerSet = true;
     }
 
     /**
@@ -1657,7 +1686,7 @@ public class StoreFile {
     }
 
     public long getMaxTimestamp() {
-      return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
+      return timeRange == null ? TimeRange.INITIAL_MAX_TIMESTAMP: timeRange.getMax();
     }
   }
 

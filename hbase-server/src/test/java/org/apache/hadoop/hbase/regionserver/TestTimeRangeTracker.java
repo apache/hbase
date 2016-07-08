@@ -17,15 +17,56 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class})
 public class TestTimeRangeTracker {
+  @Test
+  public void testExtreme() {
+    TimeRange tr = new TimeRange();
+    assertTrue(tr.includesTimeRange(new TimeRange()));
+    TimeRangeTracker trt = new TimeRangeTracker();
+    assertFalse(trt.includesTimeRange(new TimeRange()));
+    trt.includeTimestamp(1);
+    trt.includeTimestamp(10);
+    assertTrue(trt.includesTimeRange(new TimeRange()));
+  }
+
+  @Test
+  public void testTimeRangeInitialized() {
+    TimeRangeTracker src = new TimeRangeTracker();
+    TimeRange tr = new TimeRange(System.currentTimeMillis());
+    assertFalse(src.includesTimeRange(tr));
+  }
+
+  @Test
+  public void testTimeRangeTrackerNullIsSameAsTimeRangeNull() throws IOException {
+    TimeRangeTracker src = new TimeRangeTracker(1, 2);
+    byte [] bytes = Writables.getBytes(src);
+    TimeRange tgt = TimeRangeTracker.getTimeRange(bytes);
+    assertEquals(src.getMin(), tgt.getMin());
+    assertEquals(src.getMax(), tgt.getMax());
+  }
+
+  @Test
+  public void testSerialization() throws IOException {
+    TimeRangeTracker src = new TimeRangeTracker(1, 2);
+    TimeRangeTracker tgt = new TimeRangeTracker();
+    Writables.copyWritable(src, tgt);
+    assertEquals(src.getMin(), tgt.getMin());
+    assertEquals(src.getMax(), tgt.getMax());
+  }
+
   @Test
   public void testAlwaysDecrementingSetsMaximum() {
     TimeRangeTracker trr = new TimeRangeTracker();

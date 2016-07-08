@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,8 +26,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -257,7 +256,7 @@ public class KeyValueUtil {
   /**
    * Create a KeyValue for the specified row, family and qualifier that would be
    * larger than or equal to all other possible KeyValues that have the same
-   * row, family, qualifier. Used for reseeking.
+   * row, family, qualifier. Used for reseeking. Should NEVER be returned to a client.
    *
    * @param row
    *          row key
@@ -303,7 +302,7 @@ public class KeyValueUtil {
    * but creates the last key on the row/column of this KV (the value part of
    * the returned KV is always empty). Used in creating "fake keys" for the
    * multi-column Bloom filter optimization to skip the row/column we already
-   * know is not in the file.
+   * know is not in the file. Not to be returned to clients.
    * 
    * @param kv - cell
    * @return the last key on the row/column of the given key-value pair

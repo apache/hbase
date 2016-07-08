@@ -115,8 +115,8 @@ public class StripeStoreFlusher extends StoreFlusher {
             /* isCompaction = */ false,
             /* includeMVCCReadpoint = */ true,
             /* includesTags = */ true,
-            /* shouldDropBehind = */ false);
-        writer.setTimeRangeTracker(tracker);
+            /* shouldDropBehind = */ false,
+            tracker);
         return writer;
       }
     };
