@@ -2246,7 +2246,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       // The above callBlockingMethod will always return a SE.  Strip the SE wrapper before
       // putting it on the wire.  Its needed to adhere to the pb Service Interface but we don't
       // need to pass it over the wire.
-      if (e instanceof ServiceException) e = e.getCause();
+      if (e instanceof ServiceException) {
+        if (e.getCause() == null) {
+          LOG.debug("Caught a ServiceException with null cause", e);
+        } else {
+          e = e.getCause();
+        }
+      }
 
       // increment the number of requests that were exceptions.
       metrics.exception(e);
