@@ -1261,11 +1261,6 @@ public final class Canary implements Tool {
 
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    final ChoreService choreService = new ChoreService("CANARY_TOOL");
-    final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
-    if (authChore != null) {
-      choreService.scheduleChore(authChore);
-    }
 
     // loading the generic options to conf
     new GenericOptionsParser(conf, args);
@@ -1280,7 +1275,6 @@ public final class Canary implements Tool {
     Sink sink = ReflectionUtils.newInstance(sinkClass);
 
     int exitCode = ToolRunner.run(conf, new Canary(executor, sink), args);
-    choreService.shutdown();
     executor.shutdown();
     System.exit(exitCode);
   }
