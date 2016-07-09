@@ -203,6 +203,4 @@ public abstract class Query extends OperationWithAttributes {
   public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
     return this.colFamTimeRangeMap;
   }
-
-
 }

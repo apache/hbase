@@ -189,8 +189,24 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
     boolean shouldDropBehind
   ) throws IOException;
 
-
-
+  /**
+   * @param maxKeyCount
+   * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
+   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
+   * @param shouldDropBehind should the writer drop caches behind writes
+   * @param trt Ready-made timetracker to use.
+   * @return Writer for a new StoreFile in the tmp dir.
+   */
+  StoreFileWriter createWriterInTmp(
+    long maxKeyCount,
+    Compression.Algorithm compression,
+    boolean isCompaction,
+    boolean includeMVCCReadpoint,
+    boolean includesTags,
+    boolean shouldDropBehind,
+    final TimeRangeTracker trt
+  ) throws IOException;
 
   // Compaction oriented methods
 

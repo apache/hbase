@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,57 +25,86 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Represents an interval of version timestamps.
+ * Represents an interval of version timestamps. Presumes timestamps between
+ * {@link #INITIAL_MIN_TIMESTAMP} and {@link #INITIAL_MAX_TIMESTAMP} only. Gets freaked out if
+ * passed a timestamp that is < {@link #INITIAL_MIN_TIMESTAMP},
  * <p>
  * Evaluated according to minStamp &lt;= timestamp &lt; maxStamp
  * or [minStamp,maxStamp) in interval notation.
  * <p>
  * Only used internally; should not be accessed directly by clients.
+ *<p>Immutable. Thread-safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TimeRange {
-  static final long INITIAL_MIN_TIMESTAMP = 0l;
-  private static final long MIN_TIME = INITIAL_MIN_TIMESTAMP;
-  static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
-  static final long MAX_TIME = INITIAL_MAX_TIMESTAMP;
-  private long minStamp = MIN_TIME;
-  private long maxStamp = MAX_TIME;
+  public static final long INITIAL_MIN_TIMESTAMP = 0L;
+  public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
+  private final long minStamp;
+  private final long maxStamp;
   private final boolean allTime;
 
   /**
    * Default constructor.
    * Represents interval [0, Long.MAX_VALUE) (allTime)
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
+  @Deprecated
   public TimeRange() {
-    allTime = true;
+    this(INITIAL_MIN_TIMESTAMP, INITIAL_MAX_TIMESTAMP);
   }
 
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
+  @Deprecated
   public TimeRange(long minStamp) {
-    this.minStamp = minStamp;
-    this.allTime = this.minStamp == MIN_TIME;
+    this(minStamp, INITIAL_MAX_TIMESTAMP);
   }
 
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
+  @Deprecated
   public TimeRange(byte [] minStamp) {
-    this.minStamp = Bytes.toLong(minStamp);
-    this.allTime = false;
+    this(Bytes.toLong(minStamp));
   }
 
   /**
    * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
-   * @throws IllegalArgumentException
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
    */
+  @Deprecated
+  public TimeRange(byte [] minStamp, byte [] maxStamp) {
+    this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));
+  }
+
+  /**
+   * Represents interval [minStamp, maxStamp)
+   * @param minStamp the minimum timestamp, inclusive
+   * @param maxStamp the maximum timestamp, exclusive
+   * @throws IllegalArgumentException if either <0,
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above
+   */
+  @Deprecated
   public TimeRange(long minStamp, long maxStamp) {
+    check(minStamp, maxStamp);
+    this.minStamp = minStamp;
+    this.maxStamp = maxStamp;
+    this.allTime = isAllTime(minStamp, maxStamp);
+  }
+
+  private static boolean isAllTime(long minStamp, long maxStamp) {
+    return minStamp == INITIAL_MIN_TIMESTAMP && maxStamp == INITIAL_MAX_TIMESTAMP;
+  }
+
+  private static void check(long minStamp, long maxStamp) {
     if (minStamp < 0 || maxStamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
         + ", maxStamp:" + maxStamp);
@@ -84,20 +112,6 @@ public class TimeRange {
     if (maxStamp < minStamp) {
       throw new IllegalArgumentException("maxStamp is smaller than minStamp");
     }
-    this.minStamp = minStamp;
-    this.maxStamp = maxStamp;
-    this.allTime = this.minStamp == MIN_TIME && this.maxStamp == MAX_TIME;
-  }
-
-  /**
-   * Represents interval [minStamp, maxStamp)
-   * @param minStamp the minimum timestamp, inclusive
-   * @param maxStamp the maximum timestamp, exclusive
-   * @throws IOException
-   */
-  public TimeRange(byte [] minStamp, byte [] maxStamp)
-  throws IOException {
-    this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));
   }
 
   /**
@@ -125,14 +139,15 @@ public class TimeRange {
   /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false
-   * if not.
+   * Returns true if within interval [minStamp, maxStamp), false if not.
    * @param bytes timestamp to check
    * @param offset offset into the bytes
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(byte [] bytes, int offset) {
-    if(allTime) return true;
+    if (allTime) {
+      return true;
+    }
     return withinTimeRange(Bytes.toLong(bytes, offset));
   }
 
@@ -145,6 +160,7 @@ public class TimeRange {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(long timestamp) {
+    assert timestamp >= 0;
     if (this.allTime) {
       return true;
     }
@@ -163,6 +179,7 @@ public class TimeRange {
     if (this.allTime) {
       return true;
     }
+    assert tr.getMin() >= 0;
     return getMin() < tr.getMax() && getMax() >= tr.getMin();
   }
 
@@ -175,27 +192,29 @@ public class TimeRange {
    * @return true if within TimeRange, false if not
    */
   public boolean withinOrAfterTimeRange(long timestamp) {
-    if(allTime) return true;
+    assert timestamp >= 0;
+    if (allTime) {
+      return true;
+    }
     // check if >= minStamp
-    return (timestamp >= minStamp);
+    return timestamp >= minStamp;
   }
 
   /**
-   * Compare the timestamp to timerange
-   * @param timestamp
+   * Compare the timestamp to timerange.
    * @return -1 if timestamp is less than timerange,
    * 0 if timestamp is within timerange,
    * 1 if timestamp is greater than timerange
    */
   public int compare(long timestamp) {
-    if (allTime) return 0;
-    if (timestamp < minStamp) {
-      return -1;
-    } else if (timestamp >= maxStamp) {
-      return 1;
-    } else {
+    assert timestamp >= 0;
+    if (this.allTime) {
       return 0;
     }
+    if (timestamp < minStamp) {
+      return -1;
+    }
+    return timestamp >= maxStamp? 1: 0;
   }
 
   @Override

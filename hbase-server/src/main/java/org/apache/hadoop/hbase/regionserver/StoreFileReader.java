@@ -639,7 +639,7 @@ public class StoreFileReader {
   }
 
   public long getMaxTimestamp() {
-    return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
+    return timeRange == null ? TimeRange.INITIAL_MAX_TIMESTAMP: timeRange.getMax();
   }
 
   boolean isSkipResetSeqId() {

@@ -237,7 +237,7 @@ public class KeyValueUtil {
   /**
    * Create a KeyValue for the specified row, family and qualifier that would be
    * larger than or equal to all other possible KeyValues that have the same
-   * row, family, qualifier. Used for reseeking.
+   * row, family, qualifier. Used for reseeking. Should NEVER be returned to a client.
    *
    * @param row
    *          row key

@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Stores minimum and maximum timestamp values. Both timestamps are inclusive.
+ * Stores minimum and maximum timestamp values.
  * Use this class at write-time ONLY. Too much synchronization to use at read time
  * (TODO: there are two scenarios writing, once when lots of concurrency as part of memstore
  * updates but then later we can make one as part of a compaction when there is only one thread
@@ -45,8 +45,8 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public class TimeRangeTracker implements Writable {
   static final long INITIAL_MIN_TIMESTAMP = Long.MAX_VALUE;
+  static final long INITIAL_MAX_TIMESTAMP = -1L;
   long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
-  static final long INITIAL_MAX_TIMESTAMP = -1;
   long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
 
   /**
@@ -125,7 +125,7 @@ public class TimeRangeTracker implements Writable {
   }
 
   /**
-   * Check if the range has any overlap with TimeRange
+   * Check if the range has ANY overlap with TimeRange
    * @param tr TimeRange
    * @return True if there is overlap, false otherwise
    */
@@ -185,21 +185,18 @@ public class TimeRangeTracker implements Writable {
     return trt == null? null: trt.toTimeRange();
   }
 
-  private boolean isFreshInstance() {
-    return getMin() == INITIAL_MIN_TIMESTAMP && getMax() == INITIAL_MAX_TIMESTAMP;
-  }
-
   /**
    * @return Make a TimeRange from current state of <code>this</code>.
    */
   TimeRange toTimeRange() {
     long min = getMin();
     long max = getMax();
-    // Check for the case where the TimeRangeTracker is fresh. In that case it has
-    // initial values that are antithetical to a TimeRange... Return an uninitialized TimeRange
-    // if passed an uninitialized TimeRangeTracker.
-    if (isFreshInstance()) {
-      return new TimeRange();
+    // Initial TimeRangeTracker timestamps are the opposite of what you want for a TimeRange. Fix!
+    if (min == INITIAL_MIN_TIMESTAMP) {
+      min = TimeRange.INITIAL_MIN_TIMESTAMP;
+    }
+    if (max == INITIAL_MAX_TIMESTAMP) {
+      max = TimeRange.INITIAL_MAX_TIMESTAMP;
     }
     return new TimeRange(min, max);
   }

@@ -99,7 +99,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status, ThroughputController throughputController) throws IOException {
     ArrayList<Path> result = new ArrayList<Path>();
-    int cellsCount = snapshot.getCellsCount();
+    long cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
@@ -116,8 +116,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
         writer = store.createWriterInTmp(cellsCount, store.getFamily().getCompression(),
-            false, true, true);
-        writer.setTimeRangeTracker(snapshot.getTimeRangeTracker());
+            false, true, true, false/*default for dropbehind*/, snapshot.getTimeRangeTracker());
         try {
           // It's a mob store, flush the cells in a mob way. This is the difference of flushing
           // between a normal and a mob store.
