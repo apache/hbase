@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -39,6 +40,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Preconditions;
@@ -155,7 +159,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     super(parent);
   }
 
-  private void init(Path path, String pathPrefix,
+  private void init(Path pathPattern, String pathPrefix,
       Configuration conf) throws IOException {
     // Copy the jar to the local filesystem
     String parentDirStr =
@@ -173,31 +177,53 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       }
     }
 
-    FileSystem fs = path.getFileSystem(conf);
-    File dst = new File(parentDirStr, "." + pathPrefix + "."
-      + path.getName() + "." + System.currentTimeMillis() + ".jar");
-    fs.copyToLocalFile(path, new Path(dst.toString()));
-    dst.deleteOnExit();
+    FileSystem fs = pathPattern.getFileSystem(conf);
+    Path pathPattern1 = fs.isDirectory(pathPattern) ?
+      new Path(pathPattern, "*.jar") : pathPattern;  // append "*.jar" if a directory is specified
+    FileStatus[] fileStatuses = fs.globStatus(pathPattern1);  // return all files that match the pattern
+    if (fileStatuses == null || fileStatuses.length == 0) {  // if no one matches
+      throw new FileNotFoundException(pathPattern1.toString());
+    } else {
+      boolean validFileEncountered = false;
+      for (Path path : FileUtil.stat2Paths(fileStatuses)) {  // for each file that match the pattern
+        if (fs.isFile(path)) {  // only process files, skip for directories
+          File dst = new File(parentDirStr, "." + pathPrefix + "."
+            + path.getName() + "." + System.currentTimeMillis() + ".jar");
+          fs.copyToLocalFile(path, new Path(dst.toString()));
+          dst.deleteOnExit();
 
-    addURL(dst.getCanonicalFile().toURI().toURL());
+          addURL(dst.getCanonicalFile().toURI().toURL());
 
-    JarFile jarFile = new JarFile(dst.toString());
-    try {
-      Enumeration<JarEntry> entries = jarFile.entries();
-      while (entries.hasMoreElements()) {
-        JarEntry entry = entries.nextElement();
-        Matcher m = libJarPattern.matcher(entry.getName());
-        if (m.matches()) {
-          File file = new File(parentDirStr, "." + pathPrefix + "."
-            + path.getName() + "." + System.currentTimeMillis() + "." + m.group(1));
-          IOUtils.copyBytes(jarFile.getInputStream(entry),
-            new FileOutputStream(file), conf, true);
-          file.deleteOnExit();
-          addURL(file.toURI().toURL());
+          JarFile jarFile = new JarFile(dst.toString());
+          try {
+            Enumeration<JarEntry> entries = jarFile.entries();  // get entries inside a jar file
+            while (entries.hasMoreElements()) {
+              JarEntry entry = entries.nextElement();
+              Matcher m = libJarPattern.matcher(entry.getName());
+              if (m.matches()) {
+                File file = new File(parentDirStr, "." + pathPrefix + "."
+                  + path.getName() + "." + System.currentTimeMillis() + "." + m.group(1));
+                FileOutputStream outStream = new FileOutputStream(file);
+                try {
+                  IOUtils.copyBytes(jarFile.getInputStream(entry),
+                    outStream, conf, true);
+                } finally {
+                  outStream.close();
+                }
+                file.deleteOnExit();
+                addURL(file.toURI().toURL());
+              }
+            }
+          } finally {
+            jarFile.close();
+          }
+
+          validFileEncountered = true;  // Set to true when encountering a file
         }
       }
-    } finally {
-      jarFile.close();
+      if (validFileEncountered == false) {  // all items returned by globStatus() are directories
+        throw new FileNotFoundException("No file found matching " + pathPattern1.toString());
+      }
     }
   }
 
@@ -238,7 +264,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       return cl;
     }
 
-    if (!pathStr.endsWith(".jar")) {
+    if (path.getFileSystem(conf).isFile(path) && !pathStr.endsWith(".jar")) {
       throw new IOException(pathStr + ": not a jar file?");
     }
 
