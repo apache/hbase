@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.htrace.Trace;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
  * are {@link Cell}s.  When asked to flush, current memstore is moved
@@ -223,7 +225,8 @@ public class DefaultMemStore implements MemStore {
   @Override
   public Pair<Long, Cell> add(Cell cell) {
     Cell toAdd = maybeCloneWithAllocator(cell);
-    return new Pair<Long, Cell>(internalAdd(toAdd), toAdd);
+    boolean mslabUsed = (toAdd != cell);
+    return new Pair<Long, Cell>(internalAdd(toAdd, mslabUsed), toAdd);
   }
 
   @Override
@@ -254,12 +257,30 @@ public class DefaultMemStore implements MemStore {
    * allocator, and doesn't take the lock.
    *
    * Callers should ensure they already have the read lock taken
+   * @param toAdd the cell to add
+   * @param mslabUsed whether using MSLAB
+   * @return the heap size change in bytes
    */
-  private long internalAdd(final Cell toAdd) {
-    long s = heapSizeChange(toAdd, addToCellSet(toAdd));
+  private long internalAdd(final Cell toAdd, boolean mslabUsed) {
+    boolean notPresent = addToCellSet(toAdd);
+    long s = heapSizeChange(toAdd, notPresent);
+    // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
+    // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
+    // than the counted number)
+    if (!notPresent && mslabUsed) {
+      s += getCellLength(toAdd);
+    }
     timeRangeTracker.includeTimestamp(toAdd);
     this.size.addAndGet(s);
     return s;
+  }
+
+  /**
+   * Get cell length after serialized in {@link KeyValue}
+   */
+  @VisibleForTesting
+  int getCellLength(Cell cell) {
+    return KeyValueUtil.length(cell);
   }
 
   private Cell maybeCloneWithAllocator(Cell cell) {
@@ -267,7 +288,7 @@ public class DefaultMemStore implements MemStore {
       return cell;
     }
 
-    int len = KeyValueUtil.length(cell);
+    int len = getCellLength(cell);
     ByteRange alloc = allocator.allocateBytes(len);
     if (alloc == null) {
       // The allocation was too large, allocator decided
@@ -318,12 +339,9 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public long delete(Cell deleteCell) {
-    long s = 0;
     Cell toAdd = maybeCloneWithAllocator(deleteCell);
-    s += heapSizeChange(toAdd, addToCellSet(toAdd));
-    timeRangeTracker.includeTimestamp(toAdd);
-    this.size.addAndGet(s);
-    return s;
+    boolean mslabUsed = (toAdd != deleteCell);
+    return internalAdd(toAdd, mslabUsed);
   }
 
   /**
@@ -564,7 +582,7 @@ public class DefaultMemStore implements MemStore {
     // hitting OOME - see TestMemStore.testUpsertMSLAB for a
     // test that triggers the pathological case if we don't avoid MSLAB
     // here.
-    long addedSize = internalAdd(cell);
+    long addedSize = internalAdd(cell, false);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
