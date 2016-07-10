@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.ByteRange;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This is an abstraction of a segment maintained in a memstore, e.g., the active
  * cell set or its snapshot.
@@ -136,7 +138,7 @@ public abstract class Segment {
       return cell;
     }
 
-    int len = KeyValueUtil.length(cell);
+    int len = getCellLength(cell);
     ByteRange alloc = getMemStoreLAB().allocateBytes(len);
     if (alloc == null) {
       // The allocation was too large, allocator decided
@@ -148,6 +150,14 @@ public abstract class Segment {
     KeyValue newKv = new KeyValue(alloc.getBytes(), alloc.getOffset(), len);
     newKv.setSequenceId(cell.getSequenceId());
     return newKv;
+  }
+
+  /**
+   * Get cell length after serialized in {@link KeyValue}
+   */
+  @VisibleForTesting
+  int getCellLength(Cell cell) {
+    return KeyValueUtil.length(cell);
   }
 
   public abstract boolean shouldSeek(Scan scan, long oldestUnexpiredTS);
@@ -240,9 +250,15 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected long internalAdd(Cell cell) {
+  protected long internalAdd(Cell cell, boolean useMSLAB) {
     boolean succ = getCellSet().add(cell);
     long s = AbstractMemStore.heapSizeChange(cell, succ);
+    // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
+    // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
+    // than the counted number)
+    if (!succ && useMSLAB) {
+      s += getCellLength(cell);
+    }
     updateMetaInfo(cell, s);
     return s;
   }
@@ -269,7 +285,8 @@ public abstract class Segment {
     return getCellSet().tailSet(firstCell);
   }
 
-  private MemStoreLAB getMemStoreLAB() {
+  @VisibleForTesting
+  public MemStoreLAB getMemStoreLAB() {
     return memStoreLAB;
   }
 

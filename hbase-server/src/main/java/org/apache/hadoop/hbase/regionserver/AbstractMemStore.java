@@ -109,7 +109,8 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long add(Cell cell) {
     Cell toAdd = maybeCloneWithAllocator(cell);
-    return internalAdd(toAdd);
+    boolean useMSLAB = (toAdd != cell);
+    return internalAdd(toAdd, useMSLAB);
   }
 
   /**
@@ -156,7 +157,8 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long delete(Cell deleteCell) {
     Cell toAdd = maybeCloneWithAllocator(deleteCell);
-    long s = internalAdd(toAdd);
+    boolean useMSLAB = (toAdd != deleteCell);
+    long s = internalAdd(toAdd, useMSLAB);
     return s;
   }
 
@@ -243,7 +245,7 @@ public abstract class AbstractMemStore implements MemStore {
     // hitting OOME - see TestMemStore.testUpsertMSLAB for a
     // test that triggers the pathological case if we don't avoid MSLAB
     // here.
-    long addedSize = internalAdd(cell);
+    long addedSize = internalAdd(cell, false);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
@@ -387,9 +389,12 @@ public abstract class AbstractMemStore implements MemStore {
    * allocator, and doesn't take the lock.
    *
    * Callers should ensure they already have the read lock taken
+   * @param toAdd the cell to add
+   * @param useMSLAB whether using MSLAB
+   * @return the heap size change in bytes
    */
-  private long internalAdd(final Cell toAdd) {
-    long s = active.add(toAdd);
+  private long internalAdd(final Cell toAdd, final boolean useMSLAB) {
+    long s = active.add(toAdd, useMSLAB);
     setOldestEditTimeToNow();
     checkActiveSize();
     return s;

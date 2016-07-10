@@ -35,10 +35,12 @@ public class MutableSegment extends Segment {
 
   /**
    * Adds the given cell into the segment
+   * @param cell the cell to add
+   * @param useMSLAB whether using MSLAB
    * @return the change in the heap size
    */
-  public long add(Cell cell) {
-    return internalAdd(cell);
+  public long add(Cell cell, boolean useMSLAB) {
+    return internalAdd(cell, useMSLAB);
   }
 
   /**

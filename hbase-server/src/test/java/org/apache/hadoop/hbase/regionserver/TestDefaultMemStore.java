@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +57,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
@@ -108,6 +110,30 @@ public class TestDefaultMemStore {
     Cell found = this.memstore.getActive().first();
     assertEquals(1, this.memstore.getActive().getCellsCount());
     assertTrue(Bytes.toString(found.getValueArray()), CellUtil.matchingValue(samekey, found));
+  }
+
+  @Test
+  public void testPutSameCell() {
+    byte[] bytes = Bytes.toBytes(getName());
+    KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
+    long sizeChangeForFirstCell = this.memstore.add(kv);
+    long sizeChangeForSecondCell = this.memstore.add(kv);
+    // make sure memstore size increase won't double-count MSLAB chunk size
+    assertEquals(AbstractMemStore.heapSizeChange(kv, true), sizeChangeForFirstCell);
+    Segment segment = this.memstore.getActive();
+    MemStoreLAB msLab = segment.getMemStoreLAB();
+    if (msLab != null) {
+      // make sure memstore size increased even when writing the same cell, if using MSLAB
+      assertEquals(segment.getCellLength(kv), sizeChangeForSecondCell);
+      // make sure chunk size increased even when writing the same cell, if using MSLAB
+      if (msLab instanceof HeapMemStoreLAB) {
+        assertEquals(2 * segment.getCellLength(kv),
+          ((HeapMemStoreLAB) msLab).getCurrentChunk().getNextFreeOffset());
+      }
+    } else {
+      // make sure no memstore size change w/o MSLAB
+      assertEquals(0, sizeChangeForSecondCell);
+    }
   }
 
   /**
