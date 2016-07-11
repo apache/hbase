@@ -57,8 +57,9 @@ class BufferChain {
     byte [] bytes = new byte [this.remaining];
     int offset = 0;
     for (ByteBuffer bb: this.buffers) {
-      System.arraycopy(bb.array(), bb.arrayOffset(), bytes, offset, bb.limit());
-      offset += bb.capacity();
+      int length = bb.remaining();
+      bb.get(bytes, offset, length);
+      offset += length;
     }
     return bytes;
   }
