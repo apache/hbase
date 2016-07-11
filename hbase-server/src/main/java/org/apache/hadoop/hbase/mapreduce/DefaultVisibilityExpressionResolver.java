@@ -70,10 +70,6 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
     HTable labelsTable = null;
     try {
       labelsTable = new HTable(conf, LABELS_TABLE_NAME);
-    } catch (TableNotFoundException e) {
-      // Just return with out doing any thing. When the VC is not used we wont be having 'labels'
-      // table in the cluster.
-      return;
     } catch (IOException e) {
       LOG.error("Error opening 'labels' table", e);
       return;
@@ -90,6 +86,9 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
         byte[] value = next.getValue(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
         labels.put(Bytes.toString(value), Bytes.toInt(row));
       }
+    } catch (TableNotFoundException e) {
+      // Table not found. So just return
+      return;
     } catch (IOException e) {
       LOG.error("Error reading 'labels' table", e);
     } finally {

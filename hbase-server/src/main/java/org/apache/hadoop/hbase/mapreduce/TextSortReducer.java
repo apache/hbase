@@ -99,9 +99,8 @@ public class TextSortReducer extends
    */
   @Override
   protected void setup(Context context) {
-    doSetup(context);
-
     Configuration conf = context.getConfiguration();
+    doSetup(context, conf);
 
     parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY), separator);
     if (parser.getRowKeyColumnIndex() == -1) {
@@ -113,10 +112,9 @@ public class TextSortReducer extends
   /**
    * Handles common parameter initialization that a subclass might want to leverage.
    * @param context
+   * @param conf
    */
-  protected void doSetup(Context context) {
-    Configuration conf = context.getConfiguration();
-
+  protected void doSetup(Context context, Configuration conf) {
     // If a custom separator has been used,
     // decode it back from Base64 encoding.
     separator = conf.get(ImportTsv.SEPARATOR_CONF_KEY);
