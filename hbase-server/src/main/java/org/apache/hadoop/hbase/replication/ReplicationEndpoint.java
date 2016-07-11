@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +58,7 @@ public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListe
     private final String peerId;
     private final UUID clusterId;
     private final MetricsSource metrics;
+    private final Abortable abortable;
 
     @InterfaceAudience.Private
     public Context(
@@ -66,7 +68,8 @@ public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListe
         final UUID clusterId,
         final ReplicationPeer replicationPeer,
         final MetricsSource metrics,
-        final TableDescriptors tableDescriptors) {
+        final TableDescriptors tableDescriptors,
+        final Abortable abortable) {
       this.conf = conf;
       this.fs = fs;
       this.clusterId = clusterId;
@@ -74,6 +77,7 @@ public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListe
       this.replicationPeer = replicationPeer;
       this.metrics = metrics;
       this.tableDescriptors = tableDescriptors;
+      this.abortable = abortable;
     }
     public Configuration getConfiguration() {
       return conf;
@@ -99,6 +103,7 @@ public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListe
     public TableDescriptors getTableDescriptors() {
       return tableDescriptors;
     }
+    public Abortable getAbortable() { return abortable; }
   }
 
   /**
