@@ -250,13 +250,13 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected long internalAdd(Cell cell, boolean useMSLAB) {
+  protected long internalAdd(Cell cell, boolean mslabUsed) {
     boolean succ = getCellSet().add(cell);
     long s = AbstractMemStore.heapSizeChange(cell, succ);
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
-    if (!succ && useMSLAB) {
+    if (!succ && mslabUsed) {
       s += getCellLength(cell);
     }
     updateMetaInfo(cell, s);

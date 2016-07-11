@@ -197,8 +197,8 @@ class MemStoreCompactor {
           // The scanner is doing all the elimination logic
           // now we just copy it to the new segment
           Cell newKV = result.maybeCloneWithAllocator(c);
-          boolean useMSLAB = (newKV != c);
-          result.internalAdd(newKV, useMSLAB);
+          boolean mslabUsed = (newKV != c);
+          result.internalAdd(newKV, mslabUsed);
 
         }
         kvs.clear();
