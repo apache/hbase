@@ -732,7 +732,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
       ClusterStatus status = admin.getClusterStatus();
 
-      for (ServerName server : status.getServers()) {
+      for (JVMClusterUtil.RegionServerThread thread :
+          utility1.getHBaseCluster().getRegionServerThreads()) {
+        ServerName server = thread.getRegionServer().getServerName();
         ServerLoad sl = status.getLoad(server);
         List<ReplicationLoadSource> rLoadSourceList = sl.getReplicationLoadSourceList();
         ReplicationLoadSink rLoadSink = sl.getReplicationLoadSink();
