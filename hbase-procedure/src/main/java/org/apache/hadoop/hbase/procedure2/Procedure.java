@@ -589,6 +589,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return --childrenLatch == 0;
   }
 
+  @InterfaceAudience.Private
+  protected synchronized boolean hasChildren() {
+    return childrenLatch > 0;
+  }
+
   /**
    * Called by the RootProcedureState on procedure execution.
    * Each procedure store its stack-index positions.
@@ -606,7 +611,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   @InterfaceAudience.Private
   protected synchronized boolean removeStackIndex() {
-    if (stackIndexes.length > 1) {
+    if (stackIndexes != null && stackIndexes.length > 1) {
       stackIndexes = Arrays.copyOf(stackIndexes, stackIndexes.length - 1);
       return false;
     } else {

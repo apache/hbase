@@ -26,17 +26,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.IOUtils;
 
 import org.junit.After;
 import org.junit.Before;
@@ -106,7 +102,9 @@ public class TestStressWALProcedureStore {
           Random rand = new Random();
           TestProcedure proc;
           do {
-            proc = new TestProcedure(procCounter.addAndGet(1));
+            // After HBASE-15579 there may be gap in the procId sequence, trying to simulate that.
+            long procId = procCounter.addAndGet(1 + rand.nextInt(3));
+            proc = new TestProcedure(procId);
             // Insert
             procStore.insert(proc, null);
             // Update
