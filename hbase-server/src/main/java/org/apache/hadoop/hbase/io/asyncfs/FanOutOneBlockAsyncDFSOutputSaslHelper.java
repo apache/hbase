@@ -86,7 +86,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -112,8 +111,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static final String NAME_DELIMITER = " ";
 
   @VisibleForTesting
-  static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
-    "dfs.encrypt.data.transfer.cipher.suites";
+  static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY = "dfs.encrypt.data.transfer.cipher.suites";
 
   @VisibleForTesting
   static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
@@ -185,7 +183,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       try {
         cryptoCodecClass = Class.forName("org.apache.hadoop.crypto.CryptoCodec");
       } catch (ClassNotFoundException e) {
-        LOG.warn("No CryptoCodec class found, should be hadoop 2.5-", e);
+        LOG.debug("No CryptoCodec class found, should be hadoop 2.5-", e);
       }
       if (cryptoCodecClass != null) {
         Method getInstanceMethod = null;
@@ -195,8 +193,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
             break;
           }
         }
-        CREATE_CODEC = getInstanceMethod;
         try {
+          if (getInstanceMethod == null) {
+            throw new NoSuchMethodException(
+                "Can not find suitable getInstance method in CryptoCodec");
+          }
+          CREATE_CODEC = getInstanceMethod;
           CREATE_ENCRYPTOR = cryptoCodecClass.getMethod("createEncryptor");
           CREATE_DECRYPTOR = cryptoCodecClass.getMethod("createDecryptor");
 
@@ -207,11 +209,14 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           Class<?> decryptorClass = Class.forName("org.apache.hadoop.crypto.Decryptor");
           INIT_DECRYPTOR = decryptorClass.getMethod("init", byte[].class, byte[].class);
           DECRYPT = decryptorClass.getMethod("decrypt", ByteBuffer.class, ByteBuffer.class);
-        } catch (NoSuchMethodException | ClassNotFoundException e) {
-          throw new Error(e);
+        } catch (Exception e) {
+          final String msg = "Couldn't properly initialize access to HDFS internals. Please "
+              + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
+              + "HBASE-16110 for more information.";
+          LOG.error(msg, e);
+          throw new Error(msg, e);
         }
       } else {
-        LOG.warn("Can not initialize CryptoCodec, should be hadoop 2.5-");
         CREATE_CODEC = null;
         CREATE_ENCRYPTOR = null;
         CREATE_DECRYPTOR = null;
@@ -329,62 +334,53 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static SaslAdaptor createSaslAdaptor25() {
-    try {
-      final Field trustedChannelResolverField = DFSClient.class
-          .getDeclaredField("trustedChannelResolver");
-      trustedChannelResolverField.setAccessible(true);
-      final Method getDataEncryptionKeyMethod = DFSClient.class.getMethod("getDataEncryptionKey");
-      return new SaslAdaptor() {
+  private static SaslAdaptor createSaslAdaptor25()
+      throws NoSuchFieldException, NoSuchMethodException {
+    final Field trustedChannelResolverField = DFSClient.class
+        .getDeclaredField("trustedChannelResolver");
+    trustedChannelResolverField.setAccessible(true);
+    final Method getDataEncryptionKeyMethod = DFSClient.class.getMethod("getDataEncryptionKey");
+    return new SaslAdaptor() {
 
-        @Override
-        public TrustedChannelResolver getTrustedChannelResolver(DFSClient client) {
-          try {
-            return (TrustedChannelResolver) trustedChannelResolverField.get(client);
-          } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-          }
+      @Override
+      public TrustedChannelResolver getTrustedChannelResolver(DFSClient client) {
+        try {
+          return (TrustedChannelResolver) trustedChannelResolverField.get(client);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
         }
+      }
 
-        @Override
-        public SaslPropertiesResolver getSaslPropsResolver(DFSClient client) {
-          return null;
+      @Override
+      public SaslPropertiesResolver getSaslPropsResolver(DFSClient client) {
+        return null;
+      }
+
+      @Override
+      public AtomicBoolean getFallbackToSimpleAuth(DFSClient client) {
+        return null;
+      }
+
+      @Override
+      public DataEncryptionKey createDataEncryptionKey(DFSClient client) {
+        try {
+          return (DataEncryptionKey) getDataEncryptionKeyMethod.invoke(client);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
         }
-
-        @Override
-        public AtomicBoolean getFallbackToSimpleAuth(DFSClient client) {
-          return null;
-        }
-
-        @Override
-        public DataEncryptionKey createDataEncryptionKey(DFSClient client) {
-          try {
-            return (DataEncryptionKey) getDataEncryptionKeyMethod.invoke(client);
-          } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      };
-    } catch (NoSuchFieldException | NoSuchMethodException e) {
-      throw new Error(e);
-    }
-
+      }
+    };
   }
 
-  private static SaslAdaptor createSaslAdaptor() {
-    Class<?> saslDataTransferClientClass = null;
+  private static SaslAdaptor createSaslAdaptor()
+      throws NoSuchFieldException, NoSuchMethodException {
     try {
-      saslDataTransferClientClass = Class
-          .forName("org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient");
+      return createSaslAdaptor27(
+        Class.forName("org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient"));
     } catch (ClassNotFoundException e) {
-      LOG.warn("No SaslDataTransferClient class found, should be hadoop 2.5-");
+      LOG.debug("No SaslDataTransferClient class found, should be hadoop 2.5-", e);
     }
-    try {
-      return saslDataTransferClientClass != null ? createSaslAdaptor27(saslDataTransferClientClass)
-          : createSaslAdaptor25();
-    } catch (NoSuchFieldException | NoSuchMethodException e) {
-      throw new Error(e);
-    }
+    return createSaslAdaptor25();
   }
 
   private static CipherOptionHelper createCipherHelper25() {
@@ -451,9 +447,16 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     final Method getOutKeyMethod = cipherOptionClass.getMethod("getOutKey");
     final Method getOutIvMethod = cipherOptionClass.getMethod("getOutIv");
 
-    final Method convertCipherOptionsMethod = PBHelper.class.getMethod("convertCipherOptions",
+    Class<?> pbHelperClass;
+    try {
+      pbHelperClass = Class.forName("org.apache.hadoop.hdfs.protocolPB.PBHelperClient");
+    } catch (ClassNotFoundException e) {
+      LOG.debug("No PBHelperClient class found, should be hadoop 2.7-", e);
+      pbHelperClass = org.apache.hadoop.hdfs.protocolPB.PBHelper.class;
+    }
+    final Method convertCipherOptionsMethod = pbHelperClass.getMethod("convertCipherOptions",
       List.class);
-    final Method convertCipherOptionProtosMethod = PBHelper.class
+    final Method convertCipherOptionProtosMethod = pbHelperClass
         .getMethod("convertCipherOptionProtos", List.class);
     final Method addAllCipherOptionMethod = DataTransferEncryptorMessageProto.Builder.class
         .getMethod("addAllCipherOption", Iterable.class);
@@ -577,19 +580,16 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static CipherOptionHelper createCipherHelper() {
+  private static CipherOptionHelper createCipherHelper()
+      throws ClassNotFoundException, NoSuchMethodException {
     Class<?> cipherOptionClass;
     try {
       cipherOptionClass = Class.forName("org.apache.hadoop.crypto.CipherOption");
     } catch (ClassNotFoundException e) {
-      LOG.warn("No CipherOption class found, should be hadoop 2.5-");
+      LOG.debug("No CipherOption class found, should be hadoop 2.5-", e);
       return createCipherHelper25();
     }
-    try {
-      return createCipherHelper27(cipherOptionClass);
-    } catch (NoSuchMethodException | ClassNotFoundException e) {
-      throw new Error(e);
-    }
+    return createCipherHelper27(cipherOptionClass);
   }
 
   private static TransparentCryptoHelper createTransparentCryptoHelper25() {
@@ -646,25 +646,30 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static TransparentCryptoHelper createTransparentCryptoHelper() {
+  private static TransparentCryptoHelper createTransparentCryptoHelper()
+      throws NoSuchMethodException, ClassNotFoundException {
     Class<?> feInfoClass;
     try {
       feInfoClass = Class.forName("org.apache.hadoop.fs.FileEncryptionInfo");
     } catch (ClassNotFoundException e) {
-      LOG.warn("No FileEncryptionInfo class found, should be hadoop 2.5-");
+      LOG.debug("No FileEncryptionInfo class found, should be hadoop 2.5-", e);
       return createTransparentCryptoHelper25();
     }
-    try {
-      return createTransparentCryptoHelper27(feInfoClass);
-    } catch (NoSuchMethodException | ClassNotFoundException e) {
-      throw new Error(e);
-    }
+    return createTransparentCryptoHelper27(feInfoClass);
   }
 
   static {
-    SASL_ADAPTOR = createSaslAdaptor();
-    CIPHER_OPTION_HELPER = createCipherHelper();
-    TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
+    try {
+      SASL_ADAPTOR = createSaslAdaptor();
+      CIPHER_OPTION_HELPER = createCipherHelper();
+      TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
+    } catch (Exception e) {
+      final String msg = "Couldn't properly initialize access to HDFS internals. Please "
+          + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
+          + "HBASE-16110 for more information.";
+      LOG.error(msg, e);
+      throw new Error(msg, e);
+    }
   }
 
   /**
@@ -828,40 +833,40 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         byte[] challenge = proto.getPayload().toByteArray();
         byte[] response = saslClient.evaluateChallenge(challenge);
         switch (step) {
-          case 1: {
-            List<Object> cipherOptions = null;
-            if (requestedQopContainsPrivacy()) {
-              cipherOptions = CIPHER_OPTION_HELPER.getCipherOptions(conf);
-            }
-            sendSaslMessage(ctx, response, cipherOptions);
-            ctx.flush();
-            step++;
-            break;
+        case 1: {
+          List<Object> cipherOptions = null;
+          if (requestedQopContainsPrivacy()) {
+            cipherOptions = CIPHER_OPTION_HELPER.getCipherOptions(conf);
           }
-          case 2: {
-            assert response == null;
-            checkSaslComplete();
-            Object cipherOption =
-                CIPHER_OPTION_HELPER.getCipherOption(proto, isNegotiatedQopPrivacy(), saslClient);
-            ChannelPipeline p = ctx.pipeline();
-            while (p.first() != null) {
-              p.removeFirst();
-            }
-            if (cipherOption != null) {
-              CryptoCodec codec = new CryptoCodec(conf, cipherOption);
-              p.addLast(new EncryptHandler(codec), new DecryptHandler(codec));
-            } else {
-              if (useWrap()) {
-                p.addLast(new SaslWrapHandler(saslClient),
-                  new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4),
-                  new SaslUnwrapHandler(saslClient));
-              }
-            }
-            promise.trySuccess(null);
-            break;
+          sendSaslMessage(ctx, response, cipherOptions);
+          ctx.flush();
+          step++;
+          break;
+        }
+        case 2: {
+          assert response == null;
+          checkSaslComplete();
+          Object cipherOption = CIPHER_OPTION_HELPER.getCipherOption(proto,
+            isNegotiatedQopPrivacy(), saslClient);
+          ChannelPipeline p = ctx.pipeline();
+          while (p.first() != null) {
+            p.removeFirst();
           }
-          default:
-            throw new IllegalArgumentException("Unrecognized negotiation step: " + step);
+          if (cipherOption != null) {
+            CryptoCodec codec = new CryptoCodec(conf, cipherOption);
+            p.addLast(new EncryptHandler(codec), new DecryptHandler(codec));
+          } else {
+            if (useWrap()) {
+              p.addLast(new SaslWrapHandler(saslClient),
+                new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4),
+                new SaslUnwrapHandler(saslClient));
+            }
+          }
+          promise.trySuccess(null);
+          break;
+        }
+        default:
+          throw new IllegalArgumentException("Unrecognized negotiation step: " + step);
         }
       } else {
         ctx.fireChannelRead(msg);
