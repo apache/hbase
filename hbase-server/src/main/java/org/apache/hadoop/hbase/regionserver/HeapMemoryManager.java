@@ -352,10 +352,11 @@ public class HeapMemoryManager {
           globalMemStorePercent = memstoreSize;
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
         }
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("No changes made by HeapMemoryTuner.");
       } else {
         metricsHeapMemoryManager.increaseTunerDoNothingCounter();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No changes made by HeapMemoryTuner.");
+        }
       }
     }
 
