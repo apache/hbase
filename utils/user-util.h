@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <string>
 #include <mutex>
+#include <string>
 
 namespace hbase {
 
