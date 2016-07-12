@@ -2421,7 +2421,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws IOException if the namespace manager is not ready yet.
    * @throws NamespaceNotFoundException if the namespace does not exists
    */
-  private void ensureNamespaceExists(final String name)
+  protected void ensureNamespaceExists(final String name)
       throws IOException, NamespaceNotFoundException {
     checkNamespaceManagerReady();
     NamespaceDescriptor nsd = tableNamespaceManager.get(name);

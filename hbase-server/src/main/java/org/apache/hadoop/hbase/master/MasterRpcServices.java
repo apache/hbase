@@ -1241,9 +1241,9 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       master.snapshotManager.checkSnapshotSupport();
 
-    // ensure namespace exists
+      // ensure namespace exists
       TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
-      master.getNamespaceDescriptor(dstTable.getNamespaceAsString());
+      master.ensureNamespaceExists(dstTable.getNamespaceAsString());
 
       SnapshotDescription reqSnapshot = request.getSnapshot();
       master.snapshotManager.restoreSnapshot(reqSnapshot);
