@@ -85,6 +85,25 @@ public class TestMemStore extends TestCase {
     assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
   }
 
+  public void testPutSameCell() {
+    byte[] bytes = Bytes.toBytes(getName());
+    KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
+    long sizeChangeForFirstCell = this.memstore.add(kv);
+    long sizeChangeForSecondCell = this.memstore.add(kv);
+    // make sure memstore size increase won't double-count MSLAB chunk size
+    assertEquals(MemStore.heapSizeChange(kv, true), sizeChangeForFirstCell);
+    if (this.memstore.allocator != null) {
+      // make sure memstore size increased when using MSLAB
+      assertEquals(memstore.getCellLength(kv), sizeChangeForSecondCell);
+      // make sure chunk size increased even when writing the same cell, if using MSLAB
+      assertEquals(2 * memstore.getCellLength(kv),
+          this.memstore.allocator.getCurrentChunk().getNextFreeOffset());
+    } else {
+      // make sure no memstore size change w/o MSLAB
+      assertEquals(0, sizeChangeForSecondCell);
+    }
+  }
+
   /**
    * Test memstore snapshot happening while scanning.
    * @throws IOException

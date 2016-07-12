@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -204,6 +205,11 @@ public class MemStoreLAB {
     }
   }
 
+  @VisibleForTesting
+  Chunk getCurrentChunk() {
+    return this.curChunk.get();
+  }
+
   /**
    * A chunk of memory out of which allocations are sliced.
    */
@@ -308,6 +314,11 @@ public class MemStoreLAB {
       return "Chunk@" + System.identityHashCode(this) +
         " allocs=" + allocCount.get() + "waste=" +
         (data.length - nextFreeOffset.get());
+    }
+
+    @VisibleForTesting
+    int getNextFreeOffset() {
+      return this.nextFreeOffset.get();
     }
   }
 
