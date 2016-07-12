@@ -51,7 +51,8 @@ def add_dynamic_libs(names=[]):
     return rules
 
 
-system_libs = ["lzma", "event", ]
+system_libs = ["lzma",
+               "event", ]
 local_libs = [
     "double-conversion",
     "boost_regex",
@@ -85,8 +86,7 @@ wangle = add_system_libs(['wangle'],
 genrule(
     name="gen_zk",
     out="gen_zk",
-    bash=
-    "mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*")
+    bash="mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*")
 cxx_library(name='google-test',
             srcs=[
                 'googletest/googletest/src/gtest-all.cc',

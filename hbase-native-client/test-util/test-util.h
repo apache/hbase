@@ -18,8 +18,8 @@
  */
 #pragma once
 
-#include <folly/experimental/TestUtil.h>
 #include <folly/Random.h>
+#include <folly/experimental/TestUtil.h>
 
 #include <cstdlib>
 #include <string>

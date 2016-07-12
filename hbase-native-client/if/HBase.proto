@@ -58,11 +58,6 @@ message TableState {
   required State state = 1;
 }
 
-/** On HDFS representation of table state. */
-message TableDescriptor {
-  required TableSchema schema = 1;
-}
-
 /**
  * Column Family Schema
  * Inspired by the rest ColumSchemaMessage

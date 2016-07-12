@@ -19,9 +19,9 @@
 
 #include "core/cell.h"
 
-#include <memory>
-#include <gtest/gtest.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
+#include <memory>
 
 using namespace hbase;
 TEST(CellTest, CellFailureTest) {
@@ -74,8 +74,8 @@ TEST(CellTest, MultipleCellsTest) {
     row += std::to_string(i);
     value += std::to_string(i);
     CellType cell_type = CellType::PUT;
-    const Cell *cell = new Cell(row, family, column, timestamp, value,
-                                cell_type);
+    const Cell *cell =
+        new Cell(row, family, column, timestamp, value, cell_type);
     cells.push_back(cell);
   }
   int i = 0;
