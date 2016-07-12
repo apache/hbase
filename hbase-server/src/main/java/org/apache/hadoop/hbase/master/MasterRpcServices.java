@@ -1189,7 +1189,8 @@ public class MasterRpcServices extends RSRpcServices
 
       // Ensure namespace exists. Will throw exception if non-known NS.
       TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
-      master.getNamespace(dstTable.getNamespaceAsString());
+      master.getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
+
       SnapshotDescription reqSnapshot = request.getSnapshot();
       long procId = master.snapshotManager.restoreOrCloneSnapshot(
         reqSnapshot, request.getNonceGroup(), request.getNonce());
