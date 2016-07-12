@@ -19,6 +19,7 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -27,6 +28,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
+import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * JMX caches the beans that have been exported; even after the values are removed from hadoop's
@@ -41,6 +45,7 @@ public class JmxCacheBuster {
   private static final Log LOG = LogFactory.getLog(JmxCacheBuster.class);
   private static AtomicReference<ScheduledFuture> fut = new AtomicReference<>(null);
   private static MetricsExecutor executor = new MetricsExecutorImpl();
+  private static AtomicBoolean stopped = new AtomicBoolean(false);
 
   private JmxCacheBuster() {
     // Static only cache.
@@ -50,14 +55,40 @@ public class JmxCacheBuster {
    * For JMX to forget about all previously exported metrics.
    */
   public static void clearJmxCache() {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("clearing JMX Cache" + StringUtils.stringifyException(new Exception()));
+    }
     //If there are more then 100 ms before the executor will run then everything should be merged.
     ScheduledFuture future = fut.get();
     if ((future != null && (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
       // BAIL OUT
       return;
     }
+    if (stopped.get()) {
+      return;
+    }
     future = executor.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
     fut.set(future);
+  }
+
+  /**
+   * Stops the clearing of JMX metrics and restarting the Hadoop metrics system. This is needed for
+   * some test environments where we manually inject sources or sinks dynamically.
+   */
+  @VisibleForTesting
+  public static void stop() {
+    stopped.set(true);
+    ScheduledFuture future = fut.get();
+    future.cancel(false);
+  }
+
+  /**
+   * Restarts the stopped service.
+   * @see #stop()
+   */
+  @VisibleForTesting
+  public static void restart() {
+    stopped.set(false);
   }
 
   final static class JmxCacheBusterRunnable implements Runnable {
