@@ -481,8 +481,54 @@ public class TestWALProcedureStore {
     procStore.recoverLease();
     procStore.load(loader);
     assertEquals(procs.length, loader.getMaxProcId());
-    assertEquals(procs.length - 1, loader.getLoadedCount());
+    assertEquals(procs.length - 1, loader.getRunnableCount());
+    assertEquals(0, loader.getCompletedCount());
     assertEquals(0, loader.getCorruptedCount());
+  }
+
+  public void testLoadChildren() throws Exception {
+    TestProcedure a = new TestProcedure(1, 0);
+    TestProcedure b = new TestProcedure(2, 1);
+    TestProcedure c = new TestProcedure(3, 1);
+
+    // INIT
+    procStore.insert(a, null);
+
+    // Run A first step
+    a.addStackId(0);
+    procStore.update(a);
+
+    // Run A second step
+    a.addStackId(1);
+    procStore.insert(a, new Procedure[] { b, c });
+
+    // Run B first step
+    b.addStackId(2);
+    procStore.update(b);
+
+    // Run C first and last step
+    c.addStackId(3);
+    procStore.update(c);
+
+    // Run B second setp
+    b.addStackId(4);
+    procStore.update(b);
+
+    // back to A
+    a.addStackId(5);
+    a.setFinishedState();
+    procStore.delete(a, new long[] { b.getProcId(), c.getProcId() });
+    restartAndAssert(3, 0, 1, 0);
+  }
+
+  private void restartAndAssert(long maxProcId, long runnableCount,
+      int completedCount, int corruptedCount) throws Exception {
+    final LoadCounter loader = new LoadCounter();
+    storeRestart(loader);
+    assertEquals(maxProcId, loader.getMaxProcId());
+    assertEquals(runnableCount, loader.getRunnableCount());
+    assertEquals(completedCount, loader.getCompletedCount());
+    assertEquals(corruptedCount, loader.getCorruptedCount());
   }
 
   private void corruptLog(final FileStatus logFile, final long dropBytes)

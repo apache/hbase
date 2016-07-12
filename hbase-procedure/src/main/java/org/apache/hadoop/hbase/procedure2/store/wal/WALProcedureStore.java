@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,8 +58,6 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * WAL implementation of the ProcedureStore.
@@ -461,6 +461,29 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
+  @Override
+  public void delete(final Procedure proc, final long[] subProcIds) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Update " + proc + " and Delete " + Arrays.toString(subProcIds));
+    }
+
+    ByteSlot slot = acquireSlot();
+    try {
+      // Serialize the delete
+      ProcedureWALFormat.writeDelete(slot, proc, subProcIds);
+
+      // Push the transaction data and wait until it is persisted
+      pushData(PushType.DELETE, slot, proc.getProcId(), subProcIds);
+    } catch (IOException e) {
+      // We are not able to serialize the procedure.
+      // this is a code error, and we are not able to go on.
+      LOG.fatal("Unable to serialize the procedure: " + proc, e);
+      throw new RuntimeException(e);
+    } finally {
+      releaseSlot(slot);
+    }
+  }
+
   private ByteSlot acquireSlot() {
     ByteSlot slot = slotsCache.poll();
     return slot != null ? slot : new ByteSlot();
@@ -544,7 +567,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
         storeTracker.update(procId);
         break;
       case DELETE:
-        storeTracker.delete(procId);
+        if (subProcIds != null && subProcIds.length > 0) {
+          storeTracker.delete(subProcIds);
+        } else {
+          storeTracker.delete(procId);
+        }
         break;
       default:
         throw new RuntimeException("invalid push type " + type);

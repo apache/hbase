@@ -116,4 +116,5 @@ message ProcedureWALEntry {
   required Type type = 1;
   repeated Procedure procedure = 2;
   optional uint64 proc_id = 3;
+  repeated uint64 child_id = 4;
 }
