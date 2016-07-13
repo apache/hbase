@@ -452,6 +452,9 @@ EOF
         # This will overwrite any startrow/stoprow settings
         scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
+        # Clear converters from last scan.
+        @converters.clear()
+
         columns.each do |c|
           family, qualifier = parse_column_name(c.to_s)
           if qualifier
@@ -502,8 +505,6 @@ EOF
       maxlength = args.delete("MAXLENGTH") || -1
       count = 0
       res = {}
-
-      @converters.clear()
 
       # Start the scanner
       scan = scan == nil ? _hash_to_scan(args) : scan
