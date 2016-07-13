@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -36,6 +38,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -148,7 +151,78 @@ public class TestMemStoreLAB {
     }
 
   }
-  
+
+  /**
+   * Test frequent chunk retirement with chunk pool triggered by lots of threads, making sure
+   * there's no memory leak (HBASE-16195)
+   * @throws Exception if any error occurred
+   */
+  @Test
+  public void testLABChunkQueue() throws Exception {
+    HeapMemStoreLAB mslab = new HeapMemStoreLAB();
+    // by default setting, there should be no chunk queue initialized
+    assertNull(mslab.getChunkQueue());
+    // reset mslab with chunk pool
+    Configuration conf = HBaseConfiguration.create();
+    conf.setDouble(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.1);
+    // set chunk size to default max alloc size, so we could easily trigger chunk retirement
+    conf.setLong(HeapMemStoreLAB.CHUNK_SIZE_KEY, HeapMemStoreLAB.MAX_ALLOC_DEFAULT);
+    // reconstruct mslab
+    MemStoreChunkPool.clearDisableFlag();
+    mslab = new HeapMemStoreLAB(conf);
+    // launch multiple threads to trigger frequent chunk retirement
+    List<Thread> threads = new ArrayList<Thread>();
+    for (int i = 0; i < 10; i++) {
+      threads.add(getChunkQueueTestThread(mslab, "testLABChunkQueue-" + i));
+    }
+    for (Thread thread : threads) {
+      thread.start();
+    }
+    // let it run for some time
+    Thread.sleep(1000);
+    for (Thread thread : threads) {
+      thread.interrupt();
+    }
+    boolean threadsRunning = true;
+    while (threadsRunning) {
+      for (Thread thread : threads) {
+        if (thread.isAlive()) {
+          threadsRunning = true;
+          break;
+        }
+      }
+      threadsRunning = false;
+    }
+    // close the mslab
+    mslab.close();
+    // make sure all chunks reclaimed or removed from chunk queue
+    int queueLength = mslab.getChunkQueue().size();
+    assertTrue("All chunks in chunk queue should be reclaimed or removed"
+        + " after mslab closed but actually: " + queueLength, queueLength == 0);
+  }
+
+  private Thread getChunkQueueTestThread(final HeapMemStoreLAB mslab, String threadName) {
+    Thread thread = new Thread() {
+      boolean stopped = false;
+
+      @Override
+      public void run() {
+        while (!stopped) {
+          // keep triggering chunk retirement
+          mslab.allocateBytes(HeapMemStoreLAB.MAX_ALLOC_DEFAULT - 1);
+        }
+      }
+
+      @Override
+      public void interrupt() {
+        this.stopped = true;
+      }
+    };
+    thread.setName(threadName);
+    thread.setDaemon(true);
+    return thread;
+  }
+
   private static class AllocRecord implements Comparable<AllocRecord>{
     private final ByteRange alloc;
     private final int size;

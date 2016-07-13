@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -123,6 +124,13 @@ public class MemStoreChunkPool {
       return;
     }
     chunks.drainTo(reclaimedChunks, maxNumToPutback);
+    // clear reference of any non-reclaimable chunks
+    if (chunks.size() > 0) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Left " + chunks.size() + " unreclaimable chunks, removing them from queue");
+      }
+      chunks.clear();
+    }
   }
 
   /**
@@ -215,6 +223,15 @@ public class MemStoreChunkPool {
       GLOBAL_INSTANCE = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
       return GLOBAL_INSTANCE;
     }
+  }
+
+  int getMaxCount() {
+    return this.maxCount;
+  }
+
+  @VisibleForTesting
+  static void clearDisableFlag() {
+    chunkPoolDisabled = false;
   }
 
 }
