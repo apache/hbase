@@ -431,7 +431,10 @@ EOF
           org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
         end
 
-        columns.each do |c| 
+        # Clear converters from last scan.
+        @converters.clear()
+
+        columns.each do |c|
           family, qualifier = parse_column_name(c.to_s)
           if qualifier
             scan.addColumn(family, qualifier)
@@ -477,8 +480,6 @@ EOF
       maxlength = args.delete("MAXLENGTH") || -1
       count = 0
       res = {}
-
-      @converters.clear()
 
       # Start the scanner
       scanner = @table.getScanner(_hash_to_scan(args))
