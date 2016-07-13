@@ -137,6 +137,12 @@ public enum EventType {
    * Master asking RS to close meta.
    */
   M_RS_CLOSE_META           (25, ExecutorType.RS_CLOSE_META),
+  /**
+   * Messages originating from Master to RS.<br>
+   * M_RS_OPEN_PRIORITY_REGION<br>
+   * Master asking RS to open a  priority region.
+   */
+  M_RS_OPEN_PRIORITY_REGION          (26, ExecutorType.RS_OPEN_PRIORITY_REGION),
 
   /**
    * Messages originating from Client to Master.<br>
