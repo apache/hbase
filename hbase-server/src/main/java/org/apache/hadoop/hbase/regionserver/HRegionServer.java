@@ -212,6 +212,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -1705,6 +1706,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_OPEN_META,
       conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
+    this.service.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
+      conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_REGION,
       conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
@@ -4050,8 +4053,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           } else {
             updateRegionFavoredNodesMapping(region.getEncodedName(),
                 regionOpenInfo.getFavoredNodesList());
-            this.service.submit(new OpenRegionHandler(this, this, region, htd,
+            if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
+              this.service.submit(new OpenPriorityRegionHandler(this, this, region, htd,
                 versionOfOfflineNode, masterSystemTime));
+            } else {
+              this.service.submit(new OpenRegionHandler(this, this, region, htd,
+                versionOfOfflineNode, masterSystemTime));
+            }
           }
         }
 

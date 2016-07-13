@@ -250,4 +250,11 @@ public class TestHTableDescriptor {
     desc.removeConfiguration(key);
     assertEquals(null, desc.getConfigurationValue(key));
   }
+
+  @Test
+  public void testPriority() {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
+    htd.setPriority(42);
+    assertEquals(42, htd.getPriority());
+  }
 }

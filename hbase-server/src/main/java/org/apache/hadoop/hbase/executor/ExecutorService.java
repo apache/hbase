@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -125,6 +126,10 @@ public class ExecutorService {
     return executor;
   }
 
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorThreadPool(final ExecutorType type) {
+    return getExecutor(type).getThreadPoolExecutor();
+  }
 
   public void startExecutorService(final ExecutorType type, final int maxThreads) {
     String name = type.getExecutorName(this.servername);
@@ -178,7 +183,7 @@ public class ExecutorService {
     }
     return ret;
   }
-  
+
   /**
    * Executor instance.
    */
@@ -223,7 +228,12 @@ public class ExecutorService {
       }
       this.threadPoolExecutor.execute(event);
     }
-    
+
+    TrackingThreadPoolExecutor getThreadPoolExecutor() {
+      return threadPoolExecutor;
+    }
+
+    @Override
     public String toString() {
       return getClass().getSimpleName() + "-" + id + "-" + name;
     }
@@ -237,7 +247,7 @@ public class ExecutorService {
         }
         queuedEvents.add((EventHandler)r);
       }
-      
+
       List<RunningEventStatus> running = Lists.newArrayList();
       for (Map.Entry<Thread, Runnable> e :
           threadPoolExecutor.getRunningTasks().entrySet()) {
@@ -248,18 +258,18 @@ public class ExecutorService {
         }
         running.add(new RunningEventStatus(e.getKey(), (EventHandler)r));
       }
-      
+
       return new ExecutorStatus(this, queuedEvents, running);
     }
   }
- 
+
   /**
    * A subclass of ThreadPoolExecutor that keeps track of the Runnables that
    * are executing at any given point in time.
    */
   static class TrackingThreadPoolExecutor extends ThreadPoolExecutor {
-    private ConcurrentMap<Thread, Runnable> running = Maps.newConcurrentMap(); 
-      
+    private ConcurrentMap<Thread, Runnable> running = Maps.newConcurrentMap();
+
     public TrackingThreadPoolExecutor(int corePoolSize, int maximumPoolSize,
         long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
       super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
@@ -277,7 +287,7 @@ public class ExecutorService {
       assert oldPut == null : "inconsistency for thread " + t;
       super.beforeExecute(t, r);
     }
-   
+
     /**
      * @return a map of the threads currently running tasks
      * inside this executor. Each key is an active thread,
@@ -308,7 +318,7 @@ public class ExecutorService {
       this.queuedEvents = queuedEvents;
       this.running = running;
     }
-   
+
     /**
      * Dump a textual representation of the executor's status
      * to the given writer.

@@ -184,6 +184,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
+  public static final String PRIORITY = "PRIORITY";
+  private static final ImmutableBytesWritable PRIORITY_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(PRIORITY));
+
+  /** Relative priority of the table used for rpc scheduling */
+  private static final int DEFAULT_PRIORITY = HConstants.NORMAL_QOS;
+
   /*
    *  The below are ugly but better than creating them each time till we
    *  replace booleans being saved as Strings with plain booleans.  Need a
@@ -226,6 +233,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     DEFAULT_VALUES.put(DEFERRED_LOG_FLUSH,
         String.valueOf(DEFAULT_DEFERRED_LOG_FLUSH));
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
+    DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     for (String s : DEFAULT_VALUES.keySet()) {
       RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
     }
@@ -1101,6 +1109,23 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public Collection<HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableCollection(this.families.values());
+  }
+
+  private int getIntValue(ImmutableBytesWritable key, int defaultVal) {
+    byte[] val = getValue(key);
+    if (val == null || val.length == 0) {
+      return defaultVal;
+    }
+    return Integer.parseInt(Bytes.toString(val));
+  }
+
+  public HTableDescriptor setPriority(int priority) {
+    setValue(PRIORITY_KEY, Integer.toString(priority));
+    return this;
+  }
+
+  public int getPriority() {
+    return getIntValue(PRIORITY_KEY, DEFAULT_PRIORITY);
   }
 
   /**

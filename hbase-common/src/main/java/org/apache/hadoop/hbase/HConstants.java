@@ -973,6 +973,7 @@ public final class HConstants {
   public static final int NORMAL_QOS = 0;
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 100;
+  public static final int ADMIN_QOS = 50;
   public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
   public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
 
