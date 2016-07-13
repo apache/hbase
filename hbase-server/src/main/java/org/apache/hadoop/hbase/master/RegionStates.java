@@ -69,7 +69,7 @@ public class RegionStates {
   private static final Log LOG = LogFactory.getLog(RegionStates.class);
 
   public final static RegionStateStampComparator REGION_STATE_COMPARATOR =
-      new RegionStateStampComparator();
+    new RegionStateStampComparator();
 
   // This comparator sorts the RegionStates by time stamp then Region name.
   // Comparing by timestamp alone can lead us to discard different RegionStates that happen

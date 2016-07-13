@@ -37,6 +37,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,6 +101,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -200,6 +202,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
+  private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
   // A bunch of ZK events workers. Each is a single thread executor service
   private final java.util.concurrent.ExecutorService zkEventWorkers;
@@ -264,6 +267,8 @@ public class AssignmentManager extends ZooKeeperListener {
     NOT_HOSTING_REGION, HOSTING_REGION, UNKNOWN,
   }
 
+  private RetryCounter.BackoffPolicy backoffPolicy;
+  private RetryCounter.RetryConfig retryConfig;
   /**
    * Constructs a new assignment manager.
    *
@@ -309,8 +314,13 @@ public class AssignmentManager extends ZooKeeperListener {
         "hbase.meta.assignment.retry.sleeptime", 1000l);
     this.balancer = balancer;
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
+
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
-      maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
+        maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
+
+    this.scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1,
+        Threads.newDaemonThreadFactory("AM.Scheduler"));
+
     this.regionStates = new RegionStates(
       server, tableStateManager, serverManager, regionStateStore);
 
@@ -329,6 +339,22 @@ public class AssignmentManager extends ZooKeeperListener {
 
     this.metricsAssignmentManager = new MetricsAssignmentManager();
     useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
+    // Configurations for retrying opening a region on receiving a FAILED_OPEN
+    this.retryConfig = new RetryCounter.RetryConfig();
+    this.retryConfig.setSleepInterval(conf.getLong("hbase.assignment.retry.sleep.initial", 0l));
+    // Set the max time limit to the initial sleep interval so we use a constant time sleep strategy
+    // if the user does not set a max sleep time
+    this.retryConfig.setMaxSleepTime(conf.getLong("hbase.assignment.retry.sleep.max",
+        retryConfig.getSleepInterval()));
+    this.backoffPolicy = getBackoffPolicy();
+  }
+
+  /**
+   * Returns the backoff policy used for Failed Region Open retries
+   * @return the backoff policy used for Failed Region Open retries
+   */
+  RetryCounter.BackoffPolicy getBackoffPolicy() {
+    return new RetryCounter.ExponentialBackoffPolicyWithLimit();
   }
 
   MetricsAssignmentManager getAssignmentManagerMetrics() {
@@ -3390,6 +3416,17 @@ public class AssignmentManager extends ZooKeeperListener {
     threadPoolExecutorService.submit(new AssignCallable(this, regionInfo, newPlan));
   }
 
+  public void invokeAssignLater(HRegionInfo regionInfo, long sleepMillis) {
+    scheduledThreadPoolExecutor.schedule(new DelayedAssignCallable(
+        new AssignCallable(this, regionInfo, true)), sleepMillis, TimeUnit.MILLISECONDS);
+  }
+
+  public void invokeAssignLaterOnFailure(HRegionInfo regionInfo) {
+    long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
+        failedOpenTracker.get(regionInfo.getEncodedName()).get());
+    invokeAssignLater(regionInfo, sleepTime);
+  }
+
   void invokeUnAssign(HRegionInfo regionInfo) {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
   }
@@ -3701,7 +3738,10 @@ public class AssignmentManager extends ZooKeeperListener {
         } catch (HBaseIOException e) {
           LOG.warn("Failed to get region plan", e);
         }
-        invokeAssign(hri, false);
+        // Have the current thread sleep a bit before resubmitting the RPC request
+        long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
+            failedOpenTracker.get(encodedName).get());
+        invokeAssignLater(hri, sleepTime);
       }
     }
   }
@@ -4233,6 +4273,10 @@ public class AssignmentManager extends ZooKeeperListener {
     return replicasToClose;
   }
 
+  public Map<String, AtomicInteger> getFailedOpenTracker() {return failedOpenTracker;}
+
+  public RegionState getState(String encodedName) {return regionStates.getRegionState(encodedName);}
+
   /**
    * A region is offline.  The new state should be the specified one,
    * if not null.  If the specified state is null, the new state is Offline.
@@ -4453,5 +4497,17 @@ public class AssignmentManager extends ZooKeeperListener {
 
   void setRegionStateListener(RegionStateListener listener) {
     this.regionStateListener = listener;
+  }
+
+  private class DelayedAssignCallable implements Runnable {
+    Callable callable;
+    public DelayedAssignCallable(Callable callable) {
+      this.callable = callable;
+    }
+
+    @Override
+    public void run() {
+      threadPoolExecutorService.submit(callable);
+    }
   }
 }

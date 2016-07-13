@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -172,6 +173,7 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransitionOrderedByTimestamp();
+    Mockito.when(am.getState(any(String.class))).thenReturn(new RegionState(null, null));
 
     // Render to a string
     StringWriter sw = new StringWriter();
