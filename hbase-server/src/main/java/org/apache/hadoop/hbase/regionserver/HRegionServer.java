@@ -1723,6 +1723,8 @@ public class HRegionServer extends HasThread implements
       conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_OPEN_META,
       conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
+    this.service.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
+      conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_REGION,
       conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,

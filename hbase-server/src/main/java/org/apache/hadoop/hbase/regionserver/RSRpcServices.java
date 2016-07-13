@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1653,8 +1654,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
               regionOpenInfo.getFavoredNodesList());
-            regionServer.service.submit(new OpenRegionHandler(
-              regionServer, regionServer, region, htd, masterSystemTime, coordination, ord));
+            if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
+              regionServer.service.submit(new OpenPriorityRegionHandler(
+                regionServer, regionServer, region, htd, masterSystemTime, coordination, ord));
+            } else {
+              regionServer.service.submit(new OpenRegionHandler(
+                regionServer, regionServer, region, htd, masterSystemTime, coordination, ord));
+            }
           }
         }
 

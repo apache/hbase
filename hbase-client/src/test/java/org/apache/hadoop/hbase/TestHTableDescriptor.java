@@ -307,4 +307,11 @@ public class TestHTableDescriptor {
     hcd.setBlocksize(2000);
     htd.addFamily(hcd);
   }
+
+  @Test
+  public void testPriority() {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
+    htd.setPriority(42);
+    assertEquals(42, htd.getPriority());
+  }
 }
