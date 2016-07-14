@@ -164,7 +164,7 @@ public class TestMemStoreLAB {
     assertNull(mslab.getChunkQueue());
     // reset mslab with chunk pool
     Configuration conf = HBaseConfiguration.create();
-    conf.setDouble(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.1);
+    conf.setFloat(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, (float) 0.1);
     // set chunk size to default max alloc size, so we could easily trigger chunk retirement
     conf.setLong(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.MAX_ALLOC_DEFAULT);
     // reconstruct mslab
