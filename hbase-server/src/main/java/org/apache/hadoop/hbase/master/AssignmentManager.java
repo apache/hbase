@@ -75,8 +75,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
-import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
-import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -424,8 +422,6 @@ public class AssignmentManager {
     // it will reconstruct master state and cleanup any leftovers from previous master process.
     boolean failover = processDeadServersAndRegionsInTransition(deadServers);
 
-    recoverTableInDisablingState();
-    recoverTableInEnablingState();
     LOG.info("Joined the cluster in " + (System.currentTimeMillis()
       - startTime) + "ms, failover=" + failover);
   }
@@ -1763,63 +1759,6 @@ public class AssignmentManager {
       }
     }
     return offlineServers;
-  }
-
-  /**
-   * Recover the tables that were not fully moved to DISABLED state. These
-   * tables are in DISABLING state when the master restarted/switched.
-   *
-   * @throws KeeperException
-   * @throws TableNotFoundException
-   * @throws IOException
-   */
-  private void recoverTableInDisablingState()
-          throws KeeperException, IOException {
-    Set<TableName> disablingTables =
-            tableStateManager.getTablesInStates(TableState.State.DISABLING);
-    if (disablingTables.size() != 0) {
-      for (TableName tableName : disablingTables) {
-        // Recover by calling DisableTableHandler
-        LOG.info("The table " + tableName
-            + " is in DISABLING state.  Hence recovering by moving the table"
-            + " to DISABLED state.");
-        new DisableTableHandler(this.server, tableName,
-            this, tableLockManager, true).prepare().process();
-      }
-    }
-  }
-
-  /**
-   * Recover the tables that are not fully moved to ENABLED state. These tables
-   * are in ENABLING state when the master restarted/switched
-   *
-   * @throws KeeperException
-   * @throws org.apache.hadoop.hbase.TableNotFoundException
-   * @throws IOException
-   */
-  private void recoverTableInEnablingState()
-          throws KeeperException, IOException {
-    Set<TableName> enablingTables = tableStateManager.
-            getTablesInStates(TableState.State.ENABLING);
-    if (enablingTables.size() != 0) {
-      for (TableName tableName : enablingTables) {
-        // Recover by calling EnableTableHandler
-        LOG.info("The table " + tableName
-            + " is in ENABLING state.  Hence recovering by moving the table"
-            + " to ENABLED state.");
-        // enableTable in sync way during master startup,
-        // no need to invoke coprocessor
-        EnableTableHandler eth = new EnableTableHandler(this.server, tableName,
-          this, tableLockManager, true);
-        try {
-          eth.prepare();
-        } catch (TableNotFoundException e) {
-          LOG.warn("Table " + tableName + " not found in hbase:meta to recover.");
-          continue;
-        }
-        eth.process();
-      }
-    }
   }
 
   /**
