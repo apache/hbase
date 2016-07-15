@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
 
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -72,7 +71,6 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -87,6 +85,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.BypassCoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -98,7 +97,6 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -109,6 +107,7 @@ import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DispatchMergingRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -140,7 +139,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolic
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1270,11 +1268,49 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public void dispatchMergingRegions(final HRegionInfo region_a,
-      final HRegionInfo region_b, final boolean forcible, final User user) throws IOException {
+  public long dispatchMergingRegions(
+      final HRegionInfo regionInfoA,
+      final HRegionInfo regionInfoB,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws IOException {
     checkInitialized();
-    this.service.submit(new DispatchMergingRegionHandler(this,
-      this.catalogJanitorChore, region_a, region_b, forcible, user));
+
+    TableName tableName = regionInfoA.getTable();
+    if (tableName == null || regionInfoB.getTable() == null) {
+      throw new UnknownRegionException ("Can't merge regions without table associated");
+    }
+
+    if (!tableName.equals(regionInfoB.getTable())) {
+      throw new IOException ("Cannot merge regions from two different tables");
+    }
+
+    if (regionInfoA.compareTo(regionInfoB) == 0) {
+      throw new MergeRegionException(
+        "Cannot merge a region to itself " + regionInfoA + ", " + regionInfoB);
+    }
+
+    HRegionInfo [] regionsToMerge = new HRegionInfo[2];
+    regionsToMerge [0] = regionInfoA;
+    regionsToMerge [1] = regionInfoB;
+
+    if (cpHost != null) {
+      cpHost.preDispatchMerge(regionInfoA, regionInfoB);
+    }
+
+    LOG.info(getClientIdAuditPrefix() + " Merge regions "
+        + regionInfoA.getEncodedName() + " and " + regionInfoB.getEncodedName());
+
+    long procId = this.procedureExecutor.submitProcedure(
+      new DispatchMergingRegionsProcedure(
+        procedureExecutor.getEnvironment(), tableName, regionsToMerge, forcible),
+      nonceGroup,
+      nonce);
+
+    if (cpHost != null) {
+      cpHost.postDispatchMerge(regionInfoA, regionInfoB);
+    }
+    return procId;
   }
 
   void move(final byte[] encodedRegionName,
@@ -2131,6 +2167,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public AssignmentManager getAssignmentManager() {
     return this.assignmentManager;
+  }
+
+  @Override
+  public CatalogJanitor getCatalogJanitor() {
+    return this.catalogJanitorChore;
   }
 
   public MemoryBoundedLogMessageBuffer getRegionServerFatalLogBuffer() {

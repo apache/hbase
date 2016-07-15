@@ -42,9 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TestMobSnapshotCloneIndependence;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.procedure.TestMasterFailoverWithProcedures;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -58,7 +56,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
@@ -326,9 +323,9 @@ public class TestFlushSnapshotFromClient {
 
     int numRegions = admin.getTableRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
-    admin.mergeRegions(regions.get(1).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
-    admin.mergeRegions(regions.get(5).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(5).getEncodedNameAsBytes(),
         regions.get(6).getEncodedNameAsBytes(), true);
 
     // Verify that there's one region less
@@ -367,9 +364,9 @@ public class TestFlushSnapshotFromClient {
 
     int numRegions = admin.getTableRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
-    admin.mergeRegions(regions.get(1).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
-    admin.mergeRegions(regions.get(5).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(5).getEncodedNameAsBytes(),
         regions.get(6).getEncodedNameAsBytes(), true);
 
     waitRegionsAfterMerge(numRegionsAfterMerge);

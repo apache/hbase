@@ -262,6 +262,21 @@ message RestoreSnapshotStateData {
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
 }
 
+enum DispatchMergingRegionsState {
+  DISPATCH_MERGING_REGIONS_PREPARE = 1;
+  DISPATCH_MERGING_REGIONS_PRE_OPERATION = 2;
+  DISPATCH_MERGING_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
+  DISPATCH_MERGING_REGIONS_DO_MERGE_IN_RS = 4;
+  DISPATCH_MERGING_REGIONS_POST_OPERATION = 5;
+}
+
+message DispatchMergingRegionsStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  repeated RegionInfo region_info = 3;
+  optional bool forcible = 4;
+}
+
 message ServerCrashStateData {
   required ServerName server_name = 1;
   optional bool distributed_log_replay = 2;

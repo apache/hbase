@@ -242,7 +242,7 @@ public class TestAssignmentListener {
       listener.reset();
       List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
       assertEquals(2, regions.size());
-      admin.mergeRegions(regions.get(0).getEncodedNameAsBytes(),
+      admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
         regions.get(1).getEncodedNameAsBytes(), true);
       listener.awaitModifications(3);
       assertEquals(1, admin.getTableRegions(TABLE_NAME).size());

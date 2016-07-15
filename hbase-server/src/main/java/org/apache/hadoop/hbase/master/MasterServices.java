@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
-import org.apache.hadoop.hbase.security.User;
 
 import com.google.protobuf.Service;
 
@@ -111,6 +110,11 @@ public interface MasterServices extends Server {
    * @return Master's instance of {@link RegionNormalizer}
    */
   RegionNormalizer getRegionNormalizer();
+
+  /**
+   * @return Master's instance of {@link CatalogJanitor}
+   */
+  CatalogJanitor getCatalogJanitor();
 
   /**
    * @return Master's instance of {@link ProcedureExecutor}
@@ -285,12 +289,15 @@ public interface MasterServices extends Server {
    * @param region_b region to merge
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          two adjacent regions
-   * @param user effective user
+   * @return procedure Id
    * @throws IOException
    */
-  void dispatchMergingRegions(
-    final HRegionInfo region_a, final HRegionInfo region_b, final boolean forcible, final User user
-  ) throws IOException;
+  long dispatchMergingRegions(
+    final HRegionInfo region_a,
+    final HRegionInfo region_b,
+    final boolean forcible,
+    final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * @return true if master is the active one

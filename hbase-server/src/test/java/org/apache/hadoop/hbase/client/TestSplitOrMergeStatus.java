@@ -116,7 +116,7 @@ public class TestSplitOrMergeStatus {
     assertTrue(results[0]);
     List<HRegionInfo> regions = admin.getTableRegions(t.getName());
     assertTrue(regions.size() > 1);
-    admin.mergeRegions(regions.get(0).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
       regions.get(1).getEncodedNameAsBytes(), true);
     int count = waitOnSplitOrMerge(t).size();
     assertTrue(orignalCount == count);
@@ -125,7 +125,7 @@ public class TestSplitOrMergeStatus {
     results = admin.setSplitOrMergeEnabled(true, false, true, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
     assertFalse(results[0]);
-    admin.mergeRegions(regions.get(0).getEncodedNameAsBytes(),
+    admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
       regions.get(1).getEncodedNameAsBytes(), true);
     count = waitOnSplitOrMerge(t).size();
     assertTrue(orignalCount>count);

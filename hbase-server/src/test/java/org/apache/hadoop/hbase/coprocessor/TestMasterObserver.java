@@ -1541,7 +1541,7 @@ public class TestMasterObserver {
       RegionLocator regionLocator = connection.getRegionLocator(htd.getTableName());
       List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
 
-      admin.mergeRegions(regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
+      admin.mergeRegionsAsync(regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
         regions.get(1).getRegionInfo().getEncodedNameAsBytes(), true);
       assertTrue("Coprocessor should have been called on region merge",
         cp.wasDispatchMergeCalled());

@@ -92,8 +92,10 @@ public class TestRegionServerObserver {
       admin.createTable(desc, new byte[][] { Bytes.toBytes("row") });
       assertFalse(regionServerObserver.wasRegionMergeCalled());
       List<Region> regions = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME));
-      admin.mergeRegions(regions.get(0).getRegionInfo().getEncodedNameAsBytes(), regions.get(1)
-          .getRegionInfo().getEncodedNameAsBytes(), true);
+      admin.mergeRegionsAsync(
+        regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
+        regions.get(1).getRegionInfo().getEncodedNameAsBytes(),
+        true);
       int regionsCount = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME)).size();
       while (regionsCount != 1) {
         regionsCount = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME)).size();

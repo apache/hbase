@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
@@ -270,19 +269,6 @@ public class TestHBaseAdminNoCluster {
         Mockito.verify(masterAdmin, Mockito.atLeast(count))
           .isCatalogJanitorEnabled((RpcController)Mockito.any(),
             (IsCatalogJanitorEnabledRequest)Mockito.any());
-      }
-    });
-    // Admin.mergeRegions()
-    testMasterOperationIsRetried(new MethodCaller() {
-      @Override
-      public void call(Admin admin) throws Exception {
-        admin.mergeRegions(new byte[0], new byte[0], true);
-      }
-      @Override
-      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
-        Mockito.verify(masterAdmin, Mockito.atLeast(count))
-          .dispatchMergingRegions((RpcController)Mockito.any(),
-            (DispatchMergingRegionsRequest)Mockito.any());
       }
     });
   }

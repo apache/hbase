@@ -70,7 +70,7 @@ public class MergeNormalizationPlan implements NormalizationPlan {
   public void execute(Admin admin) {
     LOG.info("Executing merging normalization plan: " + this);
     try {
-      admin.mergeRegions(firstRegion.getEncodedNameAsBytes(),
+      admin.mergeRegionsAsync(firstRegion.getEncodedNameAsBytes(),
         secondRegion.getEncodedNameAsBytes(), true);
     } catch (IOException ex) {
       LOG.error("Error during region merge: ", ex);

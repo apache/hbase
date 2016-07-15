@@ -631,7 +631,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         assertNotEquals(region1, region2);
 
         // do a region merge
-        admin.mergeRegions(region1.getEncodedNameAsBytes(), region2.getEncodedNameAsBytes(), false);
+        admin.mergeRegionsAsync(
+          region1.getEncodedNameAsBytes(), region2.getEncodedNameAsBytes(), false);
 
         // wait until region merged
         long timeout = System.currentTimeMillis() + 30 * 1000;

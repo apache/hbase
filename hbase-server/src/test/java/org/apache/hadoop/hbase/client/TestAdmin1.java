@@ -1180,7 +1180,7 @@ public class TestAdmin1 {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
-      TEST_UTIL.getAdmin().mergeRegions(regions.get(1).getFirst().getEncodedNameAsBytes(),
+      TEST_UTIL.getAdmin().mergeRegionsAsync(regions.get(1).getFirst().getEncodedNameAsBytes(),
           regions.get(2).getFirst().getEncodedNameAsBytes(), true);
     } catch (IllegalArgumentException m) {
       gotException = true;
@@ -1376,7 +1376,7 @@ public class TestAdmin1 {
       assertEquals(3, admin.getTableRegions(tableName).size());
       regionA = tableRegions.get(0);
       regionB = tableRegions.get(1);
-      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false);
+      admin.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false);
       Thread.sleep(1000);
       assertEquals(2, admin.getTableRegions(tableName).size());
 
@@ -1384,7 +1384,8 @@ public class TestAdmin1 {
       tableRegions = admin.getTableRegions(tableName);
       regionA = tableRegions.get(0);
       regionB = tableRegions.get(1);
-      admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
+      admin.mergeRegionsAsync(
+        regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
       Thread.sleep(1000);
       assertEquals(1, admin.getTableRegions(tableName).size());
     } finally {

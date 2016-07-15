@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -320,6 +321,7 @@ public class TestRegionMergeTransactionOnCluster {
   public void testMerge() throws Exception {
     LOG.info("Starting testMerge");
     final TableName tableName = TableName.valueOf("testMerge");
+    final HBaseAdmin hbaseAdmin = TEST_UTIL.getHBaseAdmin();
 
     try {
       // Create table and load data.
@@ -332,7 +334,7 @@ public class TestRegionMergeTransactionOnCluster {
       regionStates.regionOffline(a);
       try {
         // Merge offline region. Region a is offline here
-        ADMIN.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+        hbaseAdmin.mergeRegionsSync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
         fail("Offline regions should not be able to merge");
       } catch (IOException ie) {
         System.out.println(ie);
@@ -340,18 +342,20 @@ public class TestRegionMergeTransactionOnCluster {
           StringUtils.stringifyException(ie).contains("regions not online")
             && ie instanceof MergeRegionException);
       }
+
       try {
         // Merge the same region: b and b.
-        ADMIN.mergeRegions(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true);
+        hbaseAdmin.mergeRegionsSync(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true);
         fail("A region should not be able to merge with itself, even forcifully");
       } catch (IOException ie) {
         assertTrue("Exception should mention regions not online",
           StringUtils.stringifyException(ie).contains("region to itself")
             && ie instanceof MergeRegionException);
       }
+
       try {
         // Merge unknown regions
-        ADMIN.mergeRegions(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true);
+        hbaseAdmin.mergeRegionsSync(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true);
         fail("Unknown region could not be merged");
       } catch (IOException ie) {
         assertTrue("UnknownRegionException should be thrown",
@@ -419,7 +423,7 @@ public class TestRegionMergeTransactionOnCluster {
             TEST_UTIL.getConnection(), tablename);
     HRegionInfo regionA = tableRegions.get(regionAnum).getFirst();
     HRegionInfo regionB = tableRegions.get(regionBnum).getFirst();
-    ADMIN.mergeRegions(
+    ADMIN.mergeRegionsAsync(
       regionA.getEncodedNameAsBytes(),
       regionB.getEncodedNameAsBytes(), false);
     return new PairOfSameType<HRegionInfo>(regionA, regionB);
