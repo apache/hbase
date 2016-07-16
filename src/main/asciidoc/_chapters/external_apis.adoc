@@ -80,139 +80,277 @@ of the <<security>> chapter.
 The following examples use the placeholder server pass:[http://example.com:8000], and
 the following commands can all be run using `curl` or `wget` commands. You can request
 plain text (the default), XML , or JSON output by adding no header for plain text,
-or the header "Accept: text/xml" for XML or "Accept: application/json" for JSON.
+or the header "Accept: text/xml" for XML, "Accept: application/json" for JSON, or
+"Accept: application/x-protobuf" to for protocol buffers.
 
 NOTE: Unless specified, use `GET` requests for queries, `PUT` or `POST` requests for
 creation or mutation, and `DELETE` for deletion.
 
-==== Cluster Information
+.Cluster-Wide Endpoints
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
 
-.HBase Version
-----
-http://example.com:8000/version/cluster
-----
+|/version/cluster
+|GET
+|Version of HBase running on this cluster
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/version/cluster"
 
-.Cluster Status
-----
-http://example.com:8000/status/cluster
-----
+|/status/cluster
+|GET
+|Cluster status
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/status/cluster"
 
-.Table List
-----
-http://example.com:8000/
-----
+|/
+|GET
+|List of all non-system tables
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/"
 
-==== Table Information
+|===
 
-.Table Schema (GET)
+.Namespace Endpoints
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
 
-To retrieve the table schema, use a `GET` request with the `/schema` endpoint:
-----
-http://example.com:8000/<table>/schema
-----
+|/namespaces
+|GET
+|List all namespaces
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/namespaces/"
 
-.Table Creation
-To create a table, use a `PUT` request with the `/schema` endpoint:
-----
-http://example.com:8000/<table>/schema
-----
+|/namespaces/_namespace_
+|GET
+|Describe a specific namespace
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/namespaces/special_ns"
 
-.Table Schema Update
-To update a table, use a `POST` request with the `/schema` endpoint:
-----
-http://example.com:8000/<table>/schema
-----
+|/namespaces/_namespace_
+|POST
+|Create a new namespace
+|curl -vi -X POST \
+  -H "Accept: text/xml" \
+  "example.com:8000/namespaces/special_ns"
 
-.Table Deletion
-To delete a table, use a `DELETE` request with the `/schema` endpoint:
-----
-http://example.com:8000/<table>/schema
-----
+|/namespaces/_namespace_/tables
+|GET
+|List all tables in a specific namespace
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/namespaces/special_ns/tables"
 
-.Table Regions
-----
-http://example.com:8000/<table>/regions
-----
+|/namespaces/_namespace_
+|PUT
+|Alter an existing namespace. Currently not used.
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/namespaces/special_ns
 
+|/namespaces/_namespace_
+|DELETE
+|Delete a namespace. The namespace must be empty.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  "example.com:8000/namespaces/special_ns"
 
-==== Gets
+|===
 
-.GET a Single Cell Value
+.Table Endpoints
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
 
-To get a single cell value, use a URL scheme like the following:
+|/_table_/schema
+|GET
+|Describe the schema of the specified table.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/schema"
 
-----
-http://example.com:8000/<table>/<row>/<column>:<qualifier>/<timestamp>/content:raw
-----
+|/_table_/schema
+|POST
+|Create a new table, or replace an existing table's schema
+|curl -vi -X POST \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" />&lt;/TableSchema>' \
+  "http://example.com:8000/users/schema"
 
-The column qualifier and timestamp are optional. Without them, the whole row will
-be returned, or the newest version will be returned.
+|/_table_/schema
+|PUT
+|Update an existing table with the provided schema fragment
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" KEEP_DELETED_CELLS="true" />&lt;/TableSchema>' \
+  "http://example.com:8000/users/schema"
 
-.Multiple Single Values (Multi-Get)
+|/_table_/schema
+|DELETE
+|Delete the table. You must use the `/_table_/schema` endpoint, not just `/_table_/`.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/schema"
 
-To get multiple single values, specify multiple column:qualifier tuples and/or a start-timestamp
-and end-timestamp. You can also limit the number of versions.
+|/_table_/regions
+|GET
+|List the table regions
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/regions
+|===
 
-----
-http://example.com:8000/<table>/<row>/<column>:<qualifier>?v=<num-versions>
-----
+.Endpoints for `Get` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
 
-.Globbing Rows
-To scan a series of rows, you can use a `*` glob
-character on the <row> value to glob together multiple rows.
+|/_table_/_row_/_column:qualifier_/_timestamp_
+|GET
+|Get the value of a single row. Values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/row1"
 
-----
-http://example.com:8000/urls/https|ad.doubleclick.net|*
-----
+curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/row1/cf:a/1458586888395"
 
-==== Puts
+|/_table_/_row_/_column:qualifier_
+|GET
+|Get the value of a single column. Values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/row1/cf:a"
 
-For Puts, `PUT` and `POST` are equivalent.
+curl -vi -X GET \
+  -H "Accept: text/xml" \
+   "http://example.com:8000/users/row1/cf:a/"
 
-.Put a Single Value
-The column qualifier and the timestamp are optional.
+|/_table_/_row_/_column:qualifier_/?v=_number_of_versions_
+|GET
+|Multi-Get a specified number of versions of a given cell. Values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/row1/cf:a?v=2"
 
-----
-http://example.com:8000/put/<table>/<row>/<column>:<qualifier>/<timestamp>
-http://example.com:8000/test/testrow/test:testcolumn
-----
+|===
 
-.Put Multiple Values
-To put multiple values, use a false row key. Row, column, and timestamp values in
-the supplied cells override the specifications on the path, allowing you to post
-multiple values to a table in batch. The HTTP response code indicates the status of
-the put. Set the `Content-Type` to `text/xml` for XML encoding or to `application/x-protobuf`
-for protobufs encoding. Supply the commit data in the `PUT` or `POST` body, using
-the <<xml_schema>> and <<protobufs_schema>> as guidelines.
+.Endpoints for `Scan` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
 
-==== Scans
+|/_table_/scanner/
+|PUT
+|Get a Scanner object. Required by all other Scan operations. Adjust the batch parameter
+to the number of rows the scan should return in a batch. See the next example for
+adding filters to your scanner. The scanner endpoint URL is returned as the `Location`
+in the HTTP response. The other examples in this table assume that the scanner endpoint
+is `\http://example.com:8000/users/scanner/145869072824375522207`.
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<Scanner batch="1"/>' \
+  "http://example.com:8000/users/scanner/"
 
-`PUT` and `POST` are equivalent for scans.
+|/_table_/scanner/
+|PUT
+|To supply filters to the Scanner object or configure the
+Scanner in any other way, you can create a text file and add
+your filter to the file. For example, to return only rows for
+which keys start with <codeph>u123</codeph> and use a batch size
+of 100, the filter file would look like this:
 
-.Scanner Creation
-To create a scanner, use the `/scanner` endpoint. The HTTP response code indicates
-success (201) or failure (anything else), and on successful scanner creation, the
-URI is returned which should be used to address the scanner.
++++
+<pre>
+&lt;Scanner batch="100"&gt;
+  &lt;filter&gt;
+    {
+      "type": "PrefixFilter",
+      "value": "u123"
+    }
+  &lt;/filter&gt;
+&lt;/Scanner&gt;
+</pre>
++++
 
-----
-http://example.com:8000/<table>/scanner
-----
+Pass the file to the `-d` argument of the `curl` request.
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  -H "Content-Type:text/xml" \
+  -d @filter.txt \
+  "http://example.com:8000/users/scanner/"
 
-.Scanner Get Next
-To get the next batch of cells found by the scanner, use the `/scanner/<scanner-id>'
-endpoint, using the URI returned by the scanner creation endpoint. If the scanner
-is exhausted, HTTP status `204` is returned.
-----
-http://example.com:8000/<table>/scanner/<scanner-id>
-----
+|/_table_/scanner/_scanner-id_
+|GET
+|Get the next batch from the scanner. Cell values are byte-encoded. If the scanner
+has been exhausted, HTTP status `204` is returned.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/scanner/145869072824375522207"
 
-.Scanner Deletion
-To delete resources associated with a scanner, send a HTTP `DELETE` request to the
-`/scanner/<scanner-id>` endpoint.
-----
-http://example.com:8000/<table>/scanner/<scanner-id>
-----
+|_table_/scanner/_scanner-id_
+|DELETE
+|Deletes the scanner and frees the resources it used.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/scanner/145869072824375522207"
 
+|===
+
+.Endpoints for `Put` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_
+|PUT
+|Write a row to a table. The row, column qualifier, and value must each be Base-64
+encoded. To encode a string, use the `base64` command-line utility. To decode the
+string, use `base64 -d`. The payload is in the `--data` argument, and the `/users/fakerow`
+value is a placeholder. Insert multiple rows by adding them to the `<CellSet>`
+element. You can also save the data to be inserted to a file and pass it to the `-d`
+parameter with syntax like `-d @filename.txt`.
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93NQo="><Cell column="Y2Y6ZQo=">dmFsdWU1Cg==</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/fakerow"
+
+curl -vi -X PUT \
+  -H "Accept: text/json" \
+  -H "Content-Type: text/json" \
+  -d '{"Row":[{"key":"cm93NQo=", "Cell": [{"column":"Y2Y6ZQo=", "$":"dmFsdWU1Cg=="}]}]}'' \
+  "example.com:8000/users/fakerow"
+
+|===
 [[xml_schema]]
 === REST XML Schema
 
@@ -349,7 +487,7 @@ http://example.com:8000/<table>/scanner/<scanner-id>
   <complexType name="Node">
     <sequence>
       <element name="region" type="tns:Region"
-          maxOccurs="unbounded" minOccurs="0">
+   maxOccurs="unbounded" minOccurs="0">
       </element>
     </sequence>
     <attribute name="name" type="string"></attribute>
@@ -552,7 +690,7 @@ public class HBaseExample {
 
     //*drop if table is already exist.*
     if(dbo.isTableExist("user")){
-            dbo.deleteTable("user");
+     dbo.deleteTable("user");
     }
 
     //*create table*

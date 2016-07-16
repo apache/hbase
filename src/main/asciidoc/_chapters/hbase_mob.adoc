@@ -1,0 +1,236 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[hbase_mob]]
+== Storing Medium-sized Objects (MOB)
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:toc: left
+:source-language: java
+
+Data comes in many sizes, and saving all of your data in HBase, including binary
+data such as images and documents, is ideal. While HBase can technically handle
+binary objects with cells that are larger than 100 KB in size, HBase's normal
+read and write paths are optimized for values smaller than 100KB in size. When
+HBase deals with large numbers of objects over this threshold, referred to here
+as medium objects, or MOBs, performance is degraded due to write amplification
+caused by splits and compactions. When using MOBs, ideally your objects will be between
+100KB and 10MB. HBase ***FIX_VERSION_NUMBER*** adds support
+for better managing large numbers of MOBs while maintaining performance,
+consistency, and low operational overhead. MOB support is provided by the work
+done in link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339]. To
+take advantage of MOB, you need to use <<hfilev3,HFile version 3>>. Optionally,
+configure the MOB file reader's cache settings for each RegionServer (see
+<<mob.cache.configure>>), then configure specific columns to hold MOB data.
+Client code does not need to change to take advantage of HBase MOB support. The
+feature is transparent to the client.
+
+=== Configuring Columns for MOB
+
+You can configure columns to support MOB during table creation or alteration,
+either in HBase Shell or via the Java API. The two relevant properties are the
+boolean `IS_MOB` and the `MOB_THRESHOLD`, which is the number of bytes at which
+an object is considered to be a MOB. Only `IS_MOB` is required. If you do not
+specify the `MOB_THRESHOLD`, the default threshold value of 100 KB is used.
+
+.Configure a Column for MOB Using HBase Shell
+====
+----
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+----
+====
+
+.Configure a Column for MOB Using the Java API
+====
+[source,java]
+----
+...
+HColumnDescriptor hcd = new HColumnDescriptor(“f”);
+hcd.setMobEnabled(true);
+...
+hcd.setMobThreshold(102400L);
+...
+----
+====
+
+
+=== Testing MOB
+
+The utility `org.apache.hadoop.hbase.IntegrationTestIngestMOB` is provided to assist with testing
+the MOB feature. The utility is run as follows:
+[source,bash]
+----
+$ sudo -u hbase hbase org.apache.hadoop.hbase.IntegrationTestIngestMOB \
+            -threshold 102400 \
+            -minMobDataSize 512 \
+            -maxMobDataSize 5120
+----
+
+* `*threshold*` is the threshold at which cells are considered to be MOBs.
+   The default is 1 kB, expressed in bytes.
+* `*minMobDataSize*` is the minimum value for the size of MOB data.
+   The default is 512 B, expressed in bytes.
+* `*maxMobDataSize*` is the maximum value for the size of MOB data.
+   The default is 5 kB, expressed in bytes.
+
+
+[[mob.cache.configure]]
+=== Configuring the MOB Cache
+
+
+Because there can be a large number of MOB files at any time, as compared to the number of HFiles,
+MOB files are not always kept open. The MOB file reader cache is a LRU cache which keeps the most
+recently used MOB files open. To configure the MOB file reader's cache on each RegionServer, add
+the following properties to the RegionServer's `hbase-site.xml`, customize the configuration to
+suit your environment, and restart or rolling restart the RegionServer.
+
+.Example MOB Cache Configuration
+====
+[source,xml]
+----
+<property>
+    <name>hbase.mob.file.cache.size</name>
+    <value>1000</value>
+    <description>
+      Number of opened file handlers to cache.
+      A larger value will benefit reads by providing more file handlers per mob
+      file cache and would reduce frequent file opening and closing.
+      However, if this is set too high, this could lead to a "too many opened file handers"
+      The default value is 1000.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.cache.evict.period</name>
+    <value>3600</value>
+    <description>
+      The amount of time in seconds after which an unused file is evicted from the
+      MOB cache. The default value is 3600 seconds.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.cache.evict.remain.ratio</name>
+    <value>0.5f</value>
+    <description>
+      A multiplier (between 0.0 and 1.0), which determines how many files remain cached
+      after the threshold of files that remains cached after a cache eviction occurs
+      which is triggered by reaching the `hbase.mob.file.cache.size` threshold.
+      The default value is 0.5f, which means that half the files (the least-recently-used
+      ones) are evicted.
+    </description>
+</property>
+----
+====
+
+=== MOB Optimization Tasks
+
+==== Manually Compacting MOB Files
+
+To manually compact MOB files, rather than waiting for the
+<<mob.cache.configure,configuration>> to trigger compaction, use the
+`compact_mob` or `major_compact_mob` HBase shell commands. These commands
+require the first argument to be the table name, and take an optional column
+family as the second argument. If the column family is omitted, all MOB-enabled
+column families are compacted.
+
+----
+hbase> compact_mob 't1', 'c1'
+hbase> compact_mob 't1'
+hbase> major_compact_mob 't1', 'c1'
+hbase> major_compact_mob 't1'
+----
+
+These commands are also available via `Admin.compactMob` and
+`Admin.majorCompactMob` methods.
+
+==== MOB Sweeper
+
+HBase MOB a MapReduce job called the Sweeper tool for
+optimization. The Sweeper tool coalesces small MOB files or MOB files with many
+deletions or updates. The Sweeper tool is not required if you use native MOB compaction, which
+does not rely on MapReduce.
+
+To configure the Sweeper tool, set the following options:
+
+[source,xml]
+----
+<property>
+    <name>hbase.mob.sweep.tool.compaction.ratio</name>
+    <value>0.5f</value>
+    <description>
+      If there are too many cells deleted in a mob file, it's regarded
+      as an invalid file and needs to be merged.
+      If existingCellsSize/mobFileSize is less than ratio, it's regarded
+      as an invalid file. The default value is 0.5f.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.sweep.tool.compaction.mergeable.size</name>
+    <value>134217728</value>
+    <description>
+      If the size of a mob file is less than this value, it's regarded as a small
+      file and needs to be merged. The default value is 128MB.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.sweep.tool.compaction.memstore.flush.size</name>
+    <value>134217728</value>
+    <description>
+      The flush size for the memstore used by sweep job. Each sweep reducer owns such a memstore.
+      The default value is 128MB.
+    </description>
+</property>
+<property>
+    <name>hbase.master.mob.ttl.cleaner.period</name>
+    <value>86400</value>
+    <description>
+      The period that ExpiredMobFileCleanerChore runs. The unit is second.
+      The default value is one day.
+    </description>
+</property>
+----
+
+Next, add the HBase install directory, _`$HBASE_HOME`/*_, and HBase library directory to
+_yarn-site.xml_ Adjust this example to suit your environment.
+[source,xml]
+----
+<property>
+    <description>Classpath for typical applications.</description>
+    <name>yarn.application.classpath</name>
+    <value>
+        $HADOOP_CONF_DIR,
+        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,
+        $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
+        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
+        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,
+        $HBASE_HOME/*, $HBASE_HOME/lib/*
+    </value>
+</property>
+----
+
+Finally, run the `sweeper` tool for each column which is configured for MOB.
+[source,bash]
+----
+$ org.apache.hadoop.hbase.mob.compactions.Sweeper _tableName_ _familyName_
+----

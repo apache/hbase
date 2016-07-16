@@ -304,12 +304,15 @@ The following utilities are available:
 `RowCounter`::
   Count rows in an HBase table.
 
+`CellCounter`::
+  Count cells in an HBase table.
+
 `replication.VerifyReplication`::
   Compare the data from tables in two different clusters.
   WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is changed.
   Note that this command is in a different package than the others.
 
-Each command except `RowCounter` accepts a single `--help` argument to print usage instructions.
+Each command except `RowCounter` and `CellCounter` accept a single `--help` argument to print usage instructions.
 
 [[hbck]]
 === HBase `hbck`
@@ -619,7 +622,8 @@ To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in 
 
 link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit.
+It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit. It is also possible to limit
+the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
 
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter <tablename> [<column1> <column2>...]
@@ -642,6 +646,8 @@ The statistics gathered by RowCounter are more fine-grained and include:
 
 The program allows you to limit the scope of the run.
 Provide a row regex or prefix to limit the rows to analyze.
+Specify a time range to scan the table by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
+
 Use `hbase.mapreduce.scan.column.family` to specify scanning a single column family.
 
 ----
@@ -1314,6 +1320,14 @@ The master cluster relies on randomization to attempt to balance the stream of r
 It is expected that the slave cluster has storage capacity to hold the replicated data, as well as any data it is responsible for ingesting.
 If a slave cluster does run out of room, or is inaccessible for other reasons, it throws an error and the master retains the WAL and retries the replication at intervals.
 
+.Consistency Across Replicated Clusters
+[WARNING]
+====
+How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. Further more, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
+
+The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
+====
+
 .Terminology Changes
 [NOTE]
 ====
@@ -1378,7 +1392,7 @@ The `VerifyReplication` MapReduce job, which is included in HBase, performs a sy
 +
 [source,bash]
 ----
-$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` "${HADOOP_HOME}/bin/hadoop" jar "${HBASE_HOME}/hbase-server-VERSION.jar" verifyrep --starttime=<timestamp> --stoptime=<timestamp> --families=<myFam> <ID> <tableName>
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` "${HADOOP_HOME}/bin/hadoop" jar "${HBASE_HOME}/hbase-server-VERSION.jar" verifyrep --starttime=<timestamp> --endtime=<timestamp> --families=<myFam> <ID> <tableName>
 ----
 +
 The `VerifyReplication` command prints out `GOODROWS` and `BADROWS` counters to indicate rows that did and did not replicate correctly.
@@ -1642,12 +1656,7 @@ The following metrics are exposed at the global region server level and (since H
 | The name of the rs znode
 | rs
 
-| hbase.replication
-| Whether replication is enabled or disabled on a given
-                cluster
-| false
-
-| eplication.sleep.before.failover
+| replication.sleep.before.failover
 | How many milliseconds a worker should sleep before attempting to replicate
                 a dead region server's WAL queues.
 |
@@ -2043,6 +2052,74 @@ The following example limits the above example to 200 MB/sec.
 ----
 $ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
 ----
+
+[[snapshots_s3]]
+=== Storing Snapshots in an Amazon S3 Bucket
+
+For general information and limitations of using Amazon S3 storage with HBase, see
+<<amazon_s3_configuration>>. You can also store and retrieve snapshots from Amazon
+S3, using the following procedure.
+
+NOTE: You can also store snapshots in Microsoft Azure Blob Storage. See <<snapshots_azure>>.
+
+.Prerequisites
+- You must be using HBase 1.0 or higher and Hadoop 2.6.1 or higher, which is the first
+configuration that uses the Amazon AWS SDK.
+- You must use the `s3a://` protocol to connect to Amazon S3. The older `s3n://`
+and `s3://` protocols have various limitations and do not use the Amazon AWS SDK.
+- The `s3a://` URI must be configured and available on the server where you run
+the commands to export and restore the snapshot.
+
+After you have fulfilled the prerequisites, take the snapshot like you normally would.
+Afterward, you can export it using the `org.apache.hadoop.hbase.snapshot.ExportSnapshot`
+command like the one below, substituting your own `s3a://` path in the `copy-from`
+or `copy-to` directive and substituting or modifying other options as required:
+
+----
+$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+    -snapshot MySnapshot \
+    -copy-from hdfs://srv2:8082/hbase \
+    -copy-to s3a://<bucket>/<namespace>/hbase \
+    -chuser MyUser \
+    -chgroup MyGroup \
+    -chmod 700 \
+    -mappers 16
+----
+
+----
+$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+    -snapshot MySnapshot
+    -copy-from s3a://<bucket>/<namespace>/hbase \
+    -copy-to hdfs://srv2:8082/hbase \
+    -chuser MyUser \
+    -chgroup MyGroup \
+    -chmod 700 \
+    -mappers 16
+----
+
+You can also use the `org.apache.hadoop.hbase.snapshot.SnapshotInfo` utility with the `s3a://` path by including the
+`-remote-dir` option.
+
+----
+$ hbase org.apache.hadoop.hbase.snapshot.SnapshotInfo \
+    -remote-dir s3a://<bucket>/<namespace>/hbase \
+    -list-snapshots
+----
+
+[[snapshots_azure]]
+== Storing Snapshots in Microsoft Azure Blob Storage
+
+You can store snapshots in Microsoft Azure Blog Storage using the same techniques
+as in <<snapshots_s3>>.
+
+.Prerequisites
+- You must be using HBase 1.2 or higher with Hadoop 2.7.1 or
+  higher. No version of HBase supports Hadoop 2.7.0.
+- Your hosts must be configured to be aware of the Azure blob storage filesystem.
+  See http://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html.
+
+After you meet the prerequisites, follow the instructions
+in <<snapshots_s3>>, replacingthe protocol specifier with `wasb://` or `wasbs://`.
 
 [[ops.capacity]]
 == Capacity Planning and Region Sizing

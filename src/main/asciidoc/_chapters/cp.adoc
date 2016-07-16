@@ -111,7 +111,7 @@ interface.
 using HBase Shell. For more details see <<cp_loading,Loading Coprocessors>>.
 
 . Call the coprocessor from your client-side code. HBase handles the coprocessor
-trapsparently.
+transparently.
 
 The framework API is provided in the
 link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]
@@ -320,7 +320,14 @@ The value contains four pieces of information which are separated by the pipe (`
 * File path: The jar file containing the Coprocessor implementation must be in a location where
 all region servers can read it. +
 You could copy the file onto the local disk on each region server, but it is recommended to store
-it in HDFS.
+it in HDFS. +
+https://issues.apache.org/jira/browse/HBASE-14548[HBASE-14548] allows a directory containing the jars
+or some wildcards to be specified, such as: hdfs://<namenode>:<port>/user/<hadoop-user>/ or
+hdfs://<namenode>:<port>/user/<hadoop-user>/*.jar. Please note that if a directory is specified,
+all jar files(.jar) directly in the directory are added,
+but it does not search files in the subtree rooted in the directory.
+And do not contain any wildcard if you would like to specify a directory.
+This enhancement applies to the ways of using the JAVA API as well.
 * Class name: The full class name of the Coprocessor.
 * Priority: An integer. The framework will determine the execution sequence of all configured
 observers registered at the same hook using priorities. This field can be left blank. In that
@@ -376,9 +383,10 @@ an easier way to load a coprocessor dynamically.
 [source,java]
 ----
 TableName tableName = TableName.valueOf("users");
-String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
+Path path = new Path("hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar");
 Configuration conf = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
+Connection connection = ConnectionFactory.createConnection(conf);
+Admin admin = connection.getAdmin();
 admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
@@ -510,23 +518,15 @@ public class RegionObserverExample extends BaseRegionObserver {
     private static final byte[] VALUE = Bytes.toBytes("You can't see Admin details");
 
     @Override
-    public void preGetOp(final ObserverContext e, final Get get, final List results)
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get, final List<Cell> results)
     throws IOException {
 
         if (Bytes.equals(get.getRow(),ADMIN)) {
-            Cell c = CellUtil.createCell(get.getRow(),COLUMN _FAMILY, COLUMN,
+            Cell c = CellUtil.createCell(get.getRow(),COLUMN_FAMILY, COLUMN,
             System.currentTimeMillis(), (byte)4, VALUE);
             results.add(c);
             e.bypass();
         }
-
-        List kvs = new ArrayList(results.size());
-        for (Cell c : results) {
-            kvs.add(KeyValueUtil.ensureKeyValue(c));
-        }
-        preGet(e, get, kvs);
-        results.clear();
-        results.addAll(kvs);
     }
 }
 ----
@@ -537,7 +537,7 @@ the `preScannerOpen()` method to filter the `admin` row from scan results.
 [source,java]
 ----
 @Override
-public RegionScanner preScannerOpen(final ObserverContext e, final Scan scan,
+public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e, final Scan scan,
 final RegionScanner s) throws IOException {
 
     Filter filter = new RowFilter(CompareOp.NOT_EQUAL, new BinaryComparator(ADMIN));
@@ -553,10 +553,10 @@ remove any `admin` results from the scan:
 [source,java]
 ----
 @Override
-public boolean postScannerNext(final ObserverContext e, final InternalScanner s,
-final List results, final int limit, final boolean hasMore) throws IOException {
+public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e, final InternalScanner s,
+final List<Result> results, final int limit, final boolean hasMore) throws IOException {
 	Result result = null;
-    Iterator iterator = results.iterator();
+    Iterator<Result> iterator = results.iterator();
     while (iterator.hasNext()) {
     result = iterator.next();
         if (Bytes.equals(result.getRow(), ROWKEY)) {

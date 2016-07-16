@@ -105,7 +105,7 @@ We encourage you to have this formatter in place in eclipse when editing HBase c
 
 .Procedure: Load the HBase Formatter Into Eclipse
 . Open the  menu item.
-. In Preferences, click the  menu item.
+. In Preferences, Go to `Java->Code Style->Formatter`.
 . Click btn:[Import] and browse to the location of the _hbase_eclipse_formatter.xml_ file, which is in the _dev-support/_ directory.
   Click btn:[Apply].
 . Still in Preferences, click .
@@ -864,7 +864,8 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 [[hbase.unittests]]
 === Unit Tests
 
-Apache HBase unit tests are subdivided into four categories: small, medium, large, and integration with corresponding JUnit link:http://www.junit.org/node/581[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
+Apache HBase test cases are subdivided into four categories: small, medium, large, and
+integration with corresponding JUnit link:http://www.junit.org/node/581[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
 JUnit categories are denoted using java annotations and look like this in your unit test code.
 
 [source,java]
@@ -879,10 +880,11 @@ public class TestHRegionInfo {
 }
 ----
 
-The above example shows how to mark a unit test as belonging to the `small` category.
-All unit tests in HBase have a categorization.
+The above example shows how to mark a test case as belonging to the `small` category.
+All test cases in HBase should have a categorization.
 
-The first three categories, `small`, `medium`, and `large`, are for tests run when you type `$ mvn test`.
+The first three categories, `small`, `medium`, and `large`, are for test cases which run when you
+type `$ mvn test`.
 In other words, these three categorizations are for HBase unit tests.
 The `integration` category is not for unit tests, but for integration tests.
 These are run when you invoke `$ mvn verify`.
@@ -890,22 +892,23 @@ Integration tests are described in <<integration.tests,integration.tests>>.
 
 HBase uses a patched maven surefire plugin and maven profiles to implement its unit test characterizations.
 
-Keep reading to figure which annotation of the set small, medium, and large to put on your new HBase unit test.
+Keep reading to figure which annotation of the set small, medium, and large to put on your new
+HBase test case.
 
 .Categorizing Tests
 Small Tests (((SmallTests)))::
-  _Small_ tests are executed in a shared JVM.
-  We put in this category all the tests that can be executed quickly in a shared JVM.
-  The maximum execution time for a small test is 15 seconds, and small tests should not use a (mini)cluster.
+  _Small_ test cases are executed in a shared JVM and individual test cases should run in 15 seconds
+   or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
+   up of test methods, should finish in under 15 seconds. These test cases can not use mini cluster.
+   These are run as part of patch pre-commit.
 
 Medium Tests (((MediumTests)))::
-  _Medium_ tests represent tests that must be executed before proposing a patch.
-  They are designed to run in less than 30 minutes altogether, and are quite stable in their results.
-  They are designed to last less than 50 seconds individually.
-  They can use a cluster, and each of them is executed in a separate JVM.
+  _Medium_ test cases are executed in separate JVM and individual test case should run in 50 seconds
+   or less. Together, they should take less than 30 minutes, and are quite stable in their results.
+   These test cases can use a mini cluster. These are run as part of patch pre-commit.
 
 Large Tests (((LargeTests)))::
-  _Large_ tests are everything else.
+  _Large_ test cases are everything else.
   They are typically large-scale tests, regression tests for specific bugs, timeout tests, performance tests.
   They are executed before a commit on the pre-integration machines.
   They can be run on the developer machine as well.
@@ -1049,9 +1052,7 @@ ConnectionCount=1 (was 1)
 
 * All tests must be categorized, if not they could be skipped.
 * All tests should be written to be as fast as possible.
-* Small category tests should last less than 15 seconds, and must not have any side effect.
-* Medium category tests should last less than 50 seconds.
-* Large category tests should last less than 3 minutes.
+* See <<hbase.unittests,hbase.unittests> for test case categories and corresponding timeouts.
   This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
 
 [[hbase.tests.sleeps]]
@@ -1080,56 +1081,28 @@ This will allow to share the cluster later.
 [[hbase.tests.example.code]]
 ==== Tests Skeleton Code
 
-Here is a test skeleton code with Categorization and a Category-based timeout Rule to copy and paste and use as basis for test contribution.
+Here is a test skeleton code with Categorization and a Category-based timeout rule to copy and paste and use as basis for test contribution.
 [source,java]
 ----
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Describe what this testcase tests. Talk about resources initialized in @BeforeClass (before
+ * any test is run) and before each test is run, etc.
  */
-package org.apache.hadoop.hbase;
-
-import static org.junit.Assert.*;
-
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
-
-/**
- * Skeleton HBase test
- */
-// NOTICE: See how we've 'categorized' this test. All hbase unit tests need to be categorized as
-// either 'small', 'medium', or 'large'. See http://hbase.apache.org/book.html#hbase.tests
-// for more on these categories.
+// Specify the category as explained in <<hbase.unittests,hbase.unittests>>.
 @Category(SmallTests.class)
 public class TestExample {
-  // Handy test rule that allows you subsequently get at the name of the current method. See
-  // down in 'test()' where we use it in the 'fail' message.
+  // Replace the TestExample.class in the below with the name of your test fixture class.
+  private static final Log LOG = LogFactory.getLog(TestExample.class);
+
+  // Handy test rule that allows you subsequently get the name of the current method. See
+  // down in 'testExampleFoo()' where we use it to log current test's name.
   @Rule public TestName testName = new TestName();
 
-  // Rather than put a @Test (timeout=.... on each test so for sure the test times out, instead
-  // just the CategoryBasedTimeout... It will apply to each test in this test set, the timeout
-  // that goes w/ the particular test categorization.
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-        withLookingForStuckThread(true).build();
+  // CategoryBasedTimeout.forClass(<testcase>) decides the timeout based on the category
+  // (small/medium/large) of the testcase. @ClassRule requires that the full testcase runs within
+  // this timeout irrespective of individual test methods' times.
+  @ClassRule
+  public static TestRule timeout = CategoryBasedTimeout.forClass(TestExample.class);
 
   @Before
   public void setUp() throws Exception {
@@ -1140,8 +1113,8 @@ public class TestExample {
   }
 
   @Test
-  public void test() {
-    fail(testName.getMethodName() + " is not yet implemented");
+  public void testExampleFoo() {
+    LOG.info("Running test " + testName.getMethodName());
   }
 }
 ----
@@ -1780,21 +1753,29 @@ It provides a nice overview that applies equally to the Apache HBase Project.
 [[submitting.patches.create]]
 ==== Create Patch
 
-The script _dev-support/make_patch.sh_ has been provided to help you adhere to patch-creation guidelines.
-The script has the following syntax:
+Use _dev-support/submit-patch.py_ to create patches and optionally, upload to jira and update
+reviews on Review Board. Patch name is formatted as (JIRA).(branch name).(patch number).patch to
+follow Yetus' naming rules. Use `-h` flag to know detailed usage information. Most useful options
+are:
 
-----
-$ make_patch.sh [-a] [-p <patch_dir>]
-----
+. `-b BRANCH, --branch BRANCH` : Specify base branch for generating the diff. If not specified, tracking branch is used. If there is no tracking branch, error will be thrown.
+. `-jid JIRA_ID, --jira-id JIRA_ID` : Jira id of the issue. If set, we deduce next patch version from attachments in the jira and also upload the new patch. Script will ask for jira username/password for authentication. If not set, patch is named <branch>.patch.
 
-. If you do not pass a `patch_dir`, the script defaults to _~/patches/_.
-  If the `patch_dir` does not exist, it is created.
-. By default, if an existing patch exists with the JIRA ID, the version of the new patch is incremented (_HBASE-XXXX-v3.patch_). If the `-a`                            option is passed, the version is not incremented, but the suffix `-addendum` is added (_HBASE-XXXX-v2-addendum.patch_). A second addendum to a given version is not supported.
-. Detects whether you have more than one local commit on your branch.
-  If you do, the script offers you the chance to run +git rebase
-  -i+ to squash the changes into a single commit so that it can use +git format-patch+.
-  If you decline, the script uses +git diff+ instead.
-  The patch is saved in a configurable directory and is ready to be attached to your JIRA.
+The script builds a new patch, and uses REST API to upload it to the jira (if --jira-id is
+specified) and update the review on ReviewBoard (if --skip-review-board not specified).
+Remote links in the jira are used to figure out if a review request already exists. If no review
+request is present, then creates a new one and populates all required fields using jira summary,
+patch description, etc. Also adds this review's link to the jira.
+
+Authentication::
+Since attaching patches on JIRA and creating/changing review request on ReviewBoard requires a
+logged in user, the script will prompt you for username and password. To avoid the hassle every
+time, set up `~/.apache-creds` with login details and encrypt it by following the steps in footer
+of script's help message.
+
+Python dependencies::
+To install required python dependencies, execute
+`pip install -r dev-support/python-requirements.txt` from the master branch.
 
 .Patching Workflow
 
@@ -1803,21 +1784,12 @@ $ make_patch.sh [-a] [-p <patch_dir>]
 * Submit one single patch for a fix.
   If necessary, squash local commits to merge local commits into a single one first.
   See this link:http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash[Stack Overflow question] for more information about squashing commits.
-* The patch should have the JIRA ID in the name.
-  If you are generating from a branch, include the target branch in the filename.
-  A common naming scheme for patches is:
+* Patch name should be as follows to adhere to Yetus' naming convention.
 +
 ----
-HBASE-XXXX.patch
+(JIRA).(branch name).(patch number).patch
 ----
-+
-----
-HBASE-XXXX-0.90.patch     # to denote that the patch is against branch 0.90
-----
-+
-----
-HBASE-XXXX-v3.patch       # to denote that this is the third version of the patch
-----
+For eg. HBASE-11625.master.001.patch, HBASE-XXXXX.branch-1.2.0005.patch, etc.
 
 * To submit a patch, first create it using one of the methods in <<patching.methods,patching.methods>>.
   Next, attach the patch to the JIRA (one patch for the whole fix), using the  dialog.
@@ -1831,8 +1803,7 @@ Please understand that not every patch may get committed, and that feedback will
 * If you need to revise your patch, leave the previous patch file(s) attached to the JIRA, and upload the new one, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
   Cancel the Patch Available flag and then re-trigger it, by toggling the btn:[Patch Available] button in JIRA.
   JIRA sorts attached files by the time they were attached, and has no problem with multiple attachments with the same name.
-  However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
-* If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
+  However, at times it is easier to increment patch number in the patch name.
 
 [[patching.methods]]
 .Methods to Create Patches
