@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -131,224 +132,254 @@ public class HFileOutputFormat2
   }
 
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
-      createRecordWriter(final TaskAttemptContext context)
-          throws IOException {
+  createRecordWriter(final TaskAttemptContext context) throws IOException {
+    return new HFileRecordWriter<V>(context, null);
+  }
 
-    // Get the path of the temporary output file
-    final Path outputPath = FileOutputFormat.getOutputPath(context);
-    final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
-    final Configuration conf = context.getConfiguration();
-    final FileSystem fs = outputdir.getFileSystem(conf);
-    // These configs. are from hbase-*.xml
-    final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
-        HConstants.DEFAULT_MAX_FILE_SIZE);
-    // Invented config.  Add to hbase-*.xml if other than default compression.
-    final String defaultCompressionStr = conf.get("hfile.compression",
-        Compression.Algorithm.NONE.getName());
-    final Algorithm defaultCompression = HFileWriterImpl
-        .compressionByName(defaultCompressionStr);
-    final boolean compactionExclude = conf.getBoolean(
-        "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
+  protected static class HFileRecordWriter<V extends Cell>
+      extends RecordWriter<ImmutableBytesWritable, V> {
+    private final TaskAttemptContext context;
+    private final Path outputPath;
+    private final Path outputDir;
+    private final Configuration conf;
+    private final FileSystem fs;
 
-    // create a map from column family to the compression algorithm
-    final Map<byte[], Algorithm> compressionMap = createFamilyCompressionMap(conf);
-    final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
-    final Map<byte[], Integer> blockSizeMap = createFamilyBlockSizeMap(conf);
+    private final long maxsize;
 
-    String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
-    final Map<byte[], DataBlockEncoding> datablockEncodingMap
-        = createFamilyDataBlockEncodingMap(conf);
-    final DataBlockEncoding overriddenEncoding;
-    if (dataBlockEncodingStr != null) {
-      overriddenEncoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
-    } else {
-      overriddenEncoding = null;
+    private final Algorithm defaultCompression;
+    private final boolean compactionExclude;
+
+    private final Map<byte[], Algorithm> compressionMap;
+    private final Map<byte[], BloomType> bloomTypeMap;
+    private final Map<byte[], Integer> blockSizeMap;
+
+    private final Map<byte[], DataBlockEncoding> datablockEncodingMap;
+    private final DataBlockEncoding overriddenEncoding;
+
+    private final Map<byte[], WriterLength> writers;
+    private byte[] previousRow;
+    private final byte[] now;
+    private boolean rollRequested;
+
+    /**
+     * Mapredue job will create a temp path for outputting results. If out != null, it means that
+     * the caller has set the temp working dir; If out == null, it means we need to set it here.
+     * Used by HFileOutputFormat2 and MultiHFileOutputFormat. MultiHFileOutputFormat will give us
+     * temp working dir at the table level and HFileOutputFormat2 has to set it here within this
+     * constructor.
+     */
+    public HFileRecordWriter(final TaskAttemptContext taContext, final Path out)
+        throws IOException {
+      // Get the path of the temporary output file
+      context = taContext;
+
+      if (out == null) {
+        outputPath = FileOutputFormat.getOutputPath(context);
+        outputDir = new FileOutputCommitter(outputPath, context).getWorkPath();
+      } else {
+        outputPath = out;
+        outputDir = outputPath;
+      }
+
+      conf = context.getConfiguration();
+      fs = outputDir.getFileSystem(conf);
+
+      // These configs. are from hbase-*.xml
+      maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, HConstants.DEFAULT_MAX_FILE_SIZE);
+
+      // Invented config. Add to hbase-*.xml if other than default compression.
+      String defaultCompressionStr = conf.get("hfile.compression", Compression.Algorithm.NONE.getName());
+      defaultCompression = HFileWriterImpl.compressionByName(defaultCompressionStr);
+      compactionExclude =
+          conf.getBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
+
+      // create a map from column family to the compression algorithm
+      compressionMap = createFamilyCompressionMap(conf);
+      bloomTypeMap = createFamilyBloomTypeMap(conf);
+      blockSizeMap = createFamilyBlockSizeMap(conf);
+
+      // Config for data block encoding
+      String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
+      datablockEncodingMap = createFamilyDataBlockEncodingMap(conf);
+      if (dataBlockEncodingStr != null) {
+        overriddenEncoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
+      } else {
+        overriddenEncoding = null;
+      }
+
+      writers = new TreeMap<byte[], WriterLength>(Bytes.BYTES_COMPARATOR);
+      previousRow = HConstants.EMPTY_BYTE_ARRAY;
+      now = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
+      rollRequested = false;
     }
 
-    return new RecordWriter<ImmutableBytesWritable, V>() {
-      // Map of families to writers and how much has been output on the writer.
-      private final Map<byte [], WriterLength> writers =
-        new TreeMap<byte [], WriterLength>(Bytes.BYTES_COMPARATOR);
-      private byte [] previousRow = HConstants.EMPTY_BYTE_ARRAY;
-      private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
-      private boolean rollRequested = false;
+    @Override
+    public void write(ImmutableBytesWritable row, V cell) throws IOException {
+      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
 
-      @Override
-      public void write(ImmutableBytesWritable row, V cell)
-          throws IOException {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+      // null input == user explicitly wants to flush
+      if (row == null && kv == null) {
+        rollWriters();
+        return;
+      }
 
-        // null input == user explicitly wants to flush
-        if (row == null && kv == null) {
-          rollWriters();
-          return;
-        }
+      byte[] rowKey = CellUtil.cloneRow(kv);
+      long length = kv.getLength();
+      byte[] family = CellUtil.cloneFamily(kv);
+      WriterLength wl = this.writers.get(family);
 
-        byte [] rowKey = CellUtil.cloneRow(kv);
-        long length = kv.getLength();
-        byte [] family = CellUtil.cloneFamily(kv);
-        WriterLength wl = this.writers.get(family);
+      // If this is a new column family, verify that the directory exists
+      if (wl == null) {
+        fs.mkdirs(new Path(outputDir, Bytes.toString(family)));
+      }
 
-        // If this is a new column family, verify that the directory exists
-        if (wl == null) {
-          fs.mkdirs(new Path(outputdir, Bytes.toString(family)));
-        }
+      // If any of the HFiles for the column families has reached
+      // maxsize, we need to roll all the writers
+      if (wl != null && wl.written + length >= maxsize) {
+        this.rollRequested = true;
+      }
 
-        // If any of the HFiles for the column families has reached
-        // maxsize, we need to roll all the writers
-        if (wl != null && wl.written + length >= maxsize) {
-          this.rollRequested = true;
-        }
+      // This can only happen once a row is finished though
+      if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
+        rollWriters();
+      }
 
-        // This can only happen once a row is finished though
-        if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
-          rollWriters();
-        }
-
-        // create a new WAL writer, if necessary
-        if (wl == null || wl.writer == null) {
-          if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
-            HRegionLocation loc = null;
-            String tableName = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
-            if (tableName != null) {
-              try (Connection connection = ConnectionFactory.createConnection(conf);
-                     RegionLocator locator =
-                       connection.getRegionLocator(TableName.valueOf(tableName))) {
-                loc = locator.getRegionLocation(rowKey);
-              } catch (Throwable e) {
-                LOG.warn("there's something wrong when locating rowkey: " +
-                  Bytes.toString(rowKey), e);
-                loc = null;
-              }
+      // create a new WAL writer, if necessary
+      if (wl == null || wl.writer == null) {
+        if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
+          HRegionLocation loc = null;
+          String tableName = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
+          if (tableName != null) {
+            try (Connection connection = ConnectionFactory.createConnection(conf);
+                RegionLocator locator = connection.getRegionLocator(TableName.valueOf(tableName))) {
+              loc = locator.getRegionLocation(rowKey);
+            } catch (Throwable e) {
+              LOG.warn("there's something wrong when locating rowkey: " + Bytes.toString(rowKey),
+                  e);
+              loc = null;
             }
+          }
 
-            if (null == loc) {
+          if (null == loc) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace(
+                  "failed to get region location, so use default writer: " + Bytes.toString(rowKey));
+            }
+            wl = getNewWriter(family, conf, null);
+          } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("first rowkey: [" + Bytes.toString(rowKey) + "]");
+            }
+            InetSocketAddress initialIsa = new InetSocketAddress(loc.getHostname(), loc.getPort());
+            if (initialIsa.isUnresolved()) {
               if (LOG.isTraceEnabled()) {
-                LOG.trace("failed to get region location, so use default writer: " +
-                  Bytes.toString(rowKey));
+                LOG.trace("failed to resolve bind address: " + loc.getHostname() + ":"
+                    + loc.getPort() + ", so use default writer");
               }
               wl = getNewWriter(family, conf, null);
             } else {
               if (LOG.isDebugEnabled()) {
-                LOG.debug("first rowkey: [" + Bytes.toString(rowKey) + "]");
+                LOG.debug("use favored nodes writer: " + initialIsa.getHostString());
               }
-              InetSocketAddress initialIsa =
-                  new InetSocketAddress(loc.getHostname(), loc.getPort());
-              if (initialIsa.isUnresolved()) {
-                if (LOG.isTraceEnabled()) {
-                  LOG.trace("failed to resolve bind address: " + loc.getHostname() + ":"
-                      + loc.getPort() + ", so use default writer");
-                }
-                wl = getNewWriter(family, conf, null);
-              } else {
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("use favored nodes writer: " + initialIsa.getHostString());
-                }
-                wl = getNewWriter(family, conf, new InetSocketAddress[] { initialIsa });
-              }
+              wl = getNewWriter(family, conf, new InetSocketAddress[] { initialIsa });
             }
-          } else {
-            wl = getNewWriter(family, conf, null);
           }
-        }
-
-        // we now have the proper WAL writer. full steam ahead
-        kv.updateLatestStamp(this.now);
-        wl.writer.append(kv);
-        wl.written += length;
-
-        // Copy the row so we know when a row transition.
-        this.previousRow = rowKey;
-      }
-
-      private void rollWriters() throws IOException {
-        for (WriterLength wl : this.writers.values()) {
-          if (wl.writer != null) {
-            LOG.info("Writer=" + wl.writer.getPath() +
-                ((wl.written == 0)? "": ", wrote=" + wl.written));
-            close(wl.writer);
-          }
-          wl.writer = null;
-          wl.written = 0;
-        }
-        this.rollRequested = false;
-      }
-
-      /* Create a new StoreFile.Writer.
-       * @param family
-       * @return A WriterLength, containing a new StoreFile.Writer.
-       * @throws IOException
-       */
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BX_UNBOXING_IMMEDIATELY_REBOXED",
-          justification="Not important")
-      private WriterLength getNewWriter(byte[] family, Configuration conf,
-          InetSocketAddress[] favoredNodes) throws IOException {
-        WriterLength wl = new WriterLength();
-        Path familydir = new Path(outputdir, Bytes.toString(family));
-        Algorithm compression = compressionMap.get(family);
-        compression = compression == null ? defaultCompression : compression;
-        BloomType bloomType = bloomTypeMap.get(family);
-        bloomType = bloomType == null ? BloomType.NONE : bloomType;
-        Integer blockSize = blockSizeMap.get(family);
-        blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
-        DataBlockEncoding encoding = overriddenEncoding;
-        encoding = encoding == null ? datablockEncodingMap.get(family) : encoding;
-        encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
-        Configuration tempConf = new Configuration(conf);
-        tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-        HFileContextBuilder contextBuilder = new HFileContextBuilder()
-                                    .withCompression(compression)
-                                    .withChecksumType(HStore.getChecksumType(conf))
-                                    .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
-                                    .withBlockSize(blockSize);
-
-        if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-          contextBuilder.withIncludesTags(true);
-        }
-
-        contextBuilder.withDataBlockEncoding(encoding);
-        HFileContext hFileContext = contextBuilder.build();
-                                    
-        if (null == favoredNodes) {
-          wl.writer =
-              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
-                  .withOutputDir(familydir).withBloomType(bloomType)
-                  .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext).build();
         } else {
-          wl.writer =
-              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
-                  .withOutputDir(familydir).withBloomType(bloomType)
-                  .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
-                  .withFavoredNodes(favoredNodes).build();
-        }
-
-        this.writers.put(family, wl);
-        return wl;
-      }
-
-      private void close(final StoreFileWriter w) throws IOException {
-        if (w != null) {
-          w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
-              Bytes.toBytes(System.currentTimeMillis()));
-          w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
-              Bytes.toBytes(context.getTaskAttemptID().toString()));
-          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
-              Bytes.toBytes(true));
-          w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
-              Bytes.toBytes(compactionExclude));
-          w.appendTrackedTimestampsToMetadata();
-          w.close();
+          wl = getNewWriter(family, conf, null);
         }
       }
 
-      @Override
-      public void close(TaskAttemptContext c)
-      throws IOException, InterruptedException {
-        for (WriterLength wl: this.writers.values()) {
+      // we now have the proper WAL writer. full steam ahead
+      kv.updateLatestStamp(this.now);
+      wl.writer.append(kv);
+      wl.written += length;
+
+      // Copy the row so we know when a row transition.
+      this.previousRow = rowKey;
+    }
+
+    private void rollWriters() throws IOException {
+      for (WriterLength wl : this.writers.values()) {
+        if (wl.writer != null) {
+          LOG.info(
+              "Writer=" + wl.writer.getPath() + ((wl.written == 0) ? "" : ", wrote=" + wl.written));
           close(wl.writer);
         }
+        wl.writer = null;
+        wl.written = 0;
       }
-    };
+      this.rollRequested = false;
+    }
+
+    /*
+     * Create a new StoreFile.Writer.
+     * @param family
+     * @return A WriterLength, containing a new StoreFile.Writer.
+     * @throws IOException
+     */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "BX_UNBOXING_IMMEDIATELY_REBOXED",
+        justification = "Not important")
+    private WriterLength getNewWriter(byte[] family, Configuration conf,
+        InetSocketAddress[] favoredNodes) throws IOException {
+      WriterLength wl = new WriterLength();
+      Path familyDir = new Path(outputDir, Bytes.toString(family));
+      Algorithm compression = compressionMap.get(family);
+      compression = compression == null ? defaultCompression : compression;
+      BloomType bloomType = bloomTypeMap.get(family);
+      bloomType = bloomType == null ? BloomType.NONE : bloomType;
+      Integer blockSize = blockSizeMap.get(family);
+      blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
+      DataBlockEncoding encoding = overriddenEncoding;
+      encoding = encoding == null ? datablockEncodingMap.get(family) : encoding;
+      encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
+      Configuration tempConf = new Configuration(conf);
+      tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+      HFileContextBuilder contextBuilder = new HFileContextBuilder().withCompression(compression)
+          .withChecksumType(HStore.getChecksumType(conf))
+          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize);
+
+      if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+        contextBuilder.withIncludesTags(true);
+      }
+
+      contextBuilder.withDataBlockEncoding(encoding);
+      HFileContext hFileContext = contextBuilder.build();
+
+      if (null == favoredNodes) {
+        wl.writer = new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
+            .withOutputDir(familyDir).withBloomType(bloomType)
+            .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext).build();
+      } else {
+        wl.writer =
+            new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
+                .withOutputDir(familyDir).withBloomType(bloomType)
+                .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
+                .withFavoredNodes(favoredNodes).build();
+      }
+
+      this.writers.put(family, wl);
+      return wl;
+    }
+
+    private void close(final StoreFileWriter w) throws IOException {
+      if (w != null) {
+        w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+        w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
+            Bytes.toBytes(context.getTaskAttemptID().toString()));
+        w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
+        w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+            Bytes.toBytes(compactionExclude));
+        w.appendTrackedTimestampsToMetadata();
+        w.close();
+      }
+    }
+
+    @Override
+    public void close(TaskAttemptContext c) throws IOException, InterruptedException {
+      for (WriterLength wl : this.writers.values()) {
+        close(wl.writer);
+      }
+    }
   }
 
   /*
@@ -503,7 +534,7 @@ public class HFileOutputFormat2
     TableMapReduceUtil.initCredentials(job);
     LOG.info("Incremental table " + regionLocator.getName() + " output configured.");
   }
-  
+
   public static void configureIncrementalLoadMap(Job job, HTableDescriptor tableDescriptor) throws
       IOException {
     Configuration conf = job.getConfiguration();
