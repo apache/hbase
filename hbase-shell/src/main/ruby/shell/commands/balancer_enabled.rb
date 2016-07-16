@@ -30,7 +30,9 @@ EOF
       end
 
       def command()
-        formatter.row([admin.balancer_enabled?.to_s])
+        state = admin.balancer_enabled?
+        formatter.row([state.to_s])
+        state
       end
     end
   end

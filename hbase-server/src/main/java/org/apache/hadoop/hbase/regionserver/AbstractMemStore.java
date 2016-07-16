@@ -109,8 +109,8 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long add(Cell cell) {
     Cell toAdd = maybeCloneWithAllocator(cell);
-    boolean useMSLAB = (toAdd != cell);
-    return internalAdd(toAdd, useMSLAB);
+    boolean mslabUsed = (toAdd != cell);
+    return internalAdd(toAdd, mslabUsed);
   }
 
   /**
@@ -157,8 +157,8 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long delete(Cell deleteCell) {
     Cell toAdd = maybeCloneWithAllocator(deleteCell);
-    boolean useMSLAB = (toAdd != deleteCell);
-    long s = internalAdd(toAdd, useMSLAB);
+    boolean mslabUsed = (toAdd != deleteCell);
+    long s = internalAdd(toAdd, mslabUsed);
     return s;
   }
 
@@ -390,11 +390,11 @@ public abstract class AbstractMemStore implements MemStore {
    *
    * Callers should ensure they already have the read lock taken
    * @param toAdd the cell to add
-   * @param useMSLAB whether using MSLAB
+   * @param mslabUsed whether using MSLAB
    * @return the heap size change in bytes
    */
-  private long internalAdd(final Cell toAdd, final boolean useMSLAB) {
-    long s = active.add(toAdd, useMSLAB);
+  private long internalAdd(final Cell toAdd, final boolean mslabUsed) {
+    long s = active.add(toAdd, mslabUsed);
     setOldestEditTimeToNow();
     checkActiveSize();
     return s;

@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRespon
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
@@ -1527,6 +1528,45 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Merge two regions. Synchronous operation.
+   * Note: It is not feasible to predict the length of merge.
+   *   Therefore, this is for internal testing only.
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public void mergeRegionsSync(
+      final byte[] nameOfRegionA,
+      final byte[] nameOfRegionB,
+      final boolean forcible) throws IOException {
+    get(
+      mergeRegionsAsync(nameOfRegionA, nameOfRegionB, forcible),
+      syncWaitTimeout,
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Merge two regions. Asynchronous operation.
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   * @deprecated Since 2.0. Will be removed in 3.0. Use
+   *     {@link #mergeRegionsAsync(byte[], byte[], boolean)} instead.
+   */
+  @Deprecated
+  @Override
+  public void mergeRegions(final byte[] nameOfRegionA,
+      final byte[] nameOfRegionB, final boolean forcible)
+      throws IOException {
+    mergeRegionsAsync(nameOfRegionA, nameOfRegionB, forcible);
+  }
+
+  /**
    * Merge two regions. Asynchronous operation.
    * @param nameOfRegionA encoded or full name of region a
    * @param nameOfRegionB encoded or full name of region b
@@ -1535,23 +1575,48 @@ public class HBaseAdmin implements Admin {
    * @throws IOException
    */
   @Override
-  public void mergeRegions(final byte[] nameOfRegionA,
-      final byte[] nameOfRegionB, final boolean forcible)
-      throws IOException {
+  public Future<Void> mergeRegionsAsync(
+      final byte[] nameOfRegionA,
+      final byte[] nameOfRegionB,
+      final boolean forcible) throws IOException {
+
     final byte[] encodedNameOfRegionA = isEncodedRegionName(nameOfRegionA) ?
       nameOfRegionA : HRegionInfo.encodeRegionName(nameOfRegionA).getBytes();
     final byte[] encodedNameOfRegionB = isEncodedRegionName(nameOfRegionB) ?
       nameOfRegionB : HRegionInfo.encodeRegionName(nameOfRegionB).getBytes();
 
+    TableName tableName;
     Pair<HRegionInfo, ServerName> pair = getRegion(nameOfRegionA);
-    if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
-      throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
+
+    if (pair != null) {
+      if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
+      }
+      tableName = pair.getFirst().getTable();
+    } else {
+      throw new UnknownRegionException (
+        "Can't invoke merge on unknown region " + Bytes.toStringBinary(encodedNameOfRegionA));
+    }
+
     pair = getRegion(nameOfRegionB);
-    if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
-      throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
-    executeCallable(new MasterCallable<Void>(getConnection()) {
+    if (pair != null) {
+      if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
+      }
+
+      if (!tableName.equals(pair.getFirst().getTable())) {
+        throw new IllegalArgumentException ("Cannot merge regions from two different tables " +
+          tableName + " and " + pair.getFirst().getTable());
+      }
+    } else {
+      throw new UnknownRegionException (
+        "Can't invoke merge on unknown region " + Bytes.toStringBinary(encodedNameOfRegionB));
+    }
+
+    DispatchMergingRegionsResponse response =
+    executeCallable(new MasterCallable<DispatchMergingRegionsResponse>(getConnection()) {
       @Override
-      public Void call(int callTimeout) throws ServiceException {
+      public DispatchMergingRegionsResponse call(int callTimeout) throws ServiceException {
         PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setCallTimeout(callTimeout);
 
@@ -1559,13 +1624,36 @@ public class HBaseAdmin implements Admin {
           DispatchMergingRegionsRequest request = RequestConverter
               .buildDispatchMergingRegionsRequest(encodedNameOfRegionA,
                 encodedNameOfRegionB, forcible);
-          master.dispatchMergingRegions(controller, request);
+          return master.dispatchMergingRegions(controller, request);
         } catch (DeserializationException de) {
           LOG.error("Could not parse destination server name: " + de);
+          throw new ServiceException(new DoNotRetryIOException(de));
         }
-        return null;
       }
     });
+    return new DispatchMergingRegionsFuture(this, tableName, response);
+  }
+
+  private static class DispatchMergingRegionsFuture extends TableFuture<Void> {
+    public DispatchMergingRegionsFuture(
+        final HBaseAdmin admin,
+        final TableName tableName,
+        final DispatchMergingRegionsResponse response) {
+      super(admin, tableName,
+          (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    public DispatchMergingRegionsFuture(
+        final HBaseAdmin admin,
+        final TableName tableName,
+        final Long procId) {
+      super(admin, tableName, procId);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "MERGE_REGIONS";
+    }
   }
 
   @Override

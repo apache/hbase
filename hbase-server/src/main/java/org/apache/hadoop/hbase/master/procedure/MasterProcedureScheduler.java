@@ -794,21 +794,28 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     private synchronized boolean tryZkSharedLock(final TableLockManager lockManager,
         final String purpose) {
-      // Take zk-read-lock
-      TableName tableName = getKey();
-      tableLock = lockManager.readLock(tableName, purpose);
-      try {
-        tableLock.acquire();
-      } catch (IOException e) {
-        LOG.error("failed acquire read lock on " + tableName, e);
-        tableLock = null;
-        return false;
+      // Since we only have one lock resource.  We should only acquire zk lock if the znode
+      // does not exist.
+      //
+      if (isSingleSharedLock()) {
+        // Take zk-read-lock
+        TableName tableName = getKey();
+        tableLock = lockManager.readLock(tableName, purpose);
+        try {
+          tableLock.acquire();
+        } catch (IOException e) {
+          LOG.error("failed acquire read lock on " + tableName, e);
+          tableLock = null;
+          return false;
+        }
       }
       return true;
     }
 
     private synchronized void releaseZkSharedLock(final TableLockManager lockManager) {
-      releaseTableLock(lockManager, isSingleSharedLock());
+      if (isSingleSharedLock()) {
+        releaseTableLock(lockManager, true);
+      }
     }
 
     private synchronized boolean tryZkExclusiveLock(final TableLockManager lockManager,
@@ -969,16 +976,17 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return null;
     }
 
-    schedLock.unlock();
-
-    // Zk lock is expensive...
+    // TODO: Zk lock is expensive and it would be perf bottleneck.  Long term solution is
+    // to remove it.
     if (!queue.tryZkSharedLock(lockManager, procedure.toString())) {
-      schedLock.lock();
       queue.releaseSharedLock();
       queue.getNamespaceQueue().releaseSharedLock();
       schedLock.unlock();
       return null;
     }
+
+    schedLock.unlock();
+
     return queue;
   }
 
@@ -990,10 +998,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   public void releaseTableSharedLock(final Procedure procedure, final TableName table) {
     final TableQueue queue = getTableQueueWithLock(table);
 
+    schedLock.lock();
     // Zk lock is expensive...
     queue.releaseZkSharedLock(lockManager);
 
-    schedLock.lock();
     queue.releaseSharedLock();
     queue.getNamespaceQueue().releaseSharedLock();
     schedLock.unlock();

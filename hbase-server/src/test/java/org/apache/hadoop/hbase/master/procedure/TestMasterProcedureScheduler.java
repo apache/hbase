@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,16 +29,19 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +51,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(TestMasterProcedureScheduler.class);
 
@@ -347,6 +351,38 @@ public class TestMasterProcedureScheduler {
     // we are now able to execute ns2
     procId = queue.poll().getProcId();
     assertEquals(4, procId);
+  }
+
+  @Test
+  public void testSharedZkLock() throws Exception {
+    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    final String dir = TEST_UTIL.getDataTestDir("TestSharedZkLock").toString();
+    MiniZooKeeperCluster zkCluster = new MiniZooKeeperCluster(conf);
+    int zkPort = zkCluster.startup(new File(dir));
+
+    try {
+      conf.set("hbase.zookeeper.quorum", "localhost:" + zkPort);
+
+      ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testSchedWithZkLock", null, false);
+      ServerName mockName = ServerName.valueOf("localhost", 60000, 1);
+      MasterProcedureScheduler procQueue = new MasterProcedureScheduler(
+        conf,
+        TableLockManager.createTableLockManager(conf, zkw, mockName));
+
+      final TableName tableName = TableName.valueOf("testtb");
+      TestTableProcedure procA =
+          new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ);
+      TestTableProcedure procB =
+          new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ);
+
+      assertTrue(procQueue.tryAcquireTableSharedLock(procA, tableName));
+      assertTrue(procQueue.tryAcquireTableSharedLock(procB, tableName));
+
+      procQueue.releaseTableSharedLock(procA, tableName);
+      procQueue.releaseTableSharedLock(procB, tableName);
+    } finally {
+      zkCluster.shutdown();
+    }
   }
 
   @Test

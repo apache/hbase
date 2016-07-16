@@ -267,8 +267,12 @@ public class TestMasterNoCluster {
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(conf, cp) {
       @Override
-      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs, int replicaId)
-      { }
+      MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
+        return new MasterMetaBootstrap(this, status) {
+          @Override
+          protected void assignMeta(Set<ServerName> previouslyFailedMeatRSs, int replicaId) { }
+        };
+      }
 
       @Override
       void initClusterSchemaService() throws IOException, InterruptedException {}

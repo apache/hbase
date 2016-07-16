@@ -770,14 +770,6 @@ See link:https://issues.apache.org/jira/browse/HBASE-6389[HBASE-6389 Modify the
             conditions to ensure that Master waits for sufficient number of Region Servers before
             starting region assignments] for more detail.
 
-[[backup.master.fail.fast]]
-==== If a backup Master exists, make the primary Master fail fast
-
-If the primary Master loses its connection with ZooKeeper, it will fall into a loop where it keeps trying to reconnect.
-Disable this functionality if you are running more than one Master: i.e. a backup Master.
-Failing to do so, the dying Master may continue to receive RPCs though another Master has assumed the role of primary.
-See the configuration <<fail.fast.expired.active.master,fail.fast.expired.active.master>>.
-
 [[recommended_configurations]]
 === Recommended Configurations
 

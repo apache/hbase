@@ -334,7 +334,9 @@ public class TestNamespaceAuditor {
     // merge the two regions
     final Set<String> encodedRegionNamesToMerge =
         Sets.newHashSet(hris.get(0).getEncodedName(), hris.get(1).getEncodedName());
-    ADMIN.mergeRegions(hris.get(0).getEncodedNameAsBytes(), hris.get(1).getEncodedNameAsBytes(),
+    ADMIN.mergeRegionsAsync(
+      hris.get(0).getEncodedNameAsBytes(),
+      hris.get(1).getEncodedNameAsBytes(),
       false);
     UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
 
@@ -420,7 +422,9 @@ public class TestNamespaceAuditor {
     regionServerObserver.failMerge(true);
     regionServerObserver.triggered = false;
 
-    ADMIN.mergeRegions(hris.get(1).getEncodedNameAsBytes(), hris.get(2).getEncodedNameAsBytes(),
+    ADMIN.mergeRegionsAsync(
+      hris.get(1).getEncodedNameAsBytes(),
+      hris.get(2).getEncodedNameAsBytes(),
       false);
     regionServerObserver.waitUtilTriggered();
     hris = ADMIN.getTableRegions(tableTwo);

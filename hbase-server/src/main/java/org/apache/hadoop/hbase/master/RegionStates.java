@@ -1043,7 +1043,7 @@ public class RegionStates {
     return regionsByServer;
   }
 
-  protected synchronized RegionState getRegionState(final String encodedName) {
+  public synchronized RegionState getRegionState(final String encodedName) {
     return regionStates.get(encodedName);
   }
 

@@ -383,9 +383,10 @@ an easier way to load a coprocessor dynamically.
 [source,java]
 ----
 TableName tableName = TableName.valueOf("users");
-String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
+Path path = new Path("hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar");
 Configuration conf = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
+Connection connection = ConnectionFactory.createConnection(conf);
+Admin admin = connection.getAdmin();
 admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
@@ -517,23 +518,15 @@ public class RegionObserverExample extends BaseRegionObserver {
     private static final byte[] VALUE = Bytes.toBytes("You can't see Admin details");
 
     @Override
-    public void preGetOp(final ObserverContext e, final Get get, final List results)
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get, final List<Cell> results)
     throws IOException {
 
         if (Bytes.equals(get.getRow(),ADMIN)) {
-            Cell c = CellUtil.createCell(get.getRow(),COLUMN _FAMILY, COLUMN,
+            Cell c = CellUtil.createCell(get.getRow(),COLUMN_FAMILY, COLUMN,
             System.currentTimeMillis(), (byte)4, VALUE);
             results.add(c);
             e.bypass();
         }
-
-        List kvs = new ArrayList(results.size());
-        for (Cell c : results) {
-            kvs.add(KeyValueUtil.ensureKeyValue(c));
-        }
-        preGet(e, get, kvs);
-        results.clear();
-        results.addAll(kvs);
     }
 }
 ----
@@ -544,7 +537,7 @@ the `preScannerOpen()` method to filter the `admin` row from scan results.
 [source,java]
 ----
 @Override
-public RegionScanner preScannerOpen(final ObserverContext e, final Scan scan,
+public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e, final Scan scan,
 final RegionScanner s) throws IOException {
 
     Filter filter = new RowFilter(CompareOp.NOT_EQUAL, new BinaryComparator(ADMIN));
@@ -560,10 +553,10 @@ remove any `admin` results from the scan:
 [source,java]
 ----
 @Override
-public boolean postScannerNext(final ObserverContext e, final InternalScanner s,
-final List results, final int limit, final boolean hasMore) throws IOException {
+public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e, final InternalScanner s,
+final List<Result> results, final int limit, final boolean hasMore) throws IOException {
 	Result result = null;
-    Iterator iterator = results.iterator();
+    Iterator<Result> iterator = results.iterator();
     while (iterator.hasNext()) {
     result = iterator.next();
         if (Bytes.equals(result.getRow(), ROWKEY)) {

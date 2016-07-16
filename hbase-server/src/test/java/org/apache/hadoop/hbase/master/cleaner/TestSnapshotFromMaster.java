@@ -278,8 +278,21 @@ public class TestSnapshotFromMaster {
    * should be retained, while those that are not in a snapshot should be deleted.
    * @throws Exception on failure
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 600000)
   public void testSnapshotHFileArchiving() throws Exception {
+    int[] hfileCount = new int[]{10, 15, 20};
+    for (int count : hfileCount) {
+      LOG.info("testSnapshotHFileArchiving with " + count + " hfiles");
+      testSnapshotHFileArchiving(count);
+    }
+  }
+
+  /**
+   * It will put data and flush until there are enough hfiles.
+   * @param hfileCount
+   * @throws Exception
+   */
+  private void testSnapshotHFileArchiving(int hfileCount) throws Exception {
     Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -291,10 +304,14 @@ public class TestSnapshotFromMaster {
     htd.setCompactionEnabled(false);
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
 
-    // load the table (creates at least 4 hfiles)
-    for ( int i = 0; i < 5; i++) {
+    // load the table
+    while(true) {
       UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
       UTIL.flush(TABLE_NAME);
+      Collection<String> hfiles = getHFiles(rootDir, fs, TABLE_NAME);
+      if (hfiles.size() >= hfileCount) {
+        break;
+      }
     }
 
     // disable the table so we can take a snapshot
@@ -354,12 +371,16 @@ public class TestSnapshotFromMaster {
       LOG.debug(fileName);
     }
     // get the archived files for the table
-    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
+    Collection<String> archives = getHFiles(archiveDir, fs, TABLE_NAME);
+
+    // get the hfiles for the table
+    Collection<String> hfiles = getHFiles(rootDir, fs, TABLE_NAME);
 
     // and make sure that there is a proper subset
     for (String fileName : snapshotHFiles) {
-      assertTrue("Archived hfiles " + files + " is missing snapshot file:" + fileName,
-        files.contains(fileName));
+      boolean exist = archives.contains(fileName) || hfiles.contains(fileName);
+      assertTrue("Archived hfiles " + archives
+        + " and table hfiles " + hfiles + " is missing snapshot file:" + fileName, exist);
     }
 
     // delete the existing snapshot
@@ -381,18 +402,17 @@ public class TestSnapshotFromMaster {
     LOG.info("After delete snapshot cleaners run File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
+    archives = getHFiles(archiveDir, fs, TABLE_NAME);
     assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
-      files.size());
+      archives.size());
   }
 
   /**
-   * @return all the HFiles for a given table that have been archived
+   * @return all the HFiles for a given table in the specified dir
    * @throws IOException on expected failure
    */
-  private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
-      FileSystem fs, TableName tableName) throws IOException {
-    Path tableArchive = FSUtils.getTableDir(archiveDir, tableName);
+  private final Collection<String> getHFiles(Path dir, FileSystem fs, TableName tableName) throws IOException {
+    Path tableArchive = FSUtils.getTableDir(dir, tableName);
     return SnapshotTestingUtils.listHFileNames(fs, tableArchive);
   }
 

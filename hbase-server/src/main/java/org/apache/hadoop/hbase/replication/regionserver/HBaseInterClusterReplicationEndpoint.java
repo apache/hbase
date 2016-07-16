@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -71,17 +72,19 @@ import org.apache.hadoop.ipc.RemoteException;
 public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoint {
 
   private static final Log LOG = LogFactory.getLog(HBaseInterClusterReplicationEndpoint.class);
+
+  private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
+
   private ClusterConnection conn;
-
   private Configuration conf;
-
   // How long should we sleep for each retry
   private long sleepForRetries;
-
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Socket timeouts require even bolder actions since we don't want to DDOS
   private int socketTimeoutMultiplier;
+  // Amount of time for shutdown to wait for all tasks to complete
+  private long maxTerminationWait;
   //Metrics for this source
   private MetricsSource metrics;
   // Handles connecting to peer region servers
@@ -93,6 +96,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private Path baseNamespaceDir;
   private Path hfileArchiveDir;
   private boolean replicationBulkLoadDataEnabled;
+  private Abortable abortable;
 
   @Override
   public void init(Context context) throws IOException {
@@ -102,6 +106,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
         maxRetriesMultiplier);
+    // A Replicator job is bound by the RPC timeout. We will wait this long for all Replicator
+    // tasks to terminate when doStop() is called.
+    long maxTerminationWaitMultiplier = this.conf.getLong(
+        "replication.source.maxterminationmultiplier",
+        DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER);
+    this.maxTerminationWait = maxTerminationWaitMultiplier *
+        this.conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
@@ -117,6 +128,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.exec = new ThreadPoolExecutor(maxThreads, maxThreads, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>());
     this.exec.allowCoreThreadTimeOut(true);
+    this.abortable = ctx.getAbortable();
 
     this.replicationBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
@@ -211,7 +223,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         entryLists.get(Math.abs(Bytes.hashCode(e.getKey().getEncodedRegionName())%n)).add(e);
       }
     }
-    while (this.isRunning()) {
+    while (this.isRunning() && !exec.isShutdown()) {
       if (!isPeerEnabled()) {
         if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
           sleepMultiplier++;
@@ -321,7 +333,19 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         LOG.warn("Failed to close the connection");
       }
     }
-    exec.shutdownNow();
+    // Allow currently running replication tasks to finish
+    exec.shutdown();
+    try {
+      exec.awaitTermination(maxTerminationWait, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+    }
+    // Abort if the tasks did not terminate in time
+    if (!exec.isTerminated()) {
+      String errMsg = "HBaseInterClusterReplicationEndpoint termination failed. The " +
+          "ThreadPoolExecutor failed to finish all tasks within " + maxTerminationWait + "ms. " +
+          "Aborting to prevent Replication from deadlocking. See HBASE-16081.";
+      abortable.abort(errMsg, new IOException(errMsg));
+    }
     notifyStopped();
   }
 

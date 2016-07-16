@@ -93,6 +93,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public CatalogJanitor getCatalogJanitor() {
+    return null;
+  }
+
+  @Override
   public MasterFileSystem getMasterFileSystem() {
     return null;
   }
@@ -282,8 +287,13 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
-      boolean forcible, User user) throws IOException {
+  public long dispatchMergingRegions(
+      final HRegionInfo region_a,
+      final HRegionInfo region_b,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    return -1;
   }
 
   @Override

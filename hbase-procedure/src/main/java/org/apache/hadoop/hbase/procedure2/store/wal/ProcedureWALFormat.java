@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,8 +37,6 @@ import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Helper class that contains the WAL serialization utils.
@@ -230,6 +230,20 @@ public final class ProcedureWALFormat {
     ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(procId);
+    builder.build().writeDelimitedTo(slot);
+  }
+
+  public static void writeDelete(ByteSlot slot, Procedure proc, long[] subprocs)
+      throws IOException {
+    ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
+    builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
+    builder.setProcId(proc.getProcId());
+    if (subprocs != null) {
+      builder.addProcedure(Procedure.convert(proc));
+      for (int i = 0; i < subprocs.length; ++i) {
+        builder.addChildId(subprocs[i]);
+      }
+    }
     builder.build().writeDelimitedTo(slot);
   }
 }

@@ -722,6 +722,7 @@ module Hbase
           rSinkString   = "       SINK  :"
           rSourceString = "       SOURCE:"
           rLoadSink = sl.getReplicationLoadSink()
+          next if rLoadSink == nil
           rSinkString << " AgeOfLastAppliedOp=" + rLoadSink.getAgeOfLastAppliedOp().to_s
           rSinkString << ", TimeStampsOfLastAppliedOp=" +
               (java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp())).toString()

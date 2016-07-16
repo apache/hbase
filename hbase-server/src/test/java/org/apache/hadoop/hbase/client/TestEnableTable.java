@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.handler;
+package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,9 +60,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestEnableTableHandler {
+public class TestEnableTable {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestEnableTableHandler.class);
+  private static final Log LOG = LogFactory.getLog(TestEnableTable.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
   @Before
@@ -155,8 +155,8 @@ public class TestEnableTableHandler {
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      try (ResultScanner scanner =
-          metaTable.getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+      try (ResultScanner scanner = metaTable.getScanner(
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());

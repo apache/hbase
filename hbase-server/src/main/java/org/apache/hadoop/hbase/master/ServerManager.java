@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -68,13 +67,13 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSeque
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -885,7 +884,7 @@ public class ServerManager {
    * @throws IOException
    */
   public void sendRegionsMerge(ServerName server, HRegionInfo region_a,
-      HRegionInfo region_b, boolean forcible, User user) throws IOException {
+      HRegionInfo region_b, boolean forcible, final UserGroupInformation user) throws IOException {
     if (server == null)
       throw new NullPointerException("Passed server is null");
     if (region_a == null || region_b == null)

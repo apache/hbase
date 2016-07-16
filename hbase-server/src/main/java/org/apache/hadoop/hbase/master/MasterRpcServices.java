@@ -54,11 +54,9 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -497,7 +495,6 @@ public class MasterRpcServices extends RSRpcServices
       .toByteArray();
     final byte[] encodedNameOfRegionB = request.getRegionB().getValue()
       .toByteArray();
-    final boolean forcible = request.getForcible();
     if (request.getRegionA().getType() != RegionSpecifierType.ENCODED_REGION_NAME
         || request.getRegionB().getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
       LOG.warn("mergeRegions specifier type: expected: "
@@ -505,6 +502,7 @@ public class MasterRpcServices extends RSRpcServices
         + request.getRegionA().getType() + ", region_b="
         + request.getRegionB().getType());
     }
+
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     RegionState regionStateA = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionA));
     RegionState regionStateB = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionB));
@@ -514,43 +512,20 @@ public class MasterRpcServices extends RSRpcServices
               : encodedNameOfRegionB)));
     }
 
-    if (!regionStateA.isOpened() || !regionStateB.isOpened()) {
-      throw new ServiceException(new MergeRegionException(
-        "Unable to merge regions not online " + regionStateA + ", " + regionStateB));
-    }
-
     final HRegionInfo regionInfoA = regionStateA.getRegion();
     final HRegionInfo regionInfoB = regionStateB.getRegion();
-    if (regionInfoA.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
-        regionInfoB.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-      throw new ServiceException(new MergeRegionException("Can't merge non-default replicas"));
-    }
-    if (regionInfoA.compareTo(regionInfoB) == 0) {
-      throw new ServiceException(new MergeRegionException(
-        "Unable to merge a region to itself " + regionInfoA + ", " + regionInfoB));
-    }
+
     try {
-      master.cpHost.preDispatchMerge(regionInfoA, regionInfoB);
+      long procId = master.dispatchMergingRegions(
+        regionInfoA,
+        regionInfoB,
+        request.getForcible(),
+        request.getNonceGroup(),
+        request.getNonce());
+      return DispatchMergingRegionsResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-
-    if (!forcible && !HRegionInfo.areAdjacent(regionInfoA, regionInfoB)) {
-      throw new ServiceException(new MergeRegionException(
-        "Unable to merge not adjacent regions "
-          + regionInfoA.getRegionNameAsString() + ", "
-          + regionInfoB.getRegionNameAsString()
-          + " where forcible = " + forcible));
-    }
-
-    try {
-      master.dispatchMergingRegions(regionInfoA, regionInfoB, forcible, RpcServer.getRequestUser());
-      master.cpHost.postDispatchMerge(regionInfoA, regionInfoB);
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-
-    return DispatchMergingRegionsResponse.newBuilder().build();
   }
 
   @Override
@@ -1189,7 +1164,8 @@ public class MasterRpcServices extends RSRpcServices
 
       // Ensure namespace exists. Will throw exception if non-known NS.
       TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
-      master.getNamespace(dstTable.getNamespaceAsString());
+      master.getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
+
       SnapshotDescription reqSnapshot = request.getSnapshot();
       long procId = master.snapshotManager.restoreOrCloneSnapshot(
         reqSnapshot, request.getNonceGroup(), request.getNonce());

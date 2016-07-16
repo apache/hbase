@@ -84,7 +84,7 @@ public class TestReplicationStateHBaseImpl {
     conf.setClass("hbase.region.replica.replication.replicationQueues.class",
       TableBasedReplicationQueuesImpl.class, ReplicationQueues.class);
     conf.setClass("hbase.region.replica.replication.replicationQueuesClient.class",
-      TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
+        TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
     utility.startMiniCluster();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
@@ -194,6 +194,11 @@ public class TestReplicationStateHBaseImpl {
       assertEquals(0, rq1.getAllQueues().size());
       assertNull(rq1.getLogsInQueue("Queue1"));
       // Test that getting logs from a non-existent queue aborts
+      assertEquals(6, ds1.getAbortCount());
+      // Test removing a non-existent queue does not cause an abort. This is because we can
+      // attempt to remove a queue that has no corresponding Replication Table row (if we never
+      // registered a WAL for it)
+      rq1.removeQueue("NotHereQueue");
       assertEquals(6, ds1.getAbortCount());
     } catch (ReplicationException e) {
       e.printStackTrace();

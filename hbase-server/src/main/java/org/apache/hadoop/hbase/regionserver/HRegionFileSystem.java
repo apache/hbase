@@ -199,7 +199,9 @@ public class HRegionFileSystem {
     Path familyDir = getStoreDir(familyName);
     FileStatus[] files = FSUtils.listStatus(this.fs, familyDir);
     if (files == null) {
-      LOG.debug("No StoreFiles for: " + familyDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No StoreFiles for: " + familyDir);
+      }
       return null;
     }
 
@@ -379,7 +381,9 @@ public class HRegionFileSystem {
     if (!fs.exists(buildPath)) {
       throw new FileNotFoundException(buildPath.toString());
     }
-    LOG.debug("Committing store file " + buildPath + " as " + dstPath);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Committing store file " + buildPath + " as " + dstPath);
+    }
     // buildPath exists, therefore not doing an exists() check.
     if (!rename(buildPath, dstPath)) {
       throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
@@ -1082,10 +1086,14 @@ public class HRegionFileSystem {
   private static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
       int hdfsClientRetriesNumber) throws InterruptedException {
     if (sleepMultiplier > hdfsClientRetriesNumber) {
-      LOG.debug(msg + ", retries exhausted");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(msg + ", retries exhausted");
+      }
       return;
     }
-    LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
+    }
     Thread.sleep((long)baseSleepBeforeRetries * sleepMultiplier);
   }
 }

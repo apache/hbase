@@ -42,8 +42,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
 .RegionSpecifierType.REGION_NAME;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -159,7 +161,6 @@ import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -175,6 +176,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -1898,12 +1900,12 @@ public final class ProtobufUtil {
   public static void mergeRegions(final RpcController controller,
       final AdminService.BlockingInterface admin,
       final HRegionInfo region_a, final HRegionInfo region_b,
-      final boolean forcible, final User user) throws IOException {
+      final boolean forcible, final UserGroupInformation user) throws IOException {
     final MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
         region_a.getRegionName(), region_b.getRegionName(),forcible);
     if (user != null) {
       try {
-        user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+        user.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
             admin.mergeRegions(controller, request);

@@ -26,13 +26,11 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.procedure.TestMasterFailoverWithProcedures;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 

@@ -5302,6 +5302,26 @@ public final class MasterProtos {
      * <code>optional bool forcible = 3 [default = false];</code>
      */
     boolean getForcible();
+
+    // optional uint64 nonce_group = 4 [default = 0];
+    /**
+     * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+     */
+    boolean hasNonceGroup();
+    /**
+     * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+     */
+    long getNonceGroup();
+
+    // optional uint64 nonce = 5 [default = 0];
+    /**
+     * <code>optional uint64 nonce = 5 [default = 0];</code>
+     */
+    boolean hasNonce();
+    /**
+     * <code>optional uint64 nonce = 5 [default = 0];</code>
+     */
+    long getNonce();
   }
   /**
    * Protobuf type {@code hbase.pb.DispatchMergingRegionsRequest}
@@ -5388,6 +5408,16 @@ public final class MasterProtos {
             case 24: {
               bitField0_ |= 0x00000004;
               forcible_ = input.readBool();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              nonce_ = input.readUInt64();
               break;
             }
           }
@@ -5490,10 +5520,44 @@ public final class MasterProtos {
       return forcible_;
     }
 
+    // optional uint64 nonce_group = 4 [default = 0];
+    public static final int NONCE_GROUP_FIELD_NUMBER = 4;
+    private long nonceGroup_;
+    /**
+     * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+     */
+    public boolean hasNonceGroup() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+     */
+    public long getNonceGroup() {
+      return nonceGroup_;
+    }
+
+    // optional uint64 nonce = 5 [default = 0];
+    public static final int NONCE_FIELD_NUMBER = 5;
+    private long nonce_;
+    /**
+     * <code>optional uint64 nonce = 5 [default = 0];</code>
+     */
+    public boolean hasNonce() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional uint64 nonce = 5 [default = 0];</code>
+     */
+    public long getNonce() {
+      return nonce_;
+    }
+
     private void initFields() {
       regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       forcible_ = false;
+      nonceGroup_ = 0L;
+      nonce_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5532,6 +5596,12 @@ public final class MasterProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBool(3, forcible_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt64(5, nonce_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5552,6 +5622,14 @@ public final class MasterProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, forcible_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, nonce_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5591,6 +5669,16 @@ public final class MasterProtos {
         result = result && (getForcible()
             == other.getForcible());
       }
+      result = result && (hasNonceGroup() == other.hasNonceGroup());
+      if (hasNonceGroup()) {
+        result = result && (getNonceGroup()
+            == other.getNonceGroup());
+      }
+      result = result && (hasNonce() == other.hasNonce());
+      if (hasNonce()) {
+        result = result && (getNonce()
+            == other.getNonce());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5615,6 +5703,14 @@ public final class MasterProtos {
       if (hasForcible()) {
         hash = (37 * hash) + FORCIBLE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getForcible());
+      }
+      if (hasNonceGroup()) {
+        hash = (37 * hash) + NONCE_GROUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasNonce()) {
+        hash = (37 * hash) + NONCE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonce());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5746,6 +5842,10 @@ public final class MasterProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         forcible_ = false;
         bitField0_ = (bitField0_ & ~0x00000004);
+        nonceGroup_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        nonce_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -5794,6 +5894,14 @@ public final class MasterProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.forcible_ = forcible_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.nonce_ = nonce_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5818,6 +5926,12 @@ public final class MasterProtos {
         }
         if (other.hasForcible()) {
           setForcible(other.getForcible());
+        }
+        if (other.hasNonceGroup()) {
+          setNonceGroup(other.getNonceGroup());
+        }
+        if (other.hasNonce()) {
+          setNonce(other.getNonce());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6129,6 +6243,72 @@ public final class MasterProtos {
         return this;
       }
 
+      // optional uint64 nonce_group = 4 [default = 0];
+      private long nonceGroup_ ;
+      /**
+       * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+       */
+      public boolean hasNonceGroup() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+       */
+      public long getNonceGroup() {
+        return nonceGroup_;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+       */
+      public Builder setNonceGroup(long value) {
+        bitField0_ |= 0x00000008;
+        nonceGroup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 4 [default = 0];</code>
+       */
+      public Builder clearNonceGroup() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        nonceGroup_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce = 5 [default = 0];
+      private long nonce_ ;
+      /**
+       * <code>optional uint64 nonce = 5 [default = 0];</code>
+       */
+      public boolean hasNonce() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional uint64 nonce = 5 [default = 0];</code>
+       */
+      public long getNonce() {
+        return nonce_;
+      }
+      /**
+       * <code>optional uint64 nonce = 5 [default = 0];</code>
+       */
+      public Builder setNonce(long value) {
+        bitField0_ |= 0x00000010;
+        nonce_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce = 5 [default = 0];</code>
+       */
+      public Builder clearNonce() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        nonce_ = 0L;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:hbase.pb.DispatchMergingRegionsRequest)
     }
 
@@ -6142,6 +6322,16 @@ public final class MasterProtos {
 
   public interface DispatchMergingRegionsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
+
+    // optional uint64 proc_id = 1;
+    /**
+     * <code>optional uint64 proc_id = 1;</code>
+     */
+    boolean hasProcId();
+    /**
+     * <code>optional uint64 proc_id = 1;</code>
+     */
+    long getProcId();
   }
   /**
    * Protobuf type {@code hbase.pb.DispatchMergingRegionsResponse}
@@ -6176,6 +6366,7 @@ public final class MasterProtos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
+      int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
@@ -6191,6 +6382,11 @@ public final class MasterProtos {
                                      extensionRegistry, tag)) {
                 done = true;
               }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              procId_ = input.readUInt64();
               break;
             }
           }
@@ -6232,7 +6428,25 @@ public final class MasterProtos {
       return PARSER;
     }
 
+    private int bitField0_;
+    // optional uint64 proc_id = 1;
+    public static final int PROC_ID_FIELD_NUMBER = 1;
+    private long procId_;
+    /**
+     * <code>optional uint64 proc_id = 1;</code>
+     */
+    public boolean hasProcId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional uint64 proc_id = 1;</code>
+     */
+    public long getProcId() {
+      return procId_;
+    }
+
     private void initFields() {
+      procId_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6246,6 +6460,9 @@ public final class MasterProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, procId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -6255,6 +6472,10 @@ public final class MasterProtos {
       if (size != -1) return size;
 
       size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, procId_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
@@ -6278,6 +6499,11 @@ public final class MasterProtos {
       org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse) obj;
 
       boolean result = true;
+      result = result && (hasProcId() == other.hasProcId());
+      if (hasProcId()) {
+        result = result && (getProcId()
+            == other.getProcId());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -6291,6 +6517,10 @@ public final class MasterProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasProcId()) {
+        hash = (37 * hash) + PROC_ID_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getProcId());
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -6400,6 +6630,8 @@ public final class MasterProtos {
 
       public Builder clear() {
         super.clear();
+        procId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -6426,6 +6658,13 @@ public final class MasterProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.procId_ = procId_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -6441,6 +6680,9 @@ public final class MasterProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse.getDefaultInstance()) return this;
+        if (other.hasProcId()) {
+          setProcId(other.getProcId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -6464,6 +6706,40 @@ public final class MasterProtos {
             mergeFrom(parsedMessage);
           }
         }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional uint64 proc_id = 1;
+      private long procId_ ;
+      /**
+       * <code>optional uint64 proc_id = 1;</code>
+       */
+      public boolean hasProcId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional uint64 proc_id = 1;</code>
+       */
+      public long getProcId() {
+        return procId_;
+      }
+      /**
+       * <code>optional uint64 proc_id = 1;</code>
+       */
+      public Builder setProcId(long value) {
+        bitField0_ |= 0x00000001;
+        procId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 proc_id = 1;</code>
+       */
+      public Builder clearProcId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        procId_ = 0L;
+        onChanged();
         return this;
       }
 
@@ -65571,316 +65847,317 @@ public final class MasterProtos {
       "oc_id\030\001 \001(\004\"n\n\021MoveRegionRequest\022)\n\006regi" +
       "on\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\020d" +
       "est_server_name\030\002 \001(\0132\024.hbase.pb.ServerN",
-      "ame\"\024\n\022MoveRegionResponse\"\222\001\n\035DispatchMe" +
+      "ame\"\024\n\022MoveRegionResponse\"\274\001\n\035DispatchMe" +
       "rgingRegionsRequest\022+\n\010region_a\030\001 \002(\0132\031." +
       "hbase.pb.RegionSpecifier\022+\n\010region_b\030\002 \002" +
       "(\0132\031.hbase.pb.RegionSpecifier\022\027\n\010forcibl" +
-      "e\030\003 \001(\010:\005false\" \n\036DispatchMergingRegions" +
-      "Response\"@\n\023AssignRegionRequest\022)\n\006regio" +
-      "n\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\"\026\n\024As" +
-      "signRegionResponse\"X\n\025UnassignRegionRequ" +
-      "est\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpe" +
-      "cifier\022\024\n\005force\030\002 \001(\010:\005false\"\030\n\026Unassign",
-      "RegionResponse\"A\n\024OfflineRegionRequest\022)" +
-      "\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifie" +
-      "r\"\027\n\025OfflineRegionResponse\"\177\n\022CreateTabl" +
-      "eRequest\022+\n\014table_schema\030\001 \002(\0132\025.hbase.p" +
-      "b.TableSchema\022\022\n\nsplit_keys\030\002 \003(\014\022\026\n\013non" +
-      "ce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023C" +
-      "reateTableResponse\022\017\n\007proc_id\030\001 \001(\004\"g\n\022D" +
-      "eleteTableRequest\022\'\n\ntable_name\030\001 \002(\0132\023." +
-      "hbase.pb.TableName\022\026\n\013nonce_group\030\002 \001(\004:" +
-      "\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n\023DeleteTableRespo",
-      "nse\022\017\n\007proc_id\030\001 \001(\004\"\207\001\n\024TruncateTableRe" +
-      "quest\022&\n\ttableName\030\001 \002(\0132\023.hbase.pb.Tabl" +
-      "eName\022\035\n\016preserveSplits\030\002 \001(\010:\005false\022\026\n\013" +
-      "nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"(" +
-      "\n\025TruncateTableResponse\022\017\n\007proc_id\030\001 \001(\004" +
-      "\"g\n\022EnableTableRequest\022\'\n\ntable_name\030\001 \002" +
-      "(\0132\023.hbase.pb.TableName\022\026\n\013nonce_group\030\002" +
-      " \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n\023EnableTable" +
-      "Response\022\017\n\007proc_id\030\001 \001(\004\"h\n\023DisableTabl" +
-      "eRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.",
-      "TableName\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005non" +
-      "ce\030\003 \001(\004:\0010\"\'\n\024DisableTableResponse\022\017\n\007p" +
-      "roc_id\030\001 \001(\004\"\224\001\n\022ModifyTableRequest\022\'\n\nt" +
-      "able_name\030\001 \002(\0132\023.hbase.pb.TableName\022+\n\014" +
-      "table_schema\030\002 \002(\0132\025.hbase.pb.TableSchem" +
-      "a\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004" +
-      ":\0010\"&\n\023ModifyTableResponse\022\017\n\007proc_id\030\001 " +
-      "\001(\004\"~\n\026CreateNamespaceRequest\022:\n\023namespa" +
-      "ceDescriptor\030\001 \002(\0132\035.hbase.pb.NamespaceD" +
-      "escriptor\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005non",
-      "ce\030\003 \001(\004:\0010\"*\n\027CreateNamespaceResponse\022\017" +
-      "\n\007proc_id\030\001 \001(\004\"Y\n\026DeleteNamespaceReques" +
-      "t\022\025\n\rnamespaceName\030\001 \002(\t\022\026\n\013nonce_group\030" +
-      "\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027DeleteName" +
-      "spaceResponse\022\017\n\007proc_id\030\001 \001(\004\"~\n\026Modify" +
-      "NamespaceRequest\022:\n\023namespaceDescriptor\030" +
-      "\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022\026\n\013" +
-      "nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*" +
-      "\n\027ModifyNamespaceResponse\022\017\n\007proc_id\030\001 \001" +
-      "(\004\"6\n\035GetNamespaceDescriptorRequest\022\025\n\rn",
-      "amespaceName\030\001 \002(\t\"\\\n\036GetNamespaceDescri" +
-      "ptorResponse\022:\n\023namespaceDescriptor\030\001 \002(" +
-      "\0132\035.hbase.pb.NamespaceDescriptor\"!\n\037List" +
-      "NamespaceDescriptorsRequest\"^\n ListNames" +
-      "paceDescriptorsResponse\022:\n\023namespaceDesc" +
-      "riptor\030\001 \003(\0132\035.hbase.pb.NamespaceDescrip" +
-      "tor\"?\n&ListTableDescriptorsByNamespaceRe" +
-      "quest\022\025\n\rnamespaceName\030\001 \002(\t\"U\n\'ListTabl" +
-      "eDescriptorsByNamespaceResponse\022*\n\013table" +
-      "Schema\030\001 \003(\0132\025.hbase.pb.TableSchema\"9\n L",
-      "istTableNamesByNamespaceRequest\022\025\n\rnames" +
-      "paceName\030\001 \002(\t\"K\n!ListTableNamesByNamesp" +
-      "aceResponse\022&\n\ttableName\030\001 \003(\0132\023.hbase.p" +
-      "b.TableName\"\021\n\017ShutdownRequest\"\022\n\020Shutdo" +
-      "wnResponse\"\023\n\021StopMasterRequest\"\024\n\022StopM" +
-      "asterResponse\"\037\n\016BalanceRequest\022\r\n\005force" +
-      "\030\001 \001(\010\"\'\n\017BalanceResponse\022\024\n\014balancer_ra" +
-      "n\030\001 \002(\010\"<\n\031SetBalancerRunningRequest\022\n\n\002" +
-      "on\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\"8\n\032SetBala" +
-      "ncerRunningResponse\022\032\n\022prev_balance_valu",
-      "e\030\001 \001(\010\"\032\n\030IsBalancerEnabledRequest\",\n\031I" +
-      "sBalancerEnabledResponse\022\017\n\007enabled\030\001 \002(" +
-      "\010\"\212\001\n\035SetSplitOrMergeEnabledRequest\022\017\n\007e" +
-      "nabled\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\0220\n\014swi" +
-      "tch_types\030\003 \003(\0162\032.hbase.pb.MasterSwitchT" +
-      "ype\022\021\n\tskip_lock\030\004 \001(\010\"4\n\036SetSplitOrMerg" +
-      "eEnabledResponse\022\022\n\nprev_value\030\001 \003(\010\"O\n\034" +
-      "IsSplitOrMergeEnabledRequest\022/\n\013switch_t" +
-      "ype\030\001 \002(\0162\032.hbase.pb.MasterSwitchType\"0\n" +
-      "\035IsSplitOrMergeEnabledResponse\022\017\n\007enable",
-      "d\030\001 \002(\010\"+\n)ReleaseSplitOrMergeLockAndRol" +
-      "lbackRequest\",\n*ReleaseSplitOrMergeLockA" +
-      "ndRollbackResponse\"\022\n\020NormalizeRequest\"+" +
-      "\n\021NormalizeResponse\022\026\n\016normalizer_ran\030\001 " +
-      "\002(\010\")\n\033SetNormalizerRunningRequest\022\n\n\002on" +
-      "\030\001 \002(\010\"=\n\034SetNormalizerRunningResponse\022\035" +
-      "\n\025prev_normalizer_value\030\001 \001(\010\"\034\n\032IsNorma" +
-      "lizerEnabledRequest\".\n\033IsNormalizerEnabl" +
-      "edResponse\022\017\n\007enabled\030\001 \002(\010\"\027\n\025RunCatalo" +
-      "gScanRequest\"-\n\026RunCatalogScanResponse\022\023",
-      "\n\013scan_result\030\001 \001(\005\"-\n\033EnableCatalogJani" +
-      "torRequest\022\016\n\006enable\030\001 \002(\010\"2\n\034EnableCata" +
-      "logJanitorResponse\022\022\n\nprev_value\030\001 \001(\010\" " +
-      "\n\036IsCatalogJanitorEnabledRequest\"0\n\037IsCa" +
-      "talogJanitorEnabledResponse\022\r\n\005value\030\001 \002" +
-      "(\010\"B\n\017SnapshotRequest\022/\n\010snapshot\030\001 \002(\0132" +
-      "\035.hbase.pb.SnapshotDescription\",\n\020Snapsh" +
-      "otResponse\022\030\n\020expected_timeout\030\001 \002(\003\"\036\n\034" +
-      "GetCompletedSnapshotsRequest\"Q\n\035GetCompl" +
-      "etedSnapshotsResponse\0220\n\tsnapshots\030\001 \003(\013",
-      "2\035.hbase.pb.SnapshotDescription\"H\n\025Delet" +
+      "e\030\003 \001(\010:\005false\022\026\n\013nonce_group\030\004 \001(\004:\0010\022\020" +
+      "\n\005nonce\030\005 \001(\004:\0010\"1\n\036DispatchMergingRegio" +
+      "nsResponse\022\017\n\007proc_id\030\001 \001(\004\"@\n\023AssignReg" +
+      "ionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Re" +
+      "gionSpecifier\"\026\n\024AssignRegionResponse\"X\n" +
+      "\025UnassignRegionRequest\022)\n\006region\030\001 \002(\0132\031",
+      ".hbase.pb.RegionSpecifier\022\024\n\005force\030\002 \001(\010" +
+      ":\005false\"\030\n\026UnassignRegionResponse\"A\n\024Off" +
+      "lineRegionRequest\022)\n\006region\030\001 \002(\0132\031.hbas" +
+      "e.pb.RegionSpecifier\"\027\n\025OfflineRegionRes" +
+      "ponse\"\177\n\022CreateTableRequest\022+\n\014table_sch" +
+      "ema\030\001 \002(\0132\025.hbase.pb.TableSchema\022\022\n\nspli" +
+      "t_keys\030\002 \003(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005" +
+      "nonce\030\004 \001(\004:\0010\"&\n\023CreateTableResponse\022\017\n" +
+      "\007proc_id\030\001 \001(\004\"g\n\022DeleteTableRequest\022\'\n\n" +
+      "table_name\030\001 \002(\0132\023.hbase.pb.TableName\022\026\n",
+      "\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"" +
+      "&\n\023DeleteTableResponse\022\017\n\007proc_id\030\001 \001(\004\"" +
+      "\207\001\n\024TruncateTableRequest\022&\n\ttableName\030\001 " +
+      "\002(\0132\023.hbase.pb.TableName\022\035\n\016preserveSpli" +
+      "ts\030\002 \001(\010:\005false\022\026\n\013nonce_group\030\003 \001(\004:\0010\022" +
+      "\020\n\005nonce\030\004 \001(\004:\0010\"(\n\025TruncateTableRespon" +
+      "se\022\017\n\007proc_id\030\001 \001(\004\"g\n\022EnableTableReques" +
+      "t\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableNa" +
+      "me\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(" +
+      "\004:\0010\"&\n\023EnableTableResponse\022\017\n\007proc_id\030\001",
+      " \001(\004\"h\n\023DisableTableRequest\022\'\n\ntable_nam" +
+      "e\030\001 \002(\0132\023.hbase.pb.TableName\022\026\n\013nonce_gr" +
+      "oup\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\'\n\024Disabl" +
+      "eTableResponse\022\017\n\007proc_id\030\001 \001(\004\"\224\001\n\022Modi" +
+      "fyTableRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hba" +
+      "se.pb.TableName\022+\n\014table_schema\030\002 \002(\0132\025." +
+      "hbase.pb.TableSchema\022\026\n\013nonce_group\030\003 \001(" +
+      "\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023ModifyTableRes" +
+      "ponse\022\017\n\007proc_id\030\001 \001(\004\"~\n\026CreateNamespac" +
+      "eRequest\022:\n\023namespaceDescriptor\030\001 \002(\0132\035.",
+      "hbase.pb.NamespaceDescriptor\022\026\n\013nonce_gr" +
+      "oup\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027Create" +
+      "NamespaceResponse\022\017\n\007proc_id\030\001 \001(\004\"Y\n\026De" +
+      "leteNamespaceRequest\022\025\n\rnamespaceName\030\001 " +
+      "\002(\t\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001" +
+      "(\004:\0010\"*\n\027DeleteNamespaceResponse\022\017\n\007proc" +
+      "_id\030\001 \001(\004\"~\n\026ModifyNamespaceRequest\022:\n\023n" +
+      "amespaceDescriptor\030\001 \002(\0132\035.hbase.pb.Name" +
+      "spaceDescriptor\022\026\n\013nonce_group\030\002 \001(\004:\0010\022" +
+      "\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027ModifyNamespaceResp",
+      "onse\022\017\n\007proc_id\030\001 \001(\004\"6\n\035GetNamespaceDes" +
+      "criptorRequest\022\025\n\rnamespaceName\030\001 \002(\t\"\\\n" +
+      "\036GetNamespaceDescriptorResponse\022:\n\023names" +
+      "paceDescriptor\030\001 \002(\0132\035.hbase.pb.Namespac" +
+      "eDescriptor\"!\n\037ListNamespaceDescriptorsR" +
+      "equest\"^\n ListNamespaceDescriptorsRespon" +
+      "se\022:\n\023namespaceDescriptor\030\001 \003(\0132\035.hbase." +
+      "pb.NamespaceDescriptor\"?\n&ListTableDescr" +
+      "iptorsByNamespaceRequest\022\025\n\rnamespaceNam" +
+      "e\030\001 \002(\t\"U\n\'ListTableDescriptorsByNamespa",
+      "ceResponse\022*\n\013tableSchema\030\001 \003(\0132\025.hbase." +
+      "pb.TableSchema\"9\n ListTableNamesByNamesp" +
+      "aceRequest\022\025\n\rnamespaceName\030\001 \002(\t\"K\n!Lis" +
+      "tTableNamesByNamespaceResponse\022&\n\ttableN" +
+      "ame\030\001 \003(\0132\023.hbase.pb.TableName\"\021\n\017Shutdo" +
+      "wnRequest\"\022\n\020ShutdownResponse\"\023\n\021StopMas" +
+      "terRequest\"\024\n\022StopMasterResponse\"\037\n\016Bala" +
+      "nceRequest\022\r\n\005force\030\001 \001(\010\"\'\n\017BalanceResp" +
+      "onse\022\024\n\014balancer_ran\030\001 \002(\010\"<\n\031SetBalance" +
+      "rRunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchrono",
+      "us\030\002 \001(\010\"8\n\032SetBalancerRunningResponse\022\032" +
+      "\n\022prev_balance_value\030\001 \001(\010\"\032\n\030IsBalancer" +
+      "EnabledRequest\",\n\031IsBalancerEnabledRespo" +
+      "nse\022\017\n\007enabled\030\001 \002(\010\"\212\001\n\035SetSplitOrMerge" +
+      "EnabledRequest\022\017\n\007enabled\030\001 \002(\010\022\023\n\013synch" +
+      "ronous\030\002 \001(\010\0220\n\014switch_types\030\003 \003(\0162\032.hba" +
+      "se.pb.MasterSwitchType\022\021\n\tskip_lock\030\004 \001(" +
+      "\010\"4\n\036SetSplitOrMergeEnabledResponse\022\022\n\np" +
+      "rev_value\030\001 \003(\010\"O\n\034IsSplitOrMergeEnabled" +
+      "Request\022/\n\013switch_type\030\001 \002(\0162\032.hbase.pb.",
+      "MasterSwitchType\"0\n\035IsSplitOrMergeEnable" +
+      "dResponse\022\017\n\007enabled\030\001 \002(\010\"+\n)ReleaseSpl" +
+      "itOrMergeLockAndRollbackRequest\",\n*Relea" +
+      "seSplitOrMergeLockAndRollbackResponse\"\022\n" +
+      "\020NormalizeRequest\"+\n\021NormalizeResponse\022\026" +
+      "\n\016normalizer_ran\030\001 \002(\010\")\n\033SetNormalizerR" +
+      "unningRequest\022\n\n\002on\030\001 \002(\010\"=\n\034SetNormaliz" +
+      "erRunningResponse\022\035\n\025prev_normalizer_val" +
+      "ue\030\001 \001(\010\"\034\n\032IsNormalizerEnabledRequest\"." +
+      "\n\033IsNormalizerEnabledResponse\022\017\n\007enabled",
+      "\030\001 \002(\010\"\027\n\025RunCatalogScanRequest\"-\n\026RunCa" +
+      "talogScanResponse\022\023\n\013scan_result\030\001 \001(\005\"-" +
+      "\n\033EnableCatalogJanitorRequest\022\016\n\006enable\030" +
+      "\001 \002(\010\"2\n\034EnableCatalogJanitorResponse\022\022\n" +
+      "\nprev_value\030\001 \001(\010\" \n\036IsCatalogJanitorEna" +
+      "bledRequest\"0\n\037IsCatalogJanitorEnabledRe" +
+      "sponse\022\r\n\005value\030\001 \002(\010\"B\n\017SnapshotRequest" +
+      "\022/\n\010snapshot\030\001 \002(\0132\035.hbase.pb.SnapshotDe" +
+      "scription\",\n\020SnapshotResponse\022\030\n\020expecte" +
+      "d_timeout\030\001 \002(\003\"\036\n\034GetCompletedSnapshots",
+      "Request\"Q\n\035GetCompletedSnapshotsResponse" +
+      "\0220\n\tsnapshots\030\001 \003(\0132\035.hbase.pb.SnapshotD" +
+      "escription\"H\n\025DeleteSnapshotRequest\022/\n\010s" +
+      "napshot\030\001 \002(\0132\035.hbase.pb.SnapshotDescrip" +
+      "tion\"\030\n\026DeleteSnapshotResponse\"s\n\026Restor" +
       "eSnapshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hba" +
-      "se.pb.SnapshotDescription\"\030\n\026DeleteSnaps" +
-      "hotResponse\"s\n\026RestoreSnapshotRequest\022/\n" +
-      "\010snapshot\030\001 \002(\0132\035.hbase.pb.SnapshotDescr" +
-      "iption\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030" +
-      "\003 \001(\004:\0010\"*\n\027RestoreSnapshotResponse\022\017\n\007p" +
-      "roc_id\030\001 \002(\004\"H\n\025IsSnapshotDoneRequest\022/\n" +
-      "\010snapshot\030\001 \001(\0132\035.hbase.pb.SnapshotDescr" +
-      "iption\"^\n\026IsSnapshotDoneResponse\022\023\n\004done",
-      "\030\001 \001(\010:\005false\022/\n\010snapshot\030\002 \001(\0132\035.hbase." +
-      "pb.SnapshotDescription\"O\n\034IsRestoreSnaps" +
-      "hotDoneRequest\022/\n\010snapshot\030\001 \001(\0132\035.hbase" +
-      ".pb.SnapshotDescription\"4\n\035IsRestoreSnap" +
-      "shotDoneResponse\022\023\n\004done\030\001 \001(\010:\005false\"F\n" +
-      "\033GetSchemaAlterStatusRequest\022\'\n\ntable_na" +
-      "me\030\001 \002(\0132\023.hbase.pb.TableName\"T\n\034GetSche" +
-      "maAlterStatusResponse\022\035\n\025yet_to_update_r" +
-      "egions\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\213\001\n\032" +
-      "GetTableDescriptorsRequest\022(\n\013table_name",
-      "s\030\001 \003(\0132\023.hbase.pb.TableName\022\r\n\005regex\030\002 " +
-      "\001(\t\022!\n\022include_sys_tables\030\003 \001(\010:\005false\022\021" +
-      "\n\tnamespace\030\004 \001(\t\"J\n\033GetTableDescriptors" +
-      "Response\022+\n\014table_schema\030\001 \003(\0132\025.hbase.p" +
-      "b.TableSchema\"[\n\024GetTableNamesRequest\022\r\n" +
-      "\005regex\030\001 \001(\t\022!\n\022include_sys_tables\030\002 \001(\010" +
-      ":\005false\022\021\n\tnamespace\030\003 \001(\t\"A\n\025GetTableNa" +
-      "mesResponse\022(\n\013table_names\030\001 \003(\0132\023.hbase" +
-      ".pb.TableName\"?\n\024GetTableStateRequest\022\'\n" +
-      "\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName\"B",
-      "\n\025GetTableStateResponse\022)\n\013table_state\030\001" +
-      " \002(\0132\024.hbase.pb.TableState\"\031\n\027GetCluster" +
-      "StatusRequest\"K\n\030GetClusterStatusRespons" +
-      "e\022/\n\016cluster_status\030\001 \002(\0132\027.hbase.pb.Clu" +
-      "sterStatus\"\030\n\026IsMasterRunningRequest\"4\n\027" +
-      "IsMasterRunningResponse\022\031\n\021is_master_run" +
-      "ning\030\001 \002(\010\"I\n\024ExecProcedureRequest\0221\n\tpr" +
-      "ocedure\030\001 \002(\0132\036.hbase.pb.ProcedureDescri" +
-      "ption\"F\n\025ExecProcedureResponse\022\030\n\020expect" +
-      "ed_timeout\030\001 \001(\003\022\023\n\013return_data\030\002 \001(\014\"K\n",
-      "\026IsProcedureDoneRequest\0221\n\tprocedure\030\001 \001" +
-      "(\0132\036.hbase.pb.ProcedureDescription\"`\n\027Is" +
-      "ProcedureDoneResponse\022\023\n\004done\030\001 \001(\010:\005fal" +
-      "se\0220\n\010snapshot\030\002 \001(\0132\036.hbase.pb.Procedur" +
-      "eDescription\",\n\031GetProcedureResultReques" +
-      "t\022\017\n\007proc_id\030\001 \002(\004\"\371\001\n\032GetProcedureResul" +
-      "tResponse\0229\n\005state\030\001 \002(\0162*.hbase.pb.GetP" +
-      "rocedureResultResponse.State\022\022\n\nstart_ti" +
-      "me\030\002 \001(\004\022\023\n\013last_update\030\003 \001(\004\022\016\n\006result\030" +
-      "\004 \001(\014\0224\n\texception\030\005 \001(\0132!.hbase.pb.Fore",
-      "ignExceptionMessage\"1\n\005State\022\r\n\tNOT_FOUN" +
-      "D\020\000\022\013\n\007RUNNING\020\001\022\014\n\010FINISHED\020\002\"M\n\025AbortP" +
-      "rocedureRequest\022\017\n\007proc_id\030\001 \002(\004\022#\n\025mayI" +
-      "nterruptIfRunning\030\002 \001(\010:\004true\"6\n\026AbortPr" +
-      "ocedureResponse\022\034\n\024is_procedure_aborted\030" +
-      "\001 \002(\010\"\027\n\025ListProceduresRequest\"@\n\026ListPr" +
-      "oceduresResponse\022&\n\tprocedure\030\001 \003(\0132\023.hb" +
-      "ase.pb.Procedure\"\315\001\n\017SetQuotaRequest\022\021\n\t" +
-      "user_name\030\001 \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tn" +
-      "amespace\030\003 \001(\t\022\'\n\ntable_name\030\004 \001(\0132\023.hba",
-      "se.pb.TableName\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016b" +
-      "ypass_globals\030\006 \001(\010\022+\n\010throttle\030\007 \001(\0132\031." +
-      "hbase.pb.ThrottleRequest\"\022\n\020SetQuotaResp" +
-      "onse\"J\n\037MajorCompactionTimestampRequest\022" +
-      "\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName" +
-      "\"U\n(MajorCompactionTimestampForRegionReq" +
-      "uest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSp" +
-      "ecifier\"@\n MajorCompactionTimestampRespo" +
-      "nse\022\034\n\024compaction_timestamp\030\001 \002(\003\"\035\n\033Sec" +
-      "urityCapabilitiesRequest\"\354\001\n\034SecurityCap",
-      "abilitiesResponse\022G\n\014capabilities\030\001 \003(\0162" +
-      "1.hbase.pb.SecurityCapabilitiesResponse." +
-      "Capability\"\202\001\n\nCapability\022\031\n\025SIMPLE_AUTH" +
-      "ENTICATION\020\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022" +
-      "\021\n\rAUTHORIZATION\020\002\022\026\n\022CELL_AUTHORIZATION" +
-      "\020\003\022\023\n\017CELL_VISIBILITY\020\004*(\n\020MasterSwitchT" +
-      "ype\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\373(\n\rMasterServ" +
-      "ice\022e\n\024GetSchemaAlterStatus\022%.hbase.pb.G" +
-      "etSchemaAlterStatusRequest\032&.hbase.pb.Ge" +
-      "tSchemaAlterStatusResponse\022b\n\023GetTableDe",
-      "scriptors\022$.hbase.pb.GetTableDescriptors" +
-      "Request\032%.hbase.pb.GetTableDescriptorsRe" +
-      "sponse\022P\n\rGetTableNames\022\036.hbase.pb.GetTa" +
-      "bleNamesRequest\032\037.hbase.pb.GetTableNames" +
-      "Response\022Y\n\020GetClusterStatus\022!.hbase.pb." +
-      "GetClusterStatusRequest\032\".hbase.pb.GetCl" +
-      "usterStatusResponse\022V\n\017IsMasterRunning\022 " +
-      ".hbase.pb.IsMasterRunningRequest\032!.hbase" +
-      ".pb.IsMasterRunningResponse\022D\n\tAddColumn" +
-      "\022\032.hbase.pb.AddColumnRequest\032\033.hbase.pb.",
-      "AddColumnResponse\022M\n\014DeleteColumn\022\035.hbas" +
-      "e.pb.DeleteColumnRequest\032\036.hbase.pb.Dele" +
-      "teColumnResponse\022M\n\014ModifyColumn\022\035.hbase" +
-      ".pb.ModifyColumnRequest\032\036.hbase.pb.Modif" +
-      "yColumnResponse\022G\n\nMoveRegion\022\033.hbase.pb" +
-      ".MoveRegionRequest\032\034.hbase.pb.MoveRegion" +
-      "Response\022k\n\026DispatchMergingRegions\022\'.hba" +
-      "se.pb.DispatchMergingRegionsRequest\032(.hb" +
-      "ase.pb.DispatchMergingRegionsResponse\022M\n" +
-      "\014AssignRegion\022\035.hbase.pb.AssignRegionReq",
-      "uest\032\036.hbase.pb.AssignRegionResponse\022S\n\016" +
-      "UnassignRegion\022\037.hbase.pb.UnassignRegion" +
-      "Request\032 .hbase.pb.UnassignRegionRespons" +
-      "e\022P\n\rOfflineRegion\022\036.hbase.pb.OfflineReg" +
-      "ionRequest\032\037.hbase.pb.OfflineRegionRespo" +
-      "nse\022J\n\013DeleteTable\022\034.hbase.pb.DeleteTabl" +
-      "eRequest\032\035.hbase.pb.DeleteTableResponse\022" +
-      "P\n\rtruncateTable\022\036.hbase.pb.TruncateTabl" +
-      "eRequest\032\037.hbase.pb.TruncateTableRespons" +
-      "e\022J\n\013EnableTable\022\034.hbase.pb.EnableTableR",
-      "equest\032\035.hbase.pb.EnableTableResponse\022M\n" +
-      "\014DisableTable\022\035.hbase.pb.DisableTableReq" +
-      "uest\032\036.hbase.pb.DisableTableResponse\022J\n\013" +
-      "ModifyTable\022\034.hbase.pb.ModifyTableReques" +
-      "t\032\035.hbase.pb.ModifyTableResponse\022J\n\013Crea" +
-      "teTable\022\034.hbase.pb.CreateTableRequest\032\035." +
-      "hbase.pb.CreateTableResponse\022A\n\010Shutdown" +
-      "\022\031.hbase.pb.ShutdownRequest\032\032.hbase.pb.S" +
-      "hutdownResponse\022G\n\nStopMaster\022\033.hbase.pb" +
-      ".StopMasterRequest\032\034.hbase.pb.StopMaster",
-      "Response\022>\n\007Balance\022\030.hbase.pb.BalanceRe" +
-      "quest\032\031.hbase.pb.BalanceResponse\022_\n\022SetB" +
-      "alancerRunning\022#.hbase.pb.SetBalancerRun" +
-      "ningRequest\032$.hbase.pb.SetBalancerRunnin" +
-      "gResponse\022\\\n\021IsBalancerEnabled\022\".hbase.p" +
-      "b.IsBalancerEnabledRequest\032#.hbase.pb.Is" +
-      "BalancerEnabledResponse\022k\n\026SetSplitOrMer" +
-      "geEnabled\022\'.hbase.pb.SetSplitOrMergeEnab" +
-      "ledRequest\032(.hbase.pb.SetSplitOrMergeEna" +
-      "bledResponse\022h\n\025IsSplitOrMergeEnabled\022&.",
-      "hbase.pb.IsSplitOrMergeEnabledRequest\032\'." +
-      "hbase.pb.IsSplitOrMergeEnabledResponse\022\217" +
-      "\001\n\"ReleaseSplitOrMergeLockAndRollback\0223." +
-      "hbase.pb.ReleaseSplitOrMergeLockAndRollb" +
-      "ackRequest\0324.hbase.pb.ReleaseSplitOrMerg" +
-      "eLockAndRollbackResponse\022D\n\tNormalize\022\032." +
-      "hbase.pb.NormalizeRequest\032\033.hbase.pb.Nor" +
-      "malizeResponse\022e\n\024SetNormalizerRunning\022%" +
-      ".hbase.pb.SetNormalizerRunningRequest\032&." +
-      "hbase.pb.SetNormalizerRunningResponse\022b\n",
-      "\023IsNormalizerEnabled\022$.hbase.pb.IsNormal" +
-      "izerEnabledRequest\032%.hbase.pb.IsNormaliz" +
-      "erEnabledResponse\022S\n\016RunCatalogScan\022\037.hb" +
-      "ase.pb.RunCatalogScanRequest\032 .hbase.pb." +
-      "RunCatalogScanResponse\022e\n\024EnableCatalogJ" +
-      "anitor\022%.hbase.pb.EnableCatalogJanitorRe" +
-      "quest\032&.hbase.pb.EnableCatalogJanitorRes" +
-      "ponse\022n\n\027IsCatalogJanitorEnabled\022(.hbase" +
-      ".pb.IsCatalogJanitorEnabledRequest\032).hba" +
-      "se.pb.IsCatalogJanitorEnabledResponse\022^\n",
-      "\021ExecMasterService\022#.hbase.pb.Coprocesso" +
-      "rServiceRequest\032$.hbase.pb.CoprocessorSe" +
-      "rviceResponse\022A\n\010Snapshot\022\031.hbase.pb.Sna" +
-      "pshotRequest\032\032.hbase.pb.SnapshotResponse" +
-      "\022h\n\025GetCompletedSnapshots\022&.hbase.pb.Get" +
-      "CompletedSnapshotsRequest\032\'.hbase.pb.Get" +
-      "CompletedSnapshotsResponse\022S\n\016DeleteSnap" +
-      "shot\022\037.hbase.pb.DeleteSnapshotRequest\032 ." +
-      "hbase.pb.DeleteSnapshotResponse\022S\n\016IsSna" +
-      "pshotDone\022\037.hbase.pb.IsSnapshotDoneReque",
-      "st\032 .hbase.pb.IsSnapshotDoneResponse\022V\n\017" +
-      "RestoreSnapshot\022 .hbase.pb.RestoreSnapsh" +
-      "otRequest\032!.hbase.pb.RestoreSnapshotResp" +
-      "onse\022P\n\rExecProcedure\022\036.hbase.pb.ExecPro" +
-      "cedureRequest\032\037.hbase.pb.ExecProcedureRe" +
-      "sponse\022W\n\024ExecProcedureWithRet\022\036.hbase.p" +
-      "b.ExecProcedureRequest\032\037.hbase.pb.ExecPr" +
-      "ocedureResponse\022V\n\017IsProcedureDone\022 .hba" +
-      "se.pb.IsProcedureDoneRequest\032!.hbase.pb." +
-      "IsProcedureDoneResponse\022V\n\017ModifyNamespa",
-      "ce\022 .hbase.pb.ModifyNamespaceRequest\032!.h" +
-      "base.pb.ModifyNamespaceResponse\022V\n\017Creat" +
-      "eNamespace\022 .hbase.pb.CreateNamespaceReq" +
-      "uest\032!.hbase.pb.CreateNamespaceResponse\022" +
-      "V\n\017DeleteNamespace\022 .hbase.pb.DeleteName" +
-      "spaceRequest\032!.hbase.pb.DeleteNamespaceR" +
-      "esponse\022k\n\026GetNamespaceDescriptor\022\'.hbas" +
-      "e.pb.GetNamespaceDescriptorRequest\032(.hba" +
-      "se.pb.GetNamespaceDescriptorResponse\022q\n\030" +
-      "ListNamespaceDescriptors\022).hbase.pb.List",
-      "NamespaceDescriptorsRequest\032*.hbase.pb.L" +
-      "istNamespaceDescriptorsResponse\022\206\001\n\037List" +
-      "TableDescriptorsByNamespace\0220.hbase.pb.L" +
-      "istTableDescriptorsByNamespaceRequest\0321." +
-      "hbase.pb.ListTableDescriptorsByNamespace" +
-      "Response\022t\n\031ListTableNamesByNamespace\022*." +
-      "hbase.pb.ListTableNamesByNamespaceReques" +
-      "t\032+.hbase.pb.ListTableNamesByNamespaceRe" +
-      "sponse\022P\n\rGetTableState\022\036.hbase.pb.GetTa" +
-      "bleStateRequest\032\037.hbase.pb.GetTableState",
-      "Response\022A\n\010SetQuota\022\031.hbase.pb.SetQuota" +
-      "Request\032\032.hbase.pb.SetQuotaResponse\022x\n\037g" +
-      "etLastMajorCompactionTimestamp\022).hbase.p" +
-      "b.MajorCompactionTimestampRequest\032*.hbas" +
-      "e.pb.MajorCompactionTimestampResponse\022\212\001" +
-      "\n(getLastMajorCompactionTimestampForRegi" +
-      "on\0222.hbase.pb.MajorCompactionTimestampFo" +
-      "rRegionRequest\032*.hbase.pb.MajorCompactio" +
-      "nTimestampResponse\022_\n\022getProcedureResult" +
-      "\022#.hbase.pb.GetProcedureResultRequest\032$.",
-      "hbase.pb.GetProcedureResultResponse\022h\n\027g" +
-      "etSecurityCapabilities\022%.hbase.pb.Securi" +
-      "tyCapabilitiesRequest\032&.hbase.pb.Securit" +
-      "yCapabilitiesResponse\022S\n\016AbortProcedure\022" +
-      "\037.hbase.pb.AbortProcedureRequest\032 .hbase" +
-      ".pb.AbortProcedureResponse\022S\n\016ListProced" +
-      "ures\022\037.hbase.pb.ListProceduresRequest\032 ." +
-      "hbase.pb.ListProceduresResponseBB\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\014M" +
-      "asterProtosH\001\210\001\001\240\001\001"
+      "se.pb.SnapshotDescription\022\026\n\013nonce_group" +
+      "\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027RestoreSn" +
+      "apshotResponse\022\017\n\007proc_id\030\001 \002(\004\"H\n\025IsSna" +
+      "pshotDoneRequest\022/\n\010snapshot\030\001 \001(\0132\035.hba",
+      "se.pb.SnapshotDescription\"^\n\026IsSnapshotD" +
+      "oneResponse\022\023\n\004done\030\001 \001(\010:\005false\022/\n\010snap" +
+      "shot\030\002 \001(\0132\035.hbase.pb.SnapshotDescriptio" +
+      "n\"O\n\034IsRestoreSnapshotDoneRequest\022/\n\010sna" +
+      "pshot\030\001 \001(\0132\035.hbase.pb.SnapshotDescripti" +
+      "on\"4\n\035IsRestoreSnapshotDoneResponse\022\023\n\004d" +
+      "one\030\001 \001(\010:\005false\"F\n\033GetSchemaAlterStatus" +
+      "Request\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.T" +
+      "ableName\"T\n\034GetSchemaAlterStatusResponse" +
+      "\022\035\n\025yet_to_update_regions\030\001 \001(\r\022\025\n\rtotal",
+      "_regions\030\002 \001(\r\"\213\001\n\032GetTableDescriptorsRe" +
+      "quest\022(\n\013table_names\030\001 \003(\0132\023.hbase.pb.Ta" +
+      "bleName\022\r\n\005regex\030\002 \001(\t\022!\n\022include_sys_ta" +
+      "bles\030\003 \001(\010:\005false\022\021\n\tnamespace\030\004 \001(\t\"J\n\033" +
+      "GetTableDescriptorsResponse\022+\n\014table_sch" +
+      "ema\030\001 \003(\0132\025.hbase.pb.TableSchema\"[\n\024GetT" +
+      "ableNamesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022inclu" +
+      "de_sys_tables\030\002 \001(\010:\005false\022\021\n\tnamespace\030" +
+      "\003 \001(\t\"A\n\025GetTableNamesResponse\022(\n\013table_" +
+      "names\030\001 \003(\0132\023.hbase.pb.TableName\"?\n\024GetT",
+      "ableStateRequest\022\'\n\ntable_name\030\001 \002(\0132\023.h" +
+      "base.pb.TableName\"B\n\025GetTableStateRespon" +
+      "se\022)\n\013table_state\030\001 \002(\0132\024.hbase.pb.Table" +
+      "State\"\031\n\027GetClusterStatusRequest\"K\n\030GetC" +
+      "lusterStatusResponse\022/\n\016cluster_status\030\001" +
+      " \002(\0132\027.hbase.pb.ClusterStatus\"\030\n\026IsMaste" +
+      "rRunningRequest\"4\n\027IsMasterRunningRespon" +
+      "se\022\031\n\021is_master_running\030\001 \002(\010\"I\n\024ExecPro" +
+      "cedureRequest\0221\n\tprocedure\030\001 \002(\0132\036.hbase" +
+      ".pb.ProcedureDescription\"F\n\025ExecProcedur",
+      "eResponse\022\030\n\020expected_timeout\030\001 \001(\003\022\023\n\013r" +
+      "eturn_data\030\002 \001(\014\"K\n\026IsProcedureDoneReque" +
+      "st\0221\n\tprocedure\030\001 \001(\0132\036.hbase.pb.Procedu" +
+      "reDescription\"`\n\027IsProcedureDoneResponse" +
+      "\022\023\n\004done\030\001 \001(\010:\005false\0220\n\010snapshot\030\002 \001(\0132" +
+      "\036.hbase.pb.ProcedureDescription\",\n\031GetPr" +
+      "ocedureResultRequest\022\017\n\007proc_id\030\001 \002(\004\"\371\001" +
+      "\n\032GetProcedureResultResponse\0229\n\005state\030\001 " +
+      "\002(\0162*.hbase.pb.GetProcedureResultRespons" +
+      "e.State\022\022\n\nstart_time\030\002 \001(\004\022\023\n\013last_upda",
+      "te\030\003 \001(\004\022\016\n\006result\030\004 \001(\014\0224\n\texception\030\005 " +
+      "\001(\0132!.hbase.pb.ForeignExceptionMessage\"1" +
+      "\n\005State\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNING\020\001\022\014\n\010F" +
+      "INISHED\020\002\"M\n\025AbortProcedureRequest\022\017\n\007pr" +
+      "oc_id\030\001 \002(\004\022#\n\025mayInterruptIfRunning\030\002 \001" +
+      "(\010:\004true\"6\n\026AbortProcedureResponse\022\034\n\024is" +
+      "_procedure_aborted\030\001 \002(\010\"\027\n\025ListProcedur" +
+      "esRequest\"@\n\026ListProceduresResponse\022&\n\tp" +
+      "rocedure\030\001 \003(\0132\023.hbase.pb.Procedure\"\315\001\n\017" +
+      "SetQuotaRequest\022\021\n\tuser_name\030\001 \001(\t\022\022\n\nus",
+      "er_group\030\002 \001(\t\022\021\n\tnamespace\030\003 \001(\t\022\'\n\ntab" +
+      "le_name\030\004 \001(\0132\023.hbase.pb.TableName\022\022\n\nre" +
+      "move_all\030\005 \001(\010\022\026\n\016bypass_globals\030\006 \001(\010\022+" +
+      "\n\010throttle\030\007 \001(\0132\031.hbase.pb.ThrottleRequ" +
+      "est\"\022\n\020SetQuotaResponse\"J\n\037MajorCompacti" +
+      "onTimestampRequest\022\'\n\ntable_name\030\001 \002(\0132\023" +
+      ".hbase.pb.TableName\"U\n(MajorCompactionTi" +
+      "mestampForRegionRequest\022)\n\006region\030\001 \002(\0132" +
+      "\031.hbase.pb.RegionSpecifier\"@\n MajorCompa" +
+      "ctionTimestampResponse\022\034\n\024compaction_tim",
+      "estamp\030\001 \002(\003\"\035\n\033SecurityCapabilitiesRequ" +
+      "est\"\354\001\n\034SecurityCapabilitiesResponse\022G\n\014" +
+      "capabilities\030\001 \003(\01621.hbase.pb.SecurityCa" +
+      "pabilitiesResponse.Capability\"\202\001\n\nCapabi" +
+      "lity\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025SECUR" +
+      "E_AUTHENTICATION\020\001\022\021\n\rAUTHORIZATION\020\002\022\026\n" +
+      "\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_VISIBILITY" +
+      "\020\004*(\n\020MasterSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005MER" +
+      "GE\020\0012\373(\n\rMasterService\022e\n\024GetSchemaAlter" +
+      "Status\022%.hbase.pb.GetSchemaAlterStatusRe",
+      "quest\032&.hbase.pb.GetSchemaAlterStatusRes" +
+      "ponse\022b\n\023GetTableDescriptors\022$.hbase.pb." +
+      "GetTableDescriptorsRequest\032%.hbase.pb.Ge" +
+      "tTableDescriptorsResponse\022P\n\rGetTableNam" +
+      "es\022\036.hbase.pb.GetTableNamesRequest\032\037.hba" +
+      "se.pb.GetTableNamesResponse\022Y\n\020GetCluste" +
+      "rStatus\022!.hbase.pb.GetClusterStatusReque" +
+      "st\032\".hbase.pb.GetClusterStatusResponse\022V" +
+      "\n\017IsMasterRunning\022 .hbase.pb.IsMasterRun" +
+      "ningRequest\032!.hbase.pb.IsMasterRunningRe",
+      "sponse\022D\n\tAddColumn\022\032.hbase.pb.AddColumn" +
+      "Request\032\033.hbase.pb.AddColumnResponse\022M\n\014" +
+      "DeleteColumn\022\035.hbase.pb.DeleteColumnRequ" +
+      "est\032\036.hbase.pb.DeleteColumnResponse\022M\n\014M" +
+      "odifyColumn\022\035.hbase.pb.ModifyColumnReque" +
+      "st\032\036.hbase.pb.ModifyColumnResponse\022G\n\nMo" +
+      "veRegion\022\033.hbase.pb.MoveRegionRequest\032\034." +
+      "hbase.pb.MoveRegionResponse\022k\n\026DispatchM" +
+      "ergingRegions\022\'.hbase.pb.DispatchMerging" +
+      "RegionsRequest\032(.hbase.pb.DispatchMergin",
+      "gRegionsResponse\022M\n\014AssignRegion\022\035.hbase" +
+      ".pb.AssignRegionRequest\032\036.hbase.pb.Assig" +
+      "nRegionResponse\022S\n\016UnassignRegion\022\037.hbas" +
+      "e.pb.UnassignRegionRequest\032 .hbase.pb.Un" +
+      "assignRegionResponse\022P\n\rOfflineRegion\022\036." +
+      "hbase.pb.OfflineRegionRequest\032\037.hbase.pb" +
+      ".OfflineRegionResponse\022J\n\013DeleteTable\022\034." +
+      "hbase.pb.DeleteTableRequest\032\035.hbase.pb.D" +
+      "eleteTableResponse\022P\n\rtruncateTable\022\036.hb" +
+      "ase.pb.TruncateTableRequest\032\037.hbase.pb.T",
+      "runcateTableResponse\022J\n\013EnableTable\022\034.hb" +
+      "ase.pb.EnableTableRequest\032\035.hbase.pb.Ena" +
+      "bleTableResponse\022M\n\014DisableTable\022\035.hbase" +
+      ".pb.DisableTableRequest\032\036.hbase.pb.Disab" +
+      "leTableResponse\022J\n\013ModifyTable\022\034.hbase.p" +
+      "b.ModifyTableRequest\032\035.hbase.pb.ModifyTa" +
+      "bleResponse\022J\n\013CreateTable\022\034.hbase.pb.Cr" +
+      "eateTableRequest\032\035.hbase.pb.CreateTableR" +
+      "esponse\022A\n\010Shutdown\022\031.hbase.pb.ShutdownR" +
+      "equest\032\032.hbase.pb.ShutdownResponse\022G\n\nSt",
+      "opMaster\022\033.hbase.pb.StopMasterRequest\032\034." +
+      "hbase.pb.StopMasterResponse\022>\n\007Balance\022\030" +
+      ".hbase.pb.BalanceRequest\032\031.hbase.pb.Bala" +
+      "nceResponse\022_\n\022SetBalancerRunning\022#.hbas" +
+      "e.pb.SetBalancerRunningRequest\032$.hbase.p" +
+      "b.SetBalancerRunningResponse\022\\\n\021IsBalanc" +
+      "erEnabled\022\".hbase.pb.IsBalancerEnabledRe" +
+      "quest\032#.hbase.pb.IsBalancerEnabledRespon" +
+      "se\022k\n\026SetSplitOrMergeEnabled\022\'.hbase.pb." +
+      "SetSplitOrMergeEnabledRequest\032(.hbase.pb",
+      ".SetSplitOrMergeEnabledResponse\022h\n\025IsSpl" +
+      "itOrMergeEnabled\022&.hbase.pb.IsSplitOrMer" +
+      "geEnabledRequest\032\'.hbase.pb.IsSplitOrMer" +
+      "geEnabledResponse\022\217\001\n\"ReleaseSplitOrMerg" +
+      "eLockAndRollback\0223.hbase.pb.ReleaseSplit" +
+      "OrMergeLockAndRollbackRequest\0324.hbase.pb" +
+      ".ReleaseSplitOrMergeLockAndRollbackRespo" +
+      "nse\022D\n\tNormalize\022\032.hbase.pb.NormalizeReq" +
+      "uest\032\033.hbase.pb.NormalizeResponse\022e\n\024Set" +
+      "NormalizerRunning\022%.hbase.pb.SetNormaliz",
+      "erRunningRequest\032&.hbase.pb.SetNormalize" +
+      "rRunningResponse\022b\n\023IsNormalizerEnabled\022" +
+      "$.hbase.pb.IsNormalizerEnabledRequest\032%." +
+      "hbase.pb.IsNormalizerEnabledResponse\022S\n\016" +
+      "RunCatalogScan\022\037.hbase.pb.RunCatalogScan" +
+      "Request\032 .hbase.pb.RunCatalogScanRespons" +
+      "e\022e\n\024EnableCatalogJanitor\022%.hbase.pb.Ena" +
+      "bleCatalogJanitorRequest\032&.hbase.pb.Enab" +
+      "leCatalogJanitorResponse\022n\n\027IsCatalogJan" +
+      "itorEnabled\022(.hbase.pb.IsCatalogJanitorE",
+      "nabledRequest\032).hbase.pb.IsCatalogJanito" +
+      "rEnabledResponse\022^\n\021ExecMasterService\022#." +
+      "hbase.pb.CoprocessorServiceRequest\032$.hba" +
+      "se.pb.CoprocessorServiceResponse\022A\n\010Snap" +
+      "shot\022\031.hbase.pb.SnapshotRequest\032\032.hbase." +
+      "pb.SnapshotResponse\022h\n\025GetCompletedSnaps" +
+      "hots\022&.hbase.pb.GetCompletedSnapshotsReq" +
+      "uest\032\'.hbase.pb.GetCompletedSnapshotsRes" +
+      "ponse\022S\n\016DeleteSnapshot\022\037.hbase.pb.Delet" +
+      "eSnapshotRequest\032 .hbase.pb.DeleteSnapsh",
+      "otResponse\022S\n\016IsSnapshotDone\022\037.hbase.pb." +
+      "IsSnapshotDoneRequest\032 .hbase.pb.IsSnaps" +
+      "hotDoneResponse\022V\n\017RestoreSnapshot\022 .hba" +
+      "se.pb.RestoreSnapshotRequest\032!.hbase.pb." +
+      "RestoreSnapshotResponse\022P\n\rExecProcedure" +
+      "\022\036.hbase.pb.ExecProcedureRequest\032\037.hbase" +
+      ".pb.ExecProcedureResponse\022W\n\024ExecProcedu" +
+      "reWithRet\022\036.hbase.pb.ExecProcedureReques" +
+      "t\032\037.hbase.pb.ExecProcedureResponse\022V\n\017Is" +
+      "ProcedureDone\022 .hbase.pb.IsProcedureDone",
+      "Request\032!.hbase.pb.IsProcedureDoneRespon" +
+      "se\022V\n\017ModifyNamespace\022 .hbase.pb.ModifyN" +
+      "amespaceRequest\032!.hbase.pb.ModifyNamespa" +
+      "ceResponse\022V\n\017CreateNamespace\022 .hbase.pb" +
+      ".CreateNamespaceRequest\032!.hbase.pb.Creat" +
+      "eNamespaceResponse\022V\n\017DeleteNamespace\022 ." +
+      "hbase.pb.DeleteNamespaceRequest\032!.hbase." +
+      "pb.DeleteNamespaceResponse\022k\n\026GetNamespa" +
+      "ceDescriptor\022\'.hbase.pb.GetNamespaceDesc" +
+      "riptorRequest\032(.hbase.pb.GetNamespaceDes",
+      "criptorResponse\022q\n\030ListNamespaceDescript" +
+      "ors\022).hbase.pb.ListNamespaceDescriptorsR" +
+      "equest\032*.hbase.pb.ListNamespaceDescripto" +
+      "rsResponse\022\206\001\n\037ListTableDescriptorsByNam" +
+      "espace\0220.hbase.pb.ListTableDescriptorsBy" +
+      "NamespaceRequest\0321.hbase.pb.ListTableDes" +
+      "criptorsByNamespaceResponse\022t\n\031ListTable" +
+      "NamesByNamespace\022*.hbase.pb.ListTableNam" +
+      "esByNamespaceRequest\032+.hbase.pb.ListTabl" +
+      "eNamesByNamespaceResponse\022P\n\rGetTableSta",
+      "te\022\036.hbase.pb.GetTableStateRequest\032\037.hba" +
+      "se.pb.GetTableStateResponse\022A\n\010SetQuota\022" +
+      "\031.hbase.pb.SetQuotaRequest\032\032.hbase.pb.Se" +
+      "tQuotaResponse\022x\n\037getLastMajorCompaction" +
+      "Timestamp\022).hbase.pb.MajorCompactionTime" +
+      "stampRequest\032*.hbase.pb.MajorCompactionT" +
+      "imestampResponse\022\212\001\n(getLastMajorCompact" +
+      "ionTimestampForRegion\0222.hbase.pb.MajorCo" +
+      "mpactionTimestampForRegionRequest\032*.hbas" +
+      "e.pb.MajorCompactionTimestampResponse\022_\n",
+      "\022getProcedureResult\022#.hbase.pb.GetProced" +
+      "ureResultRequest\032$.hbase.pb.GetProcedure" +
+      "ResultResponse\022h\n\027getSecurityCapabilitie" +
+      "s\022%.hbase.pb.SecurityCapabilitiesRequest" +
+      "\032&.hbase.pb.SecurityCapabilitiesResponse" +
+      "\022S\n\016AbortProcedure\022\037.hbase.pb.AbortProce" +
+      "dureRequest\032 .hbase.pb.AbortProcedureRes" +
+      "ponse\022S\n\016ListProcedures\022\037.hbase.pb.ListP" +
+      "roceduresRequest\032 .hbase.pb.ListProcedur" +
+      "esResponseBB\n*org.apache.hadoop.hbase.pr",
+      "otobuf.generatedB\014MasterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -65940,13 +66217,13 @@ public final class MasterProtos {
           internal_static_hbase_pb_DispatchMergingRegionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DispatchMergingRegionsRequest_descriptor,
-              new java.lang.String[] { "RegionA", "RegionB", "Forcible", });
+              new java.lang.String[] { "RegionA", "RegionB", "Forcible", "NonceGroup", "Nonce", });
           internal_static_hbase_pb_DispatchMergingRegionsResponse_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_hbase_pb_DispatchMergingRegionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DispatchMergingRegionsResponse_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { "ProcId", });
           internal_static_hbase_pb_AssignRegionRequest_descriptor =
             getDescriptor().getMessageTypes().get(10);
           internal_static_hbase_pb_AssignRegionRequest_fieldAccessorTable = new
