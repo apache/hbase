@@ -278,21 +278,9 @@ public class TestSnapshotFromMaster {
    * should be retained, while those that are not in a snapshot should be deleted.
    * @throws Exception on failure
    */
-  @Test(timeout = 600000)
+  @Test(timeout = 300000)
   public void testSnapshotHFileArchiving() throws Exception {
-    int[] hfileCount = new int[]{10, 15, 20};
-    for (int count : hfileCount) {
-      LOG.info("testSnapshotHFileArchiving with " + count + " hfiles");
-      testSnapshotHFileArchiving(count);
-    }
-  }
-
-  /**
-   * It will put data and flush until there are enough hfiles.
-   * @param hfileCount
-   * @throws Exception
-   */
-  private void testSnapshotHFileArchiving(int hfileCount) throws Exception {
+    int hfileCount = 20;
     Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -412,8 +400,8 @@ public class TestSnapshotFromMaster {
    * @throws IOException on expected failure
    */
   private final Collection<String> getHFiles(Path dir, FileSystem fs, TableName tableName) throws IOException {
-    Path tableArchive = FSUtils.getTableDir(dir, tableName);
-    return SnapshotTestingUtils.listHFileNames(fs, tableArchive);
+    Path tableDir = FSUtils.getTableDir(dir, tableName);
+    return SnapshotTestingUtils.listHFileNames(fs, tableDir);
   }
 
   /**
