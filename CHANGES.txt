@@ -1,5 +1,88 @@
 HBase Change Log
 
+
+Release Notes - HBase - Version 1.1.6 07/16/2016
+
+** Sub-task
+    * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
+    * [HBASE-16056] - Procedure v2 - fix master crash for FileNotFound
+    * [HBASE-16194] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
+    * [HBASE-16195] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum 
+    * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
+    * [HBASE-15698] - Increment TimeRange not serialized to server
+    * [HBASE-15801] - Upgrade checkstyle for all branches
+    * [HBASE-15811] - Batch Get after batch Put does not fetch all Cells
+    * [HBASE-15824] - LocalHBaseCluster gets bind exception in master info port
+    * [HBASE-15850] - Localize the configuration change in testCheckTableLocks to reduce flakiness of TestHBaseFsck test suite 
+    * [HBASE-15852] - Backport HBASE-15125 'HBaseFsck's adoptHdfsOrphan function creates region with wrong end key boundary' to Apache HBase 1.1
+    * [HBASE-15856] - Cached Connection instances can wind up with addresses never resolved
+    * [HBASE-15873] - ACL for snapshot restore / clone is not enforced
+    * [HBASE-15880] - RpcClientImpl#tracedWriteRequest incorrectly closes HTrace span
+    * [HBASE-15925] - compat-module maven variable not evaluated
+    * [HBASE-15954] - REST server should log requests with TRACE instead of DEBUG
+    * [HBASE-15955] - Disable action in CatalogJanitor#setEnabled should wait for active cleanup scan to finish
+    * [HBASE-15957] - RpcClientImpl.close never ends in some circumstances
+    * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-15976] - RegionServerMetricsWrapperRunnable will be failure  when disable blockcache.
+    * [HBASE-16012] - Major compaction can't work due to obsolete scanner read point in RegionServer
+    * [HBASE-16016] - AssignmentManager#waitForAssignment could have unexpected negative deadline
+    * [HBASE-16032] - Possible memory leak in StoreScanner
+    * [HBASE-16093] - Splits failed before creating daughter regions leave meta inconsistent
+    * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
+    * [HBASE-16132] - Scan does not return all the result when regionserver is busy
+    * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
+    * [HBASE-16190] - IntegrationTestDDLMasterFailover failed with IllegalArgumentException: n must be positive
+    * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
+    * [HBASE-16207] - can't restore snapshot without "Admin" permission
+
+
+
+
+
+
+** Improvement
+    * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-15119] - Include git SHA in check_compatibility reports
+    * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
+    * [HBASE-15854] - Log the cause of SASL connection failures
+    * [HBASE-16124] - Make check_compatibility.sh less verbose when building HBase
+    * [HBASE-16140] - bump owasp.esapi from 2.1.0 to 2.1.0.1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-15729] - Remove old JDiff wrapper scripts in dev-support
+    * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
+    * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
+    * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
+
+
+
+
+
 Release Notes - HBase - Version 1.1.5 05/08/2016
 
 ** Sub-task
