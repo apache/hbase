@@ -47,6 +47,8 @@
 #          $ ./check_compatibility.sh 0.98.5 0.98.6
 
 SCRIPT_DIRECTORY=$(dirname ${BASH_SOURCE[0]})
+# Save the InterfaceAudience package name as a variable to make annotation listing more convenient.
+IA_PACKAGE="org.apache.hadoop.hbase.classification.InterfaceAudience"
 
 # Usage message.
 usage () {
@@ -65,34 +67,41 @@ a branch (e.g. 0.98), or a particular commit hash. If ref2 is omitted, master
 will be used.
 
 Options:
-  -a, --all                     Do not filter by interface annotations.
-  -b, --binary-only             Only run the check for binary compatibility.
-  -f, --force-download          Download dependencies (i.e. Java ACC), even if they are
-                                already present.
-  -h, --help                    Show this screen.
-  -j, --java-acc                Specify which version of Java ACC to use to run the analysis. This
-                                can be a tag, branch, or commit hash. Defaults to master.
-  -n, --no-checkout             Run the tool without first using Git to checkout the two
-                                HBase versions. If this option is selected,
-                                dev-support/target/compatibility/1 and
-                                dev-support/target compatibility/2 must each be Git repositories.
-                                Also note that the references must still be specified as these are
-                                used when naming the compatibility report.
-  -o <opts>, --options=<opts>   A comma-separated list of options to pass directly to Java ACC.
-  -q, --quick                   Runs Java ACC in quick analysis mode, which disables a
-                                number of checks for things that may break compatibility.
-  -r <url>, --repo=<url>        URL of the HBase Git repository to use. Defaults to Apache
-                                HBase's GitHub (https://github.com/apache/hbase.git).
-  -s, --source-only             Only run the check for source compatibility.
+  -a, --all                             Do not filter by interface annotations.
+  -b, --binary-only                     Only run the check for binary compatibility.
+  -f, --force-download                  Download dependencies (i.e. Java ACC), even if they are
+                                        already present.
+  -h, --help                            Show this screen.
+  -j, --java-acc                        Specify which version of Java ACC to use to run the
+                                        analysis. This can be a tag, branch, or commit hash.
+                                        Defaults to master.
+  -l <list>, --annotation-list=<list>   A comma-separated list of annotations to limit compatibility
+                                        checks to. Defaults to
+                                        "${IA_PACKAGE}.Public,${IA_PACKAGE}.LimitedPrivate".
+  -n, --no-checkout                     Run the tool without first using Git to checkout the two
+                                        HBase versions. If this option is selected,
+                                        dev-support/target/compatibility/1 and
+                                        dev-support/target compatibility/2 must each be Git
+                                        repositories. Also note that the references must still be
+                                        specified as these are used when naming the compatibility
+                                        report.
+  -o <opts>, --options=<opts>           A comma-separated list of options to pass directly to Java
+                                        ACC.
+  -q, --quick                           Runs Java ACC in quick analysis mode, which disables a
+                                        number of checks for things that may break compatibility.
+  -r <url>, --repo=<url>                URL of the HBase Git repository to use. Defaults to Apache
+                                        HBase's GitHub (https://github.com/apache/hbase.git).
+  -s, --source-only                     Only run the check for source compatibility.
 __EOF
 }
 
 # Allow a user to override which GETOPT to use, as described in the header.
 GETOPT=${GETOPT:-/usr/bin/env getopt}
 
-# Parse command line arguments and check for proper syntax.
-if ! ARG_LIST=$(${GETOPT} -q -o abfhj:no:qr:s \
-    -l all,binary-only,force-download,help,java-acc:,no-checkout,options:,quick,repo:,source-only \
+# Parse command line arguments. We split long options (-l) to stay under 100 chars.
+if ! ARG_LIST=$(${GETOPT} -q -o abfhj:nl:o:qr:s \
+    -l all,annotation-list:,binary-only,force-download,help \
+    -l java-acc:,no-checkout,options:,quick,repo:,source-only \
     -- "${@}"); then
   usage >&2
   exit 2
@@ -100,44 +109,49 @@ fi
 eval set -- "${ARG_LIST[@]}"
 
 # Set defaults for options in case they're not specified on the command line.
+ANNOTATION_LIST=(${IA_PACKAGE}.Public ${IA_PACKAGE}.LimitedPrivate)
 JAVA_ACC_COMMIT="master"
 REPO_URL="https://github.com/apache/hbase.git"
 
 while ((${#})); do
   case "${1}" in
-    -a | --all            )
+    -a | --all )
       ALL=true
       shift 1 ;;
-    -b | --binary-only    )
+    -b | --binary-only )
       JAVA_ACC_COMMAND+=(-binary)
       shift 1 ;;
     -f | --force-download )
       FORCE_DOWNLOAD=true
       shift 1 ;;
-    -h | --help           )
+    -h | --help )
       usage
       exit 0 ;;
-    -j | --java-acc       )
+    -j | --java-acc )
       JAVA_ACC_COMMIT="${2}"
       shift 2 ;;
-    -n | --no-checkout    )
+    -l | --annotation-list )
+      # Process the comma-separated list of annotations and overwrite the default list.
+      ANNOTATION_LIST=($(tr "," "\n" <<< "${2}"))
+      shift 2 ;;
+    -n | --no-checkout )
       NO_CHECKOUT=true
       shift 1 ;;
-    -q | --quick          )
+    -q | --quick )
       JAVA_ACC_COMMAND+=(-quick)
       shift 1 ;;
-    -o | --options        )
+    -o | --options )
       # Process and append the comma-separated list of options into the command array.
       JAVA_ACC_COMMAND+=($(tr "," "\n" <<< "${2}"))
       shift 2 ;;
-    -r | --repo           )
+    -r | --repo )
       REPO_URL="${2}"
       shift 2 ;;
-    -s | --source-only    )
+    -s | --source-only )
       JAVA_ACC_COMMAND+=(-source)
       shift 1 ;;
     # getopt inserts -- to separate options and positional arguments.
-    --                    )
+    -- )
       # First, shift past the -- to get to the positional arguments.
       shift 1
       # If there is one positional argument, only <ref1> was specified.
@@ -260,16 +274,8 @@ if [ ! -d ${SCRIPT_DIRECTORY}/target/compatibility/javaACC ] || [ -n "${FORCE_DO
   fi
 fi
 
-# Generate annotation list dynamically; this way, there's no chance the file
-# gets stale and you have better visiblity into what classes are actually analyzed.
-declare -a ANNOTATION_LIST
-ANNOTATION_LIST+=(org.apache.hadoop.hbase.classification.InterfaceAudience.Public)
-ANNOTATION_LIST+=(org.apache.hadoop.hbase.classification.InterfaceAudience.LimitedPrivate)
-if ! [ -f ${SCRIPT_DIRECTORY}/target/compatibility/annotations ]; then
-  cat > ${SCRIPT_DIRECTORY}/target/compatibility/annotations << __EOF
-$(tr " " "\n" <<< "${ANNOTATION_LIST[@]}")
-__EOF
-fi
+# Generate one-per-line list of annotations.
+tr " " "\n" <<< "${ANNOTATION_LIST[@]}" > "${SCRIPT_DIRECTORY}/target/compatibility/annotations"
 
 # Generate command line arguments for Java ACC.
 JAVA_ACC_COMMAND+=(-l HBase)
@@ -288,4 +294,5 @@ rm -rf ${SCRIPT_DIRECTORY}/target/compatibility/report
 # compatible, an exit code of 1 if the two versions are not, and several other codes
 # for various errors. See the tool's website for details.
 echo "Running the Java API Compliance Checker..."
-perl ${SCRIPT_DIRECTORY}/target/compatibility/javaACC/japi-compliance-checker.pl ${JAVA_ACC_COMMAND[@]}
+perl "${SCRIPT_DIRECTORY}/target/compatibility/javaACC/japi-compliance-checker.pl" \
+    "${JAVA_ACC_COMMAND[@]}"
