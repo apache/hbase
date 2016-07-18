@@ -189,7 +189,6 @@ public class RecoverableZooKeeper {
               throw e;
 
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "delete");
               break;
@@ -222,7 +221,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "exists");
               break;
@@ -254,7 +252,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "exists");
               break;
@@ -296,7 +293,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getChildren");
               break;
@@ -328,7 +324,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getChildren");
               break;
@@ -361,7 +356,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getData");
               break;
@@ -394,7 +388,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getData");
               break;
@@ -430,7 +423,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "setData");
               break;
@@ -478,7 +470,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getAcl");
               break;
@@ -510,7 +501,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "setAcl");
               break;
@@ -595,7 +585,6 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
-          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
@@ -629,7 +618,6 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
-          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
@@ -685,7 +673,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-            case SESSIONEXPIRED:
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "multi");
               break;
