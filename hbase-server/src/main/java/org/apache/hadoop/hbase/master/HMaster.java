@@ -97,7 +97,6 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -138,8 +137,6 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
-import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -304,7 +301,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   private PeriodicDoMetrics periodicDoMetricsChore = null;
 
   CatalogJanitor catalogJanitorChore;
-  private ReplicationZKLockCleanerChore replicationZKLockCleanerChore;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
@@ -966,17 +962,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
     }
-    if (conf.getClass("hbase.region.replica.replication.replicationQueues.class",
-        ReplicationFactory.defaultReplicationQueueClass) == ReplicationQueuesZKImpl.class && !conf
-        .getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      try {
-        replicationZKLockCleanerChore = new ReplicationZKLockCleanerChore(this, this,
-            cleanerInterval, this.getZooKeeper(), this.conf);
-        getChoreService().scheduleChore(replicationZKLockCleanerChore);
-      } catch (Exception e) {
-        LOG.error("start replicationZKLockCleanerChore failed", e);
-      }
-    }
   }
 
   @Override
@@ -1010,7 +995,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Clean up and close up shop
     if (this.logCleaner != null) this.logCleaner.cancel(true);
     if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
-    if (this.replicationZKLockCleanerChore != null) this.replicationZKLockCleanerChore.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
