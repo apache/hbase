@@ -1736,6 +1736,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
           // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
           .setBloomFilterType(BloomType.NONE)
+          .setCacheDataInL1(true)
          });
     metaDescriptor.addCoprocessor(
       "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
