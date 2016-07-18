@@ -570,10 +570,17 @@ public class FixedFileTrailer {
         comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
       } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
         comparatorClassName = KeyValue.RAW_COMPARATOR.getClass().getName();
+      } else if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
+        // 2.0 based comparators found in class name. Convert it to corresponding Comparators in 1.x
+        // branch. Refer to HBASE-16189
+        comparatorClassName = KeyValue.COMPARATOR.getClass().getName();
+      } else if ((comparatorClassName
+          .equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))) {
+        // Refer to HBASE-16189. Fallback to 1.x comparators
+        comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
       }
 
       // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
-
       return (Class<? extends KVComparator>)
           Class.forName(comparatorClassName);
     } catch (ClassNotFoundException ex) {
