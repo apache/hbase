@@ -440,7 +440,7 @@ public class HTable implements Table {
         connConfiguration.getRetriesNumber(),
         operationTimeout,
         connConfiguration.getPrimaryCallTimeoutMicroSecond());
-    return callable.call();
+    return callable.call(operationTimeout);
   }
 
 

@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -188,7 +189,7 @@ public class RpcRetryingCallerWithReadReplicas {
    * Globally, the number of retries, timeout and so on still applies, but it's per replica,
    * not global. We continue until all retries are done, or all timeouts are exceeded.
    */
-  public synchronized Result call()
+  public Result call(int operationTimeout)
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
     boolean isTargetReplicaSpecified = (get.getReplicaId() >= 0);
 
@@ -221,10 +222,17 @@ public class RpcRetryingCallerWithReadReplicas {
 
     try {
       try {
-        Future<Result> f = cs.take();
-        return f.get();
+        long start = EnvironmentEdgeManager.currentTime();
+        Future<Result> f = cs.poll(operationTimeout, TimeUnit.MILLISECONDS);
+        long duration = EnvironmentEdgeManager.currentTime() - start;
+        if (f == null) {
+          throw new RetriesExhaustedException("timed out after " + duration + " ms");
+        }
+        return f.get(operationTimeout - duration, TimeUnit.MILLISECONDS);
       } catch (ExecutionException e) {
         throwEnrichedException(e, retries);
+      } catch (TimeoutException te) {
+        throw new RetriesExhaustedException("timed out after " + operationTimeout + " ms");
       }
     } catch (CancellationException e) {
       throw new InterruptedIOException();
