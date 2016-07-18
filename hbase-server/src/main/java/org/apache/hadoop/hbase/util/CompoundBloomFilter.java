@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
@@ -70,8 +71,15 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     totalKeyCount = meta.readLong();
     totalMaxKeys = meta.readLong();
     numChunks = meta.readInt();
-    comparator = FixedFileTrailer.createComparator(
-        Bytes.toString(Bytes.readByteArray(meta)));
+    byte[] comparatorClassName = Bytes.readByteArray(meta);
+    if (comparatorClassName.length != 0) {
+      comparator = FixedFileTrailer.createComparator(Bytes.toString(comparatorClassName));
+    } else {
+      // Fallback. In 2.0 we will not write the RAW_COMPARATOR name. So when reading back such meta
+      // data. Refer to HBASE-16189
+      // we set the comparator to RAW_COMPARATOR
+      comparator = KeyValue.RAW_COMPARATOR;
+    }
 
     hash = Hash.getInstance(hashType);
     if (hash == null) {
