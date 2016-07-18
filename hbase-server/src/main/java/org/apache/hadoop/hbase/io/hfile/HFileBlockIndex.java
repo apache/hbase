@@ -270,6 +270,7 @@ public class HFileBlockIndex {
     public Cell getRootBlockKey(int i) {
       return blockKeys[i];
     }
+
     @Override
     public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
         boolean cacheBlocks, boolean pread, boolean isCompaction,
