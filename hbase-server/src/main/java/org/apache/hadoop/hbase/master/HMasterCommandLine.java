@@ -219,6 +219,8 @@ public class HMasterCommandLine extends ServerCommandLine {
         // Run a subclass that does the zk cluster shutdown on its way out.
         int mastersCount = conf.getInt("hbase.masters", 1);
         int regionServersCount = conf.getInt("hbase.regionservers", 1);
+        // Set start timeout to 5 minutes for cmd line start operations
+        conf.setIfUnset("hbase.master.start.timeout.localHBaseCluster", "300000");
         LOG.info("Starting up instance of localHBaseCluster; master=" + mastersCount +
           ", regionserversCount=" + regionServersCount);
         LocalHBaseCluster cluster = new LocalHBaseCluster(conf, mastersCount, regionServersCount,
