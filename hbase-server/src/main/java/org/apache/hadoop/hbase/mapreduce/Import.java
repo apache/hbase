@@ -602,7 +602,7 @@ public class Import {
     try {
       Class<? extends Filter> filter = conf.getClass(FILTER_CLASS_CONF_KEY, null, Filter.class);
       if (filter != null) {
-        TableMapReduceUtil.addDependencyJars(conf, filter);
+        TableMapReduceUtil.addDependencyJarsForClasses(conf, filter);
       }
     } catch (Exception e) {
       throw new IOException(e);
@@ -629,7 +629,7 @@ public class Import {
         fs.deleteOnExit(partitionsPath);
         job.setPartitionerClass(KeyValueWritableComparablePartitioner.class);
         job.setNumReduceTasks(regionLocator.getStartKeys().length);
-        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+        TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             com.google.common.base.Preconditions.class);
       }
     } else if (hfileOutPath != null) {
@@ -643,7 +643,7 @@ public class Import {
         job.setMapOutputKeyClass(ImmutableBytesWritable.class);
         job.setMapOutputValueClass(KeyValue.class);
         HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
-        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+        TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             com.google.common.base.Preconditions.class);
       }
     } else {

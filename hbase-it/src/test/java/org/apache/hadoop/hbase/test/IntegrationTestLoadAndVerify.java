@@ -348,7 +348,7 @@ public void cleanUpCluster() throws Exception {
 
     TableMapReduceUtil.addDependencyJars(job);
 
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+    TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     TableMapReduceUtil.initCredentials(job);
     assertTrue(job.waitForCompletion(true));
     return job;
@@ -372,7 +372,7 @@ public void cleanUpCluster() throws Exception {
     TableMapReduceUtil.initTableMapperJob(
         htd.getTableName().getNameAsString(), scan, VerifyMapper.class,
         BytesWritable.class, BytesWritable.class, job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+    TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
 

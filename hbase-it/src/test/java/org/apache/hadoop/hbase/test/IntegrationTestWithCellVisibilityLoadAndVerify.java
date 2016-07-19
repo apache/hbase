@@ -330,7 +330,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     scan.setAuthorizations(new Authorizations(auths));
     TableMapReduceUtil.initTableMapperJob(htd.getTableName().getNameAsString(), scan,
         VerifyMapper.class, NullWritable.class, NullWritable.class, job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+    TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
     job.setNumReduceTasks(0);

@@ -71,7 +71,7 @@ This example assumes you use a BASH-compatible shell.
 $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-server-VERSION.jar rowcounter usertable
 ----
 
-When the command runs, internally, the HBase JAR finds the dependencies it needs for ZooKeeper, Guava, and its other dependencies on the passed `HADOOP_CLASSPATH` and adds the JARs to the MapReduce job configuration.
+When the command runs, internally, the HBase JAR finds the dependencies it needs and adds them to the MapReduce job configuration.
 See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done.
 
 The command `hbase mapredcp` can also help you dump the CLASSPATH entries required by MapReduce, which are the same jars `TableMapReduceUtil#addDependencyJars` would add.
