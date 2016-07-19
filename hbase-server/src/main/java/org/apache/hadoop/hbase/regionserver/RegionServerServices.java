@@ -81,6 +81,11 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   RegionServerQuotaManager getRegionServerQuotaManager();
 
   /**
+   * @return RegionServer's instance of {@link SecureBulkLoadManager}
+   */
+  SecureBulkLoadManager getSecureBulkLoadManager();
+
+  /**
    * Context for postOpenDeployTasks().
    */
   class PostOpenDeployContext {

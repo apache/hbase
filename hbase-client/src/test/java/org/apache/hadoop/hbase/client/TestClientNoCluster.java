@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -63,6 +65,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
@@ -476,6 +480,18 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public CoprocessorServiceResponse execRegionServerService(RpcController controller,
         CoprocessorServiceRequest request) throws ServiceException {
+      throw new NotImplementedException();
+    }
+
+    @Override
+    public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
+        PrepareBulkLoadRequest request) throws ServiceException {
+      throw new NotImplementedException();
+    }
+
+    @Override
+    public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
+        CleanupBulkLoadRequest request) throws ServiceException {
       throw new NotImplementedException();
     }
   }

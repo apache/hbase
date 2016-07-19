@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.client.coprocessor;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +32,11 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos;
 import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -39,14 +44,15 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 
 /**
- * Client proxy for SecureBulkLoadProtocol
- * used in conjunction with SecureBulkLoadEndpoint
+ * Client proxy for SecureBulkLoadProtocol used in conjunction with SecureBulkLoadEndpoint
+ * @deprecated Use for backward compatibility testing only. Will be removed when
+ *             SecureBulkLoadEndpoint is not supported.
  */
 @InterfaceAudience.Private
-public class SecureBulkLoadClient {
+public class SecureBulkLoadEndpointClient {
   private Table table;
 
-  public SecureBulkLoadClient(Table table) {
+  public SecureBulkLoadEndpointClient(Table table) {
     this.table = table;
   }
 
@@ -58,22 +64,22 @@ public class SecureBulkLoadClient {
 
       ServerRpcController controller = new ServerRpcController();
 
-      BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse> rpcCallback =
-          new BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse>();
+      BlockingRpcCallback<PrepareBulkLoadResponse> rpcCallback =
+          new BlockingRpcCallback<PrepareBulkLoadResponse>();
 
-      SecureBulkLoadProtos.PrepareBulkLoadRequest request =
-          SecureBulkLoadProtos.PrepareBulkLoadRequest.newBuilder()
+      PrepareBulkLoadRequest request =
+          PrepareBulkLoadRequest.newBuilder()
           .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
 
       instance.prepareBulkLoad(controller,
           request,
           rpcCallback);
 
-      SecureBulkLoadProtos.PrepareBulkLoadResponse response = rpcCallback.get();
+      PrepareBulkLoadResponse response = rpcCallback.get();
       if (controller.failedOnException()) {
         throw controller.getFailedOn();
       }
-      
+
       return response.getBulkToken();
     } catch (Throwable throwable) {
       throw new IOException(throwable);
@@ -88,11 +94,11 @@ public class SecureBulkLoadClient {
 
       ServerRpcController controller = new ServerRpcController();
 
-      BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse> rpcCallback =
-          new BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse>();
+      BlockingRpcCallback<CleanupBulkLoadResponse> rpcCallback =
+          new BlockingRpcCallback<CleanupBulkLoadResponse>();
 
-      SecureBulkLoadProtos.CleanupBulkLoadRequest request =
-          SecureBulkLoadProtos.CleanupBulkLoadRequest.newBuilder()
+      CleanupBulkLoadRequest request =
+          CleanupBulkLoadRequest.newBuilder()
               .setBulkToken(bulkToken).build();
 
       instance.cleanupBulkLoad(controller,
@@ -118,11 +124,11 @@ public class SecureBulkLoadClient {
       SecureBulkLoadProtos.SecureBulkLoadService instance =
           ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
-      SecureBulkLoadProtos.DelegationToken protoDT =
-          SecureBulkLoadProtos.DelegationToken.newBuilder().build();
+      DelegationToken protoDT =
+          DelegationToken.newBuilder().build();
       if(userToken != null) {
         protoDT =
-            SecureBulkLoadProtos.DelegationToken.newBuilder()
+            DelegationToken.newBuilder()
               .setIdentifier(ByteStringer.wrap(userToken.getIdentifier()))
               .setPassword(ByteStringer.wrap(userToken.getPassword()))
               .setKind(userToken.getKind().toString())

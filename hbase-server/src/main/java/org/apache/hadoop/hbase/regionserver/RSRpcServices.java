@@ -134,6 +134,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -147,6 +149,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
@@ -2042,25 +2046,68 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       Region region = getRegion(request.getRegion());
-      List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
-      for (FamilyPath familyPath: request.getFamilyPathList()) {
-        familyPaths.add(new Pair<byte[], String>(familyPath.getFamily().toByteArray(),
-          familyPath.getPath()));
-      }
       boolean bypass = false;
-      if (region.getCoprocessorHost() != null) {
-        bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
-      }
       boolean loaded = false;
-      if (!bypass) {
-        loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null);
-      }
-      if (region.getCoprocessorHost() != null) {
-        loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+
+      if (!request.hasBulkToken()) {
+        // Old style bulk load. This will not be supported in future releases
+        List<Pair<byte[], String>> familyPaths =
+            new ArrayList<Pair<byte[], String>>(request.getFamilyPathCount());
+        for (FamilyPath familyPath : request.getFamilyPathList()) {
+          familyPaths.add(new Pair<byte[], String>(familyPath.getFamily().toByteArray(), familyPath
+              .getPath()));
+        }
+        if (region.getCoprocessorHost() != null) {
+          bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+        }
+        if (!bypass) {
+          loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null);
+        }
+        if (region.getCoprocessorHost() != null) {
+          loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+        }
+      } else {
+        // secure bulk load
+        loaded = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
       builder.setLoaded(loaded);
       return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
+      PrepareBulkLoadRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+
+      Region region = getRegion(request.getRegion());
+
+      String bulkToken = regionServer.secureBulkLoadManager.prepareBulkLoad(region, request);
+      PrepareBulkLoadResponse.Builder builder = PrepareBulkLoadResponse.newBuilder();
+      builder.setBulkToken(bulkToken);
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
+      CleanupBulkLoadRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+
+      Region region = getRegion(request.getRegion());
+
+      regionServer.secureBulkLoadManager.cleanupBulkLoad(region, request);
+      CleanupBulkLoadResponse response = CleanupBulkLoadResponse.newBuilder().build();
+      return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -2930,4 +2977,5 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     return UpdateConfigurationResponse.getDefaultInstance();
   }
+
 }

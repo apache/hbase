@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -316,7 +317,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ClusterConnection getClusterConnection() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -332,6 +332,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public MetricsRegionServer getMetrics() {
+    return null;
+  }
+
+  @Override
+  public SecureBulkLoadManager getSecureBulkLoadManager() {
     return null;
   }
 }

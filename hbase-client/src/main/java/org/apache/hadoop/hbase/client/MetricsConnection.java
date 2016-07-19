@@ -444,14 +444,22 @@ public class MetricsConnection implements StatisticTrackable {
         // use generic implementation
         break;
       case 4:
-        assert "ExecService".equals(method.getName());
+        assert "PrepareBulkLoad".equals(method.getName());
         // use generic implementation
         break;
       case 5:
-        assert "ExecRegionServerService".equals(method.getName());
+        assert "CleanupBulkLoad".equals(method.getName());
         // use generic implementation
         break;
       case 6:
+        assert "ExecService".equals(method.getName());
+        // use generic implementation
+        break;
+      case 7:
+        assert "ExecRegionServerService".equals(method.getName());
+        // use generic implementation
+        break;
+      case 8:
         assert "Multi".equals(method.getName());
         multiTracker.updateRpc(stats);
         return;

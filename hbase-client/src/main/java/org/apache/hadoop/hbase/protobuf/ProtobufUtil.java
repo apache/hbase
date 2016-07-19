@@ -108,8 +108,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionReques
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -1578,30 +1576,6 @@ public final class ProtobufUtil {
 
 // Start helpers for Client
 
-  /**
-   * A helper to bulk load a list of HFiles using client protocol.
-   *
-   * @param client
-   * @param familyPaths
-   * @param regionName
-   * @param assignSeqNum
-   * @return true if all are loaded
-   * @throws IOException
-   */
-  public static boolean bulkLoadHFile(final ClientService.BlockingInterface client,
-      final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName, boolean assignSeqNum) throws IOException {
-    BulkLoadHFileRequest request =
-      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum);
-    try {
-      BulkLoadHFileResponse response =
-        client.bulkLoadHFile(null, request);
-      return response.getLoaded();
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
   public static CoprocessorServiceResponse execService(final RpcController controller,
       final ClientService.BlockingInterface client, final CoprocessorServiceCall call,
       final byte[] regionName) throws IOException {
@@ -1618,8 +1592,8 @@ public final class ProtobufUtil {
   }
 
   public static CoprocessorServiceResponse execService(final RpcController controller,
-    final MasterService.BlockingInterface client, final CoprocessorServiceCall call)
-  throws IOException {
+      final MasterService.BlockingInterface client, final CoprocessorServiceCall call)
+      throws IOException {
     CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
         .setCall(call).setRegion(
            RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY)).build();

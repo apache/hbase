@@ -337,6 +337,8 @@ message BulkLoadHFileRequest {
   required RegionSpecifier region = 1;
   repeated FamilyPath family_path = 2;
   optional bool assign_seq_num = 3;
+  optional DelegationToken fs_token = 4;
+  optional string bulk_token = 5;
 
   message FamilyPath {
     required bytes family = 1;
@@ -346,6 +348,30 @@ message BulkLoadHFileRequest {
 
 message BulkLoadHFileResponse {
   required bool loaded = 1;
+}
+
+message DelegationToken {
+  optional bytes identifier = 1;
+  optional bytes password = 2;
+  optional string kind = 3;
+  optional string service = 4;
+}
+
+message PrepareBulkLoadRequest {
+  required TableName table_name = 1;
+  optional RegionSpecifier region = 2;
+}
+
+message PrepareBulkLoadResponse {
+  required string bulk_token = 1;
+}
+
+message CleanupBulkLoadRequest {
+  required string bulk_token = 1;
+  optional RegionSpecifier region = 2;
+}
+
+message CleanupBulkLoadResponse {
 }
 
 message CoprocessorServiceCall {
@@ -466,6 +492,12 @@ service ClientService {
 
   rpc BulkLoadHFile(BulkLoadHFileRequest)
     returns(BulkLoadHFileResponse);
+
+  rpc PrepareBulkLoad(PrepareBulkLoadRequest)
+    returns (PrepareBulkLoadResponse);
+
+  rpc CleanupBulkLoad(CleanupBulkLoadRequest)
+    returns (CleanupBulkLoadResponse);
 
   rpc ExecService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);

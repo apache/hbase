@@ -1080,6 +1080,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     createRootDir(create);
 
+    // Set the hbase.fs.tmp.dir config to make sure that we have some default value. This is
+    // for tests that do not read hbase-defaults.xml
+    setHBaseFsTmpDir();
+
     // These settings will make the server waits until this exact number of
     // regions servers are connected.
     if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1) == -1) {
@@ -1103,10 +1107,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     getAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up");
-
-    // Set the hbase.fs.tmp.dir config to make sure that we have some default value. This is
-    // for tests that do not read hbase-defaults.xml
-    setHBaseFsTmpDir();
 
     return (MiniHBaseCluster)this.hbaseCluster;
   }
@@ -1278,6 +1278,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } else {
       LOG.info("The hbase.fs.tmp.dir is set to " + hbaseFsTmpDirInString);
     }
+    this.conf.set("hbase.bulkload.staging.dir", this.conf.get("hbase.fs.tmp.dir"));
   }
 
   /**

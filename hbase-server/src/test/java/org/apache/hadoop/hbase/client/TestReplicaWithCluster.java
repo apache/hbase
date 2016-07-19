@@ -35,8 +35,6 @@ import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -336,16 +334,21 @@ public class TestReplicaWithCluster {
     LOG.debug("Loading test data");
     @SuppressWarnings("deprecation")
     final ClusterConnection conn = (ClusterConnection) HTU.getAdmin().getConnection();
+    table = conn.getTable(hdt.getTableName());
+    final String bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(conn);
     RegionServerCallable<Void> callable = new RegionServerCallable<Void>(
       conn, hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0)) {
         @Override
         public Void call(int timeout) throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
             + Bytes.toStringBinary(getRow()));
+          SecureBulkLoadClient secureClient = null;
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          BulkLoadHFileRequest request =
-            RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName, true);
-          getStub().bulkLoadHFile(null, request);
+          try (Table table = conn.getTable(getTableName())) {
+            secureClient = new SecureBulkLoadClient(table);
+            secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
+                  true, null, bulkToken);
+          }
           return null;
         }
       };

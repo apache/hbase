@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.protobuf;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodes
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
@@ -103,8 +103,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ReleaseSplitOrMergeLockAndRollbackRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
 
@@ -526,19 +527,41 @@ public final class RequestConverter {
    */
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
       final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName, boolean assignSeqNum) {
-    BulkLoadHFileRequest.Builder builder = BulkLoadHFileRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
+      final byte[] regionName, boolean assignSeqNum,
+      final Token<?> userToken, final String bulkToken) {
+    RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-    FamilyPath.Builder familyPathBuilder = FamilyPath.newBuilder();
-    for (Pair<byte[], String> familyPath: familyPaths) {
-      familyPathBuilder.setFamily(ByteStringer.wrap(familyPath.getFirst()));
-      familyPathBuilder.setPath(familyPath.getSecond());
-      builder.addFamilyPath(familyPathBuilder.build());
+
+    ClientProtos.DelegationToken protoDT = null;
+    if (userToken != null) {
+      protoDT =
+          ClientProtos.DelegationToken.newBuilder()
+            .setIdentifier(ByteStringer.wrap(userToken.getIdentifier()))
+            .setPassword(ByteStringer.wrap(userToken.getPassword()))
+            .setKind(userToken.getKind().toString())
+            .setService(userToken.getService().toString()).build();
     }
-    builder.setAssignSeqNum(assignSeqNum);
-    return builder.build();
+
+    List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
+        new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>(familyPaths.size());
+    for(Pair<byte[], String> el: familyPaths) {
+      protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
+        .setFamily(ByteStringer.wrap(el.getFirst()))
+        .setPath(el.getSecond()).build());
+    }
+
+    BulkLoadHFileRequest.Builder request =
+        ClientProtos.BulkLoadHFileRequest.newBuilder()
+          .setRegion(region)
+          .setAssignSeqNum(assignSeqNum)
+          .addAllFamilyPath(protoFamilyPaths);
+    if (userToken != null) {
+      request.setFsToken(protoDT);
+    }
+    if (bulkToken != null) {
+      request.setBulkToken(bulkToken);
+    }
+    return request.build();
   }
 
   /**

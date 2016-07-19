@@ -74,8 +74,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -87,7 +87,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -323,6 +322,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // LQI queue does not need to be threadsafe -- all operations on this queue
     // happen in this thread
     Deque<LoadQueueItem> queue = new LinkedList<>();
+    SecureBulkLoadClient secureClient =  new SecureBulkLoadClient(table);
+
     try {
       /*
        * Checking hfile format is a time-consuming operation, we should have an option to skip
@@ -346,13 +347,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         return;
       }
 
+      if(isSecureBulkLoadEndpointAvailable()) {
+        LOG.warn("SecureBulkLoadEndpoint is deprecated. It will be removed in future releases.");
+        LOG.warn("Secure bulk load has been integrated into HBase core.");
+      }
+
       //If using secure bulk load, get source delegation token, and
       //prepare staging directory and token
       // fs is the source filesystem
       fsDelegationToken.acquireDelegationToken(fs);
-      if(isSecureBulkLoadEndpointAvailable()) {
-        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
-      }
+      bulkToken = secureClient.prepareBulkLoad(admin.getConnection());
 
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
@@ -391,7 +395,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     } finally {
       fsDelegationToken.releaseDelegationToken();
       if(bulkToken != null) {
-        new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
+        secureClient.cleanupBulkLoad(admin.getConnection(), bulkToken);
       }
       pool.shutdown();
       if (queue != null && !queue.isEmpty()) {
@@ -789,21 +793,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
               + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          if (!isSecureBulkLoadEndpointAvailable()) {
-            success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
-          } else {
-            try (Table table = conn.getTable(getTableName())) {
-              secureClient = new SecureBulkLoadClient(table);
-              success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
-                bulkToken, getLocation().getRegionInfo().getStartKey());
-            }
+          try (Table table = conn.getTable(getTableName())) {
+            secureClient = new SecureBulkLoadClient(table);
+            success =
+                secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
+                  assignSeqIds, fsDelegationToken.getUserToken(), bulkToken);
           }
           return success;
         } finally {
           //Best effort copying of files that might not have been imported
           //from the staging directory back to original location
           //in user directory
-          if(secureClient != null && !success) {
+          if (secureClient != null && !success) {
             FileSystem targetFs = FileSystem.get(getConf());
          // fs is the source filesystem
             if(fs == null) {

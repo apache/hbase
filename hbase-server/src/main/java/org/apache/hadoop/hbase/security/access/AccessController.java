@@ -95,10 +95,10 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest;
-import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -2145,7 +2145,7 @@ public class AccessController extends BaseMasterAndRegionObserver
    */
   @Override
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                                 PrepareBulkLoadRequest request) throws IOException {
+      PrepareBulkLoadRequest request) throws IOException {
     requireAccess("prePareBulkLoad",
         ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }
@@ -2159,7 +2159,7 @@ public class AccessController extends BaseMasterAndRegionObserver
    */
   @Override
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                                 CleanupBulkLoadRequest request) throws IOException {
+      CleanupBulkLoadRequest request) throws IOException {
     requireAccess("preCleanupBulkLoad",
         ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }

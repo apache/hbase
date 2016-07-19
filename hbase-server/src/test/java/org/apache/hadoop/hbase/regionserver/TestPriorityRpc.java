@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -61,6 +61,8 @@ public class TestPriorityRpc {
   public void setup() {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.testing.nocluster", true); // No need to do ZK
+    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.getDataTestDir(this.getClass().getName());
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf, cp);
     priority = regionServer.rpcServices.getPriority();

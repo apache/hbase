@@ -37,29 +37,6 @@ message SecureBulkLoadHFilesResponse {
   required bool loaded = 1;
 }
 
-message DelegationToken {
-  optional bytes identifier = 1;
-  optional bytes password = 2;
-  optional string kind = 3;
-  optional string service = 4;
-}
-
-message PrepareBulkLoadRequest {
-  required TableName table_name = 1;
-}
-
-message PrepareBulkLoadResponse {
-  required string bulk_token = 1;
-}
-
-message CleanupBulkLoadRequest {
-  required string bulk_token = 1;
-
-}
-
-message CleanupBulkLoadResponse {
-}
-
 service SecureBulkLoadService {
     rpc PrepareBulkLoad(PrepareBulkLoadRequest)
       returns (PrepareBulkLoadResponse);
