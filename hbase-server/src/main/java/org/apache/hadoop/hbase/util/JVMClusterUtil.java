@@ -168,11 +168,14 @@ public class JVMClusterUtil {
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
       final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
 
+    Configuration configuration = null;
+
     if (masters == null || masters.isEmpty()) {
       return null;
     }
 
     for (JVMClusterUtil.MasterThread t : masters) {
+      configuration = t.getMaster().getConfiguration();
       t.start();
     }
 
@@ -185,8 +188,10 @@ public class JVMClusterUtil {
         Thread.sleep(100);
       } catch (InterruptedException ignored) {
       }
-      if (System.currentTimeMillis() > startTime + 30000) {
-        throw new RuntimeException("Master not active after 30 seconds");
+      int startTimeout = configuration != null ? Integer.parseInt(
+        configuration.get("hbase.master.start.timeout.localHBaseCluster", "30000")) : 30000;
+      if (System.currentTimeMillis() > startTime + startTimeout) {
+        throw new RuntimeException(String.format("Master not active after %s seconds", startTimeout));
       }
     }
 

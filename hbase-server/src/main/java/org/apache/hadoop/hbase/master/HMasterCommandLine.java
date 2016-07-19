@@ -181,10 +181,16 @@ public class HMasterCommandLine extends ServerCommandLine {
         int localZKClusterSessionTimeout =
             conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
         conf.setInt(HConstants.ZK_SESSION_TIMEOUT, localZKClusterSessionTimeout);
+        int mastersCount = conf.getInt("hbase.masters", 1);
+        int regionServersCount = conf.getInt("hbase.regionservers", 1);
+        // Set start timeout to 5 minutes for cmd line start operations
+        conf.setIfUnset("hbase.master.start.timeout.localHBaseCluster", "300000");
+        LOG.info("Starting up instance of localHBaseCluster; master=" + mastersCount +
+          ", regionserversCount=" + regionServersCount);
+        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, mastersCount, regionServersCount,
+          LocalHMaster.class, HRegionServer.class);
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
-        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
-          conf.getInt("hbase.regionservers", 1), LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);
