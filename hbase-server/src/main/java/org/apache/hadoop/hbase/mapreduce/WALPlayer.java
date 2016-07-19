@@ -282,7 +282,7 @@ public class WALPlayer extends Configured implements Tool {
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
         HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
       }
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
           com.google.common.base.Preconditions.class);
     } else {
       // output to live cluster
@@ -295,7 +295,7 @@ public class WALPlayer extends Configured implements Tool {
     }
     String codecCls = WALCellCodec.getWALCellCodecClass(conf);
     try {
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Class.forName(codecCls));
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), Class.forName(codecCls));
     } catch (Exception e) {
       throw new IOException("Cannot determine wal codec class " + codecCls, e);
     }

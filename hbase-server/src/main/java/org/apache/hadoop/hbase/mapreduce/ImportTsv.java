@@ -587,7 +587,7 @@ public class ImportTsv extends Configured implements Tool {
               KeyValueSerialization.class.getName());
         }
         TableMapReduceUtil.addDependencyJars(job);
-        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+        TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             com.google.common.base.Function.class /* Guava used by TsvParser */);
       }
     }
