@@ -1103,14 +1103,19 @@ public final class RequestConverter {
   }
 
   public static DispatchMergingRegionsRequest buildDispatchMergingRegionsRequest(
-      final byte[] encodedNameOfRegionA, final byte[] encodedNameOfRegionB,
-      final boolean forcible) throws DeserializationException {
+      final byte[] encodedNameOfRegionA,
+      final byte[] encodedNameOfRegionB,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws DeserializationException {
     DispatchMergingRegionsRequest.Builder builder = DispatchMergingRegionsRequest.newBuilder();
     builder.setRegionA(buildRegionSpecifier(
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionA));
     builder.setRegionB(buildRegionSpecifier(
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionB));
     builder.setForcible(forcible);
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
     return builder.build();
   }
 

@@ -1189,8 +1189,12 @@ public class TestAdmin1 {
     // Try going to the master directly (that will skip the check in admin)
     try {
       DispatchMergingRegionsRequest request = RequestConverter
-          .buildDispatchMergingRegionsRequest(regions.get(1).getFirst().getEncodedNameAsBytes(),
-              regions.get(2).getFirst().getEncodedNameAsBytes(), true);
+          .buildDispatchMergingRegionsRequest(
+            regions.get(1).getFirst().getEncodedNameAsBytes(),
+            regions.get(2).getFirst().getEncodedNameAsBytes(),
+            true,
+            HConstants.NO_NONCE,
+            HConstants.NO_NONCE);
       ((ClusterConnection) TEST_UTIL.getAdmin().getConnection()).getMaster()
         .dispatchMergingRegions(null, request);
     } catch (ServiceException m) {

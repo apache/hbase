@@ -1614,7 +1614,7 @@ public class HBaseAdmin implements Admin {
     }
 
     DispatchMergingRegionsResponse response =
-    executeCallable(new MasterCallable<DispatchMergingRegionsResponse>(getConnection()) {
+      executeCallable(new MasterCallable<DispatchMergingRegionsResponse>(getConnection()) {
       @Override
       public DispatchMergingRegionsResponse call(int callTimeout) throws ServiceException {
         PayloadCarryingRpcController controller = rpcControllerFactory.newController();
@@ -1622,8 +1622,12 @@ public class HBaseAdmin implements Admin {
 
         try {
           DispatchMergingRegionsRequest request = RequestConverter
-              .buildDispatchMergingRegionsRequest(encodedNameOfRegionA,
-                encodedNameOfRegionB, forcible);
+              .buildDispatchMergingRegionsRequest(
+                encodedNameOfRegionA,
+                encodedNameOfRegionB,
+                forcible,
+                ng.getNonceGroup(),
+                ng.newNonce());
           return master.dispatchMergingRegions(controller, request);
         } catch (DeserializationException de) {
           LOG.error("Could not parse destination server name: " + de);
