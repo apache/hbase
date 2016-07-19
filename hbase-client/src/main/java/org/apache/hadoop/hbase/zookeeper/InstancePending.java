@@ -45,7 +45,7 @@ class InstancePending<T> {
 
   /**
    * Returns the instance given by the method {@link #prepare}.
-   * This is an interruptible blocking method
+   * This is an uninterruptible blocking method
    * and the interruption flag will be set just before returning if any.
    */
   T get() {
