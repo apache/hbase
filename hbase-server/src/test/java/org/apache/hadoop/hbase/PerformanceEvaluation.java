@@ -498,7 +498,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     TextOutputFormat.setOutputPath(job, new Path(inputDir.getParent(), "outputs"));
 
     TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+    TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
       Histogram.class,     // yammer metrics
       ObjectMapper.class); // jackson-mapper-asl
 

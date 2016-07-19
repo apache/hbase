@@ -778,7 +778,7 @@ public class TableMapReduceUtil {
           "  Continuing without it.");
     }
 
-    addDependencyJars(conf,
+    addDependencyJarsForClasses(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
@@ -826,7 +826,7 @@ public class TableMapReduceUtil {
   public static void addDependencyJars(Job job) throws IOException {
     addHBaseDependencyJars(job.getConfiguration());
     try {
-      addDependencyJars(job.getConfiguration(),
+      addDependencyJarsForClasses(job.getConfiguration(),
           // when making changes here, consider also mapred.TableMapReduceUtil
           // pull job classes
           job.getMapOutputKeyClass(),
@@ -846,8 +846,32 @@ public class TableMapReduceUtil {
    * Add the jars containing the given classes to the job's configuration
    * such that JobClient will ship them to the cluster and add them to
    * the DistributedCache.
+   * @deprecated rely on {@link #addDependencyJars(Job)} instead.
    */
+  @Deprecated
   public static void addDependencyJars(Configuration conf,
+      Class<?>... classes) throws IOException {
+    LOG.warn("The addDependencyJars(Configuration, Class<?>...) method has been deprecated since it"
+             + " is easy to use incorrectly. Most users should rely on addDependencyJars(Job) " +
+             "instead. See HBASE-8386 for more details.");
+    addDependencyJarsForClasses(conf, classes);
+  }
+
+  /**
+   * Add the jars containing the given classes to the job's configuration
+   * such that JobClient will ship them to the cluster and add them to
+   * the DistributedCache.
+   *
+   * N.B. that this method at most adds one jar per class given. If there is more than one
+   * jar available containing a class with the same name as a given class, we don't define
+   * which of those jars might be chosen.
+   *
+   * @param conf The Hadoop Configuration to modify
+   * @param classes will add just those dependencies needed to find the given classes
+   * @throws IOException if an underlying library call fails.
+   */
+  @InterfaceAudience.Private
+  public static void addDependencyJarsForClasses(Configuration conf,
       Class<?>... classes) throws IOException {
 
     FileSystem localFs = FileSystem.getLocal(conf);

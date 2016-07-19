@@ -242,7 +242,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       JobConf jobConf = new JobConf(util.getConfiguration());
 
       jobConf.setJarByClass(util.getClass());
-      org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(jobConf,
+      org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(jobConf,
         TestTableSnapshotInputFormat.class);
 
       TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,

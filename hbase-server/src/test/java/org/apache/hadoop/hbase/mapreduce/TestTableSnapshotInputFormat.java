@@ -275,7 +275,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Scan scan = new Scan(startRow, endRow); // limit the scan
 
       job.setJarByClass(util.getClass());
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
         TestTableSnapshotInputFormat.class);
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
