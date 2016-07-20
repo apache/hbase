@@ -203,6 +203,27 @@
                           <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>
                           <include>ZooKeeper.proto</include>
+                          <include>SparkFilter.proto</include>
+                          <include>ColumnAggregationNullResponseProtocol.proto</include>
+                          <include>ColumnAggregationProtocol.proto</include>
+                          <include>ColumnAggregationWithErrorsProtocol.proto</include>
+                          <include>DummyRegionServerEndpoint.proto</include>
+                          <include>IncrementCounterProcessor.proto</include>
+                          <include>PingProtocol.proto</include>
+                          <include>TestProcedure.proto</include>
+                          <include>test.proto</include>
+                          <include>test_rpc_service.proto</include>
+                          <include>CellMessage.proto</include>
+                          <include>CellSetMessage.proto</include>
+                          <include>ColumnSchemaMessage.proto</include>
+                          <include>NamespacePropertiesMessage.proto</include>
+                          <include>NamespacesMessage.proto</include>
+                          <include>ScannerMessage.proto</include>
+                          <include>StorageClusterStatusMessage.proto</include>
+                          <include>TableInfoMessage.proto</include>
+                          <include>TableListMessage.proto</include>
+                          <include>TableSchemaMessage.proto</include>
+                          <include>VersionMessage.proto</include>
                         </includes>
                       </source>
                       <!--<output>${project.build.directory}/generated-sources/java</output>-->

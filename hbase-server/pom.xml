@@ -859,50 +859,5 @@
         </plugins>
       </build>
     </profile>
-    <profile>
-      <id>compile-protobuf</id>
-      <activation>
-        <property>
-          <name>compile-protobuf</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <executions>
-              <execution>
-                <id>compile-test-protoc</id>
-                <phase>generate-test-sources</phase>
-                <goals>
-                  <goal>protoc</goal>
-                </goals>
-                <configuration>
-                  <imports>
-                    <param>${basedir}/src/test/protobuf</param>
-                  </imports>
-                  <source>
-                    <directory>${basedir}/src/test/protobuf</directory>
-                    <includes>
-                      <include>ColumnAggregationNullResponseProtocol.proto</include>
-                      <include>ColumnAggregationProtocol.proto</include>
-                      <include>ColumnAggregationWithErrorsProtocol.proto</include>
-                      <include>DummyRegionServerEndpoint.proto</include>
-                      <include>IncrementCounterProcessor.proto</include>
-                      <include>PingProtocol.proto</include>
-                      <include>TestProcedure.proto</include>
-                      <include>test.proto</include>
-                      <include>test_rpc_service.proto</include>
-                    </includes>
-                  </source>
-                 <output>${basedir}/src/test/java/</output>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
   </profiles>
 </project>

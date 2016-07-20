@@ -663,43 +663,5 @@
                 <surefire.skipSecondPart>true</surefire.skipSecondPart>
             </properties>
         </profile>
-        <profile>
-            <id>compile-protobuf</id>
-            <activation>
-                <property>
-                    <name>compile-protobuf</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.hadoop</groupId>
-                        <artifactId>hadoop-maven-plugins</artifactId>
-                        <executions>
-                            <execution>
-                                <id>compile-protoc</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>protoc</goal>
-                                </goals>
-                                <configuration>
-                                    <imports>
-                                        <param>${basedir}/src/main/protobuf</param>
-                                    </imports>
-                                    <source>
-                                        <directory>${basedir}/src/main/protobuf</directory>
-                                        <includes>
-                                            <include>Filter.proto</include>
-                                        </includes>
-                                    </source>
-                                    <!--<output>${project.build.directory}/generated-sources/java</output>-->
-                                    <output>${basedir}/src/main/java/</output>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
     </profiles>
 </project>

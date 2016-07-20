@@ -21953,7 +21953,7 @@ public final class ClientProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -21969,7 +21969,7 @@ public final class ClientProtos {
         getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         bulkToken_ = b;
@@ -22926,7 +22926,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.DelegationToken fs_token = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationTokenOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationTokenOrBuilder> 
           getFsTokenFieldBuilder() {
         if (fsTokenBuilder_ == null) {
           fsTokenBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -22968,7 +22968,7 @@ public final class ClientProtos {
           getBulkTokenBytes() {
         java.lang.Object ref = bulkToken_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           bulkToken_ = b;
@@ -23397,7 +23397,7 @@ public final class ClientProtos {
 
       public final boolean isInitialized() {
         if (!hasLoaded()) {
-
+          
           return false;
         }
         return true;
@@ -23679,7 +23679,7 @@ public final class ClientProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -23695,7 +23695,7 @@ public final class ClientProtos {
         getKindBytes() {
       java.lang.Object ref = kind_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         kind_ = b;
@@ -23722,7 +23722,7 @@ public final class ClientProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -23738,7 +23738,7 @@ public final class ClientProtos {
         getServiceBytes() {
       java.lang.Object ref = service_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         service_ = b;
@@ -24196,7 +24196,7 @@ public final class ClientProtos {
           getKindBytes() {
         java.lang.Object ref = kind_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           kind_ = b;
@@ -24270,7 +24270,7 @@ public final class ClientProtos {
           getServiceBytes() {
         java.lang.Object ref = service_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           service_ = b;
@@ -24820,16 +24820,16 @@ public final class ClientProtos {
 
       public final boolean isInitialized() {
         if (!hasTableName()) {
-
+          
           return false;
         }
         if (!getTableName().isInitialized()) {
-
+          
           return false;
         }
         if (hasRegion()) {
           if (!getRegion().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -24959,7 +24959,7 @@ public final class ClientProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -25076,7 +25076,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.RegionSpecifier region = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -25231,7 +25231,7 @@ public final class ClientProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -25247,7 +25247,7 @@ public final class ClientProtos {
         getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         bulkToken_ = b;
@@ -25507,7 +25507,7 @@ public final class ClientProtos {
 
       public final boolean isInitialized() {
         if (!hasBulkToken()) {
-
+          
           return false;
         }
         return true;
@@ -25561,7 +25561,7 @@ public final class ClientProtos {
           getBulkTokenBytes() {
         java.lang.Object ref = bulkToken_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           bulkToken_ = b;
@@ -25775,7 +25775,7 @@ public final class ClientProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -25791,7 +25791,7 @@ public final class ClientProtos {
         getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         bulkToken_ = b;
@@ -26114,12 +26114,12 @@ public final class ClientProtos {
 
       public final boolean isInitialized() {
         if (!hasBulkToken()) {
-
+          
           return false;
         }
         if (hasRegion()) {
           if (!getRegion().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -26174,7 +26174,7 @@ public final class ClientProtos {
           getBulkTokenBytes() {
         java.lang.Object ref = bulkToken_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           bulkToken_ = b;
@@ -26323,7 +26323,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.RegionSpecifier region = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new com.google.protobuf.SingleFieldBuilder<

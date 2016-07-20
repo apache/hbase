@@ -188,6 +188,11 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-annotations</artifactId>
       <exclusions>
         <exclusion>
@@ -333,56 +338,6 @@
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
-    </profile>
-    <profile>
-      <id>compile-protobuf</id>
-      <activation>
-        <property>
-          <name>compile-protobuf</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <executions>
-              <execution>
-                <id>compile-protoc</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>protoc</goal>
-                </goals>
-                <configuration>
-                  <imports>
-                    <param>${basedir}/src/main/resources/org/apache/hadoop/hbase/rest/protobuf
-                    </param>
-                  </imports>
-                  <source>
-                    <!-- These should be under src/main/protobuf -->
-                    <directory>${basedir}/src/main/resources/org/apache/hadoop/hbase/rest/protobuf
-                    </directory>
-                    <includes>
-                      <include>CellMessage.proto</include>
-                      <include>CellSetMessage.proto</include>
-                      <include>ColumnSchemaMessage.proto</include>
-                      <include>NamespacePropertiesMessage.proto</include>
-                      <include>NamespacesMessage.proto</include>
-                      <include>ScannerMessage.proto</include>
-                      <include>StorageClusterStatusMessage.proto</include>
-                      <include>TableInfoMessage.proto</include>
-                      <include>TableListMessage.proto</include>
-                      <include>TableSchemaMessage.proto</include>
-                      <include>VersionMessage.proto</include>
-                    </includes>
-                  </source>
-                  <output>${basedir}/src/main/java/</output>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <!-- Hadoop-specific dependencies -->
     <!-- profile for building against Hadoop 2.0.x

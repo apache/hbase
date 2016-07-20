@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-// This file contains protocol buffers that are used for filters
+// This file contains protocol buffers that are used for Spark filters
+// over in the hbase-spark module
 package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.spark.protobuf.generated";
-option java_outer_classname = "FilterProtos";
+option java_outer_classname = "SparkFilterProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;

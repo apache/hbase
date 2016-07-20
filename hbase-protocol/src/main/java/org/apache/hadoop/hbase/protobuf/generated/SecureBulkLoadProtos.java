@@ -1106,7 +1106,7 @@ public final class SecureBulkLoadProtos {
        * <code>required .hbase.pb.DelegationToken fs_token = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationTokenOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationTokenOrBuilder> 
           getFsTokenFieldBuilder() {
         if (fsTokenBuilder_ == null) {
           fsTokenBuilder_ = new com.google.protobuf.SingleFieldBuilder<

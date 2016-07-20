@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.spark.datasources.BytesEncoder;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder;
-import org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.spark.protobuf.generated.SparkFilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.spark.sql.datasources.hbase.Field;
@@ -183,9 +183,9 @@ public class SparkSQLPushDownFilter extends FilterBase{
   public static SparkSQLPushDownFilter parseFrom(final byte[] pbBytes)
           throws DeserializationException {
 
-    FilterProtos.SQLPredicatePushDownFilter proto;
+    SparkFilterProtos.SQLPredicatePushDownFilter proto;
     try {
-      proto = FilterProtos.SQLPredicatePushDownFilter.parseFrom(pbBytes);
+      proto = SparkFilterProtos.SQLPredicatePushDownFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
@@ -208,7 +208,7 @@ public class SparkSQLPushDownFilter extends FilterBase{
     HashMap<ByteArrayComparable, HashMap<ByteArrayComparable, String>>
             currentCellToColumnIndexMap = new HashMap<>();
 
-    for (FilterProtos.SQLPredicatePushDownCellToColumnMapping
+    for (SparkFilterProtos.SQLPredicatePushDownCellToColumnMapping
             sqlPredicatePushDownCellToColumnMapping :
             proto.getCellToColumnMappingList()) {
 
@@ -242,11 +242,11 @@ public class SparkSQLPushDownFilter extends FilterBase{
    */
   public byte[] toByteArray() {
 
-    FilterProtos.SQLPredicatePushDownFilter.Builder builder =
-            FilterProtos.SQLPredicatePushDownFilter.newBuilder();
+    SparkFilterProtos.SQLPredicatePushDownFilter.Builder builder =
+            SparkFilterProtos.SQLPredicatePushDownFilter.newBuilder();
 
-    FilterProtos.SQLPredicatePushDownCellToColumnMapping.Builder columnMappingBuilder =
-            FilterProtos.SQLPredicatePushDownCellToColumnMapping.newBuilder();
+    SparkFilterProtos.SQLPredicatePushDownCellToColumnMapping.Builder columnMappingBuilder =
+            SparkFilterProtos.SQLPredicatePushDownCellToColumnMapping.newBuilder();
 
     builder.setDynamicLogicExpression(dynamicLogicExpression.toExpressionString());
     for (byte[] valueFromQuery: valueFromQueryArray) {
