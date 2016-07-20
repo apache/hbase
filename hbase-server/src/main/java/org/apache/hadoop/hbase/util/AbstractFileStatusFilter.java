@@ -49,7 +49,7 @@ public abstract class AbstractFileStatusFilter implements PathFilter, FileStatus
 
   @Override
   public boolean accept(FileStatus f) {
-    return accept(f.getPath(), f.isDirectory());
+    return accept(f.getPath(), f.isDir());
   }
 
   @Override
