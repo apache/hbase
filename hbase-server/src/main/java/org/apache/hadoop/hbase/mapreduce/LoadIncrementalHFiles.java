@@ -818,7 +818,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                 Path hfileStagingPath = null;
                 Path hfileOrigPath = new Path(el.getSecond());
                 try {
-                  hfileStagingPath= new Path(secureClient.getStagingPath(bulkToken, el.getFirst()),
+                  hfileStagingPath= new Path(new Path(bulkToken, Bytes.toString(el.getFirst())),
                     hfileOrigPath.getName());
                   if(targetFs.rename(hfileStagingPath, hfileOrigPath)) {
                     LOG.debug("Moved back file " + hfileOrigPath + " from " +
