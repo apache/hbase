@@ -22,8 +22,6 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -124,7 +122,8 @@ public abstract class TestReplicationStateBasic {
     assertEquals(0, rq1.getAllQueues().size());
     assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
     assertNull(rq1.getLogsInQueue("bogus"));
-    assertEquals(0, rq1.claimQueues(ServerName.valueOf("bogus", 1234, -1L).toString()).size());
+    assertNull(rq1.getUnClaimedQueueIds(
+        ServerName.valueOf("bogus", 1234, -1L).toString()));
 
     rq1.setLogPosition("bogus", "bogus", 5L);
 
@@ -143,15 +142,21 @@ public abstract class TestReplicationStateBasic {
     assertEquals(1, rq2.getAllQueues().size());
     assertEquals(5, rq3.getAllQueues().size());
 
-    assertEquals(0, rq3.claimQueues(server1).size());
+    assertEquals(0, rq3.getUnClaimedQueueIds(server1).size());
+    rq3.removeReplicatorIfQueueIsEmpty(server1);
     assertEquals(2, rq3.getListOfReplicators().size());
 
-    Map<String, Set<String>> queues = rq2.claimQueues(server3);
+    List<String> queues = rq2.getUnClaimedQueueIds(server3);
     assertEquals(5, queues.size());
+    for(String queue: queues) {
+      rq2.claimQueue(server3, queue);
+    }
+    rq2.removeReplicatorIfQueueIsEmpty(server3);
     assertEquals(1, rq2.getListOfReplicators().size());
 
     // Try to claim our own queues
-    assertEquals(0, rq2.claimQueues(server2).size());
+    assertNull(rq2.getUnClaimedQueueIds(server2));
+    rq2.removeReplicatorIfQueueIsEmpty(server2);
 
     assertEquals(6, rq2.getAllQueues().size());
 

@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -517,7 +518,12 @@ public abstract class TestReplicationSourceManager {
     @Override
     public void run() {
       try {
-        logZnodesMap = rq.claimQueues(deadRsZnode);
+        logZnodesMap = new HashMap<>();
+        List<String> queues = rq.getUnClaimedQueueIds(deadRsZnode);
+        for(String queue:queues){
+          Pair<String, SortedSet<String>> pair = rq.claimQueue(deadRsZnode, queue);
+          logZnodesMap.put(pair.getFirst(), pair.getSecond());
+        }
         server.abort("Done with testing", null);
       } catch (Exception e) {
         LOG.error("Got exception while running NodeFailoverWorker", e);

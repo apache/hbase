@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -48,6 +49,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * This class provides an implementation of the ReplicationQueues interface using an HBase table
@@ -227,31 +230,54 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     return getAllQueues(serverName);
   }
 
-  @Override
-  public Map<String, Set<String>> claimQueues(String regionserver) {
-    Map<String, Set<String>> queues = new HashMap<>();
+  @Override public List<String> getUnClaimedQueueIds(String regionserver) {
     if (isThisOurRegionServer(regionserver)) {
-      return queues;
+      return null;
     }
-    ResultScanner queuesToClaim = null;
-    try {
-      queuesToClaim = getQueuesBelongingToServer(regionserver);
+    try (ResultScanner queuesToClaim = getQueuesBelongingToServer(regionserver)) {
+      List<String> res = new ArrayList<>();
       for (Result queue : queuesToClaim) {
+        String rowKey = Bytes.toString(queue.getRow());
+        res.add(rowKey);
+      }
+      return res.isEmpty() ? null : res;
+    } catch (IOException e) {
+      String errMsg = "Failed getUnClaimedQueueIds";
+      abortable.abort(errMsg, e);
+    }
+    return null;
+  }
+
+  @Override public void removeReplicatorIfQueueIsEmpty(String regionserver) {
+    // Do nothing here
+  }
+
+  @Override
+  public Pair<String, SortedSet<String>> claimQueue(String regionserver, String queueId) {
+    if (isThisOurRegionServer(regionserver)) {
+      return null;
+    }
+
+    try (ResultScanner queuesToClaim = getQueuesBelongingToServer(regionserver)){
+      for (Result queue : queuesToClaim) {
+        String rowKey = Bytes.toString(queue.getRow());
+        if (!rowKey.equals(queueId)){
+          continue;
+        }
         if (attemptToClaimQueue(queue, regionserver)) {
-          String rowKey = Bytes.toString(queue.getRow());
           ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(rowKey);
           if (replicationState.peerExists(replicationQueueInfo.getPeerId())) {
-            Set<String> sortedLogs = new HashSet<String>();
+            SortedSet<String> sortedLogs = new TreeSet<>();
             List<String> logs = getLogsInQueue(queue.getRow());
             for (String log : logs) {
               sortedLogs.add(log);
             }
-            queues.put(rowKey, sortedLogs);
             LOG.info(serverName + " has claimed queue " + rowKey + " from " + regionserver);
+            return new Pair<>(rowKey, sortedLogs);
           } else {
             // Delete orphaned queues
             removeQueue(Bytes.toString(queue.getRow()));
-            LOG.info(serverName + " has deleted abandoned queue " + rowKey + " from " +
+            LOG.info(serverName + " has deleted abandoned queue " + queueId + " from " +
               regionserver);
           }
         }
@@ -259,13 +285,8 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     } catch (IOException | KeeperException e) {
       String errMsg = "Failed claiming queues for regionserver=" + regionserver;
       abortable.abort(errMsg, e);
-      queues.clear();
-    } finally {
-      if (queuesToClaim != null) {
-        queuesToClaim.close();
-      }
     }
-    return queues;
+    return null;
   }
 
   @Override

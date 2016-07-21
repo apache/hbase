@@ -36,8 +36,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -87,22 +85,28 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
       ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s1.getConfiguration(), s1,
         s1.getZooKeeper()));
     rq1.init(s1.getServerName().toString());
-    Map<String, Set<String>> testMap =
-      rq1.claimQueues(server.getServerName().getServerName());
+    String serverName = server.getServerName().getServerName();
+    List<String> unclaimed = rq1.getUnClaimedQueueIds(serverName);
+    rq1.claimQueue(serverName, unclaimed.get(0)).getSecond();
+    rq1.removeReplicatorIfQueueIsEmpty(unclaimed.get(0));
     ReplicationQueues rq2 =
       ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s2.getConfiguration(), s2,
         s2.getZooKeeper()));
     rq2.init(s2.getServerName().toString());
-    testMap = rq2.claimQueues(s1.getServerName().getServerName());
+    serverName = s1.getServerName().getServerName();
+    unclaimed = rq2.getUnClaimedQueueIds(serverName);
+    rq2.claimQueue(serverName, unclaimed.get(0)).getSecond();
+    rq2.removeReplicatorIfQueueIsEmpty(unclaimed.get(0));
     ReplicationQueues rq3 =
       ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(s3.getConfiguration(), s3,
         s3.getZooKeeper()));
     rq3.init(s3.getServerName().toString());
-    testMap = rq3.claimQueues(s2.getServerName().getServerName());
-
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(testMap.keySet().iterator().next());
+    serverName = s2.getServerName().getServerName();
+    unclaimed = rq3.getUnClaimedQueueIds(serverName);
+    String queue3 = rq3.claimQueue(serverName, unclaimed.get(0)).getFirst();
+    rq3.removeReplicatorIfQueueIsEmpty(unclaimed.get(0));
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queue3);
     List<String> result = replicationQueueInfo.getDeadRegionServers();
-
     // verify
     assertTrue(result.contains(server.getServerName().getServerName()));
     assertTrue(result.contains(s1.getServerName().getServerName()));
@@ -137,7 +141,11 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
         new ReplicationQueuesClientArguments(s1.getConfiguration(), s1, s1.getZooKeeper()));
 
     int v0 = client.getQueuesZNodeCversion();
-    rq1.claimQueues(s0.getServerName().getServerName());
+    List<String> queues = rq1.getUnClaimedQueueIds(s0.getServerName().getServerName());
+    for(String queue : queues) {
+      rq1.claimQueue(s0.getServerName().getServerName(), queue);
+    }
+    rq1.removeReplicatorIfQueueIsEmpty(s0.getServerName().getServerName());
     int v1 = client.getQueuesZNodeCversion();
     // cversion should increase by 1 since a child node is deleted
     assertEquals(v0 + 1, v1);

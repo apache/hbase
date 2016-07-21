@@ -19,11 +19,9 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
@@ -36,6 +34,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -179,21 +178,66 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public Map<String, Set<String>> claimQueues(String regionserverZnode) {
-    Map<String, Set<String>> newQueues = new HashMap<>();
-    // check whether there is multi support. If yes, use it.
-    if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      LOG.info("Atomically moving " + regionserverZnode + "'s WALs to my queue");
-      newQueues = copyQueuesFromRSUsingMulti(regionserverZnode);
-    } else {
-      LOG.info("Moving " + regionserverZnode + "'s wals to my queue");
-      if (!lockOtherRS(regionserverZnode)) {
-        return newQueues;
-      }
-      newQueues = copyQueuesFromRS(regionserverZnode);
-      deleteAnotherRSQueues(regionserverZnode);
+  public List<String> getUnClaimedQueueIds(String regionserver) {
+    if (isThisOurRegionServer(regionserver)) {
+      return null;
     }
-    return newQueues;
+    String rsZnodePath = ZKUtil.joinZNode(this.queuesZNode, regionserver);
+    List<String> queues = null;
+    try {
+      queues = ZKUtil.listChildrenNoWatch(this.zookeeper, rsZnodePath);
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed to getUnClaimedQueueIds for RS" + regionserver, e);
+    }
+    if (queues != null) {
+      queues.remove(RS_LOCK_ZNODE);
+    }
+    return queues;
+  }
+
+  @Override
+  public Pair<String, SortedSet<String>> claimQueue(String regionserver, String queueId) {
+    if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
+      LOG.info("Atomically moving " + regionserver + "/" + queueId + "'s WALs to my queue");
+      return moveQueueUsingMulti(regionserver, queueId);
+    } else {
+      LOG.info("Moving " + regionserver + "/" + queueId + "'s wals to my queue");
+      if (!lockOtherRS(regionserver)) {
+        LOG.info("Can not take the lock now");
+        return null;
+      }
+      Pair<String, SortedSet<String>> newQueues;
+      try {
+        newQueues = copyQueueFromLockedRS(regionserver, queueId);
+        removeQueueFromLockedRS(regionserver, queueId);
+      } finally {
+        unlockOtherRS(regionserver);
+      }
+      return newQueues;
+    }
+  }
+
+  private void removeQueueFromLockedRS(String znode, String peerId) {
+    String nodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
+    String peerPath = ZKUtil.joinZNode(nodePath, peerId);
+    try {
+      ZKUtil.deleteNodeRecursively(this.zookeeper, peerPath);
+    } catch (KeeperException e) {
+      LOG.warn("Remove copied queue failed", e);
+    }
+  }
+
+  @Override
+  public void removeReplicatorIfQueueIsEmpty(String regionserver) {
+    String rsPath = ZKUtil.joinZNode(this.queuesZNode, regionserver);
+    try {
+      List<String> list = ZKUtil.listChildrenNoWatch(this.zookeeper, rsPath);
+      if (list != null && list.size() == 0){
+        ZKUtil.deleteNode(this.zookeeper, rsPath);
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Got error while removing replicator", e);
+    }
   }
 
   @Override
@@ -276,36 +320,13 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     return ZKUtil.checkExists(zookeeper, getLockZNode(znode)) >= 0;
   }
 
-  /**
-   * Delete all the replication queues for a given region server.
-   * @param regionserverZnode The znode of the region server to delete.
-   */
-  private void deleteAnotherRSQueues(String regionserverZnode) {
-    String fullpath = ZKUtil.joinZNode(this.queuesZNode, regionserverZnode);
+  private void unlockOtherRS(String znode){
+    String parent = ZKUtil.joinZNode(this.queuesZNode, znode);
+    String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
     try {
-      List<String> clusters = ZKUtil.listChildrenNoWatch(this.zookeeper, fullpath);
-      for (String cluster : clusters) {
-        // No need to delete, it will be deleted later.
-        if (cluster.equals(RS_LOCK_ZNODE)) {
-          continue;
-        }
-        String fullClusterPath = ZKUtil.joinZNode(fullpath, cluster);
-        ZKUtil.deleteNodeRecursively(this.zookeeper, fullClusterPath);
-      }
-      // Finish cleaning up
-      ZKUtil.deleteNodeRecursively(this.zookeeper, fullpath);
+      ZKUtil.deleteNode(this.zookeeper, p);
     } catch (KeeperException e) {
-      if (e instanceof KeeperException.NoNodeException
-          || e instanceof KeeperException.NotEmptyException) {
-        // Testing a special case where another region server was able to
-        // create a lock just after we deleted it, but then was also able to
-        // delete the RS znode before us or its lock znode is still there.
-        if (e.getPath().equals(fullpath)) {
-          return;
-        }
-      }
-      this.abortable.abort("Failed to delete replication queues for region server: "
-          + regionserverZnode, e);
+      this.abortable.abort("Remove lock failed", e);
     }
   }
 
@@ -313,38 +334,30 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
    * It "atomically" copies all the wals queues from another region server and returns them all
    * sorted per peer cluster (appended with the dead server's znode).
    * @param znode pertaining to the region server to copy the queues from
-   * @return WAL queues sorted per peer cluster
    */
-  private Map<String, Set<String>> copyQueuesFromRSUsingMulti(String znode) {
-    Map<String, Set<String>> queues = new HashMap<>();
-    // hbase/replication/rs/deadrs
-    String deadRSZnodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
-    List<String> peerIdsToProcess = null;
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+  private Pair<String, SortedSet<String>> moveQueueUsingMulti(String znode, String peerId) {
     try {
-      peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
-      if (peerIdsToProcess == null) return queues; // node already processed
-      for (String peerId : peerIdsToProcess) {
-        ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
-        if (!peerExists(replicationQueueInfo.getPeerId())) {
-          // the orphaned queues must be moved, otherwise the delete op of dead rs will fail,
-          // this will cause the whole multi op fail.
-          // NodeFailoverWorker will skip the orphaned queues.
-          LOG.warn("Peer " + peerId
-              + " didn't exist, will move its queue to avoid the failure of multi op");
-        }
-        String newPeerId = peerId + "-" + znode;
-        String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
-        // check the logs queue for the old peer cluster
-        String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
-        List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
-        if (wals == null || wals.size() == 0) {
-          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
-          continue; // empty log queue.
-        }
+      // hbase/replication/rs/deadrs
+      String deadRSZnodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
+      List<ZKUtilOp> listOfOps = new ArrayList<>();
+      ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
+      if (!peerExists(replicationQueueInfo.getPeerId())) {
+        // the orphaned queues must be moved, otherwise the delete op of dead rs will fail,
+        // this will cause the whole multi op fail.
+        // NodeFailoverWorker will skip the orphaned queues.
+        LOG.warn("Peer " + peerId +
+            " didn't exist, will move its queue to avoid the failure of multi op");
+      }
+      String newPeerId = peerId + "-" + znode;
+      String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
+      // check the logs queue for the old peer cluster
+      String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
+      List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
+      SortedSet<String> logQueue = new TreeSet<>();
+      if (wals == null || wals.size() == 0) {
+        listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+      } else {
         // create the new cluster znode
-        Set<String> logQueue = new HashSet<String>();
-        queues.put(newPeerId, logQueue);
         ZKUtilOp op = ZKUtilOp.createAndFailSilent(newPeerZnode, HConstants.EMPTY_BYTE_ARRAY);
         listOfOps.add(op);
         // get the offset of the logs and set it to new znodes
@@ -354,98 +367,86 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
           LOG.debug("Creating " + wal + " with data " + Bytes.toString(logOffset));
           String newLogZnode = ZKUtil.joinZNode(newPeerZnode, wal);
           listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
-          // add ops for deleting
           listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldWalZnode));
           logQueue.add(wal);
         }
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+
+        if (LOG.isTraceEnabled())
+          LOG.trace(" The multi list size is: " + listOfOps.size());
       }
-      // add delete op for dead rs, this will update the cversion of the parent.
-      // The reader will make optimistic locking with this to get a consistent
-      // snapshot
-      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
-      if (LOG.isTraceEnabled()) LOG.trace(" The multi list size is: " + listOfOps.size());
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
-      if (LOG.isTraceEnabled()) LOG.trace("Atomically moved the dead regionserver logs. ");
+      if (LOG.isTraceEnabled())
+        LOG.trace("Atomically moved the dead regionserver logs. ");
+      return new Pair<>(newPeerId, logQueue);
     } catch (KeeperException e) {
       // Multi call failed; it looks like some other regionserver took away the logs.
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
-      queues.clear();
     } catch (InterruptedException e) {
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
-      queues.clear();
       Thread.currentThread().interrupt();
     }
-    return queues;
+    return null;
   }
 
   /**
-   * This methods copies all the wals queues from another region server and returns them all sorted
+   * This methods moves all the wals queues from another region server and returns them all sorted
    * per peer cluster (appended with the dead server's znode)
    * @param znode server names to copy
-   * @return all wals for all peers of that cluster, null if an error occurred
+   * @return all wals for the peer of that cluster, null if an error occurred
    */
-  private Map<String, Set<String>> copyQueuesFromRS(String znode) {
+  private Pair<String, SortedSet<String>> copyQueueFromLockedRS(String znode, String peerId) {
     // TODO this method isn't atomic enough, we could start copying and then
     // TODO fail for some reason and we would end up with znodes we don't want.
-    Map<String, Set<String>> queues = new HashMap<>();
     try {
       String nodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
-      List<String> clusters = ZKUtil.listChildrenNoWatch(this.zookeeper, nodePath);
-      // We have a lock znode in there, it will count as one.
-      if (clusters == null || clusters.size() <= 1) {
-        return queues;
+      ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
+      String clusterPath = ZKUtil.joinZNode(nodePath, peerId);
+      if (!peerExists(replicationQueueInfo.getPeerId())) {
+        LOG.warn("Peer " + peerId + " didn't exist, skipping the replay");
+        // Protection against moving orphaned queues
+        return null;
       }
-      // The lock isn't a peer cluster, remove it
-      clusters.remove(RS_LOCK_ZNODE);
-      for (String cluster : clusters) {
-        ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(cluster);
-        if (!peerExists(replicationQueueInfo.getPeerId())) {
-          LOG.warn("Peer " + cluster + " didn't exist, skipping the replay");
-          // Protection against moving orphaned queues
-          continue;
-        }
-        // We add the name of the recovered RS to the new znode, we can even
-        // do that for queues that were recovered 10 times giving a znode like
-        // number-startcode-number-otherstartcode-number-anotherstartcode-etc
-        String newCluster = cluster + "-" + znode;
-        String newClusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, newCluster);
-        String clusterPath = ZKUtil.joinZNode(nodePath, cluster);
-        List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
-        // That region server didn't have anything to replicate for this cluster
-        if (wals == null || wals.size() == 0) {
-          continue;
-        }
-        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
+      // We add the name of the recovered RS to the new znode, we can even
+      // do that for queues that were recovered 10 times giving a znode like
+      // number-startcode-number-otherstartcode-number-anotherstartcode-etc
+      String newCluster = peerId + "-" + znode;
+      String newClusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, newCluster);
+
+      List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
+      // That region server didn't have anything to replicate for this cluster
+      if (wals == null || wals.size() == 0) {
+        return null;
+      }
+      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
           HConstants.EMPTY_BYTE_ARRAY);
-        Set<String> logQueue = new HashSet<String>();
-        queues.put(newCluster, logQueue);
-        for (String wal : wals) {
-          String z = ZKUtil.joinZNode(clusterPath, wal);
-          byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
-          long position = 0;
-          try {
-            position = ZKUtil.parseWALPositionFrom(positionBytes);
-          } catch (DeserializationException e) {
-            LOG.warn("Failed parse of wal position from the following znode: " + z
-                + ", Exception: " + e);
-          }
-          LOG.debug("Creating " + wal + " with data " + position);
-          String child = ZKUtil.joinZNode(newClusterZnode, wal);
-          // Position doesn't actually change, we are just deserializing it for
-          // logging, so just use the already serialized version
-          ZKUtil.createAndWatch(this.zookeeper, child, positionBytes);
-          logQueue.add(wal);
+      SortedSet<String> logQueue = new TreeSet<>();
+      for (String wal : wals) {
+        String z = ZKUtil.joinZNode(clusterPath, wal);
+        byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
+        long position = 0;
+        try {
+          position = ZKUtil.parseWALPositionFrom(positionBytes);
+        } catch (DeserializationException e) {
+          LOG.warn("Failed parse of wal position from the following znode: " + z
+              + ", Exception: " + e);
         }
+        LOG.debug("Creating " + wal + " with data " + position);
+        String child = ZKUtil.joinZNode(newClusterZnode, wal);
+        // Position doesn't actually change, we are just deserializing it for
+        // logging, so just use the already serialized version
+        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, child, positionBytes);
+        logQueue.add(wal);
       }
+      return new Pair<>(newCluster, logQueue);
     } catch (KeeperException e) {
-      this.abortable.abort("Copy queues from rs", e);
+      LOG.warn("Got exception in copyQueueFromLockedRS: ", e);
     } catch (InterruptedException e) {
       LOG.warn(e);
       Thread.currentThread().interrupt();
     }
-    return queues;
+    return null;
   }
 
   /**

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,8 +41,6 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static junit.framework.TestCase.assertNull;
 import static org.junit.Assert.assertEquals;
@@ -267,18 +266,19 @@ public class TestReplicationStateHBaseImpl {
     }
     try {
       // Test claiming queues
-      Map<String, Set<String>> claimedQueuesFromRq2 = rq1.claimQueues(server2);
+      List<String> claimedQueuesFromRq2 = rq1.getUnClaimedQueueIds(server2);
       // Check to make sure that list of peers with outstanding queues is decremented by one
       // after claimQueues
+      // Check to make sure that we claimed the proper number of queues
+      assertEquals(2, claimedQueuesFromRq2.size());
+      assertTrue(claimedQueuesFromRq2.contains("Queue1-" + server2));
+      assertTrue(claimedQueuesFromRq2.contains("Queue2-" + server2));
+      assertEquals(2, rq1.claimQueue(server2, "Queue1-" + server2).getSecond().size());
+      assertEquals(1, rq1.claimQueue(server2, "Queue2-" + server2).getSecond().size());
+      rq1.removeReplicatorIfQueueIsEmpty(server2);
       assertEquals(rq1.getListOfReplicators().size(), 2);
       assertEquals(rq2.getListOfReplicators().size(), 2);
       assertEquals(rq3.getListOfReplicators().size(), 2);
-      // Check to make sure that we claimed the proper number of queues
-      assertEquals(2, claimedQueuesFromRq2.size());
-      assertTrue(claimedQueuesFromRq2.containsKey("Queue1-" + server2));
-      assertTrue(claimedQueuesFromRq2.containsKey("Queue2-" + server2));
-      assertEquals(2, claimedQueuesFromRq2.get("Queue1-" + server2).size());
-      assertEquals(1, claimedQueuesFromRq2.get("Queue2-" + server2).size());
       assertEquals(5, rq1.getAllQueues().size());
       // Check that all the logs in the other queue were claimed
       assertEquals(2, rq1.getLogsInQueue("Queue1-" + server2).size());
@@ -294,7 +294,11 @@ public class TestReplicationStateHBaseImpl {
       rq1.addLog("UnclaimableQueue", "WALLogFile1.1");
       rq1.addLog("UnclaimableQueue", "WALLogFile1.2");
       assertEquals(6, rq1.getAllQueues().size());
-      Map<String, Set<String>> claimedQueuesFromRq1 = rq3.claimQueues(server1);
+      List<String> claimedQueuesFromRq1 = rq3.getUnClaimedQueueIds(server1);
+      for(String queue : claimedQueuesFromRq1) {
+        rq3.claimQueue(server1, queue);
+      }
+      rq3.removeReplicatorIfQueueIsEmpty(server1);
       assertEquals(rq1.getListOfReplicators().size(), 1);
       assertEquals(rq2.getListOfReplicators().size(), 1);
       assertEquals(rq3.getListOfReplicators().size(), 1);
@@ -302,12 +306,12 @@ public class TestReplicationStateHBaseImpl {
       // Replication Peers
       assertEquals(6, rq3.getAllQueues().size());
       // Test claiming non-existing queues
-      Map<String, Set<String>> noQueues = rq3.claimQueues("NotARealServer");
-      assertEquals(0, noQueues.size());
+      List<String> noQueues = rq3.getUnClaimedQueueIds("NotARealServer");
+      assertNull(noQueues);
       assertEquals(6, rq3.getAllQueues().size());
       // Test claiming own queues
-      noQueues = rq3.claimQueues(server3);
-      assertEquals(0, noQueues.size());
+      noQueues = rq3.getUnClaimedQueueIds(server3);
+      Assert.assertNull(noQueues);
       assertEquals(6, rq3.getAllQueues().size());
       // Check that rq3 still remain on list of replicators
       assertEquals(1, rq3.getListOfReplicators().size());
