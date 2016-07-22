@@ -3380,7 +3380,7 @@ public class HBaseFsck extends Configured implements Closeable {
       final Comparator<Cell> comp = new Comparator<Cell>() {
         @Override
         public int compare(Cell k1, Cell k2) {
-          return (int)(k1.getTimestamp() - k2.getTimestamp());
+          return Long.compare(k1.getTimestamp(), k2.getTimestamp());
         }
       };
 
