@@ -383,8 +383,8 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       ex.setMessage("Invalid scanner Id");
       throw ex;
     }
-
     try {
+      connectionCache.updateConnectionAccessTime();
       return resultsFromHBase(scanner.next(numRows));
     } catch (IOException e) {
       throw getTIOError(e);

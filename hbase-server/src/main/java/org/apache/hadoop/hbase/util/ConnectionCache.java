@@ -189,6 +189,20 @@ public class ConnectionCache {
     return connInfo;
   }
 
+  /**
+   * Updates the access time for the current connection. Used to keep Connections alive for
+   * long-lived scanners.
+   * @return whether we successfully updated the last access time
+   */
+  public boolean updateConnectionAccessTime() {
+    String userName = getEffectiveUser();
+    ConnectionInfo connInfo = connections.get(userName);
+    if (connInfo != null) {
+      return connInfo.updateAccessTime();
+    }
+    return false;
+  }
+
   class ConnectionInfo {
     final Connection connection;
     final String userName;
