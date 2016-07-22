@@ -100,8 +100,11 @@ public class TestPartialResultsFromClientSide {
   // getCellHeapSize().
   private static long CELL_HEAP_SIZE = -1;
 
+  private static long timeout = 2000;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, timeout);
     TEST_UTIL.startMiniCluster(MINICLUSTER_SIZE);
     TEST_UTIL.getAdmin().setBalancerRunning(false, true);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
@@ -1044,5 +1047,22 @@ public class TestPartialResultsFromClientSide {
     assertCell(c3, ROWS[1], FAMILIES[0], QUALIFIERS[1]);
   }
 
+  @Test
+  public void testDontThrowUnknowScannerExceptionToClient() throws Exception {
+    Table table =
+        createTestTable(TableName.valueOf("testDontThrowUnknowScannerException"), ROWS, FAMILIES,
+            QUALIFIERS, VALUE);
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    ResultScanner scanner = table.getScanner(scan);
+    scanner.next();
+    Thread.sleep(timeout * 3);
+    int count = 1;
+    while (scanner.next() != null) {
+      count++;
+    }
+    assertEquals(NUM_ROWS, count);
+    scanner.close();
+  }
 
 }

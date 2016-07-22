@@ -421,34 +421,20 @@ public abstract class ClientScanner extends AbstractClientScanner {
         clearPartialResults();
         // DNRIOEs are thrown to make us break out of retries. Some types of DNRIOEs want us
         // to reset the scanner and come back in again.
-        if (e instanceof UnknownScannerException) {
-          long timeout = lastNext + scannerTimeout;
-          // If we are over the timeout, throw this exception to the client wrapped in
-          // a ScannerTimeoutException. Else, it's because the region moved and we used the old
-          // id against the new region server; reset the scanner.
-          if (timeout < System.currentTimeMillis()) {
-            LOG.info("For hints related to the following exception, please try taking a look at: "
-                    + "https://hbase.apache.org/book.html#trouble.client.scantimeout");
-            long elapsed = System.currentTimeMillis() - lastNext;
-            ScannerTimeoutException ex =
-                new ScannerTimeoutException(elapsed + "ms passed since the last invocation, "
-                    + "timeout is currently set to " + scannerTimeout);
-            ex.initCause(e);
-            throw ex;
-          }
+
+        // If exception is any but the list below throw it back to the client; else setup
+        // the scanner and retry.
+        Throwable cause = e.getCause();
+        if ((cause != null && cause instanceof NotServingRegionException) ||
+            (cause != null && cause instanceof RegionServerStoppedException) ||
+            e instanceof OutOfOrderScannerNextException ||
+            e instanceof UnknownScannerException ) {
+          // Pass. It is easier writing the if loop test as list of what is allowed rather than
+          // as a list of what is not allowed... so if in here, it means we do not throw.
         } else {
-          // If exception is any but the list below throw it back to the client; else setup
-          // the scanner and retry.
-          Throwable cause = e.getCause();
-          if ((cause != null && cause instanceof NotServingRegionException) ||
-              (cause != null && cause instanceof RegionServerStoppedException) ||
-              e instanceof OutOfOrderScannerNextException) {
-            // Pass. It is easier writing the if loop test as list of what is allowed rather than
-            // as a list of what is not allowed... so if in here, it means we do not throw.
-          } else {
-            throw e;
-          }
+          throw e;
         }
+
         // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
         if (this.lastResult != null) {
           // The region has moved. We need to open a brand new scanner at the new location.
