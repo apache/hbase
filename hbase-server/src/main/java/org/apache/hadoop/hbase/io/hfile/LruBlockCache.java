@@ -714,8 +714,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public int compareTo(BlockBucket that) {
-      if(this.overflow() == that.overflow()) return 0;
-      return this.overflow() > that.overflow() ? 1 : -1;
+      return Long.compare(this.overflow(), that.overflow());
     }
 
     @Override
@@ -950,13 +949,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
             if (diff != 0) return diff;
-            diff = (int)(this.getOffset() - other.getOffset());
+            diff = Long.compare(this.getOffset(), other.getOffset());
             if (diff != 0) return diff;
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException("" + this.getCachedTime() + ", " +
                 other.getCachedTime());
             }
-            return (int)(other.getCachedTime() - this.getCachedTime());
+            return Long.compare(other.getCachedTime(), this.getCachedTime());
           }
 
           @Override
