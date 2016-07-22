@@ -94,39 +94,6 @@ public class TestScannerTimeout {
   }
 
   /**
-   * Test that we do get a ScannerTimeoutException
-   * @throws Exception
-   */
-  @Test(timeout=300000)
-  public void test2481() throws Exception {
-    LOG.info("START ************ test2481");
-    Scan scan = new Scan();
-    scan.setCaching(1);
-    Table table =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), TABLE_NAME);
-    ResultScanner r = table.getScanner(scan);
-    int count = 0;
-    try {
-      Result res = r.next();
-      while (res != null) {
-        count++;
-        if (count == 5) {
-          // Sleep just a bit more to be sure
-          Thread.sleep(SCANNER_TIMEOUT + THREAD_WAKE_FREQUENCY + 100);
-        }
-        res = r.next();
-      }
-    } catch (ScannerTimeoutException e) {
-      LOG.info("Got the timeout " + e.getMessage(), e);
-      return;
-    }  finally {
-      table.close();
-    }
-    fail("We should be timing out");
-    LOG.info("END ************ test2481");
-  }
-
-  /**
    * Test that scanner can continue even if the region server it was reading
    * from failed. Before 2772, it reused the same scanner id.
    * @throws Exception
