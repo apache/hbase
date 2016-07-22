@@ -81,7 +81,7 @@ public class SimpleRpcScheduler extends RpcScheduler {
       long deadlineB = priority.getDeadline(callB.getHeader(), callB.param);
       deadlineA = callA.timestamp + Math.min(deadlineA, maxDelay);
       deadlineB = callB.timestamp + Math.min(deadlineB, maxDelay);
-      return (int)(deadlineA - deadlineB);
+      return Long.compare(deadlineA, deadlineB);
     }
   }
 
