@@ -307,6 +307,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public boolean isInMaintenanceMode() {
+    return false;
+  }
+
+  @Override
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
     return 0;
   }

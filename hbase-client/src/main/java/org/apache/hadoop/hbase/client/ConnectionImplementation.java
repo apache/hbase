@@ -1416,6 +1416,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.IsInMaintenanceModeResponse isMasterInMaintenanceMode(
+          final RpcController controller,
+          final MasterProtos.IsInMaintenanceModeRequest request) throws ServiceException {
+        return stub.isMasterInMaintenanceMode(controller, request);
+      }
+
+      @Override
       public MasterProtos.BalanceResponse balance(RpcController controller,
           MasterProtos.BalanceRequest request) throws ServiceException {
         return stub.balance(controller, request);

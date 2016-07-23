@@ -159,6 +159,8 @@ import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.SplitOrMergeTracker;
@@ -260,6 +262,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Tracker for region normalizer state
   private RegionNormalizerTracker regionNormalizerTracker;
+
+  //Tracker for master maintenance mode setting
+  private MasterMaintenanceModeTracker maintenanceModeTracker;
 
   private ClusterSchemaService clusterSchemaService;
 
@@ -615,6 +620,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
+
+    this.maintenanceModeTracker = new MasterMaintenanceModeTracker(zooKeeper);
+    this.maintenanceModeTracker.start();
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
@@ -1125,6 +1133,12 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Master has not been initialized, don't run balancer.");
       return false;
     }
+
+    if (isInMaintenanceMode()) {
+      LOG.info("Master is in maintenanceMode mode, don't run balancer.");
+      return false;
+    }
+
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     synchronized (this.balancer) {
@@ -1228,6 +1242,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       return false;
     }
 
+    if (isInMaintenanceMode()) {
+      LOG.info("Master is in maintenance mode, don't run region normalizer.");
+      return false;
+    }
+
     if (!this.regionNormalizerTracker.isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
       return false;
@@ -1241,6 +1260,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       Collections.shuffle(allEnabledTables);
 
       for (TableName table : allEnabledTables) {
+        if (isInMaintenanceMode()) {
+          LOG.debug("Master is in maintenance mode, stop running region normalizer.");
+          return false;
+        }
+
         HTableDescriptor tblDesc = getTableDescriptors().get(table);
         if (table.isSystemTable() || (tblDesc != null &&
             !tblDesc.isNormalizationEnabled())) {
@@ -2264,6 +2288,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     return initialized.isReady();
   }
 
+  /**
+   * Report whether this master is in maintenance mode.
+   *
+   * @return true if master is in maintenanceMode
+   */
+  @Override
+  public boolean isInMaintenanceMode() {
+    return maintenanceModeTracker.isInMaintenanceMode();
+  }
+
   @VisibleForTesting
   public void setInitialized(boolean isInitialized) {
     procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
@@ -2735,7 +2769,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   public boolean isBalancerOn() {
-    if (null == loadBalancerTracker) return false;
+    if (null == loadBalancerTracker || isInMaintenanceMode()) {
+      return false;
+    }
     return loadBalancerTracker.isBalancerOn();
   }
 
@@ -2744,9 +2780,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * false is returned.
    */
   public boolean isNormalizerOn() {
-    return null == regionNormalizerTracker? false: regionNormalizerTracker.isNormalizerOn();
+    return (null == regionNormalizerTracker || isInMaintenanceMode()) ?
+        false: regionNormalizerTracker.isNormalizerOn();
   }
-
 
   /**
    * Queries the state of the {@link SplitOrMergeTracker}. If it is not initialized,
@@ -2755,7 +2791,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return The state of the switch
    */
   public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
-    if (null == splitOrMergeTracker) {
+    if (null == splitOrMergeTracker || isInMaintenanceMode()) {
       return false;
     }
     return splitOrMergeTracker.isSplitOrMergeEnabled(switchType);

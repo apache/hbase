@@ -1246,6 +1246,15 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public IsInMaintenanceModeResponse isMasterInMaintenanceMode(
+      final RpcController controller,
+      final IsInMaintenanceModeRequest request) throws ServiceException {
+    IsInMaintenanceModeResponse.Builder response = IsInMaintenanceModeResponse.newBuilder();
+    response.setInMaintenanceMode(master.isInMaintenanceMode());
+    return response.build();
+  }
+
+  @Override
   public UnassignRegionResponse unassignRegion(RpcController controller,
       UnassignRegionRequest req) throws ServiceException {
     try {

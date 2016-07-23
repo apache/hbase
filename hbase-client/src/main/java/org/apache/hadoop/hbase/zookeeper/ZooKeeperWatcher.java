@@ -123,6 +123,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String recoveringRegionsZNode;
   // znode containing namespace descriptors
   public static String namespaceZNode = "namespace";
+  // znode of indicating master maintenance mode
+  public static String masterMaintZNode = "masterMaintenance";
 
   public final static String META_ZNODE_PREFIX = "meta-region-server";
 
@@ -194,6 +196,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       ZKUtil.createAndFailSilent(this, backupMasterAddressesZNode);
       ZKUtil.createAndFailSilent(this, tableLockZNode);
       ZKUtil.createAndFailSilent(this, recoveringRegionsZNode);
+      ZKUtil.createAndFailSilent(this, masterMaintZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
@@ -442,6 +445,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.recovering.regions", "recovering-regions"));
     namespaceZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.namespace", "namespace"));
+    masterMaintZNode = ZKUtil.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.masterMaintenance", "master-maintenance"));
   }
 
   /**
