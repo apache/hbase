@@ -41,7 +41,6 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestSplitOrMergeStatus {
@@ -77,15 +76,13 @@ public class TestSplitOrMergeStatus {
 
     Admin admin = TEST_UTIL.getAdmin();
     initSwitchStatus(admin);
-    boolean[] results = admin.setSplitOrMergeEnabled(false, false,
-      true, MasterSwitchType.SPLIT);
+    boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.SPLIT);
     assertEquals(results.length, 1);
     assertTrue(results[0]);
     admin.split(t.getName());
     int count = waitOnSplitOrMerge(t).size();
     assertTrue(orignalCount == count);
-
-    results = admin.setSplitOrMergeEnabled(true, false, true, MasterSwitchType.SPLIT);
+    results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
     assertEquals(results.length, 1);
     assertFalse(results[0]);
     admin.split(t.getName());
@@ -110,8 +107,7 @@ public class TestSplitOrMergeStatus {
 
     waitForMergable(admin, name);
     int orignalCount = locator.getAllRegionLocations().size();
-    boolean[] results = admin.setSplitOrMergeEnabled(false, false,
-      true, MasterSwitchType.MERGE);
+    boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
     assertTrue(results[0]);
     List<HRegionInfo> regions = admin.getTableRegions(t.getName());
@@ -122,7 +118,7 @@ public class TestSplitOrMergeStatus {
     assertTrue(orignalCount == count);
 
     waitForMergable(admin, name);
-    results = admin.setSplitOrMergeEnabled(true, false, true, MasterSwitchType.MERGE);
+    results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
     assertFalse(results[0]);
     admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
@@ -135,7 +131,7 @@ public class TestSplitOrMergeStatus {
   @Test
   public void testMultiSwitches() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    boolean[] switches = admin.setSplitOrMergeEnabled(false, false, true,
+    boolean[] switches = admin.setSplitOrMergeEnabled(false, false,
       MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
     for (boolean s : switches){
       assertTrue(s);
@@ -145,34 +141,12 @@ public class TestSplitOrMergeStatus {
     admin.close();
   }
 
-  @Test
-  public void testSwitchLock() throws IOException {
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.setSplitOrMergeEnabled(false, false, false,
-      MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
-    try {
-      admin.setSplitOrMergeEnabled(false, false, true,
-        MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
-      fail();
-    } catch (IOException e) {
-      LOG.info("", e);
-    }
-    admin.releaseSplitOrMergeLockAndRollback();
-    try {
-      admin.setSplitOrMergeEnabled(true, false, true,
-        MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
-    } catch (IOException e) {
-      fail();
-    }
-    admin.close();
-  }
-  
   private void initSwitchStatus(Admin admin) throws IOException {
     if (!admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
-      admin.setSplitOrMergeEnabled(true, false, true, MasterSwitchType.SPLIT);
+      admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
     }
     if (!admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      admin.setSplitOrMergeEnabled(true, false, true, MasterSwitchType.MERGE);
+      admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
     }
     assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT));
     assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE));

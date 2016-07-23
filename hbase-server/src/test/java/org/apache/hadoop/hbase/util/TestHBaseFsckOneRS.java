@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -72,8 +71,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -95,8 +92,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.*;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
 
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
@@ -1850,54 +1845,5 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     };
     doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
     hbck.close();
-  }
-
-  /**
-   *  See HBASE-15406
-   * */
-  @Test
-  public void testSplitOrMergeStatWhenHBCKAbort() throws Exception {
-    admin.setSplitOrMergeEnabled(true, false, true,
-      MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
-    boolean oldSplit = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
-    boolean oldMerge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
-
-    assertTrue(oldSplit);
-    assertTrue(oldMerge);
-
-    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
-    HBaseFsck hbck = new HBaseFsck(conf, exec);
-    HBaseFsck.setDisplayFullReport(); // i.e. -details
-    final HBaseFsck spiedHbck = spy(hbck);
-    doAnswer(new Answer() {
-      @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
-        // we close splitOrMerge flag in hbck, so in finally hbck will not set splitOrMerge back.
-        spiedHbck.setDisableSplitAndMerge(false);
-        return null;
-      }
-    }).when(spiedHbck).onlineConsistencyRepair();
-    spiedHbck.setDisableSplitAndMerge();
-    spiedHbck.connect();
-    spiedHbck.onlineHbck();
-    spiedHbck.close();
-
-    boolean split = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
-    boolean merge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
-    assertFalse(split);
-    assertFalse(merge);
-
-    // rerun hbck to repair the switches state
-    hbck = new HBaseFsck(conf, exec);
-    hbck.setDisableSplitAndMerge();
-    hbck.connect();
-    hbck.onlineHbck();
-    hbck.close();
-
-    split = admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT);
-    merge = admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE);
-
-    assertTrue(split);
-    assertTrue(merge);
   }
 }

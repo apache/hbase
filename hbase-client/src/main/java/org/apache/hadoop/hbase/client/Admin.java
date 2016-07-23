@@ -1729,15 +1729,10 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param enabled enabled or not
    * @param synchronous If true, it waits until current split() call, if outstanding, to return.
-   * @param skipLock if false, we will do lock before change switch.
-   *                 with the lock, other requests to change the switch will be rejected!
-   *                 And when you set it to be false,
-   *                 you should call {@link #releaseSplitOrMergeLockAndRollback()} by yourself
    * @param switchTypes switchType list {@link MasterSwitchType}
    * @return Previous switch value array
    */
   boolean[] setSplitOrMergeEnabled(final boolean enabled, final boolean synchronous,
-                                   final boolean skipLock,
                                    final MasterSwitchType... switchTypes) throws IOException;
 
   /**
@@ -1746,12 +1741,4 @@ public interface Admin extends Abortable, Closeable {
    * @return true if the switch is enabled, false otherwise.
    */
   boolean isSplitOrMergeEnabled(final MasterSwitchType switchType) throws IOException;
-
-  /**
-   *  You should call this method after you call
-   *  {@link #setSplitOrMergeEnabled(boolean, boolean, boolean, MasterSwitchType...)}
-   *  with skipLock be false, this method will release the lock created by above method
-   *  and rollback the switch state to be original state before you change switch
-   * */
-  void releaseSplitOrMergeLockAndRollback() throws IOException;
 }

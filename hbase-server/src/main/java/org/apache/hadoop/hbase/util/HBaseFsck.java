@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -311,6 +310,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
 
   ZooKeeperWatcher zkw = null;
+
   /**
    * Constructor
    *
@@ -691,8 +691,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
     boolean[] oldSplitAndMerge = null;
     if (shouldDisableSplitAndMerge()) {
-      admin.releaseSplitOrMergeLockAndRollback();
-      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false, false,
+      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false,
         MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
     }
 
@@ -709,7 +708,14 @@ public class HBaseFsck extends Configured implements Closeable {
 
       if (shouldDisableSplitAndMerge()) {
         if (oldSplitAndMerge != null) {
-          admin.releaseSplitOrMergeLockAndRollback();
+          if (oldSplitAndMerge[0] && oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false,
+              MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
+          } else if (oldSplitAndMerge[0]) {
+            admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
+          } else if (oldSplitAndMerge[1]) {
+            admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
+          }
         }
       }
     }
@@ -4226,12 +4232,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Disable the split and merge
    */
   public static void setDisableSplitAndMerge() {
-    setDisableSplitAndMerge(true);
-  }
-
-  @VisibleForTesting
-  public static void setDisableSplitAndMerge(boolean flag) {
-    disableSplitAndMerge = flag;
+    disableSplitAndMerge = true;
   }
 
   /**
