@@ -146,6 +146,4 @@ public class SplitOrMergeTracker {
       return builder.build();
     }
   }
-
-
 }

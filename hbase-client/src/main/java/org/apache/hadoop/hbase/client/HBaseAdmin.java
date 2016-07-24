@@ -125,6 +125,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterSta
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
@@ -2933,6 +2935,19 @@ public class HBaseAdmin implements Admin {
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */
+  @Override
+  public boolean isMasterInMaintenanceMode() throws IOException {
+    return executeCallable(new MasterCallable<IsInMaintenanceModeResponse>(getConnection()) {
+      @Override
+      public IsInMaintenanceModeResponse call(int callTimeout) throws ServiceException {
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+        controller.setCallTimeout(callTimeout);
+        return master.isMasterInMaintenanceMode(
+          controller, IsInMaintenanceModeRequest.newBuilder().build());
+      }
+    }).getInMaintenanceMode();
+  }
+
   @Override
   public ClusterStatus getClusterStatus() throws IOException {
     return executeCallable(new MasterCallable<ClusterStatus>(getConnection()) {

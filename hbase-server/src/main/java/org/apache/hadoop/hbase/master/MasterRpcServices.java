@@ -109,6 +109,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabled
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
@@ -1356,6 +1358,15 @@ public class MasterRpcServices extends RSRpcServices
     LOG.info(master.getClientIdAuditPrefix() + " stop");
     master.stopMaster();
     return StopMasterResponse.newBuilder().build();
+  }
+
+  @Override
+  public IsInMaintenanceModeResponse isMasterInMaintenanceMode(
+      final RpcController controller,
+      final IsInMaintenanceModeRequest request) throws ServiceException {
+    IsInMaintenanceModeResponse.Builder response = IsInMaintenanceModeResponse.newBuilder();
+    response.setInMaintenanceMode(master.isInMaintenanceMode());
+    return response.build();
   }
 
   @Override

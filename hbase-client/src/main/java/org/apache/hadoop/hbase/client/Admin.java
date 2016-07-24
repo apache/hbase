@@ -840,6 +840,13 @@ public interface Admin extends Abortable, Closeable {
   void stopMaster() throws IOException;
 
   /**
+   * Check whether Master is in maintenance mode
+   *
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isMasterInMaintenanceMode()  throws IOException;
+
+  /**
    * Stop the designated regionserver
    *
    * @param hostnamePort Hostname and port delimited by a <code>:</code> as in

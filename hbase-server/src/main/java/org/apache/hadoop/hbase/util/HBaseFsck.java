@@ -211,6 +211,9 @@ public class HBaseFsck extends Configured implements Closeable {
   // AlreadyBeingCreatedException which is implies timeout on this operations up to
   // HdfsConstants.LEASE_SOFTLIMIT_PERIOD (60 seconds).
   private static final int DEFAULT_WAIT_FOR_LOCK_TIMEOUT = 80; // seconds
+  private static final int DEFAULT_MAX_CREATE_ZNODE_ATTEMPTS = 5;
+  private static final int DEFAULT_CREATE_ZNODE_ATTEMPT_SLEEP_INTERVAL = 200; // milliseconds
+  private static final int DEFAULT_CREATE_ZNODE_ATTEMPT_MAX_SLEEP_TIME = 5000; // milliseconds
 
   /**********************
    * Internal resources
@@ -238,8 +241,6 @@ public class HBaseFsck extends Configured implements Closeable {
   private static boolean details = false; // do we display the full report
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
   private static boolean forceExclusive = false; // only this hbck can modify HBase
-  private static boolean disableBalancer = false; // disable load balancer to keep regions stable
-  private static boolean disableSplitAndMerge = false; // disable split and merge
   private boolean fixAssignments = false; // fix assignment errors?
   private boolean fixMeta = false; // fix meta errors?
   private boolean checkHdfs = true; // load and check fs consistency?
@@ -315,7 +316,11 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private Set<TableName> orphanedTableZNodes = new HashSet<TableName>();
   private final RetryCounterFactory lockFileRetryCounterFactory;
-  
+  private final RetryCounterFactory createZNodeRetryCounterFactory;
+
+  private ZooKeeperWatcher zkw = null;
+  private String hbckEphemeralNodePath = null;
+  private boolean hbckZodeCreated = false;
 
   /**
    * Constructor
@@ -355,6 +360,15 @@ public class HBaseFsck extends Configured implements Closeable {
         "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
       getConf().getInt(
         "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
+    createZNodeRetryCounterFactory = new RetryCounterFactory(
+      getConf().getInt("hbase.hbck.createznode.attempts", DEFAULT_MAX_CREATE_ZNODE_ATTEMPTS),
+      getConf().getInt(
+        "hbase.hbck.createznode.attempt.sleep.interval",
+        DEFAULT_CREATE_ZNODE_ATTEMPT_SLEEP_INTERVAL),
+      getConf().getInt(
+        "hbase.hbck.createznode.attempt.maxsleeptime",
+        DEFAULT_CREATE_ZNODE_ATTEMPT_MAX_SLEEP_TIME));
+    zkw = createZooKeeperWatcher();
   }
 
   private class FileLockCallable implements Callable<FSDataOutputStream> {
@@ -503,6 +517,7 @@ public class HBaseFsck extends Configured implements Closeable {
       @Override
       public void run() {
         IOUtils.closeQuietly(HBaseFsck.this);
+        cleanupHbckZnode();
         unlockHbck();
       }
     });
@@ -682,48 +697,77 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
+   * This method maintains an ephemeral znode. If the creation fails we return false or throw
+   * exception
+   *
+   * @return true if creating znode succeeds; false otherwise
+   * @throws IOException if IO failure occurs
+   */
+  private boolean setMasterInMaintenanceMode() throws IOException {
+    RetryCounter retryCounter = createZNodeRetryCounterFactory.create();
+    hbckEphemeralNodePath = ZKUtil.joinZNode(
+      ZooKeeperWatcher.masterMaintZNode,
+      "hbck-" + Long.toString(EnvironmentEdgeManager.currentTime()));
+    do {
+      try {
+        hbckZodeCreated = ZKUtil.createEphemeralNodeAndWatch(zkw, hbckEphemeralNodePath, null);
+        if (hbckZodeCreated) {
+          break;
+        }
+      } catch (KeeperException e) {
+        if (retryCounter.getAttemptTimes() >= retryCounter.getMaxAttempts()) {
+           throw new IOException("Can't create znode " + hbckEphemeralNodePath, e);
+        }
+        // fall through and retry
+      }
+
+      LOG.warn("Fail to create znode " + hbckEphemeralNodePath + ", try=" +
+          (retryCounter.getAttemptTimes() + 1) + " of " + retryCounter.getMaxAttempts());
+
+      try {
+        retryCounter.sleepUntilNextRetry();
+      } catch (InterruptedException ie) {
+        throw (InterruptedIOException) new InterruptedIOException(
+              "Can't create znode " + hbckEphemeralNodePath).initCause(ie);
+      }
+    } while (retryCounter.shouldRetry());
+    return hbckZodeCreated;
+  }
+
+  private void cleanupHbckZnode() {
+    try {
+      if (zkw != null && hbckZodeCreated) {
+        ZKUtil.deleteNode(zkw, hbckEphemeralNodePath);
+        hbckZodeCreated = false;
+      }
+    } catch (KeeperException e) {
+      // Ignore
+      if (!e.code().equals(KeeperException.Code.NONODE)) {
+        LOG.warn("Delete HBCK znode " + hbckEphemeralNodePath + " failed ", e);
+      }
+    }
+  }
+
+  /**
    * Contacts the master and prints out cluster-wide information
    * @return 0 on success, non-zero on failure
    */
-  public int onlineHbck() throws IOException, KeeperException, InterruptedException, ServiceException {
+  public int onlineHbck()
+      throws IOException, KeeperException, InterruptedException, ServiceException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
     offlineHdfsIntegrityRepair();
 
-    boolean oldBalancer = false;
-    if (shouldDisableBalancer()) {
-      oldBalancer = admin.setBalancerRunning(false, true);
-    }
-    boolean[] oldSplitAndMerge = null;
-    if (shouldDisableSplitAndMerge()) {
-      oldSplitAndMerge = admin.setSplitOrMergeEnabled(false, false,
-        Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
+    // If Master runs maintenance tasks (such as balancer, catalog janitor, etc) during online
+    // hbck, it is likely that hbck would be misled and report transient errors.  Therefore, it
+    // is better to set Master into maintenance mode during online hbck.
+    //
+    if (!setMasterInMaintenanceMode()) {
+      LOG.warn("HBCK is running while master is not in maintenance mode, you might see transient "
+        + "error.  Please run HBCK multiple times to reduce the chance of transient error.");
     }
 
-    try {
-      onlineConsistencyRepair();
-    }
-    finally {
-      // Only restore the balancer if it was true when we started repairing and
-      // we actually disabled it. Otherwise, we might clobber another run of
-      // hbck that has just restored it.
-      if (shouldDisableBalancer() && oldBalancer) {
-        admin.setBalancerRunning(oldBalancer, false);
-      }
-
-      if (shouldDisableSplitAndMerge()) {
-        if (oldSplitAndMerge != null) {
-          if (oldSplitAndMerge[0] && oldSplitAndMerge[1]) {
-            admin.setSplitOrMergeEnabled(true, false,
-              Admin.MasterSwitchType.SPLIT, Admin.MasterSwitchType.MERGE);
-          } else if (oldSplitAndMerge[0]) {
-            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.SPLIT);
-          } else if (oldSplitAndMerge[1]) {
-            admin.setSplitOrMergeEnabled(true, false, Admin.MasterSwitchType.MERGE);
-          }
-        }
-      }
-    }
+    onlineConsistencyRepair();
 
     if (checkRegionBoundaries) {
       checkRegionBoundaries();
@@ -737,6 +781,9 @@ public class HBaseFsck extends Configured implements Closeable {
     checkAndFixOrphanedTableZNodes();
 
     checkAndFixReplication();
+
+    // Remove the hbck znode
+    cleanupHbckZnode();
 
     // Remove the hbck lock
     unlockHbck();
@@ -757,9 +804,20 @@ public class HBaseFsck extends Configured implements Closeable {
 
   @Override
   public void close() throws IOException {
-    IOUtils.closeQuietly(admin);
-    IOUtils.closeQuietly(meta);
-    IOUtils.closeQuietly(connection);
+    try {
+      cleanupHbckZnode();
+      unlockHbck();
+    } catch (Exception io) {
+      LOG.warn(io);
+    } finally {
+      if (zkw != null) {
+        zkw.close();
+        zkw = null;
+      }
+      IOUtils.closeQuietly(admin);
+      IOUtils.closeQuietly(meta);
+      IOUtils.closeQuietly(connection);
+    }
   }
 
   private static class RegionBoundariesInformation {
@@ -1644,7 +1702,6 @@ public class HBaseFsck extends Configured implements Closeable {
     HConnectionManager.execute(new HConnectable<Void>(getConf()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
-        ZooKeeperWatcher zkw = createZooKeeperWatcher();
         try {
           for (TableName tableName :
               ZKTableStateClientSideReader.getDisabledOrDisablingTables(zkw)) {
@@ -1654,8 +1711,6 @@ public class HBaseFsck extends Configured implements Closeable {
           throw new IOException(ke);
         } catch (InterruptedException e) {
           throw new InterruptedIOException();
-        } finally {
-          zkw.close();
         }
         return null;
       }
@@ -1775,17 +1830,6 @@ public class HBaseFsck extends Configured implements Closeable {
     });
   }
 
-  private ServerName getMetaRegionServerName(int replicaId)
-  throws IOException, KeeperException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    ServerName sn = null;
-    try {
-      sn = new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
-    } finally {
-      zkw.close();
-    }
-    return sn;
-  }
 
   /**
    * Contacts each regionserver and fetches metadata about regions.
@@ -3230,32 +3274,21 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixTableLocks() throws IOException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    TableLockChecker checker = new TableLockChecker(zkw, errors);
+    checker.checkTableLocks();
 
-    try {
-      TableLockChecker checker = new TableLockChecker(zkw, errors);
-      checker.checkTableLocks();
-
-      if (this.fixTableLocks) {
-        checker.fixExpiredTableLocks();
-      }
-    } finally {
-      zkw.close();
+    if (this.fixTableLocks) {
+      checker.fixExpiredTableLocks();
     }
   }
 
   private void checkAndFixReplication() throws IOException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    try {
-      ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
-      checker.checkUnDeletedQueues();
+    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+    checker.checkUnDeletedQueues();
 
-      if (checker.hasUnDeletedQueues() && this.fixReplication) {
-        checker.fixUnDeletedQueues();
-        setShouldRerun();
-      }
-    } finally {
-      zkw.close();
+    if (checker.hasUnDeletedQueues() && this.fixReplication) {
+      checker.fixUnDeletedQueues();
+      setShouldRerun();
     }
   }
 
@@ -3267,47 +3300,41 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void checkAndFixOrphanedTableZNodes()
       throws IOException, KeeperException, InterruptedException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
+    String msg;
+    TableInfo tableInfo;
 
-    try {
-      Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
-      String msg;
-      TableInfo tableInfo;
-
-      for (TableName tableName : enablingTables) {
-        // Check whether the table exists in hbase
-        tableInfo = tablesInfo.get(tableName);
-        if (tableInfo != null) {
-          // Table exists.  This table state is in transit.  No problem for this table.
-          continue;
-        }
-
-        msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
-        LOG.warn(msg);
-        orphanedTableZNodes.add(tableName);
-        errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
+    for (TableName tableName : enablingTables) {
+      // Check whether the table exists in hbase
+      tableInfo = tablesInfo.get(tableName);
+      if (tableInfo != null) {
+        // Table exists.  This table state is in transit.  No problem for this table.
+        continue;
       }
 
-      if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
-        ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
+      msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
+      LOG.warn(msg);
+      orphanedTableZNodes.add(tableName);
+      errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
+    }
 
-        for (TableName tableName : orphanedTableZNodes) {
-          try {
-            // Set the table state to be disabled so that if we made mistake, we can trace
-            // the history and figure it out.
-            // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
-            // Both approaches works.
-            zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
-          } catch (CoordinatedStateException e) {
-            // This exception should not happen here
-            LOG.error(
-              "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
-              e);
-          }
+    if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
+      ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
+
+      for (TableName tableName : orphanedTableZNodes) {
+        try {
+          // Set the table state to be disabled so that if we made mistake, we can trace
+          // the history and figure it out.
+          // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
+          // Both approaches works.
+          zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
+        } catch (CoordinatedStateException e) {
+          // This exception should not happen here
+          LOG.error(
+            "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
+            e);
         }
       }
-    } finally {
-      zkw.close();
     }
   }
 
@@ -3377,12 +3404,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
   KeeperException {
     undeployRegions(hi);
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    try {
-      ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
-    } finally {
-      zkw.close();
-    }
+    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)
@@ -4251,38 +4273,6 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Disable the load balancer.
-   */
-  public static void setDisableBalancer() {
-    disableBalancer = true;
-  }
-
-  /**
-   * Disable the split and merge
-   */
-  public static void setDisableSplitAndMerge() {
-    disableSplitAndMerge = true;
-  }
-
-  /**
-   * The balancer should be disabled if we are modifying HBase.
-   * It can be disabled if you want to prevent region movement from causing
-   * false positives.
-   */
-  public boolean shouldDisableBalancer() {
-    return fixAny || disableBalancer;
-  }
-
-  /**
-   * The split and merge should be disabled if we are modifying HBase.
-   * It can be disabled if you want to prevent region movement from causing
-   * false positives.
-   */
-  public boolean shouldDisableSplitAndMerge() {
-    return fixAny || disableSplitAndMerge;
-  }
-
-  /**
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
    */
@@ -4552,7 +4542,6 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta.");
     out.println("   -boundaries Verify that regions boundaries are the same between META and store files.");
     out.println("   -exclusive Abort if another hbck is exclusive or fixing.");
-    out.println("   -disableBalancer Disable the load balancer.");
 
     out.println("");
     out.println("  Metadata Repair options: (expert features, use with caution!)");
@@ -4653,10 +4642,6 @@ public class HBaseFsck extends Configured implements Closeable {
         setDisplayFullReport();
       } else if (cmd.equals("-exclusive")) {
         setForceExclusive();
-      } else if (cmd.equals("-disableBalancer")) {
-        setDisableBalancer();
-      }  else if (cmd.equals("-disableSplitAndMerge")) {
-        setDisableSplitAndMerge();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
           errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -timelag needs a value.");

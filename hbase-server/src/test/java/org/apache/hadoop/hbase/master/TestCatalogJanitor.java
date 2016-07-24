@@ -535,6 +535,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public boolean isInMaintenanceMode() {
+      return false;
+    }
+
+    @Override
     public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
       // Auto-generated method stub
       return 0;

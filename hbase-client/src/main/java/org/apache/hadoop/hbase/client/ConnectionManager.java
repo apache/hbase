@@ -1863,6 +1863,13 @@ class ConnectionManager {
         }
 
         @Override
+        public MasterProtos.IsInMaintenanceModeResponse isMasterInMaintenanceMode(
+            final RpcController controller,
+            final MasterProtos.IsInMaintenanceModeRequest request) throws ServiceException {
+          return stub.isMasterInMaintenanceMode(controller, request);
+        }
+
+        @Override
         public BalanceResponse balance(RpcController controller,
             BalanceRequest request) throws ServiceException {
           return stub.balance(controller, request);
