@@ -207,6 +207,13 @@ message StopMasterRequest {
 message StopMasterResponse {
 }
 
+message IsInMaintenanceModeRequest {
+}
+
+message IsInMaintenanceModeResponse {
+  required bool inMaintenanceMode = 1;
+}
+
 message BalanceRequest {
 }
 
@@ -474,6 +481,12 @@ service MasterService {
   /** Stop HBase Master only.  Does not shutdown the cluster. */
   rpc StopMaster(StopMasterRequest)
     returns(StopMasterResponse);
+
+  /**
+   * Query whether the Master is in maintenance mode.
+   */
+  rpc IsMasterInMaintenanceMode(IsInMaintenanceModeRequest)
+    returns(IsInMaintenanceModeResponse);
 
   /**
    * Run the balancer.  Will run the balancer and if regions to move, it will

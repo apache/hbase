@@ -126,6 +126,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabled
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
@@ -2083,6 +2085,12 @@ public class HConnectionManager {
         public StopMasterResponse stopMaster(RpcController controller,
             StopMasterRequest request) throws ServiceException {
           return stub.stopMaster(controller, request);
+        }
+
+        @Override
+        public IsInMaintenanceModeResponse isMasterInMaintenanceMode(RpcController controller,
+            IsInMaintenanceModeRequest request) throws ServiceException {
+          return stub.isMasterInMaintenanceMode(controller, request);
         }
 
         @Override

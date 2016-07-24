@@ -298,7 +298,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -314,7 +314,7 @@ public final class SnapshotProtos {
         getHfileBytes() {
       java.lang.Object ref = hfile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         hfile_ = b;
@@ -341,7 +341,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -357,7 +357,7 @@ public final class SnapshotProtos {
         getWalServerBytes() {
       java.lang.Object ref = walServer_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         walServer_ = b;
@@ -384,7 +384,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -400,7 +400,7 @@ public final class SnapshotProtos {
         getWalNameBytes() {
       java.lang.Object ref = walName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         walName_ = b;
@@ -742,7 +742,7 @@ public final class SnapshotProtos {
 
       public final boolean isInitialized() {
         if (!hasType()) {
-
+          
           return false;
         }
         return true;
@@ -832,7 +832,7 @@ public final class SnapshotProtos {
           getHfileBytes() {
         java.lang.Object ref = hfile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           hfile_ = b;
@@ -906,7 +906,7 @@ public final class SnapshotProtos {
           getWalServerBytes() {
         java.lang.Object ref = walServer_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           walServer_ = b;
@@ -980,7 +980,7 @@ public final class SnapshotProtos {
           getWalNameBytes() {
         java.lang.Object ref = walName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           walName_ = b;
@@ -1067,7 +1067,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles>
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles> 
         getFamilyFilesList();
     /**
      * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
@@ -1080,7 +1080,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
         getFamilyFilesOrBuilderList();
     /**
      * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
@@ -1388,7 +1388,7 @@ public final class SnapshotProtos {
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
-          com.google.protobuf.ByteString bs =
+          com.google.protobuf.ByteString bs = 
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
@@ -1404,7 +1404,7 @@ public final class SnapshotProtos {
           getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -1777,12 +1777,12 @@ public final class SnapshotProtos {
 
         public final boolean isInitialized() {
           if (!hasName()) {
-
+            
             return false;
           }
           if (hasReference()) {
             if (!getReference().isInitialized()) {
-
+              
               return false;
             }
           }
@@ -1837,7 +1837,7 @@ public final class SnapshotProtos {
             getNameBytes() {
           java.lang.Object ref = name_;
           if (ref instanceof String) {
-            com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString b = 
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
             name_ = b;
@@ -1986,7 +1986,7 @@ public final class SnapshotProtos {
          * <code>optional .Reference reference = 2;</code>
          */
         private com.google.protobuf.SingleFieldBuilder<
-            org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder>
+            org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder> 
             getReferenceFieldBuilder() {
           if (referenceBuilder_ == null) {
             referenceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2076,7 +2076,7 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
-      java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile>
+      java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile> 
           getStoreFilesList();
       /**
        * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
@@ -2089,7 +2089,7 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
-      java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder>
+      java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
           getStoreFilesOrBuilderList();
       /**
        * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
@@ -2232,7 +2232,7 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
           getStoreFilesOrBuilderList() {
         return storeFiles_;
       }
@@ -2552,7 +2552,7 @@ public final class SnapshotProtos {
                 storeFilesBuilder_ = null;
                 storeFiles_ = other.storeFiles_;
                 bitField0_ = (bitField0_ & ~0x00000002);
-                storeFilesBuilder_ =
+                storeFilesBuilder_ = 
                   com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                      getStoreFilesFieldBuilder() : null;
               } else {
@@ -2566,12 +2566,12 @@ public final class SnapshotProtos {
 
         public final boolean isInitialized() {
           if (!hasFamilyName()) {
-
+            
             return false;
           }
           for (int i = 0; i < getStoreFilesCount(); i++) {
             if (!getStoreFiles(i).isInitialized()) {
-
+              
               return false;
             }
           }
@@ -2828,7 +2828,7 @@ public final class SnapshotProtos {
         /**
          * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
-        public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder>
+        public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
              getStoreFilesOrBuilderList() {
           if (storeFilesBuilder_ != null) {
             return storeFilesBuilder_.getMessageOrBuilderList();
@@ -2854,12 +2854,12 @@ public final class SnapshotProtos {
         /**
          * <code>repeated .SnapshotRegionManifest.StoreFile store_files = 2;</code>
          */
-        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder>
+        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder> 
              getStoreFilesBuilderList() {
           return getStoreFilesFieldBuilder().getBuilderList();
         }
         private com.google.protobuf.RepeatedFieldBuilder<
-            org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder>
+            org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFileOrBuilder> 
             getStoreFilesFieldBuilder() {
           if (storeFilesBuilder_ == null) {
             storeFilesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2935,7 +2935,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
         getFamilyFilesOrBuilderList() {
       return familyFiles_;
     }
@@ -3294,7 +3294,7 @@ public final class SnapshotProtos {
               familyFilesBuilder_ = null;
               familyFiles_ = other.familyFiles_;
               bitField0_ = (bitField0_ & ~0x00000004);
-              familyFilesBuilder_ =
+              familyFilesBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getFamilyFilesFieldBuilder() : null;
             } else {
@@ -3308,16 +3308,16 @@ public final class SnapshotProtos {
 
       public final boolean isInitialized() {
         if (!hasRegionInfo()) {
-
+          
           return false;
         }
         if (!getRegionInfo().isInitialized()) {
-
+          
           return false;
         }
         for (int i = 0; i < getFamilyFilesCount(); i++) {
           if (!getFamilyFiles(i).isInitialized()) {
-
+            
             return false;
           }
         }
@@ -3480,7 +3480,7 @@ public final class SnapshotProtos {
        * <code>required .RegionInfo region_info = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
           getRegionInfoFieldBuilder() {
         if (regionInfoBuilder_ == null) {
           regionInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3688,7 +3688,7 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
            getFamilyFilesOrBuilderList() {
         if (familyFilesBuilder_ != null) {
           return familyFilesBuilder_.getMessageOrBuilderList();
@@ -3714,12 +3714,12 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest.FamilyFiles family_files = 3;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder>
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder> 
            getFamilyFilesBuilderList() {
         return getFamilyFilesFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFilesOrBuilder> 
           getFamilyFilesFieldBuilder() {
         if (familyFilesBuilder_ == null) {
           familyFilesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3765,7 +3765,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest>
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest> 
         getRegionManifestsList();
     /**
      * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
@@ -3778,7 +3778,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
         getRegionManifestsOrBuilderList();
     /**
      * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
@@ -3935,7 +3935,7 @@ public final class SnapshotProtos {
     /**
      * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
         getRegionManifestsOrBuilderList() {
       return regionManifests_;
     }
@@ -4268,7 +4268,7 @@ public final class SnapshotProtos {
               regionManifestsBuilder_ = null;
               regionManifests_ = other.regionManifests_;
               bitField0_ = (bitField0_ & ~0x00000002);
-              regionManifestsBuilder_ =
+              regionManifestsBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getRegionManifestsFieldBuilder() : null;
             } else {
@@ -4282,16 +4282,16 @@ public final class SnapshotProtos {
 
       public final boolean isInitialized() {
         if (!hasTableSchema()) {
-
+          
           return false;
         }
         if (!getTableSchema().isInitialized()) {
-
+          
           return false;
         }
         for (int i = 0; i < getRegionManifestsCount(); i++) {
           if (!getRegionManifests(i).isInitialized()) {
-
+            
             return false;
           }
         }
@@ -4421,7 +4421,7 @@ public final class SnapshotProtos {
        * <code>required .TableSchema table_schema = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
           getTableSchemaFieldBuilder() {
         if (tableSchemaBuilder_ == null) {
           tableSchemaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -4629,7 +4629,7 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
            getRegionManifestsOrBuilderList() {
         if (regionManifestsBuilder_ != null) {
           return regionManifestsBuilder_.getMessageOrBuilderList();
@@ -4655,12 +4655,12 @@ public final class SnapshotProtos {
       /**
        * <code>repeated .SnapshotRegionManifest region_manifests = 2;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder>
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder> 
            getRegionManifestsBuilderList() {
         return getRegionManifestsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.Builder, org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifestOrBuilder> 
           getRegionManifestsFieldBuilder() {
         if (regionManifestsBuilder_ == null) {
           regionManifestsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<

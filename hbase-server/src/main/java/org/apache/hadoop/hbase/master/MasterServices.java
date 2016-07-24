@@ -200,6 +200,13 @@ public interface MasterServices extends Server {
   boolean isInitialized();
 
   /**
+   * Report whether this master is in maintenance mode.
+   *
+   * @return true if master is in maintenanceMode
+   */
+  boolean isInMaintenanceMode();
+
+  /**
    * Create a new namespace
    * @param descriptor descriptor which describes the new namespace
    * @throws IOException

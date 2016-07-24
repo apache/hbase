@@ -99,6 +99,7 @@ public class CatalogJanitor extends Chore {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
       if (this.enabled.get()
+          && !this.services.isInMaintenanceMode()
           && am != null
           && am.isFailoverCleanupDone()
           && am.getRegionStates().getRegionsInTransition().size() == 0) {
@@ -231,6 +232,11 @@ public class CatalogJanitor extends Chore {
       int mergeCleaned = 0;
       Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
       for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
+        if (this.services.isInMaintenanceMode()) {
+          // Stop cleaning if the master is in maintenance mode
+          break;
+        }
+
         HRegionInfo regionA = HRegionInfo.getHRegionInfo(e.getValue(),
             HConstants.MERGEA_QUALIFIER);
         HRegionInfo regionB = HRegionInfo.getHRegionInfo(e.getValue(),
@@ -257,6 +263,11 @@ public class CatalogJanitor extends Chore {
       // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<String>();
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
+        if (this.services.isInMaintenanceMode()) {
+          // Stop cleaning if the master is in maintenance mode
+          break;
+        }
+
         if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
             cleanParent(e.getKey(), e.getValue())) {
           splitCleaned++;

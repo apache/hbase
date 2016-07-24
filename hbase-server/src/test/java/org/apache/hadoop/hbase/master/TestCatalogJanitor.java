@@ -393,6 +393,11 @@ public class TestCatalogJanitor {
       // Auto-generated method stub
       return false;
     }
+
+    @Override
+    public boolean isInMaintenanceMode() {
+      return false;
+    }
   }
 
   @Test

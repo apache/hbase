@@ -108,6 +108,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterSta
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
@@ -2245,6 +2247,20 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
   }
 
+  /**
+   * Check whether Master is in maintenance mode
+   *
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isMasterInMaintenanceMode() throws IOException {
+    return executeCallable(new MasterCallable<IsInMaintenanceModeResponse>(getConnection()) {
+      @Override
+      public IsInMaintenanceModeResponse call() throws ServiceException {
+        return master.isMasterInMaintenanceMode(null,
+          IsInMaintenanceModeRequest.newBuilder().build());
+      }
+    }).getInMaintenanceMode();
+  }
 
   /**
    * @return cluster status

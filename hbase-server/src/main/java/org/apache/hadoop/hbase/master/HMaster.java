@@ -165,6 +165,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabled
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
@@ -254,6 +256,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -382,6 +385,9 @@ MasterServices, Server {
    * This servers address.
    */
   private final InetSocketAddress isa;
+
+  // Tracker for master maintenance mode setting
+  private MasterMaintenanceModeTracker maintenanceModeTracker;
 
   // Metrics for the HMaster
   private final MetricsMaster metricsMaster;
@@ -783,6 +789,9 @@ MasterServices, Server {
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this,
       this.serverManager);
     this.drainingServerTracker.start();
+
+    this.maintenanceModeTracker = new MasterMaintenanceModeTracker(zooKeeper);
+    this.maintenanceModeTracker.start();
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
@@ -1552,6 +1561,12 @@ MasterServices, Server {
       LOG.debug("Master has not been initialized, don't run balancer.");
       return false;
     }
+
+    if (isInMaintenanceMode()) {
+      LOG.info("Master is in maintenanceMode mode, don't run balancer.");
+      return false;
+    }
+
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     boolean balancerRan;
@@ -2808,6 +2823,15 @@ MasterServices, Server {
   }
 
   @Override
+  public IsInMaintenanceModeResponse isMasterInMaintenanceMode(
+      final RpcController controller,
+      final IsInMaintenanceModeRequest request) throws ServiceException {
+    IsInMaintenanceModeResponse.Builder response = IsInMaintenanceModeResponse.newBuilder();
+    response.setInMaintenanceMode(isInMaintenanceMode());
+    return response.build();
+  }
+
+  @Override
   public AssignRegionResponse assignRegion(RpcController controller, AssignRegionRequest req)
   throws ServiceException {
     try {
@@ -3784,13 +3808,25 @@ MasterServices, Server {
   }
 
   /**
+   * Report whether this master is in maintenance mode.
+   *
+   * @return true if master is in maintenanceMode
+   */
+  @Override
+  public boolean isInMaintenanceMode() {
+    return maintenanceModeTracker.isInMaintenanceMode();
+  }
+
+  /**
    * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
    * false is returned.
    *
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   public boolean isBalancerOn() {
-    if (null == loadBalancerTracker) return false;
+    if (null == loadBalancerTracker || isInMaintenanceMode()) {
+      return false;
+    }
     return loadBalancerTracker.isBalancerOn();
   }
 
