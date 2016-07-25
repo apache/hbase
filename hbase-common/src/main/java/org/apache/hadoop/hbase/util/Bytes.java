@@ -2631,16 +2631,16 @@ public class Bytes implements Comparable<Bytes> {
       }
     }
     return result;
-    }
+  }
 
-    public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
-        int leftOffset, int rightOffset) {
-      int length = Math.min(leftLength, rightLength);
-      int result = 0;
+  public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
+      int leftOffset, int rightOffset) {
+    int length = Math.min(leftLength, rightLength);
+    int result = 0;
 
-      while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
-        result++;
-      }
-      return result;
+    while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
+      result++;
     }
+    return result;
+  }
 }
