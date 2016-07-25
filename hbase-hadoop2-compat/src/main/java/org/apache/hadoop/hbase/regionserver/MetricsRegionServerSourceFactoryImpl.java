@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,6 +29,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     private Object aggLock = new Object();
     private MetricsRegionAggregateSourceImpl aggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
+    private MetricsHeapMemoryManagerSourceImpl heapMemMngImpl;
   }
 
   private synchronized MetricsRegionAggregateSourceImpl getAggregate() {
@@ -48,6 +48,16 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
         FactoryStorage.INSTANCE.tblAggImpl = new MetricsTableAggregateSourceImpl();
       }
       return FactoryStorage.INSTANCE.tblAggImpl;
+    }
+  }
+
+  @Override
+  public synchronized MetricsHeapMemoryManagerSource getHeapMemoryManager() {
+    synchronized (FactoryStorage.INSTANCE.aggLock) {
+      if (FactoryStorage.INSTANCE.heapMemMngImpl == null) {
+        FactoryStorage.INSTANCE.heapMemMngImpl = new MetricsHeapMemoryManagerSourceImpl();
+      }
+      return FactoryStorage.INSTANCE.heapMemMngImpl;
     }
   }
 
