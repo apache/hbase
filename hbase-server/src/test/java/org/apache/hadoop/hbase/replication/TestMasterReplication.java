@@ -87,8 +87,8 @@ public class TestMasterReplication {
   private Configuration[] configurations;
   private MiniZooKeeperCluster miniZK;
 
-  private static final long SLEEP_TIME = 500;
-  private static final int NB_RETRIES = 10;
+  private static final long SLEEP_TIME = 1000;
+  private static final int NB_RETRIES = 120;
 
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
