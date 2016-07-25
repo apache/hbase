@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -110,7 +111,29 @@ public abstract class AbstractMemStore implements MemStore {
   public long add(Cell cell) {
     Cell toAdd = maybeCloneWithAllocator(cell);
     boolean mslabUsed = (toAdd != cell);
+    // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). By
+    // default MSLAB is ON and we might have copied cell to MSLAB area. If not we must do below deep
+    // copy. Or else we will keep referring to the bigger chunk of memory and prevent it from
+    // getting GCed.
+    // Copy to MSLAB would not have happened if
+    // 1. MSLAB is turned OFF. See "hbase.hregion.memstore.mslab.enabled"
+    // 2. When the size of the cell is bigger than the max size supported by MSLAB. See
+    // "hbase.hregion.memstore.mslab.max.allocation". This defaults to 256 KB
+    // 3. When cells are from Append/Increment operation.
+    if (!mslabUsed) {
+      toAdd = deepCopyIfNeeded(toAdd);
+    }
     return internalAdd(toAdd, mslabUsed);
+  }
+
+  private static Cell deepCopyIfNeeded(Cell cell) {
+    // When Cell is backed by a shared memory chunk (this can be a chunk of memory where we read the
+    // req into) the Cell instance will be of type ShareableMemory. Later we will add feature to
+    // read the RPC request into pooled direct ByteBuffers.
+    if (cell instanceof ShareableMemory) {
+      return ((ShareableMemory) cell).cloneToCell();
+    }
+    return cell;
   }
 
   /**
@@ -156,10 +179,8 @@ public abstract class AbstractMemStore implements MemStore {
    */
   @Override
   public long delete(Cell deleteCell) {
-    Cell toAdd = maybeCloneWithAllocator(deleteCell);
-    boolean mslabUsed = (toAdd != deleteCell);
-    long s = internalAdd(toAdd, mslabUsed);
-    return s;
+    // Delete operation just adds the delete marker cell coming here.
+    return add(deleteCell);
   }
 
   /**
@@ -245,6 +266,10 @@ public abstract class AbstractMemStore implements MemStore {
     // hitting OOME - see TestMemStore.testUpsertMSLAB for a
     // test that triggers the pathological case if we don't avoid MSLAB
     // here.
+    // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). We
+    // must do below deep copy. Or else we will keep referring to the bigger chunk of memory and
+    // prevent it from getting GCed.
+    cell = deepCopyIfNeeded(cell);
     long addedSize = internalAdd(cell, false);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.

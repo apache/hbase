@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -85,7 +84,7 @@ public class KeyValueCodecWithTags implements Codec {
     }
 
     protected Cell createCell(byte[] buf, int offset, int len) {
-      return new KeyValue(buf, offset, len);
+      return new ShareableMemoryKeyValue(buf, offset, len);
     }
   }
 
