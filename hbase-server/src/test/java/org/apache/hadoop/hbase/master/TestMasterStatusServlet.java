@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -26,8 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -178,6 +177,11 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransitionOrderedByTimestamp();
+    Mockito.when(
+        am.getState(
+            any(String.class)
+        )
+    ).thenReturn(new RegionState(null, null));
 
     // Render to a string
     StringWriter sw = new StringWriter();

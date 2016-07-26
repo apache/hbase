@@ -36,6 +36,7 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -87,6 +88,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -149,8 +151,8 @@ public class AssignmentManager {
 
   private final ExecutorService executorService;
 
-  // Thread pool executor service. TODO, consolidate with executorService?
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
+  private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
   private final RegionStates regionStates;
 
@@ -202,6 +204,8 @@ public class AssignmentManager {
 
   private RegionStateListener regionStateListener;
 
+  private RetryCounter.BackoffPolicy backoffPolicy;
+  private RetryCounter.RetryConfig retryConfig;
   /**
    * Constructs a new assignment manager.
    *
@@ -240,8 +244,13 @@ public class AssignmentManager {
         "hbase.meta.assignment.retry.sleeptime", 1000l);
     this.balancer = balancer;
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
+
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
-      maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
+        maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
+
+    this.scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1,
+        Threads.newDaemonThreadFactory("AM.Scheduler"));
+
     this.regionStates = new RegionStates(
       server, tableStateManager, serverManager, regionStateStore);
 
@@ -254,6 +263,23 @@ public class AssignmentManager {
 
     this.metricsAssignmentManager = new MetricsAssignmentManager();
     this.tableLockManager = tableLockManager;
+
+    // Configurations for retrying opening a region on receiving a FAILED_OPEN
+    this.retryConfig = new RetryCounter.RetryConfig();
+    this.retryConfig.setSleepInterval(conf.getLong("hbase.assignment.retry.sleep.initial", 0l));
+    // Set the max time limit to the initial sleep interval so we use a constant time sleep strategy
+    // if the user does not set a max sleep limit
+    this.retryConfig.setMaxSleepTime(conf.getLong("hbase.assignment.retry.sleep.max",
+        retryConfig.getSleepInterval()));
+    this.backoffPolicy = getBackoffPolicy();
+  }
+
+  /**
+   * Returns the backoff policy used for Failed Region Open retries
+   * @return the backoff policy used for Failed Region Open retries
+   */
+  RetryCounter.BackoffPolicy getBackoffPolicy() {
+    return new RetryCounter.ExponentialBackoffPolicyWithLimit();
   }
 
   MetricsAssignmentManager getAssignmentManagerMetrics() {
@@ -2028,6 +2054,11 @@ public class AssignmentManager {
     threadPoolExecutorService.submit(new AssignCallable(this, regionInfo));
   }
 
+  void invokeAssignLater(HRegionInfo regionInfo, long sleepMillis) {
+    scheduledThreadPoolExecutor.schedule(new DelayedAssignCallable(
+        new AssignCallable(this, regionInfo)), sleepMillis, TimeUnit.MILLISECONDS);
+  }
+
   void invokeUnAssign(HRegionInfo regionInfo) {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
   }
@@ -2233,7 +2264,10 @@ public class AssignmentManager {
         } catch (HBaseIOException e) {
           LOG.warn("Failed to get region plan", e);
         }
-        invokeAssign(hri);
+        // Have the current thread sleep a bit before resubmitting the RPC request
+        long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
+            failedOpenTracker.get(encodedName).get());
+        invokeAssignLater(hri, sleepTime);
       }
     }
     // Null means no error
@@ -2732,6 +2766,10 @@ public class AssignmentManager {
     return replicasToClose;
   }
 
+  public Map<String, AtomicInteger> getFailedOpenTracker() {return failedOpenTracker;}
+
+  public RegionState getState(String encodedName) {return regionStates.getRegionState(encodedName);}
+
   /**
    * A region is offline.  The new state should be the specified one,
    * if not null.  If the specified state is null, the new state is Offline.
@@ -2933,5 +2971,17 @@ public class AssignmentManager {
 
   void setRegionStateListener(RegionStateListener listener) {
     this.regionStateListener = listener;
+  }
+
+  private class DelayedAssignCallable implements Runnable {
+    Callable callable;
+    public DelayedAssignCallable(Callable callable) {
+      this.callable = callable;
+    }
+
+    @Override
+    public void run() {
+      threadPoolExecutorService.submit(callable);
+    }
   }
 }

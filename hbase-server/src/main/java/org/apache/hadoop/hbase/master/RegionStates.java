@@ -67,10 +67,16 @@ public class RegionStates {
 
   public final static RegionStateStampComparator REGION_STATE_COMPARATOR =
     new RegionStateStampComparator();
+
+  // This comparator sorts the RegionStates by time stamp then Region name.
+  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
+  // to share a timestamp.
   private static class RegionStateStampComparator implements Comparator<RegionState> {
     @Override
     public int compare(RegionState l, RegionState r) {
-      return Long.compare(l.getStamp(), r.getStamp());
+      return Long.compare(l.getStamp(), r.getStamp()) == 0 ?
+          Bytes.compareTo(l.getRegion().getRegionName(), r.getRegion().getRegionName()) :
+          Long.compare(l.getStamp(), r.getStamp());
     }
   }
 

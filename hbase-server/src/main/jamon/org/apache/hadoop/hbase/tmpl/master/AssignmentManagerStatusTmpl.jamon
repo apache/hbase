@@ -25,6 +25,8 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
 java.util.HashSet;
 java.util.SortedSet;
+java.util.Map;
+java.util.concurrent.atomic.AtomicInteger;
 </%import>
 <%args>
 AssignmentManager assignmentManager;
@@ -32,7 +34,9 @@ int limit = 100;
 </%args>
 
 <%java SortedSet<RegionState> rit = assignmentManager
-  .getRegionStates().getRegionsInTransitionOrderedByTimestamp(); %>
+  .getRegionStates().getRegionsInTransitionOrderedByTimestamp();
+  Map<String, AtomicInteger> failedRegionTracker = assignmentManager.getFailedOpenTracker();
+   %>
 
 <%if !rit.isEmpty() %>
 <%java>
@@ -83,7 +87,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
              <div class="tab-pane" id="tab_rits<% (recordItr / ritsPerPage) + 1 %>">
                  </%if>
                  <table class="table table-striped" style="margin-bottom:0px;"><tr><th>Region</th>
-                     <th>State</th><th>RIT time (ms)</th></tr>
+                     <th>State</th><th>RIT time (ms)</th> <th>Retries </th></tr>
              </%if>
 
              <%if ritsOverThreshold.contains(rs.getRegion().getEncodedName()) %>
@@ -93,9 +97,21 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
             <%else>
                     <tr>
             </%if>
+                        <%java>
+                          String retryStatus = "0";
+                          String name = rs.getRegion().getEncodedName();
+                          RegionState state = assignmentManager.getState(name);
+                          AtomicInteger numOpenRetries = failedRegionTracker.get(name);
+                          if (numOpenRetries != null ) {
+                            retryStatus = Integer.toString(numOpenRetries.get());
+                          } else if (state.getState() ==  RegionState.State.FAILED_OPEN) {
+                             retryStatus = "Failed";
+                          }
+                        </%java>
                         <td><% rs.getRegion().getEncodedName() %></td><td>
                         <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(rs, conf) %></td>
                         <td><% (currentTime - rs.getStamp()) %> </td>
+                        <td> <% retryStatus %> </td>
                      </tr>
                      <%java recordItr++; %>
              <%if (recordItr % ritsPerPage) == 0 %>
