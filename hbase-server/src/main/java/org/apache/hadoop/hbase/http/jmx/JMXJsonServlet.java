@@ -38,7 +38,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.util.JSONBean;
-import org.owasp.esapi.ESAPI;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -161,7 +160,7 @@ public class JMXJsonServlet extends HttpServlet {
         jsonpcb = request.getParameter(CALLBACK_PARAM);
         if (jsonpcb != null) {
           response.setContentType("application/javascript; charset=utf8");
-          writer.write(encodeJS(jsonpcb) + "(");
+          writer.write(jsonpcb + "(");
         } else {
           response.setContentType("application/json; charset=utf8");
         }
@@ -214,9 +213,4 @@ public class JMXJsonServlet extends HttpServlet {
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
   }
-
-  private String encodeJS(String inputStr) {
-    return ESAPI.encoder().encodeForJavaScript(inputStr);
-  }
-
 }

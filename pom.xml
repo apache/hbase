@@ -756,7 +756,6 @@
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
               <exclude>**/patchprocess/**</exclude>
-              <exclude>**/ESAPI.properties</exclude>
             </excludes>
           </configuration>
         </plugin>
