@@ -26,10 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -101,7 +100,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
                 continue;
               }
               // Recreate the cell with the new tags and the existing tags
-              Cell newCell = new TagRewriteCell(cell, TagUtil.fromList(nonVisTags));
+              Cell newCell = CellUtil.createCell(cell, nonVisTags);
               newEdit.add(newCell);
             } else {
               newEdit.add(cell);

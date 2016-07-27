@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -388,7 +387,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
                 removeReplicationVisibilityTag(tags);
               }
               tags.addAll(visibilityTags);
-              Cell updatedCell = new TagRewriteCell(cell, TagUtil.fromList(tags));
+              Cell updatedCell = CellUtil.createCell(cell, tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
@@ -753,7 +752,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       }
     }
 
-    Cell rewriteCell = new TagRewriteCell(newCell, TagUtil.fromList(tags));
+    Cell rewriteCell = CellUtil.createCell(newCell, tags);
     return rewriteCell;
   }
 

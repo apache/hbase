@@ -104,7 +104,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -3699,7 +3698,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         List<Tag> newTags = TagUtil.carryForwardTags(null, cell);
         newTags = TagUtil.carryForwardTTLTag(newTags, m.getTTL());
         // Rewrite the cell with the updated set of tags
-        cells.set(i, new TagRewriteCell(cell, TagUtil.fromList(newTags)));
+        cells.set(i, CellUtil.createCell(cell, newTags));
       }
     }
   }
@@ -7437,7 +7436,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       newCell = delta;
       tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
       if (tags != null) {
-        newCell = new TagRewriteCell(delta, TagUtil.fromList(tags));
+        newCell = CellUtil.createCell(delta, tags);
       }
     }
     return newCell;

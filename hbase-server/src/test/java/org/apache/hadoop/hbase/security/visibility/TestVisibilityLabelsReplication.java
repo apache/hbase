@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
@@ -413,8 +412,7 @@ public class TestVisibilityLabelsReplication {
             List<Tag> tagList = new ArrayList<Tag>();
             tagList.add(tag);
             tagList.addAll(kv.getTags());
-            byte[] fromList = TagUtil.fromList(tagList);
-            TagRewriteCell newcell = new TagRewriteCell(kv, fromList);
+            Cell newcell = CellUtil.createCell(kv, tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
         }

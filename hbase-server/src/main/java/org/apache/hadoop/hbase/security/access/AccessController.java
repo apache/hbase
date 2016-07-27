@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
@@ -887,7 +886,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         while (tagIterator.hasNext()) {
           tags.add(tagIterator.next());
         }
-        newCells.add(new TagRewriteCell(cell, TagUtil.fromList(tags)));
+        newCells.add(CellUtil.createCell(cell, tags));
       }
       // This is supposed to be safe, won't CME
       e.setValue(newCells);
@@ -2065,7 +2064,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       return newCell;
     }
 
-    Cell rewriteCell = new TagRewriteCell(newCell, TagUtil.fromList(tags));
+    Cell rewriteCell = CellUtil.createCell(newCell, tags);
     return rewriteCell;
   }
 
