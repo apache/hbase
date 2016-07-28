@@ -91,6 +91,7 @@ public class TestSnapshotFromMaster {
       TableName.valueOf("test");
   // refresh the cache every 1/2 second
   private static final long cacheRefreshPeriod = 500;
+  private static final int blockingStoreFiles = 12;
 
   /**
    * Setup the config for the cluster
@@ -115,7 +116,7 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.hstore.compaction.min", 2);
     conf.setInt("hbase.hstore.compactionThreshold", 5);
     // block writes if we get to 12 store files
-    conf.setInt("hbase.hstore.blockingStoreFiles", 12);
+    conf.setInt("hbase.hstore.blockingStoreFiles", blockingStoreFiles);
     // Ensure no extra cleaners on by default (e.g. TimeToLiveHFileCleaner)
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
     conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, "");
@@ -280,7 +281,6 @@ public class TestSnapshotFromMaster {
    */
   @Test(timeout = 300000)
   public void testSnapshotHFileArchiving() throws Exception {
-    int hfileCount = 20;
     Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -293,13 +293,9 @@ public class TestSnapshotFromMaster {
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
 
     // load the table
-    while(true) {
+    for (int i = 0; i < blockingStoreFiles / 2; i ++) {
       UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
       UTIL.flush(TABLE_NAME);
-      Collection<String> hfiles = getHFiles(rootDir, fs, TABLE_NAME);
-      if (hfiles.size() >= hfileCount) {
-        break;
-      }
     }
 
     // disable the table so we can take a snapshot
