@@ -181,6 +181,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -1319,7 +1320,12 @@ public class MasterRpcServices extends RSRpcServices
   public ShutdownResponse shutdown(RpcController controller,
       ShutdownRequest request) throws ServiceException {
     LOG.info(master.getClientIdAuditPrefix() + " shutdown");
-    master.shutdown();
+    try {
+      master.shutdown();
+    } catch (IOException e) {
+      LOG.error("Exception occurred in HMaster.shutdown()", e);
+      throw new ServiceException(e);
+    }
     return ShutdownResponse.newBuilder().build();
   }
 
@@ -1356,7 +1362,12 @@ public class MasterRpcServices extends RSRpcServices
   public StopMasterResponse stopMaster(RpcController controller,
       StopMasterRequest request) throws ServiceException {
     LOG.info(master.getClientIdAuditPrefix() + " stop");
-    master.stopMaster();
+    try {
+      master.stopMaster();
+    } catch (IOException e) {
+      LOG.error("Exception occurred while stopping master", e);
+      throw new ServiceException(e);
+    }
     return StopMasterResponse.newBuilder().build();
   }
 

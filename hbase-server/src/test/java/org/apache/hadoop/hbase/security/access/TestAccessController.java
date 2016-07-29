@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProcedureProtos;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
@@ -330,6 +331,33 @@ public class TestAccessController extends SecureTestUtil {
         0,
         AccessControlLists.getNamespacePermissions(conf,
             TEST_TABLE.getNamespaceAsString()).size());
+  }
+
+  @Test (timeout=180000)
+  public void testUnauthorizedShutdown() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+        master.shutdown();
+        return null;
+      }
+    };
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test (timeout=180000)
+  public void testUnauthorizedStopMaster() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+        master.stopMaster();
+        return null;
+      }
+    };
+
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test (timeout=180000)
