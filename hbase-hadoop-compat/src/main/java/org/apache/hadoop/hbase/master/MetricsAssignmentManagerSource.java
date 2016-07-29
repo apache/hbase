@@ -25,7 +25,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  String METRICS_NAME = "AssignmentManger";
+  String METRICS_NAME = "AssignmentManager";
 
   /**
    * The context metrics will be under.
