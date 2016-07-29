@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -278,6 +279,32 @@ public class TestAccessController3 extends SecureTestUtil {
     // all others should be denied
     verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
       USER_GROUP_READ, USER_GROUP_WRITE);
+  }
+
+  @Test (timeout=180000)
+  public void testUnauthorizedShutdown() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+        master.shutdown();
+        return null;
+      }
+    };
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test (timeout=180000)
+  public void testUnauthorizedStopMaster() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+        master.stopMaster();
+        return null;
+      }
+    };
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
 }
