@@ -24,6 +24,40 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Manages a singleton instance of the environment edge. This class shall
  * implement static versions of the interface {@link EnvironmentEdge}, then
  * defer to the delegate on invocation.
+ * <br>
+ * <b>Original Motivation:</b>
+ * The main purpose of the Environment Edge Manager was to have better control
+ * over the tests so that they behave the same when run in any system.
+ * (Refer: <a href="https://issues.apache.org/jira/browse/HBASE-2578">HBASE-2578</a> - The issue
+ * which added the {@link org.apache.hadoop.hbase.util.EnvironmentEdgeManager}).
+ * The idea is to have a central place where time can be assigned in HBase. That makes
+ * it easier to inject different implementations of time. The default environment edge is the Java
+ * Current Time in millis. The environment edge manager class is designed to be able
+ * to plug in a new implementation of time by simply injecting an implementation
+ * of {@link org.apache.hadoop.hbase.util.EnvironmentEdge} interface to
+ * {@link org.apache.hadoop.hbase.util.EnvironmentEdgeManager}
+<p>
+ <b>Problems with Environment Edge:</b><br>
+ 1. One of the major problems is the side effects of injecting an Environment Edge into
+    Environment Edge Manager.<br>
+    For example, A test could inject an edge to fast forward time in order to avoid thread
+    sleep to save time, but it could trigger a premature waking up of another thread waiting
+    on a condition dependent on time lapse, which could potentially affect the normal
+    working of the system leading to failure of tests.<br>
+ 2. Every test should ensure it is setting the Environment Edge it needs for the test to
+    perform in an expected way. Because another test which might have run before the current test
+    could have injected its own custom Environment Edge which may not be applicable to this
+    test. This is still solvable but the problem is that the tests can run in parallel
+    leading to different combinations of environment edges being injected causing unexpected
+    results.<br>
+ 3. Another important issue with respect to injecting time through Environment Edge is that
+    the milliseconds unit of time is ingrained throughout the codebase in the form of hardcoded
+    sleep time or timeouts that any change of time unit or making it fast or slow can potentially
+    trigger unexpected failures due to timeout or unintended flow of execution.<br>
+</p>
+ Because of the above issues, only {@link org.apache.hadoop.hbase.util.DefaultEnvironmentEdge}
+ is being used, whose implementation of time returns the {@link System#currentTimeMillis()}. It
+ is advised not to inject any other {@link org.apache.hadoop.hbase.util.EnvironmentEdge}.
  */
 @InterfaceAudience.Private
 public class EnvironmentEdgeManager {
