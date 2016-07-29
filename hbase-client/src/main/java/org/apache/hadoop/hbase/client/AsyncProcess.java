@@ -1583,7 +1583,11 @@ class AsyncProcess {
         if (!hasWait) { // Only log if wait is infinite.
           if (now > lastLog + 10000) {
             lastLog = now;
-            LOG.info("#" + id + ", waiting for " + currentInProgress + "  actions to finish");
+            LOG.info("#" + id + ", waiting for " + currentInProgress
+                + "  actions to finish on table: " + tableName);
+            if (currentInProgress <= thresholdToLogUndoneTaskDetails) {
+              logDetailsOfUndoneTasks(currentInProgress);
+            }
           }
         }
         synchronized (actionsInProgress) {
