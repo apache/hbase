@@ -2039,23 +2039,23 @@ public final class SecureBulkLoadProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\024SecureBulkLoad.proto\022\010hbase.pb\032\013HBase." +
-      "proto\032\014Client.proto\"\266\001\n\033SecureBulkLoadHF" +
-      "ilesRequest\022>\n\013family_path\030\001 \003(\0132).hbase" +
-      ".pb.BulkLoadHFileRequest.FamilyPath\022\026\n\016a" +
-      "ssign_seq_num\030\002 \001(\010\022+\n\010fs_token\030\003 \002(\0132\031." +
-      "hbase.pb.DelegationToken\022\022\n\nbulk_token\030\004" +
-      " \002(\t\".\n\034SecureBulkLoadHFilesResponse\022\016\n\006" +
-      "loaded\030\001 \002(\0102\256\002\n\025SecureBulkLoadService\022V" +
-      "\n\017PrepareBulkLoad\022 .hbase.pb.PrepareBulk" +
-      "LoadRequest\032!.hbase.pb.PrepareBulkLoadRe",
-      "sponse\022e\n\024SecureBulkLoadHFiles\022%.hbase.p" +
-      "b.SecureBulkLoadHFilesRequest\032&.hbase.pb" +
-      ".SecureBulkLoadHFilesResponse\022V\n\017Cleanup" +
-      "BulkLoad\022 .hbase.pb.CleanupBulkLoadReque" +
-      "st\032!.hbase.pb.CleanupBulkLoadResponseBJ\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\024SecureBulkLoadProtosH\001\210\001\001\240\001\001"
+      "\n\024SecureBulkLoad.proto\022\010hbase.pb\032\014Client" +
+      ".proto\"\266\001\n\033SecureBulkLoadHFilesRequest\022>" +
+      "\n\013family_path\030\001 \003(\0132).hbase.pb.BulkLoadH" +
+      "FileRequest.FamilyPath\022\026\n\016assign_seq_num" +
+      "\030\002 \001(\010\022+\n\010fs_token\030\003 \002(\0132\031.hbase.pb.Dele" +
+      "gationToken\022\022\n\nbulk_token\030\004 \002(\t\".\n\034Secur" +
+      "eBulkLoadHFilesResponse\022\016\n\006loaded\030\001 \002(\0102" +
+      "\256\002\n\025SecureBulkLoadService\022V\n\017PrepareBulk" +
+      "Load\022 .hbase.pb.PrepareBulkLoadRequest\032!" +
+      ".hbase.pb.PrepareBulkLoadResponse\022e\n\024Sec",
+      "ureBulkLoadHFiles\022%.hbase.pb.SecureBulkL" +
+      "oadHFilesRequest\032&.hbase.pb.SecureBulkLo" +
+      "adHFilesResponse\022V\n\017CleanupBulkLoad\022 .hb" +
+      "ase.pb.CleanupBulkLoadRequest\032!.hbase.pb" +
+      ".CleanupBulkLoadResponseBJ\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\024SecureBu" +
+      "lkLoadProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2080,7 +2080,6 @@ public final class SecureBulkLoadProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }

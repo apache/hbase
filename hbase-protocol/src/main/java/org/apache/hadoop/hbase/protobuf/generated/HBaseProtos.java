@@ -19662,69 +19662,68 @@ public final class HBaseProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HBase.proto\022\010hbase.pb\032\nCell.proto\"1\n\tT" +
-      "ableName\022\021\n\tnamespace\030\001 \002(\014\022\021\n\tqualifier" +
-      "\030\002 \002(\014\"\314\001\n\013TableSchema\022\'\n\ntable_name\030\001 \001" +
-      "(\0132\023.hbase.pb.TableName\022,\n\nattributes\030\002 " +
-      "\003(\0132\030.hbase.pb.BytesBytesPair\0225\n\017column_" +
-      "families\030\003 \003(\0132\034.hbase.pb.ColumnFamilySc" +
-      "hema\022/\n\rconfiguration\030\004 \003(\0132\030.hbase.pb.N" +
-      "ameStringPair\"x\n\nTableState\022)\n\005state\030\001 \002" +
-      "(\0162\032.hbase.pb.TableState.State\"?\n\005State\022" +
-      "\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020",
-      "\002\022\014\n\010ENABLING\020\003\"\201\001\n\022ColumnFamilySchema\022\014" +
-      "\n\004name\030\001 \002(\014\022,\n\nattributes\030\002 \003(\0132\030.hbase" +
-      ".pb.BytesBytesPair\022/\n\rconfiguration\030\003 \003(" +
-      "\0132\030.hbase.pb.NameStringPair\"\243\001\n\nRegionIn" +
-      "fo\022\021\n\tregion_id\030\001 \002(\004\022\'\n\ntable_name\030\002 \002(" +
-      "\0132\023.hbase.pb.TableName\022\021\n\tstart_key\030\003 \001(" +
-      "\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005s" +
-      "plit\030\006 \001(\010\022\025\n\nreplica_id\030\007 \001(\005:\0010\":\n\014Fav" +
-      "oredNodes\022*\n\014favored_node\030\001 \003(\0132\024.hbase." +
-      "pb.ServerName\"\236\001\n\017RegionSpecifier\022;\n\004typ",
-      "e\030\001 \002(\0162-.hbase.pb.RegionSpecifier.Regio" +
-      "nSpecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionS" +
-      "pecifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED" +
-      "_REGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 \001(" +
-      "\004\022\n\n\002to\030\002 \001(\004\"W\n\025ColumnFamilyTimeRange\022\025" +
-      "\n\rcolumn_family\030\001 \002(\014\022\'\n\ntime_range\030\002 \002(" +
-      "\0132\023.hbase.pb.TimeRange\"A\n\nServerName\022\021\n\t" +
-      "host_name\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_c" +
-      "ode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-" +
-      "\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030",
-      "\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005" +
-      "value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001" +
-      " \002(\014\022\016\n\006second\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n" +
-      "\004name\030\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\325\001\n\023SnapshotD" +
-      "escription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022" +
-      "\030\n\rcreation_time\030\003 \001(\003:\0010\0227\n\004type\030\004 \001(\0162" +
-      "\".hbase.pb.SnapshotDescription.Type:\005FLU" +
-      "SH\022\017\n\007version\030\005 \001(\005\022\r\n\005owner\030\006 \001(\t\".\n\004Ty" +
-      "pe\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH" +
-      "\020\002\"\206\001\n\024ProcedureDescription\022\021\n\tsignature",
-      "\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreation_tim" +
-      "e\030\003 \001(\003:\0010\022/\n\rconfiguration\030\004 \003(\0132\030.hbas" +
-      "e.pb.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongM" +
-      "sg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndou" +
-      "ble_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdec" +
-      "imal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits" +
-      "\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"T\n\023Namespa" +
-      "ceDescriptor\022\014\n\004name\030\001 \002(\014\022/\n\rconfigurat" +
-      "ion\030\002 \003(\0132\030.hbase.pb.NameStringPair\"\235\001\n\013" +
-      "VersionInfo\022\017\n\007version\030\001 \002(\t\022\013\n\003url\030\002 \002(",
-      "\t\022\020\n\010revision\030\003 \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004dat" +
-      "e\030\005 \002(\t\022\024\n\014src_checksum\030\006 \002(\t\022\025\n\rversion" +
-      "_major\030\007 \001(\r\022\025\n\rversion_minor\030\010 \001(\r\"Q\n\020R" +
-      "egionServerInfo\022\020\n\010infoPort\030\001 \001(\005\022+\n\014ver" +
-      "sion_info\030\002 \001(\0132\025.hbase.pb.VersionInfo*r" +
-      "\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL" +
-      "\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_" +
-      "OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010Ti" +
-      "meUnit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECONDS\020" +
-      "\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINU",
-      "TES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n*org.apache" +
-      ".hadoop.hbase.protobuf.generatedB\013HBaseP" +
-      "rotosH\001\240\001\001"
+      "\n\013HBase.proto\022\010hbase.pb\"1\n\tTableName\022\021\n\t" +
+      "namespace\030\001 \002(\014\022\021\n\tqualifier\030\002 \002(\014\"\314\001\n\013T" +
+      "ableSchema\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.p" +
+      "b.TableName\022,\n\nattributes\030\002 \003(\0132\030.hbase." +
+      "pb.BytesBytesPair\0225\n\017column_families\030\003 \003" +
+      "(\0132\034.hbase.pb.ColumnFamilySchema\022/\n\rconf" +
+      "iguration\030\004 \003(\0132\030.hbase.pb.NameStringPai" +
+      "r\"x\n\nTableState\022)\n\005state\030\001 \002(\0162\032.hbase.p" +
+      "b.TableState.State\"?\n\005State\022\013\n\007ENABLED\020\000" +
+      "\022\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLIN",
+      "G\020\003\"\201\001\n\022ColumnFamilySchema\022\014\n\004name\030\001 \002(\014" +
+      "\022,\n\nattributes\030\002 \003(\0132\030.hbase.pb.BytesByt" +
+      "esPair\022/\n\rconfiguration\030\003 \003(\0132\030.hbase.pb" +
+      ".NameStringPair\"\243\001\n\nRegionInfo\022\021\n\tregion" +
+      "_id\030\001 \002(\004\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb" +
+      ".TableName\022\021\n\tstart_key\030\003 \001(\014\022\017\n\007end_key" +
+      "\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\022\025" +
+      "\n\nreplica_id\030\007 \001(\005:\0010\":\n\014FavoredNodes\022*\n" +
+      "\014favored_node\030\001 \003(\0132\024.hbase.pb.ServerNam" +
+      "e\"\236\001\n\017RegionSpecifier\022;\n\004type\030\001 \002(\0162-.hb",
+      "ase.pb.RegionSpecifier.RegionSpecifierTy" +
+      "pe\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpecifierType" +
+      "\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED_REGION_NAME" +
+      "\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(" +
+      "\004\"W\n\025ColumnFamilyTimeRange\022\025\n\rcolumn_fam" +
+      "ily\030\001 \002(\014\022\'\n\ntime_range\030\002 \002(\0132\023.hbase.pb" +
+      ".TimeRange\"A\n\nServerName\022\021\n\thost_name\030\001 " +
+      "\002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033\n" +
+      "\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameString" +
+      "Pair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNam",
+      "eBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"" +
+      "/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006seco" +
+      "nd\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030\001 \001(\t\022" +
+      "\r\n\005value\030\002 \001(\003\"\325\001\n\023SnapshotDescription\022\014" +
+      "\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_" +
+      "time\030\003 \001(\003:\0010\0227\n\004type\030\004 \001(\0162\".hbase.pb.S" +
+      "napshotDescription.Type:\005FLUSH\022\017\n\007versio" +
+      "n\030\005 \001(\005\022\r\n\005owner\030\006 \001(\t\".\n\004Type\022\014\n\010DISABL" +
+      "ED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"\206\001\n\024Proce" +
+      "dureDescription\022\021\n\tsignature\030\001 \002(\t\022\020\n\010in",
+      "stance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022/" +
+      "\n\rconfiguration\030\004 \003(\0132\030.hbase.pb.NameStr" +
+      "ingPair\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_m" +
+      "sg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(" +
+      "\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 \002" +
+      "(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmo" +
+      "st_sig_bits\030\002 \002(\004\"T\n\023NamespaceDescriptor" +
+      "\022\014\n\004name\030\001 \002(\014\022/\n\rconfiguration\030\002 \003(\0132\030." +
+      "hbase.pb.NameStringPair\"\235\001\n\013VersionInfo\022" +
+      "\017\n\007version\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revisio",
+      "n\030\003 \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014s" +
+      "rc_checksum\030\006 \002(\t\022\025\n\rversion_major\030\007 \001(\r" +
+      "\022\025\n\rversion_minor\030\010 \001(\r\"Q\n\020RegionServerI" +
+      "nfo\022\020\n\010infoPort\030\001 \001(\005\022+\n\014version_info\030\002 " +
+      "\001(\0132\025.hbase.pb.VersionInfo*r\n\013CompareTyp" +
+      "e\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020" +
+      "\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013" +
+      "\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NA" +
+      "NOSECONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISE" +
+      "CONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOU",
+      "RS\020\006\022\010\n\004DAYS\020\007B>\n*org.apache.hadoop.hbas" +
+      "e.protobuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19887,7 +19886,6 @@ public final class HBaseProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.protobuf.generated.CellProtos.getDescriptor(),
         }, assigner);
   }
 

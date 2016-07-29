@@ -24,7 +24,6 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "Client.proto";
 
 message WALHeader {
   optional bool has_compression = 1;

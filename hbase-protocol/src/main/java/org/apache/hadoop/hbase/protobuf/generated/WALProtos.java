@@ -11969,55 +11969,55 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\022\010hbase.pb\032\013HBase.proto\032\014Clie" +
-      "nt.proto\"\217\001\n\tWALHeader\022\027\n\017has_compressio" +
-      "n\030\001 \001(\010\022\026\n\016encryption_key\030\002 \001(\014\022\033\n\023has_t" +
-      "ag_compression\030\003 \001(\010\022\027\n\017writer_cls_name\030" +
-      "\004 \001(\t\022\033\n\023cell_codec_cls_name\030\005 \001(\t\"\273\002\n\006W" +
-      "ALKey\022\033\n\023encoded_region_name\030\001 \002(\014\022\022\n\nta" +
-      "ble_name\030\002 \002(\014\022\033\n\023log_sequence_number\030\003 " +
-      "\002(\004\022\022\n\nwrite_time\030\004 \002(\004\022&\n\ncluster_id\030\005 " +
-      "\001(\0132\016.hbase.pb.UUIDB\002\030\001\022%\n\006scopes\030\006 \003(\0132" +
-      "\025.hbase.pb.FamilyScope\022\032\n\022following_kv_c",
-      "ount\030\007 \001(\r\022#\n\013cluster_ids\030\010 \003(\0132\016.hbase." +
-      "pb.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001" +
-      "(\004\022\034\n\024orig_sequence_number\030\013 \001(\004\"F\n\013Fami" +
-      "lyScope\022\016\n\006family\030\001 \002(\014\022\'\n\nscope_type\030\002 " +
-      "\002(\0162\023.hbase.pb.ScopeType\"\276\001\n\024CompactionD" +
-      "escriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded" +
-      "_region_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022" +
-      "\030\n\020compaction_input\030\004 \003(\t\022\031\n\021compaction_" +
-      "output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013" +
-      "region_name\030\007 \001(\014\"\244\003\n\017FlushDescriptor\0225\n",
-      "\006action\030\001 \002(\0162%.hbase.pb.FlushDescriptor" +
-      ".FlushAction\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023enco" +
-      "ded_region_name\030\003 \002(\014\022\035\n\025flush_sequence_" +
-      "number\030\004 \001(\004\022E\n\rstore_flushes\030\005 \003(\0132..hb" +
-      "ase.pb.FlushDescriptor.StoreFlushDescrip" +
-      "tor\022\023\n\013region_name\030\006 \001(\014\032Y\n\024StoreFlushDe" +
-      "scriptor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_h" +
-      "ome_dir\030\002 \002(\t\022\024\n\014flush_output\030\003 \003(\t\"S\n\013F" +
-      "lushAction\022\017\n\013START_FLUSH\020\000\022\020\n\014COMMIT_FL" +
-      "USH\020\001\022\017\n\013ABORT_FLUSH\020\002\022\020\n\014CANNOT_FLUSH\020\003",
-      "\"q\n\017StoreDescriptor\022\023\n\013family_name\030\001 \002(\014" +
-      "\022\026\n\016store_home_dir\030\002 \002(\t\022\022\n\nstore_file\030\003" +
-      " \003(\t\022\035\n\025store_file_size_bytes\030\004 \001(\004\"\237\001\n\022" +
-      "BulkLoadDescriptor\022\'\n\ntable_name\030\001 \002(\0132\023" +
-      ".hbase.pb.TableName\022\033\n\023encoded_region_na" +
-      "me\030\002 \002(\014\022)\n\006stores\030\003 \003(\0132\031.hbase.pb.Stor" +
-      "eDescriptor\022\030\n\020bulkload_seq_num\030\004 \002(\003\"\272\002" +
-      "\n\025RegionEventDescriptor\022=\n\nevent_type\030\001 " +
-      "\002(\0162).hbase.pb.RegionEventDescriptor.Eve" +
-      "ntType\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_re",
-      "gion_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004" +
-      " \001(\004\022)\n\006stores\030\005 \003(\0132\031.hbase.pb.StoreDes" +
-      "criptor\022$\n\006server\030\006 \001(\0132\024.hbase.pb.Serve" +
-      "rName\022\023\n\013region_name\030\007 \001(\014\".\n\tEventType\022" +
-      "\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWA" +
-      "LTrailer*F\n\tScopeType\022\033\n\027REPLICATION_SCO" +
-      "PE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001" +
-      "B?\n*org.apache.hadoop.hbase.protobuf.gen" +
-      "eratedB\tWALProtosH\001\210\001\000\240\001\001"
+      "\n\tWAL.proto\022\010hbase.pb\032\013HBase.proto\"\217\001\n\tW" +
+      "ALHeader\022\027\n\017has_compression\030\001 \001(\010\022\026\n\016enc" +
+      "ryption_key\030\002 \001(\014\022\033\n\023has_tag_compression" +
+      "\030\003 \001(\010\022\027\n\017writer_cls_name\030\004 \001(\t\022\033\n\023cell_" +
+      "codec_cls_name\030\005 \001(\t\"\273\002\n\006WALKey\022\033\n\023encod" +
+      "ed_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014" +
+      "\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite_t" +
+      "ime\030\004 \002(\004\022&\n\ncluster_id\030\005 \001(\0132\016.hbase.pb" +
+      ".UUIDB\002\030\001\022%\n\006scopes\030\006 \003(\0132\025.hbase.pb.Fam" +
+      "ilyScope\022\032\n\022following_kv_count\030\007 \001(\r\022#\n\013",
+      "cluster_ids\030\010 \003(\0132\016.hbase.pb.UUID\022\022\n\nnon" +
+      "ceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_seq" +
+      "uence_number\030\013 \001(\004\"F\n\013FamilyScope\022\016\n\006fam" +
+      "ily\030\001 \002(\014\022\'\n\nscope_type\030\002 \002(\0162\023.hbase.pb" +
+      ".ScopeType\"\276\001\n\024CompactionDescriptor\022\022\n\nt" +
+      "able_name\030\001 \002(\014\022\033\n\023encoded_region_name\030\002" +
+      " \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compaction_" +
+      "input\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003(\t\022\026" +
+      "\n\016store_home_dir\030\006 \002(\t\022\023\n\013region_name\030\007 " +
+      "\001(\014\"\244\003\n\017FlushDescriptor\0225\n\006action\030\001 \002(\0162",
+      "%.hbase.pb.FlushDescriptor.FlushAction\022\022" +
+      "\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_nam" +
+      "e\030\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022E" +
+      "\n\rstore_flushes\030\005 \003(\0132..hbase.pb.FlushDe" +
+      "scriptor.StoreFlushDescriptor\022\023\n\013region_" +
+      "name\030\006 \001(\014\032Y\n\024StoreFlushDescriptor\022\023\n\013fa" +
+      "mily_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022" +
+      "\024\n\014flush_output\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013" +
+      "START_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT" +
+      "_FLUSH\020\002\022\020\n\014CANNOT_FLUSH\020\003\"q\n\017StoreDescr",
+      "iptor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home" +
+      "_dir\030\002 \002(\t\022\022\n\nstore_file\030\003 \003(\t\022\035\n\025store_" +
+      "file_size_bytes\030\004 \001(\004\"\237\001\n\022BulkLoadDescri" +
+      "ptor\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Tabl" +
+      "eName\022\033\n\023encoded_region_name\030\002 \002(\014\022)\n\006st" +
+      "ores\030\003 \003(\0132\031.hbase.pb.StoreDescriptor\022\030\n" +
+      "\020bulkload_seq_num\030\004 \002(\003\"\272\002\n\025RegionEventD" +
+      "escriptor\022=\n\nevent_type\030\001 \002(\0162).hbase.pb" +
+      ".RegionEventDescriptor.EventType\022\022\n\ntabl" +
+      "e_name\030\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002(",
+      "\014\022\033\n\023log_sequence_number\030\004 \001(\004\022)\n\006stores" +
+      "\030\005 \003(\0132\031.hbase.pb.StoreDescriptor\022$\n\006ser" +
+      "ver\030\006 \001(\0132\024.hbase.pb.ServerName\022\023\n\013regio" +
+      "n_name\030\007 \001(\014\".\n\tEventType\022\017\n\013REGION_OPEN" +
+      "\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWALTrailer*F\n\tSc" +
+      "opeType\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030" +
+      "REPLICATION_SCOPE_GLOBAL\020\001B?\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\tWALPro" +
+      "tosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12091,7 +12091,6 @@ public final class WALProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
 

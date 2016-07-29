@@ -25,7 +25,6 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "Client.proto";
 import "HBase.proto";
 import "WAL.proto";
 

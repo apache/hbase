@@ -23977,118 +23977,118 @@ public final class AdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013Admin.proto\022\010hbase.pb\032\014Client.proto\032\013H" +
-      "Base.proto\032\tWAL.proto\"[\n\024GetRegionInfoRe" +
-      "quest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionS" +
-      "pecifier\022\030\n\020compaction_state\030\002 \001(\010\"\353\001\n\025G" +
-      "etRegionInfoResponse\022)\n\013region_info\030\001 \002(" +
-      "\0132\024.hbase.pb.RegionInfo\022I\n\020compaction_st" +
-      "ate\030\002 \001(\0162/.hbase.pb.GetRegionInfoRespon" +
-      "se.CompactionState\022\024\n\014isRecovering\030\003 \001(\010" +
-      "\"F\n\017CompactionState\022\010\n\004NONE\020\000\022\t\n\005MINOR\020\001" +
-      "\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_AND_MINOR\020\003\"P\n\023GetS",
-      "toreFileRequest\022)\n\006region\030\001 \002(\0132\031.hbase." +
-      "pb.RegionSpecifier\022\016\n\006family\030\002 \003(\014\"*\n\024Ge" +
-      "tStoreFileResponse\022\022\n\nstore_file\030\001 \003(\t\"\030" +
-      "\n\026GetOnlineRegionRequest\"D\n\027GetOnlineReg" +
-      "ionResponse\022)\n\013region_info\030\001 \003(\0132\024.hbase" +
-      ".pb.RegionInfo\"\263\002\n\021OpenRegionRequest\022=\n\t" +
-      "open_info\030\001 \003(\0132*.hbase.pb.OpenRegionReq" +
-      "uest.RegionOpenInfo\022\027\n\017serverStartCode\030\002" +
-      " \001(\004\022\032\n\022master_system_time\030\005 \001(\004\032\251\001\n\016Reg" +
-      "ionOpenInfo\022$\n\006region\030\001 \002(\0132\024.hbase.pb.R",
-      "egionInfo\022\037\n\027version_of_offline_node\030\002 \001" +
-      "(\r\022+\n\rfavored_nodes\030\003 \003(\0132\024.hbase.pb.Ser" +
-      "verName\022#\n\033openForDistributedLogReplay\030\004" +
-      " \001(\010\"\246\001\n\022OpenRegionResponse\022F\n\ropening_s" +
-      "tate\030\001 \003(\0162/.hbase.pb.OpenRegionResponse" +
-      ".RegionOpeningState\"H\n\022RegionOpeningStat" +
-      "e\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAI" +
-      "LED_OPENING\020\002\"?\n\023WarmupRegionRequest\022(\n\n" +
-      "regionInfo\030\001 \002(\0132\024.hbase.pb.RegionInfo\"\026" +
-      "\n\024WarmupRegionResponse\"\313\001\n\022CloseRegionRe",
-      "quest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionS" +
-      "pecifier\022\037\n\027version_of_closing_node\030\002 \001(" +
-      "\r\022\036\n\020transition_in_ZK\030\003 \001(\010:\004true\0220\n\022des" +
-      "tination_server\030\004 \001(\0132\024.hbase.pb.ServerN" +
-      "ame\022\027\n\017serverStartCode\030\005 \001(\004\"%\n\023CloseReg" +
-      "ionResponse\022\016\n\006closed\030\001 \002(\010\"y\n\022FlushRegi" +
-      "onRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Reg" +
-      "ionSpecifier\022\030\n\020if_older_than_ts\030\002 \001(\004\022\036" +
-      "\n\026write_flush_wal_marker\030\003 \001(\010\"_\n\023FlushR" +
-      "egionResponse\022\027\n\017last_flush_time\030\001 \002(\004\022\017",
-      "\n\007flushed\030\002 \001(\010\022\036\n\026wrote_flush_wal_marke" +
-      "r\030\003 \001(\010\"T\n\022SplitRegionRequest\022)\n\006region\030" +
-      "\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\023\n\013spli" +
-      "t_point\030\002 \001(\014\"\025\n\023SplitRegionResponse\"`\n\024" +
-      "CompactRegionRequest\022)\n\006region\030\001 \002(\0132\031.h" +
-      "base.pb.RegionSpecifier\022\r\n\005major\030\002 \001(\010\022\016" +
-      "\n\006family\030\003 \001(\014\"\027\n\025CompactRegionResponse\"" +
-      "\315\001\n\031UpdateFavoredNodesRequest\022I\n\013update_" +
-      "info\030\001 \003(\01324.hbase.pb.UpdateFavoredNodes" +
-      "Request.RegionUpdateInfo\032e\n\020RegionUpdate",
-      "Info\022$\n\006region\030\001 \002(\0132\024.hbase.pb.RegionIn" +
-      "fo\022+\n\rfavored_nodes\030\002 \003(\0132\024.hbase.pb.Ser" +
-      "verName\".\n\032UpdateFavoredNodesResponse\022\020\n" +
-      "\010response\030\001 \001(\r\"\244\001\n\023MergeRegionsRequest\022" +
-      "+\n\010region_a\030\001 \002(\0132\031.hbase.pb.RegionSpeci" +
-      "fier\022+\n\010region_b\030\002 \002(\0132\031.hbase.pb.Region" +
-      "Specifier\022\027\n\010forcible\030\003 \001(\010:\005false\022\032\n\022ma" +
-      "ster_system_time\030\004 \001(\004\"\026\n\024MergeRegionsRe" +
-      "sponse\"a\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase." +
-      "pb.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025as",
-      "sociated_cell_count\030\003 \001(\005\"\242\001\n\030ReplicateW" +
-      "ALEntryRequest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb" +
-      ".WALEntry\022\034\n\024replicationClusterId\030\002 \001(\t\022" +
-      "\"\n\032sourceBaseNamespaceDirPath\030\003 \001(\t\022!\n\031s" +
-      "ourceHFileArchiveDirPath\030\004 \001(\t\"\033\n\031Replic" +
-      "ateWALEntryResponse\"\026\n\024RollWALWriterRequ" +
-      "est\"0\n\025RollWALWriterResponse\022\027\n\017region_t" +
-      "o_flush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006re" +
-      "ason\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetS" +
-      "erverInfoRequest\"K\n\nServerInfo\022)\n\013server",
-      "_name\030\001 \002(\0132\024.hbase.pb.ServerName\022\022\n\nweb" +
-      "ui_port\030\002 \001(\r\"B\n\025GetServerInfoResponse\022)" +
-      "\n\013server_info\030\001 \002(\0132\024.hbase.pb.ServerInf" +
-      "o\"\034\n\032UpdateConfigurationRequest\"\035\n\033Updat" +
-      "eConfigurationResponse2\207\013\n\014AdminService\022" +
-      "P\n\rGetRegionInfo\022\036.hbase.pb.GetRegionInf" +
-      "oRequest\032\037.hbase.pb.GetRegionInfoRespons" +
-      "e\022M\n\014GetStoreFile\022\035.hbase.pb.GetStoreFil" +
-      "eRequest\032\036.hbase.pb.GetStoreFileResponse" +
-      "\022V\n\017GetOnlineRegion\022 .hbase.pb.GetOnline",
-      "RegionRequest\032!.hbase.pb.GetOnlineRegion" +
-      "Response\022G\n\nOpenRegion\022\033.hbase.pb.OpenRe" +
-      "gionRequest\032\034.hbase.pb.OpenRegionRespons" +
-      "e\022M\n\014WarmupRegion\022\035.hbase.pb.WarmupRegio" +
-      "nRequest\032\036.hbase.pb.WarmupRegionResponse" +
-      "\022J\n\013CloseRegion\022\034.hbase.pb.CloseRegionRe" +
-      "quest\032\035.hbase.pb.CloseRegionResponse\022J\n\013" +
-      "FlushRegion\022\034.hbase.pb.FlushRegionReques" +
-      "t\032\035.hbase.pb.FlushRegionResponse\022J\n\013Spli" +
-      "tRegion\022\034.hbase.pb.SplitRegionRequest\032\035.",
-      "hbase.pb.SplitRegionResponse\022P\n\rCompactR" +
-      "egion\022\036.hbase.pb.CompactRegionRequest\032\037." +
-      "hbase.pb.CompactRegionResponse\022M\n\014MergeR" +
-      "egions\022\035.hbase.pb.MergeRegionsRequest\032\036." +
-      "hbase.pb.MergeRegionsResponse\022\\\n\021Replica" +
-      "teWALEntry\022\".hbase.pb.ReplicateWALEntryR" +
-      "equest\032#.hbase.pb.ReplicateWALEntryRespo" +
-      "nse\022Q\n\006Replay\022\".hbase.pb.ReplicateWALEnt" +
-      "ryRequest\032#.hbase.pb.ReplicateWALEntryRe" +
-      "sponse\022P\n\rRollWALWriter\022\036.hbase.pb.RollW",
-      "ALWriterRequest\032\037.hbase.pb.RollWALWriter" +
-      "Response\022P\n\rGetServerInfo\022\036.hbase.pb.Get" +
-      "ServerInfoRequest\032\037.hbase.pb.GetServerIn" +
-      "foResponse\022G\n\nStopServer\022\033.hbase.pb.Stop" +
-      "ServerRequest\032\034.hbase.pb.StopServerRespo" +
-      "nse\022_\n\022UpdateFavoredNodes\022#.hbase.pb.Upd" +
-      "ateFavoredNodesRequest\032$.hbase.pb.Update" +
-      "FavoredNodesResponse\022b\n\023UpdateConfigurat" +
-      "ion\022$.hbase.pb.UpdateConfigurationReques" +
-      "t\032%.hbase.pb.UpdateConfigurationResponse",
-      "BA\n*org.apache.hadoop.hbase.protobuf.gen" +
-      "eratedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "\n\013Admin.proto\022\010hbase.pb\032\013HBase.proto\032\tWA" +
+      "L.proto\"[\n\024GetRegionInfoRequest\022)\n\006regio" +
+      "n\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\030\n\020co" +
+      "mpaction_state\030\002 \001(\010\"\353\001\n\025GetRegionInfoRe" +
+      "sponse\022)\n\013region_info\030\001 \002(\0132\024.hbase.pb.R" +
+      "egionInfo\022I\n\020compaction_state\030\002 \001(\0162/.hb" +
+      "ase.pb.GetRegionInfoResponse.CompactionS" +
+      "tate\022\024\n\014isRecovering\030\003 \001(\010\"F\n\017Compaction" +
+      "State\022\010\n\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJOR\020\002\022\023\n" +
+      "\017MAJOR_AND_MINOR\020\003\"P\n\023GetStoreFileReques",
+      "t\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpeci" +
+      "fier\022\016\n\006family\030\002 \003(\014\"*\n\024GetStoreFileResp" +
+      "onse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetOnlineReg" +
+      "ionRequest\"D\n\027GetOnlineRegionResponse\022)\n" +
+      "\013region_info\030\001 \003(\0132\024.hbase.pb.RegionInfo" +
+      "\"\263\002\n\021OpenRegionRequest\022=\n\topen_info\030\001 \003(" +
+      "\0132*.hbase.pb.OpenRegionRequest.RegionOpe" +
+      "nInfo\022\027\n\017serverStartCode\030\002 \001(\004\022\032\n\022master" +
+      "_system_time\030\005 \001(\004\032\251\001\n\016RegionOpenInfo\022$\n" +
+      "\006region\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027v",
+      "ersion_of_offline_node\030\002 \001(\r\022+\n\rfavored_" +
+      "nodes\030\003 \003(\0132\024.hbase.pb.ServerName\022#\n\033ope" +
+      "nForDistributedLogReplay\030\004 \001(\010\"\246\001\n\022OpenR" +
+      "egionResponse\022F\n\ropening_state\030\001 \003(\0162/.h" +
+      "base.pb.OpenRegionResponse.RegionOpening" +
+      "State\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022" +
+      "\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"" +
+      "?\n\023WarmupRegionRequest\022(\n\nregionInfo\030\001 \002" +
+      "(\0132\024.hbase.pb.RegionInfo\"\026\n\024WarmupRegion" +
+      "Response\"\313\001\n\022CloseRegionRequest\022)\n\006regio",
+      "n\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\037\n\027ve" +
+      "rsion_of_closing_node\030\002 \001(\r\022\036\n\020transitio" +
+      "n_in_ZK\030\003 \001(\010:\004true\0220\n\022destination_serve" +
+      "r\030\004 \001(\0132\024.hbase.pb.ServerName\022\027\n\017serverS" +
+      "tartCode\030\005 \001(\004\"%\n\023CloseRegionResponse\022\016\n" +
+      "\006closed\030\001 \002(\010\"y\n\022FlushRegionRequest\022)\n\006r" +
+      "egion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\030" +
+      "\n\020if_older_than_ts\030\002 \001(\004\022\036\n\026write_flush_" +
+      "wal_marker\030\003 \001(\010\"_\n\023FlushRegionResponse\022" +
+      "\027\n\017last_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(",
+      "\010\022\036\n\026wrote_flush_wal_marker\030\003 \001(\010\"T\n\022Spl" +
+      "itRegionRequest\022)\n\006region\030\001 \002(\0132\031.hbase." +
+      "pb.RegionSpecifier\022\023\n\013split_point\030\002 \001(\014\"" +
+      "\025\n\023SplitRegionResponse\"`\n\024CompactRegionR" +
+      "equest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Region" +
+      "Specifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014" +
+      "\"\027\n\025CompactRegionResponse\"\315\001\n\031UpdateFavo" +
+      "redNodesRequest\022I\n\013update_info\030\001 \003(\01324.h" +
+      "base.pb.UpdateFavoredNodesRequest.Region" +
+      "UpdateInfo\032e\n\020RegionUpdateInfo\022$\n\006region",
+      "\030\001 \002(\0132\024.hbase.pb.RegionInfo\022+\n\rfavored_" +
+      "nodes\030\002 \003(\0132\024.hbase.pb.ServerName\".\n\032Upd" +
+      "ateFavoredNodesResponse\022\020\n\010response\030\001 \001(" +
+      "\r\"\244\001\n\023MergeRegionsRequest\022+\n\010region_a\030\001 " +
+      "\002(\0132\031.hbase.pb.RegionSpecifier\022+\n\010region" +
+      "_b\030\002 \002(\0132\031.hbase.pb.RegionSpecifier\022\027\n\010f" +
+      "orcible\030\003 \001(\010:\005false\022\032\n\022master_system_ti" +
+      "me\030\004 \001(\004\"\026\n\024MergeRegionsResponse\"a\n\010WALE" +
+      "ntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022\027\n\017k" +
+      "ey_value_bytes\030\002 \003(\014\022\035\n\025associated_cell_",
+      "count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryRequest" +
+      "\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntry\022\034\n\024r" +
+      "eplicationClusterId\030\002 \001(\t\022\"\n\032sourceBaseN" +
+      "amespaceDirPath\030\003 \001(\t\022!\n\031sourceHFileArch" +
+      "iveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEntryRes" +
+      "ponse\"\026\n\024RollWALWriterRequest\"0\n\025RollWAL" +
+      "WriterResponse\022\027\n\017region_to_flush\030\001 \003(\014\"" +
+      "#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t\"\024\n\022" +
+      "StopServerResponse\"\026\n\024GetServerInfoReque" +
+      "st\"K\n\nServerInfo\022)\n\013server_name\030\001 \002(\0132\024.",
+      "hbase.pb.ServerName\022\022\n\nwebui_port\030\002 \001(\r\"" +
+      "B\n\025GetServerInfoResponse\022)\n\013server_info\030" +
+      "\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032UpdateCon" +
+      "figurationRequest\"\035\n\033UpdateConfiguration" +
+      "Response2\207\013\n\014AdminService\022P\n\rGetRegionIn" +
+      "fo\022\036.hbase.pb.GetRegionInfoRequest\032\037.hba" +
+      "se.pb.GetRegionInfoResponse\022M\n\014GetStoreF" +
+      "ile\022\035.hbase.pb.GetStoreFileRequest\032\036.hba" +
+      "se.pb.GetStoreFileResponse\022V\n\017GetOnlineR" +
+      "egion\022 .hbase.pb.GetOnlineRegionRequest\032",
+      "!.hbase.pb.GetOnlineRegionResponse\022G\n\nOp" +
+      "enRegion\022\033.hbase.pb.OpenRegionRequest\032\034." +
+      "hbase.pb.OpenRegionResponse\022M\n\014WarmupReg" +
+      "ion\022\035.hbase.pb.WarmupRegionRequest\032\036.hba" +
+      "se.pb.WarmupRegionResponse\022J\n\013CloseRegio" +
+      "n\022\034.hbase.pb.CloseRegionRequest\032\035.hbase." +
+      "pb.CloseRegionResponse\022J\n\013FlushRegion\022\034." +
+      "hbase.pb.FlushRegionRequest\032\035.hbase.pb.F" +
+      "lushRegionResponse\022J\n\013SplitRegion\022\034.hbas" +
+      "e.pb.SplitRegionRequest\032\035.hbase.pb.Split",
+      "RegionResponse\022P\n\rCompactRegion\022\036.hbase." +
+      "pb.CompactRegionRequest\032\037.hbase.pb.Compa" +
+      "ctRegionResponse\022M\n\014MergeRegions\022\035.hbase" +
+      ".pb.MergeRegionsRequest\032\036.hbase.pb.Merge" +
+      "RegionsResponse\022\\\n\021ReplicateWALEntry\022\".h" +
+      "base.pb.ReplicateWALEntryRequest\032#.hbase" +
+      ".pb.ReplicateWALEntryResponse\022Q\n\006Replay\022" +
+      "\".hbase.pb.ReplicateWALEntryRequest\032#.hb" +
+      "ase.pb.ReplicateWALEntryResponse\022P\n\rRoll" +
+      "WALWriter\022\036.hbase.pb.RollWALWriterReques",
+      "t\032\037.hbase.pb.RollWALWriterResponse\022P\n\rGe" +
+      "tServerInfo\022\036.hbase.pb.GetServerInfoRequ" +
+      "est\032\037.hbase.pb.GetServerInfoResponse\022G\n\n" +
+      "StopServer\022\033.hbase.pb.StopServerRequest\032" +
+      "\034.hbase.pb.StopServerResponse\022_\n\022UpdateF" +
+      "avoredNodes\022#.hbase.pb.UpdateFavoredNode" +
+      "sRequest\032$.hbase.pb.UpdateFavoredNodesRe" +
+      "sponse\022b\n\023UpdateConfiguration\022$.hbase.pb" +
+      ".UpdateConfigurationRequest\032%.hbase.pb.U" +
+      "pdateConfigurationResponseBA\n*org.apache",
+      ".hadoop.hbase.protobuf.generatedB\013AdminP" +
+      "rotosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -24317,7 +24317,6 @@ public final class AdminProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.WALProtos.getDescriptor(),
         }, assigner);
