@@ -4275,8 +4275,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public Map<String, AtomicInteger> getFailedOpenTracker() {return failedOpenTracker;}
 
-  public RegionState getState(String encodedName) {return regionStates.getRegionState(encodedName);}
-
   /**
    * A region is offline.  The new state should be the specified one,
    * if not null.  If the specified state is null, the new state is Offline.

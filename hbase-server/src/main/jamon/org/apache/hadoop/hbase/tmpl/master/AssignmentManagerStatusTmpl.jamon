@@ -108,12 +108,11 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
               </%if>
                <%java>
                   String retryStatus = "0";
-                  String name = rs.getRegion().getEncodedName();
-                  RegionState state = assignmentManager.getState(name);
-                  AtomicInteger numOpenRetries = failedRegionTracker.get(name);
+                  AtomicInteger numOpenRetries = failedRegionTracker.get(
+                      rs.getRegion().getEncodedName());
                   if (numOpenRetries != null ) {
                     retryStatus = Integer.toString(numOpenRetries.get());
-                  } else if (state.getState() ==  RegionState.State.FAILED_OPEN) {
+                  } else if (rs.getState() ==  RegionState.State.FAILED_OPEN) {
                      retryStatus = "Failed";
                   }
                 </%java>
