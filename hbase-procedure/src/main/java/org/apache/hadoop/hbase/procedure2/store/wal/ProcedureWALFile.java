@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
 
@@ -49,6 +50,12 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
   private long maxProcId;
   private long logSize;
   private long timestamp;
+
+  public ProcedureStoreTracker getTracker() {
+    return tracker;
+  }
+
+  private final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
 
   public ProcedureWALFile(final FileSystem fs, final FileStatus logStatus) {
     this.fs = fs;
@@ -88,14 +95,20 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     }
   }
 
-  public void readTracker(ProcedureStoreTracker tracker) throws IOException {
+  public void readTracker() throws IOException {
     ProcedureWALTrailer trailer = readTrailer();
     try {
       stream.seek(trailer.getTrackerPos());
-      tracker.readFrom(stream);
+      final ProcedureProtos.ProcedureStoreTracker trackerProtoBuf =
+          ProcedureProtos.ProcedureStoreTracker.parseDelimitedFrom(stream);
+      tracker.resetToProto(trackerProtoBuf);
     } finally {
       stream.seek(startPos);
     }
+  }
+
+  public void updateLocalTracker(ProcedureStoreTracker tracker) {
+    this.tracker.resetTo(tracker);
   }
 
   public void close() {

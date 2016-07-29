@@ -22,9 +22,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -103,6 +106,114 @@ public class TestWALProcedureStore {
     }
     FileStatus[] status = fs.listStatus(logDir);
     assertEquals(1, status.length);
+  }
+
+  /**
+   * Tests that tracker for all old logs are loaded back after procedure store is restarted.
+   */
+  @Test
+  public void trackersLoadedForAllOldLogs() throws Exception {
+    for (int i = 0; i <= 20; ++i) {
+      procStore.insert(new TestProcedure(i), null);
+      if (i > 0 && (i % 5) == 0) {
+        LoadCounter loader = new LoadCounter();
+        storeRestart(loader);
+      }
+    }
+    assertEquals(5, procStore.getActiveLogs().size());
+    for (int i = 0; i < procStore.getActiveLogs().size() - 1; ++i) {
+      ProcedureStoreTracker tracker = procStore.getActiveLogs().get(i).getTracker();
+      assertTrue(tracker != null && !tracker.isEmpty());
+    }
+  }
+
+  @Test
+  public void testWalCleanerSequentialClean() throws Exception {
+    int NUM = 5;
+    List<Procedure> procs = new ArrayList<>();
+    ArrayList<ProcedureWALFile> logs = null;
+    // Insert procedures and roll wal after every insert.
+    for (int i = 0; i < NUM; i++) {
+      procs.add(new TestSequentialProcedure());
+      procStore.insert(procs.get(i), null);
+      procStore.rollWriterForTesting();
+      logs = procStore.getActiveLogs();
+      assertEquals(logs.size(), i + 2);  // Extra 1 for current ongoing wal.
+    }
+
+    // Delete procedures in sequential order make sure that only the corresponding wal is deleted
+    // from logs list.
+    int[] deleteOrder = new int[]{ 0, 1, 2, 3, 4};
+    for (int i = 0; i < deleteOrder.length; i++) {
+      procStore.delete(procs.get(deleteOrder[i]).getProcId());
+      procStore.removeInactiveLogsForTesting();
+      assertFalse(procStore.getActiveLogs().contains(logs.get(deleteOrder[i])));
+      assertEquals(procStore.getActiveLogs().size(), NUM - i );
+    }
+  }
+
+
+  // Test that wal cleaner doesn't create holes in wal files list i.e. it only deletes files if
+  // they are in the starting of the list.
+  @Test
+  public void testWalCleanerNoHoles() throws Exception {
+    int NUM = 5;
+    List<Procedure> procs = new ArrayList<>();
+    ArrayList<ProcedureWALFile> logs = null;
+    // Insert procedures and roll wal after every insert.
+    for (int i = 0; i < NUM; i++) {
+      procs.add(new TestSequentialProcedure());
+      procStore.insert(procs.get(i), null);
+      procStore.rollWriterForTesting();
+      logs = procStore.getActiveLogs();
+      assertEquals(logs.size(), i + 2);  // Extra 1 for current ongoing wal.
+    }
+
+    for (int i = 1; i < NUM; i++) {
+      procStore.delete(procs.get(i).getProcId());
+    }
+    assertEquals(procStore.getActiveLogs().size(), NUM + 1);
+    procStore.delete(procs.get(0).getProcId());
+    assertEquals(procStore.getActiveLogs().size(), 1);
+  }
+
+  @Test
+  public void testWalCleanerUpdates() throws Exception {
+    TestSequentialProcedure p1 = new TestSequentialProcedure(),
+        p2 = new TestSequentialProcedure();
+    procStore.insert(p1, null);
+    procStore.insert(p2, null);
+    procStore.rollWriterForTesting();
+    ProcedureWALFile firstLog = procStore.getActiveLogs().get(0);
+    procStore.update(p1);
+    procStore.rollWriterForTesting();
+    procStore.update(p2);
+    procStore.rollWriterForTesting();
+    procStore.removeInactiveLogsForTesting();
+    assertFalse(procStore.getActiveLogs().contains(firstLog));
+  }
+
+  @Test
+  public void testWalCleanerUpdatesDontLeaveHoles() throws Exception {
+    TestSequentialProcedure p1 = new TestSequentialProcedure(),
+        p2 = new TestSequentialProcedure();
+    procStore.insert(p1, null);
+    procStore.insert(p2, null);
+    procStore.rollWriterForTesting();  // generates first log with p1 + p2
+    ProcedureWALFile log1 = procStore.getActiveLogs().get(0);
+    procStore.update(p2);
+    procStore.rollWriterForTesting();  // generates second log with p2
+    ProcedureWALFile log2 = procStore.getActiveLogs().get(1);
+    procStore.update(p2);
+    procStore.rollWriterForTesting();  // generates third log with p2
+    procStore.removeInactiveLogsForTesting();  // Shouldn't remove 2nd log.
+    assertEquals(4, procStore.getActiveLogs().size());
+    procStore.update(p1);
+    procStore.rollWriterForTesting();  // generates fourth log with p1
+    procStore.removeInactiveLogsForTesting();  // Should remove first two logs.
+    assertEquals(3, procStore.getActiveLogs().size());
+    assertFalse(procStore.getActiveLogs().contains(log1));
+    assertFalse(procStore.getActiveLogs().contains(log2));
   }
 
   @Test

@@ -29,6 +29,8 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -104,7 +106,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       "hbase.procedure.store.wal.sync.stats.count";
   private static final int DEFAULT_SYNC_STATS_COUNT = 10;
 
-  private final LinkedList<ProcedureWALFile> logs = new LinkedList<ProcedureWALFile>();
+  private final LinkedList<ProcedureWALFile> logs = new LinkedList<>();
   private final ProcedureStoreTracker storeTracker = new ProcedureStoreTracker();
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
@@ -246,7 +248,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     // Close the writer
-    closeStream();
+    closeCurrentLogStream();
 
     // Close the old logs
     // they should be already closed, this is just in case the load fails
@@ -776,6 +778,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
+  @VisibleForTesting void removeInactiveLogsForTesting() throws Exception {
+    lock.lock();
+    try {
+      removeInactiveLogs();
+    } finally  {
+      lock.unlock();
+    }
+  }
+
   private void periodicRoll() throws IOException {
     if (storeTracker.isEmpty()) {
       if (LOG.isTraceEnabled()) {
@@ -853,7 +864,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       return false;
     }
 
-    closeStream();
+    closeCurrentLogStream();
 
     storeTracker.resetUpdates();
     stream = newStream;
@@ -869,12 +880,13 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return true;
   }
 
-  private void closeStream() {
+  private void closeCurrentLogStream() {
     try {
       if (stream != null) {
         try {
           ProcedureWALFile log = logs.getLast();
           log.setProcIds(storeTracker.getUpdatedMinProcId(), storeTracker.getUpdatedMaxProcId());
+          log.updateLocalTracker(storeTracker);
           long trailerSize = ProcedureWALFormat.writeTrailer(stream, storeTracker);
           log.addToSize(trailerSize);
         } catch (IOException e) {
@@ -892,14 +904,38 @@ public class WALProcedureStore extends ProcedureStoreBase {
   // ==========================================================================
   //  Log Files cleaner helpers
   // ==========================================================================
-  private void removeInactiveLogs() {
-    // Verify if the ProcId of the first oldest is still active. if not remove the file.
-    while (logs.size() > 1) {
+
+  /**
+   * Iterates over log files from latest (ignoring currently active one) to oldest, deleting the
+   * ones which don't contain anything useful for recovery.
+   * @throws IOException
+   */
+  private void removeInactiveLogs() throws IOException {
+    // TODO: can we somehow avoid first iteration (starting from newest log) and still figure out
+    // efficient way to cleanup old logs.
+    // Alternatively, a complex and maybe more efficient method would be using this iteration to
+    // rewrite latest states of active procedures to a new log file and delete all old ones.
+    if (logs.size() <= 1) return;
+    ProcedureStoreTracker runningTracker = new ProcedureStoreTracker();
+    runningTracker.resetTo(storeTracker);
+    List<ProcedureWALFile> logsToBeDeleted = new ArrayList<>();
+    for (int i = logs.size() - 2; i >= 0; i--) {
+      ProcedureWALFile log = logs.get(i);
+      // If nothing was subtracted, delete the log file since it doesn't contain any useful proc
+      // states.
+      if (!runningTracker.subtract(log.getTracker())) {
+        logsToBeDeleted.add(log);
+      }
+    }
+    // Delete the logs from oldest to newest and stop at first log that can't be deleted to avoid
+    // holes in the log file sequence (for better debug capability).
+    while (true) {
       ProcedureWALFile log = logs.getFirst();
-      if (storeTracker.isTracking(log.getMinProcId(), log.getMaxProcId())) {
+      if (logsToBeDeleted.contains(log)) {
+        removeLogFile(log);
+      } else {
         break;
       }
-      removeLogFile(log);
     }
   }
 
@@ -1011,7 +1047,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
         final Path logPath = logFiles[i].getPath();
         leaseRecovery.recoverFileLease(fs, logPath);
         maxLogId = Math.max(maxLogId, getLogIdFromName(logPath.getName()));
-
         ProcedureWALFile log = initOldLog(logFiles[i]);
         if (log != null) {
           this.logs.add(log);
@@ -1025,19 +1060,19 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private void initTrackerFromOldLogs() {
     // TODO: Load the most recent tracker available
-    if (!logs.isEmpty()) {
-      ProcedureWALFile log = logs.getLast();
-      try {
-        log.readTracker(storeTracker);
-      } catch (IOException e) {
-        LOG.warn("Unable to read tracker for " + log + " - " + e.getMessage());
-        // try the next one...
-        storeTracker.reset();
-        storeTracker.setPartialFlag(true);
-      }
+    if (logs.isEmpty()) return;
+    ProcedureWALFile log = logs.getLast();
+    if (log.getTracker() != null) {
+      storeTracker.resetTo(log.getTracker());
+    } else {
+      storeTracker.reset();
+      storeTracker.setPartialFlag(true);
     }
   }
 
+  /**
+   * Loads given log file and it's tracker.
+   */
   private ProcedureWALFile initOldLog(final FileStatus logFile) throws IOException {
     ProcedureWALFile log = new ProcedureWALFile(fs, logFile);
     if (logFile.getLen() == 0) {
@@ -1068,6 +1103,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
         log.removeFile();
         return null;
       }
+    }
+    try {
+      log.readTracker();
+    } catch (IOException e) {
+      LOG.warn("Unable to read tracker for " + log + " - " + e.getMessage());
     }
     return log;
   }

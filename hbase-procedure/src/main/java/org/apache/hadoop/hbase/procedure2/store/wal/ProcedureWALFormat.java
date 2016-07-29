@@ -123,7 +123,7 @@ public final class ProcedureWALFormat {
       .build().writeDelimitedTo(stream);
 
     // Write Tracker
-    tracker.writeTo(stream);
+    tracker.toProto().writeDelimitedTo(stream);
 
     stream.write(TRAILER_VERSION);
     StreamUtils.writeLong(stream, TRAILER_MAGIC);

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.BitSetNode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -237,5 +238,113 @@ public class TestProcedureStoreTracker {
         assertEquals("procId=" + i, ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(i));
       }
     }
+  }
+
+  boolean isDeleted(ProcedureStoreTracker n, long procId) {
+    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
+  }
+
+  boolean isDeleted(BitSetNode n, long procId) {
+    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
+  }
+
+  /**
+   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
+   *               id is always marked deleted.
+   */
+  ProcedureStoreTracker buildTracker(long[] active, long[] updated, long[] deleted) {
+    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (long i : active) {
+      tracker.insert(i);
+    }
+    tracker.resetUpdates();
+    for (long i : updated) {
+      tracker.update(i);
+    }
+    for (long i : deleted) {
+      tracker.delete(i);
+    }
+    return tracker;
+  }
+
+  /**
+   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
+   *               id is always marked deleted.
+   */
+  BitSetNode buildBitSetNode(long[] active, long[] updated, long[] deleted) {
+    BitSetNode bitSetNode = new BitSetNode(0L, false);
+    for (long i : active) {
+      bitSetNode.update(i);
+    }
+    bitSetNode.resetUpdates();
+    for (long i : updated) {
+      bitSetNode.update(i);
+    }
+    for (long i : deleted) {
+      bitSetNode.delete(i);
+    }
+    return bitSetNode;
+  }
+
+  @Test
+  public void testBitSetNodeSubtract() {
+    // 1 not updated in n2, nothing to subtract
+    BitSetNode n1 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{ });
+    BitSetNode n2 = buildBitSetNode(new long[]{ 1L }, new long[]{}, new long[]{});
+    assertFalse(n1.subtract(n2));
+
+    // 1 updated in n2, and not deleted in n1, should subtract.
+    n1 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{});
+    n2 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{});
+    assertTrue(n1.subtract(n2));
+
+    // 1 updated in n2, but deleted in n1, should not subtract
+    n1 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{ 1L });
+    n2 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{});
+    assertFalse(n1.subtract(n2));
+
+    // 1 updated in n2, but not deleted in n1, should subtract.
+    n1 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{});
+    n2 = buildBitSetNode(new long[]{ 1L }, new long[]{ 1L }, new long[]{ 1L });
+    assertTrue(n1.subtract(n2));
+
+    // all four cases together.
+    n1 = buildBitSetNode(new long[]{ 0L, 10L, 20L, 30L  }, new long[]{ 0L, 10L, 20L, 30L  },
+        new long[]{ 20L });
+    n2 = buildBitSetNode(new long[]{ 0L, 10L, 20L, 30L  }, new long[]{ 0L, 20L, 30L },
+        new long[]{ 0L });
+    assertTrue(n1.subtract(n2));
+  }
+
+  @Test
+  // The structure is same as testBitSetNodeSubtract() but the ids are bigger so that internally
+  // there are many BitSetNodes.
+  public void testTrackerSubtract() {
+    // not updated in n2, nothing to subtract
+    ProcedureStoreTracker n1 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L },
+        new long[]{ });
+    ProcedureStoreTracker n2 = buildTracker(new long[]{ 1L, 1000L }, new long[]{}, new long[]{});
+    assertFalse(n1.subtract(n2));
+
+    // updated in n2, and not deleted in n1, should subtract.
+    n1 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L }, new long[]{});
+    n2 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L }, new long[]{});
+    assertTrue(n1.subtract(n2));
+
+    // updated in n2, but also deleted in n1, should not subtract
+    n1 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L });
+    n2 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L }, new long[]{});
+    assertFalse(n1.subtract(n2));
+
+    // updated in n2, but not deleted in n1, should subtract.
+    n1 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L, 1000L }, new long[]{});
+    n2 = buildTracker(new long[]{ 1L, 1000L }, new long[]{ 1L }, new long[]{ 1L, 1000L });
+    assertFalse(n1.subtract(n2));
+
+    n1 = buildTracker(new long[]{ 0L, 100L, 200L, 300L }, new long[]{ 0L, 100L, 200L, 300L },
+        new long[]{ 200L });
+    n2 = buildTracker(new long[]{ 0L, 100L, 200L, 300L }, new long[]{ 0L, 200L, 300L },
+        new long[]{ 0L });
+    assertTrue(n1.subtract(n2));
   }
 }
