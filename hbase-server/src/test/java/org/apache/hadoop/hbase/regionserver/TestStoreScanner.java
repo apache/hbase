@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,7 +75,7 @@ public class TestStoreScanner {
    * From here on down, we have a bunch of defines and specific CELL_GRID of Cells. The
    * CELL_GRID then has a Scanner that can fake out 'block' transitions. All this elaborate
    * setup is for tests that ensure we don't overread, and that the
-   * {@link StoreScanner#optimize(org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode,
+   * {@link StoreScanner#optimize(org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode,
    * Cell)} is not overly enthusiastic.
    */
   private static final byte [] ZERO = new byte [] {'0'};

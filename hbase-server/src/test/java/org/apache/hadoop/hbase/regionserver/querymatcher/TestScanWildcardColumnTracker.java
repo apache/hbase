@@ -17,36 +17,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.querymatcher;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestScanWildcardColumnTracker extends HBaseTestCase {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestScanWildcardColumnTracker {
 
   final static int VERSIONS = 2;
 
-  public void testCheckColumn_Ok() throws IOException {
-    ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+  @Test
+  public void testCheckColumnOk() throws IOException {
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
-    //Create list of qualifiers
+    // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier2"));
     qualifiers.add(Bytes.toBytes("qualifier3"));
     qualifiers.add(Bytes.toBytes("qualifier4"));
 
-    //Setting up expected result
+    // Setting up expected result
     List<MatchCode> expected = new ArrayList<MatchCode>();
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
@@ -55,31 +59,30 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<MatchCode>();
 
-    for(byte [] qualifier : qualifiers) {
-      ScanQueryMatcher.MatchCode mc =
-          ScanQueryMatcher.checkColumn(tracker, qualifier, 0, qualifier.length, 1,
-            KeyValue.Type.Put.getCode(), false);
+    for (byte[] qualifier : qualifiers) {
+      ScanQueryMatcher.MatchCode mc = ScanQueryMatcher.checkColumn(tracker, qualifier, 0,
+        qualifier.length, 1, KeyValue.Type.Put.getCode(), false);
       actual.add(mc);
     }
 
-    //Compare actual with expected
-    for(int i=0; i<expected.size(); i++) {
+    // Compare actual with expected
+    for (int i = 0; i < expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
 
-  public void testCheckColumn_EnforceVersions() throws IOException {
-    ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+  @Test
+  public void testCheckColumnEnforceVersions() throws IOException {
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
-    //Create list of qualifiers
+    // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier2"));
 
-    //Setting up expected result
+    // Setting up expected result
     List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>();
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
@@ -89,42 +92,35 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     List<MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
     long timestamp = 0;
-    for(byte [] qualifier : qualifiers) {
-      MatchCode mc =
-          ScanQueryMatcher.checkColumn(tracker, qualifier, 0, qualifier.length, ++timestamp,
-            KeyValue.Type.Put.getCode(), false);
+    for (byte[] qualifier : qualifiers) {
+      MatchCode mc = ScanQueryMatcher.checkColumn(tracker, qualifier, 0, qualifier.length,
+        ++timestamp, KeyValue.Type.Put.getCode(), false);
       actual.add(mc);
     }
 
-    //Compare actual with expected
-    for(int i=0; i<expected.size(); i++) {
+    // Compare actual with expected
+    for (int i = 0; i < expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
 
-  public void DisabledTestCheckColumn_WrongOrder() {
-    ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+  @Test
+  public void DisabledTestCheckColumnWrongOrder() {
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
-    //Create list of qualifiers
+    // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
     qualifiers.add(Bytes.toBytes("qualifier2"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
 
-    boolean ok = false;
-
     try {
-      for(byte [] qualifier : qualifiers) {
+      for (byte[] qualifier : qualifiers) {
         ScanQueryMatcher.checkColumn(tracker, qualifier, 0, qualifier.length, 1,
           KeyValue.Type.Put.getCode(), false);
       }
-    } catch (Exception e) {
-      ok = true;
+      fail();
+    } catch (IOException e) {
+      // expected
     }
-
-    assertEquals(true, ok);
   }
-
-
 }
-

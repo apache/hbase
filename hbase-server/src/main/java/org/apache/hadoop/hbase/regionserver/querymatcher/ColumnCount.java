@@ -16,18 +16,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Simple wrapper for a byte buffer and a counter.  Does not copy.
+ * Simple wrapper for a byte buffer and a counter. Does not copy.
  * <p>
  * NOT thread-safe because it is not used in a multi-threaded context, yet.
  */
 @InterfaceAudience.Private
-public class ColumnCount {
-  private final byte [] bytes;
+class ColumnCount {
+  private final byte[] bytes;
   private final int offset;
   private final int length;
   private int count;
@@ -36,7 +36,7 @@ public class ColumnCount {
    * Constructor
    * @param column the qualifier to count the versions for
    */
-  public ColumnCount(byte [] column) {
+  public ColumnCount(byte[] column) {
     this(column, 0);
   }
 
@@ -45,7 +45,7 @@ public class ColumnCount {
    * @param column the qualifier to count the versions for
    * @param count initial count
    */
-  public ColumnCount(byte [] column, int count) {
+  public ColumnCount(byte[] column, int count) {
     this(column, 0, column.length, count);
   }
 
@@ -56,7 +56,7 @@ public class ColumnCount {
    * @param length of the qualifier
    * @param count initial count
    */
-  public ColumnCount(byte [] column, int offset, int length, int count) {
+  public ColumnCount(byte[] column, int offset, int length, int count) {
     this.bytes = column;
     this.offset = offset;
     this.length = length;
@@ -66,21 +66,21 @@ public class ColumnCount {
   /**
    * @return the buffer
    */
-  public byte [] getBuffer(){
+  public byte[] getBuffer() {
     return this.bytes;
   }
 
   /**
    * @return the offset
    */
-  public int getOffset(){
+  public int getOffset() {
     return this.offset;
   }
 
   /**
    * @return the length
    */
-  public int getLength(){
+  public int getLength() {
     return this.length;
   }
 
@@ -107,5 +107,4 @@ public class ColumnCount {
   public void setCount(int count) {
     this.count = count;
   }
-
 }

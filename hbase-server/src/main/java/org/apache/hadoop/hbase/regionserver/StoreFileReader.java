@@ -18,6 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.DataInput;
+import java.io.IOException;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,12 +48,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.DataInput;
-import java.io.IOException;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Reader for a StoreFile.
@@ -114,46 +114,22 @@ public class StoreFileReader {
   }
 
   /**
-   * Uses {@link #getStoreFileScanner(boolean, boolean, boolean, long, long)} by setting
-   * {@code isCompaction} to false, {@code readPt} to 0 and {@code scannerOrder} to 0.
-   * Do not use this overload if using this scanner for compactions.
-   *
-   * @see #getStoreFileScanner(boolean, boolean, boolean, long, long)
-   */
-  public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread) {
-    // 0 is passed as readpoint because this method is only used by test
-    // where StoreFile is directly operated upon
-    return getStoreFileScanner(cacheBlocks, pread, false, 0, 0);
-  }
-
-  /**
-   * Uses {@link #getStoreFileScanner(boolean, boolean, boolean, long, long)} by setting
-   * {@code scannerOrder} to 0.
-   *
-   * @see #getStoreFileScanner(boolean, boolean, boolean, long, long)
-   */
-  public StoreFileScanner getStoreFileScanner(
-      boolean cacheBlocks, boolean pread, boolean isCompaction, long readPt) {
-    return getStoreFileScanner(cacheBlocks, pread, isCompaction, readPt, 0);
-  }
-
-  /**
    * Get a scanner to scan over this StoreFile.
-   *
    * @param cacheBlocks should this scanner cache blocks?
    * @param pread use pread (for highly concurrent small readers)
    * @param isCompaction is scanner being used for compaction?
    * @param scannerOrder Order of this scanner relative to other scanners. See
-   *  {@link KeyValueScanner#getScannerOrder()}.
+   *          {@link KeyValueScanner#getScannerOrder()}.
+   * @param canOptimizeForNonNullColumn {@code true} if we can make sure there is no null column,
+   *          otherwise {@code false}. This is a hint for optimization.
    * @return a scanner
    */
-  public StoreFileScanner getStoreFileScanner(
-      boolean cacheBlocks, boolean pread, boolean isCompaction, long readPt, long scannerOrder) {
+  public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
+      boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     // Increment the ref count
     refCount.incrementAndGet();
-    return new StoreFileScanner(
-        this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction, reader.hasMVCCInfo(),
-        readPt, scannerOrder);
+    return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
+        reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
   /**

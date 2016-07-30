@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -1747,35 +1748,6 @@ public class HStore implements Store {
     // Make sure we do not return more than maximum versions for this store.
     int maxVersions = this.family.getMaxVersions();
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
-  }
-
-  /**
-   * @param cell
-   * @param oldestTimestamp
-   * @return true if the cell is expired
-   */
-  static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
-    // Look for a TTL tag first. Use it instead of the family setting if
-    // found. If a cell has multiple TTLs, resolve the conflict by using the
-    // first tag encountered.
-    Iterator<Tag> i = CellUtil.tagsIterator(cell);
-    while (i.hasNext()) {
-      Tag t = i.next();
-      if (TagType.TTL_TAG_TYPE == t.getType()) {
-        // Unlike in schema cell TTLs are stored in milliseconds, no need
-        // to convert
-        long ts = cell.getTimestamp();
-        assert t.getValueLength() == Bytes.SIZEOF_LONG;
-        long ttl = TagUtil.getValueAsLong(t);
-        if (ts + ttl < now) {
-          return true;
-        }
-        // Per cell TTLs cannot extend lifetime beyond family settings, so
-        // fall through to check that
-        break;
-      }
-    }
-    return false;
   }
 
   @Override

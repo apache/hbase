@@ -598,7 +598,7 @@ public class DataBlockEncodingTool {
 
     StoreFileReader reader = hsf.createReader();
     reader.loadFileInfo();
-    KeyValueScanner scanner = reader.getStoreFileScanner(true, true);
+    KeyValueScanner scanner = reader.getStoreFileScanner(true, true, false, 0, 0, false);
 
     // run the utilities
     DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);

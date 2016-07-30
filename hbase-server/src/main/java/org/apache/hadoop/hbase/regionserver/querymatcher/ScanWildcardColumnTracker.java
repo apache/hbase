@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,8 +37,10 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   private int currentCount = 0;
   private int maxVersions;
   private int minVersions;
-  /* Keeps track of the latest timestamp and type included for current column.
-   * Used to eliminate duplicates. */
+  /*
+   * Keeps track of the latest timestamp and type included for current column. Used to eliminate
+   * duplicates.
+   */
   private long latestTSOfCurrentColumn;
   private byte latestTypeOfCurrentColumn;
 
@@ -49,19 +50,16 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * Return maxVersions of every row.
    * @param minVersion Minimum number of versions to keep
    * @param maxVersion Maximum number of versions to return
-   * @param oldestUnexpiredTS oldest timestamp that has not expired according
-   *          to the TTL.
+   * @param oldestUnexpiredTS oldest timestamp that has not expired according to the TTL.
    */
-  public ScanWildcardColumnTracker(int minVersion, int maxVersion,
-      long oldestUnexpiredTS) {
+  public ScanWildcardColumnTracker(int minVersion, int maxVersion, long oldestUnexpiredTS) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
     this.oldestStamp = oldestUnexpiredTS;
   }
 
   /**
-   * {@inheritDoc}
-   * This receives puts *and* deletes.
+   * {@inheritDoc} This receives puts *and* deletes.
    */
   @Override
   public MatchCode checkColumn(Cell cell, byte type) throws IOException {
@@ -69,26 +67,29 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * {@inheritDoc}
-   * This receives puts *and* deletes. Deletes do not count as a version, but rather
+   * {@inheritDoc} This receives puts *and* deletes. Deletes do not count as a version, but rather
    * take the version of the previous put (so eventually all but the last can be reclaimed).
    */
   @Override
-  public ScanQueryMatcher.MatchCode checkVersions(Cell cell,
-      long timestamp, byte type, boolean ignoreCount) throws IOException {
+  public ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
+      boolean ignoreCount) throws IOException {
 
     if (columnCell == null) {
       // first iteration.
       resetCell(cell);
-      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+      if (ignoreCount) {
+        return ScanQueryMatcher.MatchCode.INCLUDE;
+      }
       // do not count a delete marker as another version
       return checkVersion(type, timestamp);
     }
     int cmp = CellComparator.compareQualifiers(cell, this.columnCell);
     if (cmp == 0) {
-      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+      if (ignoreCount) {
+        return ScanQueryMatcher.MatchCode.INCLUDE;
+      }
 
-      //If column matches, check if it is a duplicate timestamp
+      // If column matches, check if it is a duplicate timestamp
       if (sameAsPreviousTSAndType(timestamp, type)) {
         return ScanQueryMatcher.MatchCode.SKIP;
       }
@@ -101,7 +102,9 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     if (cmp > 0) {
       // switched columns, lets do something.x
       resetCell(cell);
-      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+      if (ignoreCount) {
+        return ScanQueryMatcher.MatchCode.INCLUDE;
+      }
       return checkVersion(type, timestamp);
     }
 
@@ -109,10 +112,9 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     // WARNING: This means that very likely an edit for some other family
     // was incorrectly stored into the store for this one. Throw an exception,
     // because this might lead to data corruption.
-    throw new IOException(
-        "ScanWildcardColumnTracker.checkColumn ran into a column actually " +
-        "smaller than the previous column: " +
-        Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
+    throw new IOException("ScanWildcardColumnTracker.checkColumn ran into a column actually "
+        + "smaller than the previous column: "
+        + Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
   }
 
   private void resetCell(Cell columnCell) {
@@ -121,13 +123,10 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * Check whether this version should be retained.
-   * There are 4 variables considered:
-   * If this version is past max versions -> skip it
-   * If this kv has expired or was deleted, check min versions
-   * to decide whther to skip it or not.
-   *
-   * Increase the version counter unless this is a delete
+   * Check whether this version should be retained. There are 4 variables considered: If this
+   * version is past max versions -> skip it If this kv has expired or was deleted, check min
+   * versions to decide whther to skip it or not. Increase the version counter unless this is a
+   * delete
    */
   private MatchCode checkVersion(byte type, long timestamp) {
     if (!CellUtil.isDelete(type)) {
@@ -171,10 +170,9 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * Used by matcher and scan/get to get a hint of the next column
-   * to seek to after checkColumn() returns SKIP.  Returns the next interesting
-   * column we want, or NULL there is none (wildcard scanner).
-   *
+   * Used by matcher and scan/get to get a hint of the next column to seek to after checkColumn()
+   * returns SKIP. Returns the next interesting column we want, or NULL there is none (wildcard
+   * scanner).
    * @return The column count.
    */
   public ColumnCount getColumnHint() {

@@ -16,13 +16,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 
 /**
  * Implementing classes of this interface will be used for the tracking
@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  * believes that the current column should be skipped (by timestamp, filter etc.)</li>
  * </ul>
  * <p>
- * These two methods returns a 
- * {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode}
+ * These two methods returns a
+ * {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode}
  * to define what action should be taken.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
