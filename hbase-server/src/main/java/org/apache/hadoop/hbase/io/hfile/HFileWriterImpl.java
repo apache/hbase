@@ -287,6 +287,8 @@ public class HFileWriterImpl implements HFile.Writer {
         cacheIndexesOnWrite ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));
+    dataBlockIndexWriter.setMinIndexNumEntries(
+        HFileBlockIndex.getMinIndexNumEntries(conf));
     inlineBlockWriters.add(dataBlockIndexWriter);
 
     // Meta data block index writer
@@ -327,13 +329,13 @@ public class HFileWriterImpl implements HFile.Writer {
       doCacheOnWrite(lastDataBlockOffset);
     }
   }
-  
+
   /**
    * Try to return a Cell that falls between <code>left</code> and
    * <code>right</code> but that is shorter; i.e. takes up less space. This
    * trick is used building HFile block index. Its an optimization. It does not
    * always work. In this case we'll just return the <code>right</code> cell.
-   * 
+   *
    * @param comparator
    *          Comparator to use.
    * @param left
