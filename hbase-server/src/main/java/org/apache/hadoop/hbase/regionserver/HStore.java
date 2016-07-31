@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -1863,7 +1864,7 @@ public class HStore implements Store {
    * @param oldestTimestamp
    * @return true if the cell is expired
    */
-  static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
+  public static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
     // Do not create an Iterator or Tag objects unless the cell actually has tags.
     // TODO: This check for tags is really expensive. We decode an int for key and value. Costs.
     if (cell.getTagsLength() > 0) {

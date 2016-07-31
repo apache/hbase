@@ -121,11 +121,11 @@ public class ScanInfo {
     return this.parallelSeekEnabled;
   }
 
-  byte[] getFamily() {
+  public byte[] getFamily() {
     return family;
   }
 
-  int getMinVersions() {
+  public int getMinVersions() {
     return minVersions;
   }
 
@@ -137,7 +137,7 @@ public class ScanInfo {
     return ttl;
   }
 
-  KeepDeletedCells getKeepDeletedCells() {
+  public KeepDeletedCells getKeepDeletedCells() {
     return keepDeletedCells;
   }
 

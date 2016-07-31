@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * NOT thread-safe because it is not used in a multi-threaded context, yet.
  */
 @InterfaceAudience.Private
-public class ColumnCount {
+class ColumnCount {
   private final byte [] bytes;
   private final int offset;
   private final int length;

@@ -187,12 +187,11 @@ public class TimeRange {
   }
 
   /**
-   * Check if the specified timestamp is within this TimeRange.
+   * Check if the specified timestamp is within or after this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false
-   * if not.
+   * Returns true if greater than minStamp, false if not.
    * @param timestamp timestamp to check
-   * @return true if within TimeRange, false if not
+   * @return true if within or after TimeRange, false if not
    */
   public boolean withinOrAfterTimeRange(long timestamp) {
     assert timestamp >= 0;
