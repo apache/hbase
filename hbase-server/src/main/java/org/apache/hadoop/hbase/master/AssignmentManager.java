@@ -3408,7 +3408,7 @@ public class AssignmentManager extends ZooKeeperListener {
     return true;
   }
 
-  void invokeAssign(HRegionInfo regionInfo) {
+  public void invokeAssign(HRegionInfo regionInfo) {
     invokeAssign(regionInfo, true);
   }
 
@@ -3419,12 +3419,6 @@ public class AssignmentManager extends ZooKeeperListener {
   public void invokeAssignLater(HRegionInfo regionInfo, long sleepMillis) {
     scheduledThreadPoolExecutor.schedule(new DelayedAssignCallable(
         new AssignCallable(this, regionInfo, true)), sleepMillis, TimeUnit.MILLISECONDS);
-  }
-
-  public void invokeAssignLaterOnFailure(HRegionInfo regionInfo) {
-    long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
-        failedOpenTracker.get(regionInfo.getEncodedName()).get());
-    invokeAssignLater(regionInfo, sleepTime);
   }
 
   void invokeUnAssign(HRegionInfo regionInfo) {
@@ -4498,8 +4492,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private class DelayedAssignCallable implements Runnable {
-    Callable callable;
-    public DelayedAssignCallable(Callable callable) {
+
+    private final Callable<?> callable;
+
+    public DelayedAssignCallable(Callable<?> callable) {
       this.callable = callable;
     }
 
