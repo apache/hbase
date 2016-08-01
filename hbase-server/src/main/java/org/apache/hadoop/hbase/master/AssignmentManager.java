@@ -3412,7 +3412,7 @@ public class AssignmentManager extends ZooKeeperListener {
     invokeAssign(regionInfo, true);
   }
 
-  void invokeAssign(HRegionInfo regionInfo, boolean newPlan) {
+  public void invokeAssign(HRegionInfo regionInfo, boolean newPlan) {
     threadPoolExecutorService.submit(new AssignCallable(this, regionInfo, newPlan));
   }
 
@@ -4498,8 +4498,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private class DelayedAssignCallable implements Runnable {
-    Callable callable;
-    public DelayedAssignCallable(Callable callable) {
+
+    Callable<?> callable;
+
+    public DelayedAssignCallable(Callable<?> callable) {
       this.callable = callable;
     }
 

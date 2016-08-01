@@ -103,6 +103,6 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
       regionInfo, RegionState.State.CLOSED);
     // This below has to do w/ online enable/disable of a table
     assignmentManager.removeClosedRegion(regionInfo);
-    assignmentManager.invokeAssignLaterOnFailure(regionInfo);
+    assignmentManager.invokeAssign(regionInfo, false);
   }
 }
