@@ -72,6 +72,16 @@ public class HFileBlockIndex {
   public static final String MAX_CHUNK_SIZE_KEY = "hfile.index.block.max.size";
 
   /**
+   * Minimum number of entries in a single index block. Even if we are above the
+   * hfile.index.block.max.size we will keep writing to the same block unless we have that many
+   * entries. We should have at least a few entries so that we don't have too many levels in the
+   * multi-level index. This should be at least 2 to make sure there is no infinite recursion.
+   */
+  public static final String MIN_INDEX_NUM_ENTRIES_KEY = "hfile.index.block.min.entries";
+
+  static final int DEFAULT_MIN_INDEX_NUM_ENTRIES = 16;
+
+  /**
    * The number of bytes stored in each "secondary index" entry in addition to
    * key bytes in the non-root index block format. The first long is the file
    * offset of the deeper-level block the entry points to, and the int that
@@ -193,7 +203,7 @@ public class HFileBlockIndex {
      * Return the BlockWithScanInfo which contains the DataBlock with other scan
      * info such as nextIndexedKey. This function will only be called when the
      * HFile version is larger than 1.
-     * 
+     *
      * @param key
      *          the key we are looking for
      * @param currentBlock
@@ -494,7 +504,7 @@ public class HFileBlockIndex {
      * Performs a binary search over a non-root level index block. Utilizes the
      * secondary index, which records the offsets of (offset, onDiskSize,
      * firstKey) tuples of all entries.
-     * 
+     *
      * @param key
      *          the key we are searching for offsets to individual entries in
      *          the blockIndex buffer
@@ -793,6 +803,9 @@ public class HFileBlockIndex {
     /** The maximum size guideline of all multi-level index blocks. */
     private int maxChunkSize;
 
+    /** The maximum level of multi-level index blocks */
+    private int minIndexNumEntries;
+
     /** Whether we require this block index to always be single-level. */
     private boolean singleLevelOnly;
 
@@ -825,13 +838,21 @@ public class HFileBlockIndex {
       this.cacheConf = cacheConf;
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
+      this.minIndexNumEntries = HFileBlockIndex.DEFAULT_MIN_INDEX_NUM_ENTRIES;
     }
 
     public void setMaxChunkSize(int maxChunkSize) {
       if (maxChunkSize <= 0) {
-        throw new IllegalArgumentException("Invald maximum index block size");
+        throw new IllegalArgumentException("Invalid maximum index block size");
       }
       this.maxChunkSize = maxChunkSize;
+    }
+
+    public void setMinIndexNumEntries(int minIndexNumEntries) {
+      if (minIndexNumEntries <= 1) {
+        throw new IllegalArgumentException("Invalid maximum index level, should be >= 2");
+      }
+      this.minIndexNumEntries = minIndexNumEntries;
     }
 
     /**
@@ -865,7 +886,11 @@ public class HFileBlockIndex {
           : null;
 
       if (curInlineChunk != null) {
-        while (rootChunk.getRootSize() > maxChunkSize) {
+        while (rootChunk.getRootSize() > maxChunkSize
+            // HBASE-16288: if firstKey is larger than maxChunkSize we will loop indefinitely
+            && rootChunk.getNumEntries() > minIndexNumEntries
+            // Sanity check. We will not hit this (minIndexNumEntries ^ 16) blocks can be addressed
+            && numLevels < 16) {
           rootChunk = writeIntermediateLevel(out, rootChunk);
           numLevels += 1;
         }
@@ -956,8 +981,12 @@ public class HFileBlockIndex {
         curChunk.add(currentLevel.getBlockKey(i),
             currentLevel.getBlockOffset(i), currentLevel.getOnDiskDataSize(i));
 
-        if (curChunk.getRootSize() >= maxChunkSize)
+        // HBASE-16288: We have to have at least minIndexNumEntries(16) items in the index so that
+        // we won't end up with too-many levels for a index with very large rowKeys. Also, if the
+        // first key is larger than maxChunkSize this will cause infinite recursion.
+        if (i >= minIndexNumEntries && curChunk.getRootSize() >= maxChunkSize) {
           writeIntermediateBlock(out, parent, curChunk);
+        }
       }
 
       if (curChunk.getNumEntries() > 0) {
@@ -1449,5 +1478,9 @@ public class HFileBlockIndex {
 
   public static int getMaxChunkSize(Configuration conf) {
     return conf.getInt(MAX_CHUNK_SIZE_KEY, DEFAULT_MAX_CHUNK_SIZE);
+  }
+
+  public static int getMinIndexNumEntries(Configuration conf) {
+    return conf.getInt(MIN_INDEX_NUM_ENTRIES_KEY, DEFAULT_MIN_INDEX_NUM_ENTRIES);
   }
 }
