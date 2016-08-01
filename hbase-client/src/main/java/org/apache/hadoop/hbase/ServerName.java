@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.LongUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -290,7 +291,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     if (compare != 0) return compare;
     compare = this.getPort() - other.getPort();
     if (compare != 0) return compare;
-    return (int)(this.getStartcode() - other.getStartcode());
+    return LongUtils.compare(this.getStartcode(), other.getStartcode());
   }
 
   @Override
