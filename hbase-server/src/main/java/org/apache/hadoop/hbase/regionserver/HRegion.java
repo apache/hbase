@@ -5951,6 +5951,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Technically, if we hit limits before on this row, we don't need this call.
           if (filterRowKey(current)) {
             incrementCountOfRowsFilteredMetric(scannerContext);
+            // early check, see HBASE-16296
+            if (isFilterDoneInternal()) {
+              return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+            }
             // Typically the count of rows scanned is incremented inside #populateResult. However,
             // here we are filtering a row based purely on its row key, preventing us from calling
             // #populateResult. Thus, perform the necessary increment here to rows scanned metric
