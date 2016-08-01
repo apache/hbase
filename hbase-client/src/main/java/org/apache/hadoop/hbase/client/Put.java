@@ -117,6 +117,43 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   }
 
   /**
+   * Create a Put operation for an immutable row key.
+   *
+   * @param row row key
+   * @param rowIsImmutable whether the input row is immutable.
+   *                       Set to true if the caller can guarantee that
+   *                       the row will not be changed for the Put duration.
+   */
+  public Put(byte [] row, boolean rowIsImmutable) {
+    this(row, HConstants.LATEST_TIMESTAMP, rowIsImmutable);
+  }
+
+  /**
+   * Create a Put operation for an immutable row key, using a given timestamp.
+   *
+   * @param row row key
+   * @param ts timestamp
+   * @param rowIsImmutable whether the input row is immutable.
+   *                       Set to true if the caller can guarantee that
+   *                       the row will not be changed for the Put duration.
+   */
+  public Put(byte[] row, long ts, boolean rowIsImmutable) {
+    // Check and set timestamp
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+    this.ts = ts;
+
+    // Deal with row according to rowIsImmutable
+    checkRow(row);
+    if (rowIsImmutable) {  // Row is immutable
+      this.row = row;  // Do not make a local copy, but point to the provided byte array directly
+    } else {  // Row is not immutable
+      this.row = Bytes.copy(row, 0, row.length);  // Make a local copy
+    }
+  }
+
+  /**
    * Copy constructor.  Creates a Put operation cloned from the specified Put.
    * @param putToCopy put to copy
    */

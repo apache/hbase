@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+
 public class TestPut {
   @Test
   public void testCopyConstructor() {
@@ -39,5 +41,19 @@ public class TestPut {
     //They should have different cell lists
     assertNotEquals(origin.getCellList(family), clone.getCellList(family));
 
+  }
+
+  // HBASE-14881
+  @Test
+  public void testRowIsImmutableOrNot() {
+    byte[] rowKey = Bytes.toBytes("immutable");
+
+    // Test when row key is immutable
+    Put putRowIsImmutable = new Put(rowKey, true);
+    assertTrue(rowKey == putRowIsImmutable.getRow());  // No local copy is made
+
+    // Test when row key is not immutable
+    Put putRowIsNotImmutable = new Put(rowKey, 1000L, false);
+    assertTrue(rowKey != putRowIsNotImmutable.getRow());  // A local copy is made
   }
 }
