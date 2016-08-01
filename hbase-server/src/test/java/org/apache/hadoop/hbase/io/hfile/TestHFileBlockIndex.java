@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -647,6 +648,49 @@ public class TestHFileBlockIndex {
         valueRead);
   }
 
+  @Test(timeout=10000)
+  public void testIntermediateLevelIndicesWithLargeKeys() throws IOException {
+    testIntermediateLevelIndicesWithLargeKeys(16);
+  }
 
+  @Test(timeout=10000)
+  public void testIntermediateLevelIndicesWithLargeKeysWithMinNumEntries() throws IOException {
+    // because of the large rowKeys, we will end up with a 50-level block index without sanity check
+    testIntermediateLevelIndicesWithLargeKeys(2);
+  }
+
+  public void testIntermediateLevelIndicesWithLargeKeys(int minNumEntries) throws IOException {
+    Path hfPath = new Path(TEST_UTIL.getDataTestDir(),
+      "testIntermediateLevelIndicesWithLargeKeys.hfile");
+    int maxChunkSize = 1024;
+    FileSystem fs = FileSystem.get(conf);
+    CacheConfig cacheConf = new CacheConfig(conf);
+    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
+    conf.setInt(HFileBlockIndex.MIN_INDEX_NUM_ENTRIES_KEY, minNumEntries);
+    HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
+    HFileWriterV2 hfw =
+        (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
+        .withFileContext(context)
+        .withPath(fs, hfPath).create();
+    List<byte[]> keys = new ArrayList<byte[]>();
+
+    // This should result in leaf-level indices and a root level index
+    for (int i=0; i < 100; i++) {
+      byte[] rowkey = new byte[maxChunkSize + 1];
+      byte[] b = Bytes.toBytes(i);
+      System.arraycopy(b, 0, rowkey, rowkey.length - b.length, b.length);
+      keys.add(rowkey);
+      hfw.append(KeyValueUtil.createFirstOnRow(rowkey));
+    }
+    hfw.close();
+
+    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, conf);
+    // Scanner doesn't do Cells yet.  Fix.
+    HFileScanner scanner = reader.getScanner(true, true);
+    for (int i = 0; i < keys.size(); ++i) {
+      scanner.seekTo(keys.get(i));
+    }
+    reader.close();
+  }
 }
 
