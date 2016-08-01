@@ -290,7 +290,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     if (compare != 0) return compare;
     compare = this.getPort() - other.getPort();
     if (compare != 0) return compare;
-    return Long.compare(this.getStartcode(), other.getStartcode());
+    return (int)(this.getStartcode() - other.getStartcode());
   }
 
   @Override

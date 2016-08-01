@@ -1090,7 +1090,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
       @Override
       public int compare(BucketEntry o1, BucketEntry o2) {
-        return Long.compare(o2.accessCounter, o1.accessCounter);
+        long accessCounter1 = o1.accessCounter;
+        long accessCounter2 = o2.accessCounter;
+        return accessCounter1 < accessCounter2 ? 1 : accessCounter1 == accessCounter2 ? 0 : -1;
       }
     };
 
@@ -1211,7 +1213,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
     @Override
     public int compareTo(BucketEntryGroup that) {
-      return Long.compare(this.overflow(), that.overflow());
+      if (this.overflow() == that.overflow())
+        return 0;
+      return this.overflow() > that.overflow() ? 1 : -1;
     }
 
     @Override
@@ -1358,13 +1362,13 @@ public class BucketCache implements BlockCache, HeapSize {
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
             if (diff != 0) return diff;
-            diff = Long.compare(this.getOffset(), other.getOffset());
+            diff = (int)(this.getOffset() - other.getOffset());
             if (diff != 0) return diff;
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException("" + this.getCachedTime() + ", " +
                 other.getCachedTime());
             }
-            return Long.compare(other.getCachedTime(), this.getCachedTime());
+            return (int)(other.getCachedTime() - this.getCachedTime());
           }
 
           @Override
