@@ -1668,6 +1668,25 @@ public class AssignmentManager {
   }
 
   /**
+   * Get number of replicas of a table
+   */
+  private static int getNumReplicas(MasterServices master, TableName table) {
+    int numReplica = 1;
+    try {
+      HTableDescriptor htd = master.getTableDescriptors().get(table);
+      if (htd == null) {
+        LOG.warn("master can not get TableDescriptor from table '" + table);
+      } else {
+        numReplica = htd.getRegionReplication();
+      }
+    } catch (IOException e){
+      LOG.warn("Couldn't get the replication attribute of the table " + table + " due to "
+          + e.getMessage());
+    }
+    return numReplica;
+  }
+
+  /**
    * Get a list of replica regions that are:
    * not recorded in meta yet. We might not have recorded the locations
    * for the replicas since the replicas may not have been online yet, master restarted
@@ -1683,9 +1702,9 @@ public class AssignmentManager {
     List<HRegionInfo> regionsNotRecordedInMeta = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regionsRecordedInMeta) {
       TableName table = hri.getTable();
-      HTableDescriptor htd = master.getTableDescriptors().get(table);
-      // look at the HTD for the replica count. That's the source of truth
-      int desiredRegionReplication = htd.getRegionReplication();
+      if(master.getTableDescriptors().get(table) == null)
+        continue;
+      int  desiredRegionReplication = getNumReplicas(master, table);
       for (int i = 0; i < desiredRegionReplication; i++) {
         HRegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
         if (regionsRecordedInMeta.contains(replica)) continue;
@@ -1728,8 +1747,7 @@ public class AssignmentManager {
       // maybe because it crashed.
       PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(result);
       if (p.getFirst() != null && p.getSecond() != null) {
-        int numReplicas = ((MasterServices)server).getTableDescriptors().get(p.getFirst().
-            getTable()).getRegionReplication();
+        int numReplicas = getNumReplicas(server, p.getFirst().getTable());
         for (HRegionInfo merge : p) {
           for (int i = 1; i < numReplicas; i++) {
             replicasToClose.add(RegionReplicaUtil.getRegionInfoForReplica(merge, i));
@@ -2679,15 +2697,7 @@ public class AssignmentManager {
         }
       }
     }
-    int numReplicas = 1;
-    try {
-      numReplicas = ((MasterServices)server).getTableDescriptors().get(mergedHri.getTable()).
-          getRegionReplication();
-    } catch (IOException e) {
-      LOG.warn("Couldn't get the replication attribute of the table " + mergedHri.getTable() +
-          " due to " + e.getMessage() + ". The assignment of replicas for the merged region " +
-          "will not be done");
-    }
+    int numReplicas = getNumReplicas(server, mergedHri.getTable());
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     for (int i = 1; i < numReplicas; i++) {
       regions.add(RegionReplicaUtil.getRegionInfoForReplica(mergedHri, i));
@@ -2708,15 +2718,7 @@ public class AssignmentManager {
     // create new regions for the replica, and assign them to match with the
     // current replica assignments. If replica1 of parent is assigned to RS1,
     // the replica1s of daughters will be on the same machine
-    int numReplicas = 1;
-    try {
-      numReplicas = ((MasterServices)server).getTableDescriptors().get(parentHri.getTable()).
-          getRegionReplication();
-    } catch (IOException e) {
-      LOG.warn("Couldn't get the replication attribute of the table " + parentHri.getTable() +
-          " due to " + e.getMessage() + ". The assignment of daughter replicas " +
-          "replicas will not be done");
-    }
+    int numReplicas = getNumReplicas(server, parentHri.getTable());
     // unassign the old replicas
     List<HRegionInfo> parentRegion = new ArrayList<HRegionInfo>();
     parentRegion.add(parentHri);
