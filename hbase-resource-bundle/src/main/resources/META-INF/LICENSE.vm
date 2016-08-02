@@ -1558,6 +1558,10 @@ You can redistribute it and/or modify it under either the terms of the GPL
 #set($jruby = false)
 ## track hadoops
 #set($hadoop = false)
+## Whitelist of licenses that it's safe to not aggregate as above.
+## Note that this doesn't include ALv2 or the aforementioned aggregate
+## license mentions.
+#set($non_aggregate_fine = [ 'Public Domain', 'New BSD license', 'BSD license', 'Mozilla Public License Version 2.0', 'Mozilla Public License Version 1.1' ])
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
 #if(${debug-print-included-work-info.equalsIgnoreCase("true")})
@@ -1638,6 +1642,34 @@ ${dep.scm.url}
 This product includes ${dep.name} licensed under the ${dep.licenses[0].name}.
 
 ${dep.licenses[0].comments}
+#if(!(${non_aggregate_fine.contains($dep.licenses[0].name)}))
+Please check ^^^^^^^^^^^^ this License for acceptability here:
+
+https://www.apache.org/legal/resolved
+
+If it is okay, then update the list named 'non_aggregate_fine' in the LICENSE.vm file.
+If it isn't okay, then revert the change that added the dependency.
+
+More info on the dependency:
+
+<groupId>${dep.groupId}</groupId>
+<artifactId>${dep.artifactId}</artifactId>
+<version>${dep.version}</version>
+
+maven central search
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+project website
+${dep.url}
+project source
+${dep.scm.url}
+
+## fail the template. If you're looking at the source LICENSE.vm
+## file based on a stacktrace or exception message, you need to find
+## the generated LICENSE file that has the actual dependency info printed.
+#set($empty = [])
+${empty[0]}
+#end
 #end
 #end
 #end
