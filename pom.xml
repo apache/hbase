@@ -813,7 +813,7 @@
         <!-- version set by parent -->
         <executions>
           <execution>
-            <id>min-maven-and-java</id>
+            <id>min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
             </goals>
@@ -839,6 +839,12 @@
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
                   </message>
                 </requireJavaVersion>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>xerces:xercesImpl</exclude>
+                  </excludes>
+                  <message>We avoid adding our own Xerces jars to the classpath, see HBASE-16340.</message>
+                </bannedDependencies>
               </rules>
             </configuration>
           </execution>
@@ -1927,7 +1933,11 @@
                   <groupId>stax</groupId>
                   <artifactId>stax-api</artifactId>
                 </exclusion>
-              </exclusions>
+              <exclusion>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+              </exclusion>
+            </exclusions>
             <version>${hadoop-two.version}</version>
           </dependency>
           <dependency>
@@ -1948,7 +1958,11 @@
                   <groupId>stax</groupId>
                   <artifactId>stax-api</artifactId>
                 </exclusion>
-              </exclusions>
+              <exclusion>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -2006,11 +2020,16 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
         </dependencies>
       </dependencyManagement>
     </profile>
+   
     <!--
       profile for building against Hadoop 3.0.0. Activate using:
        mvn -Dhadoop.profile=3.0
@@ -2039,9 +2058,20 @@
           <artifactId>hadoop-minicluster</artifactId>
           <version>${hadoop.version}</version>
           <scope>compile</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>xerces</groupId>
+              <artifactId>xercesImpl</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>
+
     <!-- profiles for the tests
          See as well the properties of the project for the values
          when no profile is active.     -->
