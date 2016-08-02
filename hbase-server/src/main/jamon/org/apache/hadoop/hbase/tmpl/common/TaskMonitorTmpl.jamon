@@ -20,22 +20,12 @@ limitations under the License.
 java.util.*;
 org.apache.hadoop.hbase.monitoring.*;
 org.apache.hadoop.util.StringUtils;
-org.owasp.esapi.ESAPI;
-org.owasp.esapi.errors.EncodingException;
 </%import>
 <%args>
 TaskMonitor taskMonitor = TaskMonitor.get();
 String filter = "general";
 String format = "html";
 </%args>
-<%class>
-    public String encodeFilter() {
-    try {
-    return ESAPI.encoder().encodeForURL(filter);
-    }catch(EncodingException e) {}
-    return ESAPI.encoder().encodeForHTML(filter);
-    }
-</%class>
 <%java>
 List<? extends MonitoredTask> tasks = taskMonitor.getTasks();
 Iterator<? extends MonitoredTask> iter = tasks.iterator();
@@ -72,7 +62,7 @@ boolean first = true;
     <li <%if filter.equals("handler")%>class="active"</%if>><a href="?filter=handler">Show All RPC Handler Tasks</a></li>
     <li <%if filter.equals("rpc")%>class="active"</%if>><a href="?filter=rpc">Show Active RPC Calls</a></li>
     <li <%if filter.equals("operation")%>class="active"</%if>><a href="?filter=operation">Show Client Operations</a></li>
-    <li><a href="?format=json&filter=<% encodeFilter() %>">View as JSON</a></li>
+    <li><a href="?format=json&filter=<% filter %>">View as JSON</a></li>
   </ul>
   <%if tasks.isEmpty()%>
     <p>No tasks currently running on this node.</p>

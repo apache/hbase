@@ -29,7 +29,6 @@
   import="java.util.Collection"
   import="java.util.Collections"
   import="java.util.Comparator"
-  import="org.owasp.esapi.ESAPI"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.HRegionInfo"
@@ -85,7 +84,7 @@
     <% if ( !readOnly && action != null ) { %>
         <title>HBase Master: <%= master.getServerName() %></title>
     <% } else { %>
-        <title>Table: <%= ESAPI.encoder().encodeForHTML(fqtn) %></title>
+        <title>Table: <%= fqtn %></title>
     <% } %>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
@@ -181,7 +180,7 @@ if ( fqtn != null ) {
 <div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
-            <h1>Table <small><%= ESAPI.encoder().encodeForHTML(fqtn) %></small></h1>
+            <h1>Table <small><%= fqtn %></small></h1>
         </div>
     </div>
     <div class="row">

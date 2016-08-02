@@ -21,7 +21,6 @@
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
-  import="org.owasp.esapi.ESAPI"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HTableDescriptor"
@@ -36,14 +35,10 @@
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   Configuration conf = rs.getConfiguration();
-  String displayName = null;
+
   Region region = rs.getFromOnlineRegions(regionName);
-  if(region == null) {
-    displayName= ESAPI.encoder().encodeForHTML(regionName) + " does not exist";
-  } else {
-    displayName = HRegionInfo.getRegionNameAsStringForDisplay(region.getRegionInfo(),
+  String displayName = HRegionInfo.getRegionNameAsStringForDisplay(region.getRegionInfo(),
     rs.getConfiguration());
-  }
 %>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -126,14 +121,7 @@
          <p> <%= storeFiles.size() %> StoreFile(s) in set.</p>
          </table>
    <%  }
-   } else { %>
-   <div class="container-fluid content">
-   <div class="row inner_header">
-   </div>
-   <p><hr><p>
-   <p>Go <a href="javascript:history.back()">Back</a>
-   </div>
-  <% } %>
+   }%>
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
