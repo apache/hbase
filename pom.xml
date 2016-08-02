@@ -835,7 +835,7 @@
         <!-- version set by parent -->
         <executions>
           <execution>
-            <id>min-maven-and-java</id>
+            <id>min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
             </goals>
@@ -861,6 +861,12 @@
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
                   </message>
                 </requireJavaVersion>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>xerces:xercesImpl</exclude>
+                  </excludes>
+                  <message>We avoid adding our own Xerces jars to the classpath, see HBASE-16340.</message>
+                </bannedDependencies>
               </rules>
             </configuration>
           </execution>
@@ -2031,6 +2037,10 @@
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+              </exclusion>
             </exclusions>
             <version>${hadoop-two.version}</version>
           </dependency>
@@ -2056,6 +2066,10 @@
               <exclusion>
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -2209,6 +2223,10 @@
                <groupId>stax</groupId>
                <artifactId>stax-api</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>xerces</groupId>
+               <artifactId>xercesImpl</artifactId>
+             </exclusion>
            </exclusions>
            <version>${hadoop-three.version}</version>
          </dependency>
@@ -2230,6 +2248,10 @@
              <exclusion>
                <groupId>stax</groupId>
                <artifactId>stax-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>xerces</groupId>
+               <artifactId>xercesImpl</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
