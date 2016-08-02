@@ -104,11 +104,5 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\\}\\);$", result);
 
-    // test to get XSS JSONP result
-    result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Memory&callback=<script>alert('hello')</script>"));
-    LOG.info("/jmx?qry=java.lang:type=Memory&callback=<script>alert('hello')</script> RESULT: "+result);
-    assertTrue(!result.contains("<script>"));
-
-
   }
 }

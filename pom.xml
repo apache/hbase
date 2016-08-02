@@ -766,7 +766,6 @@
               <exclude>src/main/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
-              <exclude>**/ESAPI.properties</exclude>
             </excludes>
           </configuration>
         </plugin>
