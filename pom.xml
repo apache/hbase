@@ -49,6 +49,17 @@
   </description>
   <url>http://hbase.apache.org</url>
   <inceptionYear>2007</inceptionYear>
+  <!-- Set here so we can consistently use the correct name, even on branches with
+       an ASF parent pom older than v15. Also uses the url from v18.
+    -->
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>hbase-resource-bundle</module>
     <module>hbase-server</module>
