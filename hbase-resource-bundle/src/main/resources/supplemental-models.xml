@@ -61,24 +61,6 @@ under the License.
       </licenses>
     </project>
   </supplement>
-  <supplement>
-    <project>
-      <groupId>commons-beanutils</groupId>
-      <artifactId>commons-beanutils-core</artifactId>
-
-      <organization>
-        <name>The Apache Software Foundation</name>
-        <url>http://www.apache.org/</url>
-      </organization>
-      <licenses>
-        <license>
-          <name>Apache Software License, Version 2.0</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
 <!-- Artifacts with ambiguously named licenses in POM -->
   <supplement>
     <project>
@@ -1209,24 +1191,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
           <comments>
 Copyright (c) 2007-2011 The JRuby project
 </comments>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
-  <supplement>
-    <project>
-      <groupId>xalan</groupId>
-      <artifactId>xalan</artifactId>
-
-      <organization>
-        <name>The Apache Software Foundation</name>
-        <url>http://www.apache.org/</url>
-      </organization>
-      <licenses>
-        <license>
-          <name>The Apache Software License, Version 2.0</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-          <distribution>repo</distribution>
         </license>
       </licenses>
     </project>
