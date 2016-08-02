@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.conf.Configurable;

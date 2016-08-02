@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +25,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.collect.Sets;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -167,7 +167,7 @@ public class TableStateManager {
     return rv;
   }
 
-  @Nonnull
+  @NonNull
   public TableState.State getTableState(TableName tableName) throws IOException {
     TableState currentState = readMetaState(tableName);
     if (currentState == null) {

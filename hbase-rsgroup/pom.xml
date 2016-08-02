@@ -259,8 +259,8 @@
       </activation>
       <dependencies>
         <dependency>
-           <groupId>com.google.code.findbugs</groupId>
-           <artifactId>jsr305</artifactId>
+           <groupId>com.github.stephenc.findbugs</groupId>
+           <artifactId>findbugs-annotations</artifactId>
            <optional>true</optional>
         </dependency>
         <dependency>
@@ -271,10 +271,6 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <exclusions>
-            <exclusion>
-              <groupId>com.github.stephenc.findbugs</groupId>
-              <artifactId>findbugs-annotations</artifactId>
-            </exclusion>
             <exclusion>
               <groupId>net.java.dev.jets3t</groupId>
               <artifactId>jets3t</artifactId>
@@ -310,6 +306,10 @@
             <exclusion>
               <groupId>tomcat</groupId>
               <artifactId>jasper-runtime</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
             </exclusion>
           </exclusions>
         </dependency>

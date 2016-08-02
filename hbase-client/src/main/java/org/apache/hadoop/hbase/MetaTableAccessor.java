@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -34,6 +32,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
@@ -795,10 +795,10 @@ public class MetaTableAccessor {
    * @return Get closest metatable region row to passed <code>row</code>
    * @throws java.io.IOException
    */
-  @Nonnull
+  @NonNull
   public static HRegionInfo getClosestRegionInfo(Connection connection,
-      @Nonnull final TableName tableName,
-      @Nonnull final byte[] row)
+      @NonNull final TableName tableName,
+      @NonNull final byte[] row)
       throws IOException {
     byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
     Scan scan = getMetaScan(connection, 1);

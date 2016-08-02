@@ -19,14 +19,13 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
-
-import javax.annotation.Nullable;
 
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor

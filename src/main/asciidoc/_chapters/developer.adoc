@@ -1591,7 +1591,9 @@ value="HE_EQUALS_USE_HASHCODE",
 justification="I know what I'm doing")
 ----
 
-It is important to use the Apache-licensed version of the annotations.
+It is important to use the Apache-licensed version of the annotations. That generally means using
+annotations in the `edu.umd.cs.findbugs.annotations` package so that we can rely on the cleanroom
+reimplementation rather than annotations in the `javax.annotations` package.
 
 [[common.patch.feedback.javadoc.defaults]]
 ===== Javadoc - Useless Defaults

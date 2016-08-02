@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
@@ -30,6 +29,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

@@ -430,8 +430,8 @@
     </dependency>
     <!-- General dependencies -->
     <dependency>
-       <groupId>com.google.code.findbugs</groupId>
-       <artifactId>jsr305</artifactId>
+       <groupId>com.github.stephenc.findbugs</groupId>
+       <artifactId>findbugs-annotations</artifactId>
        <optional>true</optional>
     </dependency>
     <dependency>
