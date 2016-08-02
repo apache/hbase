@@ -63,8 +63,6 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.ArrayList;
 
-import javax.annotation.Nullable;
-
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
  * which keeps hbase:meta region server location.

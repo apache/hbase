@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import javax.annotation.Nullable;
-
 import java.io.IOException;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
