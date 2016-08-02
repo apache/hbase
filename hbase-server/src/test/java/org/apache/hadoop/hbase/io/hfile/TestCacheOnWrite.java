@@ -313,7 +313,7 @@ public class TestCacheOnWrite {
     String countByType = blockCountByType.toString();
     if (useTags) {
       assertEquals("{" + BlockType.DATA
-          + "=2663, LEAF_INDEX=297, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=34}", countByType);
+          + "=2663, LEAF_INDEX=297, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=32}", countByType);
     } else {
       assertEquals("{" + BlockType.DATA
           + "=2498, LEAF_INDEX=278, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=31}", countByType);
