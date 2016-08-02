@@ -24,14 +24,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URLEncoder;
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.xml.bind.JAXBException;
 
-import org.apache.commons.httpclient.Header;
+import org.apache.http.Header;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.client.Response;

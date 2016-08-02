@@ -27,7 +27,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.httpclient.Header;
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -95,8 +96,8 @@ public class TestGzipFilter {
     // input side filter
 
     Header[] headers = new Header[2];
-    headers[0] = new Header("Content-Type", Constants.MIMETYPE_BINARY);
-    headers[1] = new Header("Content-Encoding", "gzip");
+    headers[0] = new BasicHeader("Content-Type", Constants.MIMETYPE_BINARY);
+    headers[1] = new BasicHeader("Content-Encoding", "gzip");
     Response response = client.put(path, headers, value_1_gzip);
     assertEquals(response.getCode(), 200);
 
@@ -110,8 +111,8 @@ public class TestGzipFilter {
 
     // output side filter
 
-    headers[0] = new Header("Accept", Constants.MIMETYPE_BINARY);
-    headers[1] = new Header("Accept-Encoding", "gzip");
+    headers[0] = new BasicHeader("Accept", Constants.MIMETYPE_BINARY);
+    headers[1] = new BasicHeader("Accept-Encoding", "gzip");
     response = client.get(path, headers);
     assertEquals(response.getCode(), 200);
     ByteArrayInputStream bis = new ByteArrayInputStream(response.getBody());
@@ -128,8 +129,8 @@ public class TestGzipFilter {
   @Test
   public void testErrorNotGzipped() throws Exception {
     Header[] headers = new Header[2];
-    headers[0] = new Header("Accept", Constants.MIMETYPE_BINARY);
-    headers[1] = new Header("Accept-Encoding", "gzip");
+    headers[0] = new BasicHeader("Accept", Constants.MIMETYPE_BINARY);
+    headers[1] = new BasicHeader("Accept-Encoding", "gzip");
     Response response = client.get("/" + TABLE + "/" + ROW_1 + "/" + COLUMN_2, headers);
     assertEquals(response.getCode(), 404);
     String contentEncoding = response.getHeader("Content-Encoding");
@@ -142,9 +143,9 @@ public class TestGzipFilter {
 
   void testScannerResultCodes() throws Exception {
     Header[] headers = new Header[3];
-    headers[0] = new Header("Content-Type", Constants.MIMETYPE_XML);
-    headers[1] = new Header("Accept", Constants.MIMETYPE_JSON);
-    headers[2] = new Header("Accept-Encoding", "gzip");
+    headers[0] = new BasicHeader("Content-Type", Constants.MIMETYPE_XML);
+    headers[1] = new BasicHeader("Accept", Constants.MIMETYPE_JSON);
+    headers[2] = new BasicHeader("Accept-Encoding", "gzip");
     Response response = client.post("/" + TABLE + "/scanner", headers,
         "<Scanner/>".getBytes());
     assertEquals(response.getCode(), 201);
