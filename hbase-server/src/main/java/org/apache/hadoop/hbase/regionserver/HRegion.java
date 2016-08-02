@@ -4333,7 +4333,7 @@ public class HRegion implements HeapSize { // , Writable{
           // Check if rowkey filter wants to exclude this row. If so, loop to next.
           // Technically, if we hit limits before on this row, we don't need this call.
           if (filterRowKey(currentRow, offset, length)) {
-            boolean moreRows = nextRow(currentRow, offset, length);
+            boolean moreRows = !isFilterDoneInternal() && nextRow(currentRow, offset, length);
             if (!moreRows) return false;
             results.clear();
             continue;
