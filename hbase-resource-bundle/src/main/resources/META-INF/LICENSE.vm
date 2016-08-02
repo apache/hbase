@@ -1616,7 +1616,7 @@ ${dep.scm.url}
 #thrift_license()
 #end
 ## Note that this will fail the build if we don't have a license. update supplemental-models.
-#if( !(${dep.licenses[0].name.contains("Apache Software License, Version 2.0")}) )
+#if( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")}) )
 #if( ${dep.licenses[0].name.contains("CDDL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $cddl_1_0.add($dep))
