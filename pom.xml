@@ -800,36 +800,52 @@
           </dependency>
         </dependencies>
         <!-- version set by parent -->
-        <configuration>
-          <rules>
-            <!-- The earliest maven version we verify builds for via ASF Jenkins -->
-            <requireMavenVersion>
-              <version>[${maven.min.version},)</version>
-              <message>Maven is out of date.
+        <executions>
+          <execution>
+            <id>min-maven-and-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <!-- The earliest maven version we verify builds for via ASF Jenkins -->
+                <requireMavenVersion>
+                  <version>[${maven.min.version},)</version>
+                  <message>Maven is out of date.
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
-              </message>
-            </requireMavenVersion>
-            <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
-            <requireJavaVersion>
-              <version>[${java.min.version},)</version>
-              <message>Java is out of date.
+                  </message>
+                </requireMavenVersion>
+                <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
+                <requireJavaVersion>
+                  <version>[${java.min.version},)</version>
+                  <message>Java is out of date.
   HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
-              </message>
-            </requireJavaVersion>
-          </rules>
-        </configuration>
-        <executions>
+                  </message>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
           <execution>
-            <id>enforce</id>
+            <id>banned-jsr305</id>
             <goals>
               <goal>enforce</goal>
             </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>com.google.code.findbugs:jsr305</exclude>
+                  </excludes>
+                  <message>We don't allow the JSR305 jar from the Findbugs project, see HBASE-16321.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -1313,6 +1329,12 @@
       </dependency>
       <!-- General dependencies -->
       <dependency>
+        <groupId>com.github.stephenc.findbugs</groupId>
+        <artifactId>findbugs-annotations</artifactId>
+        <version>${findbugs-annotations}</version>
+      </dependency>
+      <!-- General dependencies -->
+      <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
         <version>${jettison.version}</version>
@@ -1338,6 +1360,12 @@
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-collections</groupId>
@@ -1620,7 +1648,6 @@
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
-      <version>${findbugs-annotations}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -1959,6 +1986,10 @@
               <exclusion>
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

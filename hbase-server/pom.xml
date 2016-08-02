@@ -413,6 +413,11 @@
     </dependency>
     <!-- General dependencies -->
     <dependency>
+       <groupId>com.github.stephenc.findbugs</groupId>
+       <artifactId>findbugs-annotations</artifactId>
+       <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
