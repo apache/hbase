@@ -244,14 +244,23 @@ public class JVMClusterUtil {
       JVMClusterUtil.MasterThread activeMaster = null;
       for (JVMClusterUtil.MasterThread t : masters) {
         if (!t.master.isActiveMaster()) {
-          t.master.stopMaster();
+          try {
+            t.master.stopMaster();
+          } catch (IOException e) {
+            LOG.error("Exception occurred while stopping master", e);
+          }
         } else {
           activeMaster = t;
         }
       }
       // Do active after.
-      if (activeMaster != null)
-        activeMaster.master.shutdown();
+      if (activeMaster != null) {
+        try {
+          activeMaster.master.shutdown();
+        } catch (IOException e) {
+          LOG.error("Exception occurred in HMaster.shutdown()", e);
+        }
+      }
 
     }
     boolean wasInterrupted = false;
