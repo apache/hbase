@@ -50,7 +50,7 @@ public class RegionLoad {
    * @return the region name as a string
    */
   public String getNameAsString() {
-    return Bytes.toString(getName());
+    return Bytes.toStringBinary(getName());
   }
 
   /**
