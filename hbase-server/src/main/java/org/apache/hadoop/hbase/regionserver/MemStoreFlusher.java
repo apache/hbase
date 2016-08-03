@@ -551,6 +551,12 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   private boolean isTooManyStoreFiles(Region region) {
+
+    // When compaction is disabled, the region is flushable
+    if (!region.getTableDesc().isCompactionEnabled()) {
+      return false;
+    }
+
     for (Store store : region.getStores()) {
       if (store.hasTooManyStoreFiles()) {
         return true;
