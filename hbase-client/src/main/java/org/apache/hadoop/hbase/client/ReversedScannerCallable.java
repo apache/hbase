@@ -176,7 +176,7 @@ public class ReversedScannerCallable extends ScannerCallable {
 
   @Override
   public ScannerCallable getScannerCallableForReplica(int id) {
-    ReversedScannerCallable r = new ReversedScannerCallable(this.cConnection, this.tableName,
+    ReversedScannerCallable r = new ReversedScannerCallable(getConnection(), this.tableName,
         this.getScan(), this.scanMetrics, this.locateStartRow, controllerFactory, id);
     r.setCaching(this.getCaching());
     return r;

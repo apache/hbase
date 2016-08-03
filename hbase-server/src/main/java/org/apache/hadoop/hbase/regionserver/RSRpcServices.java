@@ -87,7 +87,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.ipc.TimeLimitedRpcController;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -2765,13 +2764,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     timeLimitDelta =
                         scannerLeaseTimeoutPeriod > 0 ? scannerLeaseTimeoutPeriod : rpcTimeout;
                   }
-                  if (controller instanceof TimeLimitedRpcController) {
-                    TimeLimitedRpcController timeLimitedRpcController =
-                        (TimeLimitedRpcController)controller;
-                    if (timeLimitedRpcController.getCallTimeout() > 0) {
-                      timeLimitDelta = Math.min(timeLimitDelta,
-                          timeLimitedRpcController.getCallTimeout());
+                  if (controller instanceof PayloadCarryingRpcController) {
+                    PayloadCarryingRpcController pRpcController =
+                        (PayloadCarryingRpcController)controller;
+                    if (pRpcController.getCallTimeout() > 0) {
+                      timeLimitDelta = Math.min(timeLimitDelta, pRpcController.getCallTimeout());
                     }
+                  } else {
+                    throw new UnsupportedOperationException("We only do " +
+                      "PayloadCarryingRpcControllers! FIX IF A PROBLEM");
                   }
                   // Use half of whichever timeout value was more restrictive... But don't allow
                   // the time limit to be less than the allowable minimum (could cause an
