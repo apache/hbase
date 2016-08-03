@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,10 +49,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -64,6 +68,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 
 /**
@@ -118,6 +123,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Random rand;
   private final boolean replicationForBulkLoadDataEnabled;
 
+  private Connection connection;
+  private long replicationWaitTime;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -134,7 +141,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   public ReplicationSourceManager(final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
       final Configuration conf, final Server server, final FileSystem fs, final Path logDir,
-      final Path oldLogDir, final UUID clusterId) {
+      final Path oldLogDir, final UUID clusterId) throws IOException {
     //CopyOnWriteArrayList is thread-safe.
     //Generally, reading is more than modifying.
     this.sources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
@@ -171,6 +178,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     replicationForBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
+    this.replicationWaitTime = conf.getLong(HConstants.REPLICATION_SERIALLY_WAITING_KEY,
+          HConstants.REPLICATION_SERIALLY_WAITING_DEFAULT);
+    connection = ConnectionFactory.createConnection(conf);
   }
 
   /**
@@ -778,6 +788,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public ReplicationPeers getReplicationPeers() {return this.replicationPeers;}
 
+  public Connection getConnection() {
+    return this.connection;
+  }
+
   /**
    * Get a string representation of all the sources' metrics
    */
@@ -804,4 +818,75 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void cleanUpHFileRefs(String peerId, List<String> files) {
     this.replicationQueues.removeHFileRefs(peerId, files);
   }
+
+  /**
+   * Whether an entry can be pushed to the peer or not right now.
+   * If we enable serial replication, we can not push the entry until all entries in its region
+   * whose sequence numbers are smaller than this entry have been pushed.
+   * For each ReplicationSource, we need only check the first entry in each region, as long as it
+   * can be pushed, we can push all in this ReplicationSource.
+   * This method will be blocked until we can push.
+   * @return the first barrier of entry's region, or -1 if there is no barrier. It is used to
+   *         prevent saving positions in the region of no barrier.
+   */
+  void waitUntilCanBePushed(byte[] encodedName, long seq, String peerId)
+      throws IOException, InterruptedException {
+
+    /**
+     * There are barriers for this region and position for this peer. N barriers form N intervals,
+     * (b1,b2) (b2,b3) ... (bn,max). Generally, there is no logs whose seq id is not greater than
+     * the first barrier and the last interval is start from the last barrier.
+     *
+     * There are several conditions that we can push now, otherwise we should block:
+     * 1) "Serial replication" is not enabled, we can push all logs just like before. This case
+     *    should not call this method.
+     * 2) There is no barriers for this region, or the seq id is smaller than the first barrier.
+     *    It is mainly because we alter REPLICATION_SCOPE = 2. We can not guarantee the
+     *    order of logs that is written before altering.
+     * 3) This entry is in the first interval of barriers. We can push them because it is the
+     *    start of a region. Splitting/merging regions are also ok because the first section of
+     *    daughter region is in same region of parents and the order in one RS is guaranteed.
+     * 4) If the entry's seq id and the position are in same section, or the pos is the last
+     *    number of previous section. Because when open a region we put a barrier the number
+     *    is the last log's id + 1.
+     * 5) Log's seq is smaller than pos in meta, we are retrying. It may happen when a RS crashes
+     *    after save replication meta and before save zk offset.
+     */
+    List<Long> barriers = MetaTableAccessor.getReplicationBarriers(connection, encodedName);
+    if (barriers.isEmpty() || seq <= barriers.get(0)) {
+      // Case 2
+      return;
+    }
+    int interval = Collections.binarySearch(barriers, seq);
+    if (interval < 0) {
+      interval = -interval - 1;// get the insert position if negative
+    }
+    if (interval == 1) {
+      // Case 3
+      return;
+    }
+
+    while (true) {
+      long pos = MetaTableAccessor.getReplicationPositionForOnePeer(connection, encodedName, peerId);
+      if (seq <= pos) {
+        // Case 5
+      }
+      if (pos >= 0) {
+        // Case 4
+        int posInterval = Collections.binarySearch(barriers, pos);
+        if (posInterval < 0) {
+          posInterval = -posInterval - 1;// get the insert position if negative
+        }
+        if (posInterval == interval || pos == barriers.get(interval - 1) - 1) {
+          return;
+        }
+      }
+
+      LOG.info(Bytes.toString(encodedName) + " can not start pushing to peer " + peerId
+          + " because previous log has not been pushed: sequence=" + seq + " pos=" + pos
+          + " barriers=" + Arrays.toString(barriers.toArray()));
+      Thread.sleep(replicationWaitTime);
+    }
+  }
+
 }

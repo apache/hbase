@@ -92,8 +92,10 @@ public class ReplicationAdmin implements Closeable {
   // only Global for now, can add other type
   // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
   public static final String REPLICATIONTYPE = "replicationType";
-  public static final String REPLICATIONGLOBAL = Integer
-      .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
+  public static final String REPLICATIONGLOBAL =
+      Integer.toString(HConstants.REPLICATION_SCOPE_GLOBAL);
+  public static final String REPLICATIONSERIAL =
+      Integer.toString(HConstants.REPLICATION_SCOPE_SERIAL);
 
   private final Connection connection;
   // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
@@ -517,7 +519,10 @@ public class ReplicationAdmin implements Closeable {
           HashMap<String, String> replicationEntry = new HashMap<String, String>();
           replicationEntry.put(TNAME, tableName);
           replicationEntry.put(CFNAME, column.getNameAsString());
-          replicationEntry.put(REPLICATIONTYPE, REPLICATIONGLOBAL);
+          replicationEntry.put(REPLICATIONTYPE,
+              column.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL ?
+                  REPLICATIONGLOBAL :
+                  REPLICATIONSERIAL);
           replicationColFams.add(replicationEntry);
         }
       }
@@ -712,7 +717,8 @@ public class ReplicationAdmin implements Closeable {
    */
   private boolean isTableRepEnabled(HTableDescriptor htd) {
     for (HColumnDescriptor hcd : htd.getFamilies()) {
-      if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
+      if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
+          && hcd.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
         return false;
       }
     }

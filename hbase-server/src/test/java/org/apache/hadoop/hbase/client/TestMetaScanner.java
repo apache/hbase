@@ -165,7 +165,7 @@ public class TestMetaScanner {
               end);
 
             MetaTableAccessor.splitRegion(connection,
-              parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0), 1);
+              parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0), 1, false);
 
             Threads.sleep(random.nextInt(200));
           } catch (Throwable e) {

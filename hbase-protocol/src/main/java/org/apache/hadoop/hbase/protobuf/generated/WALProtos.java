@@ -21,6 +21,10 @@ public final class WALProtos {
      * <code>REPLICATION_SCOPE_GLOBAL = 1;</code>
      */
     REPLICATION_SCOPE_GLOBAL(1, 1),
+    /**
+     * <code>REPLICATION_SCOPE_SERIAL = 2;</code>
+     */
+    REPLICATION_SCOPE_SERIAL(2, 2),
     ;
 
     /**
@@ -31,6 +35,10 @@ public final class WALProtos {
      * <code>REPLICATION_SCOPE_GLOBAL = 1;</code>
      */
     public static final int REPLICATION_SCOPE_GLOBAL_VALUE = 1;
+    /**
+     * <code>REPLICATION_SCOPE_SERIAL = 2;</code>
+     */
+    public static final int REPLICATION_SCOPE_SERIAL_VALUE = 2;
 
 
     public final int getNumber() { return value; }
@@ -39,6 +47,7 @@ public final class WALProtos {
       switch (value) {
         case 0: return REPLICATION_SCOPE_LOCAL;
         case 1: return REPLICATION_SCOPE_GLOBAL;
+        case 2: return REPLICATION_SCOPE_SERIAL;
         default: return null;
       }
     }
@@ -12014,10 +12023,11 @@ public final class WALProtos {
       "criptor\022$\n\006server\030\006 \001(\0132\024.hbase.pb.Serve" +
       "rName\022\023\n\013region_name\030\007 \001(\014\".\n\tEventType\022" +
       "\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWA" +
-      "LTrailer*F\n\tScopeType\022\033\n\027REPLICATION_SCO" +
+      "LTrailer*d\n\tScopeType\022\033\n\027REPLICATION_SCO" +
       "PE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001" +
-      "B?\n*org.apache.hadoop.hbase.protobuf.gen" +
-      "eratedB\tWALProtosH\001\210\001\000\240\001\001"
+      "\022\034\n\030REPLICATION_SCOPE_SERIAL\020\002B?\n*org.ap" +
+      "ache.hadoop.hbase.protobuf.generatedB\tWA" +
+      "LProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

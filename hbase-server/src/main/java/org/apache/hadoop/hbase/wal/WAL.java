@@ -21,8 +21,11 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -35,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -267,6 +271,18 @@ public interface WAL {
     public void setCompressionContext(CompressionContext compressionContext) {
       edit.setCompressionContext(compressionContext);
       key.setCompressionContext(compressionContext);
+    }
+
+    public boolean hasSerialReplicationScope () {
+      if (getKey().getScopes() == null || getKey().getScopes().isEmpty()) {
+        return false;
+      }
+      for (Map.Entry<byte[], Integer> e:getKey().getScopes().entrySet()) {
+        if (e.getValue() == HConstants.REPLICATION_SCOPE_SERIAL){
+          return true;
+        }
+      }
+      return false;
     }
 
     @Override
