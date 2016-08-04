@@ -417,8 +417,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
         TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
         Writables.copyWritable(e.getValue(), timeRangeTracker);
-        out.println(timeRangeTracker.getMinimumTimestamp() + "...."
-            + timeRangeTracker.getMaximumTimestamp());
+        out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
       } else if (Bytes.compareTo(e.getKey(), FileInfo.AVG_KEY_LEN) == 0
           || Bytes.compareTo(e.getKey(), FileInfo.AVG_VALUE_LEN) == 0) {
         out.println(Bytes.toInt(e.getValue()));

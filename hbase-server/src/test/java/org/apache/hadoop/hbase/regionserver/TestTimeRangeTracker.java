@@ -32,6 +32,60 @@ import org.junit.experimental.categories.Category;
 public class TestTimeRangeTracker {
 
   @Test
+  public void testAlwaysDecrementingSetsMaximum() {
+    TimeRangeTracker trr = new TimeRangeTracker();
+    trr.includeTimestamp(3);
+    trr.includeTimestamp(2);
+    trr.includeTimestamp(1);
+    assertTrue(trr.getMin() != TimeRangeTracker.INITIAL_MIN_TIMESTAMP);
+    assertTrue(trr.getMax() != -1 /*The initial max value*/);
+  }
+
+  @Test
+  public void testSimpleInRange() {
+    TimeRangeTracker trr = new TimeRangeTracker();
+    trr.includeTimestamp(0);
+    trr.includeTimestamp(2);
+    assertTrue(trr.includesTimeRange(new TimeRange(1)));
+  }
+
+  /**
+   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive
+   * at right range.  Here we do ten threads each incrementing over 100k at an offset
+   * of the thread index; max is 10 * 10k and min is 0.
+   * @throws InterruptedException
+   */
+  @Test
+  public void testArriveAtRightAnswer() throws InterruptedException {
+    final TimeRangeTracker trr = new TimeRangeTracker();
+    final int threadCount = 10;
+    final int calls = 1000 * 1000;
+    Thread [] threads = new Thread[threadCount];
+    for (int i = 0; i < threads.length; i++) {
+      Thread t = new Thread("" + i) {
+        @Override
+        public void run() {
+          int offset = Integer.parseInt(getName());
+          boolean even = offset % 2 == 0;
+          if (even) {
+            for (int i = (offset * calls); i < calls; i++) trr.includeTimestamp(i);
+          } else {
+            int base = offset * calls;
+            for (int i = base + calls; i >= base; i--) trr.includeTimestamp(i);
+          }
+        }
+      };
+      t.start();
+      threads[i] = t;
+    }
+    for (int i = 0; i < threads.length; i++) {
+      threads[i].join();
+    }
+    assertTrue(trr.getMax() == calls * threadCount);
+    assertTrue(trr.getMin() == 0);
+  }
+
+  @Test
   public void testRangeConstruction() throws IOException {
     TimeRange defaultRange = new TimeRange();
     assertEquals(0L, defaultRange.getMin());
@@ -88,7 +142,7 @@ public class TestTimeRangeTracker {
     for (int i = 0; i < threads.length; i++) {
       threads[i].join();
     }
-    System.out.println(trr.getMinimumTimestamp() + " " + trr.getMaximumTimestamp() + " " +
+    System.out.println(trr.getMin() + " " + trr.getMax() + " " +
       (System.currentTimeMillis() - start));
   }
 }

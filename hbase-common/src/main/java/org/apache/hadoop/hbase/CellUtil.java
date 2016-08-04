@@ -382,6 +382,19 @@ public final class CellUtil {
     return cell.getTypeByte() == Type.DeleteFamily.getCode();
   }
 
+  public static boolean isDeleteFamilyVersion(final Cell cell) {
+    return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
+  }
+
+  /**
+   *
+   * @return True if this cell is a delete family or column type.
+   */
+  public static boolean isDeleteColumnOrFamily(Cell cell) {
+    int t = cell.getTypeByte();
+    return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
+  }
+
   /**
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.

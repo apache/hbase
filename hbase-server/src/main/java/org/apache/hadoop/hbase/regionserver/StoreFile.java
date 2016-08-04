@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -61,7 +62,6 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -468,15 +468,11 @@ public class StoreFile {
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
 
     try {
-      byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
-      if (timerangeBytes != null) {
-        this.reader.timeRangeTracker = new TimeRangeTracker();
-        Writables.copyWritable(timerangeBytes, this.reader.timeRangeTracker);
-      }
+      this.reader.timeRange = TimeRangeTracker.getTimeRange(metadataMap.get(TIMERANGE_KEY));
     } catch (IllegalArgumentException e) {
       LOG.error("Error reading timestamp range data from meta -- " +
           "proceeding without", e);
-      this.reader.timeRangeTracker = null;
+      this.reader.timeRange = null;
     }
     return this.reader;
   }
@@ -496,7 +492,7 @@ public class StoreFile {
       } catch (IOException e) {
         try {
           boolean evictOnClose =
-              cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+              cacheConf != null? cacheConf.shouldEvictOnClose(): true;
           this.closeReader(evictOnClose);
         } catch (IOException ee) {
         }
@@ -533,7 +529,7 @@ public class StoreFile {
    */
   public void deleteReader() throws IOException {
     boolean evictOnClose =
-        cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+        cacheConf != null? cacheConf.shouldEvictOnClose(): true;
     closeReader(evictOnClose);
     this.fs.delete(getPath(), true);
   }
@@ -694,15 +690,11 @@ public class StoreFile {
   }
 
   public Long getMinimumTimestamp() {
-    return (getReader().timeRangeTracker == null) ?
-      null :
-      getReader().timeRangeTracker.getMinimumTimestamp();
+    return getReader().timeRange == null? null: getReader().timeRange.getMin();
   }
 
   public Long getMaximumTimestamp() {
-    return (getReader().timeRangeTracker == null) ?
-      null :
-      getReader().timeRangeTracker.getMaximumTimestamp();
+    return getReader().timeRange == null? null: getReader().timeRange.getMax();
   }
 
 
@@ -763,13 +755,14 @@ public class StoreFile {
     protected int bytesPerChecksum;
 
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
-    /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
-     * When flushing a memstore, we set TimeRange and use this variable to
-     * indicate that it doesn't need to be calculated again while
-     * appending KeyValues.
-     * It is not set in cases of compactions when it is recalculated using only
-     * the appended KeyValues*/
-    boolean isTimeRangeTrackerSet = false;
+    /**
+     * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
+     * When flushing a memstore, we set the TimeRangeTracker that it accumulated during updates to
+     * memstore in here into this Writer and use this variable to indicate that we do not need to
+     * recalculate the timeRangeTracker bounds; it was done already as part of add-to-memstore.
+     * A completed TimeRangeTracker is not set in cases of compactions when it is recalculated.
+     */
+    boolean timeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
 
@@ -853,12 +846,16 @@ public class StoreFile {
     }
 
     /**
-     * Set TimeRangeTracker
-     * @param trt
+     * Set TimeRangeTracker.
+     * Called when flushing to pass us a pre-calculated TimeRangeTracker, one made during updates
+     * to memstore so we don't have to make one ourselves as Cells get appended. Call before first
+     * append. If this method is not called, we will calculate our own range of the Cells that
+     * comprise this StoreFile (and write them on the end as metadata). It is good to have this stuff
+     * passed because it is expensive to make.
      */
     public void setTimeRangeTracker(final TimeRangeTracker trt) {
       this.timeRangeTracker = trt;
-      isTimeRangeTrackerSet = true;
+      timeRangeTrackerSet = true;
     }
 
     /**
@@ -872,7 +869,7 @@ public class StoreFile {
       if (KeyValue.Type.Put.getCode() == kv.getTypeByte()) {
         earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
       }
-      if (!isTimeRangeTrackerSet) {
+      if (!timeRangeTrackerSet) {
         timeRangeTracker.includeTimestamp(kv);
       }
     }
@@ -1071,7 +1068,7 @@ public class StoreFile {
     protected BloomFilter deleteFamilyBloomFilter = null;
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
-    protected TimeRangeTracker timeRangeTracker = null;
+    protected TimeRange timeRange;
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
@@ -1181,13 +1178,9 @@ public class StoreFile {
      *          determined by the column family's TTL
      * @return false if queried keys definitely don't exist in this StoreFile
      */
-    boolean passesTimerangeFilter(Scan scan, long oldestUnexpiredTS) {
-      if (timeRangeTracker == null) {
-        return true;
-      } else {
-        return timeRangeTracker.includesTimeRange(scan.getTimeRange()) &&
-            timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
-      }
+    boolean passesTimerangeFilter(TimeRange tr, long oldestUnexpiredTS) {
+      return this.timeRange == null? true:
+        this.timeRange.includesTimeRange(tr) && this.timeRange.getMax() >= oldestUnexpiredTS;
     }
 
     /**
@@ -1579,7 +1572,7 @@ public class StoreFile {
     }
 
     public long getMaxTimestamp() {
-      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
+      return timeRange == null ? Long.MAX_VALUE : timeRange.getMax();
     }
 
     public void setBulkLoaded(boolean bulkLoadResult) {
