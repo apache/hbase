@@ -112,6 +112,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    */
   static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.acceptable.factor";
 
+  /**
+   * Hard capacity limit of cache, will reject any put if size > this * acceptable
+   */
+  static final String LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.hard.capacity.limit.factor";
   static final String LRU_SINGLE_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.single.percentage";
   static final String LRU_MULTI_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.multi.percentage";
   static final String LRU_MEMORY_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.memory.percentage";
@@ -137,6 +141,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
   static final float DEFAULT_MULTI_FACTOR = 0.50f;
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
+
+  /** default hard capacity limit */
+  static final float DEFAULT_HARD_CAPACITY_LIMIT_FACTOR = 1.2f;
 
   static final boolean DEFAULT_IN_MEMORY_FORCE_MODE = false;
 
@@ -170,6 +177,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   /** Cache access count (sequential ID) */
   private final AtomicLong count;
+
+  /** hard capacity limit */
+  private float hardCapacityLimitFactor;
 
   /** Cache statistics */
   private final CacheStats stats;
@@ -228,6 +238,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         DEFAULT_SINGLE_FACTOR,
         DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR,
+        DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
         false,
         DEFAULT_MAX_BLOCK_SIZE
         );
@@ -243,6 +254,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
         conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
         conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
+        conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME, DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
         conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
         conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE)
         );
@@ -269,7 +281,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor, float singleFactor,
-      float multiFactor, float memoryFactor, boolean forceInMemory, long maxBlockSize) {
+      float multiFactor, float memoryFactor, float hardLimitFactor,
+      boolean forceInMemory, long maxBlockSize) {
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
         singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
@@ -297,6 +310,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     this.elements = new AtomicLong(0);
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
     this.size = new AtomicLong(this.overhead);
+    this.hardCapacityLimitFactor = hardLimitFactor;
     if(evictionThread) {
       this.evictionThread = new EvictionThread(this);
       this.evictionThread.start(); // FindBugs SC_START_IN_CTOR
@@ -359,6 +373,22 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       LOG.warn(msg);
       return;
     }
+    long currentSize = size.get();
+    long currentAcceptableSize = acceptableSize();
+    long hardLimitSize = (long) (hardCapacityLimitFactor * currentAcceptableSize);
+    if (currentSize >= hardLimitSize) {
+      stats.failInsert();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("LruBlockCache current size " + StringUtils.byteDesc(currentSize)
+          + " has exceeded acceptable size " + StringUtils.byteDesc(currentAcceptableSize) + "  too many."
+          + " the hard limit size is " + StringUtils.byteDesc(hardLimitSize) + ", failed to put cacheKey:"
+          + cacheKey + " into LruBlockCache.");
+      }
+      if (!evictionInProgress) {
+        runEviction();
+      }
+      return;
+    }
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
@@ -367,7 +397,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    if (newSize > acceptableSize() && !evictionInProgress) {
+    if (newSize > currentAcceptableSize && !evictionInProgress) {
       runEviction();
     }
   }
@@ -906,7 +936,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + (9 * ClassSize.REFERENCE) +
-      (5 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
+      (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
       + ClassSize.OBJECT);
 
   @Override
