@@ -23,6 +23,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues
@@ -94,13 +95,32 @@ public interface ReplicationQueues {
   List<String> getAllQueues();
 
   /**
-   * Take ownership for the set of queues belonging to a dead region server.
-   * @param regionserver the id of the dead region server
-   * @return A SortedMap of the queues that have been claimed, including a SortedSet of WALs in
-   *         each queue. Returns an empty map if no queues were failed-over.
+   * Checks if the provided znode is the same as this region server's
+   * @param regionserver the id of the region server
+   * @return if this is this rs's znode
    */
-  SortedMap<String, SortedSet<String>> claimQueues(String regionserver);
+  boolean isThisOurRegionServer(String regionserver);
 
+  /**
+   * Get queueIds from a dead region server, whose queues has not been claimed by other region
+   * servers.
+   * @return empty if the queue exists but no children, null if the queue does not exist.
+   */
+  List<String> getUnClaimedQueueIds(String regionserver);
+
+  /**
+   * Take ownership for the queue identified by queueId and belongs to a dead region server.
+   * @param regionserver the id of the dead region server
+   * @param queueId the id of the queue
+   * @return the new PeerId and A SortedSet of WALs in its queue, and null if no unclaimed queue.
+   */
+  Pair<String, SortedSet<String>> claimQueue(String regionserver, String queueId);
+
+  /**
+   * Remove the znode of region server if the queue is empty.
+   * @param regionserver
+   */
+  void removeReplicatorIfQueueIsEmpty(String regionserver);
   /**
    * Get a list of all region servers that have outstanding replication queues. These servers could
    * be alive, dead or from a previous run of the cluster.
