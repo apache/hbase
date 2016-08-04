@@ -75,12 +75,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -99,7 +96,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -312,6 +308,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
     protected int timeout;
+    protected long startTime;
+    protected long deadline;// the deadline to handle this call, if exceed we can drop it.
+
     /**
      * Chain of buffers to send as response.
      */
@@ -354,6 +353,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.retryImmediatelySupported =
           connection == null? null: connection.retryImmediatelySupported;
       this.timeout = timeout;
+      this.deadline = this.timeout > 0 ? this.timestamp + this.timeout : Long.MAX_VALUE;
     }
 
     /**
@@ -1894,7 +1894,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           ? new TraceInfo(header.getTraceInfo().getTraceId(), header.getTraceInfo().getParentId())
           : null;
       int timeout = 0;
-      if (header.hasTimeout()){
+      if (header.hasTimeout() && header.getTimeout() > 0){
         timeout = Math.max(minClientRequestTimeout, header.getTimeout());
       }
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
@@ -2187,7 +2187,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
       throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status, 0);
+    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),0);
   }
 
   /**
@@ -2195,10 +2195,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * the return response has protobuf response payload. On failure, the
    * exception name and the stack trace are returned in the protobuf response.
    */
-  @Override
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      int timeout)
+      long startTime, int timeout)
   throws IOException {
     try {
       status.setRPC(md.getName(), new Object[]{param}, receiveTime);
@@ -2206,7 +2205,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       status.setRPCPacket(param);
       status.resume("Servicing call");
       //get an instance of the method arg type
-      long startTime = System.currentTimeMillis();
       PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cellScanner);
       controller.setCallTimeout(timeout);
       Message result = service.callBlockingMethod(md, controller, param);

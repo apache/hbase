@@ -48,14 +48,17 @@ public interface RpcServerInterface {
   void setSocketSendBufSize(int size);
   InetSocketAddress getListenerAddress();
 
+  /**
+   * @deprecated As of release 1.3, this will be removed in HBase 3.0
+   */
+  @Deprecated
   Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
     Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
   throws IOException, ServiceException;
 
-  Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      int timeout)
-      throws IOException, ServiceException;
+  Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md, Message param,
+      CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status, long startTime,
+      int timeout) throws IOException, ServiceException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
   HBaseRPCErrorHandler getErrorHandler();
