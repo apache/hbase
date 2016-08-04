@@ -134,6 +134,7 @@ public class TableResource extends ResourceBase {
       @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
       @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
       @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks,
+      @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
       @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String filters) {
     try {
       Filter filter = null;
@@ -200,6 +201,7 @@ public class TableResource extends ResourceBase {
       }
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
       tableScan.setCaching(fetchSize);
+      tableScan.setReversed(reversed);
       return new TableScanResource(hTable.getScanner(tableScan), userRequestedLimit);
     } catch (IOException exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
