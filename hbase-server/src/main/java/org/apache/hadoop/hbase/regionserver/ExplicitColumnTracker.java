@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <ul><li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
  * believes that the current column should be skipped (by timestamp, filter etc.)
  * <p>
- * These two methods returns a 
+ * These two methods returns a
  * {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode}
  * to define what action should be taken.
  * <p>
@@ -75,7 +75,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @param minVersions minimum number of versions to keep
    * @param maxVersions maximum versions to return per column
    * @param oldestUnexpiredTS the oldest timestamp we are interested in,
-   *  based on TTL 
+   *  based on TTL
    */
   public ExplicitColumnTracker(NavigableSet<byte[]> columns, int minVersions,
       int maxVersions, long oldestUnexpiredTS) {

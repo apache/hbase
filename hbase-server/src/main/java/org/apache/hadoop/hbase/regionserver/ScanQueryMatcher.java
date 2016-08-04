@@ -25,7 +25,6 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -412,7 +411,16 @@ public class ScanQueryMatcher {
         }
     }
 
-    int timestampComparison = tr.compare(timestamp);
+    // NOTE: Cryptic stuff!
+    // if the timestamp is HConstants.OLDEST_TIMESTAMP, then this is a fake cell made to prime a
+    // Scanner; See KeyValueUTil#createLastOnRow. This Cell should never end up returning out of
+    // here a matchcode of INCLUDE else we will return to the client a fake Cell. If we call
+    // TimeRange, it will return 0 because it doesn't deal in OLDEST_TIMESTAMP and we will fall
+    // into the later code where we could return a matchcode of INCLUDE. See HBASE-16074 "ITBLL
+    // fails, reports lost big or tiny families" for a horror story. Check here for
+    // OLDEST_TIMESTAMP. TimeRange#compare is about more generic timestamps, between 0L and
+    // Long.MAX_LONG. It doesn't do OLDEST_TIMESTAMP weird handling.
+    int timestampComparison = timestamp == HConstants.OLDEST_TIMESTAMP? -1: tr.compare(timestamp);
     if (timestampComparison >= 1) {
       return MatchCode.SKIP;
     } else if (timestampComparison <= -1) {
@@ -582,9 +590,9 @@ public class ScanQueryMatcher {
 
   public KeyValue getKeyForNextRow(KeyValue kv) {
     return KeyValue.createLastOnRow(
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        null, 0, 0,
-        null, 0, 0);
+      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+      null, 0, 0,
+      null, 0, 0);
   }
 
   /**
