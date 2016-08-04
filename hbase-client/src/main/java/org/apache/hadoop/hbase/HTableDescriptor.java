@@ -1115,6 +1115,18 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   }
 
   /**
+   * Return true if there are at least one cf whose replication scope is serial.
+   */
+  public boolean hasSerialReplicationScope() {
+    for (HColumnDescriptor column: getFamilies()){
+      if (column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Returns the configured replicas per region
    */
   public int getRegionReplication() {

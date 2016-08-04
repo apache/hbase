@@ -125,7 +125,6 @@ class FSWALEntry extends Entry {
         CellUtil.setSequenceId(c, regionSequenceId);
       }
     }
-
     getKey().setWriteEntry(we);
     return regionSequenceId;
   }

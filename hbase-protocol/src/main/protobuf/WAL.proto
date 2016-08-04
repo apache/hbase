@@ -75,6 +75,7 @@ message WALKey {
 enum ScopeType {
   REPLICATION_SCOPE_LOCAL = 0;
   REPLICATION_SCOPE_GLOBAL = 1;
+  REPLICATION_SCOPE_SERIAL = 2;
 }
 
 message FamilyScope {
