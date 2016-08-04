@@ -226,7 +226,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   protected void handleException(Throwable t) {
     String msg = "Caught throwable while processing event " + eventType;
     LOG.error(msg, t);
-    if (server != null) {
+    if (server != null && (t instanceof Error || t instanceof RuntimeException)) {
       server.abort(msg, t);
     }
   }
