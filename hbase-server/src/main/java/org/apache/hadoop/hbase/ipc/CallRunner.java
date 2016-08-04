@@ -93,6 +93,11 @@ public class CallRunner {
         }
         return;
       }
+      call.startTime = System.currentTimeMillis();
+      if (call.startTime > call.deadline) {
+        RpcServer.LOG.info("Drop timeout call: " + call);
+        return;
+      }
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
@@ -116,7 +121,7 @@ public class CallRunner {
         }
         // make the call
         resultPair = this.rpcServer.call(call.service, call.md, call.param, call.cellScanner,
-          call.timestamp, this.status, call.timeout);
+          call.timestamp, this.status, call.startTime, call.timeout);
       } catch (Throwable e) {
         RpcServer.LOG.debug(Thread.currentThread().getName() + ": " + call.toShortString(), e);
         errorThrowable = e;

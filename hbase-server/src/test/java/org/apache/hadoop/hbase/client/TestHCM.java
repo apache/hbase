@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.*;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -83,7 +84,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 
-import com.google.common.collect.Lists;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * This class is for testing HBaseConnectionManager features
@@ -110,6 +116,7 @@ public class TestHCM {
   private static final byte[] ROW = Bytes.toBytes("bbb");
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
   private static Random _randy = new Random();
+  private static final int RPC_RETRY = 5;
 
 /**
 * This copro sleeps 20 second. The first call it fails. The second time, it works.
@@ -160,12 +167,32 @@ public class TestHCM {
     }
   }
 
+  public static class SleepLongerAtFirstCoprocessor extends BaseRegionObserver {
+    public static final int SLEEP_TIME = 2000;
+    static final AtomicLong ct = new AtomicLong(0);
+
+    @Override
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Get get, final List<Cell> results) throws IOException {
+      // After first sleep, all requests are timeout except the last retry. If we handle
+      // all the following requests, finally the last request is also timeout. If we drop all
+      // timeout requests, we can handle the last request immediately and it will not timeout.
+      if (ct.incrementAndGet() <= 1) {
+        Threads.sleep(SLEEP_TIME * (RPC_RETRY-1) * 2);
+      } else {
+        Threads.sleep(SLEEP_TIME);
+      }
+    }
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, RPC_RETRY);
+    // simulate queue blocking in testDropTimeoutRequest
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 1);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -435,6 +462,21 @@ public class TestHCM {
       } catch (RetriesExhaustedException e) {
         // expected
       }
+    }
+  }
+
+  @Test
+  public void testDropTimeoutRequest() throws Exception {
+    // Simulate the situation that the server is slow and client retries for several times because
+    // of timeout. When a request can be handled after waiting in the queue, we will drop it if
+    // it has been considered as timeout at client. If we don't drop it, the server will waste time
+    // on handling timeout requests and finally all requests timeout and client throws exception.
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDropTimeputRequest");
+    hdt.addCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
+      t.setRpcTimeout(SleepLongerAtFirstCoprocessor.SLEEP_TIME * 2);
+      t.get(new Get(FAM_NAM));
     }
   }
 
