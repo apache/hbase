@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -426,11 +425,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Starts the nonce operation for a mutation, if needed.
    * @param mutation Mutation.
    * @param nonceGroup Nonce group from the request.
-   * @returns Nonce used (can be NO_NONCE).
+   * @returns whether to proceed this mutation.
    */
-  private long startNonceOperation(final MutationProto mutation, long nonceGroup)
-      throws IOException, OperationConflictException {
-    if (regionServer.nonceManager == null || !mutation.hasNonce()) return HConstants.NO_NONCE;
+  private boolean startNonceOperation(final MutationProto mutation, long nonceGroup)
+      throws IOException {
+    if (regionServer.nonceManager == null || !mutation.hasNonce()) return true;
     boolean canProceed = false;
     try {
       canProceed = regionServer.nonceManager.startOperation(
@@ -438,14 +437,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (InterruptedException ex) {
       throw new InterruptedIOException("Nonce start operation interrupted");
     }
-    if (!canProceed) {
-      // TODO: instead, we could convert append/increment to get w/mvcc
-      String message = "The operation with nonce {" + nonceGroup + ", " + mutation.getNonce()
-        + "} on row [" + Bytes.toString(mutation.getRow().toByteArray())
-        + "] may have already completed";
-      throw new OperationConflictException(message);
-    }
-    return mutation.getNonce();
+    return canProceed;
   }
 
   /**
@@ -614,23 +606,33 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * bypassed as indicated by RegionObserver, null otherwise
    * @throws IOException
    */
-  private Result append(final Region region, final OperationQuota quota, final MutationProto m,
-      final CellScanner cellScanner, long nonceGroup) throws IOException {
+  private Result append(final Region region, final OperationQuota quota,
+      final MutationProto mutation, final CellScanner cellScanner, long nonceGroup)
+      throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
-    Append append = ProtobufUtil.toAppend(m, cellScanner);
+    Append append = ProtobufUtil.toAppend(mutation, cellScanner);
     quota.addMutation(append);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
       r = region.getCoprocessorHost().preAppend(append);
     }
     if (r == null) {
-      long nonce = startNonceOperation(m, nonceGroup);
+      boolean canProceed = startNonceOperation(mutation, nonceGroup);
       boolean success = false;
       try {
-        r = region.append(append, nonceGroup, nonce);
+        if (canProceed) {
+          r = region.append(append, nonceGroup, mutation.getNonce());
+        } else {
+          // convert duplicate append to get
+          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
+            nonceGroup, mutation.getNonce());
+          r = Result.create(results);
+        }
         success = true;
       } finally {
-        endNonceOperation(m, nonceGroup, success);
+        if (canProceed) {
+          endNonceOperation(mutation, nonceGroup, success);
+        }
       }
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postAppend(append, r);
@@ -662,13 +664,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       r = region.getCoprocessorHost().preIncrement(increment);
     }
     if (r == null) {
-      long nonce = startNonceOperation(mutation, nonceGroup);
+      boolean canProceed = startNonceOperation(mutation, nonceGroup);
       boolean success = false;
       try {
-        r = region.increment(increment, nonceGroup, nonce);
+        if (canProceed) {
+          r = region.increment(increment, nonceGroup, mutation.getNonce());
+        } else {
+          // convert duplicate increment to get
+          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
+            mutation.getNonce());
+          r = Result.create(results);
+        }
         success = true;
       } finally {
-        endNonceOperation(mutation, nonceGroup, success);
+        if (canProceed) {
+          endNonceOperation(mutation, nonceGroup, success);
+        }
       }
       if (region.getCoprocessorHost() != null) {
         r = region.getCoprocessorHost().postIncrement(increment, r);

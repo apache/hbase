@@ -2617,6 +2617,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
       throws IOException {
+    return getScanner(scan, additionalScanners, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  private RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
+      long nonceGroup, long nonce) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
       // Verify families are all valid
@@ -2630,7 +2635,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           checkFamily(family);
         }
       }
-      return instantiateRegionScanner(scan, additionalScanners);
+      return instantiateRegionScanner(scan, additionalScanners, nonceGroup, nonce);
     } finally {
       closeRegionOperation(Operation.SCAN);
     }
@@ -2638,13 +2643,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
+    return instantiateRegionScanner(scan, additionalScanners, HConstants.NO_NONCE,
+      HConstants.NO_NONCE);
+  }
+
+  protected RegionScanner instantiateRegionScanner(Scan scan,
+      List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
     if (scan.isReversed()) {
       if (scan.getFilter() != null) {
         scan.getFilter().setReversed(true);
       }
       return new ReversedRegionScannerImpl(scan, additionalScanners, this);
     }
-    return new RegionScannerImpl(scan, additionalScanners, this);
+    return new RegionScannerImpl(scan, additionalScanners, this, nonceGroup, nonce);
   }
 
   @Override
@@ -5592,6 +5603,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
         throws IOException {
+      this(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    }
+
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
+        long nonceGroup, long nonce) throws IOException {
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {
@@ -5621,15 +5637,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
       synchronized(scannerReadPoints) {
-        this.readPt = getReadPoint(isolationLevel);
+        if (nonce == HConstants.NO_NONCE || rsServices == null
+            || rsServices.getNonceManager() == null) {
+          this.readPt = getReadPoint(isolationLevel);
+        } else {
+          this.readPt = rsServices.getNonceManager().getMvccFromOperationContext(nonceGroup, nonce);
+        }
         scannerReadPoints.put(this, this.readPt);
       }
 
+      initializeScanners(scan, additionalScanners);
+    }
+
+    protected void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
+        throws IOException {
       // Here we separate all scanners into two lists - scanner that provide data required
       // by the filter to operate (scanners list) and all others (joinedScanners list).
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
-      List<KeyValueScanner> joinedScanners
-        = new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
+      List<KeyValueScanner> joinedScanners =
+          new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
       // Store all already instantiated scanners for exception handling
       List<KeyValueScanner> instantiatedScanners = new ArrayList<KeyValueScanner>();
       // handle additionalScanners
@@ -6795,15 +6821,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
-   void prepareGet(final Get get) throws IOException, NoSuchColumnFamilyException {
+  void prepareGet(final Get get) throws IOException, NoSuchColumnFamilyException {
     checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
-      for (byte [] family: get.familySet()) {
+      for (byte[] family : get.familySet()) {
         checkFamily(family);
       }
     } else { // Adding all families to scanner
-      for (byte[] family: this.htableDescriptor.getFamiliesKeys()) {
+      for (byte[] family : this.htableDescriptor.getFamiliesKeys()) {
         get.addFamily(family);
       }
     }
@@ -6811,7 +6837,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public List<Cell> get(Get get, boolean withCoprocessor) throws IOException {
+    return get(get, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
 
+  @Override
+  public List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
+      throws IOException {
     List<Cell> results = new ArrayList<Cell>();
 
     // pre-get CP hook
@@ -6825,7 +6856,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RegionScanner scanner = null;
     try {
-      scanner = getScanner(scan);
+      scanner = getScanner(scan, null, nonceGroup, nonce);
       scanner.next(results);
     } finally {
       if (scanner != null)
@@ -7168,6 +7199,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               applyToMemstore(e.getKey(), e.getValue(), true, false, sequenceId);
         }
         mvcc.completeAndWait(writeEntry);
+        if (rsServices != null && rsServices.getNonceManager() != null) {
+          rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
+            writeEntry.getWriteNumber());
+        }
         writeEntry = null;
       } finally {
         this.updatesLock.readLock().unlock();

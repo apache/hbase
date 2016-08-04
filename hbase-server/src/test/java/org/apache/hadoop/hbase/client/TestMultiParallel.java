@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -524,16 +523,16 @@ public class TestMultiParallel {
       Increment inc = new Increment(ONE_ROW);
       inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
       table.increment(inc);
+
+      // duplicate increment
       inc = new Increment(ONE_ROW);
       inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
-      try {
-        table.increment(inc);
-        fail("Should have thrown an exception");
-      } catch (OperationConflictException ex) {
-      }
+      Result result = table.increment(inc);
+      validateResult(result, QUALIFIER, Bytes.toBytes(1L));
+
       Get get = new Get(ONE_ROW);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      Result result = table.get(get);
+      result = table.get(get);
       validateResult(result, QUALIFIER, Bytes.toBytes(1L));
 
       // Now run a bunch of requests in parallel, exactly half should succeed.
@@ -561,7 +560,6 @@ public class TestMultiParallel {
             }
             try {
               table.increment(inc);
-            } catch (OperationConflictException ex) { // Some threads are expected to fail.
             } catch (IOException ioEx) {
               fail("Not expected");
             }

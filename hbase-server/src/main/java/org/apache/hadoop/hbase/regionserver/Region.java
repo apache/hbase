@@ -395,6 +395,17 @@ public interface Region extends ConfigurationObserver {
   List<Cell> get(Get get, boolean withCoprocessor) throws IOException;
 
   /**
+   * Do a get for duplicate non-idempotent operation.
+   * @param get query parameters.
+   * @param withCoprocessor
+   * @param nonceGroup Nonce group.
+   * @param nonce Nonce.
+   * @return list of cells resulting from the operation
+   * @throws IOException
+   */
+  List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce) throws IOException;
+
+  /**
    * Return an iterator that scans over the HRegion, returning the indicated
    * columns and rows specified by the {@link Scan}.
    * <p>
