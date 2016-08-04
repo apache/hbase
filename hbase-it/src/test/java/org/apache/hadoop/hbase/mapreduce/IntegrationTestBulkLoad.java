@@ -72,6 +72,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -204,7 +205,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, desc);
-    //sleep for sometime. Hope is that the regions are closed/opened before 
+    //sleep for sometime. Hope is that the regions are closed/opened before
     //the sleep returns. TODO: do this better
     Thread.sleep(30000);
   }
@@ -213,7 +214,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   public void testBulkLoad() throws Exception {
     runLoad();
     installSlowingCoproc();
-    runCheck();
+    runCheckWithRetry();
   }
 
   public void runLoad() throws Exception {
@@ -289,7 +290,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         Admin admin = conn.getAdmin();
         Table table = conn.getTable(getTablename());
         RegionLocator regionLocator = conn.getRegionLocator(getTablename())) {
-      
+
       // Configure the partitioner and other things needed for HFileOutputFormat.
       HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
 
@@ -658,15 +659,30 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     private static void logError(String msg, Context context) throws IOException {
-      HBaseTestingUtility util = new HBaseTestingUtility(context.getConfiguration());
       TableName table = getTableName(context.getConfiguration());
 
       LOG.error("Failure in chain verification: " + msg);
-      LOG.error("cluster status:\n" + util.getHBaseClusterInterface().getClusterStatus());
-      LOG.error("table regions:\n"
-          + Joiner.on("\n").join(util.getHBaseAdmin().getTableRegions(table)));
+      try (Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
+          Admin admin = connection.getAdmin()) {
+        LOG.error("cluster status:\n" + admin.getClusterStatus());
+        LOG.error("table regions:\n"
+            + Joiner.on("\n").join(admin.getTableRegions(table)));
+      }
     }
   }
+
+  private void runCheckWithRetry() throws IOException, ClassNotFoundException, InterruptedException {
+    try {
+      runCheck();
+    } catch (Throwable t) {
+      LOG.warn("Received " + StringUtils.stringifyException(t));
+      LOG.warn("Running the check MR Job again to see whether an ephemeral problem or not");
+      runCheck();
+      throw t; // we should still fail the test even if second retry succeeds
+    }
+    // everything green
+  }
+
 
   /**
    * After adding data to the table start a mr job to
@@ -761,7 +777,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       runLoad();
     } else if (check) {
       installSlowingCoproc();
-      runCheck();
+      runCheckWithRetry();
     } else {
       testBulkLoad();
     }
