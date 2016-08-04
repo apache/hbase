@@ -310,6 +310,7 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
+        1.2f,  // limit
         false,
         16 * 1024 * 1024);
 
@@ -431,6 +432,7 @@ public class TestLruBlockCache {
         0.2f, // single
         0.3f, // multi
         0.5f, // memory
+        1.2f, // limit
         true,
         16 * 1024 * 1024);
 
@@ -537,6 +539,7 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
+        1.2f,  // limit
         false,
         16 * 1024 * 1024);
 
@@ -600,6 +603,7 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
+        1.2f,  // limit
         false,
         1024);
     CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
@@ -639,6 +643,7 @@ public class TestLruBlockCache {
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
+        1.2f,  // limit
         false,
         16 * 1024 * 1024);
 
