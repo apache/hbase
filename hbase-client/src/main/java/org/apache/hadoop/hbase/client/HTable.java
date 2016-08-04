@@ -138,7 +138,8 @@ public class HTable implements HTableInterface {
   protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi
   private boolean closed;
-  private int operationTimeout;
+  private int operationTimeout; // global timeout for each blocking method with retrying rpc
+  private int rpcTimeout; // timeout for each rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
 
@@ -380,7 +381,8 @@ public class HTable implements HTableInterface {
     this.currentWriteBufferSize = 0;
     this.scannerCaching = tableConfiguration.getScannerCaching();
     this.scannerMaxResultSize = tableConfiguration.getScannerMaxResultSize();
-
+    this.rpcTimeout = configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     if (this.rpcCallerFactory == null) {
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration,
         this.connection.getStatisticsTracker());
@@ -592,8 +594,12 @@ public class HTable implements HTableInterface {
    */
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
-    return new UnmodifyableHTableDescriptor(
-      this.connection.getHTableDescriptor(this.tableName));
+    HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
+      rpcControllerFactory, operationTimeout, rpcTimeout);
+    if (htd != null) {
+      return new UnmodifyableHTableDescriptor(htd);
+    }
+    return null;
   }
 
   /**
@@ -748,8 +754,9 @@ public class HTable implements HTableInterface {
                 .getRegionName(), row, family, rpcControllerFactory.newController());
           }
      };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
-  }
+     return rpcCallerFactory.<Result>newCaller(rpcTimeout).callWithRetries(callable,
+         this.operationTimeout);
+   }
 
    /**
     * {@inheritDoc}
@@ -832,7 +839,8 @@ public class HTable implements HTableInterface {
               getReq, controller);
           }
         };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result>newCaller(rpcTimeout).callWithRetries(callable,
+      this.operationTimeout);
   }
 
   /**
@@ -927,7 +935,8 @@ public class HTable implements HTableInterface {
         }
       }
     };
-    rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1067,7 +1076,11 @@ public class HTable implements HTableInterface {
           if (remainingTime == 0) {
             throw new DoNotRetryIOException("Timeout for mutate row");
           }
-          RpcClient.setRpcTimeout(remainingTime);
+          int timeout = remainingTime;
+          if (rpcTimeout > 0 && rpcTimeout < timeout) {
+            timeout = rpcTimeout;
+          }
+          RpcClient.setRpcTimeout(timeout);
           try {
             RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
               getLocation().getRegionInfo().getRegionName(), rm);
@@ -1125,7 +1138,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1154,7 +1168,8 @@ public class HTable implements HTableInterface {
         }
       }
     };
-    return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1219,7 +1234,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Long> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Long> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1246,9 +1262,9 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
-
 
   /**
    * {@inheritDoc}
@@ -1274,7 +1290,8 @@ public class HTable implements HTableInterface {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+        this.operationTimeout);
   }
 
   /**
@@ -1296,7 +1313,11 @@ public class HTable implements HTableInterface {
           if (remainingTime == 0) {
             throw new DoNotRetryIOException("Timeout for mutate row");
           }
-          RpcClient.setRpcTimeout(remainingTime);
+          int timeout = remainingTime;
+          if (rpcTimeout > 0 && rpcTimeout < timeout){
+            timeout = rpcTimeout;
+          }
+          RpcClient.setRpcTimeout(timeout);
           try {
             RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
               getLocation().getRegionInfo().getRegionName(), rm);

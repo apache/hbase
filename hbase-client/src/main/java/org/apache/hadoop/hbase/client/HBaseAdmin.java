@@ -67,7 +67,9 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionServerCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -175,8 +177,11 @@ public class HBaseAdmin implements Abortable, Closeable {
   private boolean aborted;
   private boolean cleanupConnectionOnClose = false; // close the connection in close()
   private boolean closed = false;
+  private int operationTimeout;
+  private int rpcTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
+  private RpcControllerFactory rpcControllerFactory;
 
   /**
    * Constructor.
@@ -211,6 +216,11 @@ public class HBaseAdmin implements Abortable, Closeable {
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
+    this.operationTimeout = this.conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.rpcTimeout = this.conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf,
       connection.getStatisticsTracker());
   }
@@ -420,7 +430,35 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HTableDescriptor getTableDescriptor(final TableName tableName)
   throws TableNotFoundException, IOException {
-    return this.connection.getHTableDescriptor(tableName);
+     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
+       operationTimeout, rpcTimeout);
+  }
+
+  static HTableDescriptor getTableDescriptor(final TableName tableName, HConnection connection,
+      RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
+         int operationTimeout, int rpcTimeout) throws TableNotFoundException, IOException {
+
+      if (tableName == null) return null;
+      HTableDescriptor htd = executeCallable(new MasterCallable<HTableDescriptor>(connection) {
+        @Override
+        public HTableDescriptor call() throws ServiceException {
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          controller.setPriority(tableName);
+          GetTableDescriptorsResponse htds;
+          GetTableDescriptorsRequest req =
+                  RequestConverter.buildGetTableDescriptorsRequest(tableName);
+          htds = master.getTableDescriptors(controller, req);
+
+          if (!htds.getTableSchemaList().isEmpty()) {
+            return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+          }
+          return null;
+        }
+      }, rpcCallerFactory, operationTimeout, rpcTimeout);
+      if (htd != null) {
+        return htd;
+      }
+      throw new TableNotFoundException(tableName.getNameAsString());
   }
 
   public HTableDescriptor getTableDescriptor(final byte[] tableName)
@@ -3474,7 +3512,13 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   private <V> V executeCallable(MasterCallable<V> callable) throws IOException {
-    RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
+    return executeCallable(callable, rpcCallerFactory, operationTimeout, rpcTimeout);
+  }
+
+  private static <V> V executeCallable(MasterCallable<V> callable,
+             RpcRetryingCallerFactory rpcCallerFactory, int operationTimeout, int rpcTimeout)
+      throws IOException {
+    RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller(rpcTimeout);
     try {
       return caller.callWithRetries(callable);
     } finally {

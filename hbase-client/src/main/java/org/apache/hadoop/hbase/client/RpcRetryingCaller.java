@@ -54,20 +54,25 @@ public class RpcRetryingCaller<T> {
    * When we started making calls.
    */
   private long globalStartTime;
-  /**
-   * Start and end times for a single call.
-   */
+
   private final static int MIN_RPC_TIMEOUT = 2000;
+
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
 
   private final long pause;
   private final int retries;
+  private final int rpcTimeout;// timeout for each rpc request
 
   public RpcRetryingCaller(long pause, int retries, int startLogErrorsCnt) {
+    this(pause, retries, startLogErrorsCnt, 0);
+  }
+
+  public RpcRetryingCaller(long pause, int retries, int startLogErrorsCnt, int rpcTimeout) {
     this.pause = pause;
     this.retries = retries;
     this.startLogErrorsCnt = startLogErrorsCnt;
+    this.rpcTimeout = rpcTimeout;
   }
 
   private void beforeCall() {
@@ -76,10 +81,15 @@ public class RpcRetryingCaller<T> {
     if (remaining < MIN_RPC_TIMEOUT) {
       // If there is no time left, we're trying anyway. It's too late.
       // 0 means no timeout, and it's not the intent here. So we secure both cases by
-      // resetting to the minimum.
+      // setting remaining to MIN_RPC_TIMEOUT
       remaining = MIN_RPC_TIMEOUT;
     }
-    RpcClient.setRpcTimeout(remaining);
+    int timeout = remaining;
+    // If we have a nonzero setting for RPC timeout, use it
+    if (rpcTimeout > 0 && rpcTimeout < timeout){
+      timeout = rpcTimeout;
+    }
+    RpcClient.setRpcTimeout(timeout);
   }
 
   private void afterCall() {
@@ -158,8 +168,9 @@ public class RpcRetryingCaller<T> {
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
+    int timeout = rpcTimeout > 0 ? rpcTimeout : MIN_RPC_TIMEOUT;
     return (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime)
-      + MIN_RPC_TIMEOUT + expectedSleep;
+      + timeout + expectedSleep;
   }
 
   /**
