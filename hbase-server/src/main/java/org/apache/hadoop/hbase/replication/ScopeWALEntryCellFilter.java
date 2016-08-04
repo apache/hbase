@@ -18,86 +18,50 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-public class TableCfWALEntryFilter implements WALEntryFilter {
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableMap;
 
-  private static final Log LOG = LogFactory.getLog(TableCfWALEntryFilter.class);
-  private final ReplicationPeer peer;
+/**
+ * Keeps KVs that are scoped other than local
+ */
+@InterfaceAudience.Private
+public class ScopeWALEntryCellFilter implements WallEntryCellFilter {
+  private static final Log LOG = LogFactory.getLog(ScopeWALEntryCellFilter.class);
+  private NavigableMap<byte[], Integer> scopes;
 
-  public TableCfWALEntryFilter(ReplicationPeer peer) {
-    this.peer = peer;
+  public ScopeWALEntryCellFilter(NavigableMap<byte[], Integer> scopes) {
+    this.scopes = scopes;
   }
 
   @Override
-  public Entry filter(Entry entry) {
-    TableName tabName = entry.getKey().getTablename();
-    ArrayList<Cell> cells = entry.getEdit().getCells();
-    Map<TableName, List<String>> tableCFs = null;
-
-    try {
-      tableCFs = this.peer.getTableCFs();
-    } catch (IllegalArgumentException e) {
-      LOG.error("should not happen: can't get tableCFs for peer " + peer.getId() +
-          ", degenerate as if it's not configured by keeping tableCFs==null");
-    }
-    int size = cells.size();
-
-    // If null means user has explicitly not configured any table CFs so all the tables data are
-    // applicable for replication
-    if (tableCFs == null) {
-      return entry;
-    }
-    // return null(prevent replicating) if logKey's table isn't in this peer's
-    // replicable table list
-    if (!tableCFs.containsKey(tabName)) {
-      return null;
+  public Cell filterCell(Cell cell) {
+    if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+      return filterBulkLoadEntries(scopes, cell);
     } else {
-      List<String> cfs = tableCFs.get(tabName);
-      for (int i = size - 1; i >= 0; i--) {
-        Cell cell = cells.get(i);
-        // TODO There is a similar logic in ScopeWALEntryFilter but data structures are different so
-        // cannot refactor into one now, can revisit and see if any way to unify them.
-        // Filter bulk load entries separately
-        if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-          Cell filteredBulkLoadEntryCell = filterBulkLoadEntries(cfs, cell);
-          if (filteredBulkLoadEntryCell != null) {
-            cells.set(i, filteredBulkLoadEntryCell);
-          } else {
-            cells.remove(i);
-          }
-        } else {
-          // ignore(remove) kv if its cf isn't in the replicable cf list
-          // (empty cfs means all cfs of this table are replicable)
-          if ((cfs != null) && !cfs.contains(Bytes.toString(cell.getFamilyArray(),
-            cell.getFamilyOffset(), cell.getFamilyLength()))) {
-            cells.remove(i);
-          }
-        }
+      // The scope will be null or empty if
+      // there's nothing to replicate in that WALEdit
+      byte[] fam = CellUtil.cloneFamily(cell);
+      if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
+        return null;
       }
     }
-    if (cells.size() < size/2) {
-      cells.trimToSize();
-    }
-    return entry;
+    return cell;
   }
 
-  private Cell filterBulkLoadEntries(List<String> cfs, Cell cell) {
+  private Cell filterBulkLoadEntries(NavigableMap<byte[], Integer> scopes, Cell cell) {
     byte[] fam;
     BulkLoadDescriptor bld = null;
     try {
@@ -114,7 +78,7 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
     while (copiedStoresListIterator.hasNext()) {
       StoreDescriptor sd = copiedStoresListIterator.next();
       fam = sd.getFamilyName().toByteArray();
-      if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
+      if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
         copiedStoresListIterator.remove();
         anyStoreRemoved = true;
       }
