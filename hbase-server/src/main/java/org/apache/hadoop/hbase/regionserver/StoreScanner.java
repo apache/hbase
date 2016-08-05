@@ -319,7 +319,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public StoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType,
       final NavigableSet<byte[]> columns, final List<KeyValueScanner> scanners, long earliestPutTs,
       long readPt) throws IOException {
-    this(null, scan, scanInfo, columns, readPt, scan.getCacheBlocks());
+    this(null, scan, scanInfo, columns, readPt,
+        scanType == ScanType.USER_SCAN ? scan.getCacheBlocks() : false);
     if (scanType == ScanType.USER_SCAN) {
       this.matcher = UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now,
         null);
