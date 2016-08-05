@@ -1684,11 +1684,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           throw new IOException(error);
         }
         LOG.info("Open " + region.getRegionNameAsString());
-        htd = htds.get(region.getTable());
-        if (htd == null) {
-          htd = regionServer.tableDescriptors.get(region.getTable());
-          htds.put(region.getTable(), htd);
-        }
 
         final Boolean previous = regionServer.regionsInTransitionInRS.putIfAbsent(
           encodedNameBytes, Boolean.TRUE);
@@ -1733,6 +1728,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 tmpRegions);
             }
           }
+          htd = htds.get(region.getTable());
+          if (htd == null) {
+            htd = regionServer.tableDescriptors.get(region.getTable());
+            htds.put(region.getTable(), htd);
+          }
+          if (htd == null) {
+            throw new IOException("Missing table descriptor for " + region.getEncodedName());
+          }
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
@@ -1741,9 +1744,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
               regionOpenInfo.getFavoredNodesList());
-            if (htd == null) {
-              throw new IOException("Missing table descriptor for " + region.getEncodedName());
-            }
             if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
               regionServer.service.submit(new OpenPriorityRegionHandler(
                 regionServer, regionServer, region, htd, masterSystemTime));
