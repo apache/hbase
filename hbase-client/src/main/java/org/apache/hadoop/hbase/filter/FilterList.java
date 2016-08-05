@@ -277,7 +277,6 @@ final public class FilterList extends Filter {
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         if (filter.filterAllRemaining()) {
-          seenNonHintReturnCode = true;
           continue;
         }
 
