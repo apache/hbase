@@ -315,6 +315,7 @@ public class TestFilter {
     verifyScan(s, expectedRows, expectedKeys);
   }
 
+  @Test
   public void testPrefixFilterWithReverseScan() throws Exception {
     // Grab rows from group one (half of total)
     long expectedRows = this.numRows / 2;
@@ -412,6 +413,7 @@ public class TestFilter {
 
   }
 
+  @Test
   public void testPageFilterWithReverseScan() throws Exception {
     // KVs in first 6 rows
     KeyValue[] expectedKVs = {
@@ -491,6 +493,7 @@ public class TestFilter {
     verifyScan(s, expectedRows, expectedKeys);
   }
 
+  @Test
   public void testWhileMatchFilterWithFilterRowWithReverseScan()
       throws Exception {
     final int pageSize = 4;
@@ -520,6 +523,7 @@ public class TestFilter {
         pageSize, scannerCounter);
   }
 
+  @Test
   public void testWhileMatchFilterWithFilterRowKeyWithReverseScan()
       throws Exception {
     Scan s = new Scan();
@@ -1767,6 +1771,7 @@ public class TestFilter {
         kvs.length, idx);
   }
 
+  @Test
   public void testColumnPaginationFilterColumnOffset() throws Exception {
     KeyValue [] expectedKVs = {
       // testRowOne-0
