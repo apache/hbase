@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
-.RegionSpecifierType.REGION_NAME;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,11 +38,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
+.RegionSpecifierType.REGION_NAME;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -125,8 +124,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
-import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -172,9 +171,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -333,32 +334,17 @@ public final class ProtobufUtil {
    *   a new IOException that wraps the unexpected ServiceException.
    */
   public static IOException getRemoteException(ServiceException se) {
-    return makeIOExceptionOfException(se);
-  }
-
-  /**
-   * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
-   * just {@link ServiceException}. Prefer this method to
-   * {@link #getRemoteException(ServiceException)} because trying to
-   * contain direct protobuf references.
-   * @param e
-   */
-  public static IOException handleRemoteException(Exception e) {
-    return makeIOExceptionOfException(e);
-  }
-
-  private static IOException makeIOExceptionOfException(Exception e) {
-    Throwable t = e;
-    if (e instanceof ServiceException) {
-      t = e.getCause();
+    Throwable e = se.getCause();
+    if (e == null) {
+      return new IOException(se);
     }
-    if (ExceptionUtil.isInterrupt(t)) {
-      return ExceptionUtil.asInterrupt(t);
+    if (ExceptionUtil.isInterrupt(e)) {
+      return ExceptionUtil.asInterrupt(e);
     }
-    if (t instanceof RemoteException) {
-      t = ((RemoteException)t).unwrapRemoteException();
+    if (e instanceof RemoteException) {
+      e = ((RemoteException) e).unwrapRemoteException();
     }
-    return t instanceof IOException? (IOException)t: new HBaseIOException(t);
+    return e instanceof IOException ? (IOException) e : new IOException(se);
   }
 
   /**
@@ -1266,6 +1252,7 @@ public final class ProtobufUtil {
     return toMutation(type, mutation, builder, HConstants.NO_NONCE);
   }
 
+  @SuppressWarnings("deprecation")
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
       MutationProto.Builder builder, long nonce)
   throws IOException {
@@ -2671,11 +2658,13 @@ public final class ProtobufUtil {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
       List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
   }
 
+  @SuppressWarnings("deprecation")
   public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
       byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     // compaction descriptor contains relative paths.
@@ -3673,29 +3662,5 @@ public final class ProtobufUtil {
   public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
     return new RegionLoadStats(stats.getMemstoreLoad(), stats.getHeapOccupancy(),
         stats.getCompactionPressure());
-  }
-
-  /**
-   * @param msg
-   * @return A String version of the passed in <code>msg</code>
-   */
-  public static String toText(Message msg) {
-    return TextFormat.shortDebugString(msg);
-  }
-
-  public static byte [] toBytes(ByteString bs) {
-    return bs.toByteArray();
-  }
-
-  /**
-   * Contain ServiceException inside here. Take a callable that is doing our pb rpc and run it.
-   * @throws IOException
-   */
-  public static <T> T call(Callable<T> callable) throws IOException {
-    try {
-      return callable.call();
-    } catch (Exception e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
   }
 }

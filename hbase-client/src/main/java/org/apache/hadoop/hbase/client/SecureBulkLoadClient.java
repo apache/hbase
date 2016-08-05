@@ -22,9 +22,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -41,35 +38,41 @@ import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * Client proxy for SecureBulkLoadProtocol
  */
 @InterfaceAudience.Private
 public class SecureBulkLoadClient {
   private Table table;
-  private final RpcControllerFactory rpcControllerFactory;
 
-  public SecureBulkLoadClient(final Configuration conf, Table table) {
+  public SecureBulkLoadClient(Table table) {
     this.table = table;
-    this.rpcControllerFactory = new RpcControllerFactory(conf);
   }
 
   public String prepareBulkLoad(final Connection conn) throws IOException {
     try {
-      RegionServerCallable<String> callable = new RegionServerCallable<String>(conn,
-          this.rpcControllerFactory, table.getName(), HConstants.EMPTY_START_ROW) {
-        @Override
-        protected String call(PayloadCarryingRpcController controller) throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          RegionSpecifier region =
-              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-          PrepareBulkLoadRequest request = PrepareBulkLoadRequest.newBuilder()
-              .setTableName(ProtobufUtil.toProtoTableName(table.getName()))
-              .setRegion(region).build();
-          PrepareBulkLoadResponse response = getStub().prepareBulkLoad(null, request);
-          return response.getBulkToken();
-        }
-      };
+      RegionServerCallable<String> callable =
+          new RegionServerCallable<String>(conn, table.getName(), HConstants.EMPTY_START_ROW) {
+            @Override
+            public String call(int callTimeout) throws IOException {
+              byte[] regionName = getLocation().getRegionInfo().getRegionName();
+              RegionSpecifier region =
+                  RequestConverter
+                      .buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+              try {
+                PrepareBulkLoadRequest request =
+                    PrepareBulkLoadRequest.newBuilder()
+                        .setTableName(ProtobufUtil.toProtoTableName(table.getName()))
+                        .setRegion(region).build();
+                PrepareBulkLoadResponse response = getStub().prepareBulkLoad(null, request);
+                return response.getBulkToken();
+              } catch (ServiceException se) {
+                throw ProtobufUtil.getRemoteException(se);
+              }
+            }
+          };
       return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
           .<String> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
@@ -79,19 +82,24 @@ public class SecureBulkLoadClient {
 
   public void cleanupBulkLoad(final Connection conn, final String bulkToken) throws IOException {
     try {
-      RegionServerCallable<Void> callable = new RegionServerCallable<Void>(conn,
-          this.rpcControllerFactory, table.getName(), HConstants.EMPTY_START_ROW) {
-        @Override
-        protected Void call(PayloadCarryingRpcController controller) throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          RegionSpecifier region = RequestConverter.buildRegionSpecifier(
-              RegionSpecifierType.REGION_NAME, regionName);
-          CleanupBulkLoadRequest request =
-              CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bulkToken).build();
-          getStub().cleanupBulkLoad(null, request);
-          return null;
-        }
-      };
+      RegionServerCallable<Void> callable =
+          new RegionServerCallable<Void>(conn, table.getName(), HConstants.EMPTY_START_ROW) {
+            @Override
+            public Void call(int callTimeout) throws IOException {
+              byte[] regionName = getLocation().getRegionInfo().getRegionName();
+              RegionSpecifier region = RequestConverter.buildRegionSpecifier(
+                RegionSpecifierType.REGION_NAME, regionName);
+              try {
+                CleanupBulkLoadRequest request =
+                    CleanupBulkLoadRequest.newBuilder().setRegion(region)
+                        .setBulkToken(bulkToken).build();
+                getStub().cleanupBulkLoad(null, request);
+              } catch (ServiceException se) {
+                throw ProtobufUtil.getRemoteException(se);
+              }
+              return null;
+            }
+          };
       RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
           .<Void> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
@@ -122,8 +130,8 @@ public class SecureBulkLoadClient {
     try {
       BulkLoadHFileResponse response = client.bulkLoadHFile(null, request);
       return response.getLoaded();
-    } catch (Exception se) {
-      throw ProtobufUtil.handleRemoteException(se);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     }
   }
 

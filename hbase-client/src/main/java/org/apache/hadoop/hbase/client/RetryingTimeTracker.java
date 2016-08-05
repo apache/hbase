@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * Tracks the amount of time remaining for an operation.
  */
 class RetryingTimeTracker {
+
   private long globalStartTime = -1;
 
   public void start() {
@@ -37,19 +38,16 @@ class RetryingTimeTracker {
       if (callTimeout == Integer.MAX_VALUE) {
         return Integer.MAX_VALUE;
       }
-      long remaining = EnvironmentEdgeManager.currentTime() - this.globalStartTime;
-      long remainingTime = callTimeout - remaining;
+      int remainingTime = (int) (
+        callTimeout -
+        (EnvironmentEdgeManager.currentTime() - this.globalStartTime));
       if (remainingTime < 1) {
         // If there is no time left, we're trying anyway. It's too late.
         // 0 means no timeout, and it's not the intent here. So we secure both cases by
         // resetting to the minimum.
         remainingTime = 1;
       }
-      if (remainingTime > Integer.MAX_VALUE) {
-        throw new RuntimeException("remainingTime=" + remainingTime +
-            " which is > Integer.MAX_VALUE");
-      }
-      return (int)remainingTime;
+      return remainingTime;
     }
   }
 

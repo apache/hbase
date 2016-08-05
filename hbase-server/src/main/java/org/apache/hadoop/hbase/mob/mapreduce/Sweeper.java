@@ -38,6 +38,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * The sweep tool. It deletes the mob files that are not used and merges the small mob files to
  * bigger ones. Each run of this sweep tool only handles one column family. The runs on
@@ -62,10 +64,10 @@ public class Sweeper extends Configured implements Tool {
    * @throws ServiceException
    */
   int sweepFamily(String tableName, String familyName) throws IOException, InterruptedException,
-      ClassNotFoundException, KeeperException {
+      ClassNotFoundException, KeeperException, ServiceException {
     Configuration conf = getConf();
     // make sure the target HBase exists.
-    HBaseAdmin.available(conf);
+    HBaseAdmin.checkHBaseAvailable(conf);
     Connection connection = ConnectionFactory.createConnection(getConf());
     Admin admin = connection.getAdmin();
     try {

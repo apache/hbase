@@ -29,6 +29,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -44,6 +46,8 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.protobuf.ServiceException;
+
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -53,6 +57,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
+  private static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
+
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;
   protected final Configuration conf;
@@ -92,7 +98,7 @@ public class RpcRetryingCallerWithReadReplicas {
     private final PayloadCarryingRpcController controller;
 
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
-      super(RpcRetryingCallerWithReadReplicas.this.cConnection, rpcControllerFactory,
+      super(RpcRetryingCallerWithReadReplicas.this.cConnection,
           RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow());
       this.id = id;
       this.location = location;
@@ -135,20 +141,28 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     @Override
-    protected Result call(PayloadCarryingRpcController controller) throws Exception {
+    public Result call(int callTimeout) throws Exception {
       if (controller.isCanceled()) return null;
+
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
+
       byte[] reg = location.getRegionInfo().getRegionName();
+
       ClientProtos.GetRequest request =
           RequestConverter.buildGetRequest(reg, get);
       controller.setCallTimeout(callTimeout);
-      ClientProtos.GetResponse response = getStub().get(controller, request);
-      if (response == null) {
-        return null;
+
+      try {
+        ClientProtos.GetResponse response = getStub().get(controller, request);
+        if (response == null) {
+          return null;
+        }
+        return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
       }
-      return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
     }
 
     @Override

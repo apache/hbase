@@ -45,5 +45,4 @@ public class HBaseIOException extends IOException {
 
   public HBaseIOException(Throwable cause) {
       super(cause);
-  }
-}
+  }}

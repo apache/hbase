@@ -21,13 +21,17 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-
 /**
- * A RetryingCallable for RPC connection operations.
+ * A RetryingCallable for generic connection operations.
  * @param <V> return type
  */
-abstract class RpcRetryingCallable<V> implements RetryingCallable<V>, Closeable {
+abstract class ConnectionCallable<V> implements RetryingCallable<V>, Closeable {
+  protected Connection connection;
+
+  public ConnectionCallable(final Connection connection) {
+    this.connection = connection;
+  }
+
   @Override
   public void prepare(boolean reload) throws IOException {
   }
@@ -49,17 +53,4 @@ abstract class RpcRetryingCallable<V> implements RetryingCallable<V>, Closeable 
   public long sleep(long pause, int tries) {
     return ConnectionUtils.getPauseTime(pause, tries);
   }
-
-  @Override
-  // Same trick as in RegionServerCallable so users don't have to copy/paste so much boilerplate
-  // and so we contain references to protobuf.
-  public V call(int callTimeout) throws IOException {
-    try {
-      return rpcCall(callTimeout);
-    } catch (Exception e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
-  }
-
-  protected abstract V rpcCall(int callTimeout) throws Exception;
 }

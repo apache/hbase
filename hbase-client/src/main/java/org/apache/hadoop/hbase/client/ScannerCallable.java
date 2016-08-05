@@ -52,6 +52,9 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
 /**
  * Scanner operations such as create, next, etc.
  * Used by {@link ResultScanner}s made by {@link Table}. Passed to a retrying caller such as
@@ -71,6 +74,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected boolean renew = false;
   private Scan scan;
   private int caching = 1;
+  protected final ClusterConnection cConnection;
   protected ScanMetrics scanMetrics;
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
@@ -121,8 +125,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, rpcControllerFactory, tableName, scan.getStartRow());
+    super(connection, tableName, scan.getStartRow());
     this.id = id;
+    this.cConnection = connection;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
     Configuration conf = connection.getConfiguration();
@@ -180,16 +185,25 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
   }
 
-  protected Result [] call(PayloadCarryingRpcController controller) throws Exception {
+
+  @Override
+  public Result [] call(int callTimeout) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-    if (this.closed) {
-      if (this.scannerId != -1) {
+
+    if (controller == null) {
+      controller = controllerFactory.newController();
+      controller.setPriority(getTableName());
+      controller.setCallTimeout(callTimeout);
+    }
+
+    if (closed) {
+      if (scannerId != -1) {
         close();
       }
     } else {
-      if (this.scannerId == -1L) {
+      if (scannerId == -1L) {
         this.scannerId = openScanner();
       } else {
         Result [] rrs = null;
@@ -198,56 +212,61 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
         setHeartbeatMessage(false);
         try {
           incRPCcallsMetrics();
-          request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
+          request =
+              RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
                 this.scanMetrics != null, renew);
           ScanResponse response = null;
-          response = getStub().scan(controller, request);
-          // Client and RS maintain a nextCallSeq number during the scan. Every next() call
-          // from client to server will increment this number in both sides. Client passes this
-          // number along with the request and at RS side both the incoming nextCallSeq and its
-          // nextCallSeq will be matched. In case of a timeout this increment at the client side
-          // should not happen. If at the server side fetching of next batch of data was over,
-          // there will be mismatch in the nextCallSeq number. Server will throw
-          // OutOfOrderScannerNextException and then client will reopen the scanner with startrow
-          // as the last successfully retrieved row.
-          // See HBASE-5974
-          nextCallSeq++;
-          long timestamp = System.currentTimeMillis();
-          setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
-          // Results are returned via controller
-          CellScanner cellScanner = controller.cellScanner();
-          rrs = ResponseConverter.getResults(cellScanner, response);
-          if (logScannerActivity) {
-            long now = System.currentTimeMillis();
-            if (now - timestamp > logCutOffLatency) {
-              int rows = rrs == null ? 0 : rrs.length;
-              LOG.info("Took " + (now-timestamp) + "ms to fetch "
+          try {
+            response = getStub().scan(controller, request);
+            // Client and RS maintain a nextCallSeq number during the scan. Every next() call
+            // from client to server will increment this number in both sides. Client passes this
+            // number along with the request and at RS side both the incoming nextCallSeq and its
+            // nextCallSeq will be matched. In case of a timeout this increment at the client side
+            // should not happen. If at the server side fetching of next batch of data was over,
+            // there will be mismatch in the nextCallSeq number. Server will throw
+            // OutOfOrderScannerNextException and then client will reopen the scanner with startrow
+            // as the last successfully retrieved row.
+            // See HBASE-5974
+            nextCallSeq++;
+            long timestamp = System.currentTimeMillis();
+            setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
+            // Results are returned via controller
+            CellScanner cellScanner = controller.cellScanner();
+            rrs = ResponseConverter.getResults(cellScanner, response);
+            if (logScannerActivity) {
+              long now = System.currentTimeMillis();
+              if (now - timestamp > logCutOffLatency) {
+                int rows = rrs == null ? 0 : rrs.length;
+                LOG.info("Took " + (now-timestamp) + "ms to fetch "
                   + rows + " rows from scanner=" + scannerId);
+              }
             }
-          }
-          updateServerSideMetrics(response);
-          // moreResults is only used for the case where a filter exhausts all elements
-          if (response.hasMoreResults() && !response.getMoreResults()) {
-            this.scannerId = -1L;
-            this.closed = true;
-            // Implied that no results were returned back, either.
-            return null;
-          }
-          // moreResultsInRegion explicitly defines when a RS may choose to terminate a batch due
-          // to size or quantity of results in the response.
-          if (response.hasMoreResultsInRegion()) {
-            // Set what the RS said
-            setHasMoreResultsContext(true);
-            setServerHasMoreResults(response.getMoreResultsInRegion());
-          } else {
-            // Server didn't respond whether it has more results or not.
-            setHasMoreResultsContext(false);
+            updateServerSideMetrics(response);
+            // moreResults is only used for the case where a filter exhausts all elements
+            if (response.hasMoreResults() && !response.getMoreResults()) {
+              scannerId = -1L;
+              closed = true;
+              // Implied that no results were returned back, either.
+              return null;
+            }
+            // moreResultsInRegion explicitly defines when a RS may choose to terminate a batch due
+            // to size or quantity of results in the response.
+            if (response.hasMoreResultsInRegion()) {
+              // Set what the RS said
+              setHasMoreResultsContext(true);
+              setServerHasMoreResults(response.getMoreResultsInRegion());
+            } else {
+              // Server didn't respond whether it has more results or not.
+              setHasMoreResultsContext(false);
+            }
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
           }
           updateResultsMetrics(rrs);
         } catch (IOException e) {
           if (logScannerActivity) {
-            LOG.info("Got exception making request " + ProtobufUtil.toText(request) + " to " +
-                getLocation(), e);
+            LOG.info("Got exception making request " + TextFormat.shortDebugString(request)
+              + " to " + getLocation(), e);
           }
           IOException ioe = e;
           if (e instanceof RemoteException) {
@@ -256,9 +275,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           if (logScannerActivity && (ioe instanceof UnknownScannerException)) {
             try {
               HRegionLocation location =
-                  getConnection().relocateRegion(getTableName(), scan.getStartRow());
-              LOG.info("Scanner=" + scannerId + " expired, current region location is " +
-                  location.toString());
+                getConnection().relocateRegion(getTableName(), scan.getStartRow());
+              LOG.info("Scanner=" + scannerId
+                + " expired, current region location is " + location.toString());
             } catch (Throwable t) {
               LOG.info("Failed to relocate region", t);
             }
@@ -357,8 +376,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
       try {
         getStub().scan(controller, request);
-      } catch (Exception e) {
-        throw ProtobufUtil.handleRemoteException(e);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
       }
     } catch (IOException e) {
       LOG.warn("Ignore, probably already closed", e);
@@ -368,8 +387,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
 
   protected long openScanner() throws IOException {
     incRPCcallsMetrics();
-    ScanRequest request = RequestConverter.buildScanRequest(
-        getLocation().getRegionInfo().getRegionName(), this.scan, 0, false);
+    ScanRequest request =
+      RequestConverter.buildScanRequest(
+        getLocation().getRegionInfo().getRegionName(),
+        this.scan, 0, false);
     try {
       ScanResponse response = getStub().scan(controller, request);
       long id = response.getScannerId();
@@ -378,8 +399,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           + " on region " + getLocation().toString());
       }
       return id;
-    } catch (Exception e) {
-      throw ProtobufUtil.handleRemoteException(e);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     }
   }
 
@@ -420,6 +441,11 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   public int getCaching() {
     return caching;
+  }
+
+  @Override
+  public ClusterConnection getConnection() {
+    return cConnection;
   }
 
   /**

@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
  * against the master on the MasterProtos.MasterService.BlockingInterface; but not by
  * final user code. Hence it's package protected.
  */
-interface MasterKeepAliveConnection extends MasterProtos.MasterService.BlockingInterface {
+interface MasterKeepAliveConnection
+extends MasterProtos.MasterService.BlockingInterface {
   // Do this instead of implement Closeable because closeable returning IOE is PITA.
   void close();
 }

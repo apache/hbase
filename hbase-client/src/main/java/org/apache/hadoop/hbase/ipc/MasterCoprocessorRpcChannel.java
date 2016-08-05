@@ -77,4 +77,5 @@ public class MasterCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     }
     return response;
   }
+
 }

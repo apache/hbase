@@ -27,18 +27,23 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * A Callable for flushRegion() RPC.
  */
 @InterfaceAudience.Private
 public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionResponse> {
+
   private static final Log LOG = LogFactory.getLog(FlushRegionCallable.class);
+
   private final byte[] regionName;
   private final boolean writeFlushWalMarker;
   private boolean reload;
@@ -59,14 +64,18 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
   }
 
   @Override
+  public FlushRegionResponse call(int callTimeout) throws Exception {
+    return flushRegion();
+  }
+
+  @Override
   public void prepare(boolean reload) throws IOException {
     super.prepare(reload);
     this.reload = reload;
   }
 
-  @Override
-  protected FlushRegionResponse call(PayloadCarryingRpcController controller) throws Exception {
-    // Check whether we should still do the flush to this region. If the regions are changed due
+  private FlushRegionResponse flushRegion() throws IOException {
+    // check whether we should still do the flush to this region. If the regions are changed due
     // to splits or merges, etc return success
     if (!Bytes.equals(location.getRegionInfo().getRegionName(), regionName)) {
       if (!reload) {
@@ -84,6 +93,13 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
 
     FlushRegionRequest request =
         RequestConverter.buildFlushRegionRequest(regionName, writeFlushWalMarker);
-    return stub.flushRegion(controller, request);
+
+    try {
+      PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+      controller.setPriority(tableName);
+      return stub.flushRegion(controller, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 }

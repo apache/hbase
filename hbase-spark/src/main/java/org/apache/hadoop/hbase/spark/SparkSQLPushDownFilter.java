@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.hbase.spark;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -35,8 +37,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ByteString;
 
 /**
  * This filter will push down all qualifier logic given to us

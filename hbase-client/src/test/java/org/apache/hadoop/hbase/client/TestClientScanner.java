@@ -65,6 +65,7 @@ public class TestClientScanner {
   RpcControllerFactory controllerFactory;
 
   @Before
+  @SuppressWarnings("deprecation")
   public void setup() throws IOException {
     clusterConn = Mockito.mock(ClusterConnection.class);
     rpcFactory = Mockito.mock(RpcRetryingCallerFactory.class);
