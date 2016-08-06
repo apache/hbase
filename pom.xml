@@ -1275,7 +1275,7 @@
     <disruptor.version>3.3.0</disruptor.version>
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
     <collections.version>3.2.2</collections.version>
-    <httpclient.version>4.5.2</httpclient.version>
+    <httpclient.version>4.3.6</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
     <metrics-core.version>3.1.2</metrics-core.version>
     <guava.version>12.0.1</guava.version>
@@ -2228,10 +2228,6 @@
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop-two.version}</version>
             <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
                 <artifactId>jsp-api</artifactId>
@@ -2266,10 +2262,6 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${hadoop-two.version}</version>
             <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
                 <artifactId>jsp-api</artifactId>
@@ -2418,10 +2410,6 @@
            <artifactId>hadoop-common</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
@@ -2461,10 +2449,6 @@
            <artifactId>hadoop-minicluster</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>

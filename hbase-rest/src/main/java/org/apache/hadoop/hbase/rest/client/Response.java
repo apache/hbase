@@ -19,14 +19,11 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
-import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
+import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.mortbay.log.Log;
 
 /**
  * The HTTP result code, response headers, and body of a HTTP response.
@@ -37,7 +34,6 @@ public class Response {
   private int code;
   private Header[] headers;
   private byte[] body;
-  private HttpResponse resp;
   private InputStream stream;
 
   /**
@@ -73,15 +69,13 @@ public class Response {
    * Constructor
    * @param code the HTTP response code
    * @param headers headers the HTTP response headers
-   * @param resp the response
+   * @param body the response body, can be null
    * @param in Inputstream if the response had one.
-   * Note: this is not thread-safe
    */
-  public Response(int code, Header[] headers, HttpResponse resp, InputStream in) {
+  public Response(int code, Header[] headers, byte[] body, InputStream in) {
     this.code = code;
     this.headers = headers;
-    this.body = null;
-    this.resp = resp;
+    this.body = body;
     this.stream = in;
   }
 
@@ -135,13 +129,6 @@ public class Response {
    * @return the HTTP response body
    */
   public byte[] getBody() {
-    if (body == null) {
-      try {
-        body = Client.getResponseBody(resp);
-      } catch (IOException ioe) {
-        Log.debug("encountered ioe when obtaining body", ioe);
-      }
-    }
     return body;
   }
 

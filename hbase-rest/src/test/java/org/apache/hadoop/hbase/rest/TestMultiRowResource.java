@@ -18,8 +18,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.http.Header;
-import org.apache.http.message.BasicHeader;
+import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
@@ -97,7 +96,7 @@ public class TestMultiRowResource {
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RESTServer.REST_CSRF_ENABLED_KEY, csrfEnabled);
-    extraHdr = new BasicHeader(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
+    extraHdr = new Header(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     context = JAXBContext.newInstance(
