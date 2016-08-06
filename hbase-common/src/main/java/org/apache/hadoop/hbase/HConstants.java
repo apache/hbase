@@ -799,8 +799,21 @@ public final class HConstants {
 
   /**
    * timeout for each RPC
+   * @deprecated Use {@link #HBASE_RPC_READ_TIMEOUT_KEY} or {@link #HBASE_RPC_WRITE_TIMEOUT_KEY}
+   * instead.
    */
+  @Deprecated
   public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+
+  /**
+   * timeout for each read RPC
+   */
+  public static final String HBASE_RPC_READ_TIMEOUT_KEY = "hbase.rpc.read.timeout";
+
+  /**
+   * timeout for each write RPC
+   */
+  public static final String HBASE_RPC_WRITE_TIMEOUT_KEY = "hbase.rpc.write.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}

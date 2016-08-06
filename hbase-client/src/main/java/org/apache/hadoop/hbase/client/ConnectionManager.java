@@ -560,6 +560,7 @@ class ConnectionManager {
     private final boolean useMetaReplicas;
     private final int numTries;
     final int rpcTimeout;
+    final int writeRpcTimeout;
     private NonceGenerator nonceGenerator = null;
     private final AsyncProcess asyncProcess;
     // single tracker per connection
@@ -654,6 +655,9 @@ class ConnectionManager {
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      this.writeRpcTimeout = conf.getInt(
+        HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
       if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
         synchronized (nonceGeneratorCreateLock) {
           if (ConnectionManager.nonceGenerator == null) {
@@ -2340,7 +2344,8 @@ class ConnectionManager {
     // For tests to override.
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
-      return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory);
+      return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory,
+        writeRpcTimeout);
     }
 
     @Override

@@ -866,11 +866,35 @@ public class RemoteHTable implements Table {
     throw new UnsupportedOperationException();
   }
 
-  @Override public void setRpcTimeout(int rpcTimeout) {
+  @Override
+  @Deprecated
+  public void setRpcTimeout(int rpcTimeout) {
     throw new UnsupportedOperationException();
   }
 
-  @Override public int getRpcTimeout() {
+  @Override
+  @Deprecated
+  public int getRpcTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getReadRpcTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setReadRpcTimeout(int readRpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getWriteRpcTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setWriteRpcTimeout(int writeRpcTimeout) {
     throw new UnsupportedOperationException();
   }
 }

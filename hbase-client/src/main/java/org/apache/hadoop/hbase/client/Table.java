@@ -614,16 +614,56 @@ public interface Table extends Closeable {
   public int getOperationTimeout();
 
   /**
+   * Get timeout (millisecond) of each rpc request in this Table instance.
+   *
+   * @returns Currently configured read timeout
+   * @deprecated Use getReadRpcTimeout or getWriteRpcTimeout instead
+   */
+  @Deprecated
+  int getRpcTimeout();
+
+  /**
    * Set timeout (millisecond) of each rpc request in operations of this Table instance, will
    * override the value of hbase.rpc.timeout in configuration.
    * If a rpc request waiting too long, it will stop waiting and send a new request to retry until
    * retries exhausted or operation timeout reached.
+   * <p>
+   * NOTE: This will set both the read and write timeout settings to the provided value.
+   *
    * @param rpcTimeout the timeout of each rpc request in millisecond.
+   *
+   * @deprecated Use setReadRpcTimeout or setWriteRpcTimeout instead
    */
-  public void setRpcTimeout(int rpcTimeout);
+  @Deprecated
+  void setRpcTimeout(int rpcTimeout);
 
   /**
-   * Get timeout (millisecond) of each rpc request in this Table instance.
+   * Get timeout (millisecond) of each rpc read request in this Table instance.
    */
-  public int getRpcTimeout();
+  int getReadRpcTimeout();
+
+  /**
+   * Set timeout (millisecond) of each rpc read request in operations of this Table instance, will
+   * override the value of hbase.rpc.read.timeout in configuration.
+   * If a rpc read request waiting too long, it will stop waiting and send a new request to retry
+   * until retries exhausted or operation timeout reached.
+   *
+   * @param readRpcTimeout
+   */
+  void setReadRpcTimeout(int readRpcTimeout);
+
+  /**
+   * Get timeout (millisecond) of each rpc write request in this Table instance.
+   */
+  int getWriteRpcTimeout();
+
+  /**
+   * Set timeout (millisecond) of each rpc write request in operations of this Table instance, will
+   * override the value of hbase.rpc.write.timeout in configuration.
+   * If a rpc write request waiting too long, it will stop waiting and send a new request to retry
+   * until retries exhausted or operation timeout reached.
+   *
+   * @param writeRpcTimeout
+   */
+  void setWriteRpcTimeout(int writeRpcTimeout);
 }

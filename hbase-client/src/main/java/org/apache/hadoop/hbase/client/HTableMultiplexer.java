@@ -441,6 +441,7 @@ public class HTableMultiplexer {
     private final ScheduledExecutorService executor;
     private final int maxRetryInQueue;
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
+    private final int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
 
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
@@ -450,7 +451,10 @@ public class HTableMultiplexer {
       this.queue = new LinkedBlockingQueue<>(perRegionServerBufferQueueSize);
       RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
       RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-      this.ap = new AsyncProcess(conn, conf, pool, rpcCallerFactory, false, rpcControllerFactory);
+      this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+          conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+              HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+      this.ap = new AsyncProcess(conn, conf, pool, rpcCallerFactory, false, rpcControllerFactory, writeRpcTimeout);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
     }

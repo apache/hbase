@@ -374,11 +374,25 @@ public class HTableWrapper implements HTableInterface {
     return table.getOperationTimeout();
   }
 
-  @Override public void setRpcTimeout(int rpcTimeout) {
+  @Override
+  @Deprecated
+  public int getRpcTimeout() { return table.getRpcTimeout(); }
+
+  @Override
+  @Deprecated
+  public void setRpcTimeout(int rpcTimeout) {
     table.setRpcTimeout(rpcTimeout);
   }
 
-  @Override public int getRpcTimeout() {
-    return table.getRpcTimeout();
-  }
+  @Override
+  public void setWriteRpcTimeout(int writeRpcTimeout) { table.setWriteRpcTimeout(writeRpcTimeout); }
+
+  @Override
+  public void setReadRpcTimeout(int readRpcTimeout) { table.setReadRpcTimeout(readRpcTimeout); }
+
+  @Override
+  public int getWriteRpcTimeout() { return table.getWriteRpcTimeout(); }
+
+  @Override
+  public int getReadRpcTimeout() { return table.getReadRpcTimeout(); }
 }
