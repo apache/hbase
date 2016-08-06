@@ -308,12 +308,26 @@ public final class HTableWrapper implements Table {
   }
 
   @Override
+  @Deprecated
   public void setRpcTimeout(int rpcTimeout) {
     table.setRpcTimeout(rpcTimeout);
   }
 
   @Override
+  public void setWriteRpcTimeout(int writeRpcTimeout) { table.setWriteRpcTimeout(writeRpcTimeout); }
+
+  @Override
+  public void setReadRpcTimeout(int readRpcTimeout) { table.setReadRpcTimeout(readRpcTimeout); }
+
+  @Override
+  @Deprecated
   public int getRpcTimeout() {
     return table.getRpcTimeout();
   }
+
+  @Override
+  public int getWriteRpcTimeout() { return table.getWriteRpcTimeout(); }
+
+  @Override
+  public int getReadRpcTimeout() { return table.getReadRpcTimeout(); }
 }

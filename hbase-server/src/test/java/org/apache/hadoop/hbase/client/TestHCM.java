@@ -18,11 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -146,6 +142,16 @@ public class TestHCM {
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Get get, final List<Cell> results) throws IOException {
       Threads.sleep(SLEEP_TIME);
+    }
+  }
+
+  public static class SleepWriteCoprocessor extends BaseRegionObserver {
+    public static final int SLEEP_TIME = 5000;
+    @Override
+    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+                               final Increment increment) throws IOException {
+      Threads.sleep(SLEEP_TIME);
+      return super.preIncrement(e, increment);
     }
   }
 
@@ -351,7 +357,7 @@ public class TestHCM {
     }
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testRpcTimeout() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testRpcTimeout");
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
@@ -361,6 +367,78 @@ public class TestHCM {
       t.setRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
       t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
       t.get(new Get(FAM_NAM));
+      fail("Get should not have succeeded");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+
+    // Again, with configuration based override
+    c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, SleepCoprocessor.SLEEP_TIME / 2);
+    try (Connection conn = ConnectionFactory.createConnection(c)) {
+      try (Table t = conn.getTable(hdt.getTableName())) {
+        t.get(new Get(FAM_NAM));
+        fail("Get should not have succeeded");
+      } catch (RetriesExhaustedException e) {
+        // expected
+      }
+    }
+  }
+
+  @Test
+  public void testWriteRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testWriteRpcTimeout");
+    hdt.addCoprocessor(SleepWriteCoprocessor.class.getName());
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+
+    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
+      t.setWriteRpcTimeout(SleepWriteCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepWriteCoprocessor.SLEEP_TIME * 100);
+      Increment i = new Increment(FAM_NAM);
+      i.addColumn(FAM_NAM, FAM_NAM, 1);
+      t.increment(i);
+      fail("Write should not have succeeded");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+
+    // Again, with configuration based override
+    c.setInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, SleepWriteCoprocessor.SLEEP_TIME / 2);
+    try (Connection conn = ConnectionFactory.createConnection(c)) {
+      try (Table t = conn.getTable(hdt.getTableName())) {
+        Increment i = new Increment(FAM_NAM);
+        i.addColumn(FAM_NAM, FAM_NAM, 1);
+        t.increment(i);
+        fail("Write should not have succeeded");
+      } catch (RetriesExhaustedException e) {
+        // expected
+      }
+    }
+  }
+
+  @Test
+  public void testReadRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testReadRpcTimeout");
+    hdt.addCoprocessor(SleepCoprocessor.class.getName());
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+
+    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
+      t.setReadRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
+      t.get(new Get(FAM_NAM));
+      fail("Get should not have succeeded");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+
+    // Again, with configuration based override
+    c.setInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY, SleepCoprocessor.SLEEP_TIME / 2);
+    try (Connection conn = ConnectionFactory.createConnection(c)) {
+      try (Table t = conn.getTable(hdt.getTableName())) {
+        t.get(new Get(FAM_NAM));
+        fail("Get should not have succeeded");
+      } catch (RetriesExhaustedException e) {
+        // expected
+      }
     }
   }
 

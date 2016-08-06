@@ -112,7 +112,8 @@ public class HTable implements Table {
   protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi & Scan
   private int operationTimeout; // global timeout for each blocking method with retrying rpc
-  private int rpcTimeout; // timeout for each rpc request
+  private int readRpcTimeout; // timeout for each read rpc request
+  private int writeRpcTimeout; // timeout for each write rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
@@ -212,8 +213,12 @@ public class HTable implements Table {
 
     this.operationTimeout = tableName.isSystemTable() ?
         connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
-    this.rpcTimeout = configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.readRpcTimeout = configuration.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
+        configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.writeRpcTimeout = configuration.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
     if (this.rpcCallerFactory == null) {
@@ -257,7 +262,7 @@ public class HTable implements Table {
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
-      rpcControllerFactory, operationTimeout, rpcTimeout);
+      rpcControllerFactory, operationTimeout, readRpcTimeout);
     if (htd != null) {
       return new UnmodifyableHTableDescriptor(htd);
     }
@@ -430,7 +435,7 @@ public class HTable implements Table {
           }
         }
       };
-      return rpcCallerFactory.<Result>newCaller(rpcTimeout).callWithRetries(callable,
+      return rpcCallerFactory.<Result>newCaller(readRpcTimeout).callWithRetries(callable,
           this.operationTimeout);
     }
 
@@ -528,7 +533,7 @@ public class HTable implements Table {
         }
       }
     };
-    rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+    rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -654,7 +659,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Result> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -686,7 +691,7 @@ public class HTable implements Table {
         }
       }
     };
-    return rpcCallerFactory.<Result> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Result> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -742,7 +747,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Long> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Long> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -772,7 +777,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -803,7 +808,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -833,7 +838,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -864,7 +869,7 @@ public class HTable implements Table {
           }
         }
       };
-    return rpcCallerFactory.<Boolean> newCaller(rpcTimeout).callWithRetries(callable,
+    return rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
   }
 
@@ -1196,13 +1201,34 @@ public class HTable implements Table {
   }
 
   @Override
+  @Deprecated
   public int getRpcTimeout() {
-    return rpcTimeout;
+    return readRpcTimeout;
   }
 
   @Override
+  @Deprecated
   public void setRpcTimeout(int rpcTimeout) {
-    this.rpcTimeout = rpcTimeout;
+    this.readRpcTimeout = rpcTimeout;
+    this.writeRpcTimeout = rpcTimeout;
+  }
+
+  @Override
+  public int getWriteRpcTimeout() {
+    return writeRpcTimeout;
+  }
+
+  @Override
+  public void setWriteRpcTimeout(int writeRpcTimeout) {
+    this.writeRpcTimeout = writeRpcTimeout;
+  }
+
+  @Override
+  public int getReadRpcTimeout() { return readRpcTimeout; }
+
+  @Override
+  public void setReadRpcTimeout(int readRpcTimeout) {
+    this.readRpcTimeout = readRpcTimeout;
   }
 
   @Override
@@ -1282,7 +1308,7 @@ public class HTable implements Table {
     AsyncProcess asyncProcess =
         new AsyncProcess(connection, configuration, pool,
             RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
-            true, RpcControllerFactory.instantiate(configuration));
+            true, RpcControllerFactory.instantiate(configuration), readRpcTimeout);
 
     AsyncRequestFuture future = asyncProcess.submitAll(tableName, execs,
         new Callback<ClientProtos.CoprocessorServiceResult>() {
