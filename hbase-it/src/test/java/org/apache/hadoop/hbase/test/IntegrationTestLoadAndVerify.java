@@ -549,9 +549,11 @@ public void cleanUpCluster() throws Exception {
     getTestingUtil(getConf()).deleteTable(htd.getTableName());
   }
 
-  public void usage() {
-    System.err.println(this.getClass().getSimpleName()
-      + " [-Doptions] <load|verify|loadAndVerify|search>");
+  @Override
+  public void printUsage() {
+    printUsage(this.getClass().getSimpleName() + " <options>"
+        + " [-Doptions] <load|verify|loadAndVerify|search>", "Options", "");
+    System.err.println("");
     System.err.println("  Loads a table with row dependencies and verifies the dependency chains");
     System.err.println("Options");
     System.err.println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
@@ -571,7 +573,7 @@ public void cleanUpCluster() throws Exception {
 
     String[] args = cmd.getArgs();
     if (args == null || args.length < 1) {
-      usage();
+      printUsage();
       throw new RuntimeException("Incorrect Number of args.");
     }
     toRun = args[0];
@@ -608,7 +610,7 @@ public void cleanUpCluster() throws Exception {
       }
     } else {
       System.err.println("Invalid argument " + toRun);
-      usage();
+      printUsage();
       return 1;
     }
 

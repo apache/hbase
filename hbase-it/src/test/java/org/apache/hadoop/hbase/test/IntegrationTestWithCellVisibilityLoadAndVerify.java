@@ -346,7 +346,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   }
 
   @Override
-  public void usage() {
+  public void printUsage() {
     System.err.println(this.getClass().getSimpleName() + " -u usera,userb [-Doptions]");
     System.err.println("  Loads a table with cell visibilities and verifies with Authorizations");
     System.err.println("Options");
@@ -386,7 +386,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   protected void processOptions(CommandLine cmd) {
     List args = cmd.getArgList();
     if (args.size() > 0) {
-      usage();
+      printUsage();
       throw new RuntimeException("No args expected.");
     }
     // We always want loadAndVerify action
