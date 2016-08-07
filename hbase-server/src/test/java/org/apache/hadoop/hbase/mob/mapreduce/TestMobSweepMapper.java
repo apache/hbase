@@ -49,13 +49,11 @@ import org.mockito.stubbing.Answer;
 
 @Category(SmallTests.class)
 public class TestMobSweepMapper {
-
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass
@@ -93,7 +91,7 @@ public class TestMobSweepMapper {
     lock.acquire();
     try {
       Mapper<ImmutableBytesWritable, Result, Text, KeyValue>.Context ctx =
-        mock(Mapper.Context.class);
+          mock(Mapper.Context.class);
       when(ctx.getConfiguration()).thenReturn(configuration);
       SweepMapper map = new SweepMapper();
       doAnswer(new Answer<Void>() {

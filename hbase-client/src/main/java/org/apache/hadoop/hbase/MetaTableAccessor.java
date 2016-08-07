@@ -460,12 +460,9 @@ public class MetaTableAccessor {
    */
   public static List<HRegionInfo> getTableRegions(Connection connection,
       TableName tableName, final boolean excludeOfflinedSplitParents)
-      throws IOException {
-    List<Pair<HRegionInfo, ServerName>> result;
-
-    result = getTableRegionsAndLocations(connection, tableName,
-      excludeOfflinedSplitParents);
-
+  throws IOException {
+    List<Pair<HRegionInfo, ServerName>> result =
+        getTableRegionsAndLocations(connection, tableName, excludeOfflinedSplitParents);
     return getListOfHRegionInfos(result);
   }
 

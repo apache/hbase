@@ -188,7 +188,6 @@ public class TableStateManager {
     return MetaTableAccessor.getTableState(master.getConnection(), tableName);
   }
 
-  @SuppressWarnings("deprecation")
   public void start() throws IOException {
     TableDescriptors tableDescriptors = master.getTableDescriptors();
     Connection connection = master.getConnection();

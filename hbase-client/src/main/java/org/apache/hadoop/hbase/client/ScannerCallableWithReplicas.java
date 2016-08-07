@@ -267,7 +267,6 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   /**
    * When a scanner switches in the middle of scanning (the 'next' call fails
    * for example), the upper layer {@link ClientScanner} needs to know
-   * @return
    */
   public boolean switchedToADifferentReplica() {
     return replicaSwitched.get();
@@ -398,8 +397,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     public void cancel() {
       cancelled = true;
       caller.cancel();
-      if (callable.getController() != null) {
-        callable.getController().startCancel();
+      if (callable.getRpcController() != null) {
+        callable.getRpcController().startCancel();
       }
       someRPCcancelled = true;
     }

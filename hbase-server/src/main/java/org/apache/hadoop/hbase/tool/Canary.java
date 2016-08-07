@@ -1145,8 +1145,11 @@ public final class Canary implements Tool {
     }
     List<RegionTask> tasks = new ArrayList<RegionTask>();
     try {
-      for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {        
-        tasks.add(new RegionTask(admin.getConnection(), region, sink, taskType, rawScanEnabled));
+      List<HRegionInfo> hris = admin.getTableRegions(tableDesc.getTableName());
+      if (hris != null) {
+        for (HRegionInfo region : hris) {
+          tasks.add(new RegionTask(admin.getConnection(), region, sink, taskType, rawScanEnabled));
+        }
       }
     } finally {
       table.close();

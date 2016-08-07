@@ -47,6 +47,7 @@ public class RpcControllerFactory {
   }
 
   public PayloadCarryingRpcController newController() {
+    // TODO: Set HConstants default rpc timeout here rather than nothing?
     return new PayloadCarryingRpcController();
   }
 

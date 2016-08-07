@@ -573,11 +573,11 @@ public class TestReplicasClient {
         Assert.assertTrue(((Result)r).isStale());
         Assert.assertTrue(((Result)r).getExists());
       }
-      Set<PayloadCarryingServerCallable> set =
+      Set<CancellableRegionServerCallable> set =
           ((AsyncRequestFutureImpl<?>)reqs).getCallsInProgress();
       // verify we did cancel unneeded calls
       Assert.assertTrue(!set.isEmpty());
-      for (PayloadCarryingServerCallable m : set) {
+      for (CancellableRegionServerCallable m : set) {
         Assert.assertTrue(m.isCancelled());
       }
     } finally {

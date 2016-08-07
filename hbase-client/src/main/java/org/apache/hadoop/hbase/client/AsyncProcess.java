@@ -587,7 +587,7 @@ class AsyncProcess {
    */
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
-      PayloadCarryingServerCallable callable, int curTimeout) {
+      CancellableRegionServerCallable callable, int curTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -739,11 +739,11 @@ class AsyncProcess {
       private final MultiAction<Row> multiAction;
       private final int numAttempt;
       private final ServerName server;
-      private final Set<PayloadCarryingServerCallable> callsInProgress;
+      private final Set<CancellableRegionServerCallable> callsInProgress;
 
       private SingleServerRequestRunnable(
           MultiAction<Row> multiAction, int numAttempt, ServerName server,
-          Set<PayloadCarryingServerCallable> callsInProgress) {
+          Set<CancellableRegionServerCallable> callsInProgress) {
         this.multiAction = multiAction;
         this.numAttempt = numAttempt;
         this.server = server;
@@ -753,7 +753,7 @@ class AsyncProcess {
       @Override
       public void run() {
         MultiResponse res;
-        PayloadCarryingServerCallable callable = currentCallable;
+        CancellableRegionServerCallable callable = currentCallable;
         try {
           // setup the callable based on the actions, if we don't have one already from the request
           if (callable == null) {
@@ -802,7 +802,7 @@ class AsyncProcess {
     private final BatchErrors errors;
     private final ConnectionImplementation.ServerErrorTracker errorsByServer;
     private final ExecutorService pool;
-    private final Set<PayloadCarryingServerCallable> callsInProgress;
+    private final Set<CancellableRegionServerCallable> callsInProgress;
 
 
     private final TableName tableName;
@@ -829,12 +829,12 @@ class AsyncProcess {
     private final int[] replicaGetIndices;
     private final boolean hasAnyReplicaGets;
     private final long nonceGroup;
-    private PayloadCarryingServerCallable currentCallable;
+    private CancellableRegionServerCallable currentCallable;
     private int currentCallTotalTimeout;
 
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
         ExecutorService pool, boolean needResults, Object[] results,
-        Batch.Callback<CResult> callback, PayloadCarryingServerCallable callable, int timeout) {
+        Batch.Callback<CResult> callback, CancellableRegionServerCallable callable, int timeout) {
       this.pool = pool;
       this.callback = callback;
       this.nonceGroup = nonceGroup;
@@ -899,7 +899,7 @@ class AsyncProcess {
       }
       this.callsInProgress = !hasAnyReplicaGets ? null :
           Collections.newSetFromMap(
-              new ConcurrentHashMap<PayloadCarryingServerCallable, Boolean>());
+              new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
 
       this.errorsByServer = createServerErrorTracker();
       this.errors = (globalErrors != null) ? globalErrors : new BatchErrors();
@@ -907,7 +907,7 @@ class AsyncProcess {
       this.currentCallTotalTimeout = timeout;
     }
 
-    public Set<PayloadCarryingServerCallable> getCallsInProgress() {
+    public Set<CancellableRegionServerCallable> getCallsInProgress() {
       return callsInProgress;
     }
 
@@ -1662,7 +1662,7 @@ class AsyncProcess {
         throw new InterruptedIOException(iex.getMessage());
       } finally {
         if (callsInProgress != null) {
-          for (PayloadCarryingServerCallable clb : callsInProgress) {
+          for (CancellableRegionServerCallable clb : callsInProgress) {
             clb.cancel();
           }
         }
@@ -1743,7 +1743,7 @@ class AsyncProcess {
   protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults,
-      PayloadCarryingServerCallable callable, int curTimeout) {
+      CancellableRegionServerCallable callable, int curTimeout) {
     return new AsyncRequestFutureImpl<CResult>(
         tableName, actions, nonceGroup, getPool(pool), needResults,
         results, callback, callable, curTimeout);
@@ -1771,7 +1771,7 @@ class AsyncProcess {
    * Create a caller. Isolated to be easily overridden in the tests.
    */
   @VisibleForTesting
-  protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable) {
+  protected RpcRetryingCaller<MultiResponse> createCaller(CancellableRegionServerCallable callable) {
     return rpcCallerFactory.<MultiResponse> newCaller();
   }
 
