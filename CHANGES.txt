@@ -1,5 +1,74 @@
 HBase Change Log
 
+Release 0.98.21 - 8/15/2016
+
+** Sub-task
+    * [HBASE-15115] - Fix findbugs complaints in hbase-client
+    * [HBASE-16194] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
+    * [HBASE-16195] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
+    * [HBASE-16321] - Ensure findbugs jsr305 jar isn't present
+    * [HBASE-16352] - Port HBASE-15645 (hbase.rpc.timeout is not used in operations of HTable) to 0.98
+
+** Bug
+    * [HBASE-13594] - MultiRowRangeFilter shouldn't call HBaseZeroCopyByteString.wrap() directly
+    * [HBASE-13704] - Hbase throws OutOfOrderScannerNextException when MultiRowRangeFilter is used
+    * [HBASE-14206] - MultiRowRangeFilter returns records whose rowKeys are out of allowed ranges
+    * [HBASE-15746] - Remove extra RegionCoprocessor preClose() in RSRpcServices#closeRegion
+    * [HBASE-15783] - AccessControlConstants#OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST not used any more.
+    * [HBASE-15946] - Eliminate possible security concerns in RS web UI's store file metrics
+    * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-15976] - RegionServerMetricsWrapperRunnable will be failure  when disable blockcache.
+    * [HBASE-15990] - The priority value of subsequent coprocessors in the Coprocessor.Priority.SYSTEM list are not incremented by one
+    * [HBASE-16007] - Job's Configuration should be passed to TableMapReduceUtil#addDependencyJars() in WALPlayer
+    * [HBASE-16012] - Major compaction can't work due to obsolete scanner read point in RegionServer
+    * [HBASE-16032] - Possible memory leak in StoreScanner
+    * [HBASE-16033] - Add more details in logging of responseTooSlow/TooLarge
+    * [HBASE-16045] - endtime argument for VerifyReplication was incorrectly specified in usage
+    * [HBASE-16055] - PutSortReducer loses any Visibility/acl attribute set on the Puts 
+    * [HBASE-16061] - Allow logging to a buffered console
+    * [HBASE-16070] - Mapreduce Serialization classes do not have Interface audience
+    * [HBASE-16090] - ResultScanner is not closed in SyncTable#finishRemainingHashRanges()
+    * [HBASE-16091] - Canary takes lot more time when there are delete markers in the table
+    * [HBASE-16093] - Splits failed before creating daughter regions leave meta inconsistent
+    * [HBASE-16095] - Add priority to TableDescriptor and priority region open thread pool
+    * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
+    * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
+    * [HBASE-16144] - Replication queue's lock will live forever if RS acquiring the lock has died prematurely
+    * [HBASE-16160] - Get the UnsupportedOperationException when using delegation token with encryption
+    * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
+    * [HBASE-16207] - can't restore snapshot without "Admin" permission
+    * [HBASE-16227] - [Shell] Column value formatter not working in scans
+    * [HBASE-16244] - LocalHBaseCluster start timeout should be configurable
+    * [HBASE-16272] - Overflow in ServerName's compareTo method
+    * [HBASE-16281] - TestMasterReplication is flaky
+    * [HBASE-16284] - Unauthorized client can shutdown the cluster
+    * [HBASE-16288] - HFile intermediate block level indexes might recurse forever creating multi TB files
+    * [HBASE-16296] - Reverse scan performance degrades when using filter lists
+    * [HBASE-16300] - LruBlockCache.CACHE_FIXED_OVERHEAD should calculate LruBlockCache size correctly
+    * [HBASE-16319] - Fix TestCacheOnWrite after HBASE-16288
+    * [HBASE-16350] - Undo server abort from HBASE-14968
+
+** Improvement
+    * [HBASE-11144] - Filter to support scanning multiple row key ranges
+    * [HBASE-14548] - Expand how table coprocessor jar and dependency path can be specified
+    * [HBASE-15119] - Include git SHA in check_compatibility reports
+    * [HBASE-15870] - Specify columns in REST multi gets
+    * [HBASE-16048] - Tag InternalScanner with LimitedPrivate(HBaseInterfaceAudience.COPROC) 
+    * [HBASE-16052] - Improve HBaseFsck Scalability
+    * [HBASE-16085] - Add on metric for failed compactions
+    * [HBASE-16108] - RowCounter should support multiple key ranges
+    * [HBASE-16124] - Make check_compatibility.sh less verbose when building HBase
+    * [HBASE-16220] - Demote log level for "HRegionFileSystem - No StoreFiles for" messages to TRACE
+    * [HBASE-16241] - Allow specification of annotations to use when running check_compatibility.sh
+    * [HBASE-16275] - Change ServerManager#onlineServers from ConcurrentHashMap to ConcurrentSkipListMap
+
+** Task
+    * [HBASE-15729] - Remove old JDiff wrapper scripts in dev-support
+    * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
+    * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
+    * [HBASE-16175] - Backport HBASE-15650 (Remove TimeRangeTracker as point of contention when many threads reading a StoreFile) to 0.98
+
+
 Release 0.98.20 - 6/13/2016
 
 ** Sub-task
