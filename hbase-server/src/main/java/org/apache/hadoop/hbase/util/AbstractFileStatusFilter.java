@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-
 /**
  * Typical base class for file status filter.  Works more efficiently when
  * filtering file statuses, otherwise implementation will need to lookup filestatus
@@ -45,7 +43,7 @@ public abstract class AbstractFileStatusFilter implements PathFilter, FileStatus
    * @param isDir   An optional boolean indicating whether the path is a directory or not
    * @return        true if the path is accepted, false if the path is filtered out
    */
-  protected abstract boolean accept(Path p, @CheckForNull Boolean isDir);
+  protected abstract boolean accept(Path p, Boolean isDir);
 
   @Override
   public boolean accept(FileStatus f) {
@@ -57,11 +55,11 @@ public abstract class AbstractFileStatusFilter implements PathFilter, FileStatus
     return accept(p, null);
   }
 
-  protected boolean isFile(FileSystem fs, @CheckForNull Boolean isDir, Path p) throws IOException {
+  protected boolean isFile(FileSystem fs, Boolean isDir, Path p) throws IOException {
     return !isDirectory(fs, isDir, p);
   }
 
-  protected boolean isDirectory(FileSystem fs, @CheckForNull Boolean isDir, Path p) throws IOException {
+  protected boolean isDirectory(FileSystem fs, Boolean isDir, Path p) throws IOException {
     return isDir != null ? isDir : fs.isDirectory(p);
   }
 }

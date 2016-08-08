@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -98,7 +97,6 @@ public abstract class BaseDecoder implements Codec.Decoder {
    * thrown if EOF is reached prematurely. Does not return null.
    * @throws IOException
    */
-  @NonNull
   protected abstract Cell parseCell() throws IOException;
 
   @Override

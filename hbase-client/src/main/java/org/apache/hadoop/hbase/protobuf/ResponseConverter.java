@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -348,7 +347,6 @@ public final class ResponseConverter {
    * @return exception if any, or null; Will return DoNotRetryIOException for string represented
    * failure causes in controller.
    */
-  @Nullable
   public static IOException getControllerException(RpcController controller) throws IOException {
     if (controller != null && controller.failed()) {
       if (controller instanceof ServerRpcController) {

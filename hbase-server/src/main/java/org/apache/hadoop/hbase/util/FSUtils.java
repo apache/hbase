@@ -93,8 +93,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-
 /**
  * Utility methods for interacting with the underlying file system.
  */
@@ -1173,7 +1171,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       try {
         return isFile(fs, isDir, p);
       } catch (IOException e) {
@@ -1205,7 +1203,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       if (!isValidName(p.getName())) {
         return false;
       }
@@ -1364,7 +1362,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       if (!regionDirPattern.matcher(p.getName()).matches()) {
         return false;
       }
@@ -1413,7 +1411,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       try {
         // throws IAE if invalid
         HColumnDescriptor.isLegalFamilyName(Bytes.toBytes(p.getName()));
@@ -1475,7 +1473,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       if (!StoreFileInfo.isHFile(p)) {
         return false;
       }
@@ -1499,7 +1497,7 @@ public abstract class FSUtils {
     }
 
     @Override
-    protected boolean accept(Path p, @CheckForNull Boolean isDir) {
+    protected boolean accept(Path p, Boolean isDir) {
       if (!StoreFileInfo.isReference(p)) {
         return false;
       }

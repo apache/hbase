@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimaps;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -76,7 +75,6 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   protected Map<String, Collection<Scan>> getSnapshotScanMapping(final List<Scan> scans) {
     return Multimaps.index(scans, new Function<Scan, String>() {
-      @Nullable
       @Override
       public String apply(Scan input) {
         return snapshotNameForTable(
