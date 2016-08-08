@@ -804,7 +804,7 @@ public class HRegionServer extends HasThread implements
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
     if (this.initLatch != null) {
-      this.initLatch.await(50, TimeUnit.SECONDS);
+      this.initLatch.await(20, TimeUnit.SECONDS);
     }
     // Retrieve clusterId
     // Since cluster status is now up
