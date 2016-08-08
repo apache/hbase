@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -448,6 +449,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Some unit tests don't need a cluster, so no zookeeper at all
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+      setInitLatch(new CountDownLatch(1));
       activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
       int infoPort = putUpJettyServer();
       startActiveMasterManager(infoPort);
@@ -695,6 +697,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
+    this.initLatch.countDown();
     this.serverManager = createServerManager(this, this);
 
     setupClusterConnection();
