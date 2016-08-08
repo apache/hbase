@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.ws.rs.core.MediaType;
@@ -458,6 +459,56 @@ public class TestTableScan {
     CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
     int count = TestScannerResource.countCellSet(model);
     assertEquals(0, count);
+  }
+
+  @Test
+  public void testReversed() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder.append("/*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_START_ROW + "=aaa");
+    builder.append("&");
+    builder.append(Constants.SCAN_END_ROW + "=aay");
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(24, count);
+    List<RowModel> rowModels = model.getRows().subList(1, count);
+
+    //reversed
+    builder = new StringBuilder();
+    builder.append("/*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_START_ROW + "=aay");
+    builder.append("&");
+    builder.append(Constants.SCAN_END_ROW + "=aaa");
+    builder.append("&");
+    builder.append(Constants.SCAN_REVERSED + "=true");
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    model = (CellSetModel) ush.unmarshal(response.getStream());
+    count = TestScannerResource.countCellSet(model);
+    assertEquals(24, count);
+    List<RowModel> reversedRowModels = model.getRows().subList(1, count);
+
+    Collections.reverse(reversedRowModels);
+    assertEquals(rowModels.size(), reversedRowModels.size());
+    for (int i = 0; i < rowModels.size(); i++) {
+      RowModel rowModel = rowModels.get(i);
+      RowModel reversedRowModel = reversedRowModels.get(i);
+
+      assertEquals(new String(rowModel.getKey(), "UTF-8"),
+          new String(reversedRowModel.getKey(), "UTF-8"));
+      assertEquals(new String(rowModel.getCells().get(0).getValue(), "UTF-8"),
+          new String(reversedRowModel.getCells().get(0).getValue(), "UTF-8"));
+    }
   }
 
   /**

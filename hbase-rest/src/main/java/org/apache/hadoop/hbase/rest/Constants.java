@@ -68,6 +68,7 @@ public interface Constants {
   String SCAN_BATCH_SIZE = "batchsize";
   String SCAN_LIMIT = "limit";
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
+  String SCAN_REVERSED = "reversed";
 
   String ROW_KEYS_PARAM_NAME = "row";
   /** If this query parameter is present when processing row or scanner resources,
