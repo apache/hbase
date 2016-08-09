@@ -620,12 +620,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean canProceed = startNonceOperation(mutation, nonceGroup);
       boolean success = false;
       try {
+        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
         if (canProceed) {
-          r = region.append(append, nonceGroup, mutation.getNonce());
+          r = region.append(append, nonceGroup, nonce);
         } else {
           // convert duplicate append to get
           List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-            nonceGroup, mutation.getNonce());
+            nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -667,12 +668,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean canProceed = startNonceOperation(mutation, nonceGroup);
       boolean success = false;
       try {
+        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
         if (canProceed) {
-          r = region.increment(increment, nonceGroup, mutation.getNonce());
+          r = region.increment(increment, nonceGroup, nonce);
         } else {
           // convert duplicate increment to get
           List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-            mutation.getNonce());
+            nonce);
           r = Result.create(results);
         }
         success = true;
