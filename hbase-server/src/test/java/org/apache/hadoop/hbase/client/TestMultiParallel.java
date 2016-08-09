@@ -516,14 +516,14 @@ public class TestMultiParallel {
       table.increment(inc);
       inc = new Increment(ONE_ROW);
       inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
-      try {
-        table.increment(inc);
-        fail("Should have thrown an exception");
-      } catch (OperationConflictException ex) {
-      }
+
+      // duplicate increment
+      Result result = table.increment(inc);
+      validateResult(result, QUALIFIER, Bytes.toBytes(1L));
+
       Get get = new Get(ONE_ROW);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      Result result = table.get(get);
+      result = table.get(get);
       validateResult(result, QUALIFIER, Bytes.toBytes(1L));
 
       // Now run a bunch of requests in parallel, exactly half should succeed.
@@ -551,7 +551,6 @@ public class TestMultiParallel {
             }
             try {
               table.increment(inc);
-            } catch (OperationConflictException ex) { // Some threads are expected to fail.
             } catch (IOException ioEx) {
               fail("Not expected");
             }

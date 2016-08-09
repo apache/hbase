@@ -2623,8 +2623,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public RegionScanner getScanner(Scan scan,
-      List<KeyValueScanner> additionalScanners) throws IOException {
+  public RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
+      throws IOException {
+    return getScanner(scan, additionalScanners, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  private RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
+      long nonceGroup, long nonce) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
       // Verify families are all valid
@@ -2638,7 +2643,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           checkFamily(family);
         }
       }
-      return instantiateRegionScanner(scan, additionalScanners);
+      return instantiateRegionScanner(scan, additionalScanners, nonceGroup, nonce);
     } finally {
       closeRegionOperation(Operation.SCAN);
     }
@@ -2646,6 +2651,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
+    return instantiateRegionScanner(scan, additionalScanners, HConstants.NO_NONCE,
+      HConstants.NO_NONCE);
+  }
+
+  protected RegionScanner instantiateRegionScanner(Scan scan,
+      List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
     if (scan.isReversed()) {
       if (scan.getFilter() != null) {
         scan.getFilter().setReversed(true);
@@ -5647,8 +5658,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return region.getRegionInfo();
     }
 
-    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
-        throws IOException {
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
+        long nonceGroup, long nonce) throws IOException {
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {
@@ -5677,10 +5688,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
       synchronized(scannerReadPoints) {
-        this.readPt = getReadpoint(isolationLevel);
+        if (nonce == HConstants.NO_NONCE || rsServices == null
+            || rsServices.getNonceManager() == null) {
+          this.readPt = getReadpoint(isolationLevel);
+        } else {
+          this.readPt = rsServices.getNonceManager().getMvccFromOperationContext(nonceGroup, nonce);
+        }
         scannerReadPoints.put(this, this.readPt);
       }
 
+      initializeScanners(scan, additionalScanners);
+    }
+
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
+        throws IOException {
+      this(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    }
+
+    protected void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
+        throws IOException {
       // Here we separate all scanners into two lists - scanner that provide data required
       // by the filter to operate (scanners list) and all others (joinedScanners list).
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(scan.getFamilyMap().size());
@@ -6963,25 +6989,31 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public List<Cell> get(Get get, boolean withCoprocessor) throws IOException {
+    return get(get, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
 
+  @Override
+  public List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
+      throws IOException {
     List<Cell> results = new ArrayList<Cell>();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
-       if (coprocessorHost.preGet(get, results)) {
-         return results;
-       }
+      if (coprocessorHost.preGet(get, results)) {
+        return results;
+      }
     }
-    long before =  EnvironmentEdgeManager.currentTime();
+    long before = EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
 
     RegionScanner scanner = null;
     try {
-      scanner = getScanner(scan);
+      scanner = getScanner(scan, null, nonceGroup, nonce);
       scanner.next(results);
     } finally {
-      if (scanner != null)
+      if (scanner != null) {
         scanner.close();
+      }
     }
 
     // post-get CP hook
@@ -7455,7 +7487,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           // Do a get on the write entry... this will block until sequenceid is assigned... w/o it,
           // TestAtomicOperation fails.
-          walKey.getWriteEntry();
+          WriteEntry writeEntry = walKey.getWriteEntry();
+          // save mvcc to this nonce's OperationContext
+          if (rsServices != null && rsServices.getNonceManager() != null) {
+            rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
+              writeEntry.getWriteNumber());
+          }
 
           // Actually write to Memstore now
           if (!tempMemstore.isEmpty()) {
@@ -7681,7 +7718,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             walKey = this.appendEmptyEdit(this.wal);
           }
           // Get WriteEntry. Will wait on assign of the sequence id.
-          walKey.getWriteEntry();
+          WriteEntry writeEntry = walKey.getWriteEntry();
+          // save mvcc to this nonce's OperationContext
+          if (rsServices != null && rsServices.getNonceManager() != null) {
+            rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
+              writeEntry.getWriteNumber());
+          }
 
           // Now write to memstore, a family at a time.
           for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {

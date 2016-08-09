@@ -852,6 +852,62 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a protocol buffer Mutate to a Get.
+   * @param proto the protocol buffer Mutate to convert.
+   * @param cellScanner
+   * @return the converted client get.
+   * @throws IOException
+   */
+  public static Get toGet(final MutationProto proto, final CellScanner cellScanner)
+      throws IOException {
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.INCREMENT || type == MutationType.APPEND : type.name();
+    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
+    Get get = null;
+    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: "
+            + TextFormat.shortDebugString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
+              + " no cell returned: " + TextFormat.shortDebugString(proto));
+        }
+        Cell cell = cellScanner.current();
+        if (get == null) {
+          get = new Get(Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+        }
+        get.addColumn(Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(),
+          cell.getFamilyLength()), Bytes.copy(cell.getQualifierArray(), cell.getQualifierOffset(),
+          cell.getQualifierLength()));
+      }
+    } else {
+      get = new Get(row);
+      for (ColumnValue column : proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv : column.getQualifierValueList()) {
+          byte[] qualifier = qv.getQualifier().toByteArray();
+          if (!qv.hasValue()) {
+            throw new DoNotRetryIOException("Missing required field: qualifier value");
+          }
+          get.addColumn(family, qualifier);
+        }
+      }
+    }
+    if (proto.hasTimeRange()) {
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
+    }
+    for (NameBytesPair attribute : proto.getAttributeList()) {
+      get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
+    }
+    return get;
+  }
+
+  /**
    * Convert a client Scan to a protocol buffer Scan
    *
    * @param scan the client Scan to convert

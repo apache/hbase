@@ -62,6 +62,8 @@ public class ServerNonceManager {
     private static final long WAITING_BIT = 4;
     private static final long ALL_FLAG_BITS = WAITING_BIT | STATE_BITS;
 
+    private long mvcc;
+
     @Override
     public String toString() {
       return "[state " + getState() + ", hasWait " + hasWait() + ", activity "
@@ -100,6 +102,14 @@ public class ServerNonceManager {
 
     private long getActivityTime() {
       return this.data >>> 3;
+    }
+
+    public void setMvcc(long mvcc) {
+      this.mvcc = mvcc;
+    }
+
+    public long getMvcc() {
+      return this.mvcc;
     }
   }
 
@@ -189,6 +199,39 @@ public class ServerNonceManager {
         newResult.notifyAll();
       }
     }
+  }
+
+  /**
+   * Store the write point in OperationContext when the operation succeed.
+   * @param group Nonce group.
+   * @param nonce Nonce.
+   * @param mvcc Write point of the succeed operation.
+   */
+  public void addMvccToOperationContext(long group, long nonce, long mvcc) {
+    if (nonce == HConstants.NO_NONCE) {
+      return;
+    }
+    NonceKey nk = new NonceKey(group, nonce);
+    OperationContext result = nonces.get(nk);
+    assert result != null;
+    synchronized (result) {
+      result.setMvcc(mvcc);
+    }
+  }
+
+  /**
+   * Return the write point of the previous succeed operation.
+   * @param group Nonce group.
+   * @param nonce Nonce.
+   * @return write point of the previous succeed operation.
+   */
+  public long getMvccFromOperationContext(long group, long nonce) {
+    if (nonce == HConstants.NO_NONCE) {
+      return Long.MAX_VALUE;
+    }
+    NonceKey nk = new NonceKey(group, nonce);
+    OperationContext result = nonces.get(nk);
+    return result == null ? Long.MAX_VALUE : result.getMvcc();
   }
 
   /**
