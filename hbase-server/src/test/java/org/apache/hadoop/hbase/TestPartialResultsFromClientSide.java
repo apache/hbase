@@ -99,7 +99,7 @@ public class TestPartialResultsFromClientSide {
   // getCellHeapSize().
   private static long CELL_HEAP_SIZE = -1;
 
-  private static long timeout = 2000;
+  private static long timeout = 10000;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -1054,7 +1054,7 @@ public class TestPartialResultsFromClientSide {
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
     scanner.next();
-    Thread.sleep(timeout * 3);
+    Thread.sleep(timeout * 2);
     int count = 1;
     while (scanner.next() != null) {
       count++;
