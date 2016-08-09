@@ -380,6 +380,17 @@ public interface Region extends ConfigurationObserver {
   List<Cell> get(Get get, boolean withCoprocessor) throws IOException;
 
   /**
+   * Do a get for duplicate non-idempotent operation.
+   * @param get query parameters.
+   * @param withCoprocessor
+   * @param nonceGroup Nonce group.
+   * @param nonce Nonce.
+   * @return list of cells resulting from the operation
+   * @throws IOException
+   */
+  List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce) throws IOException;
+
+  /**
    * Return all the data for the row that matches <i>row</i> exactly,
    * or the one that immediately preceeds it, at or immediately before
    * <i>ts</i>.

@@ -492,7 +492,7 @@ public class TestScannerHeartbeatMessages {
     // Instantiate the custom heartbeat region scanners
     @Override
     protected RegionScanner instantiateRegionScanner(Scan scan,
-        List<KeyValueScanner> additionalScanners) throws IOException {
+        List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
       if (scan.isReversed()) {
         if (scan.getFilter() != null) {
           scan.getFilter().setReversed(true);
