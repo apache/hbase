@@ -31,7 +31,10 @@ BAD_RUN_STRINGS = [
     "The forked VM terminated without properly saying goodbye",  # JVM crashed.
 ]
 
-# Returns [[all tests], [failed tests], [timeout tests], [hanging tests]]
+# Returns [[all tests], [failed tests], [timeout tests], [hanging tests]] if successfully gets
+# the build information.
+# If there is error getting console text or if there are blacklisted strings in console text,
+# then returns None.
 # Definitions:
 # All tests: All testcases which were run.
 # Hanging test: A testcase which started but never finished.
@@ -44,7 +47,7 @@ def get_bad_tests(console_url):
     if response.status_code != 200:
         print "Error getting consoleText. Response = {} {}".format(
             response.status_code, response.reason)
-        return {}
+        return
 
     all_tests = set()
     hanging_tests = set()
