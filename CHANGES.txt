@@ -33,7 +33,6 @@ Release 0.98.21 - 8/15/2016
     * [HBASE-16095] - Add priority to TableDescriptor and priority region open thread pool
     * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
     * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
-    * [HBASE-16144] - Replication queue's lock will live forever if RS acquiring the lock has died prematurely
     * [HBASE-16160] - Get the UnsupportedOperationException when using delegation token with encryption
     * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
     * [HBASE-16207] - can't restore snapshot without "Admin" permission
