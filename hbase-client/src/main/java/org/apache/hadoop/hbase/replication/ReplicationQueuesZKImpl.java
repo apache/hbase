@@ -25,7 +25,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -222,8 +221,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
    * @param znode the server names of the other server
    * @return true if the lock was acquired, false in every other cases
    */
-  @VisibleForTesting
-  public boolean lockOtherRS(String znode) {
+  private boolean lockOtherRS(String znode) {
     try {
       String parent = ZKUtil.joinZNode(this.queuesZNode, znode);
       if (parent.equals(this.myQueuesZnode)) {
@@ -248,15 +246,6 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       return false;
     }
     return true;
-  }
-
-  public String getLockZNode(String znode) {
-    return this.queuesZNode + "/" + znode + "/" + RS_LOCK_ZNODE;
-  }
-
-  @VisibleForTesting
-  public boolean checkLockExists(String znode) throws KeeperException {
-    return ZKUtil.checkExists(zookeeper, getLockZNode(znode)) >= 0;
   }
 
   /**

@@ -96,7 +96,6 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -430,7 +429,6 @@ MasterServices, Server {
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
 
   private CatalogJanitor catalogJanitorChore;
-  private ReplicationZKLockCleanerChore replicationZKLockCleanerChore;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
 
@@ -1337,16 +1335,6 @@ MasterServices, Server {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
     }
-    if (!conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      try {
-        replicationZKLockCleanerChore = new ReplicationZKLockCleanerChore(this, this,
-            cleanerInterval, this.getZooKeeper(), this.conf);
-        Threads.setDaemonThreadRunning(replicationZKLockCleanerChore.getThread(),
-            "replicationZKLockCleanerChore");
-      } catch (Exception e) {
-        LOG.error("start replicationZKLockCleanerChore failed", e);
-      }
-    }
   }
 
   /**
@@ -1365,7 +1353,6 @@ MasterServices, Server {
     this.rpcServerOpen = false;
     // Clean up and close up shop
     if (this.logCleaner!= null) this.logCleaner.interrupt();
-    if (this.replicationZKLockCleanerChore != null) this.replicationZKLockCleanerChore.interrupt();
     if (this.hfileCleaner != null) this.hfileCleaner.interrupt();
 
     if (this.infoServer != null) {
