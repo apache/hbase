@@ -55,6 +55,7 @@ public class ColumnCountGetFilter extends FilterBase {
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
     // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    if (filterAllRemaining()) return true;
     return false;
   }
 

@@ -58,11 +58,13 @@ public abstract class FilterBase extends Filter {
   @Override
   @Deprecated
   public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
+    if (filterAllRemaining()) return true;
     return false;
   }
 
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
+    if (filterAllRemaining()) return true;
     return filterRowKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
 

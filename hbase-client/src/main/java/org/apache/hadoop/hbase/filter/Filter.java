@@ -87,6 +87,8 @@ public abstract class Filter {
   /**
    * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
    * false, each KeyValue in the row will be passed to {@link #filterKeyValue(Cell)} below.
+   * If {@link #filterAllRemaining()} returns true, then {@link #filterRowKey(Cell)} should
+   * also return true.
    *
    * Concrete implementers can signal a failure condition in their code by throwing an
    * {@link IOException}.

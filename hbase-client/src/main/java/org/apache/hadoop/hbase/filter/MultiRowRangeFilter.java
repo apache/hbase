@@ -85,6 +85,7 @@ public class MultiRowRangeFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) {
+    if (filterAllRemaining()) return true;
     // If it is the first time of running, calculate the current range index for
     // the row key. If index is out of bound which happens when the start row
     // user sets is after the largest stop row of the ranges, stop the scan.

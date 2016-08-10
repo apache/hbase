@@ -55,6 +55,7 @@ public class PrefixFilter extends FilterBase {
   public boolean filterRowKey(Cell firstRowCell) {
     if (firstRowCell == null || this.prefix == null)
       return true;
+    if (filterAllRemaining()) return true;
     int length = firstRowCell.getRowLength();
     if (length < prefix.length) return true;
     // if they are equal, return false => pass row

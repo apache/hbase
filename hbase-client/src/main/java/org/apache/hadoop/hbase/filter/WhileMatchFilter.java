@@ -74,6 +74,7 @@ public class WhileMatchFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
+    if (filterAllRemaining()) return true;
     boolean value = filter.filterRowKey(cell);
     changeFAR(value);
     return value;
