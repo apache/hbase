@@ -110,7 +110,7 @@ public class RESTServer implements Constants {
     RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
 
     Options options = new Options();
-    options.addOption("p", "port", true, "Port to bind to [default: 8080]");
+    options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
     options.addOption(null, "infoport", true, "Port for web UI");
@@ -204,7 +204,7 @@ public class RESTServer implements Constants {
       sslConnector.setKeyPassword(keyPassword);
       connector = sslConnector;
     }
-    connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", 8080));
+    connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", DEFAULT_LISTEN_PORT));
     connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
     connector.setHeaderBufferSize(65536);
 
