@@ -73,7 +73,7 @@ def getServerNameForRegion(admin, r)
         sleep 0.1
       end
       # Make a fake servername by appending ','
-      metaServer = tracker.getMetaRegionLocation().toString() + ","
+      metaServer = (tracker.getMetaRegionLocation().toString() + ",").to_s
       tracker.stop()
       return metaServer
     ensure
@@ -385,7 +385,7 @@ def loadRegions(options, hostname, port)
     end
     next unless exists
     currentServer = getServerNameForRegion(admin, r)
-    if currentServer and currentServer == servername
+    if currentServer and servername and currentServer == servername.to_s
       $LOG.info("Region " + r.getRegionNameAsString() + " (" + counter.to_s +
         " of " + regions.length.to_s + ") already on target server=" + servername)
       counter = counter + 1
