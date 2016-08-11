@@ -540,7 +540,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      */
     @Override
     public Table getTable(TableName tableName) throws IOException {
-      return this.getTable(tableName, HTable.getDefaultExecutor(getConfiguration()));
+      return this.getTable(tableName, null);
     }
 
     /**
