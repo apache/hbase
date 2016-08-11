@@ -106,8 +106,7 @@ public interface Cell {
   //3) Qualifier
 
   /**
-   * Contiguous raw bytes that may start at any index in the containing array. Max length is
-   * Short.MAX_VALUE which is 32,767 bytes.
+   * Contiguous raw bytes that may start at any index in the containing array.
    * @return The array containing the qualifier bytes.
    */
   byte[] getQualifierArray();
@@ -155,7 +154,7 @@ public interface Cell {
 
   /**
    * Contiguous raw bytes that may start at any index in the containing array. Max length is
-   * Integer.MAX_VALUE which is 2,147,483,648 bytes.
+   * Integer.MAX_VALUE which is 2,147,483,647 bytes.
    * @return The array containing the value bytes.
    */
   byte[] getValueArray();
