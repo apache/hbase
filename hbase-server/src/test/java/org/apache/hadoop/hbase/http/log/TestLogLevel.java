@@ -61,18 +61,12 @@ public class TestLogLevel {
             .getConnectorAddress(0));
 
         //servlet
-        URL url = new URL("http://" + authority + "/logLevel?log=" + logName
-            + "&level=" + Level.ERROR);
+        URL url =
+            new URL("http://" + authority + "/logLevel?log=" + logName + "&level=" + Level.ERROR);
         out.println("*** Connecting to " + url);
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        connection.connect();
-
-        BufferedReader in = new BufferedReader(new InputStreamReader(
-            connection.getInputStream()));
-        for(String line; (line = in.readLine()) != null; out.println(line));
-        in.close();
-        connection.disconnect();
-
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()))) {
+          for(String line; (line = in.readLine()) != null; out.println(line));
+        }
         log.debug("log.debug2");
         log.info("log.info2");
         log.error("log.error2");
