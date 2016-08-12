@@ -905,11 +905,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         }
       }
 
-      // Initialize the RegionServerCoprocessorHost now that our ephemeral
-      // node was created by reportForDuty, in case any coprocessors want
-      // to use ZooKeeper
-      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
-
       if (!this.stopped && isHealthy()){
         // start the snapshot handler and other procedure handlers,
         // since the server is ready to run
@@ -1338,6 +1333,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       // Set our ephemeral znode up in zookeeper now we have a name.
       createMyEphemeralNode();
+
+      // Initialize the RegionServerCoprocessorHost now that our ephemeral
+      // node was created, in case any coprocessors want to use ZooKeeper
+      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
       // Save it in a file, this will allow to see if we crash
       ZNodeClearer.writeMyEphemeralNodeOnDisk(getMyEphemeralNodePath());
