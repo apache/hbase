@@ -58,9 +58,9 @@ public class StoreFileWriter implements Compactor.CellSink {
   private final BloomFilterWriter deleteFamilyBloomFilterWriter;
   private final BloomType bloomType;
   private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
-  private Cell lastDeleteFamilyCell = null;
   private long deleteFamilyCnt = 0;
   private BloomContext bloomContext = null;
+  private BloomContext deleteFamilyBloomContext = null;
 
   /**
    * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
@@ -137,6 +137,18 @@ public class StoreFileWriter implements Compactor.CellSink {
         LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", " +
             generalBloomFilterWriter.getClass().getSimpleName());
       }
+      // init bloom context
+      switch (bloomType) {
+      case ROW:
+        bloomContext = new RowBloomContext(generalBloomFilterWriter);
+        break;
+      case ROWCOL:
+        bloomContext = new RowColBloomContext(generalBloomFilterWriter);
+        break;
+      default:
+        throw new IOException(
+            "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL expected)");
+      }
     } else {
       // Not using Bloom filters.
       this.bloomType = BloomType.NONE;
@@ -148,6 +160,7 @@ public class StoreFileWriter implements Compactor.CellSink {
       this.deleteFamilyBloomFilterWriter = BloomFilterFactory
           .createDeleteBloomAtWrite(conf, cacheConf,
               (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+      deleteFamilyBloomContext = new RowBloomContext(deleteFamilyBloomFilterWriter);
     } else {
       deleteFamilyBloomFilterWriter = null;
     }
@@ -213,22 +226,6 @@ public class StoreFileWriter implements Compactor.CellSink {
 
   private void appendGeneralBloomfilter(final Cell cell) throws IOException {
     if (this.generalBloomFilterWriter != null) {
-      // only add to the bloom filter on a new, unique key
-      if (this.bloomContext == null) {
-        // init bloom context
-        switch (bloomType) {
-        case ROW:
-          bloomContext = new RowBloomContext(generalBloomFilterWriter);
-          break;
-        case ROWCOL:
-          bloomContext = new RowColBloomContext(generalBloomFilterWriter);
-          break;
-        default:
-          throw new IOException(
-              "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL expected)");
-        }
-      }
-
       /*
        * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.png
        * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + TimeStamp
@@ -249,18 +246,8 @@ public class StoreFileWriter implements Compactor.CellSink {
 
     // increase the number of delete family in the store file
     deleteFamilyCnt++;
-    if (null != this.deleteFamilyBloomFilterWriter) {
-      boolean newKey = true;
-      if (lastDeleteFamilyCell != null) {
-        // hbase:meta does not have blooms. So we need not have special interpretation
-        // of the hbase:meta cells
-        newKey = !CellUtil.matchingRows(cell, lastDeleteFamilyCell);
-      }
-      // TODO : Use bloom context for delete family bloom filter also
-      if (newKey) {
-        this.deleteFamilyBloomFilterWriter.add(cell);
-        this.lastDeleteFamilyCell = cell;
-      }
+    if (this.deleteFamilyBloomFilterWriter != null) {
+      deleteFamilyBloomContext.writeBloom(cell);
     }
   }
 

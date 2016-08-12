@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 @InterfaceAudience.Private
 public class RowBloomContext extends BloomContext {
 
-  public RowBloomContext(BloomFilterWriter generalBloomFilterWriter) {
-    super(generalBloomFilterWriter);
+  public RowBloomContext(BloomFilterWriter bloomFilterWriter) {
+    super(bloomFilterWriter);
   }
 
   public void addLastBloomKey(Writer writer) throws IOException {

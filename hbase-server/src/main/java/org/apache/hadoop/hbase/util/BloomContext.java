@@ -33,10 +33,10 @@ public abstract class BloomContext {
   // TODO : Avoid holding references to lastCell
   protected Cell lastCell;
 
-  protected BloomFilterWriter generalBloomFilterWriter;
+  protected BloomFilterWriter bloomFilterWriter;
 
-  public BloomContext(BloomFilterWriter generalBloomFilterWriter) {
-    this.generalBloomFilterWriter = generalBloomFilterWriter;
+  public BloomContext(BloomFilterWriter bloomFilterWriter) {
+    this.bloomFilterWriter = bloomFilterWriter;
   }
 
   public Cell getLastCell() {
@@ -49,8 +49,9 @@ public abstract class BloomContext {
    * @throws IOException
    */
   public void writeBloom(Cell cell) throws IOException {
+    // only add to the bloom filter on a new, unique key
     if (isNewKey(cell)) {
-      generalBloomFilterWriter.add(cell);
+      bloomFilterWriter.add(cell);
       this.lastCell = cell;
     }
   }
