@@ -21,15 +21,16 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -78,6 +79,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   /** Whether to cache-on-write compound Bloom filter chunks */
   private boolean cacheOnWrite;
 
+  private BloomType bloomType;
+
   /**
    * @param chunkByteSizeHint
    *          each chunk's size in bytes. The real chunk size might be different
@@ -88,10 +91,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
    *          hash function type to use
    * @param maxFold
    *          maximum degree of folding allowed
+   * @param bloomType
+   *          the bloom type
    */
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate,
       int hashType, int maxFold, boolean cacheOnWrite,
-      CellComparator comparator) {
+      CellComparator comparator, BloomType bloomType) {
     chunkByteSize = BloomFilterUtil.computeFoldableByteSize(
         chunkByteSizeHint * 8L, maxFold);
 
@@ -100,6 +105,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     this.maxFold = maxFold;
     this.cacheOnWrite = cacheOnWrite;
     this.comparator = comparator;
+    this.bloomType = bloomType;
   }
 
   @Override
@@ -152,16 +158,9 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     chunk = null;
   }
 
-  /**
-   * Adds a Bloom filter key. This key must be greater than the previous key,
-   * as defined by the comparator this compound Bloom filter is configured
-   * with. For efficiency, key monotonicity is not checked here. See
-   * {@link StoreFileWriter#append(
-   * org.apache.hadoop.hbase.Cell)} for the details of deduplication.
-   */
   @Override
-  public void add(byte[] bloomKey, int keyOffset, int keyLength) {
-    if (bloomKey == null)
+  public void add(Cell cell) {
+    if (cell == null)
       throw new NullPointerException();
 
     enqueueReadyChunk(false);
@@ -171,32 +170,39 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
         throw new IllegalStateException("First key in chunk already set: "
             + Bytes.toStringBinary(firstKeyInChunk));
       }
-      firstKeyInChunk = Arrays.copyOfRange(bloomKey, keyOffset, keyOffset
-          + keyLength);
-
-      if (prevChunk == null) {
-        // First chunk
-        chunk = BloomFilterUtil.createBySize(chunkByteSize, errorRate,
-            hashType, maxFold);
+      // This will be done only once per chunk
+      if (bloomType == BloomType.ROW) {
+        firstKeyInChunk = CellUtil.copyRow(cell);
       } else {
-        // Use the same parameters as the last chunk, but a new array and
-        // a zero key count.
-        chunk = prevChunk.createAnother();
+        firstKeyInChunk =
+            CellUtil.getCellKeySerializedAsKeyValueKey(CellUtil.createFirstOnRowCol(cell));
       }
-
-      if (chunk.getKeyCount() != 0) {
-        throw new IllegalStateException("keyCount=" + chunk.getKeyCount()
-            + " > 0");
-      }
-
-      chunk.allocBloom();
-      ++numChunks;
+      allocateNewChunk();
     }
 
-    chunk.add(bloomKey, keyOffset, keyLength);
+    chunk.add(cell);
     ++totalKeyCount;
   }
 
+  private void allocateNewChunk() {
+    if (prevChunk == null) {
+      // First chunk
+      chunk = BloomFilterUtil.createBySize(chunkByteSize, errorRate,
+          hashType, maxFold, bloomType);
+    } else {
+      // Use the same parameters as the last chunk, but a new array and
+      // a zero key count.
+      chunk = prevChunk.createAnother();
+    }
+
+    if (chunk.getKeyCount() != 0) {
+      throw new IllegalStateException("keyCount=" + chunk.getKeyCount()
+          + " > 0");
+    }
+
+    chunk.allocBloom();
+    ++numChunks;
+  }
   @Override
   public void writeInlineBlock(DataOutput out) throws IOException {
     // We don't remove the chunk from the queue here, because we might need it

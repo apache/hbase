@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,40 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.io.Writable;
 
-/**
- * Specifies methods needed to add elements to a Bloom filter and serialize the
- * resulting Bloom filter as a sequence of bytes.
- */
 @InterfaceAudience.Private
-public interface BloomFilterWriter extends BloomFilterBase {
+public class ByteArrayHashKey extends HashKey<byte[]> {
 
-  /** Compact the Bloom filter before writing metadata &amp; data to disk. */
-  void compactBloom();
-  /**
-   * Get a writable interface into bloom filter meta data.
-   *
-   * @return a writable instance that can be later written to a stream
-   */
-  Writable getMetaWriter();
+  public ByteArrayHashKey(byte[] t) {
+    super(t);
+  }
 
-  /**
-   * Get a writable interface into bloom filter data (the actual Bloom bits).
-   * Not used for compound Bloom filters.
-   *
-   * @return a writable instance that can be later written to a stream
-   */
-  Writable getDataWriter();
-
-  /**
-   * Add the specified binary to the bloom filter.
-   * @param cell the cell data to be added to the bloom
-   */
-  void add(Cell cell);
+  @Override
+  public byte get(int pos) {
+    return t[pos];
+  }
 }

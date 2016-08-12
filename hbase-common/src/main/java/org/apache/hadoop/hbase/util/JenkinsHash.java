@@ -54,9 +54,33 @@ public class JenkinsHash extends Hash {
   }
 
   /**
+   * Compute the hash of the specified file
+   * @param args name of file to compute hash of.
+   * @throws IOException e
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length != 1) {
+      System.err.println("Usage: JenkinsHash filename");
+      System.exit(-1);
+    }
+    FileInputStream in = new FileInputStream(args[0]);
+    byte[] bytes = new byte[512];
+    int value = 0;
+    JenkinsHash hash = new JenkinsHash();
+    try {
+      for (int length = in.read(bytes); length > 0; length = in.read(bytes)) {
+        value = hash.hash(bytes, length, value);
+      }
+    } finally {
+      in.close();
+    }
+    System.out.println(Math.abs(value));
+  }
+
+  /**
    * taken from  hashlittle() -- hash a variable-length key into a 32-bit value
    *
-   * @param key the key (the unaligned variable-length array of bytes)
+   * @param hashKey the key to extract the  bytes for hash algo
    * @param nbytes number of bytes to include in hash
    * @param initval can be any integer value
    * @return a 32-bit value.  Every bit of the key affects every bit of the
@@ -78,26 +102,26 @@ public class JenkinsHash extends Hash {
    * <p>Use for hash table lookup, or anything where one collision in 2^^32 is
    * acceptable.  Do NOT use for cryptographic purposes.
   */
-  @Override
   @SuppressWarnings("fallthrough")
-  public int hash(byte[] key, int off, int nbytes, int initval) {
+  @Override
+  public int hash(HashKey hashKey, int off, int nbytes, int initval) {
     int length = nbytes;
     int a, b, c;
     a = b = c = 0xdeadbeef + length + initval;
     int offset = off;
     for (; length > 12; offset += 12, length -= 12) {
-      a += (key[offset] & BYTE_MASK);
-      a += ((key[offset + 1] & BYTE_MASK) <<  8);
-      a += ((key[offset + 2] & BYTE_MASK) << 16);
-      a += ((key[offset + 3] & BYTE_MASK) << 24);
-      b += (key[offset + 4] & BYTE_MASK);
-      b += ((key[offset + 5] & BYTE_MASK) <<  8);
-      b += ((key[offset + 6] & BYTE_MASK) << 16);
-      b += ((key[offset + 7] & BYTE_MASK) << 24);
-      c += (key[offset + 8] & BYTE_MASK);
-      c += ((key[offset + 9] & BYTE_MASK) <<  8);
-      c += ((key[offset + 10] & BYTE_MASK) << 16);
-      c += ((key[offset + 11] & BYTE_MASK) << 24);
+      a += (hashKey.get(offset) & BYTE_MASK);
+      a += ((hashKey.get(offset + 1) & BYTE_MASK) <<  8);
+      a += ((hashKey.get(offset + 2) & BYTE_MASK) << 16);
+      a += ((hashKey.get(offset + 3) & BYTE_MASK) << 24);
+      b += (hashKey.get(offset + 4) & BYTE_MASK);
+      b += ((hashKey.get(offset + 5) & BYTE_MASK) <<  8);
+      b += ((hashKey.get(offset + 6) & BYTE_MASK) << 16);
+      b += ((hashKey.get(offset + 7) & BYTE_MASK) << 24);
+      c += (hashKey.get(offset + 8) & BYTE_MASK);
+      c += ((hashKey.get(offset + 9) & BYTE_MASK) <<  8);
+      c += ((hashKey.get(offset + 10) & BYTE_MASK) << 16);
+      c += ((hashKey.get(offset + 11) & BYTE_MASK) << 24);
 
       /*
        * mix -- mix 3 32-bit values reversibly.
@@ -164,30 +188,30 @@ public class JenkinsHash extends Hash {
     //-------------------------------- last block: affect all 32 bits of (c)
     switch (length) {                   // all the case statements fall through
     case 12:
-      c += ((key[offset + 11] & BYTE_MASK) << 24);
+      c += ((hashKey.get(offset + 11) & BYTE_MASK) << 24);
     case 11:
-      c += ((key[offset + 10] & BYTE_MASK) << 16);
+      c += ((hashKey.get(offset + 10) & BYTE_MASK) << 16);
     case 10:
-      c += ((key[offset + 9] & BYTE_MASK) <<  8);
+      c += ((hashKey.get(offset + 9) & BYTE_MASK) <<  8);
     case  9:
-      c += (key[offset + 8] & BYTE_MASK);
+      c += (hashKey.get(offset + 8) & BYTE_MASK);
     case  8:
-      b += ((key[offset + 7] & BYTE_MASK) << 24);
+      b += ((hashKey.get(offset + 7) & BYTE_MASK) << 24);
     case  7:
-      b += ((key[offset + 6] & BYTE_MASK) << 16);
+      b += ((hashKey.get(offset + 6) & BYTE_MASK) << 16);
     case  6:
-      b += ((key[offset + 5] & BYTE_MASK) <<  8);
+      b += ((hashKey.get(offset + 5) & BYTE_MASK) <<  8);
     case  5:
-      b += (key[offset + 4] & BYTE_MASK);
+      b += (hashKey.get(offset + 4) & BYTE_MASK);
     case  4:
-      a += ((key[offset + 3] & BYTE_MASK) << 24);
+      a += ((hashKey.get(offset + 3) & BYTE_MASK) << 24);
     case  3:
-      a += ((key[offset + 2] & BYTE_MASK) << 16);
+      a += ((hashKey.get(offset + 2) & BYTE_MASK) << 16);
     case  2:
-      a += ((key[offset + 1] & BYTE_MASK) <<  8);
+      a += ((hashKey.get(offset + 1) & BYTE_MASK) <<  8);
     case  1:
       //noinspection PointlessArithmeticExpression
-      a += (key[offset + 0] & BYTE_MASK);
+      a += (hashKey.get(offset + 0) & BYTE_MASK);
       break;
     case  0:
       return c;
@@ -237,29 +261,5 @@ public class JenkinsHash extends Hash {
     b ^= a; b -= rotateLeft(a, 14);
     c ^= b; c -= rotateLeft(b, 24);
     return c;
-  }
-
-  /**
-   * Compute the hash of the specified file
-   * @param args name of file to compute hash of.
-   * @throws IOException e
-   */
-  public static void main(String[] args) throws IOException {
-    if (args.length != 1) {
-      System.err.println("Usage: JenkinsHash filename");
-      System.exit(-1);
-    }
-    FileInputStream in = new FileInputStream(args[0]);
-    byte[] bytes = new byte[512];
-    int value = 0;
-    JenkinsHash hash = new JenkinsHash();
-    try {
-      for (int length = in.read(bytes); length > 0; length = in.read(bytes)) {
-        value = hash.hash(bytes, length, value);
-      }
-    } finally {
-      in.close();
-    }
-    System.out.println(Math.abs(value));
   }
 }

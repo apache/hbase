@@ -150,9 +150,11 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     // Atleast we now avoid multiple copies until it comes here. If we want to make this to work
     // with BBs then the Hash.java APIs should also be changed to work with BBs.
     if (keyCell instanceof KeyValue) {
+      // TODO : directly use Cell here
       return checkContains(((KeyValue) keyCell).getBuffer(), ((KeyValue) keyCell).getKeyOffset(),
         ((KeyValue) keyCell).getKeyLength(), block);
     }
+    // TODO : Avoid this copy in read path also
     byte[] key = CellUtil.getCellKeySerializedAsKeyValueKey(keyCell);
     return checkContains(key, 0, key.length, block);
   }

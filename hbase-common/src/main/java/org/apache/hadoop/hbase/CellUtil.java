@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -33,6 +34,7 @@ import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience.Private;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
@@ -139,6 +141,22 @@ public final class CellUtil {
     return destinationOffset + rowLen;
   }
 
+  /**
+   * Copies the row to a new byte[]
+   * @param cell the cell from which row has to copied
+   * @return the byte[] containing the row
+   */
+  public static byte[] copyRow(Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return ByteBufferUtils.copyOfRange(((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPosition(),
+        ((ByteBufferedCell) cell).getRowPosition() + cell.getRowLength());
+    } else {
+      return Arrays.copyOfRange(cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowOffset() + cell.getRowLength());
+    }
+  }
+
   public static int copyFamilyTo(Cell cell, byte[] destination, int destinationOffset) {
     byte fLen = cell.getFamilyLength();
     if (cell instanceof ByteBufferedCell) {
@@ -200,12 +218,22 @@ public final class CellUtil {
 
   /********************* misc *************************************/
 
+  @Private
   public static byte getRowByte(Cell cell, int index) {
     if (cell instanceof ByteBufferedCell) {
       return ((ByteBufferedCell) cell).getRowByteBuffer().get(
           ((ByteBufferedCell) cell).getRowPosition() + index);
     }
     return cell.getRowArray()[cell.getRowOffset() + index];
+  }
+
+  @Private
+  public static byte getQualifierByte(Cell cell, int index) {
+    if (cell instanceof ByteBufferedCell) {
+      return ((ByteBufferedCell) cell).getQualifierByteBuffer().get(
+          ((ByteBufferedCell) cell).getQualifierPosition() + index);
+    }
+    return cell.getQualifierArray()[cell.getQualifierOffset() + index];
   }
 
   public static ByteBuffer getValueBufferShallowCopy(Cell cell) {
@@ -1701,7 +1729,7 @@ public final class CellUtil {
 
   /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
-   *
+   * The family length is considered to be 0
    * @param cell
    * @return First possible Cell on passed Cell's row.
    */

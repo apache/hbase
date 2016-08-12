@@ -40,7 +40,7 @@ public class MurmurHash3 extends Hash {
   /** Returns the MurmurHash3_x86_32 hash. */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("SF")
   @Override
-  public int hash(byte[] bytes, int offset, int length, int initval) {
+  public int hash(HashKey hashKey, int offset, int length, int initval) {
     final int c1 = 0xcc9e2d51;
     final int c2 = 0x1b873593;
 
@@ -49,8 +49,10 @@ public class MurmurHash3 extends Hash {
 
     for (int i = offset; i < roundedEnd; i += 4) {
       // little endian load order
-      int k1 = (bytes[i] & 0xff) | ((bytes[i + 1] & 0xff) << 8) | ((bytes[i + 2] & 0xff) << 16)
-          | (bytes[i + 3] << 24);
+      int k1 =
+          (hashKey.get(i) & 0xff) | ((hashKey.get(i + 1) & 0xff) << 8)
+              | ((hashKey.get(i + 2) & 0xff) << 16)
+              | (hashKey.get(i + 3) << 24);
       k1 *= c1;
       k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
       k1 *= c2;
@@ -65,13 +67,13 @@ public class MurmurHash3 extends Hash {
 
     switch (length & 0x03) {
     case 3:
-      k1 = (bytes[roundedEnd + 2] & 0xff) << 16;
+      k1 = (hashKey.get(roundedEnd + 2) & 0xff) << 16;
       // FindBugs SF_SWITCH_FALLTHROUGH
     case 2:
-      k1 |= (bytes[roundedEnd + 1] & 0xff) << 8;
+      k1 |= (hashKey.get(roundedEnd + 1) & 0xff) << 8;
       // FindBugs SF_SWITCH_FALLTHROUGH
     case 1:
-      k1 |= (bytes[roundedEnd] & 0xff);
+      k1 |= (hashKey.get(roundedEnd) & 0xff);
       k1 *= c1;
       k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
       k1 *= c2;

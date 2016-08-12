@@ -22,6 +22,7 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  * Utility methods related to BloomFilters
@@ -173,11 +174,12 @@ public final class BloomFilterUtil {
    * @param errorRate target false positive rate of the Bloom filter
    * @param hashType Bloom filter hash function type
    * @param foldFactor
+   * @param bloomType
    * @return the new Bloom filter of the desired size
    */
   public static BloomFilterChunk createBySize(int byteSizeHint,
-      double errorRate, int hashType, int foldFactor) {
-    BloomFilterChunk bbf = new BloomFilterChunk(hashType);
+      double errorRate, int hashType, int foldFactor, BloomType bloomType) {
+    BloomFilterChunk bbf = new BloomFilterChunk(hashType, bloomType);
 
     bbf.byteSize = computeFoldableByteSize(byteSizeHint * 8L, foldFactor);
     long bitSize = bbf.byteSize * 8;
@@ -195,11 +197,12 @@ public final class BloomFilterUtil {
   public static boolean contains(byte[] buf, int offset, int length,
       ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount) {
-
-    int hash1 = hash.hash(buf, offset, length, 0);
-    int hash2 = hash.hash(buf, offset, length, hash1);
+    // TODO : this will get removed once read path also work with Cell for blooms.
+    ByteArrayHashKey hashKey = new ByteArrayHashKey(buf);
+    int hash1 = hash.hash(hashKey, offset, length, 0);
+    int hash2 = hash.hash(hashKey, offset, length, hash1);
     int bloomBitSize = bloomSize << 3;
-    
+
     if (randomGeneratorForTest == null) {
       // Production mode.
       int compositeHash = hash1;

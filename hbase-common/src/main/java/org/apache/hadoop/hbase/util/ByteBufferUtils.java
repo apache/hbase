@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -982,6 +983,21 @@ public final class ByteBufferUtils {
       in.get(out, destinationOffset, length);
       in.position(oldPos);
     }
+  }
+
+  /**
+   * Similar to  {@link Arrays#copyOfRange(byte[], int, int)}
+   * @param original the buffer from which the copy has to happen
+   * @param from the starting index
+   * @param to the ending index
+   * @return a byte[] created out of the copy
+   */
+  public static byte[] copyOfRange(ByteBuffer original, int from, int to) {
+    int newLength = to - from;
+    if (newLength < 0) throw new IllegalArgumentException(from + " > " + to);
+    byte[] copy = new byte[newLength];
+    ByteBufferUtils.copyFromBufferToArray(copy, original, from, 0, newLength);
+    return copy;
   }
 
   // For testing purpose

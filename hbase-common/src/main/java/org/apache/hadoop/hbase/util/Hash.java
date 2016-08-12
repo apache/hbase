@@ -139,7 +139,20 @@ public abstract class Hash {
    * @param initval seed value
    * @return hash value
    */
-  public abstract int hash(byte[] bytes, int offset, int length, int initval);
+  // TODO : remove this once read path is updated to work with Cells
+  public int hash(byte[] bytes, int offset, int length, int initval) {
+    return hash(new ByteArrayHashKey(bytes), offset, length, initval);
+  }
 
-  // TODO : a buffer based hash function would be needed.. Not adding it for now
+  /**
+   * Calculate a hash using bytes from <code>offset</code> to <code>offset +
+   * length</code>, and the provided seed value.
+   * @param hashKey key to extract the hash
+   * @param offset offset to be used  by the hash algo
+   * @param length length to be used by the hash algo
+   * @param initval the seed value
+   * @return hash value
+   */
+  // TODO : Remove offset and length when the byte[] version of hash() is removed
+  public abstract int hash(HashKey hashKey, int offset, int length, int initval);
 }
