@@ -198,7 +198,7 @@ public class HFileCorruptionChecker {
 
     List<FileStatus> cfs = FSUtils.filterFileStatuses(statuses, new FamilyDirFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (cfs.size() == 0 && !fs.exists(regionDir)) {
+    if ((cfs == null || cfs.size() == 0) && !fs.exists(regionDir)) {
       LOG.warn("Region Directory " + regionDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);
