@@ -1,13 +1,16 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.1.6 07/16/2016
+Release Notes - HBase - Version 1.1.6 08/13/2016
 
 ** Sub-task
     * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
     * [HBASE-16056] - Procedure v2 - fix master crash for FileNotFound
+    * [HBASE-16189] - [Rolling Upgrade] 2.0 hfiles cannot be opened by 1.x servers
     * [HBASE-16194] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
     * [HBASE-16195] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
+    * [HBASE-16317] - revert all ESAPI changes
+    * [HBASE-16321] - Ensure findbugs jsr305 jar isn't present
 
 
 
@@ -40,9 +43,21 @@ Release Notes - HBase - Version 1.1.6 07/16/2016
     * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
     * [HBASE-16132] - Scan does not return all the result when regionserver is busy
     * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
+    * [HBASE-16144] - Replication queue's lock will live forever if RS acquiring the lock has died prematurely
     * [HBASE-16190] - IntegrationTestDDLMasterFailover failed with IllegalArgumentException: n must be positive
     * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
     * [HBASE-16207] - can't restore snapshot without "Admin" permission
+    * [HBASE-16237] - Blocks for hbase:meta table are not cached in L1 cache
+    * [HBASE-16238] - It's useless to catch SESSIONEXPIRED exception and retry in RecoverableZooKeeper
+    * [HBASE-16272] - Overflow in ServerName's compareTo method
+    * [HBASE-16281] - TestMasterReplication is flaky
+    * [HBASE-16288] - HFile intermediate block level indexes might recurse forever creating multi TB files
+    * [HBASE-16289] - AsyncProcess stuck messages need to print region/server
+    * [HBASE-16296] - Reverse scan performance degrades when using filter lists
+    * [HBASE-16315] - RegionSizeCalculator prints region names as binary without escapes
+    * [HBASE-16319] - Fix TestCacheOnWrite after HBASE-16288
+    * [HBASE-16350] - Undo server abort from HBASE-14968
+    * [HBASE-16368] - test*WhenRegionMove in TestPartialResultsFromClientSide is flaky
 
 
 
@@ -51,11 +66,17 @@ Release Notes - HBase - Version 1.1.6 07/16/2016
 
 ** Improvement
     * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-14345] - Consolidate printUsage in IntegrationTestLoadAndVerify
     * [HBASE-15119] - Include git SHA in check_compatibility reports
     * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
     * [HBASE-15854] - Log the cause of SASL connection failures
+    * [HBASE-15931] - Add log for long-running tasks in AsyncProcess
     * [HBASE-16124] - Make check_compatibility.sh less verbose when building HBase
     * [HBASE-16140] - bump owasp.esapi from 2.1.0 to 2.1.0.1
+    * [HBASE-16241] - Allow specification of annotations to use when running check_compatibility.sh
+    * [HBASE-16256] - Purpose of EnvironmentEdge, EnvironmentEdgeManager
+    * [HBASE-16266] - Do not throw ScannerTimeoutException when catch UnknownScannerException
+    * [HBASE-16379] - [replication] Minor improvement to replication/copy_tables_desc.rb
 
 
 
