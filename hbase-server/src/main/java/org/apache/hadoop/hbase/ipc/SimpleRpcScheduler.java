@@ -93,9 +93,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       replicationExecutor.resizeQueues(conf);
     }
 
-    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY,
-      CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
-
+    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT);
     if (isCodelQueueType(callQueueType)) {
       // update CoDel Scheduler tunables
       int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
@@ -181,8 +179,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.highPriorityLevel = highPriorityLevel;
     this.abortable = server;
 
-    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY,
-        CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
+    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT);
     float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
     float callqScanShare = conf.getFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
 
