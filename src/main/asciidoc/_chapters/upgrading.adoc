@@ -71,9 +71,10 @@ In addition to the usual API versioning considerations HBase has other compatibi
 
 .Client API compatibility
 * Allow changing or removing existing client APIs.
-* An API needs to deprecated for a major version before we will change/remove it.
+* An API needs to be deprecated for a major version before we will change/remove it.
 * APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
-* Example: A user using a newly deprecated api does not need to modify application code with hbase api calls until the next major version.
+* New APIs introduced in a patch version will only be added in a source compatible way footnote:[See 'Source Compatibility' https://blogs.oracle.com/darcy/entry/kinds_of_compatibility]: i.e. code that implements public APIs will continue to compile.
+* Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
 
 .Client Binary compatibility
 * Client code written to APIs available in a given patch release can run unchanged (no recompilation needed) against the new jars of later patch versions.
@@ -95,7 +96,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 * JMX APIs exposed via the `/jmx/` endpoint
 
 .Summary
-* A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.]. Downgrading versions within patch releases may not be compatible.
+* A patch upgrade is a drop-in replacement. Any change that is not Java binary and source compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.] Downgrading versions within patch releases may not be compatible.
 
 * A minor upgrade requires no application/client code modification. Ideally it would be a drop-in replacement but client code, coprocessors, filters, etc might have to be recompiled if new jars are used.
 
