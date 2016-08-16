@@ -206,9 +206,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, desc);
-    //sleep for sometime. Hope is that the regions are closed/opened before
-    //the sleep returns. TODO: do this better
-    Thread.sleep(30000);
   }
 
   @Test
