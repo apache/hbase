@@ -1777,11 +1777,11 @@ public class HTable implements HTableInterface, RegionLocator {
     return operationTimeout;
   }
 
-  @Override public void setRpcTimeout(int rpcTimeout) {
+  public void setRpcTimeout(int rpcTimeout) {
     this.rpcTimeout = rpcTimeout;
   }
 
-  @Override public int getRpcTimeout() {
+  public int getRpcTimeout() {
     return rpcTimeout;
   }
 
