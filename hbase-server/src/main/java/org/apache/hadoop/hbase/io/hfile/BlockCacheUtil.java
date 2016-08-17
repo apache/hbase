@@ -38,6 +38,10 @@ import org.codehaus.jackson.map.SerializationConfig;
  */
 @InterfaceAudience.Private
 public class BlockCacheUtil {
+
+
+  public static final long NANOS_PER_SECOND = 1000000000;
+
   /**
    * Needed generating JSON.
    */
@@ -223,7 +227,7 @@ public class BlockCacheUtil {
         this.dataBlockCount++;
         this.dataSize += cb.getSize();
       }
-      long age = this.now - cb.getCachedTime();
+      long age = (this.now - cb.getCachedTime())/NANOS_PER_SECOND;
       this.hist.add(age, 1);
       return false;
     }
