@@ -49,14 +49,35 @@
                   Apache HBase Flaky Tests Dashboard
               </span>
 </p>
+<span>Last updated: <b>{{datetime}}</b></span><br>
+<span>Count of flaky tests (cumulated from all jobs):
+    <b>{{bad_tests_count}}</b></span><br>
 <br><br>
+<span style="font-size:20px;"><b>List of Jobs</b></span><br>
+<br>
+{% set counter = 0 %}
+{% for url in results %}
+{% set counter = counter + 1 %}
+<a href="#job_{{ counter }}">{{ url |e }}</a>
+<br>
+{% endfor %}
+<br>
+<br>
+<span style="font-size:20px;"><b>Results</b></span><br>
+<br>
 {% set counter = 0 %}
 {% for url in results %}
 {% set result = results[url] %}
 {# Dedup ids since test names may duplicate across urls #}
 {% set counter = counter + 1 %}
-                <span style="font-size:20px; font-weight:bold;">Job : {{ url |e }}
-                <a href="{{ url |e }}" style="text-decoration:none;">&#x1f517;</a></span>
+<span id="job_{{ counter }}" style="font-weight:bold;">
+    {{ url |e }}<br>
+    <a href="{{ url |e }}">
+        Go to <img height="16px" src="https://jenkins.io/sites/default/files/jenkins_favicon.ico">
+    </a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="#">Go to top</a>
+</span>
 <br/><br/>
 <table>
     <tr>

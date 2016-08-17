@@ -16,15 +16,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=invalid-name
+# To disable 'invalid constant name' warnings.
+# pylint: disable=import-error
+# Testing environment may not have all dependencies.
+
 """
 This script uses Jenkins REST api to collect test result(s) of given build/builds and generates
 flakyness data about unittests.
 Print help: report-flakies.py -h
 """
+
 import argparse
-from jinja2 import Template
 import logging
 import os
+import time
+from collections import OrderedDict
+from jinja2 import Template
+
 import requests
 
 import findHangingTests
@@ -115,7 +124,7 @@ all_failed_tests = set()
 all_hanging_tests = set()
 # Contains { <url> : { <bad_test> : { 'all': [<build ids>], 'failed': [<build ids>],
 #                                     'timeout': [<build ids>], 'hanging': [<builds ids>] } } }
-url_to_bad_test_results = {}
+url_to_bad_test_results = OrderedDict()
 
 # Iterates over each url, gets test results and prints flaky tests.
 expanded_urls = expand_multi_config_projects(args)
@@ -160,33 +169,48 @@ for url_max_build in expanded_urls:
         bad_tests.update(failed_tests.union(hanging_tests))
 
     # For each bad test, get build ids where it ran, timed out, failed or hanged.
-    test_to_build_ids = {key : {'all' : set(), 'timeout': set(), 'failed': set(), 'hanging' : set()}
+    test_to_build_ids = {key : {'all' : set(), 'timeout': set(), 'failed': set(),
+                                'hanging' : set(), 'bad_count' : 0}
                          for key in bad_tests}
     for build in build_id_to_results:
         [all_tests, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
         for bad_test in test_to_build_ids:
+            is_bad = False
             if all_tests.issuperset([bad_test]):
                 test_to_build_ids[bad_test]["all"].add(build)
             if timeout_tests.issuperset([bad_test]):
                 test_to_build_ids[bad_test]['timeout'].add(build)
+                is_bad = True
             if failed_tests.issuperset([bad_test]):
                 test_to_build_ids[bad_test]['failed'].add(build)
+                is_bad = True
             if hanging_tests.issuperset([bad_test]):
                 test_to_build_ids[bad_test]['hanging'].add(build)
-    url_to_bad_test_results[url] = test_to_build_ids
+                is_bad = True
+            if is_bad:
+                test_to_build_ids[bad_test]['bad_count'] += 1
 
-    if len(test_to_build_ids) > 0:
+    # Calculate flakyness % for each test.
+    for bad_test in test_to_build_ids:
+        test_to_build_ids[bad_test]['flakyness'] = (
+            (test_to_build_ids[bad_test]['bad_count']) * 100.0 /
+            len(test_to_build_ids[bad_test]['all']))
+
+    # Sort tests in descending order by flakyness.
+    sorted_test_to_build_ids = OrderedDict(
+        sorted(test_to_build_ids.iteritems(), key=lambda x: x[1]['flakyness'], reverse=True))
+    url_to_bad_test_results[url] = sorted_test_to_build_ids
+
+    if len(sorted_test_to_build_ids) > 0:
         print "URL: {}".format(url)
         print "{:>60}  {:10}  {:25}  {}".format(
             "Test Name", "Total Runs", "Bad Runs(failed/timeout/hanging)", "Flakyness")
-        for bad_test in test_to_build_ids:
-            failed = len(test_to_build_ids[bad_test]['failed'])
-            timeout = len(test_to_build_ids[bad_test]['timeout'])
-            hanging = len(test_to_build_ids[bad_test]['hanging'])
-            total = len(test_to_build_ids[bad_test]['all'])
+        for bad_test in sorted_test_to_build_ids:
+            test_status = sorted_test_to_build_ids[bad_test]
             print "{:>60}  {:10}  {:7} ( {:4} / {:5} / {:5} )  {:2.0f}%".format(
-                bad_test, total, failed + timeout, failed, timeout, hanging,
-                (failed + timeout) * 100.0 / total)
+                bad_test, len(test_status['all']), test_status['bad_count'],
+                len(test_status['failed']), len(test_status['timeout']),
+                len(test_status['hanging']), test_status['flakyness'])
     else:
         print "No flaky tests founds."
         if len(build_ids) == len(build_ids_without_tests_run):
@@ -218,4 +242,6 @@ with open(os.path.join(dev_support_dir, "flaky-dashboard-template.html"), "r") a
     template = Template(f.read())
 
 with open("dashboard.html", "w") as f:
-    f.write(template.render(results=url_to_bad_test_results))
+    datetime = time.strftime("%m/%d/%Y %H:%M:%S")
+    f.write(template.render(datetime=datetime, bad_tests_count=len(all_bad_tests),
+                            results=url_to_bad_test_results))
