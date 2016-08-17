@@ -59,16 +59,35 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestRemoteTable {
-  private static final TableName TABLE = TableName.valueOf("TestRemoteTable");
-  private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
-  private static final byte[] ROW_2 = Bytes.toBytes("testrow2");
-  private static final byte[] ROW_3 = Bytes.toBytes("testrow3");
-  private static final byte[] ROW_4 = Bytes.toBytes("testrow4");
-  private static final byte[] COLUMN_1 = Bytes.toBytes("a");
-  private static final byte[] COLUMN_2 = Bytes.toBytes("b");
-  private static final byte[] COLUMN_3 = Bytes.toBytes("c");
-  private static final byte[] QUALIFIER_1 = Bytes.toBytes("1");
-  private static final byte[] QUALIFIER_2 = Bytes.toBytes("2");
+
+  // Verify that invalid URL characters and arbitrary bytes are escaped when
+  // constructing REST URLs per HBASE-7621. RemoteHTable should support row keys
+  // and qualifiers containing any byte for all table operations.
+  private static final String INVALID_URL_CHARS_1 =
+      "|\"\\^{}\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000B\u000C";
+
+  // HColumnDescriptor prevents certain characters in column names.  The following
+  // are examples of characters are allowed in column names but are not valid in
+  // URLs.
+  private static final String INVALID_URL_CHARS_2 = "|^{}\u0242";
+
+  // Besides alphanumeric these characters can also be present in table names.
+  private static final String VALID_TABLE_NAME_CHARS = "_-.";
+
+  private static final TableName TABLE =
+      TableName.valueOf("TestRemoteTable" + VALID_TABLE_NAME_CHARS);
+
+  private static final byte[] ROW_1 = Bytes.toBytes("testrow1" + INVALID_URL_CHARS_1);
+  private static final byte[] ROW_2 = Bytes.toBytes("testrow2" + INVALID_URL_CHARS_1);
+  private static final byte[] ROW_3 = Bytes.toBytes("testrow3" + INVALID_URL_CHARS_1);
+  private static final byte[] ROW_4 = Bytes.toBytes("testrow4"+ INVALID_URL_CHARS_1);
+
+  private static final byte[] COLUMN_1 = Bytes.toBytes("a" + INVALID_URL_CHARS_2);
+  private static final byte[] COLUMN_2 = Bytes.toBytes("b" + INVALID_URL_CHARS_2);
+  private static final byte[] COLUMN_3 = Bytes.toBytes("c" + INVALID_URL_CHARS_2);
+
+  private static final byte[] QUALIFIER_1 = Bytes.toBytes("1" + INVALID_URL_CHARS_1);
+  private static final byte[] QUALIFIER_2 = Bytes.toBytes("2" + INVALID_URL_CHARS_1);
   private static final byte[] VALUE_1 = Bytes.toBytes("testvalue1");
   private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
@@ -322,7 +341,7 @@ public class TestRemoteTable {
     assertNotNull(value);
     assertTrue(Bytes.equals(VALUE_2, value));
     
-    assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable"), remoteTable.getTableName()));
+    assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable" + VALID_TABLE_NAME_CHARS), remoteTable.getTableName()));
   }
 
   @Test
