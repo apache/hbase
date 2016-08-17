@@ -177,7 +177,6 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 <%java>
   AgeSnapshot ageAtEvictionSnapshot = bc.getStats().getAgeAtEvictionSnapshot();
   // Only show if non-zero mean and stddev as is the case in combinedblockcache
-  double mean = ageAtEvictionSnapshot.getMean();
 </%java>
     <tr>
         <td>Evicted</td>
@@ -189,13 +188,11 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         <td><% String.format("%,d", bc.getStats().getEvictionCount()) %></td>
         <td>The total number of times an eviction has occurred</td>
     </tr>
-<%if mean > 0 %>
     <tr>
         <td>Mean</td>
-        <td><% String.format("%,d", (long)(ageAtEvictionSnapshot.getMean()/(1000000 * 1000))) %></td>
+        <td><% String.format("%,d", (long)ageAtEvictionSnapshot.getMean()) %></td>
         <td>Mean age of Blocks at eviction time (seconds)</td>
     </tr>
-</%if>
 </%def>
 
 <%def hits_tmpl>
@@ -288,7 +285,6 @@ are combined counts. Request count is sum of hits and misses.</p>
     boolean evictions;
 </%args>
 <%java>
-  final long nanosPerSecond = 1000000000;
   String bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
   String bcName = bc.getClass().getSimpleName();
   org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile cbsbf =
