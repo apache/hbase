@@ -157,416 +157,312 @@
       <name>Amitanand S. Aiyer</name>
       <email>acube123@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>appy</id>
       <name>Apekshit Sharma</name>
       <email>appy@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>apurtell</id>
       <name>Andrew Purtell</name>
       <email>apurtell@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Salesforce.com</organization>
-      <organizationUrl>http://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
       <id>anoopsamjohn</id>
       <name>Anoop Sam John</name>
       <email>anoopsamjohn@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Intel</organization>
-      <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>antonov</id>
       <name>Mikhail Antonov</name>
       <email>antonov@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com/</organizationUrl>
     </developer>
     <developer>
       <id>ashishsinghi</id>
       <name>Ashish Singhi</name>
       <email>ashishsinghi@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Huawei</organization>
-      <organizationUrl>http://www.huawei.com/en/</organizationUrl>
     </developer>
     <developer>
       <id>busbey</id>
       <name>Sean Busbey</name>
       <email>busbey@apache.org</email>
       <timezone>-6</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>chenheng</id>
       <name>Heng Chen</name>
       <email>chenheng@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Yuantiku</organization>
-      <organizationUrl>http://www.yuantiku.com</organizationUrl>
     </developer>
     <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>dmeil</id>
       <name>Doug Meil</name>
       <email>dmeil@apache.org</email>
       <timezone>-5</timezone>
-      <organization>Explorys</organization>
-      <organizationUrl>http://www.explorys.com</organizationUrl>
     </developer>
     <developer>
       <id>eclark</id>
       <name>Elliott Clark</name>
       <email>eclark@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>enis</id>
       <name>Enis Soztutar</name>
       <email>enis@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>fenghh</id>
       <name>Honghua Feng</name>
       <email>fenghh@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Xiaomi</organization>
-      <organizationUrl>http://www.xiaomi.com</organizationUrl>
     </developer>
     <developer>
       <id>garyh</id>
       <name>Gary Helmling</name>
       <email>garyh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>gchanan</id>
       <name>Gregory Chanan</name>
       <email>gchanan@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jdcryans</id>
       <name>Jean-Daniel Cryans</name>
       <email>jdcryans@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jeffreyz</id>
       <name>Jeffrey Zhong</name>
       <email>jeffreyz@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>jerryjch</id>
       <name>Jing Chen (Jerry) He</name>
       <email>jerryjch@apache.org</email>
       <timezone>-8</timezone>
-      <organization>IBM</organization>
-      <organizationUrl>http://www.ibm.com</organizationUrl>
     </developer>
     <developer>
       <id>jyates</id>
       <name>Jesse Yates</name>
       <email>jyates@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Salesforce.com</organization>
-      <organizationUrl>http://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
       <id>jgray</id>
       <name>Jonathan Gray</name>
       <email>jgray@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Continuuity</organization>
-      <organizationUrl>http://www.continuuity.com</organizationUrl>
     </developer>
     <developer>
       <id>jingchengdu</id>
       <name>Jingcheng Du</name>
       <email>jingchengdu@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Intel</organization>
-      <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>esteban</id>
       <name>Esteban Gutierrez</name>
       <email>esteban@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jmhsieh</id>
       <name>Jonathan Hsieh</name>
       <email>jmhsieh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jxiang</id>
       <name>Jimmy Xiang</name>
       <email>jxiang@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>kannan</id>
       <name>Kannan Muthukkaruppan</name>
       <email>kannan@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>karthik</id>
       <name>Karthik Ranganathan</name>
       <email>kranganathan@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
       <timezone>+1</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
       <id>larsh</id>
       <name>Lars Hofhansl</name>
       <email>larsh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Salesforce.com</organization>
-      <organizationUrl>http://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
       <id>liangxie</id>
       <name>Liang Xie</name>
       <email>liangxie@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Xiaomi</organization>
-      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
       <id>liushaohui</id>
       <name>Shaohui Liu</name>
       <email>liushaohui@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Xiaomi</organization>
-      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
       <id>liyin</id>
       <name>Liyin Tang</name>
       <email>liyin.tang@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>liyu</id>
       <name>Yu Li</name>
       <email>liyu@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Alibaba</organization>
-      <organizationUrl>http://www.taobao.com</organizationUrl>
     </developer>
     <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>mbertozzi</id>
       <name>Matteo Bertozzi</name>
       <email>mbertozzi@apache.org</email>
       <timezone>0</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
       <timezone>+10</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>ndimiduk</id>
       <name>Nick Dimiduk</name>
       <email>ndimiduk@apache.org</email>
       <timezone>-8</timezone>
-      <organization>unaffiliated</organization>
-      <organizationUrl>http://www.n10k.com</organizationUrl>
     </developer>
     <developer>
       <id>nkeywal</id>
       <name>Nicolas Liochon</name>
       <email>nkeywal@apache.org</email>
       <timezone>+1</timezone>
-      <organization>Scaled Risk</organization>
-      <organizationUrl>http://www.scaledrisk.com</organizationUrl>
     </developer>
     <developer>
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>octo47</id>
       <name>Andrey Stepachev</name>
       <email>octo47@gmail.com</email>
       <timezone>0</timezone>
-      <organization>Dropbox</organization>
-      <organizationUrl>https://www.dropbox.com/</organizationUrl>
     </developer>
     <developer>
       <id>rajeshbabu</id>
       <name>Rajeshbabu Chintaguntla</name>
       <email>rajeshbabu@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>ramkrishna</id>
       <name>Ramkrishna S Vasudevan</name>
       <email>ramkrishna@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Intel</organization>
-      <organizationUrl>http://www.intel.in</organizationUrl>
     </developer>
     <developer>
       <id>rawson</id>
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
-      <organization>WANdisco</organization>
-      <organizationUrl>http://www.wandisco.com/</organizationUrl>
     </developer>
     <developer>
       <id>sershe</id>
       <name>Sergey Shelukhin</name>
       <email>sershe@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>ssrungarapu</id>
       <name>Srikanth Srungarapu</name>
       <email>ssrungarapu@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>stack</id>
       <name>Michael Stack</name>
       <email>stack@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
       <id>syuanjiang</id>
       <name>Stephen Yuan Jiang</name>
       <email>syuanjiang@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>tedyu</id>
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>todd</id>
       <name>Todd Lipcon</name>
       <email>todd@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>toffer</id>
       <name>Francis Liu</name>
       <email>toffer@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Yahoo</organization>
-      <organizationUrl>http://www.yahoo.com</organizationUrl>
     </developer>
     <developer>
       <id>virag</id>
       <name>Virag Kothari</name>
       <email>virag@yahoo-inc.com</email>
       <timezone>-8</timezone>
-      <organization>Yahoo!</organization>
-      <organizationUrl>http://www.yahoo.com</organizationUrl>
     </developer>
     <developer>
       <id>zhangduo</id>
       <name>Duo Zhang</name>
       <email>zhangduo@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Xiaomi</organization>
-      <organizationUrl>http://www.mi.com</organizationUrl>
     </developer>
     <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
       <timezone>+8</timezone>
-      <organization>Taobao</organization>
-      <organizationUrl>http://www.taobao.com</organizationUrl>
     </developer>
   </developers>
   <build>
