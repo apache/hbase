@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,24 @@ import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTrace
 @InterfaceStability.Evolving
 public final class ForeignExceptionUtil {
   private ForeignExceptionUtil() { }
+
+  public static Exception toException(final ForeignExceptionMessage eem) {
+    final GenericExceptionMessage gem = eem.getGenericException();
+    final StackTraceElement[] trace = toStackTrace(gem.getTraceList());
+    try {
+      Class<?> realClass = Class.forName(gem.getClassName());
+      Class<? extends Exception> cls = realClass.asSubclass(Exception.class);
+      Constructor<? extends Exception> cn = cls.getConstructor(String.class);
+      cn.setAccessible(true);
+      Exception re = cn.newInstance(gem.getMessage());
+      re.setStackTrace(trace);
+      return re;
+    } catch (Throwable e) {
+      Exception re = new Exception(gem.getMessage());
+      re.setStackTrace(trace);
+      return re;
+    }
+  }
 
   public static IOException toIOException(final ForeignExceptionMessage eem) {
     GenericExceptionMessage gem = eem.getGenericException();

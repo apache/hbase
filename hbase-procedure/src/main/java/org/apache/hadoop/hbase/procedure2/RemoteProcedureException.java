@@ -111,6 +111,6 @@ public class RemoteProcedureException extends ProcedureException {
   }
 
   public static RemoteProcedureException fromProto(final ForeignExceptionMessage eem) {
-    return new RemoteProcedureException(eem.getSource(), ForeignExceptionUtil.toIOException(eem));
+    return new RemoteProcedureException(eem.getSource(), ForeignExceptionUtil.toException(eem));
   }
 }

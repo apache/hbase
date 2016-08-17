@@ -300,10 +300,6 @@ implements ServerProcedureInterface {
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (ProcedureYieldException e) {
-      LOG.warn("Failed serverName=" + this.serverName + ", state=" + state + "; retry "
-          + e.getMessage());
-      throw e;
     } catch (IOException e) {
       LOG.warn("Failed serverName=" + this.serverName + ", state=" + state + "; retry", e);
     } catch (InterruptedException e) {
