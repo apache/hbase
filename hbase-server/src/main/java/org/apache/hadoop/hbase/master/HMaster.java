@@ -131,6 +131,7 @@ import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -1706,11 +1707,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       // check replication scope
-      if (hcd.getScope() < 0) {
-        String message = "Replication scope for column family "
-          + hcd.getNameAsString() + "  must be positive.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
+      checkReplicationScope(hcd);
 
       // check data replication factor, it can be 0(default value) when user has not explicitly
       // set the value, in this case we use default replication factor set in the file system.
@@ -1721,6 +1718,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       // TODO: should we check coprocessors and encryption ?
+    }
+  }
+
+  private void checkReplicationScope(HColumnDescriptor hcd) throws IOException{
+    // check replication scope
+    WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(hcd.getScope());
+    if (scop == null) {
+      String message = "Replication scope for column family "
+          + hcd.getNameAsString() + " is " + hcd.getScope() + " which is invalid.";
+
+      LOG.error(message);
+      throw new DoNotRetryIOException(message);
     }
   }
 
@@ -1957,6 +1966,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkInitialized();
     checkCompression(columnDescriptor);
     checkEncryption(conf, columnDescriptor);
+    checkReplicationScope(columnDescriptor);
     if (cpHost != null) {
       if (cpHost.preAddColumn(tableName, columnDescriptor)) {
         return;
@@ -1983,6 +1993,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkInitialized();
     checkCompression(descriptor);
     checkEncryption(conf, descriptor);
+    checkReplicationScope(descriptor);
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
         return;
