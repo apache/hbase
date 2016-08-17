@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyObject;
@@ -32,9 +31,9 @@ import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
-import com.google.protobuf.RpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
@@ -42,9 +41,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,8 +53,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
@@ -413,142 +408,5 @@ public abstract class AbstractTestIPC {
     assertTrue(client
         .wrapException(address, new CallTimeoutException("Test AbstractRpcClient#wrapException"))
         .getCause() instanceof CallTimeoutException);
-  }
-
-  @Test
-  public void testAsyncProtobufConnectionSetup() throws Exception {
-    TestRpcServer rpcServer = new TestRpcServer();
-    try (RpcClient client = createRpcClient(CONF)) {
-      rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-
-      RpcChannel channel = client.createProtobufRpcChannel(
-          ServerName.valueOf(address.getHostName(), address.getPort(), System.currentTimeMillis()),
-          User.getCurrent(), 0);
-
-      final AtomicBoolean done = new AtomicBoolean(false);
-
-      channel
-          .callMethod(md, new PayloadCarryingRpcController(), param, md.getOutputType().toProto(),
-              new com.google.protobuf.RpcCallback<Message>() {
-                @Override
-                public void run(Message parameter) {
-                  done.set(true);
-                }
-              });
-
-      TEST_UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return done.get();
-        }
-      });
-    } finally {
-      rpcServer.stop();
-    }
-  }
-
-  @Test
-  public void testRTEDuringAsyncProtobufConnectionSetup() throws Exception {
-    TestRpcServer rpcServer = new TestRpcServer();
-    try (RpcClient client = createRpcClientRTEDuringConnectionSetup(CONF)) {
-      rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-
-      RpcChannel channel = client.createProtobufRpcChannel(
-          ServerName.valueOf(address.getHostName(), address.getPort(), System.currentTimeMillis()),
-          User.getCurrent(), 0);
-
-      final AtomicBoolean done = new AtomicBoolean(false);
-
-      PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
-      controller.notifyOnFail(new com.google.protobuf.RpcCallback<IOException>() {
-        @Override
-        public void run(IOException e) {
-          done.set(true);
-          LOG.info("Caught expected exception: " + e.toString());
-          assertTrue(StringUtils.stringifyException(e).contains("Injected fault"));
-        }
-      });
-
-      channel.callMethod(md, controller, param, md.getOutputType().toProto(),
-          new com.google.protobuf.RpcCallback<Message>() {
-            @Override
-            public void run(Message parameter) {
-              done.set(true);
-              fail("Expected an exception to have been thrown!");
-            }
-          });
-
-      TEST_UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return done.get();
-        }
-      });
-    } finally {
-      rpcServer.stop();
-    }
-  }
-
-  @Test
-  public void testAsyncConnectionSetup() throws Exception {
-    TestRpcServer rpcServer = new TestRpcServer();
-    try (RpcClient client = createRpcClient(CONF)) {
-      rpcServer.start();
-      Message msg = setupAsyncConnection(rpcServer, client);
-
-      assertNotNull(msg);
-    } finally {
-      rpcServer.stop();
-    }
-  }
-
-  @Test
-  public void testRTEDuringAsyncConnectionSetup() throws Exception {
-    TestRpcServer rpcServer = new TestRpcServer();
-    try (RpcClient client = createRpcClientRTEDuringConnectionSetup(CONF)) {
-      rpcServer.start();
-      setupAsyncConnection(rpcServer, client);
-
-      fail("Expected an exception to have been thrown!");
-    } catch (ExecutionException e) {
-      assertTrue(StringUtils.stringifyException(e).contains("Injected fault"));
-    } finally {
-      rpcServer.stop();
-    }
-  }
-
-  private Message setupAsyncConnection(TestRpcServer rpcServer, RpcClient client)
-      throws IOException, InterruptedException, ExecutionException,
-      java.util.concurrent.TimeoutException {
-    InetSocketAddress address = rpcServer.getListenerAddress();
-    if (address == null) {
-      throw new IOException("Listener channel is closed");
-    }
-    MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-    EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-
-    ServerName serverName =
-        ServerName.valueOf(address.getHostName(), address.getPort(), System.currentTimeMillis());
-
-    AsyncRpcChannel channel =
-        client.createRpcChannel(md.getService().getName(), serverName, User.getCurrent());
-
-    final Future<Message> f = channel
-        .callMethod(md, param, null, md.getOutputType().toProto(), MessageConverter.NO_CONVERTER,
-            null, 1000, HConstants.NORMAL_QOS);
-
-    return f.get(1, TimeUnit.SECONDS);
   }
 }

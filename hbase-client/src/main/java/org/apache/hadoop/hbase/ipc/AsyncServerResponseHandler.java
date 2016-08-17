@@ -37,13 +37,13 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 @InterfaceAudience.Private
 public class AsyncServerResponseHandler extends SimpleChannelInboundHandler<ByteBuf> {
-  private final AsyncRpcChannelImpl channel;
+  private final AsyncRpcChannel channel;
 
   /**
    * Constructor
    * @param channel on which this response handler operates
    */
-  public AsyncServerResponseHandler(AsyncRpcChannelImpl channel) {
+  public AsyncServerResponseHandler(AsyncRpcChannel channel) {
     this.channel = channel;
   }
 

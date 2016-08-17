@@ -19,7 +19,11 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+
+import io.netty.util.concurrent.DefaultPromise;
+
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
@@ -39,12 +43,12 @@ import org.apache.hadoop.ipc.RemoteException;
  * @param <M> Message returned in communication to be converted
  */
 @InterfaceAudience.Private
-public class AsyncCall<M extends Message, T> extends Promise<T> {
+public class AsyncCall<M extends Message, T> extends DefaultPromise<T> {
   private static final Log LOG = LogFactory.getLog(AsyncCall.class.getName());
 
   final int id;
 
-  private final AsyncRpcChannelImpl channel;
+  private final AsyncRpcChannel channel;
 
   final Descriptors.MethodDescriptor method;
   final Message param;
@@ -77,7 +81,7 @@ public class AsyncCall<M extends Message, T> extends Promise<T> {
    * @param priority            for this request
    * @param metrics             MetricsConnection to which the metrics are stored for this request
    */
-  public AsyncCall(AsyncRpcChannelImpl channel, int connectId, Descriptors.MethodDescriptor
+  public AsyncCall(AsyncRpcChannel channel, int connectId, Descriptors.MethodDescriptor
         md, Message param, CellScanner cellScanner, M responseDefaultType, MessageConverter<M, T>
         messageConverter, IOExceptionConverter exceptionConverter, long rpcTimeout, int priority,
       MetricsConnection metrics) {

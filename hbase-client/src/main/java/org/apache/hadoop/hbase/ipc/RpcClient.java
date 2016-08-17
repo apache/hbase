@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcChannel;
-import io.netty.util.concurrent.EventExecutor;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -70,18 +70,6 @@ import org.apache.hadoop.hbase.security.User;
       throws IOException;
 
   /**
-   * Create or fetch AsyncRpcChannel
-   * @param serviceName to connect to
-   * @param sn ServerName of the channel to create
-   * @param user for the service
-   * @return An async RPC channel fitting given parameters
-   * @throws FailedServerException if server failed
-   * @throws StoppedRpcClientException if the RPC client has stopped
-   */
-  AsyncRpcChannel createRpcChannel(String serviceName, ServerName sn, User user)
-      throws StoppedRpcClientException, FailedServerException;
-
-  /**
    * Creates a "channel" that can be used by a protobuf service.  Useful setting up
    * protobuf stubs.
    *
@@ -116,10 +104,4 @@ import org.apache.hadoop.hbase.security.User;
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
-
-  /**
-   * Get an event loop to operate on
-   * @return EventLoop
-   */
-  EventExecutor getEventExecutor();
 }

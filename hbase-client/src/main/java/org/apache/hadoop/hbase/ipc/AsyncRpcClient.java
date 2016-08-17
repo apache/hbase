@@ -23,11 +23,11 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.RpcController;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -37,6 +37,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -49,16 +52,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Future;
 import org.apache.hadoop.hbase.client.MetricsConnection;
-import org.apache.hadoop.hbase.client.ResponseFutureListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.hbase.util.Pair;
@@ -240,7 +240,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-    final Future<Message> promise = connection.callMethod(md, param, pcrc.cellScanner(), returnType,
+    final Promise<Message> promise = connection.callMethod(md, param, pcrc.cellScanner(), returnType,
         getMessageConverterWithRpcController(pcrc), null, pcrc.getCallTimeout(),
         pcrc.getPriority());
 
@@ -290,8 +290,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
     try {
       connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-      ResponseFutureListener<Message> listener =
-        new ResponseFutureListener<Message>() {
+      FutureListener<Message> listener =
+        new FutureListener<Message>() {
           @Override
           public void operationComplete(Future<Message> future) throws Exception {
             if (!future.isSuccess()) {
@@ -351,11 +351,6 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
   }
 
-  @Override
-  public EventLoop getEventExecutor() {
-    return this.bootstrap.config().group().next();
-  }
-
   /**
    * Create a cell scanner
    *
@@ -376,13 +371,6 @@ public class AsyncRpcClient extends AbstractRpcClient {
    */
   public ByteBuffer buildCellBlock(CellScanner cells) throws IOException {
     return ipcUtil.buildCellBlock(this.codec, this.compressor, cells);
-  }
-
-  @Override
-  public AsyncRpcChannel createRpcChannel(String serviceName, ServerName sn, User user)
-      throws StoppedRpcClientException, FailedServerException {
-    return this.createRpcChannel(serviceName,
-        new InetSocketAddress(sn.getHostname(), sn.getPort()), user);
   }
 
   /**
@@ -420,7 +408,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
         connections.remove(hashCode);
       }
       if (rpcChannel == null) {
-        rpcChannel = new AsyncRpcChannelImpl(this.bootstrap, this, ticket, serviceName, location);
+        rpcChannel = new AsyncRpcChannel(this.bootstrap, this, ticket, serviceName, location);
         connections.put(hashCode, rpcChannel);
       }
     }
