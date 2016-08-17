@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -92,9 +94,9 @@ public class RemoteHTable implements Table {
       final long startTime, final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append('/');
-    sb.append(Bytes.toStringBinary(row));
+    sb.append(toURLEncodedBytes(row));
     Set families = familyMap.entrySet();
     if (families != null) {
       Iterator i = familyMap.entrySet().iterator();
@@ -104,19 +106,18 @@ public class RemoteHTable implements Table {
         Collection quals = (Collection)e.getValue();
         if (quals == null || quals.isEmpty()) {
           // this is an unqualified family. append the family name and NO ':'
-          sb.append(Bytes.toStringBinary((byte[])e.getKey()));
+          sb.append(toURLEncodedBytes((byte[])e.getKey()));
         } else {
           Iterator ii = quals.iterator();
           while (ii.hasNext()) {
-            sb.append(Bytes.toStringBinary((byte[])e.getKey()));
+            sb.append(toURLEncodedBytes((byte[])e.getKey()));
             sb.append(':');
             Object o = ii.next();
             // Puts use byte[] but Deletes use KeyValue
             if (o instanceof byte[]) {
-              sb.append(Bytes.toStringBinary((byte[])o));
+              sb.append(toURLEncodedBytes((byte[])o));
             } else if (o instanceof KeyValue) {
-              sb.append(Bytes.toStringBinary(((KeyValue) o).getQualifierArray(),
-                ((KeyValue) o).getQualifierOffset(), ((KeyValue) o).getQualifierLength()));
+              sb.append(toURLEncodedBytes(CellUtil.cloneQualifier((KeyValue)o)));
             } else {
               throw new RuntimeException("object type not handled");
             }
@@ -151,7 +152,7 @@ public class RemoteHTable implements Table {
   protected String buildMultiRowSpec(final byte[][] rows, int maxVersions) {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append("/multiget/");
     if (rows == null || rows.length == 0) {
       return sb.toString();
@@ -163,7 +164,7 @@ public class RemoteHTable implements Table {
         sb.append('&');
       }
       sb.append("row=");
-      sb.append(Bytes.toStringBinary(rk));
+      sb.append(toURLEncodedBytes(rk));
     }
     sb.append("&v=");
     sb.append(maxVersions);
@@ -211,8 +212,6 @@ public class RemoteHTable implements Table {
 
   /**
    * Constructor
-   * @param client
-   * @param name
    */
   public RemoteHTable(Client client, String name) {
     this(client, HBaseConfiguration.create(), Bytes.toBytes(name));
@@ -220,9 +219,6 @@ public class RemoteHTable implements Table {
 
   /**
    * Constructor
-   * @param client
-   * @param conf
-   * @param name
    */
   public RemoteHTable(Client client, Configuration conf, String name) {
     this(client, conf, Bytes.toBytes(name));
@@ -230,9 +226,6 @@ public class RemoteHTable implements Table {
 
   /**
    * Constructor
-   * @param client
-   * @param conf
-   * @param name
    */
   public RemoteHTable(Client client, Configuration conf, byte[] name) {
     this.client = client;
@@ -260,7 +253,7 @@ public class RemoteHTable implements Table {
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append("schema");
     for (int i = 0; i < maxRetries; i++) {
@@ -402,9 +395,9 @@ public class RemoteHTable implements Table {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append('/');
-    sb.append(Bytes.toStringBinary(put.getRow()));
+    sb.append(toURLEncodedBytes(put.getRow()));
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
         model.createProtobufOutput());
@@ -459,7 +452,7 @@ public class RemoteHTable implements Table {
     // build path for multiput
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
@@ -530,7 +523,7 @@ public class RemoteHTable implements Table {
       }
       StringBuffer sb = new StringBuffer();
       sb.append('/');
-      sb.append(Bytes.toStringBinary(name));
+      sb.append(Bytes.toString(name));
       sb.append('/');
       sb.append("scanner");
       for (int i = 0; i < maxRetries; i++) {
@@ -684,9 +677,9 @@ public class RemoteHTable implements Table {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append('/');
-    sb.append(Bytes.toStringBinary(put.getRow()));
+    sb.append(toURLEncodedBytes(put.getRow()));
     sb.append("?check=put");
 
     for (int i = 0; i < maxRetries; i++) {
@@ -728,9 +721,9 @@ public class RemoteHTable implements Table {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
+    sb.append(Bytes.toString(name));
     sb.append('/');
-    sb.append(Bytes.toStringBinary(row));
+    sb.append(toURLEncodedBytes(row));
     sb.append("?check=delete");
 
     for (int i = 0; i < maxRetries; i++) {
@@ -889,5 +882,20 @@ public class RemoteHTable implements Table {
   @Override
   public void setWriteRpcTimeout(int writeRpcTimeout) {
     throw new UnsupportedOperationException();
+  }
+
+  /*
+   * Only a small subset of characters are valid in URLs.
+   *
+   * Row keys, column families, and qualifiers cannot be appended to URLs without first URL
+   * escaping. Table names are ok because they can only contain alphanumeric, ".","_", and "-"
+   * which are valid characters in URLs.
+   */
+  private static String toURLEncodedBytes(byte[] row) {
+    try {
+      return URLEncoder.encode(new String(row, "UTF-8"), "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      throw new IllegalStateException("URLEncoder doesn't support UTF-8", e);
+    }
   }
 }
