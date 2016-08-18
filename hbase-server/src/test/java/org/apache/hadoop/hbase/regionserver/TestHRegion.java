@@ -6568,4 +6568,74 @@ public class TestHRegion {
     return initHRegion(tableName, callingMethod, HBaseConfiguration.create(),
         families);
   }
+
+  /**
+   * HBASE-16429 Make sure no stuck if roll writer when ring buffer is filled with appends
+   * @throws IOException if IO error occurred during test
+   */
+  @Test(timeout = 60000)
+  public void testWritesWhileRollWriter() throws IOException {
+    int testCount = 10;
+    int numRows = 1024;
+    int numFamilies = 2;
+    int numQualifiers = 2;
+    final byte[][] families = new byte[numFamilies][];
+    for (int i = 0; i < numFamilies; i++) {
+      families[i] = Bytes.toBytes("family" + i);
+    }
+    final byte[][] qualifiers = new byte[numQualifiers][];
+    for (int i = 0; i < numQualifiers; i++) {
+      qualifiers[i] = Bytes.toBytes("qual" + i);
+    }
+
+    String method = "testWritesWhileRollWriter";
+    CONF.setInt("hbase.regionserver.wal.disruptor.event.count", 2);
+    this.region = initHRegion(tableName, method, CONF, families);
+    try {
+      List<Thread> threads = new ArrayList<Thread>();
+      for (int i = 0; i < numRows; i++) {
+        final int count = i;
+        Thread t = new Thread(new Runnable() {
+
+          @Override
+          public void run() {
+            byte[] row = Bytes.toBytes("row" + count);
+            Put put = new Put(row);
+            put.setDurability(Durability.SYNC_WAL);
+            byte[] value = Bytes.toBytes(String.valueOf(count));
+            for (byte[] family : families) {
+              for (byte[] qualifier : qualifiers) {
+                put.addColumn(family, qualifier, (long) count, value);
+              }
+            }
+            try {
+              region.put(put);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        });
+        threads.add(t);
+      }
+      for (Thread t : threads) {
+        t.start();
+      }
+
+      for (int i = 0; i < testCount; i++) {
+        region.getWAL().rollWriter();
+        Thread.yield();
+      }
+    } finally {
+      try {
+        HBaseTestingUtility.closeRegionAndWAL(this.region);
+        CONF.setInt("hbase.regionserver.wal.disruptor.event.count", 16 * 1024);
+      } catch (DroppedSnapshotException dse) {
+        // We could get this on way out because we interrupt the background flusher and it could
+        // fail anywhere causing a DSE over in the background flusher... only it is not properly
+        // dealt with so could still be memory hanging out when we get to here -- memory we can't
+        // flush because the accounting is 'off' since original DSE.
+      }
+      this.region = null;
+    }
+  }
 }
