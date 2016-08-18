@@ -324,8 +324,20 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     // constructor BEFORE the ring buffer is set running so it is null on first time through
     // here; allow for that.
     SyncFuture syncFuture = null;
-    SafePointZigZagLatch zigzagLatch = (this.ringBufferEventHandler == null) ? null
-        : this.ringBufferEventHandler.attainSafePoint();
+    SafePointZigZagLatch zigzagLatch = null;
+    long sequence = -1L;
+    if (this.ringBufferEventHandler != null) {
+      // Get sequence first to avoid dead lock when ring buffer is full
+      // Considering below sequence
+      // 1. replaceWriter is called and zigzagLatch is initialized
+      // 2. ringBufferEventHandler#onEvent is called and arrives at #attainSafePoint(long) then wait
+      // on safePointReleasedLatch
+      // 3. Since ring buffer is full, if we get sequence when publish sync, the replaceWriter
+      // thread will wait for the ring buffer to be consumed, but the only consumer is waiting
+      // replaceWriter thread to release safePointReleasedLatch, which causes a deadlock
+      sequence = getSequenceOnRingBuffer();
+      zigzagLatch = this.ringBufferEventHandler.attainSafePoint();
+    }
     afterCreatingZigZagLatch();
     long oldFileLen = 0L;
     try {
@@ -336,8 +348,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // to come back. Cleanup this syncFuture down below after we are ready to run again.
       try {
         if (zigzagLatch != null) {
+          // use assert to make sure no change breaks the logic that
+          // sequence and zigzagLatch will be set together
+          assert sequence > 0L : "Failed to get sequence from ring buffer";
           Trace.addTimelineAnnotation("awaiting safepoint");
-          syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer());
+          syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence));
         }
       } catch (FailedSyncBeforeLogCloseException e) {
         // If unflushed/unsynced entries on close, it is reason to abort.
@@ -709,12 +724,20 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return logRollNeeded;
   }
 
-  private SyncFuture publishSyncOnRingBuffer() {
-    return publishSyncOnRingBuffer(null);
+  private SyncFuture publishSyncOnRingBuffer(long sequence) {
+    return publishSyncOnRingBuffer(sequence, null);
+  }
+
+  private long getSequenceOnRingBuffer() {
+    return this.disruptor.getRingBuffer().next();
   }
 
   private SyncFuture publishSyncOnRingBuffer(Span span) {
     long sequence = this.disruptor.getRingBuffer().next();
+    return publishSyncOnRingBuffer(sequence, span);
+  }
+
+  private SyncFuture publishSyncOnRingBuffer(long sequence, Span span) {
     // here we use ring buffer sequence as transaction id
     SyncFuture syncFuture = getSyncFuture(sequence, span);
     try {
