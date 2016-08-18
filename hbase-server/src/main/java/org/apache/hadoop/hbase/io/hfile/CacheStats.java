@@ -150,7 +150,9 @@ public class CacheStats {
   }
 
   public void evicted(final long t, boolean primary) {
-    if (t > this.startTime) this.ageAtEviction.update(t - this.startTime);
+    if (t > this.startTime) {
+      this.ageAtEviction.update((t - this.startTime)/BlockCacheUtil.NANOS_PER_SECOND);
+    }
     this.evictedBlockCount.incrementAndGet();
     if (primary) {
       primaryEvictedBlockCount.incrementAndGet();
