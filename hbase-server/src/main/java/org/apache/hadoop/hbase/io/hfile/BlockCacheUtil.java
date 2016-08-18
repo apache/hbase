@@ -41,6 +41,8 @@ import com.yammer.metrics.stats.Snapshot;
  */
 @InterfaceAudience.Private
 public class BlockCacheUtil {
+
+  public static final long NANOS_PER_SECOND = 1000000000;
   /**
    * Needed making histograms.
    */
@@ -225,7 +227,7 @@ public class BlockCacheUtil {
         this.dataBlockCount++;
         this.dataSize += cb.getSize();
       }
-      long age = this.now - cb.getCachedTime();
+      long age = (this.now - cb.getCachedTime())/NANOS_PER_SECOND;
       this.age.update(age);
       return false;
     }

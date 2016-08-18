@@ -176,9 +176,6 @@ org.apache.hadoop.util.StringUtils;
 </%args>
 <%java>
   AgeSnapshot ageAtEvictionSnapshot = bc.getStats().getAgeAtEvictionSnapshot();
-  // Only show if non-zero mean and stddev as is the case in combinedblockcache
-  double mean = ageAtEvictionSnapshot.getMean();
-  double stddev = ageAtEvictionSnapshot.getStdDev();
 </%java>
     <tr>
         <td>Evicted</td>
@@ -190,20 +187,16 @@ org.apache.hadoop.util.StringUtils;
         <td><% String.format("%,d", bc.getStats().getEvictionCount()) %></td>
         <td>The total number of times an eviction has occurred</td>
     </tr>
-<%if mean > 0 %>
     <tr>
         <td>Mean</td>
-        <td><% String.format("%,d", (long)(ageAtEvictionSnapshot.getMean()/(1000000 * 1000))) %></td>
+        <td><% String.format("%,d", (long)(ageAtEvictionSnapshot.getMean())) %></td>
         <td>Mean age of Blocks at eviction time (seconds)</td>
     </tr>
-</%if>
-<%if stddev > 0 %>
     <tr>
         <td>StdDev</td>
-        <td><% String.format("%,d", (long)(ageAtEvictionSnapshot.getStdDev()/1000000)) %></td>
+        <td><% String.format("%,d", (long)(ageAtEvictionSnapshot.getStdDev())) %></td>
         <td>Standard Deviation for age of Blocks at eviction time</td>
     </tr>
-</%if>
 </%def>
 
 <%def bc_stats>
