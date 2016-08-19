@@ -29,6 +29,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,14 +41,16 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * ProcedureWALPrettyPrinter prints the contents of a given ProcedureWAL file
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
-public class ProcedureWALPrettyPrinter {
-  private PrintStream out;
+public class ProcedureWALPrettyPrinter extends Configured implements Tool {
+  private final PrintStream out;
 
   public ProcedureWALPrettyPrinter() {
     out = System.out;
@@ -85,7 +88,6 @@ public class ProcedureWALPrettyPrinter {
   }
 
   public void processProcedureWALFile(ProcedureWALFile log) throws IOException {
-
     log.open();
     ProcedureWALHeader header = log.getHeader();
     printHeader(header);
@@ -96,7 +98,7 @@ public class ProcedureWALPrettyPrinter {
       while (hasMore) {
         ProcedureWALEntry entry = ProcedureWALFormat.readEntry(stream);
         if (entry == null) {
-          out.print("No more entry, exiting with missing EOF");
+          out.println("No more entry, exiting with missing EOF");
           hasMore = false;
           break;
         }
@@ -109,7 +111,7 @@ public class ProcedureWALPrettyPrinter {
         }
       }
     } catch (IOException e) {
-      out.print("got an exception while reading the procedure WAL " + e.getMessage());
+      out.println("got an exception while reading the procedure WAL " + e.getMessage());
     }
     finally {
       log.close();
@@ -138,10 +140,6 @@ public class ProcedureWALPrettyPrinter {
     out.println();
   }
 
-  public static void main(String[] args) throws IOException {
-    run(args);
-  }
-
   /**
    * Pass one or more log file names and formatting options and it will dump out
    * a text version of the contents on <code>stdout</code>.
@@ -151,18 +149,15 @@ public class ProcedureWALPrettyPrinter {
    * @throws IOException
    *           Thrown upon file system errors etc.
    */
-  public static void run(String[] args) throws IOException {
+  public int run(final String[] args) throws IOException {
     // create options
     Options options = new Options();
     options.addOption("h", "help", false, "Output help message");
     options.addOption("f", "file", true, "File to print");
 
-    List<Path> files = new ArrayList<Path>();
-
-    ProcedureWALPrettyPrinter printer = new ProcedureWALPrettyPrinter();
-    CommandLineParser parser = new PosixParser();
+    final List<Path> files = new ArrayList<Path>();
     try {
-      CommandLine cmd = parser.parse(options, args);
+      CommandLine cmd = new PosixParser().parse(options, args);
 
       if (cmd.hasOption("f")) {
         files.add(new Path(cmd.getOptionValue("f")));
@@ -171,19 +166,24 @@ public class ProcedureWALPrettyPrinter {
       if (files.size() == 0 || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
-        System.exit(-1);
+        return(-1);
       }
-
     } catch (ParseException e) {
       e.printStackTrace();
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
-      System.exit(-1);
+      return(-1);
     }
     // get configuration, file system, and process the given files
-    Configuration conf = HBaseConfiguration.create();
     for (Path file : files) {
-      printer.processFile(conf, file);
+      processFile(getConf(), file);
     }
+    return(0);
+  }
+
+  public static void main(String[] args) throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    int exitCode = ToolRunner.run(conf, new ProcedureWALPrettyPrinter(), args);
+    System.exit(exitCode);
   }
 }
