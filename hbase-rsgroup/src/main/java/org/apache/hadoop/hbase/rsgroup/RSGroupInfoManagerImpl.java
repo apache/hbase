@@ -229,7 +229,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     for(TableName tableName: tableNames) {
       if (tableMap.containsKey(tableName)) {
-        RSGroupInfo src = new RSGroupInfo(newGroupMap.get(tableMap.get(tableName)));
+        RSGroupInfo src = new RSGroupInfo(rsGroupMap.get(tableMap.get(tableName)));
         src.removeTable(tableName);
         newGroupMap.put(src.getName(), src);
       }
