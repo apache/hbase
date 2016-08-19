@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 
@@ -168,18 +167,15 @@ public class BloomFilterChunk implements BloomFilterBase {
     }
   }
 
-  public void add(byte [] buf) {
-    add(buf, 0, buf.length);
-  }
-
-  public void add(byte [] buf, int offset, int len) {
+  // Used only by tests
+  void add(byte [] buf, int offset, int len) {
     /*
      * For faster hashing, use combinatorial generation
      * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
      */
-    int hash1 = this.hash.hash(buf, offset, len, 0);
-    int hash2 = this.hash.hash(buf, offset, len, hash1);
-
+    HashKey<byte[]> hashKey = new ByteArrayHashKey(buf, offset, len);
+    int hash1 = this.hash.hash(hashKey, 0);
+    int hash2 = this.hash.hash(hashKey, hash1);
     setHashLoc(hash1, hash2);
   }
 
@@ -192,22 +188,14 @@ public class BloomFilterChunk implements BloomFilterBase {
     int hash2;
     HashKey<Cell> hashKey;
     if (this.bloomType == BloomType.ROW) {
-      // TODO : Move this length to the HashKey when we do the read path to work with
-      // extractor so that the byte[] version of hash() function is removed
-      int length = cell.getRowLength();
       hashKey = new RowBloomHashKey(cell);
-      hash1 = this.hash.hash(hashKey, 0, length, 0);
-      hash2 = this.hash.hash(hashKey, 0, length, hash1);
+      hash1 = this.hash.hash(hashKey, 0);
+      hash2 = this.hash.hash(hashKey, hash1);
     } else {
-      int famLen = cell.getFamilyLength();
-      // TODO : Move this length to the HashKey when we do the read path to work with
-      // extractor so that the byte[] version of hash() function is removed
-      int length = KeyValueUtil.keyLength(cell) - famLen;
       hashKey = new RowColBloomHashKey(cell);
-      hash1 = this.hash.hash(hashKey, 0, length, 0);
-      hash2 = this.hash.hash(hashKey, 0, length, hash1);
+      hash1 = this.hash.hash(hashKey, 0);
+      hash2 = this.hash.hash(hashKey, hash1);
     }
-
     setHashLoc(hash1, hash2);
   }
 

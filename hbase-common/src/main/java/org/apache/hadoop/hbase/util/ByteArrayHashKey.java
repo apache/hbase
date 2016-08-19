@@ -22,12 +22,26 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class ByteArrayHashKey extends HashKey<byte[]> {
 
-  public ByteArrayHashKey(byte[] t) {
+  private final int offset;
+  private final int length;
+
+  public ByteArrayHashKey(byte[] t, int offset, int length) {
     super(t);
+    this.offset = offset;
+    this.length = length;
   }
 
   @Override
   public byte get(int pos) {
-    return t[pos];
+    return t[getAbsolutePos(pos)];
+  }
+
+  private int getAbsolutePos(int pos) {
+    return this.offset + pos;
+  }
+
+  @Override
+  public int length() {
+    return this.length;
   }
 }

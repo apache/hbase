@@ -43,8 +43,8 @@ public class RowColBloomHashKey extends CellHashKey {
 
   @Override
   public byte get(int offset) {
-    // Always assume that this cell has keyvalue serialized key structure.
-    // rk len + row key + 0 byte for family length + qual + ts + type
+    // For ROW_COL blooms we use bytes
+    // <RK length> (2 bytes) , <RK>, 0 (one byte CF length), <CQ>, <TS> (8 btes), <TYPE> ( 1 byte)
     if (offset < Bytes.SIZEOF_SHORT) {
       // assign locally
       int rowlen = rowLength;
@@ -76,5 +76,13 @@ public class RowColBloomHashKey extends CellHashKey {
       return LATEST_TS[offset - (Bytes.SIZEOF_SHORT + rowLength + qualLength + Bytes.SIZEOF_BYTE)];
     }
     return MAX_TYPE;
+  }
+
+  @Override
+  public int length() {
+    // For ROW_COL blooms we use bytes
+    // <RK length> (2 bytes) , <RK>, 0 (one byte CF length), <CQ>, <TS> (8 btes), <TYPE> ( 1 byte)
+    return KeyValue.ROW_LENGTH_SIZE + this.t.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
+        + this.t.getQualifierLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 }

@@ -32,4 +32,9 @@ public class RowBloomHashKey extends CellHashKey {
   public byte get(int offset) {
     return CellUtil.getRowByte(t, offset);
   }
+
+  @Override
+  public int length() {
+    return this.t.getRowLength();
+  }
 }

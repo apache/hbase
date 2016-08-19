@@ -40,14 +40,14 @@ public class MurmurHash3 extends Hash {
   /** Returns the MurmurHash3_x86_32 hash. */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("SF")
   @Override
-  public int hash(HashKey hashKey, int offset, int length, int initval) {
+  public <T> int hash(HashKey<T> hashKey, int initval) {
     final int c1 = 0xcc9e2d51;
     final int c2 = 0x1b873593;
-
+    int length = hashKey.length();
     int h1 = initval;
-    int roundedEnd = offset + (length & 0xfffffffc); // round down to 4 byte block
+    int roundedEnd = (length & 0xfffffffc); // round down to 4 byte block
 
-    for (int i = offset; i < roundedEnd; i += 4) {
+    for (int i = 0; i < roundedEnd; i += 4) {
       // little endian load order
       int k1 =
           (hashKey.get(i) & 0xff) | ((hashKey.get(i + 1) & 0xff) << 8)

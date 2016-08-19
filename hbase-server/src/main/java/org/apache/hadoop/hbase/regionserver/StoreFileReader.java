@@ -374,8 +374,8 @@ public class StoreFileReader {
             exists = false;
           } else {
             exists =
-                bloomFilter.contains(kvKey, bloom) ||
-                bloomFilter.contains(rowBloomKey, bloom);
+                bloomFilter.contains(kvKey, bloom, BloomType.ROWCOL) ||
+                bloomFilter.contains(rowBloomKey, bloom, BloomType.ROWCOL);
           }
         } else {
           exists = !keyIsAfterLast

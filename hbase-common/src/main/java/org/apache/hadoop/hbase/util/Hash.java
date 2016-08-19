@@ -98,61 +98,11 @@ public abstract class Hash {
   }
 
   /**
-   * Calculate a hash using all bytes from the input argument, and
-   * a seed of -1.
-   * @param bytes input bytes
-   * @return hash value
-   */
-  public int hash(byte[] bytes) {
-    return hash(bytes, bytes.length, -1);
-  }
-
-  /**
-   * Calculate a hash using all bytes from the input argument,
-   * and a provided seed value.
-   * @param bytes input bytes
-   * @param initval seed value
-   * @return hash value
-   */
-  public int hash(byte[] bytes, int initval) {
-    return hash(bytes, 0, bytes.length, initval);
-  }
-
-  /**
-   * Calculate a hash using bytes from 0 to <code>length</code>, and
-   * the provided seed value
-   * @param bytes input bytes
-   * @param length length of the valid bytes after offset to consider
-   * @param initval seed value
-   * @return hash value
-   */
-  public int hash(byte[] bytes, int length, int initval) {
-    return hash(bytes, 0, length, initval);
-  }
-
-  /**
-   * Calculate a hash using bytes from <code>offset</code> to <code>offset + 
-   * length</code>, and the provided seed value.
-   * @param bytes input bytes
-   * @param offset the offset into the array to start consideration
-   * @param length length of the valid bytes after offset to consider
-   * @param initval seed value
-   * @return hash value
-   */
-  // TODO : remove this once read path is updated to work with Cells
-  public int hash(byte[] bytes, int offset, int length, int initval) {
-    return hash(new ByteArrayHashKey(bytes), offset, length, initval);
-  }
-
-  /**
-   * Calculate a hash using bytes from <code>offset</code> to <code>offset +
-   * length</code>, and the provided seed value.
+   * Calculate a hash using bytes from HashKey and the provided seed value.
+   * @param <T>
    * @param hashKey key to extract the hash
-   * @param offset offset to be used  by the hash algo
-   * @param length length to be used by the hash algo
    * @param initval the seed value
    * @return hash value
    */
-  // TODO : Remove offset and length when the byte[] version of hash() is removed
-  public abstract int hash(HashKey hashKey, int offset, int length, int initval);
+  public abstract <T> int hash(HashKey<T> hashKey, int initval);
 }

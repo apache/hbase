@@ -69,7 +69,7 @@ public class JenkinsHash extends Hash {
     JenkinsHash hash = new JenkinsHash();
     try {
       for (int length = in.read(bytes); length > 0; length = in.read(bytes)) {
-        value = hash.hash(bytes, length, value);
+        value = hash.hash(new ByteArrayHashKey(bytes, 0, length), value);
       }
     } finally {
       in.close();
@@ -81,7 +81,6 @@ public class JenkinsHash extends Hash {
    * taken from  hashlittle() -- hash a variable-length key into a 32-bit value
    *
    * @param hashKey the key to extract the  bytes for hash algo
-   * @param nbytes number of bytes to include in hash
    * @param initval can be any integer value
    * @return a 32-bit value.  Every bit of the key affects every bit of the
    * return value.  Two keys differing by one or two bits will have totally
@@ -104,11 +103,11 @@ public class JenkinsHash extends Hash {
   */
   @SuppressWarnings("fallthrough")
   @Override
-  public int hash(HashKey hashKey, int off, int nbytes, int initval) {
-    int length = nbytes;
+  public <T> int hash(HashKey<T> hashKey, int initval) {
+    int length = hashKey.length();
     int a, b, c;
     a = b = c = 0xdeadbeef + length + initval;
-    int offset = off;
+    int offset = 0;
     for (; length > 12; offset += 12, length -= 12) {
       a += (hashKey.get(offset) & BYTE_MASK);
       a += ((hashKey.get(offset + 1) & BYTE_MASK) <<  8);

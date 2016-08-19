@@ -23,10 +23,9 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,68 +94,66 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
 
   @Override
   public boolean contains(byte[] key, int keyOffset, int keyLength, ByteBuff bloom) {
-    // We try to store the result in this variable so we can update stats for
-    // testing, but when an error happens, we log a message and return.
-
-    int block = index.rootBlockContainingKey(key, keyOffset,
-        keyLength);
-    return checkContains(key, keyOffset, keyLength, block);
-  }
-
-  private boolean checkContains(byte[] key, int keyOffset, int keyLength, int block) {
-    boolean result;
+    int block = index.rootBlockContainingKey(key, keyOffset, keyLength);
     if (block < 0) {
-      result = false; // This key is not in the file.
-    } else {
-      HFileBlock bloomBlock;
-      try {
-        // We cache the block and use a positional read.
-        bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
-            index.getRootBlockDataSize(block), true, true, false, true,
-            BlockType.BLOOM_CHUNK, null);
-      } catch (IOException ex) {
-        // The Bloom filter is broken, turn it off.
-        throw new IllegalArgumentException(
-            "Failed to load Bloom block for key "
-                + Bytes.toStringBinary(key, keyOffset, keyLength), ex);
-      }
-      try {
-        ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
-        result =
-            BloomFilterUtil.contains(key, keyOffset, keyLength, bloomBuf, bloomBlock.headerSize(),
-              bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
-      } finally {
-        // After the use return back the block if it was served from a cache.
-        reader.returnBlock(bloomBlock);
-      }
+      return false; // This key is not in the file.
     }
-
-    if (numQueriesPerChunk != null && block >= 0) {
+    boolean result;
+    HFileBlock bloomBlock = getBloomBlock(block);
+    try {
+      ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
+      result = BloomFilterUtil.contains(key, keyOffset, keyLength, bloomBuf,
+          bloomBlock.headerSize(), bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
+    } finally {
+      // After the use return back the block if it was served from a cache.
+      reader.returnBlock(bloomBlock);
+    }
+    if (numPositivesPerChunk != null && result) {
       // Update statistics. Only used in unit tests.
-      ++numQueriesPerChunk[block];
-      if (result)
-        ++numPositivesPerChunk[block];
+      ++numPositivesPerChunk[block];
     }
-
     return result;
   }
 
-  @Override
-  public boolean contains(Cell keyCell, ByteBuff bloom) {
-    // We try to store the result in this variable so we can update stats for
-    // testing, but when an error happens, we log a message and return.
-    int block = index.rootBlockContainingKey(keyCell);
-    // This copy will be needed. Because blooms work on the key part only.
-    // Atleast we now avoid multiple copies until it comes here. If we want to make this to work
-    // with BBs then the Hash.java APIs should also be changed to work with BBs.
-    if (keyCell instanceof KeyValue) {
-      // TODO : directly use Cell here
-      return checkContains(((KeyValue) keyCell).getBuffer(), ((KeyValue) keyCell).getKeyOffset(),
-        ((KeyValue) keyCell).getKeyLength(), block);
+  private HFileBlock getBloomBlock(int block) {
+    HFileBlock bloomBlock;
+    try {
+      // We cache the block and use a positional read.
+      bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
+          index.getRootBlockDataSize(block), true, true, false, true, BlockType.BLOOM_CHUNK, null);
+    } catch (IOException ex) {
+      // The Bloom filter is broken, turn it off.
+      throw new IllegalArgumentException("Failed to load Bloom block", ex);
     }
-    // TODO : Avoid this copy in read path also
-    byte[] key = CellUtil.getCellKeySerializedAsKeyValueKey(keyCell);
-    return checkContains(key, 0, key.length, block);
+
+    if (numQueriesPerChunk != null) {
+      // Update statistics. Only used in unit tests.
+      ++numQueriesPerChunk[block];
+    }
+    return bloomBlock;
+  }
+
+  @Override
+  public boolean contains(Cell keyCell, ByteBuff bloom, BloomType type) {
+    int block = index.rootBlockContainingKey(keyCell);
+    if (block < 0) {
+      return false; // This key is not in the file.
+    }
+    boolean result;
+    HFileBlock bloomBlock = getBloomBlock(block);
+    try {
+      ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
+      result = BloomFilterUtil.contains(keyCell, bloomBuf, bloomBlock.headerSize(),
+          bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount, type);
+    } finally {
+      // After the use return back the block if it was served from a cache.
+      reader.returnBlock(bloomBlock);
+    }
+    if (numPositivesPerChunk != null && result) {
+      // Update statistics. Only used in unit tests.
+      ++numPositivesPerChunk[block];
+    }
+    return result;
   }
 
   public boolean supportsAutoLoading() {

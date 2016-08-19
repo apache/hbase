@@ -101,7 +101,6 @@ import org.apache.htrace.impl.ProbabilitySampler;
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.UniformReservoir;
 
 /**
@@ -550,7 +549,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           next.perClientRunRows = perClientRows / 10;
           String s = MAPPER.writeValueAsString(next);
           LOG.info("Client=" + j + ", maptask=" + i + ", input=" + s);
-          int hash = h.hash(Bytes.toBytes(s));
+          byte[] b = Bytes.toBytes(s);
+          int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
           m.put(hash, s);
         }
       }

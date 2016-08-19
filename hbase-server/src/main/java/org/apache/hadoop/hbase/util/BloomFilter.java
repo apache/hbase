@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  *
@@ -77,17 +78,16 @@ public interface BloomFilter extends BloomFilterBase {
 
   /**
    * Check if the specified key is contained in the bloom filter.
-   * Used in ROW_COL blooms where the blooms are serialized as KeyValues
    * @param keyCell the key to check for the existence of
    * @param bloom bloom filter data to search. This can be null if auto-loading
    *        is supported.
+   * @param type The type of Bloom ROW/ ROW_COL
    * @return true if matched by bloom, false if not
    */
-  boolean contains(Cell keyCell, ByteBuff bloom);
+  boolean contains(Cell keyCell, ByteBuff bloom, BloomType type);
 
   /**
    * Check if the specified key is contained in the bloom filter.
-   * Used in ROW bloom where the blooms are just plain byte[]
    * @param buf data to check for existence of
    * @param offset offset into the data
    * @param length length of the data

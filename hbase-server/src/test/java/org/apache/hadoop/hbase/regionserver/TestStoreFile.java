@@ -600,8 +600,7 @@ public class TestStoreFile extends HBaseTestCase {
     for (int i = 0; i < 2000; i++) {
       String row = String.format(localFormatter, i);
       byte[] rowKey = Bytes.toBytes(row);
-      boolean exists = reader.passesDeleteFamilyBloomFilter(rowKey, 0,
-          rowKey.length);
+      boolean exists = reader.passesDeleteFamilyBloomFilter(rowKey, 0, rowKey.length);
       if (i % 2 == 0) {
         if (!exists)
           falseNeg++;

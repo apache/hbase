@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.RemoteAdmin;
+import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
@@ -738,7 +739,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           ", writeToWAL=" + this.writeToWAL +
           ", useTags=" + this.useTags +
           ", noOfTags=" + this.noOfTags;
-          int hash = h.hash(Bytes.toBytes(s));
+          byte[] b = Bytes.toBytes(s);
+          int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
           m.put(hash, s);
         }
       }

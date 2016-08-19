@@ -43,8 +43,8 @@ public class TestBloomFilterChunk extends TestCase {
     byte[] key1 = {1,2,3,4,5,6,7,8,9};
     byte[] key2 = {1,2,3,4,5,6,7,8,7};
 
-    bf1.add(key1);
-    bf2.add(key2);
+    bf1.add(key1, 0, key1.length);
+    bf2.add(key2, 0, key2.length);
 
     assertTrue(BloomFilterUtil.contains(key1, 0, key1.length, new MultiByteBuff(bf1.bloom), 0,
         (int) bf1.byteSize, bf1.hash, bf1.hashCount));
@@ -58,7 +58,7 @@ public class TestBloomFilterChunk extends TestCase {
     byte [] bkey = {1,2,3,4};
     byte [] bval = "this is a much larger byte array".getBytes();
 
-    bf1.add(bkey);
+    bf1.add(bkey, 0, bkey.length);
     bf1.add(bval, 1, bval.length-1);
 
     assertTrue(BloomFilterUtil.contains(bkey, 0, bkey.length, new MultiByteBuff(bf1.bloom), 0,
@@ -100,7 +100,8 @@ public class TestBloomFilterChunk extends TestCase {
     long origSize = b.getByteSize();
     assertEquals(1204, origSize);
     for (int i = 0; i < 12; ++i) {
-      b.add(Bytes.toBytes(i));
+      byte[] ib = Bytes.toBytes(i);
+      b.add(ib, 0, ib.length);
     }
     b.compactBloom();
     assertEquals(origSize>>2, b.getByteSize());
@@ -128,7 +129,8 @@ public class TestBloomFilterChunk extends TestCase {
     long startTime =  System.currentTimeMillis();
     long origSize = b.getByteSize();
     for (int i = 0; i < 1*1000*1000; ++i) {
-      b.add(Bytes.toBytes(i));
+      byte[] ib = Bytes.toBytes(i);
+      b.add(ib, 0, ib.length);
     }
     long endTime = System.currentTimeMillis();
     System.out.println("Total Add time = " + (endTime - startTime) + "ms");

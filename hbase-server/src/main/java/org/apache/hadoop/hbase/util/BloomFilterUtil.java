@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.text.NumberFormat;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -197,10 +198,14 @@ public final class BloomFilterUtil {
   public static boolean contains(byte[] buf, int offset, int length,
       ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount) {
-    // TODO : this will get removed once read path also work with Cell for blooms.
-    ByteArrayHashKey hashKey = new ByteArrayHashKey(buf);
-    int hash1 = hash.hash(hashKey, offset, length, 0);
-    int hash2 = hash.hash(hashKey, offset, length, hash1);
+    HashKey<byte[]> hashKey = new ByteArrayHashKey(buf, offset, length);
+    return contains(bloomBuf, bloomOffset, bloomSize, hash, hashCount, hashKey);
+  }
+
+  private static <T> boolean contains(ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
+      int hashCount, HashKey<T> hashKey) {
+    int hash1 = hash.hash(hashKey, 0);
+    int hash2 = hash.hash(hashKey, hash1);
     int bloomBitSize = bloomSize << 3;
 
     if (randomGeneratorForTest == null) {
@@ -223,6 +228,13 @@ public final class BloomFilterUtil {
       }
     }
     return true;
+  }
+
+  public static boolean contains(Cell cell, ByteBuff bloomBuf, int bloomOffset, int bloomSize,
+      Hash hash, int hashCount, BloomType type) {
+    HashKey<Cell> hashKey = type == BloomType.ROW ? new RowBloomHashKey(cell)
+        : new RowColBloomHashKey(cell);
+    return contains(bloomBuf, bloomOffset, bloomSize, hash, hashCount, hashKey);
   }
 
   /**

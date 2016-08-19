@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -152,8 +154,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     } else {
       // old format region name. First hbase:meta region also
       // use this format.EncodedName is the JenkinsHash value.
-      int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
-        regionName.length, 0));
+      HashKey<byte[]> key = new ByteArrayHashKey(regionName, 0, regionName.length);
+      int hashVal = Math.abs(JenkinsHash.getInstance().hash(key, 0));
       encodedName = String.valueOf(hashVal);
     }
     return encodedName;
