@@ -641,4 +641,58 @@ public abstract class TestRSGroupsBase {
   private String getGroupName(String baseName) {
     return groupPrefix+"_"+baseName+"_"+rand.nextInt(Integer.MAX_VALUE);
   }
+
+  @Test
+  public void testMultiTableMove() throws Exception {
+    LOG.info("testMultiTableMove");
+
+    final TableName tableNameA = TableName.valueOf(tablePrefix + "_testMultiTableMoveA");
+    final TableName tableNameB = TableName.valueOf(tablePrefix + "_testMultiTableMoveB");
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    String newGroupName = getGroupName("testMultiTableMove");
+    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 1);
+
+    TEST_UTIL.createTable(tableNameA, familyNameBytes);
+    TEST_UTIL.createTable(tableNameB, familyNameBytes);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<String> regionsA = getTableRegionMap().get(tableNameA);
+        if (regionsA == null)
+          return false;
+        List<String> regionsB = getTableRegionMap().get(tableNameB);
+        if (regionsB == null)
+          return false;
+
+        return getTableRegionMap().get(tableNameA).size() >= 1
+                && getTableRegionMap().get(tableNameB).size() >= 1;
+      }
+    });
+
+    RSGroupInfo tableGrpA = rsGroupAdmin.getRSGroupInfoOfTable(tableNameA);
+    assertTrue(tableGrpA.getName().equals(RSGroupInfo.DEFAULT_GROUP));
+
+    RSGroupInfo tableGrpB = rsGroupAdmin.getRSGroupInfoOfTable(tableNameB);
+    assertTrue(tableGrpB.getName().equals(RSGroupInfo.DEFAULT_GROUP));
+    //change table's group
+    LOG.info("Moving table [" + tableNameA + "," + tableNameB + "] to " + newGroup.getName());
+    rsGroupAdmin.moveTables(Sets.newHashSet(tableNameA, tableNameB), newGroup.getName());
+
+    //verify group change
+    Assert.assertEquals(newGroup.getName(),
+            rsGroupAdmin.getRSGroupInfoOfTable(tableNameA).getName());
+
+    Assert.assertEquals(newGroup.getName(),
+            rsGroupAdmin.getRSGroupInfoOfTable(tableNameB).getName());
+
+    //verify tables' not exist in old group
+    Set<TableName> DefaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    assertFalse(DefaultTables.contains(tableNameA));
+    assertFalse(DefaultTables.contains(tableNameB));
+
+    //verify tables' exist in new group
+    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroupName).getTables();
+    assertTrue(newGroupTables.contains(tableNameA));
+    assertTrue(newGroupTables.contains(tableNameB));
+  }
 }
