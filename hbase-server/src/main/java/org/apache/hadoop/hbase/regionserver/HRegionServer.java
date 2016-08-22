@@ -1882,6 +1882,10 @@ public class HRegionServer extends HasThread implements
 
   private static final byte[] UNSPECIFIED_REGION = new byte[]{};
 
+  public List<WAL> getWALs() throws IOException {
+    return walFactory.getWALs();
+  }
+
   @Override
   public WAL getWAL(HRegionInfo regionInfo) throws IOException {
     WAL wal;

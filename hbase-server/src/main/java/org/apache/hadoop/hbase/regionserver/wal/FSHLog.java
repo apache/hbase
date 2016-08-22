@@ -986,6 +986,13 @@ public class FSHLog implements WAL {
     return computeFilename(this.filenum.get());
   }
 
+  /**
+   * @return current file number (timestamp)
+   */
+  public long getFilenum() {
+    return filenum.get();
+  }
+  
   @Override
   public String toString() {
     return "FSHLog " + logFilePrefix + ":" + logFileSuffix + "(num " + filenum + ")";

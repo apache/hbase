@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -117,6 +119,16 @@ public class DefaultWALProvider implements WALProvider {
       }
     }
     logPrefix = sb.toString();
+  }
+
+  @Override
+  public List<WAL> getWALs() throws IOException {
+    if (log == null) {
+      return Collections.emptyList();
+    }
+    List<WAL> wals = new ArrayList<WAL>();
+    wals.add(log);
+    return wals;
   }
 
   @Override

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -105,6 +106,13 @@ public class IOTestProvider implements WALProvider {
         DefaultWALProvider.getWALDirectoryName(factory.factoryId),
         HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
         true, logPrefix, META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+  }
+
+  @Override
+  public List<WAL> getWALs() throws IOException {
+    List<WAL> wals = new ArrayList<WAL>();
+    wals.add(log);
+    return wals;
   }
 
   @Override

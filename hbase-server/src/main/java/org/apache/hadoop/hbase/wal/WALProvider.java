@@ -59,6 +59,10 @@ public interface WALProvider {
    */
   WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException;
 
+  /** @return the List of WALs that are used by this server
+   */
+  List<WAL> getWALs() throws IOException;
+
   /**
    * persist outstanding WALs to storage and stop accepting new appends.
    * This method serves as shorthand for sending a sync to every WAL provided by a given

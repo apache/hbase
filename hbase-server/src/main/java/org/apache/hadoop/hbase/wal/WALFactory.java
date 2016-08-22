@@ -232,6 +232,10 @@ public class WALFactory {
     }
   }
 
+  public List<WAL> getWALs() throws IOException {
+    return provider.getWALs();
+  }
+
   /**
    * @param identifier may not be null, contents will not be altered
    * @param namespace could be null, and will use default namespace if null

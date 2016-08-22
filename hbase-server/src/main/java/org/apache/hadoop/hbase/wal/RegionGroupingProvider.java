@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.wal.DefaultWALProvider.META_WAL_PROVIDER_I
 import static org.apache.hadoop.hbase.wal.DefaultWALProvider.WAL_FILE_NAME_DELIMITER;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -166,6 +167,15 @@ public class RegionGroupingProvider implements WALProvider {
     } else {
       return factory.createProvider(providerClass, listeners, group);
     }
+  }
+
+  @Override
+  public List<WAL> getWALs() throws IOException {
+    List<WAL> wals = new ArrayList<WAL>();
+    for (WALProvider provider : cached.values()) {
+      wals.addAll(provider.getWALs());
+    }
+    return wals;
   }
 
   private WAL getWAL(final String group) throws IOException {

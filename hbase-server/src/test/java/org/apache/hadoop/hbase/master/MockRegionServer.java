@@ -562,7 +562,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public WAL getWAL(HRegionInfo regionInfo) throws IOException {
-    // TODO Auto-generated method stub
     return null;
   }
 
