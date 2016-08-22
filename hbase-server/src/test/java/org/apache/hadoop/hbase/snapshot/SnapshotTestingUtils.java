@@ -572,6 +572,18 @@ public final class SnapshotTestingUtils {
         corruptFile(p);
       }
 
+      public void missOneRegionSnapshotFile() throws IOException {
+        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir);
+        for (FileStatus fileStatus : manifestFiles) {
+          String fileName = fileStatus.getPath().getName();
+          if (fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOTINFO_FILE)
+            || fileName.endsWith(".tabledesc")
+            || fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)) {
+              fs.delete(fileStatus.getPath(), true);
+          }
+        }
+      }
+
       /**
        * Corrupt data-manifest file
        *

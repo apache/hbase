@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -300,7 +301,21 @@ public class SnapshotFileCache implements Stoppable {
     FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
     if (running != null) {
       for (FileStatus run : running) {
-        snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
+        try {
+          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
+        } catch (CorruptedSnapshotException e) {
+          // See HBASE-16464
+          if (e.getCause() instanceof FileNotFoundException) {
+            // If the snapshot is not in progress, we will delete it
+            if (!fs.exists(new Path(run.getPath(),
+              SnapshotDescriptionUtils.SNAPSHOT_IN_PROGRESS))) {
+              fs.delete(run.getPath(), true);
+              LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
+            }
+          } else {
+            throw e;
+          }
+        }
       }
     }
     return snapshotInProgress;
