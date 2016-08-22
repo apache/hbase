@@ -161,7 +161,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     try {
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
-
+      SnapshotDescriptionUtils.createInProgressTag(workingDir, fs);
       // write down the snapshot info in the working directory
       SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, fs);
       snapshotManifest.addTableDescriptor(this.htd);
