@@ -239,6 +239,10 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   private final ConcurrentMap<Thread, SyncFuture> syncFuturesByHandler;
 
+  public long getFilenum() {
+    return this.filenum.get();
+  }
+
   /**
    * A log file has a creation timestamp (in ms) in its file name ({@link #filenum}. This helper
    * method returns the creation timestamp from a given log file. It extracts the timestamp assuming

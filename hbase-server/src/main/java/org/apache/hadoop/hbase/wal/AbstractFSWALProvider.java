@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -106,6 +108,16 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     logPrefix = sb.toString();
     doInit(conf);
+  }
+
+  @Override
+  public List<WAL> getWALs() throws IOException {
+    if (wal == null) {
+      return Collections.emptyList();
+    }
+    List<WAL> wals = new ArrayList<WAL>();
+    wals.add(wal);
+    return wals;
   }
 
   @Override

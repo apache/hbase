@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -568,8 +569,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
+  public List<WAL> getWALs() throws IOException {
+    return Collections.emptyList();
+  }
+
+  @Override
   public WAL getWAL(HRegionInfo regionInfo) throws IOException {
-    // TODO Auto-generated method stub
     return null;
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,6 +244,11 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public Leases getLeases() {
     return null;
+  }
+
+  @Override
+  public List<WAL> getWALs() throws IOException {
+    return Collections.emptyList();
   }
 
   @Override

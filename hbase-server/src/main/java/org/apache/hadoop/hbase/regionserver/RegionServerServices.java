@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -54,6 +55,11 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
   WAL getWAL(HRegionInfo regionInfo) throws IOException;
+
+  /** @return the List of WALs that are used by this server
+   *  Doesn't include the meta WAL
+   */
+  List<WAL> getWALs() throws IOException;
 
   /**
    * @return Implementation of {@link CompactionRequestor} or null.
