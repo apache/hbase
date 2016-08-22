@@ -168,4 +168,24 @@ public class TestSnapshotHFileCleaner {
       fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
     }
   }
+
+
+  /**
+   * HBASE-16464
+   */
+  @Test
+  public void testMissedTmpSnapshot() throws IOException {
+    SnapshotTestingUtils.SnapshotMock
+      snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
+      SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    builder.addRegionV2();
+    builder.missOneRegionSnapshotFile();
+
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+      "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    cache.getSnapshotsInProgress();
+    assertFalse(fs.exists(builder.getSnapshotsDir()));
+  }
 }
