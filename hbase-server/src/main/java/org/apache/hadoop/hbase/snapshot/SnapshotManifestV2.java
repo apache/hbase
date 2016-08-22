@@ -82,12 +82,18 @@ public final class SnapshotManifestV2 {
     }
 
     public void regionClose(final SnapshotRegionManifest.Builder region) throws IOException {
-      SnapshotRegionManifest manifest = region.build();
-      FSDataOutputStream stream = fs.create(getRegionManifestPath(snapshotDir, manifest));
-      try {
-        manifest.writeTo(stream);
-      } finally {
-        stream.close();
+      // we should ensure the snapshot dir exist, maybe it has been deleted by master
+      // see HBASE-16464
+      if (fs.exists(snapshotDir)) {
+        SnapshotRegionManifest manifest = region.build();
+        FSDataOutputStream stream = fs.create(getRegionManifestPath(snapshotDir, manifest));
+        try {
+          manifest.writeTo(stream);
+        } finally {
+          stream.close();
+        }
+      } else {
+        LOG.warn("can't write manifest without parent dir, maybe it has been deleted by master?");
       }
     }
 
