@@ -902,6 +902,7 @@ public final class CellUtil {
   }
 
   /**
+   * Estimate based on keyvalue's serialization format. 
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.
    */
@@ -915,7 +916,7 @@ public final class CellUtil {
     return getSumOfCellElementLengths(cell) +
       // Use the KeyValue's infrastructure size presuming that another implementation would have
       // same basic cost.
-      KeyValue.KEY_INFRASTRUCTURE_SIZE +
+      KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE +
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
   }
@@ -939,10 +940,17 @@ public final class CellUtil {
     KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
+  /**
+   * Calculates the serialized key size. We always serialize in the KeyValue's serialization
+   * format.
+   * @param cell the cell for which the key size has to be calculated.
+   * @return the key size
+   */
   public static int estimatedSerializedSizeOfKey(final Cell cell) {
     if (cell instanceof KeyValue) return ((KeyValue)cell).getKeyLength();
-    // This will be a low estimate.  Will do for now.
-    return getSumOfCellKeyElementLengths(cell);
+    return cell.getRowLength() + cell.getFamilyLength() +
+        cell.getQualifierLength() +
+        KeyValue.KEY_INFRASTRUCTURE_SIZE;
   }
 
   /**
