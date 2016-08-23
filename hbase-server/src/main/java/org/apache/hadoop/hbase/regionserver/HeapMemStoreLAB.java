@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.MemStoreChunkPool.PooledChunk;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
@@ -67,10 +68,11 @@ public class HeapMemStoreLAB implements MemStoreLAB {
   static final Log LOG = LogFactory.getLog(HeapMemStoreLAB.class);
 
   private AtomicReference<Chunk> curChunk = new AtomicReference<Chunk>();
-  // A queue of chunks contained by this memstore, used with chunk pool
-  private BlockingQueue<Chunk> chunkQueue = null;
-  final int chunkSize;
-  final int maxAlloc;
+  // A queue of chunks from pool contained by this memstore LAB
+  @VisibleForTesting
+  BlockingQueue<PooledChunk> pooledChunkQueue = null;
+  private final int chunkSize;
+  private final int maxAlloc;
   private final MemStoreChunkPool chunkPool;
 
   // This flag is for closing this instance, its set when clearing snapshot of
@@ -95,7 +97,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
     if (this.chunkPool != null) {
       // set queue length to chunk pool max count to avoid keeping reference of
       // too many non-reclaimable chunks
-      chunkQueue = new LinkedBlockingQueue<Chunk>(chunkPool.getMaxCount());
+      pooledChunkQueue = new LinkedBlockingQueue<PooledChunk>(chunkPool.getMaxCount());
     }
 
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
@@ -128,7 +130,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       if (allocOffset != -1) {
         // We succeeded - this is the common case - small alloc
         // from a big buffer
-        return new SimpleMutableByteRange(c.data, allocOffset, size);
+        return new SimpleMutableByteRange(c.getData(), allocOffset, size);
       }
 
       // not enough space!
@@ -148,7 +150,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
     // opening scanner which will read their data
     if (chunkPool != null && openScannerCount.get() == 0
         && reclaimed.compareAndSet(false, true)) {
-      chunkPool.putbackChunks(this.chunkQueue);
+      chunkPool.putbackChunks(this.pooledChunkQueue);
     }
   }
 
@@ -166,9 +168,9 @@ public class HeapMemStoreLAB implements MemStoreLAB {
   @Override
   public void decScannerCount() {
     int count = this.openScannerCount.decrementAndGet();
-    if (chunkPool != null && count == 0 && this.closed
+    if (this.closed && chunkPool != null && count == 0
         && reclaimed.compareAndSet(false, true)) {
-      chunkPool.putbackChunks(this.chunkQueue);
+      chunkPool.putbackChunks(this.pooledChunkQueue);
     }
   }
 
@@ -204,20 +206,31 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       // No current chunk, so we want to allocate one. We race
       // against other allocators to CAS in an uninitialized chunk
       // (which is cheap to allocate)
-      c = (chunkPool != null) ? chunkPool.getChunk() : new Chunk(chunkSize);
+      if (chunkPool != null) {
+        c = chunkPool.getChunk();
+      }
+      boolean pooledChunk = false;
+      if (c != null) {
+        // This is chunk from pool
+        pooledChunk = true;
+      } else {
+        c = new Chunk(chunkSize);
+      }
       if (curChunk.compareAndSet(null, c)) {
         // we won race - now we need to actually do the expensive
         // allocation step
         c.init();
-        if (chunkQueue != null && !this.closed && !this.chunkQueue.offer(c)) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Chunk queue is full, won't reuse this new chunk. Current queue size: "
-                + chunkQueue.size());
+        if (pooledChunk) {
+          if (!this.closed && !this.pooledChunkQueue.offer((PooledChunk) c)) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Chunk queue is full, won't reuse this new chunk. Current queue size: "
+                  + pooledChunkQueue.size());
+            }
           }
         }
         return c;
-      } else if (chunkPool != null) {
-        chunkPool.putbackChunk(c);
+      } else if (pooledChunk) {
+        chunkPool.putbackChunk((PooledChunk) c);
       }
       // someone else won race - that's fine, we'll try to grab theirs
       // in the next iteration of the loop.
@@ -230,119 +243,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
   }
 
   @VisibleForTesting
-  BlockingQueue<Chunk> getChunkQueue() {
-    return this.chunkQueue;
-  }
-
-  /**
-   * A chunk of memory out of which allocations are sliced.
-   */
-  static class Chunk {
-    /** Actual underlying data */
-    private byte[] data;
-
-    private static final int UNINITIALIZED = -1;
-    private static final int OOM = -2;
-    /**
-     * Offset for the next allocation, or the sentinel value -1
-     * which implies that the chunk is still uninitialized.
-     * */
-    private AtomicInteger nextFreeOffset = new AtomicInteger(UNINITIALIZED);
-
-    /** Total number of allocations satisfied from this buffer */
-    private AtomicInteger allocCount = new AtomicInteger();
-
-    /** Size of chunk in bytes */
-    private final int size;
-
-    /**
-     * Create an uninitialized chunk. Note that memory is not allocated yet, so
-     * this is cheap.
-     * @param size in bytes
-     */
-    Chunk(int size) {
-      this.size = size;
-    }
-
-    /**
-     * Actually claim the memory for this chunk. This should only be called from
-     * the thread that constructed the chunk. It is thread-safe against other
-     * threads calling alloc(), who will block until the allocation is complete.
-     */
-    public void init() {
-      assert nextFreeOffset.get() == UNINITIALIZED;
-      try {
-        if (data == null) {
-          data = new byte[size];
-        }
-      } catch (OutOfMemoryError e) {
-        boolean failInit = nextFreeOffset.compareAndSet(UNINITIALIZED, OOM);
-        assert failInit; // should be true.
-        throw e;
-      }
-      // Mark that it's ready for use
-      boolean initted = nextFreeOffset.compareAndSet(
-          UNINITIALIZED, 0);
-      // We should always succeed the above CAS since only one thread
-      // calls init()!
-      Preconditions.checkState(initted,
-          "Multiple threads tried to init same chunk");
-    }
-
-    /**
-     * Reset the offset to UNINITIALIZED before before reusing an old chunk
-     */
-    void reset() {
-      if (nextFreeOffset.get() != UNINITIALIZED) {
-        nextFreeOffset.set(UNINITIALIZED);
-        allocCount.set(0);
-      }
-    }
-
-    /**
-     * Try to allocate <code>size</code> bytes from the chunk.
-     * @return the offset of the successful allocation, or -1 to indicate not-enough-space
-     */
-    public int alloc(int size) {
-      while (true) {
-        int oldOffset = nextFreeOffset.get();
-        if (oldOffset == UNINITIALIZED) {
-          // The chunk doesn't have its data allocated yet.
-          // Since we found this in curChunk, we know that whoever
-          // CAS-ed it there is allocating it right now. So spin-loop
-          // shouldn't spin long!
-          Thread.yield();
-          continue;
-        }
-        if (oldOffset == OOM) {
-          // doh we ran out of ram. return -1 to chuck this away.
-          return -1;
-        }
-
-        if (oldOffset + size > data.length) {
-          return -1; // alloc doesn't fit
-        }
-
-        // Try to atomically claim this chunk
-        if (nextFreeOffset.compareAndSet(oldOffset, oldOffset + size)) {
-          // we got the alloc
-          allocCount.incrementAndGet();
-          return oldOffset;
-        }
-        // we raced and lost alloc, try again
-      }
-    }
-
-    @Override
-    public String toString() {
-      return "Chunk@" + System.identityHashCode(this) +
-        " allocs=" + allocCount.get() + "waste=" +
-        (data.length - nextFreeOffset.get());
-    }
-
-    @VisibleForTesting
-    int getNextFreeOffset() {
-      return this.nextFreeOffset.get();
-    }
+  BlockingQueue<PooledChunk> getChunkQueue() {
+    return this.pooledChunkQueue;
   }
 }

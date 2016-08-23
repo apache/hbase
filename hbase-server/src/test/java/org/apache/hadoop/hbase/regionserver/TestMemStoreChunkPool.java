@@ -196,4 +196,43 @@ public class TestMemStoreChunkPool {
     assertTrue(chunkPool.getPoolSize() > 0);
   }
 
+  @Test
+  public void testPutbackChunksMultiThreaded() throws Exception {
+    MemStoreChunkPool oldPool = MemStoreChunkPool.GLOBAL_INSTANCE;
+    final int maxCount = 10;
+    final int initialCount = 5;
+    final int chunkSize = 10;
+    MemStoreChunkPool pool = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
+    assertEquals(initialCount, pool.getPoolSize());
+    assertEquals(maxCount, pool.getMaxCount());
+    MemStoreChunkPool.GLOBAL_INSTANCE = pool;// Replace the global ref with the new one we created.
+                                             // Used it for the testing. Later in finally we put
+                                             // back the original
+    try {
+      Runnable r = new Runnable() {
+        @Override
+        public void run() {
+          MemStoreLAB memStoreLAB = new HeapMemStoreLAB(conf);
+          for (int i = 0; i < maxCount; i++) {
+            memStoreLAB.allocateBytes(chunkSize);// Try allocate size = chunkSize. Means every
+                                                 // allocate call will result in a new chunk
+          }
+          // Close MemStoreLAB so that all chunks will be tried to be put back to pool
+          memStoreLAB.close();
+        }
+      };
+      Thread t1 = new Thread(r);
+      Thread t2 = new Thread(r);
+      Thread t3 = new Thread(r);
+      t1.start();
+      t2.start();
+      t3.start();
+      t1.join();
+      t2.join();
+      t3.join();
+      assertTrue(pool.getPoolSize() <= maxCount);
+    } finally {
+      MemStoreChunkPool.GLOBAL_INSTANCE = oldPool;
+    }
+  }
 }

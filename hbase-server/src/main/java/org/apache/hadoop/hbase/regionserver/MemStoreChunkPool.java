@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
-import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -61,54 +60,69 @@ public class MemStoreChunkPool {
   final static float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
 
   // Static reference to the MemStoreChunkPool
-  private static MemStoreChunkPool GLOBAL_INSTANCE;
+  static MemStoreChunkPool GLOBAL_INSTANCE;
   /** Boolean whether we have disabled the memstore chunk pool entirely. */
   static boolean chunkPoolDisabled = false;
 
   private final int maxCount;
 
   // A queue of reclaimed chunks
-  private final BlockingQueue<Chunk> reclaimedChunks;
+  private final BlockingQueue<PooledChunk> reclaimedChunks;
   private final int chunkSize;
 
   /** Statistics thread schedule pool */
   private final ScheduledExecutorService scheduleThreadPool;
   /** Statistics thread */
   private static final int statThreadPeriod = 60 * 5;
-  private AtomicLong createdChunkCount = new AtomicLong();
-  private AtomicLong reusedChunkCount = new AtomicLong();
+  private final AtomicLong createdChunkCount = new AtomicLong();
+  private final AtomicLong reusedChunkCount = new AtomicLong();
 
   MemStoreChunkPool(Configuration conf, int chunkSize, int maxCount,
       int initialCount) {
     this.maxCount = maxCount;
     this.chunkSize = chunkSize;
-    this.reclaimedChunks = new LinkedBlockingQueue<Chunk>();
+    this.reclaimedChunks = new LinkedBlockingQueue<PooledChunk>();
     for (int i = 0; i < initialCount; i++) {
-      Chunk chunk = new Chunk(chunkSize);
+      PooledChunk chunk = new PooledChunk(chunkSize);
       chunk.init();
       reclaimedChunks.add(chunk);
     }
+    createdChunkCount.set(initialCount);
     final String n = Thread.currentThread().getName();
-    scheduleThreadPool = Executors.newScheduledThreadPool(1,
-        new ThreadFactoryBuilder().setNameFormat(n+"-MemStoreChunkPool Statistics")
-            .setDaemon(true).build());
-    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
-        statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
+    scheduleThreadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+        .setNameFormat(n + "-MemStoreChunkPool Statistics").setDaemon(true).build());
+    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(), statThreadPeriod,
+        statThreadPeriod, TimeUnit.SECONDS);
   }
 
   /**
-   * Poll a chunk from the pool, reset it if not null, else create a new chunk
-   * to return
+   * Poll a chunk from the pool, reset it if not null, else create a new chunk to return if we have
+   * not yet created max allowed chunks count. When we have already created max allowed chunks and
+   * no free chunks as of now, return null. It is the responsibility of the caller to make a chunk
+   * then.
+   * Note: Chunks returned by this pool must be put back to the pool after its use.
    * @return a chunk
+   * @see #putbackChunk(Chunk)
+   * @see #putbackChunks(BlockingQueue)
    */
-  Chunk getChunk() {
-    Chunk chunk = reclaimedChunks.poll();
-    if (chunk == null) {
-      chunk = new Chunk(chunkSize);
-      createdChunkCount.incrementAndGet();
-    } else {
+  PooledChunk getChunk() {
+    PooledChunk chunk = reclaimedChunks.poll();
+    if (chunk != null) {
       chunk.reset();
       reusedChunkCount.incrementAndGet();
+    } else {
+      // Make a chunk iff we have not yet created the maxCount chunks
+      while (true) {
+        long created = this.createdChunkCount.get();
+        if (created < this.maxCount) {
+          chunk = new PooledChunk(chunkSize);
+          if (this.createdChunkCount.compareAndSet(created, created + 1)) {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
     }
     return chunk;
   }
@@ -118,18 +132,11 @@ public class MemStoreChunkPool {
    * skip the remaining chunks
    * @param chunks
    */
-  void putbackChunks(BlockingQueue<Chunk> chunks) {
-    int maxNumToPutback = this.maxCount - reclaimedChunks.size();
-    if (maxNumToPutback <= 0) {
-      return;
-    }
-    chunks.drainTo(reclaimedChunks, maxNumToPutback);
-    // clear reference of any non-reclaimable chunks
-    if (chunks.size() > 0) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Left " + chunks.size() + " unreclaimable chunks, removing them from queue");
-      }
-      chunks.clear();
+  void putbackChunks(BlockingQueue<PooledChunk> chunks) {
+    assert reclaimedChunks.size() < this.maxCount;
+    PooledChunk chunk = null;
+    while ((chunk = chunks.poll()) != null) {
+      reclaimedChunks.add(chunk);
     }
   }
 
@@ -138,10 +145,8 @@ public class MemStoreChunkPool {
    * skip it
    * @param chunk
    */
-  void putbackChunk(Chunk chunk) {
-    if (reclaimedChunks.size() >= this.maxCount) {
-      return;
-    }
+  void putbackChunk(PooledChunk chunk) {
+    assert reclaimedChunks.size() < this.maxCount;
     reclaimedChunks.add(chunk);
   }
 
@@ -156,31 +161,28 @@ public class MemStoreChunkPool {
     this.reclaimedChunks.clear();
   }
 
-  private static class StatisticsThread extends Thread {
-    MemStoreChunkPool mcp;
-
-    public StatisticsThread(MemStoreChunkPool mcp) {
+  private class StatisticsThread extends Thread {
+    StatisticsThread() {
       super("MemStoreChunkPool.StatisticsThread");
       setDaemon(true);
-      this.mcp = mcp;
     }
 
     @Override
     public void run() {
-      mcp.logStats();
+      logStats();
     }
-  }
 
-  private void logStats() {
-    if (!LOG.isDebugEnabled()) return;
-    long created = createdChunkCount.get();
-    long reused = reusedChunkCount.get();
-    long total = created + reused;
-    LOG.debug("Stats: current pool size=" + reclaimedChunks.size()
-        + ",created chunk count=" + created
-        + ",reused chunk count=" + reused
-        + ",reuseRatio=" + (total == 0 ? "0" : StringUtils.formatPercent(
-            (float) reused / (float) total, 2)));
+    private void logStats() {
+      if (!LOG.isDebugEnabled()) return;
+      long created = createdChunkCount.get();
+      long reused = reusedChunkCount.get();
+      long total = created + reused;
+      LOG.debug("Stats: current pool size=" + reclaimedChunks.size()
+          + ",created chunk count=" + created
+          + ",reused chunk count=" + reused
+          + ",reuseRatio=" + (total == 0 ? "0" : StringUtils.formatPercent(
+              (float) reused / (float) total, 2)));
+    }
   }
 
   /**
@@ -234,4 +236,9 @@ public class MemStoreChunkPool {
     chunkPoolDisabled = false;
   }
 
+  public static class PooledChunk extends Chunk {
+    PooledChunk(int size) {
+      super(size);
+    }
+  }
 }
