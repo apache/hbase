@@ -160,12 +160,13 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
    * @param throughputController The compaction throughput controller.
    * @param major Is a major compaction.
+   * @param numofFilesToCompact the number of files to compact
    * @return Whether compaction ended; false if it was interrupted for any reason.
    */
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId,
-      ThroughputController throughputController,  boolean major) throws IOException {
+      long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
+      boolean major, int numofFilesToCompact) throws IOException {
     if (!(scanner instanceof MobCompactionStoreScanner)) {
       throw new IllegalArgumentException(
         "The scanner should be an instance of MobCompactionStoreScanner");
