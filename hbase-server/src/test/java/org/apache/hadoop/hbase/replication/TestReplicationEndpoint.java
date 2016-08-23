@@ -37,12 +37,19 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.replication.regionserver.*;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests ReplicationSource and ReplicationEndpoint interactions
@@ -82,8 +89,8 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
     admin.addPeer("testCustomReplicationEndpoint",
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
-        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()), null);
+        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
+            .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()), null);
 
     // check whether the class has been constructed and started
     Waiter.waitFor(conf1, 60000, new Waiter.Predicate<Exception>() {
@@ -123,8 +130,8 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     Assert.assertTrue(!ReplicationEndpointReturningFalse.replicated.get());
     final String id = "testReplicationEndpointReturnsFalseOnReplicate";
     admin.addPeer(id,
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
-        .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()), null);
+        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
+            .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()), null);
     // now replicate some data.
     doPut(row);
 
@@ -139,6 +146,66 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     admin.removePeer("testReplicationEndpointReturnsFalseOnReplicate");
+  }
+
+  @Test
+  public void testMetricsSourceBaseSourcePassthrough(){
+    /*
+    The replication MetricsSource wraps a MetricsReplicationSourceSourceImpl
+    and a MetricsReplicationGlobalSourceSource, so that metrics get written to both namespaces.
+    Both of those classes wrap a MetricsReplicationSourceImpl that implements BaseSource, which
+    allows for custom JMX metrics.
+    This test checks to make sure the BaseSource decorator logic on MetricsSource actually calls down through
+    the two layers of wrapping to the actual BaseSource.
+    */
+    String id = "id";
+    DynamicMetricsRegistry mockRegistry = mock(DynamicMetricsRegistry.class);
+    MetricsReplicationSourceImpl singleRms = mock(MetricsReplicationSourceImpl.class);
+    when(singleRms.getMetricsRegistry()).thenReturn(mockRegistry);
+    MetricsReplicationSourceImpl globalRms = mock(MetricsReplicationSourceImpl.class);
+    when(globalRms.getMetricsRegistry()).thenReturn(mockRegistry);
+
+    MetricsReplicationSourceSource singleSourceSource = new MetricsReplicationSourceSourceImpl(singleRms, id);
+    MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
+    MetricsSource source = new MetricsSource(id, singleSourceSource, globalSourceSource);
+    String gaugeName = "gauge";
+    String singleGaugeName = "source.id." + gaugeName;
+    long delta = 1;
+    String counterName = "counter";
+    String singleCounterName = "source.id." + counterName;
+    long count = 2;
+    source.decGauge(gaugeName, delta);
+    source.getMetricsContext();
+    source.getMetricsDescription();
+    source.getMetricsJmxContext();
+    source.getMetricsName();
+    source.incCounters(counterName, count);
+    source.incGauge(gaugeName, delta);
+    source.init();
+    source.removeMetric(gaugeName);
+    source.setGauge(gaugeName, delta);
+    source.updateHistogram(counterName, count);
+    source.updateQuantile(counterName, count);
+
+    verify(singleRms).decGauge(singleGaugeName, delta);
+    verify(globalRms).decGauge(gaugeName, delta);
+    verify(globalRms).getMetricsContext();
+    verify(globalRms).getMetricsJmxContext();
+    verify(globalRms).getMetricsName();
+    verify(singleRms).incCounters(singleCounterName, count);
+    verify(globalRms).incCounters(counterName, count);
+    verify(singleRms).incGauge(singleGaugeName, delta);
+    verify(globalRms).incGauge(gaugeName, delta);
+    verify(globalRms).init();
+    verify(singleRms).removeMetric(singleGaugeName);
+    verify(globalRms).removeMetric(gaugeName);
+    verify(singleRms).setGauge(singleGaugeName, delta);
+    verify(globalRms).setGauge(gaugeName, delta);
+    verify(singleRms).updateHistogram(singleCounterName, count);
+    verify(globalRms).updateHistogram(counterName, count);
+    verify(singleRms).updateQuantile(singleCounterName, count);
+    verify(globalRms).updateQuantile(counterName, count);
+
   }
 
   @Test (timeout=120000)
@@ -252,6 +319,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
       return true;
     }
+
 
     @Override
     public WALEntryFilter getWALEntryfilter() {
