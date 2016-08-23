@@ -289,13 +289,12 @@ public class ReplicationAdmin implements Closeable {
       Collection<String> appendCfs = entry.getValue();
       if (preTableCfs.containsKey(table)) {
         List<String> cfs = preTableCfs.get(table);
-        if (cfs == null || appendCfs == null) {
+        if (cfs == null || appendCfs == null || appendCfs.isEmpty()) {
           preTableCfs.put(table, null);
         } else {
           Set<String> cfSet = new HashSet<String>(cfs);
           cfSet.addAll(appendCfs);
           preTableCfs.put(table, Lists.newArrayList(cfSet));
-
         }
       } else {
         if (appendCfs == null || appendCfs.isEmpty()) {
@@ -342,9 +341,9 @@ public class ReplicationAdmin implements Closeable {
       Collection<String> removeCfs = entry.getValue();
       if (preTableCfs.containsKey(table)) {
         List<String> cfs = preTableCfs.get(table);
-        if (cfs == null && removeCfs == null) {
+        if (cfs == null && (removeCfs == null || removeCfs.isEmpty())) {
           preTableCfs.remove(table);
-        } else if (cfs != null && removeCfs != null) {
+        } else if (cfs != null && (removeCfs != null && !removeCfs.isEmpty())) {
           Set<String> cfSet = new HashSet<String>(cfs);
           cfSet.removeAll(removeCfs);
           if (cfSet.isEmpty()) {
@@ -352,10 +351,10 @@ public class ReplicationAdmin implements Closeable {
           } else {
             preTableCfs.put(table, Lists.newArrayList(cfSet));
           }
-        } else if (cfs == null && removeCfs != null) {
+        } else if (cfs == null && (removeCfs != null && !removeCfs.isEmpty())) {
           throw new ReplicationException("Cannot remove cf of table: " + table
               + " which doesn't specify cfs from table-cfs config in peer: " + id);
-        } else if (cfs != null && removeCfs == null) {
+        } else if (cfs != null && (removeCfs == null || removeCfs.isEmpty())) {
           throw new ReplicationException("Cannot remove table: " + table
               + " which has specified cfs from table-cfs config in peer: " + id);
         }
