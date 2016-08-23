@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -54,8 +57,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Thread Pool that executes the submitted procedures.
@@ -1257,6 +1258,11 @@ public class ProcedureExecutor<TEnvironment> {
       }
     }
     return procId;
+  }
+
+  @VisibleForTesting
+  protected long getLastProcId() {
+    return lastProcId.get();
   }
 
   private Long getRootProcedureId(Procedure proc) {
