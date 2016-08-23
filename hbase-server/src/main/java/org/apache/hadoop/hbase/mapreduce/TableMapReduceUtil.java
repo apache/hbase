@@ -771,7 +771,7 @@ public class TableMapReduceUtil {
     Class prefixTreeCodecClass = null;
     try {
       prefixTreeCodecClass =
-          Class.forName("org.apache.hadoop.hbase.code.prefixtree.PrefixTreeCodec");
+          Class.forName("org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec");
     } catch (ClassNotFoundException e) {
       // this will show up in unit tests but should not show in real deployments
       LOG.warn("The hbase-prefix-tree module jar containing PrefixTreeCodec is not present." +
