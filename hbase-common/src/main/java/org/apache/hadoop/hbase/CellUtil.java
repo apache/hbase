@@ -902,7 +902,7 @@ public final class CellUtil {
   }
 
   /**
-   * Estimate based on keyvalue's serialization format. 
+   * Estimate based on keyvalue's serialization format.
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.
    */
