@@ -355,8 +355,7 @@ public class TestProcedureRecovery {
         case STATE_2:
           LOG.info("execute step 2 " + this);
           if (submitChildProc) {
-            addChildProcedure(new TestStateMachineProcedure());
-            addChildProcedure(new TestStateMachineProcedure());
+            addChildProcedure(new TestStateMachineProcedure(), new TestStateMachineProcedure());
             setNextState(State.DONE);
           } else {
             setNextState(State.STATE_3);
@@ -375,6 +374,10 @@ public class TestProcedureRecovery {
           iResult += 7;
           break;
         case DONE:
+          if (submitChildProc) {
+            addChildProcedure(new TestStateMachineProcedure());
+          }
+          iResult += 11;
           setResult(Bytes.toBytes(iResult));
           return Flow.NO_MORE_STATE;
         default:
@@ -441,7 +444,10 @@ public class TestProcedureRecovery {
     long procId = procExecutor.submitProcedure(new TestStateMachineProcedure(true));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExecutor, procId);
-    ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
+    ProcedureTestingUtility.assertProcNotFailed(result);
+    assertEquals(19, Bytes.toInt(result.getResult()));
+    assertEquals(4, procExecutor.getLastProcId());
   }
 
   @Test(timeout=30000)
@@ -479,7 +485,7 @@ public class TestProcedureRecovery {
     // The procedure is completed
     ProcedureInfo result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
-    assertEquals(15, Bytes.toInt(result.getResult()));
+    assertEquals(26, Bytes.toInt(result.getResult()));
   }
 
   @Test(timeout=30000)

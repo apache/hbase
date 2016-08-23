@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachinePr
 @InterfaceStability.Evolving
 public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
+  private Flow stateFlow = Flow.HAS_MORE_STATE;
   private int stateCount = 0;
   private int[] states = null;
 
@@ -114,11 +115,13 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected void addChildProcedure(Procedure subProcedure) {
+  protected void addChildProcedure(Procedure... subProcedure) {
     if (subProcList == null) {
-      subProcList = new ArrayList<Procedure>();
+      subProcList = new ArrayList<Procedure>(subProcedure.length);
     }
-    subProcList.add(subProcedure);
+    for (int i = 0; i < subProcedure.length; ++i) {
+      subProcList.add(subProcedure[i]);
+    }
   }
 
   @Override
@@ -126,14 +129,14 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       throws ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
+      if (!hasMoreState()) return null;
+
       TState state = getCurrentState();
       if (stateCount == 0) {
         setNextState(getStateId(state));
       }
-      if (executeFromState(env, state) == Flow.NO_MORE_STATE) {
-        // completed
-        return null;
-      }
+
+      stateFlow = executeFromState(env, state);
 
       if (subProcList != null && subProcList.size() != 0) {
         Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
@@ -141,7 +144,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
         return subProcedures;
       }
 
-      return (isWaiting() || isFailed()) ? null : new Procedure[] {this};
+      return (isWaiting() || isFailed() || !hasMoreState()) ? null : new Procedure[] {this};
     } finally {
       updateTimestamp();
     }
@@ -162,6 +165,10 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   @Override
   protected boolean isYieldAfterExecutionStep(final TEnvironment env) {
     return isYieldBeforeExecuteFromState(env, getCurrentState());
+  }
+
+  private boolean hasMoreState() {
+    return stateFlow != Flow.NO_MORE_STATE;
   }
 
   private TState getCurrentState() {
