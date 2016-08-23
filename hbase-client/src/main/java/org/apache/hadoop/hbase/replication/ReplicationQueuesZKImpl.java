@@ -161,7 +161,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       return ZKUtil.parseWALPositionFrom(bytes);
     } catch (DeserializationException de) {
       LOG.warn("Failed to parse WALPosition for queueId=" + queueId + " and wal=" + filename
-          + "znode content, continuing.");
+          + " znode content, continuing.");
     }
     // if we can not parse the position, start at the beginning of the wal file
     // again

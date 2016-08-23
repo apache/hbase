@@ -1825,6 +1825,17 @@ public class ZKUtil {
     }
   }
 
+  /**
+   * Returns a string with replication znodes and position of the replication log
+   * @param zkw
+   * @return aq string of replication znodes and log positions
+   */
+  public static String getReplicationZnodesDump(ZooKeeperWatcher zkw) throws KeeperException {
+    StringBuilder sb = new StringBuilder();
+    getReplicationZnodesDump(zkw, sb);
+    return sb.toString();
+  }
+
   private static void appendRSZnodes(ZooKeeperWatcher zkw, String znode, StringBuilder sb)
       throws KeeperException {
     List<String> stack = new LinkedList<String>();
