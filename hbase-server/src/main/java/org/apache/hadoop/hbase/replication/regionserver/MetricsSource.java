@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -33,7 +34,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * through the metrics interfaces.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
-public class MetricsSource {
+public class MetricsSource implements BaseSource {
 
   private static final Log LOG = LogFactory.getLog(MetricsSource.class);
 
@@ -58,6 +59,19 @@ public class MetricsSource {
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
     globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+  }
+
+  /**
+   * Constructor for injecting custom (or test) MetricsReplicationSourceSources
+   * @param id Name of the source this class is monitoring
+   * @param singleSourceSource Class to monitor id-scoped metrics
+   * @param globalSourceSource Class to monitor global-scoped metrics
+   */
+  public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
+                       MetricsReplicationSourceSource globalSourceSource) {
+    this.id = id;
+    this.singleSourceSource = singleSourceSource;
+    this.globalSourceSource = globalSourceSource;
   }
 
   /**
@@ -226,5 +240,67 @@ public class MetricsSource {
     if (lastHFileRefsQueueSize < 0) {
       lastHFileRefsQueueSize = 0;
     }
+  }
+
+  @Override
+  public void init() {
+    singleSourceSource.init();
+    globalSourceSource.init();
+  }
+
+  @Override
+  public void setGauge(String gaugeName, long value) {
+    singleSourceSource.setGauge(gaugeName, value);
+    globalSourceSource.setGauge(gaugeName, value);
+  }
+
+  @Override
+  public void incGauge(String gaugeName, long delta) {
+    singleSourceSource.incGauge(gaugeName, delta);
+    globalSourceSource.incGauge(gaugeName, delta);
+  }
+
+  @Override
+  public void decGauge(String gaugeName, long delta) {
+    singleSourceSource.decGauge(gaugeName, delta);
+    globalSourceSource.decGauge(gaugeName, delta);
+  }
+
+  @Override
+  public void removeMetric(String key) {
+    singleSourceSource.removeMetric(key);
+    globalSourceSource.removeMetric(key);
+  }
+
+  @Override
+  public void incCounters(String counterName, long delta) {
+    singleSourceSource.incCounters(counterName, delta);
+    globalSourceSource.incCounters(counterName, delta);
+  }
+
+  @Override
+  public void updateHistogram(String name, long value) {
+    singleSourceSource.updateHistogram(name, value);
+    globalSourceSource.updateHistogram(name, value);
+  }
+
+  @Override
+  public String getMetricsContext() {
+    return globalSourceSource.getMetricsContext();
+  }
+
+  @Override
+  public String getMetricsDescription() {
+    return globalSourceSource.getMetricsDescription();
+  }
+
+  @Override
+  public String getMetricsJmxContext() {
+    return globalSourceSource.getMetricsJmxContext();
+  }
+
+  @Override
+  public String getMetricsName() {
+    return globalSourceSource.getMetricsName();
   }
 }
