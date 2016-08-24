@@ -238,6 +238,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   protected volatile long lastReplayedOpenRegionSeqId = -1L;
   protected volatile long lastReplayedCompactionSeqId = -1L;
+  
+  // collects Map(s) of Store to sequence Id when handleFileNotFound() is involved
+  protected List<Map> storeSeqIds = new ArrayList<>();
 
   //////////////////////////////////////////////////////////////////////////////
   // Members
@@ -4970,6 +4973,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     startRegionOperation(); // obtain region close lock
     try {
+      Map<Store, Long> map = new HashMap<Store, Long>();
       synchronized (writestate) {
         for (Store store : getStores()) {
           // TODO: some stores might see new data from flush, while others do not which
@@ -5002,8 +5006,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               }
             }
 
-            // Drop the memstore contents if they are now smaller than the latest seen flushed file
-            totalFreedSize += dropMemstoreContentsForSeqId(storeSeqId, store);
+            map.put(store, storeSeqId);
           }
         }
 
@@ -5024,6 +5027,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // that we have picked the flush files for
         if (this.lastReplayedOpenRegionSeqId < smallestSeqIdInStores) {
           this.lastReplayedOpenRegionSeqId = smallestSeqIdInStores;
+        }
+      }
+      if (!map.isEmpty()) {
+        if (!force) {
+          for (Map.Entry<Store, Long> entry : map.entrySet()) {
+            // Drop the memstore contents if they are now smaller than the latest seen flushed file
+            totalFreedSize += dropMemstoreContentsForSeqId(entry.getValue(), entry.getKey());
+          }
+        } else {
+          synchronized (storeSeqIds) {
+            // don't try to acquire write lock of updatesLock now
+            storeSeqIds.add(map);
+          }
         }
       }
       // C. Finally notify anyone waiting on memstore to clear:
@@ -7141,6 +7157,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
+  // dropMemstoreContentsForSeqId() would acquire write lock of updatesLock
+  // We perform this operation outside of the read lock of updatesLock to avoid dead lock
+  // See HBASE-16304
+  @SuppressWarnings("unchecked")
+  private void dropMemstoreContents() throws IOException {
+    long totalFreedSize = 0;
+    while (!storeSeqIds.isEmpty()) {
+      Map<Store, Long> map = null;
+      synchronized (storeSeqIds) {
+        if (storeSeqIds.isEmpty()) break;
+        map = storeSeqIds.remove(storeSeqIds.size()-1);
+      }
+      for (Map.Entry<Store, Long> entry : map.entrySet()) {
+        // Drop the memstore contents if they are now smaller than the latest seen flushed file
+        totalFreedSize += dropMemstoreContentsForSeqId(entry.getValue(), entry.getKey());
+      }
+    }
+    if (totalFreedSize > 0) {
+      LOG.debug("Freed " + totalFreedSize + " bytes from memstore");
+    }
+  }
+
   @Override
   public Result increment(Increment mutation, long nonceGroup, long nonce)
   throws IOException {
@@ -7206,6 +7244,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         writeEntry = null;
       } finally {
         this.updatesLock.readLock().unlock();
+        // For increment/append, a region scanner for doing a get operation could throw 
+        // FileNotFoundException. So we call dropMemstoreContents() in finally block
+        // after releasing read lock
+        dropMemstoreContents();
       }
       // If results is null, then client asked that we not return the calculated results.
       return results != null && returnResults? Result.create(results): null;
@@ -7546,7 +7588,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      48 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      49 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
