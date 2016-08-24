@@ -189,6 +189,7 @@ public class DefaultMemStore implements MemStore {
   @Override
   public void clearSnapshot(long id) throws UnexpectedStateException {
     MemStoreLAB tmpAllocator = null;
+    if (this.snapshotId == -1) return;  // already cleared
     if (this.snapshotId != id) {
       throw new UnexpectedStateException("Current snapshot id is " + this.snapshotId + ",passed "
           + id);
