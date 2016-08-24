@@ -190,6 +190,7 @@ public abstract class AbstractMemStore implements MemStore {
    */
   @Override
   public void clearSnapshot(long id) throws UnexpectedStateException {
+    if (this.snapshotId == -1) return;  // already cleared
     if (this.snapshotId != id) {
       throw new UnexpectedStateException("Current snapshot id is " + this.snapshotId + ",passed "
           + id);
