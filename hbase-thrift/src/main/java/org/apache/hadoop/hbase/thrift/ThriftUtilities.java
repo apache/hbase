@@ -94,6 +94,7 @@ public class ThriftUtilities {
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
     col.bloomFilterType = in.getBloomFilterType().toString();
+    col.timeToLive = in.getTimeToLive();
     return col;
   }
 
