@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ByteSlot extends OutputStream {
-  private static final int DOUBLE_GROW_LIMIT = 1 << 20;
+  private static final int LARGE_GROW_SIZE_THRESHOLD = 8 << 20;
+  private static final int LARGE_GROW_SIZE = 1 << 20;
+  private static final int RESET_THRESHOLD = 64 << 20;
   private static final int GROW_ALIGN = 128;
 
   private byte[] buf;
@@ -51,6 +53,9 @@ public class ByteSlot extends OutputStream {
   private int size;
 
   public void reset() {
+    if (buf != null && buf.length > RESET_THRESHOLD) {
+      buf = null;
+    }
     head = 0;
     size = 0;
   }
@@ -101,8 +106,13 @@ public class ByteSlot extends OutputStream {
     if (buf == null) {
       buf = new byte[minCapacity];
     } else if (minCapacity > buf.length) {
-      int newCapacity = buf.length << 1;
-      if (minCapacity > newCapacity || newCapacity > DOUBLE_GROW_LIMIT) {
+      int newCapacity;
+      if (buf.length <= LARGE_GROW_SIZE_THRESHOLD) {
+        newCapacity = buf.length << 1;
+      } else {
+        newCapacity = buf.length + LARGE_GROW_SIZE;
+      }
+      if (minCapacity > newCapacity) {
         newCapacity = minCapacity;
       }
       buf = Arrays.copyOf(buf, newCapacity);

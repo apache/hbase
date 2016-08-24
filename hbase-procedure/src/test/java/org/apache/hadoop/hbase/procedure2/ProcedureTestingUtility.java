@@ -31,15 +31,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.util.Threads;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -87,6 +88,24 @@ public class ProcedureTestingUtility {
     // re-start
     procStore.start(storeThreads);
     procExecutor.start(execThreads, failOnCorrupted);
+  }
+
+  public static void storeRestart(ProcedureStore procStore, ProcedureStore.ProcedureLoader loader)
+      throws Exception {
+    procStore.stop(false);
+    procStore.start(procStore.getNumThreads());
+    procStore.recoverLease();
+    procStore.load(loader);
+  }
+
+  public static void storeRestartAndAssert(ProcedureStore procStore, long maxProcId,
+      long runnableCount, int completedCount, int corruptedCount) throws Exception {
+    final LoadCounter loader = new LoadCounter();
+    storeRestart(procStore, loader);
+    assertEquals(maxProcId, loader.getMaxProcId());
+    assertEquals(runnableCount, loader.getRunnableCount());
+    assertEquals(completedCount, loader.getCompletedCount());
+    assertEquals(corruptedCount, loader.getCorruptedCount());
   }
 
   public static <TEnv> void setKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
@@ -223,6 +242,8 @@ public class ProcedureTestingUtility {
   }
 
   public static class TestProcedure extends Procedure<Void> {
+    private byte[] data = null;
+
     public TestProcedure() {}
 
     public TestProcedure(long procId) {
@@ -230,6 +251,11 @@ public class ProcedureTestingUtility {
     }
 
     public TestProcedure(long procId, long parentId) {
+      this(procId, parentId, null);
+    }
+
+    public TestProcedure(long procId, long parentId, byte[] data) {
+      setData(data);
       setProcId(procId);
       if (parentId > 0) {
         setParentProcId(parentId);
@@ -244,6 +270,10 @@ public class ProcedureTestingUtility {
       setState(ProcedureState.FINISHED);
     }
 
+    public void setData(final byte[] data) {
+      this.data = data;
+    }
+
     @Override
     protected Procedure[] execute(Void env) { return null; }
 
@@ -254,10 +284,21 @@ public class ProcedureTestingUtility {
     protected boolean abort(Void env) { return false; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException { }
+    protected void serializeStateData(final OutputStream stream) throws IOException {
+      StreamUtils.writeRawVInt32(stream, data != null ? data.length : 0);
+      if (data != null) stream.write(data);
+    }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException { }
+    protected void deserializeStateData(final InputStream stream) throws IOException {
+      int len = StreamUtils.readRawVarint32(stream);
+      if (len > 0) {
+        data = new byte[len];
+        stream.read(data);
+      } else {
+        data = null;
+      }
+    }
   }
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
