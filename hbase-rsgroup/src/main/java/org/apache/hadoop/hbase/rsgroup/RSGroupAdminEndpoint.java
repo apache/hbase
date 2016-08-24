@@ -93,7 +93,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void start(CoprocessorEnvironment env) throws IOException {
     MasterCoprocessorEnvironment menv = (MasterCoprocessorEnvironment)env;
     master = menv.getMasterServices();
-    groupInfoManager = new RSGroupInfoManagerImpl(master);
+    setGroupInfoManager(new RSGroupInfoManagerImpl(master));
     groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
     Class clazz =
         master.getConfiguration().getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, null);
@@ -109,6 +109,20 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   @Override
   public Service getService() {
     return this;
+  }
+
+  private static void setStaticGroupInfoManager(RSGroupInfoManagerImpl groupInfoManager) {
+    RSGroupAdminEndpoint.groupInfoManager = groupInfoManager;
+  }
+
+  private void setGroupInfoManager(RSGroupInfoManagerImpl groupInfoManager) throws IOException {
+    if (groupInfoManager == null) {
+      groupInfoManager = new RSGroupInfoManagerImpl(master);
+      groupInfoManager.init();
+    } else if (!groupInfoManager.isInit()) {
+      groupInfoManager.init();
+    }
+    setStaticGroupInfoManager(groupInfoManager);
   }
 
   public RSGroupInfoManager getGroupInfoManager() {

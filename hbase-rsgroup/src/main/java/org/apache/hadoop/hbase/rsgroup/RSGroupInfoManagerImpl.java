@@ -122,6 +122,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   private volatile Set<String> prevRSGroups;
   private RSGroupSerDe rsGroupSerDe;
   private DefaultServerUpdater defaultServerUpdater;
+  private boolean isInit = false;
 
 
   public RSGroupInfoManagerImpl(MasterServices master) throws IOException {
@@ -131,13 +132,21 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     this.master = master;
     this.watcher = master.getZooKeeper();
     this.conn = master.getClusterConnection();
-    rsGroupStartupWorker = new RSGroupStartupWorker(this, master, conn);
     prevRSGroups = new HashSet<String>();
+  }
+
+  public void init() throws IOException{
+    rsGroupStartupWorker = new RSGroupStartupWorker(this, master, conn);
     refresh();
     rsGroupStartupWorker.start();
     defaultServerUpdater = new DefaultServerUpdater(this);
     master.getServerManager().registerListener(this);
     defaultServerUpdater.start();
+    isInit = true;
+  }
+
+  boolean isInit() {
+    return isInit;
   }
 
   /**
@@ -669,6 +678,8 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
             //flush any inconsistencies between ZK and HTable
             groupInfoManager.flushConfig(groupInfoManager.rsGroupMap);
           }
+        } catch (RuntimeException e) {
+          throw e;
         } catch(Exception e) {
           found.set(false);
           LOG.warn("Failed to perform check", e);

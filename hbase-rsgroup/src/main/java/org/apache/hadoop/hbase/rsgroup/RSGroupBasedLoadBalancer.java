@@ -316,18 +316,19 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   private Set<HRegionInfo> getMisplacedRegions(
       Map<HRegionInfo, ServerName> regions) throws IOException {
     Set<HRegionInfo> misplacedRegions = new HashSet<HRegionInfo>();
-    for (HRegionInfo region : regions.keySet()) {
-      ServerName assignedServer = regions.get(region);
+    for(Map.Entry<HRegionInfo, ServerName> region : regions.entrySet()) {
+      HRegionInfo regionInfo = region.getKey();
+      ServerName assignedServer = region.getValue();
       RSGroupInfo info =
-          RSGroupInfoManager.getRSGroup(RSGroupInfoManager.getRSGroupOfTable(region.getTable()));
+          RSGroupInfoManager.getRSGroup(RSGroupInfoManager.getRSGroupOfTable(regionInfo.getTable()));
       if (assignedServer != null &&
           (info == null || !info.containsServer(assignedServer.getHostPort()))) {
-        LOG.debug("Found misplaced region: " + region.getRegionNameAsString() +
+        LOG.debug("Found misplaced region: " + regionInfo.getRegionNameAsString() +
             " on server: " + assignedServer +
             " found in group: " +
             RSGroupInfoManager.getRSGroupOfServer(assignedServer.getHostPort()) +
             " outside of group: " + (info == null ? "UNKNOWN" : info.getName()));
-        misplacedRegions.add(region);
+        misplacedRegions.add(regionInfo);
       }
     }
     return misplacedRegions;
@@ -339,9 +340,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
         new TreeMap<ServerName, List<HRegionInfo>>();
     List<HRegionInfo> misplacedRegions = new LinkedList<HRegionInfo>();
     correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<HRegionInfo>());
-    for (ServerName sName : existingAssignments.keySet()) {
+    for (Map.Entry<ServerName, List<HRegionInfo>> assignments : existingAssignments.entrySet()){
+      ServerName sName = assignments.getKey();
       correctAssignments.put(sName, new LinkedList<HRegionInfo>());
-      List<HRegionInfo> regions = existingAssignments.get(sName);
+      List<HRegionInfo> regions = assignments.getValue();
       for (HRegionInfo region : regions) {
         RSGroupInfo info = null;
         try {

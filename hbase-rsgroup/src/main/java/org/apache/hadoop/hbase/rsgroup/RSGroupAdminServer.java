@@ -216,7 +216,7 @@ public class RSGroupAdminServer extends RSGroupAdmin {
             }
           }
           try {
-            Thread.sleep(1000);
+            manager.wait(1000);
           } catch (InterruptedException e) {
             LOG.warn("Sleep interrupted", e);
             Thread.currentThread().interrupt();
