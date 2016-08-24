@@ -38,8 +38,7 @@ public class VersionedSegmentsList {
   private final LinkedList<ImmutableSegment> storeSegments;
   private final long version;
 
-  public VersionedSegmentsList(
-          LinkedList<ImmutableSegment> storeSegments, long version) {
+  public VersionedSegmentsList(LinkedList<ImmutableSegment> storeSegments, long version) {
     this.storeSegments = storeSegments;
     this.version = version;
   }
@@ -50,5 +49,17 @@ public class VersionedSegmentsList {
 
   public long getVersion() {
     return version;
+  }
+
+  public int getNumOfCells() {
+    int totalCells = 0;
+    for (ImmutableSegment s : storeSegments) {
+      totalCells += s.getCellsCount();
+    }
+    return totalCells;
+  }
+
+  public int getNumOfSegments() {
+    return storeSegments.size();
   }
 }

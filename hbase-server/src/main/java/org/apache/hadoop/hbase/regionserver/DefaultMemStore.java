@@ -93,7 +93,7 @@ public class DefaultMemStore extends AbstractMemStore {
             createImmutableSegment(getActive());
         setSnapshot(immutableSegment);
         setSnapshotSize(keySize());
-        resetCellSet();
+        resetActive();
       }
     }
     return new MemStoreSnapshot(this.snapshotId, getSnapshot());
@@ -116,10 +116,10 @@ public class DefaultMemStore extends AbstractMemStore {
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(2);
-    list.add(getActive().getSegmentScanner(readPt, 1));
-    list.add(getSnapshot().getSegmentScanner(readPt, 0));
+    list.add(getActive().getScanner(readPt, 1));
+    list.add(getSnapshot().getScanner(readPt, 0));
     return Collections.<KeyValueScanner> singletonList(
-      new MemStoreScanner((AbstractMemStore) this, list, readPt));
+      new MemStoreScanner(getComparator(), list));
   }
 
   @Override

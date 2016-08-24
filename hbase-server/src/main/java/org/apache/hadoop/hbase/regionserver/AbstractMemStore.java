@@ -65,18 +65,18 @@ public abstract class AbstractMemStore implements MemStore {
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       (ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER +
-      ClassSize.CELL_SKIPLIST_SET + ClassSize.CONCURRENT_SKIPLISTMAP));
+      ClassSize.CELL_SET + ClassSize.CONCURRENT_SKIPLISTMAP));
 
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c) {
     this.conf = conf;
     this.comparator = c;
-    resetCellSet();
-    this.snapshot = SegmentFactory.instance().createImmutableSegment(conf, c, 0);
+    resetActive();
+    this.snapshot = SegmentFactory.instance().createImmutableSegment(c, 0);
     this.snapshotId = NO_SNAPSHOT_ID;
   }
 
-  protected void resetCellSet() {
+  protected void resetActive() {
     // Reset heap to not include any keys
     this.active = SegmentFactory.instance().createMutableSegment(conf, comparator, DEEP_OVERHEAD);
     this.timeOfOldestEdit = Long.MAX_VALUE;

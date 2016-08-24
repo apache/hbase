@@ -305,10 +305,6 @@ public class SegmentScanner implements KeyValueScanner {
     // do nothing
   }
 
-  protected Segment getSegment(){
-    return segment;
-  }
-
   //debug method
   @Override
   public String toString() {
@@ -319,6 +315,10 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   /********************* Private Methods **********************/
+
+  private Segment getSegment(){
+    return segment;
+  }
 
   /**
    * Private internal method for iterating over the segment,

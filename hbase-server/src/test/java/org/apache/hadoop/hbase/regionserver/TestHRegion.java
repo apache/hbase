@@ -5109,7 +5109,7 @@ public class TestHRegion {
    *
    * @throws IOException
    */
-  private void assertScan(final HRegion r, final byte[] fs, final byte[] firstValue)
+  protected void assertScan(final HRegion r, final byte[] fs, final byte[] firstValue)
       throws IOException {
     byte[][] families = { fs };
     Scan scan = new Scan();
@@ -5172,7 +5172,7 @@ public class TestHRegion {
     }
   }
 
-  private Configuration initSplit() {
+  protected Configuration initSplit() {
     // Always compact if there is more than one store file.
     CONF.setInt("hbase.hstore.compactionThreshold", 2);
 
