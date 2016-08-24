@@ -582,8 +582,6 @@ public class TestAdmin2 {
         2 * 1000);
 
     /**** configuration for testLogRollOnDatanodeDeath ****/
-    // make sure log.hflush() calls syncFs() to open a pipeline
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
     TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);

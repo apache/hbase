@@ -101,7 +101,6 @@ public class TestReplicationWithTags {
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setInt("zookeeper.recovery.retry", 1);
     conf1.setInt("zookeeper.recovery.retry.intervalmill", 10);
-    conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
@@ -123,7 +122,6 @@ public class TestReplicationWithTags {
     conf2.setInt("hfile.format.version", 3);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf2.setBoolean("dfs.support.append", true);
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,

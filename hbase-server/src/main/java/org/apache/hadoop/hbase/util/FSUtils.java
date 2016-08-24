@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -1267,6 +1266,7 @@ public abstract class FSUtils {
       super(fs, HConstants.HBASE_NON_TABLE_DIRS);
     }
 
+    @Override
     protected boolean isValidName(final String name) {
       if (!super.isValidName(name))
         return false;
@@ -1279,39 +1279,6 @@ public abstract class FSUtils {
       }
       return true;
     }
-  }
-
-  /**
-   * Heuristic to determine whether is safe or not to open a file for append
-   * Looks both for dfs.support.append and use reflection to search
-   * for SequenceFile.Writer.syncFs() or FSDataOutputStream.hflush()
-   * @param conf
-   * @return True if append support
-   */
-  public static boolean isAppendSupported(final Configuration conf) {
-    boolean append = conf.getBoolean("dfs.support.append", false);
-    if (append) {
-      try {
-        // TODO: The implementation that comes back when we do a createWriter
-        // may not be using SequenceFile so the below is not a definitive test.
-        // Will do for now (hdfs-200).
-        SequenceFile.Writer.class.getMethod("syncFs", new Class<?> []{});
-        append = true;
-      } catch (SecurityException e) {
-      } catch (NoSuchMethodException e) {
-        append = false;
-      }
-    }
-    if (!append) {
-      // Look for the 0.21, 0.22, new-style append evidence.
-      try {
-        FSDataOutputStream.class.getMethod("hflush", new Class<?> []{});
-        append = true;
-      } catch (NoSuchMethodException e) {
-        append = false;
-      }
-    }
-    return append;
   }
 
   /**

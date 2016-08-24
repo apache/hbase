@@ -72,7 +72,6 @@ public class TestZooKeeperACL {
     System.setProperty("zookeeper.authProvider.1",
         "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
 
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.maxClientCnxns", 1000);
 
     // If Hadoop is missing HADOOP-7070 the cluster will fail to start due to

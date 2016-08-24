@@ -66,7 +66,6 @@ public class TestDeleteColumnFamilyProcedureFromClient {
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
   }
 

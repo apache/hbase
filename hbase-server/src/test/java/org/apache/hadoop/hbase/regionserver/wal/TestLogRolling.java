@@ -72,8 +72,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
 
     /**** configuration for testLogRollOnDatanodeDeath ****/
-    // make sure log.hflush() calls syncFs() to open a pipeline
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
     TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
@@ -147,10 +145,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
         }
       }
     });
-
-    // don't run this test without append support (HDFS-200 & HDFS-142)
-    assertTrue("Need append support for this test",
-      FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
 
     // add up the datanode count, to ensure proper replication when we kill 1
     // This function is synchronous; when it returns, the dfs cluster is active
@@ -266,10 +260,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
           paths.add(newFile);
         }
       });
-
-      // don't run this test without append support (HDFS-200 & HDFS-142)
-      assertTrue("Need append support for this test",
-        FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
 
       writeData(table, 1002);
 

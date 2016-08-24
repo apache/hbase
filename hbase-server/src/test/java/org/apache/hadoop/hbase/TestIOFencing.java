@@ -248,7 +248,6 @@ public class TestIOFencing {
     Configuration c = TEST_UTIL.getConfiguration();
     // Insert our custom region
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
-    c.setBoolean("dfs.support.append", true);
     // Encourage plenty of flushes
     c.setLong("hbase.hregion.memstore.flush.size", 100000);
     c.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, ConstantSizeRegionSplitPolicy.class.getName());

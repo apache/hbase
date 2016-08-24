@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.NavigableMap;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -88,8 +85,6 @@ public class TestLogRollAbort {
     // Increase the amount of time between client retries
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 5 * 1000);
 
-    // make sure log.hflush() calls syncFs() to open a pipeline
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
     TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
@@ -144,10 +139,6 @@ public class TestLogRollAbort {
     try {
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       WAL log = server.getWAL(null);
-
-      // don't run this test without append support (HDFS-200 & HDFS-142)
-      assertTrue("Need append support for this test",
-        FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
 
       Put p = new Put(Bytes.toBytes("row2001"));
       p.addColumn(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2001));

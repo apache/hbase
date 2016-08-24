@@ -62,7 +62,6 @@ public class TestMasterTransitions {
    * @throws Exception
    */
   @BeforeClass public static void beforeAllTests() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
     TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILIES);

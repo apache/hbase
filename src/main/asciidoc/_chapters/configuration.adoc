@@ -337,26 +337,7 @@ Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop. See link:h
 [[hadoop.older.versions]]
 ==== Hadoop versions 0.20.x - 1.x
 
-HBase will lose data unless it is running on an HDFS that has a durable `sync` implementation.
-DO NOT use Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0 which DO NOT have this attribute.
-Currently only Hadoop versions 0.20.205.x or any release in excess of this version -- this includes hadoop-1.0.0 -- have a working, durable sync.
-The Cloudera blog post link:https://blog.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/[An
-            update on Apache Hadoop 1.0] by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
-It's worth checking out if you are having trouble making sense of the Hadoop version morass.
-
-Sync has to be explicitly enabled by setting `dfs.support.append` equal to true on both the client side -- in _hbase-site.xml_ -- and on the serverside in _hdfs-site.xml_ (The sync facility HBase needs is a subset of the append code path).
-
-[source,xml]
-----
-
-<property>
-  <name>dfs.support.append</name>
-  <value>true</value>
-</property>
-----
-
-You will have to restart your cluster after making this edit.
-Ignore the chicken-little comment you'll find in the _hdfs-default.xml_ in the description for the `dfs.support.append` configuration.
+DO NOT use Hadoop versions older than 2.2.0 for HBase versions greater than 1.0. Check release documentation if you are using an older version of HBase for Hadoop related information. 
 
 [[hadoop.security]]
 ==== Apache HBase on Secure Hadoop

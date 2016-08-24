@@ -151,8 +151,6 @@ public class TestWALSplit {
     conf = TEST_UTIL.getConfiguration();
     conf.setClass("hbase.regionserver.hlog.writer.impl",
         InstrumentedLogWriter.class, Writer.class);
-    conf.setBoolean("dfs.support.broken.append", true);
-    conf.setBoolean("dfs.support.append", true);
     // This is how you turn off shortcircuit read currently.  TODO: Fix.  Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.

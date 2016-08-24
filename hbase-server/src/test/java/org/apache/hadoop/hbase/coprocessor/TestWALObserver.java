@@ -113,7 +113,6 @@ public class TestWALObserver {
         SampleRegionWALObserver.class.getName(), SampleRegionWALObserver.Legacy.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         SampleRegionWALObserver.class.getName());
-    conf.setBoolean("dfs.support.append", true);
     conf.setInt("dfs.client.block.recovery.retries", 2);
 
     TEST_UTIL.startMiniCluster(1);

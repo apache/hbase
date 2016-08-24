@@ -46,7 +46,6 @@ public class TestFullLogReconstruction {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
-    c.setBoolean("dfs.support.append", true);
     // quicker heartbeat interval for faster DN death notification
     c.setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     c.setInt("dfs.heartbeat.interval", 1);

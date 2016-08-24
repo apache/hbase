@@ -94,7 +94,6 @@ public class TestBlockReorder {
   public void setUp() throws Exception {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
-    htu.getConfiguration().setBoolean("dfs.support.append", true);
     htu.getConfiguration().setInt("dfs.replication", 3);
     htu.startMiniDFSCluster(3,
         new String[]{"/r1", "/r2", "/r3"}, new String[]{host1, host2, host3});

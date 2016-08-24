@@ -121,7 +121,6 @@ public class TestMasterReplication {
     baseConfiguration.set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     baseConfiguration.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
-    baseConfiguration.setBoolean("dfs.support.append", true);
     baseConfiguration.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     baseConfiguration.setStrings(
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,

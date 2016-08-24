@@ -88,7 +88,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf.setLong("hbase.master.logcleaner.ttl", 10);
     conf.setInt("zookeeper.recovery.retry", 1);
     conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
-    conf.setBoolean("dfs.support.append", true);
     conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
@@ -121,7 +120,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf1.setInt("hfile.format.version", 3);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf1.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf1.setBoolean("dfs.support.append", true);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
