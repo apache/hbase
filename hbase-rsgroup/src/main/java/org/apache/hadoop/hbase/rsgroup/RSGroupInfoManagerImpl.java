@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ServiceException;
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor.DefaultVisitorBase;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -71,8 +71,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
-import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
-import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -82,7 +80,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -703,22 +700,12 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   private void createGroupTable(MasterServices masterServices) throws IOException {
-    HRegionInfo[] newRegions =
-        ModifyRegionUtils.createHRegionInfos(RSGROUP_TABLE_DESC, null);
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
-    masterServices.getMasterProcedureExecutor().submitProcedure(
-        new CreateTableProcedure(
-            masterServices.getMasterProcedureExecutor().getEnvironment(),
-            RSGROUP_TABLE_DESC,
-            newRegions,
-            latch),
-        HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
-    latch.await();
+    Long procId = masterServices.createSystemTable(RSGROUP_TABLE_DESC);
     // wait for region to be online
     int tries = 600;
-    while(masterServices.getAssignmentManager().getRegionStates()
-        .getRegionServerOfRegion(newRegions[0]) == null && tries > 0) {
+    while (!(masterServices.getMasterProcedureExecutor().isFinished(procId))
+        && masterServices.getMasterProcedureExecutor().isRunning()
+        && tries > 0) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -727,7 +714,12 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       tries--;
     }
     if(tries <= 0) {
-      throw new IOException("Failed to create group table.");
+      throw new IOException("Failed to create group table in a given time.");
+    } else {
+      ProcedureInfo result = masterServices.getMasterProcedureExecutor().getResult(procId);
+      if (result != null && result.isFailed()) {
+        throw new IOException("Failed to create group table. " + result.getExceptionFullMessage());
+      }
     }
   }
 

@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -200,15 +198,7 @@ public class TableNamespaceManager {
   }
 
   private void createNamespaceTable(MasterServices masterServices) throws IOException {
-    HRegionInfo[] newRegions = new HRegionInfo[]{
-        new HRegionInfo(HTableDescriptor.NAMESPACE_TABLEDESC.getTableName(), null, null)};
-
-    // we need to create the table this way to bypass checkInitialized
-    masterServices.getMasterProcedureExecutor()
-      .submitProcedure(new CreateTableProcedure(
-          masterServices.getMasterProcedureExecutor().getEnvironment(),
-          HTableDescriptor.NAMESPACE_TABLEDESC,
-          newRegions));
+    masterServices.createSystemTable(HTableDescriptor.NAMESPACE_TABLEDESC);
   }
 
   @SuppressWarnings("deprecation")

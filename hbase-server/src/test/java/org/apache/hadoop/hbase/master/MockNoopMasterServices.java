@@ -73,6 +73,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
+    return -1;
+  }
+
+  @Override
   public AssignmentManager getAssignmentManager() {
     return null;
   }
