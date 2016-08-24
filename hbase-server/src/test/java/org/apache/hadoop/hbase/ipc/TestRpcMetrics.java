@@ -137,5 +137,34 @@ public class TestRpcMetrics {
     HELPER.assertCounter("exceptions", 5, serverSource);
   }
 
+  @Test
+  public void testServerContextNameWithHostName() {
+    String[] masterServerNames = { "master/node-xyz/10.19.250.253:16020",
+        "master/node-regionserver-xyz/10.19.250.253:16020", "HMaster/node-xyz/10.19.250.253:16020",
+        "HMaster/node-regionserver-xyz/10.19.250.253:16020" };
+
+    String[] regionServerNames = { "regionserver/node-xyz/10.19.250.253:16020",
+        "regionserver/node-master1-xyz/10.19.250.253:16020",
+        "HRegionserver/node-xyz/10.19.250.253:16020",
+        "HRegionserver/node-master1-xyz/10.19.250.253:16020" };
+
+    MetricsHBaseServerSource masterSource = null;
+    for (String serverName : masterServerNames) {
+      masterSource = new MetricsHBaseServer(serverName, new MetricsHBaseServerWrapperStub())
+          .getMetricsSource();
+      assertEquals("master", masterSource.getMetricsContext());
+      assertEquals("Master,sub=IPC", masterSource.getMetricsJmxContext());
+      assertEquals("Master", masterSource.getMetricsName());
+    }
+
+    MetricsHBaseServerSource rsSource = null;
+    for (String serverName : regionServerNames) {
+      rsSource = new MetricsHBaseServer(serverName, new MetricsHBaseServerWrapperStub())
+          .getMetricsSource();
+      assertEquals("regionserver", rsSource.getMetricsContext());
+      assertEquals("RegionServer,sub=IPC", rsSource.getMetricsJmxContext());
+      assertEquals("RegionServer", rsSource.getMetricsName());
+    }
+  }
 }
 
