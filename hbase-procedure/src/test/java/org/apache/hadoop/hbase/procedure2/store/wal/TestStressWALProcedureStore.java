@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
@@ -128,5 +129,19 @@ public class TestStressWALProcedureStore {
     assertTrue(procCounter.get() >= LAST_PROC_ID);
     assertTrue(procStore.getStoreTracker().isEmpty());
     assertEquals(1, procStore.getActiveLogs().size());
+  }
+
+  @Test
+  public void testEntrySizeLimit() throws Exception {
+    final int NITEMS = 20;
+    for (int i = 1; i <= NITEMS; ++i) {
+      final byte[] data = new byte[256 << i];
+      LOG.info(String.format("Writing %s", StringUtils.humanSize(data.length)));
+      TestProcedure proc = new TestProcedure(i, 0, data);
+      procStore.insert(proc, null);
+    }
+
+    // check that we are able to read the big proc-blobs
+    ProcedureTestingUtility.storeRestartAndAssert(procStore, NITEMS, NITEMS, 0, 0);
   }
 }

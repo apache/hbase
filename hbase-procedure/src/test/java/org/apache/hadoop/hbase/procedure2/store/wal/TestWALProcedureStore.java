@@ -91,10 +91,7 @@ public class TestWALProcedureStore {
   }
 
   private void storeRestart(ProcedureStore.ProcedureLoader loader) throws Exception {
-    procStore.stop(false);
-    procStore.start(PROCEDURE_STORE_SLOTS);
-    procStore.recoverLease();
-    procStore.load(loader);
+    ProcedureTestingUtility.storeRestart(procStore, loader);
   }
 
   @Test
@@ -486,6 +483,7 @@ public class TestWALProcedureStore {
     assertEquals(0, loader.getCorruptedCount());
   }
 
+  @Test
   public void testLoadChildren() throws Exception {
     TestProcedure a = new TestProcedure(1, 0);
     TestProcedure b = new TestProcedure(2, 1);
@@ -523,12 +521,8 @@ public class TestWALProcedureStore {
 
   private void restartAndAssert(long maxProcId, long runnableCount,
       int completedCount, int corruptedCount) throws Exception {
-    final LoadCounter loader = new LoadCounter();
-    storeRestart(loader);
-    assertEquals(maxProcId, loader.getMaxProcId());
-    assertEquals(runnableCount, loader.getRunnableCount());
-    assertEquals(completedCount, loader.getCompletedCount());
-    assertEquals(corruptedCount, loader.getCorruptedCount());
+    ProcedureTestingUtility.storeRestartAndAssert(procStore, maxProcId,
+      runnableCount, completedCount, corruptedCount);
   }
 
   private void corruptLog(final FileStatus logFile, final long dropBytes)
