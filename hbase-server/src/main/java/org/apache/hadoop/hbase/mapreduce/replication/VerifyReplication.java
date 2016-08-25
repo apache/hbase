@@ -80,7 +80,7 @@ public class VerifyReplication extends Configured implements Tool {
   static int versions = -1;
   static String tableName = null;
   static String families = null;
-  static String delimiter = null;
+  static String delimiter = "";
   static String peerId = null;
   static String rowPrefixes = null;
 
