@@ -68,6 +68,8 @@ public class TestRSGroups extends TestRSGroupsBase {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL.getConfiguration().setFloat(
+            "hbase.master.balancer.stochastic.tableSkewCost", 6000);
     TEST_UTIL.getConfiguration().set(
         HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         RSGroupBasedLoadBalancer.class.getName());
