@@ -237,6 +237,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
+      return -1;
+    }
+
+    @Override
     public SnapshotManager getSnapshotManager() {
       return null;
     }

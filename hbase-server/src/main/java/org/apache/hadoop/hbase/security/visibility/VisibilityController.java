@@ -209,7 +209,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
           DisabledRegionSplitPolicy.class.getName());
       labelsTable.setValue(Bytes.toBytes(HConstants.DISALLOW_WRITES_IN_RECOVERING),
           Bytes.toBytes(true));
-      master.createTable(labelsTable, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      master.createSystemTable(labelsTable);
     }
   }
 

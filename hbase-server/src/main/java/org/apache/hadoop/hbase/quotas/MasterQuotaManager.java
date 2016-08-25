@@ -477,13 +477,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   private void createQuotaTable() throws IOException {
-    HRegionInfo[] newRegions = new HRegionInfo[] { new HRegionInfo(QuotaUtil.QUOTA_TABLE_NAME) };
-
-    masterServices.getMasterProcedureExecutor()
-      .submitProcedure(new CreateTableProcedure(
-          masterServices.getMasterProcedureExecutor().getEnvironment(),
-          QuotaUtil.QUOTA_TABLE_DESC,
-          newRegions));
+    masterServices.createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);
   }
 
   private static class NamedLock<T> {
