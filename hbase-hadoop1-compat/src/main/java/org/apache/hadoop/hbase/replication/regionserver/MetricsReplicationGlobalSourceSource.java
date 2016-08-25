@@ -22,7 +22,7 @@ import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 
 public class MetricsReplicationGlobalSourceSource implements MetricsReplicationSourceSource {
-
+  private final MetricsReplicationSource rms;
   private final MetricMutableGaugeLong ageOfLastShippedOpGauge;
   private long ageOfLastShipped; // Hadoop 1 metrics don't let you read from gauges
   private final MetricMutableGaugeLong sizeOfLogQueueGauge;
@@ -36,7 +36,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MetricMutableCounterLong logReadInBytesCounter;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
-
+    this.rms = rms;
     ageOfLastShippedOpGauge = rms.getMetricsRegistry().getLongGauge(SOURCE_AGE_OF_LAST_SHIPPED_OP, 0L);
 
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getLongGauge(SOURCE_SIZE_OF_LOG_QUEUE, 0L);
@@ -114,5 +114,65 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public long getLastShippedAge() {
     return ageOfLastShipped;
+  }
+
+  @Override
+  public void init() {
+    rms.init();
+  }
+
+  @Override
+  public void setGauge(String gaugeName, long value) {
+    rms.setGauge(gaugeName, value);
+  }
+
+  @Override
+  public void incGauge(String gaugeName, long delta) {
+    rms.incGauge(gaugeName, delta);
+  }
+
+  @Override
+  public void decGauge(String gaugeName, long delta) {
+    rms.decGauge(gaugeName, delta);
+  }
+
+  @Override
+  public void removeMetric(String key) {
+    rms.removeMetric(key);
+  }
+
+  @Override
+  public void incCounters(String counterName, long delta) {
+    rms.incCounters(counterName, delta);
+  }
+
+  @Override
+  public void updateHistogram(String name, long value) {
+    rms.updateHistogram(name, value);
+  }
+
+  @Override
+  public void updateQuantile(String name, long value) {
+    rms.updateQuantile(name, value);
+  }
+
+  @Override
+  public String getMetricsContext() {
+    return rms.getMetricsContext();
+  }
+
+  @Override
+  public String getMetricsDescription() {
+    return rms.getMetricsDescription();
+  }
+
+  @Override
+  public String getMetricsJmxContext() {
+    return rms.getMetricsJmxContext();
+  }
+
+  @Override
+  public String getMetricsName() {
+    return rms.getMetricsName();
   }
 }

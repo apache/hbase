@@ -31,6 +31,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logEditsFilteredKey;
   private final String shippedBatchesKey;
   private final String shippedOpsKey;
+  private String keyPrefix;
+
   @Deprecated
   private final String shippedKBsKey;
   private final String shippedBytesKey;
@@ -50,32 +52,33 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
     this.id = id;
+    this.keyPrefix = "source." + this.id + ".";
 
-    ageOfLastShippedOpKey = "source." + id + ".ageOfLastShippedOp";
+    ageOfLastShippedOpKey = this.keyPrefix + ".ageOfLastShippedOp";
     ageOfLastShippedOpGauge = rms.getMetricsRegistry().getLongGauge(ageOfLastShippedOpKey, 0L);
 
-    sizeOfLogQueueKey = "source." + id + ".sizeOfLogQueue";
+    sizeOfLogQueueKey = this.keyPrefix + ".sizeOfLogQueue";
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getLongGauge(sizeOfLogQueueKey, 0L);
 
-    shippedBatchesKey = "source." + this.id + ".shippedBatches";
+    shippedBatchesKey = this.keyPrefix + ".shippedBatches";
     shippedBatchesCounter = rms.getMetricsRegistry().getLongCounter(shippedBatchesKey, 0L);
 
-    shippedOpsKey = "source." + this.id + ".shippedOps";
+    shippedOpsKey = this.keyPrefix + ".shippedOps";
     shippedOpsCounter = rms.getMetricsRegistry().getLongCounter(shippedOpsKey, 0L);
 
-    shippedKBsKey = "source." + this.id + ".shippedKBs";
+    shippedKBsKey = this.keyPrefix + ".shippedKBs";
     shippedKBsCounter = rms.getMetricsRegistry().getLongCounter(shippedKBsKey, 0L);
 
-    shippedBytesKey = "source." + this.id + ".shippedBytes";
+    shippedBytesKey = this.keyPrefix + ".shippedBytes";
     shippedBytesCounter = rms.getMetricsRegistry().getLongCounter(shippedBytesKey, 0L);
 
-    logReadInBytesKey = "source." + this.id + ".logReadInBytes";
+    logReadInBytesKey = this.keyPrefix + ".logReadInBytes";
     logReadInBytesCounter = rms.getMetricsRegistry().getLongCounter(logReadInBytesKey, 0L);
 
-    logReadInEditsKey = "source." + id + ".logEditsRead";
+    logReadInEditsKey = this.keyPrefix + ".logEditsRead";
     logReadInEditsCounter = rms.getMetricsRegistry().getLongCounter(logReadInEditsKey, 0L);
 
-    logEditsFilteredKey = "source." + id + ".logEditsFiltered";
+    logEditsFilteredKey = this.keyPrefix + ".logEditsFiltered";
     logEditsFilteredCounter = rms.getMetricsRegistry().getLongCounter(logEditsFilteredKey, 0L);
   }
 
@@ -139,5 +142,66 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   @Override
   public long getLastShippedAge() {
     return ageOfLastShipped;
+  }
+
+
+  @Override
+  public void init() {
+    rms.init();
+  }
+
+  @Override
+  public void setGauge(String gaugeName, long value) {
+    rms.setGauge(this.keyPrefix + gaugeName, value);
+  }
+
+  @Override
+  public void incGauge(String gaugeName, long delta) {
+    rms.incGauge(this.keyPrefix + gaugeName, delta);
+  }
+
+  @Override
+  public void decGauge(String gaugeName, long delta) {
+    rms.decGauge(this.keyPrefix + gaugeName, delta);
+  }
+
+  @Override
+  public void removeMetric(String key) {
+    rms.removeMetric(this.keyPrefix + key);
+  }
+
+  @Override
+  public void incCounters(String counterName, long delta) {
+    rms.incCounters(this.keyPrefix + counterName, delta);
+  }
+
+  @Override
+  public void updateHistogram(String name, long value) {
+    rms.updateHistogram(this.keyPrefix + name, value);
+  }
+
+  @Override
+  public void updateQuantile(String name, long value) {
+    rms.updateQuantile(this.keyPrefix + name, value);
+  }
+
+  @Override
+  public String getMetricsContext() {
+    return rms.getMetricsContext();
+  }
+
+  @Override
+  public String getMetricsDescription() {
+    return rms.getMetricsDescription();
+  }
+
+  @Override
+  public String getMetricsJmxContext() {
+    return rms.getMetricsJmxContext();
+  }
+
+  @Override
+  public String getMetricsName() {
+    return rms.getMetricsName();
   }
 }
