@@ -1601,6 +1601,30 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return procId;
   }
 
+  @Override
+  public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
+    if (isStopped()) {
+      throw new MasterNotRunningException();
+    }
+
+    TableName tableName = hTableDescriptor.getTableName();
+    if (!(tableName.isSystemTable())) {
+      throw new IllegalArgumentException(
+        "Only system table creation can use this createSystemTable API");
+    }
+
+    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, null);
+
+    LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
+
+    // This special create table is called locally to master.  Therefore, no RPC means no need
+    // to use nonce to detect duplicated RPC call.
+    long procId = this.procedureExecutor.submitProcedure(
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), hTableDescriptor, newRegions));
+
+    return procId;
+  }
+
   /**
    * Checks whether the table conforms to some sane limits, and configured
    * values (compression, etc) work. Throws an exception if something is wrong.

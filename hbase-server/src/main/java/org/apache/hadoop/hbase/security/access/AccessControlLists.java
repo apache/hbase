@@ -124,7 +124,8 @@ public class AccessControlLists {
    * @throws IOException
    */
   static void createACLTable(MasterServices master) throws IOException {
-    master.createTable(new HTableDescriptor(ACL_TABLE_NAME)
+    /** Table descriptor for ACL table */
+    final HTableDescriptor ACL_TABLEDESC = new HTableDescriptor(ACL_TABLE_NAME)
       .addFamily(new HColumnDescriptor(ACL_LIST_FAMILY)
         .setMaxVersions(1)
         .setInMemory(true)
@@ -134,10 +135,8 @@ public class AccessControlLists {
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
         // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
         // be the case if we are using CombinedBlockCache (Bucket Cache).
-        .setCacheDataInL1(true)),
-    null,
-    HConstants.NO_NONCE,
-    HConstants.NO_NONCE);
+        .setCacheDataInL1(true));
+    master.createSystemTable(ACL_TABLEDESC);
   }
 
   /**
