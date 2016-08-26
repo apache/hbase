@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.Cell;
+
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -55,5 +57,45 @@ public class TestPut {
     // Test when row key is not immutable
     Put putRowIsNotImmutable = new Put(rowKey, 1000L, false);
     assertTrue(rowKey != putRowIsNotImmutable.getRow());  // A local copy is made
+  }
+
+  // HBASE-14882
+  @Test
+  public void testAddImmutable() {
+    byte[] row        = Bytes.toBytes("immutable-row");
+    byte[] family     = Bytes.toBytes("immutable-family");
+
+    byte[] qualifier0 = Bytes.toBytes("immutable-qualifier-0");
+    byte[] value0     = Bytes.toBytes("immutable-value-0");
+
+    byte[] qualifier1 = Bytes.toBytes("immutable-qualifier-1");
+    byte[] value1     = Bytes.toBytes("immutable-value-1");
+    long   ts1        = 5000L;
+
+    Put put = new Put(row, true);
+    put.addImmutable(family, qualifier0, value0);
+    put.addImmutable(family, qualifier1, ts1, value1);
+
+    // Verify the first cell in the list
+    Cell cell0 = put.getCellList(family).get(0);
+
+    // Verify no local copy is made for family, qualifier and value
+    assertTrue(cell0.getFamilyArray()    == family);
+    assertTrue(cell0.getQualifierArray() == qualifier0);
+    assertTrue(cell0.getValueArray()     == value0);
+
+    // Verify timestamp
+    assertTrue(cell0.getTimestamp()      == put.getTimeStamp());
+
+    // verify the second cell in the list
+    Cell cell1 = put.getCellList(family).get(1);
+
+    // Verify no local copy is made for family, qualifier and value
+    assertTrue(cell0.getFamilyArray()    == family);
+    assertTrue(cell1.getQualifierArray() == qualifier1);
+    assertTrue(cell1.getValueArray()     == value1);
+
+    // Verify timestamp
+    assertTrue(cell1.getTimestamp()      == ts1);
   }
 }

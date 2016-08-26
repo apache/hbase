@@ -550,6 +550,11 @@ public final class HConstants {
   public static final int MAX_ROW_LENGTH = Short.MAX_VALUE;
 
   /**
+   * Max length of column family
+   */
+  public static final int MAX_FAMILY_LENGTH = Byte.MAX_VALUE;
+
+  /**
    * Timestamp to use when we want to refer to the latest cell.
    * This is the timestamp sent by clients when no timestamp is specified on
    * commit.

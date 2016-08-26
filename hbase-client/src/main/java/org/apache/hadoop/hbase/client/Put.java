@@ -225,13 +225,137 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
    */
-  public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
+  public Put addImmutable(final byte[] family, final byte[] qualifier, final long ts,
+      final byte[] value) {
+    // Check family
+    if (family == null || family.length == 0 || family.length > HConstants.MAX_FAMILY_LENGTH) {
+      throw new IllegalArgumentException("Family cannot be null. " +
+        "And its length cannot be 0 or greater than " + HConstants.MAX_FAMILY_LENGTH);
+    }
+
+    // Check qualifier
+    if (qualifier == null) {
+      throw new IllegalArgumentException("Qualifier is null");
+    }
+    // As array.length returns int , qualifier.length can not be greater than Integer.MAX_VALUE,
+    // so it is safe that Cell.getQualifierLength() returns int. Do not need to check here.
+
+    // Check value
+    if (value == null) {
+      throw new IllegalArgumentException("Value is null");
+    }
+    // As array.length returns int, value.length can not be greater than Integer.MAX_VALUE,
+    // so it is safe that Cell.getValueLength() returns int. Do not need to check here.
+
+    // Check timestamp
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
     }
+
     List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
-    list.add(kv);
+    list.add(new Cell() {
+      // 1) Row
+      @Override
+      public byte[] getRowArray() {
+        return row;
+      }
+
+      @Override
+      public int getRowOffset() {
+        return 0;
+      }
+
+      @Override
+      public short getRowLength() {
+        // row.length is checked by Mutation.checkRow() in the constructor of Put,
+        // so it is safe to make the type conversion.
+        return (short)(row.length);
+      }
+
+      // 2) Family
+      @Override
+      public byte[] getFamilyArray() {
+        return family;
+      }
+
+      @Override
+      public int getFamilyOffset() {
+        return 0;
+      }
+
+      @Override
+      public byte getFamilyLength() {
+        // family.length is checked at the beginning of this function,
+        // so it is safe to make the type conversion.
+        return (byte)(family.length);
+      }
+
+      // 3) Qualifier
+      @Override
+      public byte[] getQualifierArray() {
+        return qualifier;
+      }
+
+      @Override
+      public int getQualifierOffset() {
+        return 0;
+      }
+
+      @Override
+      public int getQualifierLength() {
+        return qualifier.length;
+      }
+
+      // 4) Timestamp
+      @Override
+      public long getTimestamp() {
+        return ts;
+      }
+
+      //5) Type
+      @Override
+      public byte getTypeByte() {
+        return KeyValue.Type.Put.getCode();
+      }
+
+      //6) SequenceId
+      @Override
+      public long getSequenceId() {
+        return 0L;
+      }
+
+      //7) Value
+      @Override
+      public byte[] getValueArray() {
+        return value;
+      }
+
+      @Override
+      public int getValueOffset() {
+        return 0;
+      }
+
+      @Override
+      public int getValueLength() {
+        return value.length;
+      }
+
+      // 8) Tags
+      @Override
+      public byte[] getTagsArray() {
+        return HConstants.EMPTY_BYTE_ARRAY;
+      }
+
+      @Override
+      public int getTagsOffset() {
+        return 0;
+      }
+
+      @Override
+      public int getTagsLength() {
+        return 0;
+      }
+    });
     familyMap.put(family, list);
     return this;
   }
