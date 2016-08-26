@@ -27,8 +27,8 @@ public class TestBufferedDataBlockEncoder {
 
   @Test
   public void testEnsureSpaceForKey() {
-    BufferedDataBlockEncoder.SeekerState state =
-        new BufferedDataBlockEncoder.SeekerState();
+    BufferedDataBlockEncoder.SeekerState state = new BufferedDataBlockEncoder.SeekerState(
+        false);
     for (int i = 1; i <= 65536; ++i) {
       state.keyLength = i;
       state.ensureSpaceForKey();

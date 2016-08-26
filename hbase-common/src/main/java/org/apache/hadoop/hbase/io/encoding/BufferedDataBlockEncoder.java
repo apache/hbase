@@ -84,10 +84,18 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     /** We need to store a copy of the key. */
     protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
-    protected byte[] tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
+    protected byte[] tagsBuffer = null;
 
     protected long memstoreTS;
     protected int nextKvOffset;
+
+    public SeekerState(boolean tagsCompressed) {
+      if (tagsCompressed) {
+        tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
+      } else {
+        tagsBuffer = HConstants.EMPTY_BYTE_ARRAY;
+      }
+    }
 
     protected boolean isValid() {
       return valueOffset != -1;
@@ -164,8 +172,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected final KVComparator comparator;
     protected final SamePrefixComparator<byte[]> samePrefixComparator;
     protected ByteBuffer currentBuffer;
-    protected STATE current = createSeekerState(); // always valid
-    protected STATE previous = createSeekerState(); // may not be valid
+    protected STATE current, previous;
     protected TagCompressionContext tagCompressionContext = null;
 
     public BufferedEncodedSeeker(KVComparator comparator,
@@ -180,6 +187,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
           throw new RuntimeException("Failed to initialize TagCompressionContext", e);
         }
       }
+      current = createSeekerState(); // always valid
+      previous = createSeekerState(); // may not be valid
     }
     
     protected boolean includesMvcc() {
@@ -188,6 +197,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     protected boolean includesTags() {
       return this.decodingCtx.getHFileContext().isIncludesTags();
+    }
+
+    protected boolean tagsCompressed() {
+      return this.decodingCtx.getHFileContext().isCompressTags();
     }
 
     @Override
@@ -390,7 +403,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected STATE createSeekerState() {
       // This will fail for non-default seeker state if the subclass does not
       // override this method.
-      return (STATE) new SeekerState();
+      return (STATE) new SeekerState(this.tagsCompressed());
     }
 
     abstract protected void decodeFirst();

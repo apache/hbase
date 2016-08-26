@@ -404,6 +404,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private int familyLengthWithSize;
 
+    public FastDiffSeekerState(boolean tagsCompressed) {
+      super(tagsCompressed);
+    }
+
     @Override
     protected void copyFromNext(SeekerState that) {
       super.copyFromNext(that);
@@ -543,7 +547,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected FastDiffSeekerState createSeekerState() {
-        return new FastDiffSeekerState();
+        return new FastDiffSeekerState(this.tagsCompressed());
       }
     };
   }
