@@ -122,7 +122,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     /** We need to store a copy of the key. */
     protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
-    protected byte[] tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
+    protected byte[] tagsBuffer = null;
 
     protected long memstoreTS;
     protected int nextKvOffset;
@@ -132,9 +132,15 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     private final ObjectIntPair<ByteBuffer> tmpPair;
     private final boolean includeTags;
 
-    public SeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
+    public SeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags,
+        boolean tagsCompressed) {
       this.tmpPair = tmpPair;
       this.includeTags = includeTags;
+      if (tagsCompressed) {
+        tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
+      } else {
+        tagsBuffer = HConstants.EMPTY_BYTE_ARRAY;
+      }
     }
 
     protected boolean isValid() {
@@ -724,6 +730,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       return this.decodingCtx.getHFileContext().isIncludesTags();
     }
 
+    protected boolean tagsCompressed() {
+      return this.decodingCtx.getHFileContext().isCompressTags();
+    }
+
     @Override
     public int compareKey(CellComparator comparator, Cell key) {
       keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
@@ -978,7 +988,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected STATE createSeekerState() {
       // This will fail for non-default seeker state if the subclass does not
       // override this method.
-      return (STATE) new SeekerState(this.tmpPair, this.includesTags());
+      return (STATE) new SeekerState(this.tmpPair, this.includesTags(),
+          this.tagsCompressed());
     }
 
     abstract protected void decodeFirst();
