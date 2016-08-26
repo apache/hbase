@@ -21,12 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -379,6 +379,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private int familyLengthWithSize;
 
+    public FastDiffSeekerState(boolean tagsCompressed) {
+      super(tagsCompressed);
+    }
+
     @Override
     protected void copyFromNext(SeekerState that) {
       super.copyFromNext(that);
@@ -518,7 +522,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected FastDiffSeekerState createSeekerState() {
-        return new FastDiffSeekerState();
+        return new FastDiffSeekerState(this.tagsCompressed());
       }
     };
   }
