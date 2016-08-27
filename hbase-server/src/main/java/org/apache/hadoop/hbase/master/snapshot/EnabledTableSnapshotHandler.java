@@ -50,7 +50,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
 
   public EnabledTableSnapshotHandler(SnapshotDescription snapshot, MasterServices master,
       final SnapshotManager manager) {
-    super(snapshot, master);
+    super(snapshot, master, manager);
     this.coordinator = manager.getCoordinator();
   }
 

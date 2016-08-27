@@ -134,7 +134,7 @@ public class TestSnapshotHFileCleaner {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
-      cache.getSnapshotsInProgress();
+      cache.getSnapshotsInProgress(null);
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
@@ -161,7 +161,7 @@ public class TestSnapshotHFileCleaner {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
-      cache.getSnapshotsInProgress();
+      cache.getSnapshotsInProgress(null);
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
@@ -169,23 +169,22 @@ public class TestSnapshotHFileCleaner {
     }
   }
 
-
   /**
-   * HBASE-16464
-   */
+  * HBASE-16464
+  */
   @Test
   public void testMissedTmpSnapshot() throws IOException {
     SnapshotTestingUtils.SnapshotMock
-      snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
     SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-      SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     builder.missOneRegionSnapshotFile();
 
-    long period = Long.MAX_VALUE;
+      long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-      "test-snapshot-file-cache-refresh", new SnapshotFiles());
-    cache.getSnapshotsInProgress();
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    cache.getSnapshotsInProgress(null);
     assertFalse(fs.exists(builder.getSnapshotsDir()));
   }
 }

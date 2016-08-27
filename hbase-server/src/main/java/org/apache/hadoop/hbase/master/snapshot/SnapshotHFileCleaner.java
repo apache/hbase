@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
@@ -57,16 +60,25 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   /** File cache for HFiles in the completed and currently running snapshots */
   private SnapshotFileCache cache;
 
+  private MasterServices master;
+
   @Override
   public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
-      return cache.getUnreferencedFiles(files);
+      return cache.getUnreferencedFiles(files, master.getSnapshotManager());
     } catch (CorruptedSnapshotException cse) {
       LOG.debug("Corrupted in-progress snapshot file exception, ignored ", cse);
     } catch (IOException e) {
       LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
     }
     return Collections.emptyList();
+  }
+
+  @Override
+  public void init(Map<String, Object> params) {
+    if (params.containsKey(HMaster.MASTER)) {
+      this.master = (MasterServices) params.get(HMaster.MASTER);
+    }
   }
 
   @Override
@@ -92,6 +104,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
       LOG.error("Failed to create cleaner util", e);
     }
   }
+
 
   @Override
   public void stop(String why) {

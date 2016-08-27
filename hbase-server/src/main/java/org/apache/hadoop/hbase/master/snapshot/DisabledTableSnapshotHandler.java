@@ -58,8 +58,8 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
    * @param masterServices master services provider
    */
   public DisabledTableSnapshotHandler(SnapshotDescription snapshot,
-      final MasterServices masterServices) {
-    super(snapshot, masterServices);
+      final MasterServices masterServices, final SnapshotManager snapshotManager) {
+    super(snapshot, masterServices, snapshotManager);
   }
 
   @Override

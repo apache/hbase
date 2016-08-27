@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,10 +32,10 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
@@ -49,6 +49,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final Path oldFileDir;
   private final Configuration conf;
   protected List<T> cleanersChain;
+  protected Map<String, Object> params;
+
+  public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
+                      FileSystem fs, Path oldFileDir, String confKey) {
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, null);
+  }
 
   /**
    * @param name name of the chore being run
@@ -58,16 +64,18 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param fs handle to the FS
    * @param oldFileDir the path to the archived files
    * @param confKey configuration key for the classes to instantiate
+   * @param params members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-      FileSystem fs, Path oldFileDir, String confKey) {
+      FileSystem fs, Path oldFileDir, String confKey, Map<String, Object> params) {
     super(name, s, sleepPeriod);
     this.fs = fs;
     this.oldFileDir = oldFileDir;
     this.conf = conf;
-
+    this.params = params;
     initCleanerChain(confKey);
   }
+
 
   /**
    * Validate the file to see if it even belongs in the directory. If it is valid, then the file
@@ -109,6 +117,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       @SuppressWarnings("unchecked")
       T cleaner = (T) c.newInstance();
       cleaner.setConf(conf);
+      cleaner.init(this.params);
       return cleaner;
     } catch (Exception e) {
       LOG.warn("Can NOT create CleanerDelegate: " + className, e);

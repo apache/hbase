@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -177,7 +178,8 @@ public class SnapshotFileCache implements Stoppable {
   // XXX this is inefficient to synchronize on the method, when what we really need to guard against
   // is an illegal access to the cache. Really we could do a mutex-guarded pointer swap on the
   // cache, but that seems overkill at the moment and isn't necessarily a bottleneck.
-  public synchronized Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files)
+  public synchronized Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
+      final SnapshotManager snapshotManager)
       throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
@@ -192,7 +194,7 @@ public class SnapshotFileCache implements Stoppable {
         continue;
       }
       if (snapshotsInProgress == null) {
-        snapshotsInProgress = getSnapshotsInProgress();
+        snapshotsInProgress = getSnapshotsInProgress(snapshotManager);
       }
       if (snapshotsInProgress.contains(fileName)) {
         continue;
@@ -292,8 +294,9 @@ public class SnapshotFileCache implements Stoppable {
     this.snapshots.clear();
     this.snapshots.putAll(known);
   }
-  
-  @VisibleForTesting List<String> getSnapshotsInProgress() throws IOException {
+
+  @VisibleForTesting List<String> getSnapshotsInProgress(
+    final SnapshotManager snapshotManager) throws IOException {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
     Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
@@ -301,19 +304,24 @@ public class SnapshotFileCache implements Stoppable {
     FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
     if (running != null) {
       for (FileStatus run : running) {
+        ReentrantLock lock = null;
+        if (snapshotManager != null) {
+          lock = snapshotManager.getLocks().acquireLock(run.getPath().getName());
+        }
         try {
           snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
         } catch (CorruptedSnapshotException e) {
           // See HBASE-16464
           if (e.getCause() instanceof FileNotFoundException) {
-            // If the snapshot is not in progress, we will delete it
-            if (!fs.exists(new Path(run.getPath(),
-              SnapshotDescriptionUtils.SNAPSHOT_IN_PROGRESS))) {
-              fs.delete(run.getPath(), true);
-              LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
-            }
+            // If the snapshot is corrupt, we will delete it
+            fs.delete(run.getPath(), true);
+            LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
           } else {
             throw e;
+          }
+        } finally {
+          if (lock != null) {
+            lock.unlock();
           }
         }
       }
