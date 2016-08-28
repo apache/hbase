@@ -87,10 +87,11 @@ See <<java,Java>> for information about supported JDK versions.
   Do not download the file ending in _src.tar.gz_ for now.
 . Extract the downloaded file, and change to the newly-created directory.
 +
+[source,subs="attributes"]
 ----
 
-$ tar xzvf hbase-<?eval ${project.version}?>-bin.tar.gz
-$ cd hbase-<?eval ${project.version}?>/
+$ tar xzvf hbase-{Version}-bin.tar.gz
+$ cd hbase-{Version}/
 ----
 
 . For HBase 0.98.5 and later, you are required to set the `JAVA_HOME` environment variable before starting HBase.

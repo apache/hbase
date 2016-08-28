@@ -59,9 +59,9 @@ link:http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf[No Rela
 [[other.info.sites]]
 === HBase Sites
 
-link:http://www.cloudera.com/blog/category/hbase/[Cloudera's HBase Blog] has a lot of links to useful HBase information.
+link:https://blog.cloudera.com/blog/category/hbase/[Cloudera's HBase Blog] has a lot of links to useful HBase information.
 
-* link:http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/[CAP Confusion] is a relevant entry for background information on distributed storage systems.
+* link:https://blog.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/[CAP Confusion] is a relevant entry for background information on distributed storage systems.
 
 link:http://wiki.apache.org/hadoop/HBase/HBasePresentations[HBase Wiki] has a page with a number of presentations.
 

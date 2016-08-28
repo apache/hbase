@@ -1412,8 +1412,7 @@ admin.createTable(tableDesc);
 [source]
 .Configuring the Split Policy On a Table Using HBase Shell
 ----
-hbase> create 'test', {METHOD => 'table_att', CONFIG => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},
-{NAME => 'cf1'}
+hbase> create 'test', {METADATA => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},{NAME => 'cf1'}
 ----
 
 The default split policy can be overwritten using a custom

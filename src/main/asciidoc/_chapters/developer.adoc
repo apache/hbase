@@ -351,6 +351,10 @@ mvn -Dhadoop.profile=22 ...
 
 You may need to change the protobuf definitions that reside in the _hbase-protocol_ module or other modules.
 
+Previous to hbase-2.0.0, protobuf definition files were sprinkled across all hbase modules but now all
+to do with protobuf must reside in the hbase-protocol module; we are trying to contain our protobuf
+use so we can freely change versions without upsetting any downstream project use of protobuf.
+
 The protobuf files are located in _hbase-protocol/src/main/protobuf_.
 For the change to be effective, you will need to regenerate the classes.
 You can use maven profile `compile-protobuf` to do this.
@@ -1587,7 +1591,9 @@ value="HE_EQUALS_USE_HASHCODE",
 justification="I know what I'm doing")
 ----
 
-It is important to use the Apache-licensed version of the annotations.
+It is important to use the Apache-licensed version of the annotations. That generally means using
+annotations in the `edu.umd.cs.findbugs.annotations` package so that we can rely on the cleanroom
+reimplementation rather than annotations in the `javax.annotations` package.
 
 [[common.patch.feedback.javadoc.defaults]]
 ===== Javadoc - Useless Defaults
