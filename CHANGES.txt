@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.1.6 08/13/2016
+Release Notes - HBase - Version 1.1.6 08/28/2016
 
 ** Sub-task
     * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
@@ -10,7 +10,9 @@ Release Notes - HBase - Version 1.1.6 08/13/2016
     * [HBASE-16194] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
     * [HBASE-16195] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
     * [HBASE-16317] - revert all ESAPI changes
+    * [HBASE-16318] - fail build if license isn't in whitelist
     * [HBASE-16321] - Ensure findbugs jsr305 jar isn't present
+    * [HBASE-16452] - Procedure v2 - Make ProcedureWALPrettyPrinter extend Tool
 
 
 
@@ -21,6 +23,7 @@ Release Notes - HBase - Version 1.1.6 08/13/2016
 ** Bug
     * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum 
     * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
+    * [HBASE-15635] - Mean age of Blocks in cache (seconds) on webUI should be greater than zero
     * [HBASE-15698] - Increment TimeRange not serialized to server
     * [HBASE-15801] - Upgrade checkstyle for all branches
     * [HBASE-15811] - Batch Get after batch Put does not fetch all Cells
@@ -49,6 +52,7 @@ Release Notes - HBase - Version 1.1.6 08/13/2016
     * [HBASE-16207] - can't restore snapshot without "Admin" permission
     * [HBASE-16237] - Blocks for hbase:meta table are not cached in L1 cache
     * [HBASE-16238] - It's useless to catch SESSIONEXPIRED exception and retry in RecoverableZooKeeper
+    * [HBASE-16270] - Handle duplicate clearing of snapshot in region replicas
     * [HBASE-16272] - Overflow in ServerName's compareTo method
     * [HBASE-16281] - TestMasterReplication is flaky
     * [HBASE-16288] - HFile intermediate block level indexes might recurse forever creating multi TB files
@@ -57,7 +61,12 @@ Release Notes - HBase - Version 1.1.6 08/13/2016
     * [HBASE-16315] - RegionSizeCalculator prints region names as binary without escapes
     * [HBASE-16319] - Fix TestCacheOnWrite after HBASE-16288
     * [HBASE-16350] - Undo server abort from HBASE-14968
+    * [HBASE-16360] - TableMapReduceUtil addHBaseDependencyJars has the wrong class name for PrefixTreeCodec
     * [HBASE-16368] - test*WhenRegionMove in TestPartialResultsFromClientSide is flaky
+    * [HBASE-16420] - Fix source incompatibility of Table interface
+    * [HBASE-16429] - FSHLog: deadlock if rollWriter called when ring buffer filled with appends
+    * [HBASE-16464] - archive folder grows bigger and bigger due to corrupt snapshot under tmp dir
+    * [HBASE-16471] - Region Server metrics context will be wrong when machine hostname contain "master" word
 
 
 
@@ -99,6 +108,8 @@ Release Notes - HBase - Version 1.1.6 08/13/2016
     * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
     * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
     * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
+    * [HBASE-16376] - Document implicit side-effects on partial results when calling Scan#setBatch(int)
+    * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
 
 
 
