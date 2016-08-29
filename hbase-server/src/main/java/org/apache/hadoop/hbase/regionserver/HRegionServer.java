@@ -1463,6 +1463,11 @@ public class HRegionServer extends HasThread implements
         this, this.regionServerAccounting);
     if (this.hMemManager != null) {
       this.hMemManager.start(getChoreService());
+      MemStoreChunkPool chunkPool = MemStoreChunkPool.getPool(this.conf);
+      if (chunkPool != null) {
+        // Register it as HeapMemoryTuneObserver
+        this.hMemManager.registerTuneObserver(chunkPool);
+      }
     }
   }
 

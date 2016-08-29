@@ -203,7 +203,7 @@ public class TestMemStoreChunkPool {
     final int maxCount = 10;
     final int initialCount = 5;
     final int chunkSize = 10;
-    MemStoreChunkPool pool = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount);
+    MemStoreChunkPool pool = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount, 1);
     assertEquals(initialCount, pool.getPoolSize());
     assertEquals(maxCount, pool.getMaxCount());
     MemStoreChunkPool.GLOBAL_INSTANCE = pool;// Replace the global ref with the new one we created.

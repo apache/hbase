@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -86,6 +88,8 @@ public class HeapMemoryManager {
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
   private MetricsHeapMemoryManager metricsHeapMemoryManager;
+
+  private List<HeapMemoryTuneObserver> tuneObservers = new ArrayList<HeapMemoryTuneObserver>();
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
@@ -204,6 +208,10 @@ public class HeapMemoryManager {
     // The thread is Daemon. Just interrupting the ongoing process.
     LOG.info("Stoping HeapMemoryTuner chore.");
     this.heapMemTunerChore.cancel(true);
+  }
+
+  public void registerTuneObserver(HeapMemoryTuneObserver observer) {
+    this.tuneObservers.add(observer);
   }
 
   // Used by the test cases.
@@ -351,6 +359,9 @@ public class HeapMemoryManager {
           blockCache.setMaxSize(newBlockCacheSize);
           globalMemStorePercent = memstoreSize;
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
+          for (HeapMemoryTuneObserver observer : tuneObservers) {
+            observer.onHeapMemoryTune(newMemstoreSize, newBlockCacheSize);
+          }
         }
       } else {
         metricsHeapMemoryManager.increaseTunerDoNothingCounter();
@@ -488,5 +499,18 @@ public class HeapMemoryManager {
     public boolean needsTuning() {
       return needsTuning;
     }
+  }
+
+  /**
+   * Every class that wants to observe heap memory tune actions must implement this interface.
+   */
+  public static interface HeapMemoryTuneObserver {
+
+    /**
+     * This method would be called by HeapMemoryManger when a heap memory tune action took place.
+     * @param newMemstoreSize The newly calculated global memstore size
+     * @param newBlockCacheSize The newly calculated global blockcache size
+     */
+    void onHeapMemoryTune(long newMemstoreSize, long newBlockCacheSize);
   }
 }
