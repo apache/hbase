@@ -1299,7 +1299,7 @@ public class HConnectionManager {
         HRegionLocation metaLocation = null;
         try {
           // locate the meta region
-          metaLocation = locateRegion(parentTable, metaKey, true, false);
+          metaLocation = locateRegion(parentTable, metaKey, useCache, retry);
           // If null still, go around again.
           if (metaLocation == null) continue;
           ClientService.BlockingInterface service = getClient(metaLocation.getServerName());
