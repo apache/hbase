@@ -92,6 +92,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   public V call(int callTimeout) throws IOException {
     try {
       if (this.rpcController != null) {
+        this.rpcController.reset();
         this.rpcController.setCallTimeout(callTimeout);
       }
       return rpcCall();
@@ -129,7 +130,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   /**
    * @param regionName RegionName. If hbase:meta, we'll set high priority.
    */
-  void setPriority(final byte [] regionName) {
+  void setPriority(final byte[] regionName) {
     if (isMetaRegion(regionName)) {
       setPriority(TableName.META_TABLE_NAME);
     }

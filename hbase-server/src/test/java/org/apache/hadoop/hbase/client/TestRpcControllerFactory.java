@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,8 +46,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Lists;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestRpcControllerFactory {
@@ -202,9 +203,9 @@ public class TestRpcControllerFactory {
   }
 
   int verifyCount(Integer counter) {
-    assertEquals(counter.intValue(), CountingRpcController.TABLE_PRIORITY.get());
+    assertTrue(CountingRpcController.TABLE_PRIORITY.get() >= counter.intValue());
     assertEquals(0, CountingRpcController.INT_PRIORITY.get());
-    return counter + 1;
+    return CountingRpcController.TABLE_PRIORITY.get() + 1;
   }
 
   @Test

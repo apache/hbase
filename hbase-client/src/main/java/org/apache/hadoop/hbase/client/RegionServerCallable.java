@@ -70,12 +70,6 @@ public abstract class RegionServerCallable<T> extends AbstractRegionServerCallab
       TableName tableName, byte [] row) {
     super(connection, tableName, row);
     this.rpcController = rpcController;
-    // If it is an instance of PayloadCarryingRpcController, we can set priority on the
-    // controller based off the tableName. RpcController may be null in tests when mocking so allow
-    // for null controller.
-    if (this.rpcController != null && this.rpcController instanceof PayloadCarryingRpcController) {
-      ((PayloadCarryingRpcController)this.rpcController).setPriority(tableName);
-    }
   }
 
   void setClientByServiceName(ServerName service) throws IOException {
@@ -106,11 +100,17 @@ public abstract class RegionServerCallable<T> extends AbstractRegionServerCallab
   @Override
   public T call(int callTimeout) throws IOException {
     try {
-      if (this.rpcController != null &&
-          this.rpcController instanceof PayloadCarryingRpcController) {
-        ((PayloadCarryingRpcController)this.rpcController).setCallTimeout(callTimeout);
-        // Do a reset of the CellScanner in case we are carrying any Cells since last time through.
-        setRpcControllerCellScanner(null);
+      if (this.rpcController != null) {
+        // Do a reset to clear previous states, such as CellScanner.
+        this.rpcController.reset();
+        if (this.rpcController instanceof PayloadCarryingRpcController) {
+          PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController)this.rpcController;
+          // If it is an instance of PayloadCarryingRpcController, we can set priority on the
+          // controller based off the tableName. RpcController may be null in tests when mocking so allow
+          // for null controller.
+          pcrc.setPriority(tableName);
+          pcrc.setCallTimeout(callTimeout);
+        }
       }
       return rpcCall();
     } catch (Exception e) {

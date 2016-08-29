@@ -63,9 +63,6 @@ public abstract class NoncedRegionServerCallable<T> extends AbstractRegionServer
       TableName tableName, byte [] row) {
     super(connection, tableName, row);
     this.rpcController = rpcController;
-    if (this.rpcController != null) {
-      this.rpcController.setPriority(tableName);
-    }
     this.nonce = getConnection().getNonceGenerator().newNonce();
   }
 
@@ -96,6 +93,8 @@ public abstract class NoncedRegionServerCallable<T> extends AbstractRegionServer
   @Override
   public T call(int callTimeout) throws IOException {
     if (this.rpcController != null) {
+      this.rpcController.reset();
+      this.rpcController.setPriority(tableName);
       this.rpcController.setCallTimeout(callTimeout);
     }
     try {
