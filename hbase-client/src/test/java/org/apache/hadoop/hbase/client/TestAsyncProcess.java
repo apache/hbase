@@ -25,8 +25,11 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -57,6 +60,12 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
+import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFutureImpl;
+import org.apache.hadoop.hbase.client.AsyncProcess.ListRowAccess;
+import org.apache.hadoop.hbase.client.AsyncProcess.TaskCountChecker;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowCheckerHost;
+import org.apache.hadoop.hbase.client.AsyncProcess.RequestSizeChecker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -65,13 +74,34 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker;
+import org.apache.hadoop.hbase.client.AsyncProcess.SubmittedSizeChecker;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category({ClientTests.class, MediumTests.class})
 public class TestAsyncProcess {
@@ -180,6 +210,13 @@ public class TestAsyncProcess {
           new RpcRetryingCallerFactory(conf), useGlobalErrors, new RpcControllerFactory(conf), rpcTimeout);
     }
 
+    @Override
+    public <Res> AsyncRequestFuture submit(TableName tableName, RowAccess<? extends Row> rows,
+        boolean atLeastOne, Callback<Res> callback, boolean needResults)
+            throws InterruptedIOException {
+      // We use results in tests to check things, so override to always save them.
+      return super.submit(DUMMY_TABLE, rows, atLeastOne, callback, true);
+    }
     @Override
     public <Res> AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows,
         boolean atLeastOne, Callback<Res> callback, boolean needResults)
@@ -435,7 +472,186 @@ public class TestAsyncProcess {
       return null;
     }
   }
+  @Test
+  public void testListRowAccess() {
+    int count = 10;
+    List<String> values = new LinkedList<>();
+    for (int i = 0; i != count; ++i) {
+      values.add(String.valueOf(i));
+    }
 
+    ListRowAccess<String> taker = new ListRowAccess(values);
+    assertEquals(count, taker.size());
+
+    int restoreCount = 0;
+    int takeCount = 0;
+    Iterator<String> it = taker.iterator();
+    while (it.hasNext()) {
+      String v = it.next();
+      assertEquals(String.valueOf(takeCount), v);
+      ++takeCount;
+      it.remove();
+      if (Math.random() >= 0.5) {
+        break;
+      }
+    }
+    assertEquals(count, taker.size() + takeCount);
+
+    it = taker.iterator();
+    while (it.hasNext()) {
+      String v = it.next();
+      assertEquals(String.valueOf(takeCount), v);
+      ++takeCount;
+      it.remove();
+    }
+    assertEquals(0, taker.size());
+    assertEquals(count, takeCount);
+  }
+  private static long calculateRequestCount(long putSizePerServer, long maxHeapSizePerRequest) {
+    if (putSizePerServer <= maxHeapSizePerRequest) {
+      return 1;
+    } else if (putSizePerServer % maxHeapSizePerRequest == 0) {
+      return putSizePerServer / maxHeapSizePerRequest;
+    } else {
+      return putSizePerServer / maxHeapSizePerRequest + 1;
+    }
+  }
+
+  @Test
+  public void testSubmitSameSizeOfRequest() throws Exception {
+    long writeBuffer = 2 * 1024 * 1024;
+    long putsHeapSize = writeBuffer;
+    doSubmitRequest(writeBuffer, putsHeapSize);
+  }
+  @Test
+  public void testIllegalArgument() throws IOException {
+    ClusterConnection conn = createHConnection();
+    final long maxHeapSizePerRequest = conn.getConfiguration().getLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
+      AsyncProcess.DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE);
+    conn.getConfiguration().setLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, -1);
+    try {
+      MyAsyncProcess ap = new MyAsyncProcess(conn, conf, true);
+      fail("The maxHeapSizePerRequest must be bigger than zero");
+    } catch (IllegalArgumentException e) {
+    }
+    conn.getConfiguration().setLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, maxHeapSizePerRequest);
+  }
+  @Test
+  public void testSubmitLargeRequestWithUnlimitedSize() throws Exception {
+    long maxHeapSizePerRequest = Long.MAX_VALUE;
+    long putsHeapSize = 2 * 1024 * 1024;
+    doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
+  }
+
+  @Test(timeout=300000)
+  public void testSubmitRandomSizeRequest() throws Exception {
+    Random rn = new Random();
+    final long limit = 10 * 1024 * 1024;
+    for (int count = 0; count != 2; ++count) {
+      long maxHeapSizePerRequest = Math.max(1, (Math.abs(rn.nextLong()) % limit));
+      long putsHeapSize = Math.max(1, (Math.abs(rn.nextLong()) % limit));
+      LOG.info("[testSubmitRandomSizeRequest] maxHeapSizePerRequest=" + maxHeapSizePerRequest + ", putsHeapSize=" + putsHeapSize);
+      doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
+    }
+  }
+
+  @Test
+  public void testSubmitSmallRequest() throws Exception {
+    long maxHeapSizePerRequest = 2 * 1024 * 1024;
+    long putsHeapSize = 100;
+    doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
+  }
+
+  @Test(timeout=120000)
+  public void testSubmitLargeRequest() throws Exception {
+    long maxHeapSizePerRequest = 2 * 1024 * 1024;
+    long putsHeapSize = maxHeapSizePerRequest * 2;
+    doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
+  }
+
+  private void doSubmitRequest(long maxHeapSizePerRequest, long putsHeapSize) throws Exception {
+    ClusterConnection conn = createHConnection();
+    final long defaultHeapSizePerRequest = conn.getConfiguration().getLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
+      AsyncProcess.DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE);
+    conn.getConfiguration().setLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, maxHeapSizePerRequest);
+    BufferedMutatorParams bufferParam = new BufferedMutatorParams(DUMMY_TABLE);
+
+    // sn has two regions
+    long putSizeSN = 0;
+    long putSizeSN2 = 0;
+    List<Put> puts = new ArrayList<>();
+    while ((putSizeSN + putSizeSN2) <= putsHeapSize) {
+      Put put1 = new Put(DUMMY_BYTES_1);
+      put1.addColumn(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
+      Put put2 = new Put(DUMMY_BYTES_2);
+      put2.addColumn(DUMMY_BYTES_2, DUMMY_BYTES_2, DUMMY_BYTES_2);
+      Put put3 = new Put(DUMMY_BYTES_3);
+      put3.addColumn(DUMMY_BYTES_3, DUMMY_BYTES_3, DUMMY_BYTES_3);
+      putSizeSN += (put1.heapSize() + put2.heapSize());
+      putSizeSN2 += put3.heapSize();
+      puts.add(put1);
+      puts.add(put2);
+      puts.add(put3);
+    }
+
+    int minCountSnRequest = (int) calculateRequestCount(putSizeSN, maxHeapSizePerRequest);
+    int minCountSn2Request = (int) calculateRequestCount(putSizeSN2, maxHeapSizePerRequest);
+    LOG.info("Total put count:" + puts.size() + ", putSizeSN:"+ putSizeSN + ", putSizeSN2:" + putSizeSN2
+      + ", maxHeapSizePerRequest:" + maxHeapSizePerRequest
+      + ", minCountSnRequest:" + minCountSnRequest
+      + ", minCountSn2Request:" + minCountSn2Request);
+    try (HTable ht = new HTable(conn, bufferParam)) {
+      MyAsyncProcess ap = new MyAsyncProcess(conn, conf, true);
+      ht.mutator.ap = ap;
+
+      Assert.assertEquals(0L, ht.mutator.currentWriteBufferSize.get());
+      ht.put(puts);
+      List<AsyncRequestFuture> reqs = ap.allReqs;
+
+      int actualSnReqCount = 0;
+      int actualSn2ReqCount = 0;
+      for (AsyncRequestFuture req : reqs) {
+        if (!(req instanceof AsyncRequestFutureImpl)) {
+          continue;
+        }
+        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        if (ars.getRequestHeapSize().containsKey(sn)) {
+          ++actualSnReqCount;
+        }
+        if (ars.getRequestHeapSize().containsKey(sn2)) {
+          ++actualSn2ReqCount;
+        }
+      }
+      // If the server is busy, the actual count may be incremented.
+      assertEquals(true, minCountSnRequest <= actualSnReqCount);
+      assertEquals(true, minCountSn2Request <= actualSn2ReqCount);
+      Map<ServerName, Long> sizePerServers = new HashMap<>();
+      for (AsyncRequestFuture req : reqs) {
+        if (!(req instanceof AsyncRequestFutureImpl)) {
+          continue;
+        }
+        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        Map<ServerName, List<Long>> requestHeapSize = ars.getRequestHeapSize();
+        for (Map.Entry<ServerName, List<Long>> entry : requestHeapSize.entrySet()) {
+          long sum = 0;
+          for (long size : entry.getValue()) {
+            assertEquals(true, size <= maxHeapSizePerRequest);
+            sum += size;
+          }
+          assertEquals(true, sum <= maxHeapSizePerRequest);
+          long value = sizePerServers.containsKey(entry.getKey()) ? sizePerServers.get(entry.getKey()) : 0L;
+          sizePerServers.put(entry.getKey(), value + sum);
+        }
+      }
+      assertEquals(true, sizePerServers.containsKey(sn));
+      assertEquals(true, sizePerServers.containsKey(sn2));
+      assertEquals(false, sizePerServers.containsKey(sn3));
+      assertEquals(putSizeSN, (long) sizePerServers.get(sn));
+      assertEquals(putSizeSN2, (long) sizePerServers.get(sn2));
+    }
+    // restore config.
+    conn.getConfiguration().setLong(AsyncProcess.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, defaultHeapSizePerRequest);
+  }
   @Test
   public void testSubmit() throws Exception {
     ClusterConnection hc = createHConnection();
@@ -477,7 +693,9 @@ public class TestAsyncProcess {
     List<Put> puts = new ArrayList<Put>();
     puts.add(createPut(1, true));
 
-    ap.incTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+    for (int i = 0; i != ap.maxConcurrentTasksPerRegion; ++i) {
+      ap.incTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+    }
     ap.submit(DUMMY_TABLE, puts, false, null, false);
     Assert.assertEquals(puts.size(), 1);
 
@@ -538,7 +756,7 @@ public class TestAsyncProcess {
   public void testSubmitTrue() throws IOException {
     final AsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, false);
     ap.tasksInProgress.incrementAndGet();
-    final AtomicInteger ai = new AtomicInteger(1);
+    final AtomicInteger ai = new AtomicInteger(ap.maxConcurrentTasksPerRegion);
     ap.taskCounterPerRegion.put(hri1.getRegionName(), ai);
 
     final AtomicBoolean checkPoint = new AtomicBoolean(false);
@@ -672,6 +890,8 @@ public class TestAsyncProcess {
     setMockLocation(hc, DUMMY_BYTES_1, new RegionLocations(loc1));
     setMockLocation(hc, DUMMY_BYTES_2, new RegionLocations(loc2));
     setMockLocation(hc, DUMMY_BYTES_3, new RegionLocations(loc3));
+    Mockito.when(hc.locateRegions(Mockito.eq(DUMMY_TABLE), Mockito.anyBoolean(), Mockito.anyBoolean()))
+           .thenReturn(Arrays.asList(loc1, loc2, loc3));
     setMockLocation(hc, FAILS, new RegionLocations(loc2));
     return hc;
   }
@@ -681,6 +901,18 @@ public class TestAsyncProcess {
     setMockLocation(hc, DUMMY_BYTES_1, hrls1);
     setMockLocation(hc, DUMMY_BYTES_2, hrls2);
     setMockLocation(hc, DUMMY_BYTES_3, hrls3);
+    List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
+    for (HRegionLocation loc : hrls1.getRegionLocations()) {
+      locations.add(loc);
+    }
+    for (HRegionLocation loc : hrls2.getRegionLocations()) {
+      locations.add(loc);
+    }
+    for (HRegionLocation loc : hrls3.getRegionLocations()) {
+      locations.add(loc);
+    }
+    Mockito.when(hc.locateRegions(Mockito.eq(DUMMY_TABLE), Mockito.anyBoolean(), Mockito.anyBoolean()))
+           .thenReturn(locations);
     return hc;
   }
 
@@ -688,6 +920,8 @@ public class TestAsyncProcess {
       RegionLocations result) throws IOException {
     Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row),
         Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt())).thenReturn(result);
+    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row),
+        Mockito.anyBoolean(), Mockito.anyBoolean())).thenReturn(result);
   }
 
   private static ClusterConnection createHConnectionCommon() {
@@ -789,6 +1023,195 @@ public class TestAsyncProcess {
   }
 
   @Test
+  public void testTaskCheckerHost() throws IOException {
+    final int maxTotalConcurrentTasks = 100;
+    final int maxConcurrentTasksPerServer = 2;
+    final int maxConcurrentTasksPerRegion = 1;
+    final AtomicLong tasksInProgress = new AtomicLong(0);
+    final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
+    final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    TaskCountChecker countChecker = new TaskCountChecker(
+      maxTotalConcurrentTasks,
+      maxConcurrentTasksPerServer,
+      maxConcurrentTasksPerRegion,
+      tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+    final long maxHeapSizePerRequest = 2 * 1024 * 1024;
+    // unlimiited
+    RequestSizeChecker sizeChecker = new RequestSizeChecker(maxHeapSizePerRequest);
+    RowCheckerHost checkerHost = new RowCheckerHost(Arrays.asList(countChecker, sizeChecker));
+
+    ReturnCode loc1Code = checkerHost.canTakeOperation(loc1, maxHeapSizePerRequest);
+    assertEquals(RowChecker.ReturnCode.INCLUDE, loc1Code);
+
+    ReturnCode loc1Code_2 = checkerHost.canTakeOperation(loc1, maxHeapSizePerRequest);
+    // rejected for size
+    assertNotEquals(RowChecker.ReturnCode.INCLUDE, loc1Code_2);
+
+    ReturnCode loc2Code = checkerHost.canTakeOperation(loc2, maxHeapSizePerRequest);
+    // rejected for size
+    assertNotEquals(RowChecker.ReturnCode.INCLUDE, loc2Code);
+
+    // fill the task slots for loc3.
+    taskCounterPerRegion.put(loc3.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerServer.put(loc3.getServerName(), new AtomicInteger(100));
+
+    ReturnCode loc3Code = checkerHost.canTakeOperation(loc3, 1L);
+    // rejected for count
+    assertNotEquals(RowChecker.ReturnCode.INCLUDE, loc3Code);
+
+    // release the task slots for loc3.
+    taskCounterPerRegion.put(loc3.getRegionInfo().getRegionName(), new AtomicInteger(0));
+    taskCounterPerServer.put(loc3.getServerName(), new AtomicInteger(0));
+
+    ReturnCode loc3Code_2 = checkerHost.canTakeOperation(loc3, 1L);
+    assertEquals(RowChecker.ReturnCode.INCLUDE, loc3Code_2);
+  }
+
+  @Test
+  public void testRequestSizeCheckerr() throws IOException {
+    final long maxHeapSizePerRequest = 2 * 1024 * 1024;
+    final ClusterConnection conn = createHConnection();
+    RequestSizeChecker checker = new RequestSizeChecker(maxHeapSizePerRequest);
+
+    // inner state is unchanged.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(loc1, maxHeapSizePerRequest);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(loc2, maxHeapSizePerRequest);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+    }
+
+    // accept the data located on loc1 region.
+    ReturnCode acceptCode = checker.canTakeOperation(loc1, maxHeapSizePerRequest);
+    assertEquals(RowChecker.ReturnCode.INCLUDE, acceptCode);
+    checker.notifyFinal(acceptCode, loc1, maxHeapSizePerRequest);
+
+    // the sn server reachs the limit.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(loc1, maxHeapSizePerRequest);
+      assertNotEquals(RowChecker.ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(loc2, maxHeapSizePerRequest);
+      assertNotEquals(RowChecker.ReturnCode.INCLUDE, code);
+    }
+
+    // the request to sn2 server should be accepted.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(loc3, maxHeapSizePerRequest);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+    }
+
+    checker.reset();
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(loc1, maxHeapSizePerRequest);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(loc2, maxHeapSizePerRequest);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+    }
+  }
+
+  @Test
+  public void testSubmittedSizeChecker() {
+    final long maxHeapSizeSubmit = 2 * 1024 * 1024;
+    SubmittedSizeChecker checker = new SubmittedSizeChecker(maxHeapSizeSubmit);
+
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode include = checker.canTakeOperation(loc1, 100000);
+      assertEquals(ReturnCode.INCLUDE, include);
+    }
+
+    for (int i = 0; i != 10; ++i) {
+      checker.notifyFinal(ReturnCode.INCLUDE, loc1, maxHeapSizeSubmit);
+    }
+
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode include = checker.canTakeOperation(loc1, 100000);
+      assertEquals(ReturnCode.END, include);
+    }
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode include = checker.canTakeOperation(loc2, 100000);
+      assertEquals(ReturnCode.END, include);
+    }
+    checker.reset();
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode include = checker.canTakeOperation(loc1, 100000);
+      assertEquals(ReturnCode.INCLUDE, include);
+    }
+  }
+  @Test
+  public void testTaskCountChecker() throws InterruptedIOException {
+    long rowSize = 12345;
+    int maxTotalConcurrentTasks = 100;
+    int maxConcurrentTasksPerServer = 2;
+    int maxConcurrentTasksPerRegion = 1;
+    AtomicLong tasksInProgress = new AtomicLong(0);
+    Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
+    Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    TaskCountChecker checker = new TaskCountChecker(
+      maxTotalConcurrentTasks,
+      maxConcurrentTasksPerServer,
+      maxConcurrentTasksPerRegion,
+      tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+
+    // inner state is unchanged.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(loc1, rowSize);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+    }
+    // add loc1 region.
+    ReturnCode code = checker.canTakeOperation(loc1, rowSize);
+    assertEquals(RowChecker.ReturnCode.INCLUDE, code);
+    checker.notifyFinal(code, loc1, rowSize);
+
+    // fill the task slots for loc1.
+    taskCounterPerRegion.put(loc1.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerServer.put(loc1.getServerName(), new AtomicInteger(100));
+
+    // the region was previously accepted, so it must be accpted now.
+    for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
+      ReturnCode includeCode = checker.canTakeOperation(loc1, rowSize);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, includeCode);
+      checker.notifyFinal(includeCode, loc1, rowSize);
+    }
+
+    // fill the task slots for loc3.
+    taskCounterPerRegion.put(loc3.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerServer.put(loc3.getServerName(), new AtomicInteger(100));
+
+    // no task slots.
+    for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
+      ReturnCode excludeCode = checker.canTakeOperation(loc3, rowSize);
+      assertNotEquals(RowChecker.ReturnCode.INCLUDE, excludeCode);
+      checker.notifyFinal(excludeCode, loc3, rowSize);
+    }
+
+    // release the tasks for loc3.
+    taskCounterPerRegion.put(loc3.getRegionInfo().getRegionName(), new AtomicInteger(0));
+    taskCounterPerServer.put(loc3.getServerName(), new AtomicInteger(0));
+
+    // add loc3 region.
+    ReturnCode code3 = checker.canTakeOperation(loc3, rowSize);
+    assertEquals(RowChecker.ReturnCode.INCLUDE, code3);
+    checker.notifyFinal(code3, loc3, rowSize);
+
+    // the region was previously accepted, so it must be accpted now.
+    for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
+      ReturnCode includeCode = checker.canTakeOperation(loc3, rowSize);
+      assertEquals(RowChecker.ReturnCode.INCLUDE, includeCode);
+      checker.notifyFinal(includeCode, loc3, rowSize);
+    }
+
+    checker.reset();
+    // the region was previously accepted,
+    // but checker have reseted and task slots for loc1 is full.
+    // So it must be rejected now.
+    for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
+      ReturnCode includeCode = checker.canTakeOperation(loc1, rowSize);
+      assertNotEquals(RowChecker.ReturnCode.INCLUDE, includeCode);
+      checker.notifyFinal(includeCode, loc1, rowSize);
+    }
+  }
+
+  @Test
   public void testBatch() throws IOException, InterruptedException {
     ClusterConnection conn = new MyConnectionImpl(conf);
     HTable ht = new HTable(conn, new BufferedMutatorParams(DUMMY_TABLE));
@@ -818,7 +1241,6 @@ public class TestAsyncProcess {
     Assert.assertEquals(res[5], success);
     Assert.assertEquals(res[6], failure);
   }
-
   @Test
   public void testErrorsServers() throws IOException {
     Configuration configuration = new Configuration(conf);

@@ -69,7 +69,7 @@ import com.google.protobuf.Service;
  * mrmBuilder.addMutationRequest(m1);
  * mrmBuilder.addMutationRequest(m2);
  * CoprocessorRpcChannel channel = t.coprocessorService(ROW);
- * MultiRowMutationService.BlockingInterface service = 
+ * MultiRowMutationService.BlockingInterface service =
  *    MultiRowMutationService.newBlockingStub(channel);
  * MutateRowsRequest mrm = mrmBuilder.build();
  * service.mutateRows(null, mrm);
