@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>1.2.3-SNAPSHOT</version>
+    <version>1.2.3</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-thrift</artifactId>
@@ -609,7 +609,7 @@ the same time. -->
         </property>
       </activation>
       <properties>
-        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>3.0</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
