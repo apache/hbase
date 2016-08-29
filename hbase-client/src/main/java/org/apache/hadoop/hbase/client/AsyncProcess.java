@@ -1080,7 +1080,10 @@ class AsyncProcess {
         if (connection.getConnectionMetrics() != null) {
           connection.getConnectionMetrics().incrNormalRunners();
         }
-        return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction",
+        StringBuilder sb = new StringBuilder();
+        sb.append("AsyncProcess.sendMultiAction.").append(server.getHostAndPort());
+        sb.append(".").append(multiAction.size());
+        return Collections.singletonList(Trace.wrap(sb.toString(),
             new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress)));
       }
 
