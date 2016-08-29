@@ -505,7 +505,7 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 === Making a Release Candidate
 
 NOTE: These instructions are for building HBase 1.0.x.
-For building earlier versions, the process is different.
+For building earlier versions, e.g. 0.98.x, the process is different.
 See this section under the respective release documentation folders.
 
 .Point Releases
@@ -521,20 +521,23 @@ You should also have tried recent branch tips out on a cluster under load, perha
 [NOTE]
 ====
 At this point you should tag the previous release branch (ex: 0.96.1) with the new point release tag (e.g.
-0.96.1.1 tag). Any commits with changes for the point release should be applied to the new tag.
+0.96.1.1 tag). Any commits with changes for the point release should go against the new tag.
 ====
 
 The Hadoop link:http://wiki.apache.org/hadoop/HowToRelease[How To
-                    Release] wiki page is used as a model for most of the instructions below, and may have more detail on particular sections, so it is worth review.
+                    Release] wiki page is used as a model for most of the instructions below.
+                    Although it now stale, it may have more detail on particular sections, so
+                    it is worth review especially if you get stuck.
 
 .Specifying the Heap Space for Maven on OSX
 [NOTE]
 ====
-On OSX, you may need to specify the heap space for Maven commands, by setting the `MAVEN_OPTS` variable to `-Xmx3g`.
+On OSX, you may run into OutOfMemoryErrors building, particularly building the site and
+documentation. Up the heap and permgen space for Maven by setting the `MAVEN_OPTS` variable.
 You can prefix the variable to the Maven command, as in the following example:
 
 ----
-MAVEN_OPTS="-Xmx2g" mvn package
+MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
 ----
 
 You could also set this in an environment variable or alias in your shell.
@@ -552,7 +555,8 @@ The script handles everything else, and comes in handy.
 Update _CHANGES.txt_ with the changes since the last release.
 Make sure the URL to the JIRA points to the proper location which lists fixes for this release.
 Adjust the version in all the POM files appropriately.
-If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions.
+If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
+in all pom.xml files.
 If you are running this receipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
 The link:http://mojo.codehaus.org/versions-maven-plugin/[Versions
                             Maven Plugin] can be of use here.
@@ -564,7 +568,7 @@ To set a version in all the many poms of the hbase multi-module project, use a c
 $ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0
 ----
 +
-Checkin the _CHANGES.txt_ and any version changes.
+Make sure all versions in poms are changed! Checkin the _CHANGES.txt_ and any version changes.
 
 . Update the documentation.
 +
@@ -590,7 +594,7 @@ Extract the tarball and make sure it looks good.
 A good test for the src tarball being 'complete' is to see if you can build new tarballs from this source bundle.
 If the source tarball is good, save it off to a _version directory_, a directory somewhere where you are collecting all of the tarballs you will publish as part of the release candidate.
 For example if you were building an hbase-0.96.0 release candidate, you might call the directory _hbase-0.96.0RC0_.
-Later you will publish this directory as our release candidate up on pass:[http://people.apache.org/~YOU].
+Later you will publish this directory as our release candidate.
 
 . Build the binary tarball.
 +
@@ -617,7 +621,7 @@ $ mvn install -DskipTests site assembly:single -Prelease
 
 +
 Otherwise, the build complains that hbase modules are not in the maven repository
-when you try to do it at once, especially on fresh repository.
+when you try to do it all in one step, especially on a fresh repository.
 It seems that you need the install goal in both steps.
 +
 Extract the generated tarball and check it out.
@@ -650,13 +654,14 @@ $ mvn deploy -DskipTests -Papache-release -Prelease
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
 More work needs to be done on these maven artifacts to make them generally available.
 +
-We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
+We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not
+include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
 
 . Make the Release Candidate available.
 +
 The artifacts are in the maven repository in the staging area in the 'open' state.
 While in this 'open' state you can check out what you've published to make sure all is good.
-To do this, log in to Apache's Nexus at link:http://repository.apache.org[repository.apache.org]                        using your Apache ID.
+To do this, log in to Apache's Nexus at link:http://repository.apache.org[repository.apache.org] using your Apache ID.
 Find your artifacts in the staging repository. Click on 'Staging Repositories' and look for a new one ending in "hbase" with a status of 'Open', select it.
 Use the tree view to expand the list of repository contents and inspect if the artifacts you expect are present. Check the POMs.
 As long as the staging repo is open you can re-upload if something is missing or built incorrectly.
@@ -682,7 +687,7 @@ See link:http://www.apache.org/dev/publishing-maven-artifacts.html[Publishing Ma
 NOTE: We no longer publish using the maven release plugin.
 Instead we do +mvn deploy+.
 It seems to give us a backdoor to maven release publishing.
-If there is no _-SNAPSHOT_                            on the version string, then we are 'deployed' to the apache maven repository staging directory from which we can publish URLs for candidates and later, if they pass, publish as release (if a _-SNAPSHOT_ on the version string, deploy will put the artifacts up into apache snapshot repos).
+If there is no _-SNAPSHOT_ on the version string, then we are 'deployed' to the apache maven repository staging directory from which we can publish URLs for candidates and later, if they pass, publish as release (if a _-SNAPSHOT_ on the version string, deploy will put the artifacts up into apache snapshot repos).
 +
 If the HBase version ends in `-SNAPSHOT`, the artifacts go elsewhere.
 They are put into the Apache snapshots repository directly and are immediately available.
@@ -698,13 +703,7 @@ If you run the script, do your checks at this stage verifying the src and bin ta
 Tag before you start the build.
 You can always delete it if the build goes haywire.
 
-. Sign, upload, and 'stage' your version directory to link:http://people.apache.org[people.apache.org] (TODO:
-  There is a new location to stage releases using svnpubsub.  See
-  (link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system]).
-+
-If all checks out, next put the _version directory_ up on link:http://people.apache.org[people.apache.org].
-You will need to sign and fingerprint them before you push them up.
-In the _version directory_ run the following commands:
+. Sign, fingerprint and then 'stage' your release candiate version directory via svnpubsub by committing your directory to link:https://dist.apache.org/repos/dist/dev/hbase/[The 'dev' distribution directory] (See comments on link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system] but in essence it is an svn checkout of https://dist.apache.org/repos/dist/dev/hbase -- releases are at https://dist.apache.org/repos/dist/release/hbase). In the _version directory_ run the following commands:
 +
 [source,bourne]
 ----
@@ -714,11 +713,28 @@ $ for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done
 $ for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
 $ cd ..
-# Presuming our 'version directory' is named 0.96.0RC0, now copy it up to people.apache.org.
-$ rsync -av 0.96.0RC0 people.apache.org:public_html
+# Presuming our 'version directory' is named 0.96.0RC0, copy it to the svn checkout of the dist dev dir
+# in this case named hbase.dist.dev.svn
+$ cd /Users/stack/checkouts/hbase.dist.dev.svn
+$ svn info
+Path: .
+Working Copy Root Path: /Users/stack/checkouts/hbase.dist.dev.svn
+URL: https://dist.apache.org/repos/dist/dev/hbase
+Repository Root: https://dist.apache.org/repos/dist
+Repository UUID: 0d268c88-bc11-4956-87df-91683dc98e59
+Revision: 15087
+Node Kind: directory
+Schedule: normal
+Last Changed Author: ndimiduk
+Last Changed Rev: 15045
+Last Changed Date: 2016-08-28 11:13:36 -0700 (Sun, 28 Aug 2016)
+$ mv 0.96.0RC0 /Users/stack/checkouts/hbase.dist.dev.svn
+$ svn add 0.96.0RC0
+$ svn commit ...
 ----
 +
-Make sure the link:http://people.apache.org[people.apache.org] directory is showing and that the mvn repo URLs are good.
+Ensure it actually gets published by checking link:https://dist.apache.org/repos/dist/dev/hbase/[https://dist.apache.org/repos/dist/dev/hbase/].
+
 Announce the release candidate on the mailing list and call a vote.
 
 
