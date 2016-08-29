@@ -1,5 +1,63 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.2.3 08/29/2016
+
+** Task
+     * [HBASE-16260] - Audit dependencies for Category-X
+     * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
+     * [HBASE-16376] - Document implicit side-effects on partial results when calling Scan#setBatch(int)
+
+** Sub-task
+     * [HBASE-16193] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
+     * [HBASE-16193] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
+     * [HBASE-13428] - [Rolling Upgrade] 2.0 hfiles cannot be opened by 1.x servers
+     * [HBASE-16260] - revert all ESAPI changes
+     * [HBASE-16260] - Ensure findbugs jsr305 jar isn't present
+     * [HBASE-16100] - Procedure v2 - Make ProcedureWALPrettyPrinter extend Tool
+     * [HBASE-16260] - fail build if license isn't in whitelist
+
+** Improvement
+     * [HBASE-15931] - Add log for long-running tasks in AsyncProcess
+     * [HBASE-16256] - Purpose of EnvironmentEdge, EnvironmentEdgeManager
+     * [HBASE-16266] - Do not throw ScannerTimeoutException when catch UnknownScannerException
+     * [HBASE-16241] - Allow specification of annotations to use when running check_compatibility.sh
+     * [HBASE-16287] - LruBlockCache size should not exceed acceptableSize too many
+     * [HBASE-14345] - Consolidate printUsage in IntegrationTestLoadAndVerify
+     * [HBASE-16385] - Have hbase-rest pull hbase.rest.port from Constants.java
+     * [HBASE-16379] - [replication] Minor improvement to replication/copy_tables_desc.rb
+
+** Bug
+     * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
+     * [HBASE-16190] - IntegrationTestDDLMasterFailover failed with IllegalArgumentException: n must be positive
+     * [HBASE-15775] - Canary launches two AuthUtil Chores
+     * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
+     * [HBASE-16300] - LruBlockCache.CACHE_FIXED_OVERHEAD should calculate LruBlockCache size correctly
+     * [HBASE-16207] - can't restore snapshot without "Admin" permission
+     * [HBASE-16132] - Scan does not return all the result when regionserver is busy
+     * [HBASE-16227] - [Shell] Column value formatter not working in scans
+     * [HBASE-16272] - Overflow in ServerName's compareTo method
+     * [HBASE-16288] - HFile intermediate block level indexes might recurse forever creating multi TB files
+     * [HBASE-16319] - Fix TestCacheOnWrite after HBASE-16288
+     * [HBASE-16284] - Unauthorized client can shutdown the cluster
+     * [HBASE-16237] - Blocks for meta table are not cached in L1 cache
+     * [HBASE-16281] - TestMasterReplication is flaky Phil Yang	Phil Yang	Major	Resolved	Fixed	24/Jul/16	03/Aug/16
+     * [HBASE-16296] - Reverse scan performance degrades when using filter lists
+     * [HBASE-16350] - Undo server abort from HBASE-14968
+     * [HBASE-16144] - Replication queue's lock will live forever if RS acquiring the lock has died prematurely
+     * [HBASE-16368] - test*WhenRegionMove in TestPartialResultsFromClientSide is flaky
+     * [HBASE-16363] - Correct javadoc for qualifier length and value length in Cell interface
+     * [HBASE-14753] - TestShell is not invoked anymore
+     * [HBASE-16420] - Fix source incompatibility of Table interface
+     * [HBASE-15635] - Mean age of Blocks in cache (seconds) on webUI should be greater than zero
+     * [HBASE-16304] - HRegion#RegionScannerImpl#handleFileNotFoundException may lead to deadlock when trying to obtain write lock on updatesLock
+     * [HBASE-16315] - RegionSizeCalculator prints region names as binary without escapes
+     * [HBASE-16471] - Region Server metrics context will be wrong when machine hostname contain "master" word
+     * [HBASE-16464] - archive folder grows bigger and bigger due to corrupt snapshot under tmp dir
+     * [HBASE-16429] - FSHLog: deadlock if rollWriter called when ring buffer filled with appends
+     * [HBASE-16289] - AsyncProcess stuck messages need to print region/server
+     * [HBASE-16270] - Handle duplicate clearing of snapshot in region replicas
+
+
 Release Notes - HBase - Version 1.2.2 07/12/2016
 
 ** Sub-task
