@@ -67,10 +67,8 @@ public class AddColumnFamilyProcedure
     this.traceEnabled = null;
   }
 
-  public AddColumnFamilyProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final HColumnDescriptor cfDescriptor) throws IOException {
+  public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final HColumnDescriptor cfDescriptor) {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser().getUGI();

@@ -71,9 +71,7 @@ public class ModifyTableProcedure
     initilize();
   }
 
-  public ModifyTableProcedure(
-    final MasterProcedureEnv env,
-    final HTableDescriptor htd) throws IOException {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd) {
     initilize();
     this.modifiedHTableDescriptor = htd;
     this.user = env.getRequestUser().getUGI();

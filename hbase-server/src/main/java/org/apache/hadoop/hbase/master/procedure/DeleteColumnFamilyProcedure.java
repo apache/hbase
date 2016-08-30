@@ -68,10 +68,8 @@ public class DeleteColumnFamilyProcedure
     this.traceEnabled = null;
   }
 
-  public DeleteColumnFamilyProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final byte[] familyName) throws IOException {
+  public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final byte[] familyName) {
     this.tableName = tableName;
     this.familyName = familyName;
     this.user = env.getRequestUser().getUGI();

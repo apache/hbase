@@ -82,12 +82,9 @@ public class EnableTableProcedure
    * @param env MasterProcedureEnv
    * @param tableName the table to operate on
    * @param skipTableStateCheck whether to check table state
-   * @throws IOException
    */
-  public EnableTableProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final boolean skipTableStateCheck) throws IOException {
+  public EnableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final boolean skipTableStateCheck) {
     this(env, tableName, skipTableStateCheck, null);
   }
 
@@ -98,11 +95,8 @@ public class EnableTableProcedure
    * @param tableName the table to operate on
    * @param skipTableStateCheck whether to check table state
    */
-  public EnableTableProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final boolean skipTableStateCheck,
-      final ProcedurePrepareLatch syncLatch) throws IOException {
+  public EnableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch) {
     this.tableName = tableName;
     this.skipTableStateCheck = skipTableStateCheck;
     this.user = env.getRequestUser().getUGI();
