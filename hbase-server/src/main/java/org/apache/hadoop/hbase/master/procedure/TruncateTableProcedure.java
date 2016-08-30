@@ -61,7 +61,7 @@ public class TruncateTableProcedure
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      boolean preserveSplits) throws IOException {
+      boolean preserveSplits) {
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
     this.user = env.getRequestUser().getUGI();
