@@ -55,9 +55,8 @@ public class CreateNamespaceProcedure
     this.traceEnabled = null;
   }
 
-  public CreateNamespaceProcedure(
-      final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) throws IOException {
+  public CreateNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor nsDescriptor) {
     this.nsDescriptor = nsDescriptor;
     this.traceEnabled = null;
     this.setOwner(env.getRequestUser().getUGI().getShortUserName());
