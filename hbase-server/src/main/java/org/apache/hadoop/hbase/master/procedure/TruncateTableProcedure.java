@@ -56,16 +56,26 @@ public class TruncateTableProcedure
   private HTableDescriptor hTableDescriptor;
   private TableName tableName;
 
+  // used for compatibility with old clients, until 2.0 the client had a sync behavior
+  private final ProcedurePrepareLatch syncLatch;
+
   public TruncateTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
+    syncLatch = null;
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       boolean preserveSplits) throws IOException {
+    this(env, tableName, preserveSplits, null);
+  }
+
+  public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
+      boolean preserveSplits, ProcedurePrepareLatch latch) throws IOException {
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
     this.user = env.getRequestUser();
     this.setOwner(this.user.getShortName());
+    this.syncLatch = latch;
   }
 
   @Override
@@ -147,6 +157,11 @@ public class TruncateTableProcedure
 
     // The truncate doesn't have a rollback. The execution will succeed, at some point.
     throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 
   @Override

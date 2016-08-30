@@ -62,16 +62,23 @@ public class DeleteColumnFamilyProcedure
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
+  // used for compatibility with old clients, until 2.0 the client had a sync behavior
+  private final ProcedurePrepareLatch syncLatch;
+
   public DeleteColumnFamilyProcedure() {
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
+    this.syncLatch = null;
   }
 
-  public DeleteColumnFamilyProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
+  public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
       final byte[] familyName) throws IOException {
+    this(env, tableName, familyName, null);
+  }
+
+  public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final byte[] familyName, final ProcedurePrepareLatch latch) throws IOException {
     this.tableName = tableName;
     this.familyName = familyName;
     this.user = env.getRequestUser();
@@ -79,6 +86,7 @@ public class DeleteColumnFamilyProcedure
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
+    this.syncLatch = latch;
   }
 
   @Override
@@ -167,6 +175,11 @@ public class DeleteColumnFamilyProcedure
           + getColumnFamilyName() + " to the table " + tableName, e);
       throw e;
     }
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 
   @Override

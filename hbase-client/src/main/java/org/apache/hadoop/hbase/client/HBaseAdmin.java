@@ -863,7 +863,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> addColumnFamily(final TableName tableName,
+  public void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+      throws IOException {
+    get(addColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> addColumnFamilyAsync(final TableName tableName,
       final HColumnDescriptor columnFamily) throws IOException {
     AddColumnResponse response =
         executeCallable(new MasterCallable<AddColumnResponse>(getConnection(),
@@ -906,7 +912,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
+  public void deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
+      throws IOException {
+    get(deleteColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> deleteColumnFamilyAsync(final TableName tableName, final byte[] columnFamily)
       throws IOException {
     DeleteColumnResponse response =
         executeCallable(new MasterCallable<DeleteColumnResponse>(getConnection(),
@@ -917,8 +929,7 @@ public class HBaseAdmin implements Admin {
             DeleteColumnRequest req =
                 RequestConverter.buildDeleteColumnRequest(tableName, columnFamily,
                   ng.getNonceGroup(), ng.newNonce());
-            master.deleteColumn(getRpcController(), req);
-            return null;
+            return master.deleteColumn(getRpcController(), req);
           }
         });
     return new DeleteColumnFamilyFuture(this, tableName, response);
@@ -950,7 +961,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> modifyColumnFamily(final TableName tableName,
+  public void modifyColumnFamily(final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
+    get(modifyColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyAsync(final TableName tableName,
       final HColumnDescriptor columnFamily) throws IOException {
     ModifyColumnResponse response =
         executeCallable(new MasterCallable<ModifyColumnResponse>(getConnection(),
@@ -961,8 +978,7 @@ public class HBaseAdmin implements Admin {
             ModifyColumnRequest req =
                 RequestConverter.buildModifyColumnRequest(tableName, columnFamily,
                   ng.getNonceGroup(), ng.newNonce());
-            master.modifyColumn(getRpcController(), req);
-            return null;
+            return master.modifyColumn(getRpcController(), req);
           }
         });
     return new ModifyColumnFamilyFuture(this, tableName, response);
@@ -1642,7 +1658,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> modifyTable(final TableName tableName, final HTableDescriptor htd)
+  public void modifyTable(final TableName tableName, final HTableDescriptor htd)
+      throws IOException {
+    get(modifyTableAsync(tableName, htd), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
     if (!tableName.equals(htd.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName +

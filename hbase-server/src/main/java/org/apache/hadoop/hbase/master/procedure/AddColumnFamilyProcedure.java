@@ -59,16 +59,23 @@ public class AddColumnFamilyProcedure
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
+  // used for compatibility with old clients, until 2.0 the client had a sync behavior
+  private final ProcedurePrepareLatch syncLatch;
+
   public AddColumnFamilyProcedure() {
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
+    this.syncLatch = null;
   }
 
-  public AddColumnFamilyProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
+  public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
       final HColumnDescriptor cfDescriptor) throws IOException {
+    this(env, tableName, cfDescriptor, null);
+  }
+
+  public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) throws IOException {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser();
@@ -76,6 +83,7 @@ public class AddColumnFamilyProcedure
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
+    this.syncLatch = latch;
   }
 
   @Override
@@ -149,6 +157,11 @@ public class AddColumnFamilyProcedure
           + getColumnFamilyName() + " to the table " + tableName, e);
       throw e;
     }
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 
   @Override

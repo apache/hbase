@@ -1847,11 +1847,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
 
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     long procId = this.procedureExecutor.submitProcedure(
-      new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits),
+      new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName,
+        preserveSplits, latch),
       nonceGroup,
       nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    latch.await();
 
     if (cpHost != null) {
       cpHost.postTruncateTable(tableName);
@@ -1876,11 +1878,14 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     // Execute the operation synchronously - wait for the operation to complete before continuing.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     long procId = this.procedureExecutor.submitProcedure(
-      new AddColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnDescriptor),
+      new AddColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName,
+        columnDescriptor, latch),
       nonceGroup,
       nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    latch.await();
+
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, columnDescriptor);
     }
@@ -1906,11 +1911,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
 
     // Execute the operation synchronously - wait for the operation to complete before continuing.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     long procId = this.procedureExecutor.submitProcedure(
-      new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, descriptor),
+      new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName,
+        descriptor, latch),
       nonceGroup,
       nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    latch.await();
 
     if (cpHost != null) {
       cpHost.postModifyColumn(tableName, descriptor);
@@ -1934,11 +1941,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
 
     // Execute the operation synchronously - wait for the operation to complete before continuing.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     long procId = this.procedureExecutor.submitProcedure(
-      new DeleteColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnName),
+      new DeleteColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName,
+        columnName, latch),
       nonceGroup,
       nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    latch.await();
 
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, columnName);
@@ -2060,12 +2069,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
 
     // Execute the operation synchronously - wait for the operation completes before continuing.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     long procId = this.procedureExecutor.submitProcedure(
-      new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor),
+      new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor, latch),
       nonceGroup,
       nonce);
-
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    latch.await();
 
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);

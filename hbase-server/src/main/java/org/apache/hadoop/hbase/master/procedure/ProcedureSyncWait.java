@@ -71,7 +71,7 @@ public final class ProcedureSyncWait {
     return waitForProcedureToComplete(procExec, procId);
   }
 
-  public static byte[] waitForProcedureToComplete(ProcedureExecutor<MasterProcedureEnv> procExec,
+  private static byte[] waitForProcedureToComplete(ProcedureExecutor<MasterProcedureEnv> procExec,
       final long procId) throws IOException {
     while (!procExec.isFinished(procId) && procExec.isRunning()) {
       // TODO: add a config to make it tunable

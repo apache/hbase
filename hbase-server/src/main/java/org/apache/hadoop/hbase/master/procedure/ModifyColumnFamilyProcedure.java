@@ -59,21 +59,29 @@ public class ModifyColumnFamilyProcedure
 
   private Boolean traceEnabled;
 
+  // used for compatibility with old clients, until 2.0 the client had a sync behavior
+  private final ProcedurePrepareLatch syncLatch;
+
   public ModifyColumnFamilyProcedure() {
     this.unmodifiedHTableDescriptor = null;
     this.traceEnabled = null;
+    this.syncLatch = null;
   }
 
-  public ModifyColumnFamilyProcedure(
-      final MasterProcedureEnv env,
-      final TableName tableName,
+  public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
       final HColumnDescriptor cfDescriptor) throws IOException {
+    this(env, tableName, cfDescriptor, null);
+  }
+
+  public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
+      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) throws IOException {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser();
     this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.traceEnabled = null;
+    this.syncLatch = latch;
   }
 
   @Override
@@ -147,6 +155,11 @@ public class ModifyColumnFamilyProcedure
           + getColumnFamilyName() + " to the table " + tableName, e);
       throw e;
     }
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 
   @Override

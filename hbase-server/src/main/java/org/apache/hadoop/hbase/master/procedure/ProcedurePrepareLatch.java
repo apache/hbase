@@ -36,13 +36,29 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 public abstract class ProcedurePrepareLatch {
   private static final NoopLatch noopLatch = new NoopLatch();
 
+  /**
+   * Create a latch if the client does not have async proc support.
+   * This uses the default 1.1 version.
+   * @return a CompatibilityLatch or a NoopLatch if the client has async proc support
+   */
   public static ProcedurePrepareLatch createLatch() {
-    // don't use the latch if we have procedure support
-    return hasProcedureSupport() ? noopLatch : new CompatibilityLatch();
+    // don't use the latch if we have procedure support (default 1.1)
+    return createLatch(1, 1);
   }
 
-  public static boolean hasProcedureSupport() {
-    return VersionInfoUtil.currentClientHasMinimumVersion(1, 1);
+  /**
+   * Create a latch if the client does not have async proc support
+   * @param major major version with async proc support
+   * @param minor minor version with async proc support
+   * @return a CompatibilityLatch or a NoopLatch if the client has async proc support
+   */
+  public static ProcedurePrepareLatch createLatch(int major, int minor) {
+    // don't use the latch if we have procedure support
+    return hasProcedureSupport(major, minor) ? noopLatch : new CompatibilityLatch();
+  }
+
+  private static boolean hasProcedureSupport(int major, int minor) {
+    return VersionInfoUtil.currentClientHasMinimumVersion(major, minor);
   }
 
   protected abstract void countDown(final Procedure proc);

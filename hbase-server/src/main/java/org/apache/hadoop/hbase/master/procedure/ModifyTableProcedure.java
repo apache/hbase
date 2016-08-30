@@ -68,17 +68,26 @@ public class ModifyTableProcedure
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled = null;
 
+  // used for compatibility with old clients, until 2.0 the client had a sync behavior
+  private final ProcedurePrepareLatch syncLatch;
+
   public ModifyTableProcedure() {
     initilize();
+    this.syncLatch = null;
   }
 
-  public ModifyTableProcedure(
-    final MasterProcedureEnv env,
-    final HTableDescriptor htd) throws IOException {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd)
+      throws IOException {
+    this(env, htd, null);
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd,
+      final ProcedurePrepareLatch latch) throws IOException {
     initilize();
     this.modifiedHTableDescriptor = htd;
     this.user = env.getRequestUser();
     this.setOwner(this.user.getShortName());
+    this.syncLatch = latch;
   }
 
   private void initilize() {
@@ -182,6 +191,11 @@ public class ModifyTableProcedure
       LOG.warn("Fail trying to rollback modify table=" + getTableName() + " state=" + state, e);
       throw e;
     }
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 
   @Override
