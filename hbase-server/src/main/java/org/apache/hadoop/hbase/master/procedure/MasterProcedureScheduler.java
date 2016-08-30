@@ -40,6 +40,10 @@ import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureRunnableSet;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlIterableList;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlLinkedNode;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlTree;
 
 /**
  * ProcedureRunnableSet for the Master Procedures.
@@ -65,13 +69,20 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   private final ReentrantLock schedLock = new ReentrantLock();
   private final Condition schedWaitCond = schedLock.newCondition();
 
+  private final static NamespaceQueueKeyComparator NAMESPACE_QUEUE_KEY_COMPARATOR =
+      new NamespaceQueueKeyComparator();
+  private final static ServerQueueKeyComparator SERVER_QUEUE_KEY_COMPARATOR =
+      new ServerQueueKeyComparator();
+  private final static TableQueueKeyComparator TABLE_QUEUE_KEY_COMPARATOR =
+      new TableQueueKeyComparator();
+
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<ServerName>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<TableName>();
   private int queueSize = 0;
 
-  private final Object[] serverBuckets = new Object[128];
-  private Queue<String> namespaceMap = null;
-  private Queue<TableName> tableMap = null;
+  private final ServerQueue[] serverBuckets = new ServerQueue[128];
+  private NamespaceQueue namespaceMap = null;
+  private TableQueue tableMap = null;
 
   private final int metaTablePriority;
   private final int userTablePriority;
@@ -142,7 +153,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       // the queue is not suspended or removed from the fairq (run-queue)
       // because someone has an xlock on it.
       // so, if the queue is not-linked we should add it
-      if (queue.size() == 1 && !IterableList.isLinked(queue)) {
+      if (queue.size() == 1 && !AvlIterableList.isLinked(queue)) {
         fairq.add(queue);
       }
       queueSize++;
@@ -152,7 +163,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       // our (proc) parent has the xlock,
       // so the queue is not in the fairq (run-queue)
       // add it back to let the child run (inherit the lock)
-      if (!IterableList.isLinked(queue)) {
+      if (!AvlIterableList.isLinked(queue)) {
         fairq.add(queue);
       }
       queueSize++;
@@ -230,12 +241,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     try {
       // Remove Servers
       for (int i = 0; i < serverBuckets.length; ++i) {
-        clear((ServerQueue)serverBuckets[i], serverRunQueue);
+        clear(serverBuckets[i], serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR);
         serverBuckets[i] = null;
       }
 
       // Remove Tables
-      clear(tableMap, tableRunQueue);
+      clear(tableMap, tableRunQueue, TABLE_QUEUE_KEY_COMPARATOR);
       tableMap = null;
 
       assert queueSize == 0 : "expected queue size to be 0, got " + queueSize;
@@ -244,11 +255,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
-  private <T extends Comparable<T>> void clear(Queue<T> treeMap, FairQueue<T> fairq) {
+  private <T extends Comparable<T>, TNode extends Queue<T>> void clear(TNode treeMap,
+      final FairQueue<T> fairq, final AvlKeyComparator<TNode> comparator) {
     while (treeMap != null) {
       Queue<T> node = AvlTree.getFirst(treeMap);
       assert !node.isSuspended() : "can't clear suspended " + node.getKey();
-      treeMap = AvlTree.remove(treeMap, node.getKey());
+      treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
       removeFromRunQueue(fairq, node);
     }
   }
@@ -302,7 +314,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue) {
-    if (IterableList.isLinked(queue)) return;
+    if (AvlIterableList.isLinked(queue)) return;
     if (!queue.isEmpty())  {
       fairq.add(queue);
       queueSize += queue.size();
@@ -310,7 +322,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq, Queue<T> queue) {
-    if (!IterableList.isLinked(queue)) return;
+    if (!AvlIterableList.isLinked(queue)) return;
     fairq.remove(queue);
     queueSize -= queue.size();
   }
@@ -507,11 +519,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
 
     private void suspendTableQueue(Queue<TableName> queue) {
-      waitingTables = IterableList.append(waitingTables, queue);
+      waitingTables = AvlIterableList.append(waitingTables, queue);
     }
 
     private void suspendServerQueue(Queue<ServerName> queue) {
-      waitingServers = IterableList.append(waitingServers, queue);
+      waitingServers = AvlIterableList.append(waitingServers, queue);
     }
 
     private boolean hasWaitingTables() {
@@ -520,7 +532,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     private Queue<TableName> popWaitingTable() {
       Queue<TableName> node = waitingTables;
-      waitingTables = IterableList.remove(waitingTables, node);
+      waitingTables = AvlIterableList.remove(waitingTables, node);
       node.setSuspended(false);
       return node;
     }
@@ -531,7 +543,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     private Queue<ServerName> popWaitingServer() {
       Queue<ServerName> node = waitingServers;
-      waitingServers = IterableList.remove(waitingServers, node);
+      waitingServers = AvlIterableList.remove(waitingServers, node);
       node.setSuspended(false);
       return node;
     }
@@ -555,17 +567,17 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private TableQueue getTableQueue(TableName tableName) {
-    Queue<TableName> node = AvlTree.get(tableMap, tableName);
-    if (node != null) return (TableQueue)node;
+    TableQueue node = AvlTree.get(tableMap, tableName, TABLE_QUEUE_KEY_COMPARATOR);
+    if (node != null) return node;
 
     NamespaceQueue nsQueue = getNamespaceQueue(tableName.getNamespaceAsString());
     node = new TableQueue(tableName, nsQueue, getTablePriority(tableName));
     tableMap = AvlTree.insert(tableMap, node);
-    return (TableQueue)node;
+    return node;
   }
 
   private void removeTableQueue(TableName tableName) {
-    tableMap = AvlTree.remove(tableMap, tableName);
+    tableMap = AvlTree.remove(tableMap, tableName, TABLE_QUEUE_KEY_COMPARATOR);
   }
 
   private int getTablePriority(TableName tableName) {
@@ -589,12 +601,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   //  Namespace Queue Lookup Helpers
   // ============================================================================
   private NamespaceQueue getNamespaceQueue(String namespace) {
-    Queue<String> node = AvlTree.get(namespaceMap, namespace);
+    NamespaceQueue node = AvlTree.get(namespaceMap, namespace, NAMESPACE_QUEUE_KEY_COMPARATOR);
     if (node != null) return (NamespaceQueue)node;
 
     node = new NamespaceQueue(namespace);
     namespaceMap = AvlTree.insert(namespaceMap, node);
-    return (NamespaceQueue)node;
+    return node;
   }
 
   // ============================================================================
@@ -610,24 +622,19 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private ServerQueue getServerQueue(ServerName serverName) {
-    int index = getBucketIndex(serverBuckets, serverName.hashCode());
-    Queue<ServerName> root = getTreeRoot(serverBuckets, index);
-    Queue<ServerName> node = AvlTree.get(root, serverName);
-    if (node != null) return (ServerQueue)node;
+    final int index = getBucketIndex(serverBuckets, serverName.hashCode());
+    ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+    if (node != null) return node;
 
     node = new ServerQueue(serverName);
-    serverBuckets[index] = AvlTree.insert(root, node);
+    serverBuckets[index] = AvlTree.insert(serverBuckets[index], node);
     return (ServerQueue)node;
   }
 
   private void removeServerQueue(ServerName serverName) {
-    int index = getBucketIndex(serverBuckets, serverName.hashCode());
-    serverBuckets[index] = AvlTree.remove((ServerQueue)serverBuckets[index], serverName);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <T extends Comparable<T>> Queue<T> getTreeRoot(Object[] buckets, int index) {
-    return (Queue<T>) buckets[index];
+    final int index = getBucketIndex(serverBuckets, serverName.hashCode());
+    final ServerQueue root = serverBuckets[index];
+    serverBuckets[index] = AvlTree.remove(root, serverName, SERVER_QUEUE_KEY_COMPARATOR);
   }
 
   private static int getBucketIndex(Object[] buckets, int hashCode) {
@@ -645,6 +652,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   // ============================================================================
   //  Table and Server Queue Implementation
   // ============================================================================
+  private static class ServerQueueKeyComparator implements AvlKeyComparator<ServerQueue> {
+    @Override
+    public int compareKey(ServerQueue node, Object key) {
+      return node.compareKey((ServerName)key);
+    }
+  }
+
   public static class ServerQueue extends QueueImpl<ServerName> {
     public ServerQueue(ServerName serverName) {
       super(serverName);
@@ -696,6 +710,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     @Override
     public String toString() {
       return String.format("region %s event", regionInfo.getRegionNameAsString());
+    }
+  }
+
+  private static class TableQueueKeyComparator implements AvlKeyComparator<TableQueue> {
+    @Override
+    public int compareKey(TableQueue node, Object key) {
+      return node.compareKey((TableName)key);
     }
   }
 
@@ -849,6 +870,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
           LOG.warn("Could not release the table write-lock", e);
         }
       }
+    }
+  }
+
+  private static class NamespaceQueueKeyComparator implements AvlKeyComparator<NamespaceQueue> {
+    @Override
+    public int compareKey(NamespaceQueue node, Object key) {
+      return node.compareKey((String)key);
     }
   }
 
@@ -1024,7 +1052,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
       if (queue.isEmpty() && queue.tryExclusiveLock(0)) {
         // remove the table from the run-queue and the map
-        if (IterableList.isLinked(queue)) {
+        if (AvlIterableList.isLinked(queue)) {
           tableRunQueue.remove(queue);
         }
 
@@ -1268,13 +1296,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     boolean isSuspended();
   }
 
-  private static abstract class Queue<TKey extends Comparable<TKey>> implements QueueInterface {
-    private Queue<TKey> avlRight = null;
-    private Queue<TKey> avlLeft = null;
-    private int avlHeight = 1;
-
-    private Queue<TKey> iterNext = null;
-    private Queue<TKey> iterPrev = null;
+  private static abstract class Queue<TKey extends Comparable<TKey>>
+      extends AvlLinkedNode<Queue<TKey>> implements QueueInterface {
     private boolean suspended = false;
 
     private long exclusiveLockProcIdOwner = Long.MIN_VALUE;
@@ -1366,6 +1389,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return key.compareTo(cmpKey);
     }
 
+    @Override
     public int compareTo(Queue<TKey> other) {
       return compareKey(other.key);
     }
@@ -1441,13 +1465,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
 
     public void add(Queue<T> queue) {
-      queueHead = IterableList.append(queueHead, queue);
+      queueHead = AvlIterableList.append(queueHead, queue);
       if (currentQueue == null) setNextQueue(queueHead);
     }
 
     public void remove(Queue<T> queue) {
-      Queue<T> nextQueue = queue.iterNext;
-      queueHead = IterableList.remove(queueHead, queue);
+      Queue<T> nextQueue = AvlIterableList.readNext(queue);
+      queueHead = AvlIterableList.remove(queueHead, queue);
       if (currentQueue == queue) {
         setNextQueue(queueHead != null ? nextQueue : null);
       }
@@ -1478,7 +1502,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     private boolean nextQueue() {
       if (currentQueue == null) return false;
-      currentQueue = currentQueue.iterNext;
+      currentQueue = AvlIterableList.readNext(currentQueue);
       return currentQueue != null;
     }
 
@@ -1493,189 +1517,6 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     private int calculateQuantum(final Queue queue) {
       return Math.max(1, queue.getPriority() * quantum); // TODO
-    }
-  }
-
-  private static class AvlTree {
-    public static <T extends Comparable<T>> Queue<T> get(Queue<T> root, T key) {
-      while (root != null) {
-        int cmp = root.compareKey(key);
-        if (cmp > 0) {
-          root = root.avlLeft;
-        } else if (cmp < 0) {
-          root = root.avlRight;
-        } else {
-          return root;
-        }
-      }
-      return null;
-    }
-
-    public static <T extends Comparable<T>> Queue<T> getFirst(Queue<T> root) {
-      if (root != null) {
-        while (root.avlLeft != null) {
-          root = root.avlLeft;
-        }
-      }
-      return root;
-    }
-
-    public static <T extends Comparable<T>> Queue<T> getLast(Queue<T> root) {
-      if (root != null) {
-        while (root.avlRight != null) {
-          root = root.avlRight;
-        }
-      }
-      return root;
-    }
-
-    public static <T extends Comparable<T>> Queue<T> insert(Queue<T> root, Queue<T> node) {
-      if (root == null) return node;
-      if (node.compareTo(root) < 0) {
-        root.avlLeft = insert(root.avlLeft, node);
-      } else {
-        root.avlRight = insert(root.avlRight, node);
-      }
-      return balance(root);
-    }
-
-    private static <T extends Comparable<T>> Queue<T> removeMin(Queue<T> p) {
-      if (p.avlLeft == null)
-        return p.avlRight;
-      p.avlLeft = removeMin(p.avlLeft);
-      return balance(p);
-    }
-
-    public static <T extends Comparable<T>> Queue<T> remove(Queue<T> root, T key) {
-      if (root == null) return null;
-
-      int cmp = root.compareKey(key);
-      if (cmp == 0) {
-        Queue<T> q = root.avlLeft;
-        Queue<T> r = root.avlRight;
-        if (r == null) return q;
-        Queue<T> min = getFirst(r);
-        min.avlRight = removeMin(r);
-        min.avlLeft = q;
-        return balance(min);
-      } else if (cmp > 0) {
-        root.avlLeft = remove(root.avlLeft, key);
-      } else /* if (cmp < 0) */ {
-        root.avlRight = remove(root.avlRight, key);
-      }
-      return balance(root);
-    }
-
-    private static <T extends Comparable<T>> Queue<T> balance(Queue<T> p) {
-      fixHeight(p);
-      int balance = balanceFactor(p);
-      if (balance == 2) {
-        if (balanceFactor(p.avlRight) < 0) {
-          p.avlRight = rotateRight(p.avlRight);
-        }
-        return rotateLeft(p);
-      } else if (balance == -2) {
-        if (balanceFactor(p.avlLeft) > 0) {
-          p.avlLeft = rotateLeft(p.avlLeft);
-        }
-        return rotateRight(p);
-      }
-      return p;
-    }
-
-    private static <T extends Comparable<T>> Queue<T> rotateRight(Queue<T> p) {
-      Queue<T> q = p.avlLeft;
-      p.avlLeft = q.avlRight;
-      q.avlRight = p;
-      fixHeight(p);
-      fixHeight(q);
-      return q;
-    }
-
-    private static <T extends Comparable<T>> Queue<T> rotateLeft(Queue<T> q) {
-      Queue<T> p = q.avlRight;
-      q.avlRight = p.avlLeft;
-      p.avlLeft = q;
-      fixHeight(q);
-      fixHeight(p);
-      return p;
-    }
-
-    private static <T extends Comparable<T>> void fixHeight(Queue<T> node) {
-      int heightLeft = height(node.avlLeft);
-      int heightRight = height(node.avlRight);
-      node.avlHeight = 1 + Math.max(heightLeft, heightRight);
-    }
-
-    private static <T extends Comparable<T>> int height(Queue<T> node) {
-      return node != null ? node.avlHeight : 0;
-    }
-
-    private static <T extends Comparable<T>> int balanceFactor(Queue<T> node) {
-      return height(node.avlRight) - height(node.avlLeft);
-    }
-  }
-
-  private static class IterableList {
-    public static <T extends Comparable<T>> Queue<T> prepend(Queue<T> head, Queue<T> node) {
-      assert !isLinked(node) : node + " is already linked";
-      if (head != null) {
-        Queue<T> tail = head.iterPrev;
-        tail.iterNext = node;
-        head.iterPrev = node;
-        node.iterNext = head;
-        node.iterPrev = tail;
-      } else {
-        node.iterNext = node;
-        node.iterPrev = node;
-      }
-      return node;
-    }
-
-    public static <T extends Comparable<T>> Queue<T> append(Queue<T> head, Queue<T> node) {
-      assert !isLinked(node) : node + " is already linked";
-      if (head != null) {
-        Queue<T> tail = head.iterPrev;
-        tail.iterNext = node;
-        node.iterNext = head;
-        node.iterPrev = tail;
-        head.iterPrev = node;
-        return head;
-      }
-      node.iterNext = node;
-      node.iterPrev = node;
-      return node;
-    }
-
-    public static <T extends Comparable<T>> Queue<T> appendList(Queue<T> head, Queue<T> otherHead) {
-      if (head == null) return otherHead;
-      if (otherHead == null) return head;
-
-      Queue<T> tail = head.iterPrev;
-      Queue<T> otherTail = otherHead.iterPrev;
-      tail.iterNext = otherHead;
-      otherHead.iterPrev = tail;
-      otherTail.iterNext = head;
-      head.iterPrev = otherTail;
-      return head;
-    }
-
-    private static <T extends Comparable<T>> Queue<T> remove(Queue<T> head, Queue<T> node) {
-      assert isLinked(node) : node + " is not linked";
-      if (node != node.iterNext) {
-        node.iterPrev.iterNext = node.iterNext;
-        node.iterNext.iterPrev = node.iterPrev;
-        head = (head == node) ? node.iterNext : head;
-      } else {
-        head = null;
-      }
-      node.iterNext = null;
-      node.iterPrev = null;
-      return head;
-    }
-
-    private static <T extends Comparable<T>> boolean isLinked(Queue<T> node) {
-      return node.iterPrev != null && node.iterNext != null;
     }
   }
 }
