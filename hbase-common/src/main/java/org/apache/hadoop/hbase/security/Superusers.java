@@ -42,6 +42,7 @@ public final class Superusers {
 
   private static List<String> superUsers;
   private static List<String> superGroups;
+  private static User systemUser;
 
   private Superusers(){}
 
@@ -55,17 +56,17 @@ public final class Superusers {
   public static void initialize(Configuration conf) throws IOException {
     superUsers = new ArrayList<>();
     superGroups = new ArrayList<>();
-    User user = User.getCurrent();
+    systemUser = User.getCurrent();
 
-    if (user == null) {
+    if (systemUser == null) {
       throw new IllegalStateException("Unable to obtain the current user, "
         + "authorization checks for internal operations will not work correctly!");
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is " + user.getShortName());
+      LOG.trace("Current user name is " + systemUser.getShortName());
     }
-    String currentUser = user.getShortName();
+    String currentUser = systemUser.getShortName();
     String[] superUserList = conf.getStrings(SUPERUSER_CONF_KEY, new String[0]);
     for (String name : superUserList) {
       if (AuthUtil.isGroupPrincipal(name)) {
@@ -124,5 +125,9 @@ public final class Superusers {
 
   public static List<String> getSuperUsers() {
     return superUsers;
+  }
+
+  public static User getSystemUser() {
+    return systemUser;
   }
 }

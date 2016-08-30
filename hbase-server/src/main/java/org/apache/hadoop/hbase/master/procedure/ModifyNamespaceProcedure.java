@@ -55,9 +55,8 @@ public class ModifyNamespaceProcedure
     this.traceEnabled = null;
   }
 
-  public ModifyNamespaceProcedure(
-      final MasterProcedureEnv env,
-      final NamespaceDescriptor newNsDescriptor) throws IOException {
+  public ModifyNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor newNsDescriptor) {
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
     this.traceEnabled = null;
