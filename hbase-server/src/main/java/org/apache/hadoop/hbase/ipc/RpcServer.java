@@ -183,7 +183,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    */
   static final int DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER = 10;
 
-  private final IPCUtil ipcUtil;
+  private final CellBlockBuilder cellBlockBuilder;
 
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
@@ -434,14 +434,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         List<ByteBuffer> cellBlock = null;
         int cellBlockSize = 0;
         if (reservoir != null) {
-          this.cellBlockStream = ipcUtil.buildCellBlockStream(this.connection.codec,
+          this.cellBlockStream = cellBlockBuilder.buildCellBlockStream(this.connection.codec,
               this.connection.compressionCodec, cells, reservoir);
           if (this.cellBlockStream != null) {
             cellBlock = this.cellBlockStream.getByteBuffers();
             cellBlockSize = this.cellBlockStream.size();
           }
         } else {
-          ByteBuffer b = ipcUtil.buildCellBlock(this.connection.codec,
+          ByteBuffer b = cellBlockBuilder.buildCellBlock(this.connection.codec,
               this.connection.compressionCodec, cells);
           if (b != null) {
             cellBlockSize = b.remaining();
@@ -1861,7 +1861,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
         if (header.hasCellBlockMeta()) {
           buf.position(offset);
-          cellScanner = ipcUtil.createCellScannerReusingBuffers(this.codec, this.compressionCodec, buf);
+          cellScanner = cellBlockBuilder.createCellScannerReusingBuffers(this.codec, this.compressionCodec, buf);
         }
       } catch (Throwable t) {
         InetSocketAddress address = getListenerAddress();
@@ -2058,7 +2058,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay", true);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive", true);
 
-    this.ipcUtil = new IPCUtil(conf);
+    this.cellBlockBuilder = new CellBlockBuilder(conf);
 
 
     // Create the responder here

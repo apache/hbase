@@ -260,11 +260,11 @@ public class AsyncRpcClient extends AbstractRpcClient {
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
       } else {
-        throw wrapException(addr, (Exception) e.getCause());
+        throw IPCUtil.wrapException(addr, (Exception) e.getCause());
       }
     } catch (TimeoutException e) {
       CallTimeoutException cte = new CallTimeoutException(promise.toString());
-      throw wrapException(addr, cte);
+      throw IPCUtil.wrapException(addr, cte);
     }
   }
 
@@ -359,7 +359,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @throws java.io.IOException on error on creation cell scanner
    */
   public CellScanner createCellScanner(byte[] cellBlock) throws IOException {
-    return ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
+    return cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
   }
 
   /**
@@ -370,7 +370,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @throws java.io.IOException if block creation fails
    */
   public ByteBuffer buildCellBlock(CellScanner cells) throws IOException {
-    return ipcUtil.buildCellBlock(this.codec, this.compressor, cells);
+    return cellBlockBuilder.buildCellBlock(this.codec, this.compressor, cells);
   }
 
   /**

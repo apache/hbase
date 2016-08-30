@@ -896,7 +896,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       }
       builder.setMethodName(call.md.getName());
       builder.setRequestParam(call.param != null);
-      ByteBuffer cellBlock = ipcUtil.buildCellBlock(this.codec, this.compressor, call.cells);
+      ByteBuffer cellBlock = cellBlockBuilder.buildCellBlock(this.codec, this.compressor, call.cells);
       if (cellBlock != null) {
         CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
         cellBlockBuilder.setLength(cellBlock.limit());
@@ -997,12 +997,12 @@ public class RpcClientImpl extends AbstractRpcClient {
         }
         if (responseHeader.hasException()) {
           ExceptionResponse exceptionResponse = responseHeader.getException();
-          RemoteException re = createRemoteException(exceptionResponse);
+          RemoteException re = IPCUtil.createRemoteException(exceptionResponse);
           call.setException(re);
           call.callStats.setResponseSizeBytes(totalSize);
           call.callStats.setCallTimeMs(
               EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
-          if (isFatalConnectionException(exceptionResponse)) {
+          if (IPCUtil.isFatalConnectionException(exceptionResponse)) {
             markClosed(re);
           }
         } else {
@@ -1017,7 +1017,7 @@ public class RpcClientImpl extends AbstractRpcClient {
             int size = responseHeader.getCellBlockMeta().getLength();
             byte [] cellBlock = new byte[size];
             IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
-            cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
+            cellBlockScanner = cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
           }
           call.setResponse(value, cellBlockScanner);
           call.callStats.setResponseSizeBytes(totalSize);
@@ -1042,29 +1042,6 @@ public class RpcClientImpl extends AbstractRpcClient {
       } finally {
         cleanupCalls(false);
       }
-    }
-
-    /**
-     * @return True if the exception is a fatal connection exception.
-     */
-    private boolean isFatalConnectionException(final ExceptionResponse e) {
-      return e.getExceptionClassName().
-        equals(FatalConnectionException.class.getName());
-    }
-
-    /**
-     * @param e exception to be wrapped
-     * @return RemoteException made from passed <code>e</code>
-     */
-    private RemoteException createRemoteException(final ExceptionResponse e) {
-      String innerExceptionClassName = e.getExceptionClassName();
-      boolean doNotRetry = e.getDoNotRetry();
-      return e.hasHostname()?
-        // If a hostname then add it to the RemoteWithExtrasException
-        new RemoteWithExtrasException(innerExceptionClassName,
-          e.getStackTrace(), e.getHostname(), e.getPort(), doNotRetry):
-        new RemoteWithExtrasException(innerExceptionClassName,
-          e.getStackTrace(), doNotRetry);
     }
 
     protected synchronized boolean markClosed(IOException e) {
@@ -1322,7 +1299,7 @@ public class RpcClientImpl extends AbstractRpcClient {
         throw call.error;
       }
       // local exception
-      throw wrapException(addr, call.error);
+      throw IPCUtil.wrapException(addr, call.error);
     }
 
     return call;
