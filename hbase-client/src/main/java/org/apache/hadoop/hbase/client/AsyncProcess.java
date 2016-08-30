@@ -19,17 +19,22 @@
 
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -38,29 +43,28 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.RetryImmediatelyException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -124,6 +128,25 @@ class AsyncProcess {
       "hbase.client.threshold.log.details";
   private static final int DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS = 10;
   private final int THRESHOLD_TO_LOG_REGION_DETAILS = 2;
+
+  /**
+   * The maximum size of single RegionServer.
+   */
+  public static final String HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE = "hbase.client.max.perrequest.heapsize";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE}.
+   */
+  public static final long DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE = 4194304;
+
+  /**
+   * The maximum size of submit.
+   */
+  public static final String HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE = "hbase.client.max.submit.heapsize";
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE}.
+   */
+  public static final long DEFAULT_HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE = DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE;
 
   /**
    * The context used to wait for results from one submit call.
@@ -208,7 +231,6 @@ class AsyncProcess {
       new ConcurrentSkipListMap<byte[], AtomicInteger>(Bytes.BYTES_COMPARATOR);
   protected final ConcurrentMap<ServerName, AtomicInteger> taskCounterPerServer =
       new ConcurrentHashMap<ServerName, AtomicInteger>();
-
   // Start configuration settings.
   private final int startLogErrorsCnt;
 
@@ -217,6 +239,11 @@ class AsyncProcess {
    */
   protected final int maxTotalConcurrentTasks;
 
+  /**
+   * The max heap size of all tasks simultaneously executed on a server.
+   */
+  protected final long maxHeapSizePerRequest;
+  protected final long maxHeapSizeSubmit;
   /**
    * The number of tasks we run in parallel on a single region.
    * With 1 (the default) , we ensure that the ordering of the queries is respected: we don't start
@@ -278,7 +305,6 @@ class AsyncProcess {
       addresses.addAll(other.addresses);
     }
   }
-
   public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
       RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors, RpcControllerFactory rpcFactory,
       int rpcTimeout) {
@@ -305,7 +331,9 @@ class AsyncProcess {
           HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS);
     this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
           HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
-
+    this.maxHeapSizePerRequest = conf.getLong(HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
+          DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE);
+    this.maxHeapSizeSubmit = conf.getLong(HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE, DEFAULT_HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE);
     this.startLogErrorsCnt =
         conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
 
@@ -320,7 +348,15 @@ class AsyncProcess {
       throw new IllegalArgumentException("maxConcurrentTasksPerRegion=" +
           maxConcurrentTasksPerRegion);
     }
+    if (this.maxHeapSizePerRequest <= 0) {
+      throw new IllegalArgumentException("maxHeapSizePerServer=" +
+          maxHeapSizePerRequest);
+    }
 
+    if (this.maxHeapSizeSubmit <= 0) {
+      throw new IllegalArgumentException("maxHeapSizeSubmit=" +
+          maxHeapSizeSubmit);
+    }
     // Server tracker allows us to do faster, and yet useful (hopefully), retries.
     // However, if we are too useful, we might fail very quickly due to retry count limit.
     // To avoid this, we are going to cheat for now (see HBASE-7659), and calculate maximum
@@ -357,13 +393,32 @@ class AsyncProcess {
   }
 
   /**
-   * See {@link #submit(ExecutorService, TableName, List, boolean, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, boolean)}.
+   * See {@link #submit(ExecutorService, TableName, List, boolean, Batch.Callback, boolean)}.
    * Uses default ExecutorService for this AP (must have been created with one).
    */
-  public <CResult> AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows,
+  public <CResult> AsyncRequestFuture submit(TableName tableName, final List<? extends Row> rows,
       boolean atLeastOne, Batch.Callback<CResult> callback, boolean needResults)
       throws InterruptedIOException {
     return submit(null, tableName, rows, atLeastOne, callback, needResults);
+  }
+  /**
+   * See {@link #submit(ExecutorService, TableName, RowAccess, boolean, Batch.Callback, boolean)}.
+   * Uses default ExecutorService for this AP (must have been created with one).
+   */
+  public <CResult> AsyncRequestFuture submit(TableName tableName,
+      final RowAccess<? extends Row> rows, boolean atLeastOne, Batch.Callback<CResult> callback,
+      boolean needResults) throws InterruptedIOException {
+    return submit(null, tableName, rows, atLeastOne, callback, needResults);
+  }
+  /**
+   * See {@link #submit(ExecutorService, TableName, RowAccess, boolean, Batch.Callback, boolean)}.
+   * Uses the {@link ListRowAccess} to wrap the {@link List}.
+   */
+  public <CResult> AsyncRequestFuture submit(ExecutorService pool, TableName tableName,
+      List<? extends Row> rows, boolean atLeastOne, Batch.Callback<CResult> callback,
+      boolean needResults) throws InterruptedIOException {
+    return submit(pool, tableName, new ListRowAccess(rows), atLeastOne,
+      callback, needResults);
   }
 
   /**
@@ -379,7 +434,7 @@ class AsyncProcess {
    * @param atLeastOne true if we should submit at least a subset.
    */
   public <CResult> AsyncRequestFuture submit(ExecutorService pool, TableName tableName,
-      List<? extends Row> rows, boolean atLeastOne, Batch.Callback<CResult> callback,
+      RowAccess<? extends Row> rows, boolean atLeastOne, Batch.Callback<CResult> callback,
       boolean needResults) throws InterruptedIOException {
     if (rows.isEmpty()) {
       return NO_REQS_RESULT;
@@ -395,16 +450,15 @@ class AsyncProcess {
     // Location errors that happen before we decide what requests to take.
     List<Exception> locationErrors = null;
     List<Integer> locationErrorRows = null;
+    RowCheckerHost checker = createRowCheckerHost();
+    boolean firstIter = true;
     do {
       // Wait until there is at least one slot for a new task.
       waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1, tableName.getNameAsString());
-
-      // Remember the previous decisions about regions or region servers we put in the
-      //  final multi.
-      Map<HRegionInfo, Boolean> regionIncluded = new HashMap<HRegionInfo, Boolean>();
-      Map<ServerName, Boolean> serverIncluded = new HashMap<ServerName, Boolean>();
-
       int posInList = -1;
+      if (!firstIter) {
+        checker.reset();
+      }
       Iterator<? extends Row> it = rows.iterator();
       while (it.hasNext()) {
         Row r = it.next();
@@ -433,8 +487,12 @@ class AsyncProcess {
           it.remove();
           break; // Backward compat: we stop considering actions on location error.
         }
-
-        if (canTakeOperation(loc, regionIncluded, serverIncluded)) {
+        long rowSize = (r instanceof Mutation) ? ((Mutation) r).heapSize() : 0;
+        ReturnCode code = checker.canTakeOperation(loc, rowSize);
+        if (code == ReturnCode.END) {
+          break;
+        }
+        if (code == ReturnCode.INCLUDE) {
           Action<Row> action = new Action<Row>(r, ++posInList);
           setNonce(ng, r, action);
           retainedActions.add(action);
@@ -444,6 +502,7 @@ class AsyncProcess {
           it.remove();
         }
       }
+      firstIter = false;
     } while (retainedActions.isEmpty() && atLeastOne && (locationErrors == null));
 
     if (retainedActions.isEmpty()) return NO_REQS_RESULT;
@@ -452,6 +511,18 @@ class AsyncProcess {
         locationErrors, locationErrorRows, actionsByServer, pool);
   }
 
+  private RowCheckerHost createRowCheckerHost() {
+    return new RowCheckerHost(Arrays.asList(
+        new TaskCountChecker(maxTotalConcurrentTasks,
+          maxConcurrentTasksPerServer,
+          maxConcurrentTasksPerRegion,
+          tasksInProgress,
+          taskCounterPerServer,
+          taskCounterPerRegion)
+        , new RequestSizeChecker(maxHeapSizePerRequest)
+        , new SubmittedSizeChecker(maxHeapSizeSubmit)
+    ));
+  }
   <CResult> AsyncRequestFuture submitMultiActions(TableName tableName,
       List<Action<Row>> retainedActions, long nonceGroup, Batch.Callback<CResult> callback,
       Object[] results, boolean needResults, List<Exception> locationErrors,
@@ -493,74 +564,6 @@ class AsyncProcess {
 
     multiAction.add(regionName, action);
   }
-
-  /**
-   * Check if we should send new operations to this region or region server.
-   * We're taking into account the past decision; if we have already accepted
-   * operation on a given region, we accept all operations for this region.
-   *
-   * @param loc; the region and the server name we want to use.
-   * @return true if this region is considered as busy.
-   */
-  protected boolean canTakeOperation(HRegionLocation loc,
-                                     Map<HRegionInfo, Boolean> regionsIncluded,
-                                     Map<ServerName, Boolean> serversIncluded) {
-    HRegionInfo regionInfo = loc.getRegionInfo();
-    Boolean regionPrevious = regionsIncluded.get(regionInfo);
-
-    if (regionPrevious != null) {
-      // We already know what to do with this region.
-      return regionPrevious;
-    }
-
-    Boolean serverPrevious = serversIncluded.get(loc.getServerName());
-    if (Boolean.FALSE.equals(serverPrevious)) {
-      // It's a new region, on a region server that we have already excluded.
-      regionsIncluded.put(regionInfo, Boolean.FALSE);
-      return false;
-    }
-
-    AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegionInfo().getRegionName());
-    if (regionCnt != null && regionCnt.get() >= maxConcurrentTasksPerRegion) {
-      // Too many tasks on this region already.
-      regionsIncluded.put(regionInfo, Boolean.FALSE);
-      return false;
-    }
-
-    if (serverPrevious == null) {
-      // The region is ok, but we need to decide for this region server.
-      int newServers = 0; // number of servers we're going to contact so far
-      for (Map.Entry<ServerName, Boolean> kv : serversIncluded.entrySet()) {
-        if (kv.getValue()) {
-          newServers++;
-        }
-      }
-
-      // Do we have too many total tasks already?
-      boolean ok = (newServers + tasksInProgress.get()) < maxTotalConcurrentTasks;
-
-      if (ok) {
-        // If the total is fine, is it ok for this individual server?
-        AtomicInteger serverCnt = taskCounterPerServer.get(loc.getServerName());
-        ok = (serverCnt == null || serverCnt.get() < maxConcurrentTasksPerServer);
-      }
-
-      if (!ok) {
-        regionsIncluded.put(regionInfo, Boolean.FALSE);
-        serversIncluded.put(loc.getServerName(), Boolean.FALSE);
-        return false;
-      }
-
-      serversIncluded.put(loc.getServerName(), Boolean.TRUE);
-    } else {
-      assert serverPrevious.equals(Boolean.TRUE);
-    }
-
-    regionsIncluded.put(regionInfo, Boolean.TRUE);
-
-    return true;
-  }
-
   /**
    * See {@link #submitAll(ExecutorService, TableName, List, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, Object[])}.
    * Uses default ExecutorService for this AP (must have been created with one).
@@ -739,7 +742,7 @@ class AsyncProcess {
       private final int numAttempt;
       private final ServerName server;
       private final Set<PayloadCarryingServerCallable> callsInProgress;
-
+      private Long heapSize = null;
       private SingleServerRequestRunnable(
           MultiAction<Row> multiAction, int numAttempt, ServerName server,
           Set<PayloadCarryingServerCallable> callsInProgress) {
@@ -747,6 +750,24 @@ class AsyncProcess {
         this.numAttempt = numAttempt;
         this.server = server;
         this.callsInProgress = callsInProgress;
+      }
+
+      @VisibleForTesting
+      long heapSize() {
+        if (heapSize != null) {
+          return heapSize;
+        }
+        heapSize = 0L;
+        for (Map.Entry<byte[], List<Action<Row>>> e: this.multiAction.actions.entrySet()) {
+          List<Action<Row>> actions = e.getValue();
+          for (Action<Row> action: actions) {
+            Row row = action.getAction();
+            if (row instanceof Mutation) {
+              heapSize += ((Mutation) row).heapSize();
+            }
+          }
+        }
+        return heapSize;
       }
 
       @Override
@@ -830,7 +851,7 @@ class AsyncProcess {
     private final long nonceGroup;
     private PayloadCarryingServerCallable currentCallable;
     private int currentCallTotalTimeout;
-
+    private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
         ExecutorService pool, boolean needResults, Object[] results,
         Batch.Callback<CResult> callback, PayloadCarryingServerCallable callable, int timeout) {
@@ -909,7 +930,21 @@ class AsyncProcess {
     public Set<PayloadCarryingServerCallable> getCallsInProgress() {
       return callsInProgress;
     }
+    @VisibleForTesting
+    Map<ServerName, List<Long>> getRequestHeapSize() {
+      return heapSizesByServer;
+    }
 
+    private SingleServerRequestRunnable addSingleServerRequestHeapSize(ServerName server,
+        SingleServerRequestRunnable runnable) {
+      List<Long> heapCount = heapSizesByServer.get(server);
+      if (heapCount == null) {
+        heapCount = new LinkedList<>();
+        heapSizesByServer.put(server, heapCount);
+      }
+      heapCount.add(runnable.heapSize());
+      return runnable;
+    }
     /**
      * Group a list of actions per region servers, and send them.
      *
@@ -1079,8 +1114,9 @@ class AsyncProcess {
         if (connection.getConnectionMetrics() != null) {
           connection.getConnectionMetrics().incrNormalRunners();
         }
-        return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction",
-            new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress)));
+        SingleServerRequestRunnable runnable = addSingleServerRequestHeapSize(server,
+          new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress));
+        return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction", runnable));
       }
 
       // group the actions by the amount of delay
@@ -1101,9 +1137,8 @@ class AsyncProcess {
       List<Runnable> toReturn = new ArrayList<Runnable>(actions.size());
       for (DelayingRunner runner : actions.values()) {
         String traceText = "AsyncProcess.sendMultiAction";
-        Runnable runnable =
-            new SingleServerRequestRunnable(runner.getActions(), numAttempt, server,
-                callsInProgress);
+        Runnable runnable = addSingleServerRequestHeapSize(server,
+          new SingleServerRequestRunnable(runner.getActions(), numAttempt, server, callsInProgress));
         // use a delay runner only if we need to sleep for some time
         if (runner.getSleepTime() > 0) {
           runner.setRunner(runnable);
@@ -1940,5 +1975,285 @@ class AsyncProcess {
     NO_NOT_RETRIABLE,
     NO_RETRIES_EXHAUSTED,
     NO_OTHER_SUCCEEDED
+  }
+
+  /**
+   * Collect all advices from checkers and make the final decision.
+   */
+  @VisibleForTesting
+  static class RowCheckerHost {
+    private final List<RowChecker> checkers;
+    private boolean isEnd = false;
+    RowCheckerHost(final List<RowChecker> checkers) {
+      this.checkers = checkers;
+    }
+    void reset() throws InterruptedIOException {
+      isEnd = false;
+      InterruptedIOException e = null;
+      for (RowChecker checker : checkers) {
+        try {
+          checker.reset();
+        } catch (InterruptedIOException ex) {
+          e = ex;
+        }
+      }
+      if (e != null) {
+        throw e;
+      }
+    }
+    ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+      if (isEnd) {
+        return ReturnCode.END;
+      }
+      ReturnCode code = ReturnCode.INCLUDE;
+      for (RowChecker checker : checkers) {
+        switch (checker.canTakeOperation(loc, rowSize)) {
+          case END:
+            isEnd = true;
+            code = ReturnCode.END;
+            break;
+          case SKIP:
+            code = ReturnCode.SKIP;
+            break;
+          case INCLUDE:
+          default:
+            break;
+        }
+        if (code == ReturnCode.END) {
+          break;
+        }
+      }
+      for (RowChecker checker : checkers) {
+        checker.notifyFinal(code, loc, rowSize);
+      }
+      return code;
+    }
+  }
+
+  /**
+   * Provide a way to control the flow of rows iteration.
+   */
+  @VisibleForTesting
+  interface RowChecker {
+    enum ReturnCode {
+      /**
+       * Accept current row.
+       */
+      INCLUDE,
+      /**
+       * Skip current row.
+       */
+      SKIP,
+      /**
+       * No more row can be included.
+       */
+      END
+    };
+    ReturnCode canTakeOperation(HRegionLocation loc, long rowSize);
+    /**
+     * Add the final ReturnCode to the checker.
+     * The ReturnCode may be reversed, so the checker need the final decision to update
+     * the inner state.
+     */
+    void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize);
+    /**
+     * Reset the inner state.
+     */
+    void reset() throws InterruptedIOException ;
+  }
+
+  /**
+   * limit the heapsize of total submitted data.
+   * Reduce the limit of heapsize for submitting quickly
+   * if there is no running task.
+   */
+  @VisibleForTesting
+  static class SubmittedSizeChecker implements RowChecker {
+    private final long maxHeapSizeSubmit;
+    private long heapSize = 0;
+    SubmittedSizeChecker(final long maxHeapSizeSubmit) {
+      this.maxHeapSizeSubmit = maxHeapSizeSubmit;
+    }
+    @Override
+    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+      if (heapSize >= maxHeapSizeSubmit) {
+        return ReturnCode.END;
+      }
+      return ReturnCode.INCLUDE;
+    }
+
+    @Override
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+      if (code == ReturnCode.INCLUDE) {
+        heapSize += rowSize;
+      }
+    }
+
+    @Override
+    public void reset() {
+      heapSize = 0;
+    }
+  }
+  /**
+   * limit the max number of tasks in an AsyncProcess.
+   */
+  @VisibleForTesting
+  static class TaskCountChecker implements RowChecker {
+    private static final long MAX_WAITING_TIME = 1000; //ms
+    private final Set<HRegionInfo> regionsIncluded = new HashSet<>();
+    private final Set<ServerName> serversIncluded = new HashSet<>();
+    private final int maxConcurrentTasksPerRegion;
+    private final int maxTotalConcurrentTasks;
+    private final int maxConcurrentTasksPerServer;
+    private final Map<byte[], AtomicInteger> taskCounterPerRegion;
+    private final Map<ServerName, AtomicInteger> taskCounterPerServer;
+    private final Set<byte[]> busyRegions = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    private final AtomicLong tasksInProgress;
+    TaskCountChecker(final int maxTotalConcurrentTasks,
+      final int maxConcurrentTasksPerServer,
+      final int maxConcurrentTasksPerRegion,
+      final AtomicLong tasksInProgress,
+      final Map<ServerName, AtomicInteger> taskCounterPerServer,
+      final Map<byte[], AtomicInteger> taskCounterPerRegion) {
+      this.maxTotalConcurrentTasks = maxTotalConcurrentTasks;
+      this.maxConcurrentTasksPerRegion = maxConcurrentTasksPerRegion;
+      this.maxConcurrentTasksPerServer = maxConcurrentTasksPerServer;
+      this.taskCounterPerRegion = taskCounterPerRegion;
+      this.taskCounterPerServer = taskCounterPerServer;
+      this.tasksInProgress = tasksInProgress;
+    }
+    @Override
+    public void reset() throws InterruptedIOException {
+      // prevent the busy-waiting
+      waitForRegion();
+      regionsIncluded.clear();
+      serversIncluded.clear();
+      busyRegions.clear();
+    }
+    private void waitForRegion() throws InterruptedIOException {
+      if (busyRegions.isEmpty()) {
+        return;
+      }
+      EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
+      final long start = ee.currentTime();
+      while ((ee.currentTime() - start) <= MAX_WAITING_TIME) {
+        for (byte[] region : busyRegions) {
+          AtomicInteger count = taskCounterPerRegion.get(region);
+          if (count == null || count.get() < maxConcurrentTasksPerRegion) {
+            return;
+          }
+        }
+        try {
+          synchronized (tasksInProgress) {
+            tasksInProgress.wait(10);
+          }
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted." +
+              " tasksInProgress=" + tasksInProgress);
+        }
+      }
+    }
+    /**
+     * 1) check the regions is allowed.
+     * 2) check the concurrent tasks for regions.
+     * 3) check the total concurrent tasks.
+     * 4) check the concurrent tasks for server.
+     * @param loc
+     * @param rowSize
+     * @return
+     */
+    @Override
+    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+
+      HRegionInfo regionInfo = loc.getRegionInfo();
+      if (regionsIncluded.contains(regionInfo)) {
+        // We already know what to do with this region.
+        return ReturnCode.INCLUDE;
+      }
+      AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegionInfo().getRegionName());
+      if (regionCnt != null && regionCnt.get() >= maxConcurrentTasksPerRegion) {
+        // Too many tasks on this region already.
+        return ReturnCode.SKIP;
+      }
+      int newServers = serversIncluded.size()
+        + (serversIncluded.contains(loc.getServerName()) ? 0 : 1);
+      if ((newServers + tasksInProgress.get()) > maxTotalConcurrentTasks) {
+        // Too many tasks.
+        return ReturnCode.SKIP;
+      }
+      AtomicInteger serverCnt = taskCounterPerServer.get(loc.getServerName());
+      if (serverCnt != null && serverCnt.get() >= maxConcurrentTasksPerServer) {
+        // Too many tasks for this individual server
+        return ReturnCode.SKIP;
+      }
+      return ReturnCode.INCLUDE;
+    }
+
+    @Override
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+      if (code == ReturnCode.INCLUDE) {
+        regionsIncluded.add(loc.getRegionInfo());
+        serversIncluded.add(loc.getServerName());
+      }
+      busyRegions.add(loc.getRegionInfo().getRegionName());
+    }
+  }
+
+  /**
+   * limit the request size for each regionserver.
+   */
+  @VisibleForTesting
+  static class RequestSizeChecker implements RowChecker {
+    private final long maxHeapSizePerRequest;
+    private final Map<ServerName, Long> serverRequestSizes = new HashMap<>();
+    RequestSizeChecker(final long maxHeapSizePerRequest) {
+      this.maxHeapSizePerRequest = maxHeapSizePerRequest;
+    }
+    @Override
+    public void reset() {
+      serverRequestSizes.clear();
+    }
+    @Override
+    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+      // Is it ok for limit of request size?
+      long currentRequestSize = serverRequestSizes.containsKey(loc.getServerName()) ?
+        serverRequestSizes.get(loc.getServerName()) : 0L;
+      // accept at least one request
+      if (currentRequestSize == 0 || currentRequestSize + rowSize <= maxHeapSizePerRequest) {
+        return ReturnCode.INCLUDE;
+      }
+      return ReturnCode.SKIP;
+    }
+
+    @Override
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+      if (code == ReturnCode.INCLUDE) {
+        long currentRequestSize = serverRequestSizes.containsKey(loc.getServerName()) ?
+          serverRequestSizes.get(loc.getServerName()) : 0L;
+        serverRequestSizes.put(loc.getServerName(), currentRequestSize + rowSize);
+      }
+    }
+  }
+
+  public static class ListRowAccess<T> implements RowAccess<T> {
+    private final List<T> data;
+    ListRowAccess(final List<T> data) {
+      this.data = data;
+    }
+
+    @Override
+    public int size() {
+      return data.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return data.isEmpty();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+      return data.iterator();
+    }
   }
 }

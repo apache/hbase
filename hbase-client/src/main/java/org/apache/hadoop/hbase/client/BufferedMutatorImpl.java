@@ -28,11 +28,13 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -68,6 +70,12 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @VisibleForTesting
   AtomicLong currentWriteBufferSize = new AtomicLong(0);
 
+  /**
+   * Count the size of {@link BufferedMutatorImpl#writeAsyncBuffer}.
+   * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
+   */
+  @VisibleForTesting
+  AtomicInteger undealtMutationCount = new AtomicInteger(0);
   private long writeBufferSize;
   private final int maxKeyValueSize;
   private boolean closed = false;
@@ -128,11 +136,13 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
 
     long toAddSize = 0;
+    int toAddCount = 0;
     for (Mutation m : ms) {
       if (m instanceof Put) {
         validatePut((Put) m);
       }
       toAddSize += m.heapSize();
+      ++toAddCount;
     }
 
     // This behavior is highly non-intuitive... it does not protect us against
@@ -141,14 +151,17 @@ public class BufferedMutatorImpl implements BufferedMutator {
     if (ap.hasError()) {
       currentWriteBufferSize.addAndGet(toAddSize);
       writeAsyncBuffer.addAll(ms);
+      undealtMutationCount.addAndGet(toAddCount);
       backgroundFlushCommits(true);
     } else {
       currentWriteBufferSize.addAndGet(toAddSize);
       writeAsyncBuffer.addAll(ms);
+      undealtMutationCount.addAndGet(toAddCount);
     }
 
     // Now try and queue what needs to be queued.
-    while (currentWriteBufferSize.get() > writeBufferSize) {
+    while (undealtMutationCount.get() != 0
+        && currentWriteBufferSize.get() > writeBufferSize) {
       backgroundFlushCommits(false);
     }
   }
@@ -207,58 +220,41 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private void backgroundFlushCommits(boolean synchronous) throws
       InterruptedIOException,
       RetriesExhaustedWithDetailsException {
+    if (!synchronous && writeAsyncBuffer.isEmpty()) {
+      return;
+    }
 
-    LinkedList<Mutation> buffer = new LinkedList<>();
-    // Keep track of the size so that this thread doesn't spin forever
-    long dequeuedSize = 0;
-
-    try {
-      // Grab all of the available mutations.
-      Mutation m;
-
-      // If there's no buffer size drain everything. If there is a buffersize drain up to twice
-      // that amount. This should keep the loop from continually spinning if there are threads
-      // that keep adding more data to the buffer.
-      while (
-          (writeBufferSize <= 0 || dequeuedSize < (writeBufferSize * 2) || synchronous)
-              && (m = writeAsyncBuffer.poll()) != null) {
-        buffer.add(m);
-        long size = m.heapSize();
-        dequeuedSize += size;
-        currentWriteBufferSize.addAndGet(-size);
-      }
-
-      if (!synchronous && dequeuedSize == 0) {
-        return;
-      }
-
-      if (!synchronous) {
-        ap.submit(tableName, buffer, true, null, false);
+    if (!synchronous) {
+      QueueRowAccess taker = new QueueRowAccess();
+      try {
+        ap.submit(tableName, taker, true, null, false);
         if (ap.hasError()) {
           LOG.debug(tableName + ": One or more of the operations have failed -"
               + " waiting for all operation in progress to finish (successfully or not)");
         }
+      } finally {
+        taker.restoreRemainder();
       }
-      if (synchronous || ap.hasError()) {
-        while (!buffer.isEmpty()) {
-          ap.submit(tableName, buffer, true, null, false);
+    }
+    if (synchronous || ap.hasError()) {
+      QueueRowAccess taker = new QueueRowAccess();
+      try {
+        while (!taker.isEmpty()) {
+          ap.submit(tableName, taker, true, null, false);
+          taker.reset();
         }
-        RetriesExhaustedWithDetailsException error =
-            ap.waitForAllPreviousOpsAndReset(null, tableName.getNameAsString());
-        if (error != null) {
-          if (listener == null) {
-            throw error;
-          } else {
-            this.listener.onException(error, this);
-          }
-        }
+      } finally {
+        taker.restoreRemainder();
       }
-    } finally {
-      for (Mutation mut : buffer) {
-        long size = mut.heapSize();
-        currentWriteBufferSize.addAndGet(size);
-        dequeuedSize -= size;
-        writeAsyncBuffer.add(mut);
+
+      RetriesExhaustedWithDetailsException error =
+          ap.waitForAllPreviousOpsAndReset(null, tableName.getNameAsString());
+      if (error != null) {
+        if (listener == null) {
+          throw error;
+        } else {
+          this.listener.onException(error, this);
+        }
       }
     }
   }
@@ -293,5 +289,68 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Deprecated
   public List<Row> getWriteBuffer() {
     return Arrays.asList(writeAsyncBuffer.toArray(new Row[0]));
+  }
+
+  private class QueueRowAccess implements RowAccess<Row> {
+    private int remainder = undealtMutationCount.getAndSet(0);
+
+    void reset() {
+      restoreRemainder();
+      remainder = undealtMutationCount.getAndSet(0);
+    }
+
+    @Override
+    public Iterator<Row> iterator() {
+      return new Iterator<Row>() {
+        private final Iterator<Mutation> iter = writeAsyncBuffer.iterator();
+        private int countDown = remainder;
+        private Mutation last = null;
+        @Override
+        public boolean hasNext() {
+          if (countDown <= 0) {
+            return false;
+          }
+          return iter.hasNext();
+        }
+        @Override
+        public Row next() {
+          if (!hasNext()) {
+            throw new NoSuchElementException();
+          }
+          last = iter.next();
+          if (last == null) {
+            throw new NoSuchElementException();
+          }
+          --countDown;
+          return last;
+        }
+        @Override
+        public void remove() {
+          if (last == null) {
+            throw new IllegalStateException();
+          }
+          iter.remove();
+          currentWriteBufferSize.addAndGet(-last.heapSize());
+          --remainder;
+        }
+      };
+    }
+
+    @Override
+    public int size() {
+      return remainder;
+    }
+
+    void restoreRemainder() {
+      if (remainder > 0) {
+        undealtMutationCount.addAndGet(remainder);
+        remainder = 0;
+      }
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return remainder <= 0;
+    }
   }
 }
