@@ -76,13 +76,12 @@ public class DeleteTableProcedure
     syncLatch = null;
   }
 
-  public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName)
-      throws IOException {
+  public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName) {
     this(env, tableName, null);
   }
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final ProcedurePrepareLatch syncLatch) throws IOException {
+      final ProcedurePrepareLatch syncLatch) {
     this.tableName = tableName;
     this.user = env.getRequestUser();
     this.setOwner(this.user.getShortName());

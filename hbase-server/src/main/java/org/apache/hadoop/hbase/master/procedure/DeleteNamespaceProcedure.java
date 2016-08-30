@@ -63,9 +63,7 @@ public class DeleteNamespaceProcedure
     this.traceEnabled = null;
   }
 
-  public DeleteNamespaceProcedure(
-      final MasterProcedureEnv env,
-      final String namespaceName) throws IOException {
+  public DeleteNamespaceProcedure(final MasterProcedureEnv env, final String namespaceName) {
     this.namespaceName = namespaceName;
     this.nsDescriptor = null;
     this.traceEnabled = null;

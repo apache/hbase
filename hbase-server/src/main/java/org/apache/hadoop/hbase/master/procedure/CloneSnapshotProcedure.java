@@ -97,13 +97,9 @@ public class CloneSnapshotProcedure
    * @param env MasterProcedureEnv
    * @param hTableDescriptor the table to operate on
    * @param snapshot snapshot to clone from
-   * @throws IOException
    */
-  public CloneSnapshotProcedure(
-      final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor,
-      final SnapshotDescription snapshot)
-      throws IOException {
+  public CloneSnapshotProcedure(final MasterProcedureEnv env,
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
     this.hTableDescriptor = hTableDescriptor;
     this.snapshot = snapshot;
     this.user = env.getRequestUser();

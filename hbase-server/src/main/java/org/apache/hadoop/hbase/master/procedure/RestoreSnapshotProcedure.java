@@ -99,8 +99,7 @@ public class RestoreSnapshotProcedure
   public RestoreSnapshotProcedure(
       final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor,
-      final SnapshotDescription snapshot)
-      throws IOException {
+      final SnapshotDescription snapshot) {
     // This is the new schema we are going to write out as this modification.
     this.modifiedHTableDescriptor = hTableDescriptor;
     // Snapshot information

@@ -76,13 +76,12 @@ public class ModifyTableProcedure
     this.syncLatch = null;
   }
 
-  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd)
-      throws IOException {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd) {
     this(env, htd, null);
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd,
-      final ProcedurePrepareLatch latch) throws IOException {
+      final ProcedurePrepareLatch latch) {
     initilize();
     this.modifiedHTableDescriptor = htd;
     this.user = env.getRequestUser();

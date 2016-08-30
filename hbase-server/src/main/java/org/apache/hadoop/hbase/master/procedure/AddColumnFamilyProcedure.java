@@ -75,7 +75,7 @@ public class AddColumnFamilyProcedure
   }
 
   public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) throws IOException {
+      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser();

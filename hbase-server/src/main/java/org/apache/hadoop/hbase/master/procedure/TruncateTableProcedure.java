@@ -65,12 +65,12 @@ public class TruncateTableProcedure
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      boolean preserveSplits) throws IOException {
+      boolean preserveSplits) {
     this(env, tableName, preserveSplits, null);
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      boolean preserveSplits, ProcedurePrepareLatch latch) throws IOException {
+      boolean preserveSplits, ProcedurePrepareLatch latch) {
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
     this.user = env.getRequestUser();

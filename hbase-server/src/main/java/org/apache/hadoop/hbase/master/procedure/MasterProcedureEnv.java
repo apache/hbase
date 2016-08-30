@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -96,10 +96,10 @@ public class MasterProcedureEnv {
       master.getTableLockManager());
   }
 
-  public User getRequestUser() throws IOException {
+  public User getRequestUser() {
     User user = RpcServer.getRequestUser();
     if (user == null) {
-      user = UserProvider.instantiate(getMasterConfiguration()).getCurrent();
+      user = Superusers.getSystemUser();
     }
     return user;
   }

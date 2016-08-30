@@ -73,12 +73,12 @@ public class DeleteColumnFamilyProcedure
   }
 
   public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final byte[] familyName) throws IOException {
+      final byte[] familyName) {
     this(env, tableName, familyName, null);
   }
 
   public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final byte[] familyName, final ProcedurePrepareLatch latch) throws IOException {
+      final byte[] familyName, final ProcedurePrepareLatch latch) {
     this.tableName = tableName;
     this.familyName = familyName;
     this.user = env.getRequestUser();

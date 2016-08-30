@@ -69,12 +69,12 @@ public class ModifyColumnFamilyProcedure
   }
 
   public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor) throws IOException {
+      final HColumnDescriptor cfDescriptor) {
     this(env, tableName, cfDescriptor, null);
   }
 
   public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) throws IOException {
+      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser();

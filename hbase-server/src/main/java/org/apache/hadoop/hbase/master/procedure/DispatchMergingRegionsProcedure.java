@@ -84,7 +84,7 @@ implements TableProcedureInterface {
       final MasterProcedureEnv env,
       final TableName tableName,
       final HRegionInfo [] regionsToMerge,
-      final boolean forcible) throws IOException {
+      final boolean forcible) {
     this.traceEnabled = isTraceEnabled();
     this.assignmentManager = getAssignmentManager(env);
     this.tableName = tableName;

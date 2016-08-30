@@ -76,15 +76,13 @@ public class CreateTableProcedure
   }
 
   public CreateTableProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions)
-      throws IOException {
+      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions) {
     this(env, hTableDescriptor, newRegions, null);
   }
 
   public CreateTableProcedure(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
-      final ProcedurePrepareLatch syncLatch)
-      throws IOException {
+      final ProcedurePrepareLatch syncLatch) {
     this.hTableDescriptor = hTableDescriptor;
     this.newRegions = newRegions != null ? Lists.newArrayList(newRegions) : null;
     this.user = env.getRequestUser();
