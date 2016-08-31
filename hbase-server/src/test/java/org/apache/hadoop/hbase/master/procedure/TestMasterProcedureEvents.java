@@ -151,7 +151,7 @@ public class TestMasterProcedureEvents {
     master.getServerManager().moveFromOnelineToDeadServers(hrs.getServerName());
 
     long procId = procExec.submitProcedure(
-      new ServerCrashProcedure(hrs.getServerName(), true, carryingMeta));
+      new ServerCrashProcedure(procExec.getEnvironment(), hrs.getServerName(), true, carryingMeta));
 
     for (int i = 0; i < 10; ++i) {
       Thread.sleep(100);
