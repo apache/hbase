@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.client.AsyncProcess.RowCheckerHost;
 import org.apache.hadoop.hbase.client.AsyncProcess.RequestSizeChecker;
 import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker;
 import org.apache.hadoop.hbase.client.AsyncProcess.SubmittedSizeChecker;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -207,6 +209,11 @@ public class TestAsyncProcess {
       return super.submit(DUMMY_TABLE, rows, atLeastOne, callback, true);
     }
 
+
+    @Override
+    protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+      // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
+    }
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(
         PayloadCarryingServerCallable callable) {
@@ -277,7 +284,21 @@ public class TestAsyncProcess {
       return new CallerWithFailure(ioe);
     }
   }
-
+  /**
+   * Make the backoff time always different on each call.
+   */
+  static class MyClientBackoffPolicy implements ClientBackoffPolicy {
+    private final Map<ServerName, AtomicInteger> count = new HashMap<>();
+    @Override
+    public long getBackoffTime(ServerName serverName, byte[] region, ServerStatistics stats) {
+      AtomicInteger inc = count.get(serverName);
+      if (inc == null) {
+        inc = new AtomicInteger(0);
+        count.put(serverName, inc);
+      }
+      return inc.getAndIncrement();
+    }
+  }
   class MyAsyncProcessWithReplicas extends MyAsyncProcess {
     private Set<byte[]> failures = new TreeSet<byte[]>(new Bytes.ByteArrayComparator());
     private long primarySleepMs = 0, replicaSleepMs = 0;
@@ -823,6 +844,46 @@ public class TestAsyncProcess {
     Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
 
     Assert.assertEquals(1, ars.getFailedOperations().size());
+  }
+
+  @Test
+  public void testTaskCountWithoutClientBackoffPolicy() throws IOException, InterruptedException {
+    ClusterConnection hc = createHConnection();
+    MyAsyncProcess ap = new MyAsyncProcess(hc, conf, false);
+    testTaskCount(ap);
+  }
+
+  @Test
+  public void testTaskCountWithClientBackoffPolicy() throws IOException, InterruptedException {
+    Configuration copyConf = new Configuration(conf);
+    copyConf.setBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE, true);
+    MyClientBackoffPolicy bp = new MyClientBackoffPolicy();
+    ClusterConnection hc = createHConnection();
+    Mockito.when(hc.getConfiguration()).thenReturn(copyConf);
+    Mockito.when(hc.getStatisticsTracker()).thenReturn(ServerStatisticTracker.create(copyConf));
+    Mockito.when(hc.getBackoffPolicy()).thenReturn(bp);
+    MyAsyncProcess ap = new MyAsyncProcess(hc, copyConf, false);
+    testTaskCount(ap);
+  }
+
+  private void testTaskCount(AsyncProcess ap) throws InterruptedIOException, InterruptedException {
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i != 3; ++i) {
+      puts.add(createPut(1, true));
+      puts.add(createPut(2, true));
+      puts.add(createPut(3, true));
+    }
+    ap.submit(DUMMY_TABLE, puts, true, null, false);
+    ap.waitUntilDone();
+    // More time to wait if there are incorrect task count.
+    TimeUnit.SECONDS.sleep(1);
+    assertEquals(0, ap.tasksInProgress.get());
+    for (AtomicInteger count : ap.taskCounterPerRegion.values()) {
+      assertEquals(0, count.get());
+    }
+    for (AtomicInteger count : ap.taskCounterPerServer.values()) {
+      assertEquals(0, count.get());
+    }
   }
 
   @Test

@@ -1066,7 +1066,6 @@ class AsyncProcess {
       for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
         ServerName server = e.getKey();
         MultiAction<Row> multiAction = e.getValue();
-        incTaskCounters(multiAction.getRegions(), server);
         Collection<? extends Runnable> runnables = getNewMultiActionRunnable(server, multiAction,
             numAttempt);
         // make sure we correctly count the number of runnables before we try to reuse the send
@@ -1114,6 +1113,7 @@ class AsyncProcess {
         if (connection.getConnectionMetrics() != null) {
           connection.getConnectionMetrics().incrNormalRunners();
         }
+        incTaskCounters(multiAction.getRegions(), server);
         SingleServerRequestRunnable runnable = addSingleServerRequestHeapSize(server,
           new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress));
         return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction", runnable));
@@ -1136,6 +1136,7 @@ class AsyncProcess {
 
       List<Runnable> toReturn = new ArrayList<Runnable>(actions.size());
       for (DelayingRunner runner : actions.values()) {
+        incTaskCounters(runner.getActions().getRegions(), server);
         String traceText = "AsyncProcess.sendMultiAction";
         Runnable runnable = addSingleServerRequestHeapSize(server,
           new SingleServerRequestRunnable(runner.getActions(), numAttempt, server, callsInProgress));
@@ -1760,7 +1761,8 @@ class AsyncProcess {
     }
   }
 
-  private void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+  @VisibleForTesting
+  protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
     boolean metrics = AsyncProcess.this.connection.getConnectionMetrics() != null;
     boolean stats = AsyncProcess.this.connection.getStatisticsTracker() != null;
     if (!stats && !metrics) {
