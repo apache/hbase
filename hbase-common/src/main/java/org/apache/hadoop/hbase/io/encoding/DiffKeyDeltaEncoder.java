@@ -362,8 +362,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private long timestamp;
 
-    public DiffSeekerState(boolean tagsCompressed) {
-      super(tagsCompressed);
+    public DiffSeekerState() {
+      super();
     }
 
     @Override
@@ -501,7 +501,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected DiffSeekerState createSeekerState() {
-        return new DiffSeekerState(this.tagsCompressed());
+        return new DiffSeekerState();
       }
     };
   }
