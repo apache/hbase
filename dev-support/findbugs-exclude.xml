@@ -16,33 +16,13 @@
 -->
 
 <FindBugsFilter>
+  <!-- Nested packages are not included by the Package filter, so we need a regexp... -->
   <Match>
-    <Package name="org.apache.hadoop.hbase.thrift2.generated"/>
+    <Class name="~.*\.generated\..*"/>
   </Match>
 
   <Match>
-    <Package name="org.apache.hadoop.hbase.thrift.generated"/>
-  </Match>
-
-  <Match>
-    <Package name="org.apache.hadoop.hbase.rest.protobuf.generated"/>
-  </Match>
-
-  <Match>
-    <Package name="org.apache.hadoop.hbase.protobuf.generated"/>
-  </Match>
-
-  <Match>
-    <Package name="org.apache.hadoop.hbase.coprocessor.example.generated"/>
-  </Match>
-
-  <Match>
-    <!-- Nested packages are not included by the filter, so we need a regexp... -->
     <Package name="~org\.apache\.hadoop\.hbase\.tmpl\..*"/>
-  </Match>
-
-  <Match>
-    <Package name="~org\.apache\.hadoop\.hbase\.generated\..*"/>
   </Match>
 
   <Match>
