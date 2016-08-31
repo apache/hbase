@@ -45,6 +45,22 @@ public final class TestRpcServiceProtos {
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
 
+      /**
+       * <code>rpc pause(.PauseRequestProto) returns (.EmptyResponseProto);</code>
+       */
+      public abstract void pause(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
+
+      /**
+       * <code>rpc addr(.EmptyRequestProto) returns (.AddrResponseProto);</code>
+       */
+      public abstract void addr(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -72,6 +88,22 @@ public final class TestRpcServiceProtos {
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done) {
           impl.error(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void pause(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done) {
+          impl.pause(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void addr(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto> done) {
+          impl.addr(controller, request, done);
         }
 
       };
@@ -102,6 +134,10 @@ public final class TestRpcServiceProtos {
               return impl.echo(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto)request);
             case 2:
               return impl.error(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto)request);
+            case 3:
+              return impl.pause(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto)request);
+            case 4:
+              return impl.addr(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -121,6 +157,10 @@ public final class TestRpcServiceProtos {
             case 1:
               return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.getDefaultInstance();
             case 2:
+              return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto.getDefaultInstance();
+            case 4:
               return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -142,6 +182,10 @@ public final class TestRpcServiceProtos {
               return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance();
             case 2:
               return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance();
+            case 4:
+              return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -173,6 +217,22 @@ public final class TestRpcServiceProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
+
+    /**
+     * <code>rpc pause(.PauseRequestProto) returns (.EmptyResponseProto);</code>
+     */
+    public abstract void pause(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
+
+    /**
+     * <code>rpc addr(.EmptyRequestProto) returns (.AddrResponseProto);</code>
+     */
+    public abstract void addr(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto> done);
 
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -211,6 +271,16 @@ public final class TestRpcServiceProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto>specializeCallback(
               done));
           return;
+        case 3:
+          this.pause(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto>specializeCallback(
+              done));
+          return;
+        case 4:
+          this.addr(controller, (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -230,6 +300,10 @@ public final class TestRpcServiceProtos {
         case 1:
           return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.getDefaultInstance();
         case 2:
+          return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto.getDefaultInstance();
+        case 4:
           return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -251,6 +325,10 @@ public final class TestRpcServiceProtos {
           return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance();
         case 2:
           return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance();
+        case 4:
+          return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -316,6 +394,36 @@ public final class TestRpcServiceProtos {
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class,
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance()));
       }
+
+      public  void pause(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance()));
+      }
+
+      public  void addr(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.class,
+            org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -335,6 +443,16 @@ public final class TestRpcServiceProtos {
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto error(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto pause(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto addr(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
           throws com.google.protobuf.ServiceException;
@@ -382,6 +500,30 @@ public final class TestRpcServiceProtos {
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto pause(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto addr(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:TestProtobufRpcProto)
@@ -396,14 +538,16 @@ public final class TestRpcServiceProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\026test_rpc_service.proto\032\ntest.proto2\250\001\n" +
+      "\n\026test_rpc_service.proto\032\ntest.proto2\212\002\n" +
       "\024TestProtobufRpcProto\022/\n\004ping\022\022.EmptyReq" +
       "uestProto\032\023.EmptyResponseProto\022-\n\004echo\022\021" +
       ".EchoRequestProto\032\022.EchoResponseProto\0220\n" +
       "\005error\022\022.EmptyRequestProto\032\023.EmptyRespon" +
-      "seProtoBL\n.org.apache.hadoop.hbase.ipc.p" +
-      "rotobuf.generatedB\024TestRpcServiceProtos\210" +
-      "\001\001\240\001\001"
+      "seProto\0220\n\005pause\022\022.PauseRequestProto\032\023.E" +
+      "mptyResponseProto\022.\n\004addr\022\022.EmptyRequest" +
+      "Proto\032\022.AddrResponseProtoBL\n.org.apache." +
+      "hadoop.hbase.ipc.protobuf.generatedB\024Tes" +
+      "tRpcServiceProtos\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

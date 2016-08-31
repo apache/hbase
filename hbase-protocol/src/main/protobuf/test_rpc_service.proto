@@ -30,4 +30,6 @@ service TestProtobufRpcProto {
   rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
   rpc echo(EchoRequestProto) returns (EchoResponseProto);
   rpc error(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc pause(PauseRequestProto) returns (EmptyResponseProto);
+  rpc addr(EmptyRequestProto) returns (AddrResponseProto);
 }

@@ -22,37 +22,14 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors.MethodDescriptor;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.MetricsConnection;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
@@ -63,8 +40,6 @@ import org.mockito.stubbing.Answer;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestIPC extends AbstractTestIPC {
-
-  private static final Log LOG = LogFactory.getLog(TestIPC.class);
 
   @Override
   protected RpcClientImpl createRpcClientNoCodec(Configuration conf) {
@@ -96,71 +71,4 @@ public class TestIPC extends AbstractTestIPC {
 
     return new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT, spyFactory);
   }
-
-  public static void main(String[] args) throws IOException, SecurityException,
-      NoSuchMethodException, InterruptedException {
-    if (args.length != 2) {
-      System.out.println("Usage: TestIPC <CYCLES> <CELLS_PER_CYCLE>");
-      return;
-    }
-    // ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.INFO);
-    // ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.INFO);
-    int cycles = Integer.parseInt(args[0]);
-    int cellcount = Integer.parseInt(args[1]);
-    Configuration conf = HBaseConfiguration.create();
-    TestRpcServer rpcServer = new TestRpcServer();
-    MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-    EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-    RpcClientImpl client = new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT);
-    KeyValue kv = BIG_CELL;
-    Put p = new Put(CellUtil.cloneRow(kv));
-    for (int i = 0; i < cellcount; i++) {
-      p.add(kv);
-    }
-    RowMutations rm = new RowMutations(CellUtil.cloneRow(kv));
-    rm.add(p);
-    try {
-      rpcServer.start();
-      long startTime = System.currentTimeMillis();
-      User user = User.getCurrent();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      for (int i = 0; i < cycles; i++) {
-        List<CellScannable> cells = new ArrayList<>();
-        // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
-        ClientProtos.RegionAction.Builder builder =
-            RequestConverter.buildNoDataRegionAction(HConstants.EMPTY_BYTE_ARRAY, rm, cells,
-              RegionAction.newBuilder(), ClientProtos.Action.newBuilder(),
-              MutationProto.newBuilder());
-        builder.setRegion(RegionSpecifier
-            .newBuilder()
-            .setType(RegionSpecifierType.REGION_NAME)
-            .setValue(
-              ByteString.copyFrom(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())));
-        if (i % 100000 == 0) {
-          LOG.info("" + i);
-          // Uncomment this for a thread dump every so often.
-          // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
-          // "Thread dump " + Thread.currentThread().getName());
-        }
-        PayloadCarryingRpcController pcrc =
-            new PayloadCarryingRpcController(CellUtil.createCellScanner(cells));
-        // Pair<Message, CellScanner> response =
-        client.call(pcrc, md, builder.build(), param, user, address,
-            new MetricsConnection.CallStats());
-        /*
-         * int count = 0; while (p.getSecond().advance()) { count++; } assertEquals(cells.size(),
-         * count);
-         */
-      }
-      LOG.info("Cycled " + cycles + " time(s) with " + cellcount + " cell(s) in "
-          + (System.currentTimeMillis() - startTime) + "ms");
-    } finally {
-      client.close();
-      rpcServer.stop();
-    }
-  }
-
 }

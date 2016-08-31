@@ -18,12 +18,17 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+
+import com.google.common.collect.Lists;
+import com.google.protobuf.ServiceException;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,27 +37,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ThreadLocalRandom;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import javax.security.sasl.SaslException;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -64,67 +63,12 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.BlockingService;
-
-import javax.security.sasl.SaslException;
-
 public abstract class AbstractTestSecureIPC {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final File KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri()
       .getPath());
-
-  static final BlockingService SERVICE =
-      TestRpcServiceProtos.TestProtobufRpcProto.newReflectiveBlockingService(
-          new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
-
-            @Override
-            public TestProtos.EmptyResponseProto ping(RpcController controller,
-                                                      TestProtos.EmptyRequestProto request)
-                throws ServiceException {
-              return null;
-            }
-
-            @Override
-            public TestProtos.EmptyResponseProto error(RpcController controller,
-                                                       TestProtos.EmptyRequestProto request)
-                throws ServiceException {
-              return null;
-            }
-
-            @Override
-            public TestProtos.EchoResponseProto echo(RpcController controller,
-                                                     TestProtos.EchoRequestProto request)
-                throws ServiceException {
-              if (controller instanceof PayloadCarryingRpcController) {
-                PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController) controller;
-                // If cells, scan them to check we are able to iterate what we were given and since
-                // this is
-                // an echo, just put them back on the controller creating a new block. Tests our
-                // block
-                // building.
-                CellScanner cellScanner = pcrc.cellScanner();
-                List<Cell> list = null;
-                if (cellScanner != null) {
-                  list = new ArrayList<Cell>();
-                  try {
-                    while (cellScanner.advance()) {
-                      list.add(cellScanner.current());
-                    }
-                  } catch (IOException e) {
-                    throw new ServiceException(e);
-                  }
-                }
-                cellScanner = CellUtil.createCellScanner(list);
-                ((PayloadCarryingRpcController) controller).setCellScanner(cellScanner);
-              }
-              return TestProtos.EchoResponseProto.newBuilder()
-                  .setMessage(request.getMessage()).build();
-            }
-          });
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
@@ -262,16 +206,8 @@ public abstract class AbstractTestSecureIPC {
     rpcServer.start();
     try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
         HConstants.DEFAULT_CLUSTER_ID.toString())) {
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      BlockingRpcChannel channel =
-          rpcClient.createBlockingRpcChannel(
-              ServerName.valueOf(address.getHostName(), address.getPort(),
-                  System.currentTimeMillis()), clientUser, 0);
-      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
-          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(channel);
+      BlockingInterface stub = newBlockingStub(rpcClient, rpcServer.getListenerAddress(),
+        clientUser);
       List<String> results = new ArrayList<>();
       TestThread th1 = new TestThread(stub, results);
       final Throwable exception[] = new Throwable[1];
@@ -298,11 +234,11 @@ public abstract class AbstractTestSecureIPC {
   }
 
   public static class TestThread extends Thread {
-      private final TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
+      private final BlockingInterface stub;
 
       private final List<String> results;
 
-          public TestThread(TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub, List<String> results) {
+          public TestThread(BlockingInterface stub, List<String> results) {
           this.stub = stub;
           this.results = results;
         }

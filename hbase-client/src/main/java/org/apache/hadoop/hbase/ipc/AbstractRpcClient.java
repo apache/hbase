@@ -214,7 +214,7 @@ public abstract class AbstractRpcClient implements RpcClient {
    *               new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
    */
-  Message callBlockingMethod(Descriptors.MethodDescriptor md, PayloadCarryingRpcController pcrc,
+  private Message callBlockingMethod(Descriptors.MethodDescriptor md, PayloadCarryingRpcController pcrc,
       Message param, Message returnType, final User ticket, final InetSocketAddress isa)
       throws ServiceException {
     if (pcrc == null) {

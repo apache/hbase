@@ -19,9 +19,16 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.RpcClient.SPECIFIC_WRITE_THREAD;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import com.google.common.collect.Lists;
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,11 +49,9 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -55,12 +60,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import com.google.common.collect.Lists;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.Descriptors.MethodDescriptor;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestRpcClient {
@@ -94,29 +93,6 @@ public class IntegrationTestRpcClient {
       return super.call(service, md, param, cellScanner, receiveTime, status);
     }
   }
-
-  static final BlockingService SERVICE =
-      TestRpcServiceProtos.TestProtobufRpcProto
-      .newReflectiveBlockingService(new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
-
-        @Override
-        public EmptyResponseProto ping(RpcController controller, EmptyRequestProto request)
-            throws ServiceException {
-          return null;
-        }
-
-        @Override
-        public EmptyResponseProto error(RpcController controller, EmptyRequestProto request)
-            throws ServiceException {
-          return null;
-        }
-
-        @Override
-        public EchoResponseProto echo(RpcController controller, EchoRequestProto request)
-            throws ServiceException {
-          return EchoResponseProto.newBuilder().setMessage(request.getMessage()).build();
-        }
-      });
 
   protected AbstractRpcClient createRpcClient(Configuration conf, boolean isSyncClient) {
     return isSyncClient ?
@@ -301,14 +277,11 @@ public class IntegrationTestRpcClient {
 
     @Override
     public void run() {
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-
       while (running.get()) {
         boolean isBigPayload = random.nextBoolean();
         String message = isBigPayload ? BIG_PAYLOAD : id + numCalls;
         EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
-        EchoResponseProto ret = EchoResponseProto.newBuilder().setMessage("foo").build();
-
+        EchoResponseProto ret;
         TestRpcServer server = cluster.getRandomServer();
         try {
           User user = User.getCurrent();
@@ -317,8 +290,8 @@ public class IntegrationTestRpcClient {
             throw new IOException("Listener channel is closed");
           }
           sending.set(true);
-          ret = (EchoResponseProto)
-              rpcClient.callBlockingMethod(md, null, param, ret, user, address);
+          BlockingInterface stub = newBlockingStub(rpcClient, address, user);
+          ret = stub.echo(null, param);
         } catch (Exception e) {
           LOG.warn(e);
           continue; // expected in case connection is closing or closed
