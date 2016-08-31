@@ -21,8 +21,15 @@
  */
 -->
 <configuration>
-    <property>
+  <property>
     <name>hbase.procedure.store.wal.use.hsync</name>
     <value>false</value>
+  </property>
+  <property>
+    <name>hbase.procedure.check.owner.set</name>
+    <value>false</value>
+    <description>Whether ProcedureExecutor should enforce that each
+    procedure to have an owner
+    </description>
   </property>
 </configuration>

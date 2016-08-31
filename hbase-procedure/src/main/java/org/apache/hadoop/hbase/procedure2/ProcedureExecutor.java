@@ -246,6 +246,9 @@ public class ProcedureExecutor<TEnvironment> {
   private final ProcedureStore store;
   private final Configuration conf;
 
+  private static final String CHECK_OWNER_SET_CONF_KEY = "hbase.procedure.check.owner.set";
+  private final boolean checkOwnerSet;
+
   private Thread[] threads;
 
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
@@ -259,6 +262,7 @@ public class ProcedureExecutor<TEnvironment> {
     this.runnables = runqueue;
     this.store = store;
     this.conf = conf;
+    this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, true);
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
@@ -640,6 +644,9 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(isRunning());
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(!proc.hasParent());
+    if (this.checkOwnerSet) {
+      Preconditions.checkArgument(proc.hasOwner());
+    }
 
     // Initialize the Procedure ID
     long currentProcId = nextProcId();
