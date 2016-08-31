@@ -22,8 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,7 +125,8 @@ public class ProcedureExecutor<TEnvironment> {
    * the master (e.g. master failover) so, if we delay a bit the real deletion of
    * the proc result the client will be able to get the result the next try.
    */
-  private static class CompletedProcedureCleaner<TEnvironment> extends Procedure<TEnvironment> {
+  private static class CompletedProcedureCleaner<TEnvironment>
+      extends ProcedureInMemoryChore<TEnvironment> {
     private static final Log LOG = LogFactory.getLog(CompletedProcedureCleaner.class);
 
     private static final String CLEANER_INTERVAL_CONF_KEY = "hbase.procedure.cleaner.interval";
@@ -148,14 +147,15 @@ public class ProcedureExecutor<TEnvironment> {
         final Map<Long, ProcedureInfo> completedMap,
         final Map<NonceKey, Long> nonceKeysToProcIdsMap) {
       // set the timeout interval that triggers the periodic-procedure
-      setTimeout(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
+      super(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
       this.completed = completedMap;
       this.nonceKeysToProcIdsMap = nonceKeysToProcIdsMap;
       this.store = store;
       this.conf = conf;
     }
 
-    public void periodicExecute(final TEnvironment env) {
+    @Override
+    protected void periodicExecute(final TEnvironment env) {
       if (completed.isEmpty()) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("No completed procedures to cleanup.");
@@ -188,31 +188,6 @@ public class ProcedureExecutor<TEnvironment> {
           }
         }
       }
-    }
-
-    @Override
-    protected Procedure[] execute(final TEnvironment env) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void rollback(final TEnvironment env) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(final TEnvironment env) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void serializeStateData(final OutputStream stream) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void deserializeStateData(final InputStream stream) {
-      throw new UnsupportedOperationException();
     }
   }
 
@@ -536,9 +511,8 @@ public class ProcedureExecutor<TEnvironment> {
       threads[i].start();
     }
 
-    // Add completed cleaner
-    waitingTimeout.add(
-      new CompletedProcedureCleaner(conf, store, completed, nonceKeysToProcIdsMap));
+    // Add completed cleaner chore
+    addChore(new CompletedProcedureCleaner(conf, store, completed, nonceKeysToProcIdsMap));
   }
 
   public void stop() {
@@ -624,6 +598,22 @@ public class ProcedureExecutor<TEnvironment> {
       procedureLists.add(e.getValue());
     }
     return procedureLists;
+  }
+
+  /**
+   * Add a chore procedure to the executor
+   * @param chore the chore to add
+   */
+  public void addChore(final ProcedureInMemoryChore chore) {
+    waitingTimeout.add(chore);
+  }
+
+  /**
+   * Remove a chore procedure from the executor
+   * @param chore the chore to remove
+   */
+  public void removeChore(final ProcedureInMemoryChore chore) {
+    waitingTimeout.remove(chore);
   }
 
   /**
@@ -905,12 +895,12 @@ public class ProcedureExecutor<TEnvironment> {
       // will have the tracker saying everything is in the last log.
       // ----------------------------------------------------------------------------
 
-      // The CompletedProcedureCleaner is a special case, and it acts as a chore.
+      // The ProcedureInMemoryChore is a special case, and it acts as a chore.
       // instead of bringing the Chore class in, we reuse this timeout thread for
       // this special case.
-      if (proc instanceof CompletedProcedureCleaner) {
+      if (proc instanceof ProcedureInMemoryChore) {
         try {
-          ((CompletedProcedureCleaner)proc).periodicExecute(getEnvironment());
+          ((ProcedureInMemoryChore)proc).periodicExecute(getEnvironment());
         } catch (Throwable e) {
           LOG.error("Ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
         }
