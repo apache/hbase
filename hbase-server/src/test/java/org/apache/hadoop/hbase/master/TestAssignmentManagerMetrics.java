@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.fail;
 
 @Category(MediumTests.class)
 public class TestAssignmentManagerMetrics {
@@ -68,6 +71,11 @@ public class TestAssignmentManagerMetrics {
 
     // set tablesOnMaster to none
     conf.set("hbase.balancer.tablesOnMaster", "none");
+
+    // set client sync wait timeout to 5sec
+    conf.setInt("hbase.client.sync.wait.timeout.msec", 2500);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 2500);
 
     TEST_UTIL.startMiniCluster(1);
     cluster = TEST_UTIL.getHBaseCluster();
@@ -119,7 +127,14 @@ public class TestAssignmentManagerMetrics {
       String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
       htd.addCoprocessorWithSpec(spec);
 
-      TEST_UTIL.getHBaseAdmin().modifyTable(TABLENAME, htd);
+      try {
+        TEST_UTIL.getHBaseAdmin().modifyTable(TABLENAME, htd);
+        fail("Expected region failed to open");
+      } catch (IOException e) {
+        // expected, the RS will crash and the assignment will spin forever waiting for a RS
+        // to assign the region. the region will not go to FAILED_OPEN because in this case
+        // we have just one RS and it will do one retry.
+      }
 
       // Sleep 3 seconds, wait for doMetrics chore catching up
       Thread.sleep(msgInterval * 3);
