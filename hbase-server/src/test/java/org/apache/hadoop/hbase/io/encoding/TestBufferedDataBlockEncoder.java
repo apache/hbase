@@ -49,7 +49,7 @@ public class TestBufferedDataBlockEncoder {
   @Test
   public void testEnsureSpaceForKey() {
     BufferedDataBlockEncoder.SeekerState state = new BufferedDataBlockEncoder.SeekerState(
-        new ObjectIntPair<ByteBuffer>(), false, false);
+        new ObjectIntPair<ByteBuffer>(), false);
     for (int i = 1; i <= 65536; ++i) {
       state.keyLength = i;
       state.ensureSpaceForKey();

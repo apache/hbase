@@ -368,8 +368,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     private long timestamp;
 
     public DiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair,
-        boolean includeTags, boolean tagsCompressed) {
-      super(tmpPair, includeTags, tagsCompressed);
+        boolean includeTags) {
+      super(tmpPair, includeTags);
     }
 
     @Override
@@ -504,8 +504,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected DiffSeekerState createSeekerState() {
-        return new DiffSeekerState(this.tmpPair, this.includesTags(),
-            this.tagsCompressed());
+        return new DiffSeekerState(this.tmpPair, this.includesTags());
       }
     };
   }

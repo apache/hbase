@@ -121,8 +121,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected boolean uncompressTags = true;
 
     /** We need to store a copy of the key. */
-    protected byte[] keyBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
-    protected byte[] tagsBuffer = null;
+    protected byte[] keyBuffer = HConstants.EMPTY_BYTE_ARRAY;
+    protected byte[] tagsBuffer = HConstants.EMPTY_BYTE_ARRAY;
 
     protected long memstoreTS;
     protected int nextKvOffset;
@@ -132,15 +132,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     private final ObjectIntPair<ByteBuffer> tmpPair;
     private final boolean includeTags;
 
-    public SeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags,
-        boolean tagsCompressed) {
+    public SeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       this.tmpPair = tmpPair;
       this.includeTags = includeTags;
-      if (tagsCompressed) {
-        tagsBuffer = new byte[INITIAL_KEY_BUFFER_SIZE];
-      } else {
-        tagsBuffer = HConstants.EMPTY_BYTE_ARRAY;
-      }
     }
 
     protected boolean isValid() {
@@ -157,11 +151,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     protected void ensureSpaceForKey() {
       if (keyLength > keyBuffer.length) {
-        // rare case, but we need to handle arbitrary length of key
-        int newKeyBufferLength = Math.max(keyBuffer.length, 1) * 2;
-        while (keyLength > newKeyBufferLength) {
-          newKeyBufferLength *= 2;
-        }
+        int newKeyBufferLength = Integer.highestOneBit(Math.max(
+            INITIAL_KEY_BUFFER_SIZE, keyLength) - 1) << 1;
         byte[] newKeyBuffer = new byte[newKeyBufferLength];
         System.arraycopy(keyBuffer, 0, newKeyBuffer, 0, keyBuffer.length);
         keyBuffer = newKeyBuffer;
@@ -170,11 +161,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     protected void ensureSpaceForTags() {
       if (tagsLength > tagsBuffer.length) {
-        // rare case, but we need to handle arbitrary length of tags
-        int newTagsBufferLength = Math.max(tagsBuffer.length, 1) * 2;
-        while (tagsLength > newTagsBufferLength) {
-          newTagsBufferLength *= 2;
-        }
+        int newTagsBufferLength = Integer.highestOneBit(Math.max(
+            INITIAL_KEY_BUFFER_SIZE, tagsLength) - 1) << 1;
         byte[] newTagsBuffer = new byte[newTagsBufferLength];
         System.arraycopy(tagsBuffer, 0, newTagsBuffer, 0, tagsBuffer.length);
         tagsBuffer = newTagsBuffer;
@@ -730,10 +718,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       return this.decodingCtx.getHFileContext().isIncludesTags();
     }
 
-    protected boolean tagsCompressed() {
-      return this.decodingCtx.getHFileContext().isCompressTags();
-    }
-
     @Override
     public int compareKey(CellComparator comparator, Cell key) {
       keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
@@ -988,8 +972,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected STATE createSeekerState() {
       // This will fail for non-default seeker state if the subclass does not
       // override this method.
-      return (STATE) new SeekerState(this.tmpPair, this.includesTags(),
-          this.tagsCompressed());
+      return (STATE) new SeekerState(this.tmpPair, this.includesTags());
     }
 
     abstract protected void decodeFirst();
