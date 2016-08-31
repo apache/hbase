@@ -552,12 +552,12 @@ public class TestAsyncProcess {
   public void testSubmitRandomSizeRequest() throws Exception {
     Random rn = new Random();
     final long limit = 10 * 1024 * 1024;
-    for (int count = 0; count != 2; ++count) {
-      long maxHeapSizePerRequest = Math.max(1, (Math.abs(rn.nextLong()) % limit));
-      long putsHeapSize = Math.max(1, (Math.abs(rn.nextLong()) % limit));
-      LOG.info("[testSubmitRandomSizeRequest] maxHeapSizePerRequest=" + maxHeapSizePerRequest + ", putsHeapSize=" + putsHeapSize);
-      doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
-    }
+    final int requestCount = 1 + (int) (rn.nextDouble() * 3);
+    long putsHeapSize = Math.abs(rn.nextLong()) % limit;
+    long maxHeapSizePerRequest = putsHeapSize / requestCount;
+    LOG.info("[testSubmitRandomSizeRequest] maxHeapSizePerRequest=" + maxHeapSizePerRequest +
+        ", putsHeapSize=" + putsHeapSize);
+    doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
   }
 
   @Test
