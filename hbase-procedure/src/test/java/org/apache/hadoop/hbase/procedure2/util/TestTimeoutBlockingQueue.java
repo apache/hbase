@@ -133,4 +133,26 @@ public class TestTimeoutBlockingQueue {
       }
     }
   }
+
+  @Test
+  public void testRemove() {
+    TimeoutBlockingQueue<TestObject> queue =
+      new TimeoutBlockingQueue<TestObject>(2, new TestObjectTimeoutRetriever());
+
+    TestObject[] objs = new TestObject[5];
+    for (int i = 0; i < objs.length; ++i) {
+      objs[i] = new TestObject(0, i * 10);
+      queue.add(objs[i]);
+    }
+    queue.dump();
+
+    for (int i = 0; i < objs.length; i += 2) {
+      queue.remove(objs[i]);
+    }
+
+    for (int i = 0; i < objs.length; ++i) {
+      TestObject x = queue.poll();
+      assertEquals((i % 2) == 0 ? null : objs[i], x);
+    }
+  }
 }
