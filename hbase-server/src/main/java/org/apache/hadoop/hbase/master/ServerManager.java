@@ -52,8 +52,10 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -620,8 +622,9 @@ public class ServerManager {
     }
 
     boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
-    this.master.getMasterProcedureExecutor().
-      submitProcedure(new ServerCrashProcedure(serverName, true, carryingMeta));
+    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
+    procExec.submitProcedure(new ServerCrashProcedure(
+      procExec.getEnvironment(), serverName, true, carryingMeta));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
 
@@ -664,8 +667,9 @@ public class ServerManager {
     }
 
     this.deadservers.add(serverName);
-    this.master.getMasterProcedureExecutor().
-    submitProcedure(new ServerCrashProcedure(serverName, shouldSplitWal, false));
+    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
+    procExec.submitProcedure(new ServerCrashProcedure(
+      procExec.getEnvironment(), serverName, shouldSplitWal, false));
   }
 
   /**

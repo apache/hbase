@@ -118,7 +118,8 @@ public class TestServerCrashProcedure {
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
       long procId =
-        procExec.submitProcedure(new ServerCrashProcedure(hrs.getServerName(), true, carryingMeta));
+        procExec.submitProcedure(new ServerCrashProcedure(
+          procExec.getEnvironment(), hrs.getServerName(), true, carryingMeta));
       // Now run through the procedure twice crashing the executor on each step...
       MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
       // Assert all data came back.

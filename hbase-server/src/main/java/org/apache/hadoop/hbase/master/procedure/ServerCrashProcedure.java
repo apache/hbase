@@ -145,12 +145,15 @@ implements ServerProcedureInterface {
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
    * @param carryingMeta True if carrying hbase:meta table region.
    */
-  public ServerCrashProcedure(final ServerName serverName,
-      final boolean shouldSplitWal, final boolean carryingMeta) {
+  public ServerCrashProcedure(
+      final MasterProcedureEnv env,
+      final ServerName serverName,
+      final boolean shouldSplitWal,
+      final boolean carryingMeta) {
     this.serverName = serverName;
     this.shouldSplitWal = shouldSplitWal;
     this.carryingMeta = carryingMeta;
-    // Currently not used.
+    this.setOwner(env.getRequestUser().getShortName());
   }
 
   /**

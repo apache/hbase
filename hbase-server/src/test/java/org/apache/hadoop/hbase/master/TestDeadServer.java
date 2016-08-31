@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -99,8 +100,9 @@ public class TestDeadServer {
   @Test(timeout = 15000)
   public void testCrashProcedureReplay() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    ProcedureExecutor pExecutor = master.getMasterProcedureExecutor();
-    ServerCrashProcedure proc = new ServerCrashProcedure(hostname123, false, false);
+    final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
+    ServerCrashProcedure proc = new ServerCrashProcedure(
+      pExecutor.getEnvironment(), hostname123, false, false);
 
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
     
