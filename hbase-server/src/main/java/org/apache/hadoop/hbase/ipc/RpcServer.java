@@ -2677,7 +2677,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     Connection register(SocketChannel channel) {
-      Connection connection = new Connection(channel, System.currentTimeMillis());
+      Connection connection = getConnection(channel, System.currentTimeMillis());
       add(connection);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server connection from " + connection +

@@ -35,6 +35,8 @@ import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -283,6 +285,59 @@ public abstract class AbstractTestIPC {
           assertTrue(waitTime < ms);
         }
       }
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  static class TestFailingRpcServer extends TestRpcServer {
+
+    TestFailingRpcServer() throws IOException {
+      this(new FifoRpcScheduler(CONF, 1), CONF);
+    }
+
+    TestFailingRpcServer(Configuration conf) throws IOException {
+      this(new FifoRpcScheduler(conf, 1), conf);
+    }
+
+    TestFailingRpcServer(RpcScheduler scheduler, Configuration conf) throws IOException {
+      super(scheduler, conf);
+    }
+
+    class FailingConnection extends Connection {
+      public FailingConnection(SocketChannel channel, long lastContact) {
+          super(channel, lastContact);
+      }
+
+      @Override
+      protected void processRequest(ByteBuffer buf) throws IOException, InterruptedException {
+        // this will throw exception after the connection header is read, and an RPC is sent
+        // from client
+        throw new DoNotRetryIOException("Failing for test");
+      }
+    }
+
+    @Override
+    protected Connection getConnection(SocketChannel channel, long time) {
+        return new FailingConnection(channel, time);
+    }
+  }
+
+  /** Tests that the connection closing is handled by the client with outstanding RPC calls */
+  @Test (timeout = 30000)
+  public void testConnectionCloseWithOutstandingRPCs() throws InterruptedException, IOException {
+    Configuration conf = new Configuration(CONF);
+    RpcServer rpcServer = new TestFailingRpcServer(conf);
+    try (AbstractRpcClient client = createRpcClient(conf)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      stub.echo(
+              new PayloadCarryingRpcController(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
+              param);
+      fail("RPC should have failed because connection closed");
+    } catch (ServiceException e) {
+      LOG.info("Caught expected exception: " + e.toString());
     } finally {
       rpcServer.stop();
     }
