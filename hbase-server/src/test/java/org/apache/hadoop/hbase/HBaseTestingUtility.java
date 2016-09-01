@@ -2363,6 +2363,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (schedulerAddress != null) {
       conf.set("yarn.resourcemanager.scheduler.address", schedulerAddress);
     }
+    String mrJobHistoryWebappAddress =
+      jobConf.get("mapreduce.jobhistory.webapp.address");
+    if (mrJobHistoryWebappAddress != null) {
+      conf.set("mapreduce.jobhistory.webapp.address", mrJobHistoryWebappAddress);
+    }
+    String yarnRMWebappAddress =
+      jobConf.get("yarn.resourcemanager.webapp.address");
+    if (yarnRMWebappAddress != null) {
+      conf.set("yarn.resourcemanager.webapp.address", yarnRMWebappAddress);
+    }
   }
 
   /**
