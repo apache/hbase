@@ -380,26 +380,26 @@ public class CatalogJanitor extends Chore {
         return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
-      LOG.warn("Error trying to determine if daughter region exists, " +
+      LOG.error("Error trying to determine if daughter region exists, " +
                "assuming exists and has references", ioe);
-      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
-    }
-
-    try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          this.services.getConfiguration(), fs, tabledir, daughter, true);
-    } catch (IOException e) {
-      LOG.warn("Error trying to determine referenced files from : " + daughter.getEncodedName()
-          + ", to: " + parent.getEncodedName() + " assuming has references", e);
       return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
     }
 
     boolean references = false;
     HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
-    for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
-      if ((references = regionFs.hasReferences(family.getNameAsString()))) {
-        break;
+    try {
+      regionFs = HRegionFileSystem.openRegionFromFileSystem(
+          this.services.getConfiguration(), fs, tabledir, daughter, true);
+      
+      for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
+        if ((references = regionFs.hasReferences(family.getNameAsString()))) {
+          break;
+        }
       }
+    } catch (IOException e) {
+      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
+          + ", to: " + parent.getEncodedName() + " assuming has references", e);
+      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
     }
     return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.valueOf(references));
   }

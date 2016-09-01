@@ -240,9 +240,18 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   public boolean hasReferences(final String familyName) throws IOException {
-    FileStatus[] files = FSUtils.listStatus(fs, getStoreDir(familyName),
-        new FSUtils.ReferenceFileFilter(fs));
-    return files != null && files.length > 0;
+    FileStatus[] files = FSUtils.listStatus(fs, getStoreDir(familyName));
+    if (files != null) {
+      for(FileStatus stat: files) {
+        if(stat.isDirectory()) {
+          continue;
+        }
+        if(StoreFileInfo.isReference(stat.getPath())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
