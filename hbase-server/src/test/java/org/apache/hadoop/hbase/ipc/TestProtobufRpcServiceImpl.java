@@ -76,8 +76,8 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
   @Override
   public EchoResponseProto echo(RpcController controller, EchoRequestProto request)
       throws ServiceException {
-    if (controller instanceof PayloadCarryingRpcController) {
-      PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController) controller;
+    if (controller instanceof HBaseRpcController) {
+      HBaseRpcController pcrc = (HBaseRpcController) controller;
       // If cells, scan them to check we are able to iterate what we were given and since this is an
       // echo, just put them back on the controller creating a new block. Tests our block building.
       CellScanner cellScanner = pcrc.cellScanner();
@@ -93,7 +93,7 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
         }
       }
       cellScanner = CellUtil.createCellScanner(list);
-      ((PayloadCarryingRpcController) controller).setCellScanner(cellScanner);
+      pcrc.setCellScanner(cellScanner);
     }
     return EchoResponseProto.newBuilder().setMessage(request.getMessage()).build();
   }

@@ -214,11 +214,11 @@ public abstract class AbstractRpcClient implements RpcClient {
    *               new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
    */
-  private Message callBlockingMethod(Descriptors.MethodDescriptor md, PayloadCarryingRpcController pcrc,
+  private Message callBlockingMethod(Descriptors.MethodDescriptor md, HBaseRpcController pcrc,
       Message param, Message returnType, final User ticket, final InetSocketAddress isa)
       throws ServiceException {
     if (pcrc == null) {
-      pcrc = new PayloadCarryingRpcController();
+      pcrc = new HBaseRpcControllerImpl();
     }
 
     Pair<Message, CellScanner> val;
@@ -257,7 +257,7 @@ public abstract class AbstractRpcClient implements RpcClient {
    * @throws InterruptedException if call is interrupted
    * @throws java.io.IOException if transport failed
    */
-  protected abstract Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
+  protected abstract Pair<Message, CellScanner> call(HBaseRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
       InetSocketAddress isa, MetricsConnection.CallStats callStats)
       throws IOException, InterruptedException;
@@ -274,16 +274,16 @@ public abstract class AbstractRpcClient implements RpcClient {
    * @param channelOperationTimeout timeout for operation
    * @return configured payload controller
    */
-  static PayloadCarryingRpcController configurePayloadCarryingRpcController(
+  static HBaseRpcController configurePayloadCarryingRpcController(
       RpcController controller, int channelOperationTimeout) {
-    PayloadCarryingRpcController pcrc;
-    if (controller != null && controller instanceof PayloadCarryingRpcController) {
-      pcrc = (PayloadCarryingRpcController) controller;
+    HBaseRpcController pcrc;
+    if (controller != null && controller instanceof HBaseRpcController) {
+      pcrc = (HBaseRpcController) controller;
       if (!pcrc.hasCallTimeout()) {
         pcrc.setCallTimeout(channelOperationTimeout);
       }
     } else {
-      pcrc = new PayloadCarryingRpcController();
+      pcrc = new HBaseRpcControllerImpl();
       pcrc.setCallTimeout(channelOperationTimeout);
     }
     return pcrc;
@@ -317,7 +317,7 @@ public abstract class AbstractRpcClient implements RpcClient {
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType) throws ServiceException {
-      PayloadCarryingRpcController pcrc = configurePayloadCarryingRpcController(
+      HBaseRpcController pcrc = configurePayloadCarryingRpcController(
           controller,
           channelOperationTimeout);
 

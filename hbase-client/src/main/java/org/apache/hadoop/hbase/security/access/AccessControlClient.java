@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
@@ -94,7 +94,7 @@ public class AccessControlClient {
   public static void grant(Connection connection, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     controller.setPriority(tableName);
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
@@ -113,7 +113,7 @@ public class AccessControlClient {
    */
   public static void grant(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
 
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
@@ -128,7 +128,7 @@ public class AccessControlClient {
    */
   public static void grant(Connection connection, final String userName,
        final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       ProtobufUtil.grant(controller, getAccessControlServiceStub(table), userName, actions);
@@ -155,7 +155,7 @@ public class AccessControlClient {
   public static void revoke(Connection connection, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     controller.setPriority(tableName);
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
@@ -174,7 +174,7 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       ProtobufUtil.revoke(controller, getAccessControlServiceStub(table), userName, namespace,
@@ -188,7 +188,7 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String userName,
       final Permission.Action... actions) throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       ProtobufUtil.revoke(controller, getAccessControlServiceStub(table), userName, actions);
@@ -206,7 +206,7 @@ public class AccessControlClient {
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
       throws Throwable {
-    PayloadCarryingRpcController controller
+    HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     List<UserPermission> permList = new ArrayList<UserPermission>();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {

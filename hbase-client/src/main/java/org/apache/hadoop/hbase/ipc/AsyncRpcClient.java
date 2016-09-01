@@ -231,12 +231,12 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @throws java.io.IOException  if a connection failure is encountered
    */
   @Override
-  protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
+  protected Pair<Message, CellScanner> call(HBaseRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
       InetSocketAddress addr, MetricsConnection.CallStats callStats)
       throws IOException, InterruptedException {
     if (pcrc == null) {
-      pcrc = new PayloadCarryingRpcController();
+      pcrc = new HBaseRpcControllerImpl();
     }
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
@@ -269,7 +269,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
   }
 
   private MessageConverter<Message, Message> getMessageConverterWithRpcController(
-      final PayloadCarryingRpcController pcrc) {
+      final HBaseRpcController pcrc) {
     return new
       MessageConverter<Message, Message>() {
         @Override
@@ -284,7 +284,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * Call method async
    */
   private void callMethod(final Descriptors.MethodDescriptor md,
-      final PayloadCarryingRpcController pcrc, final Message param, Message returnType, User ticket,
+      final HBaseRpcController pcrc, final Message param, Message returnType, User ticket,
       InetSocketAddress addr, final RpcCallback<Message> done) {
     final AsyncRpcChannel connection;
     try {
@@ -490,7 +490,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
     @Override
     public void callMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType, RpcCallback<Message> done) {
-      PayloadCarryingRpcController pcrc =
+      HBaseRpcController pcrc =
           configurePayloadCarryingRpcController(controller, channelOperationTimeout);
 
       this.rpcClient.callMethod(md, pcrc, param, returnType, this.ticket, this.isa, done);

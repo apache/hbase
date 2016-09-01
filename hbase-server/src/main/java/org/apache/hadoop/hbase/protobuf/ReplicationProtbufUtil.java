@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.protobuf;
 
 
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,7 +37,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -45,8 +48,6 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALKey;
-
-import com.google.protobuf.ServiceException;
 
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
@@ -66,7 +67,7 @@ public class ReplicationProtbufUtil {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
         buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
           sourceHFileArchiveDir);
-    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
+    HBaseRpcController controller = new HBaseRpcControllerImpl(p.getSecond());
     try {
       admin.replicateWALEntry(controller, p.getFirst());
     } catch (ServiceException se) {

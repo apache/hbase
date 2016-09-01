@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RegionServerCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -1036,7 +1036,7 @@ public class HBaseAdmin implements Admin {
     CloseRegionRequest request =
       RequestConverter.buildCloseRegionRequest(sn, encodedRegionName);
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = this.rpcControllerFactory.newController();
+    HBaseRpcController controller = this.rpcControllerFactory.newController();
     try {
       CloseRegionResponse response = admin.closeRegion(controller, request);
       boolean closed = response.getClosed();
@@ -1053,7 +1053,7 @@ public class HBaseAdmin implements Admin {
   public void closeRegion(final ServerName sn, final HRegionInfo hri) throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
 
     // Close the region without updating zk state.
     ProtobufUtil.closeRegion(controller, admin, sn, hri.getRegionName());
@@ -1063,7 +1063,7 @@ public class HBaseAdmin implements Admin {
   public List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
     return ProtobufUtil.getOnlineRegions(controller, admin);
   }
 
@@ -1094,7 +1094,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public Void call() throws Exception {
         // TODO: There is no timeout on this controller. Set one!
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+        HBaseRpcController controller = rpcControllerFactory.newController();
         FlushRegionRequest request =
             RequestConverter.buildFlushRegionRequest(hRegionInfo.getRegionName());
         admin.flushRegion(controller, request);
@@ -1257,7 +1257,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public Void call() throws Exception {
         // TODO: There is no timeout on this controller. Set one!
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+        HBaseRpcController controller = rpcControllerFactory.newController();
         CompactRegionRequest request =
             RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family);
         admin.compactRegion(controller, request);
@@ -1649,7 +1649,7 @@ public class HBaseAdmin implements Admin {
        throw new IOException("should not give a splitkey which equals to startkey!");
     }
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
     controller.setPriority(hri.getTable());
 
     // TODO: this does not do retries, it should. Set priority and timeout in controller
@@ -1837,7 +1837,7 @@ public class HBaseAdmin implements Admin {
     final AdminService.BlockingInterface admin =
       this.connection.getAdmin(ServerName.valueOf(hostname, port, 0));
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
     controller.setPriority(HConstants.HIGH_QOS);
     StopServerRequest request = RequestConverter.buildStopServerRequest(
         "Called by admin client " + this.connection.toString());
@@ -2191,7 +2191,7 @@ public class HBaseAdmin implements Admin {
     final AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
     try {
       return admin.rollWALWriter(controller, request);
     } catch (ServiceException e) {
@@ -2272,7 +2272,7 @@ public class HBaseAdmin implements Admin {
     ServerName sn = regionServerPair.getSecond();
     final AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // TODO: There is no timeout on this controller. Set one!
-    PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+    HBaseRpcController controller = rpcControllerFactory.newController();
     GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
       regionServerPair.getFirst().getRegionName(), true);
     GetRegionInfoResponse response;
@@ -3034,7 +3034,7 @@ public class HBaseAdmin implements Admin {
         AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
     checkTableExists(tableName);
     // TODO: There is no timeout on this controller. Set one!
-    final PayloadCarryingRpcController rpcController = rpcControllerFactory.newController();
+    final HBaseRpcController rpcController = rpcControllerFactory.newController();
     switch (compactType) {
       case MOB:
         final AdminProtos.AdminService.BlockingInterface masterAdmin =

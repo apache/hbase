@@ -903,7 +903,7 @@ public class RpcClientImpl extends AbstractRpcClient {
         builder.setCellBlockMeta(cellBlockBuilder.build());
       }
       // Only pass priority if there is one set.
-      if (priority != PayloadCarryingRpcController.PRIORITY_UNSET) {
+      if (priority != HBaseRpcController.PRIORITY_UNSET) {
         builder.setPriority(priority);
       }
       builder.setTimeout(call.timeout);
@@ -1208,12 +1208,12 @@ public class RpcClientImpl extends AbstractRpcClient {
    * @throws IOException if something fails on the connection
    */
   @Override
-  protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
+  protected Pair<Message, CellScanner> call(HBaseRpcController pcrc, MethodDescriptor md,
       Message param, Message returnType, User ticket, InetSocketAddress addr,
       MetricsConnection.CallStats callStats)
       throws IOException, InterruptedException {
     if (pcrc == null) {
-      pcrc = new PayloadCarryingRpcController();
+      pcrc = new HBaseRpcControllerImpl();
     }
 
     Call call = this.call(md, param, returnType, pcrc, ticket, addr, callStats);
@@ -1236,7 +1236,7 @@ public class RpcClientImpl extends AbstractRpcClient {
    * @throws IOException if something fails on the connection
    */
   private <R extends Message> Call call(MethodDescriptor method, Message request,
-      R responsePrototype, PayloadCarryingRpcController pcrc, User ticket,
+      R responsePrototype, HBaseRpcController pcrc, User ticket,
       InetSocketAddress addr, MetricsConnection.CallStats callStats)
       throws IOException, InterruptedException {
 

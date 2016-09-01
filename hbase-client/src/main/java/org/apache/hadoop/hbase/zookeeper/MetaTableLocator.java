@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -318,7 +318,7 @@ public class MetaTableLocator {
       return false;
     }
     Throwable t;
-    PayloadCarryingRpcController controller = connection.getRpcControllerFactory().newController();
+    HBaseRpcController controller = connection.getRpcControllerFactory().newController();
     try {
       // Try and get regioninfo from the hosting server.
       return ProtobufUtil.getRegionInfo(controller, hostingServer, regionName) != null;

@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
- * Factory to create a {@link PayloadCarryingRpcController}
+ * Factory to create a {@link HBaseRpcController}
  */
 @InterfaceAudience.Private
 public class RpcControllerFactory {
@@ -46,17 +46,17 @@ public class RpcControllerFactory {
     this.conf = conf;
   }
 
-  public PayloadCarryingRpcController newController() {
+  public HBaseRpcController newController() {
     // TODO: Set HConstants default rpc timeout here rather than nothing?
-    return new PayloadCarryingRpcController();
+    return new HBaseRpcControllerImpl();
   }
 
-  public PayloadCarryingRpcController newController(final CellScanner cellScanner) {
-    return new PayloadCarryingRpcController(cellScanner);
+  public HBaseRpcController newController(final CellScanner cellScanner) {
+    return new HBaseRpcControllerImpl(cellScanner);
   }
 
-  public PayloadCarryingRpcController newController(final List<CellScannable> cellIterables) {
-    return new PayloadCarryingRpcController(cellIterables);
+  public HBaseRpcController newController(final List<CellScannable> cellIterables) {
+    return new HBaseRpcControllerImpl(cellIterables);
   }
 
 

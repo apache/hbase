@@ -430,7 +430,7 @@ public class AsyncRpcChannel {
         requestHeaderBuilder.setCellBlockMeta(cellBlockBuilder.build());
       }
       // Only pass priority if there one. Let zero be same as no priority.
-      if (call.getPriority() != PayloadCarryingRpcController.PRIORITY_UNSET) {
+      if (call.getPriority() != HBaseRpcController.PRIORITY_UNSET) {
         requestHeaderBuilder.setPriority(call.getPriority());
       }
       requestHeaderBuilder.setTimeout(call.rpcTimeout > Integer.MAX_VALUE ?

@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   protected final ClusterConnection connection;
   protected MasterKeepAliveConnection master;
-  private final PayloadCarryingRpcController rpcController;
+  private final HBaseRpcController rpcController;
 
   MasterCallable(final Connection connection, final RpcControllerFactory rpcConnectionFactory) {
     this.connection = (ClusterConnection) connection;
@@ -111,7 +111,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
    */
   protected abstract V rpcCall() throws Exception;
 
-  PayloadCarryingRpcController getRpcController() {
+  HBaseRpcController getRpcController() {
     return this.rpcController;
   }
 

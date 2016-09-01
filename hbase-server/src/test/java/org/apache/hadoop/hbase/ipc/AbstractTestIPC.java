@@ -105,7 +105,7 @@ public abstract class AbstractTestIPC {
     try (AbstractRpcClient client = createRpcClientNoCodec(conf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController();
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
       String message = "hello";
       assertEquals(message,
         stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
@@ -135,8 +135,7 @@ public abstract class AbstractTestIPC {
     try (AbstractRpcClient client = createRpcClient(conf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController(
-          CellUtil.createCellScanner(cells));
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl(CellUtil.createCellScanner(cells));
       String message = "hello";
       assertEquals(message,
         stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
@@ -212,7 +211,7 @@ public abstract class AbstractTestIPC {
       // set total RPC size bigger than 100 bytes
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message.toString()).build();
       stub.echo(
-        new PayloadCarryingRpcController(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
+        new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
         param);
       fail("RPC should have failed because it exceeds max request size");
     } catch (ServiceException e) {
@@ -266,7 +265,7 @@ public abstract class AbstractTestIPC {
     try (AbstractRpcClient client = createRpcClient(CONF)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      PayloadCarryingRpcController pcrc = new PayloadCarryingRpcController();
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
       int ms = 1000;
       int timeout = 100;
       for (int i = 0; i < 10; i++) {
@@ -306,7 +305,7 @@ public abstract class AbstractTestIPC {
 
     class FailingConnection extends Connection {
       public FailingConnection(SocketChannel channel, long lastContact) {
-          super(channel, lastContact);
+        super(channel, lastContact);
       }
 
       @Override
@@ -319,12 +318,12 @@ public abstract class AbstractTestIPC {
 
     @Override
     protected Connection getConnection(SocketChannel channel, long time) {
-        return new FailingConnection(channel, time);
+      return new FailingConnection(channel, time);
     }
   }
 
   /** Tests that the connection closing is handled by the client with outstanding RPC calls */
-  @Test (timeout = 30000)
+  @Test
   public void testConnectionCloseWithOutstandingRPCs() throws InterruptedException, IOException {
     Configuration conf = new Configuration(CONF);
     RpcServer rpcServer = new TestFailingRpcServer(conf);
@@ -332,9 +331,7 @@ public abstract class AbstractTestIPC {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      stub.echo(
-              new PayloadCarryingRpcController(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
-              param);
+      stub.echo(null, param);
       fail("RPC should have failed because connection closed");
     } catch (ServiceException e) {
       LOG.info("Caught expected exception: " + e.toString());

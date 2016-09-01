@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -103,8 +103,8 @@ public abstract class RegionServerCallable<T> extends AbstractRegionServerCallab
       if (this.rpcController != null) {
         // Do a reset to clear previous states, such as CellScanner.
         this.rpcController.reset();
-        if (this.rpcController instanceof PayloadCarryingRpcController) {
-          PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController)this.rpcController;
+        if (this.rpcController instanceof HBaseRpcController) {
+          HBaseRpcController pcrc = (HBaseRpcController)this.rpcController;
           // If it is an instance of PayloadCarryingRpcController, we can set priority on the
           // controller based off the tableName. RpcController may be null in tests when mocking so allow
           // for null controller.
@@ -141,10 +141,10 @@ public abstract class RegionServerCallable<T> extends AbstractRegionServerCallab
    * a Coproccessor Endpoint context. Should never happen.
    */
   protected CellScanner getRpcControllerCellScanner() {
-    return ((PayloadCarryingRpcController)this.rpcController).cellScanner();
+    return ((HBaseRpcController)this.rpcController).cellScanner();
   }
 
   protected void setRpcControllerCellScanner(CellScanner cellScanner) {
-    ((PayloadCarryingRpcController)this.rpcController).setCellScanner(cellScanner);
+    ((HBaseRpcController)this.rpcController).setCellScanner(cellScanner);
   }
 }

@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ProtobufCoprocessorService;
-import org.apache.hadoop.hbase.ipc.DelegatingPayloadCarryingRpcController;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.DelegatingHBaseRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -57,27 +57,27 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public PayloadCarryingRpcController newController() {
+    public HBaseRpcController newController() {
       return new CountingRpcController(super.newController());
     }
 
     @Override
-    public PayloadCarryingRpcController newController(final CellScanner cellScanner) {
+    public HBaseRpcController newController(final CellScanner cellScanner) {
       return new CountingRpcController(super.newController(cellScanner));
     }
 
     @Override
-    public PayloadCarryingRpcController newController(final List<CellScannable> cellIterables) {
+    public HBaseRpcController newController(final List<CellScannable> cellIterables) {
       return new CountingRpcController(super.newController(cellIterables));
     }
   }
 
-  public static class CountingRpcController extends DelegatingPayloadCarryingRpcController {
+  public static class CountingRpcController extends DelegatingHBaseRpcController {
 
     private static AtomicInteger INT_PRIORITY = new AtomicInteger();
     private static AtomicInteger TABLE_PRIORITY = new AtomicInteger();
 
-    public CountingRpcController(PayloadCarryingRpcController delegate) {
+    public CountingRpcController(HBaseRpcController delegate) {
       super(delegate);
     }
 

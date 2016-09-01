@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -412,7 +412,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
           builder.addCellsPerResult(result.size());
           List<CellScannable> results = new ArrayList<CellScannable>(1);
           results.add(result);
-          ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil
+          ((HBaseRpcController) controller).setCellScanner(CellUtil
               .createCellScanner(results));
           builder.setMoreResults(true);
         }

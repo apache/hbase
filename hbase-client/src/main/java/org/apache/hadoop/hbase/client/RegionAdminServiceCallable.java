@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<T> {
   protected AdminService.BlockingInterface stub;
   protected final RpcControllerFactory rpcControllerFactory;
-  private PayloadCarryingRpcController controller = null;
+  private HBaseRpcController controller = null;
 
   protected final ClusterConnection connection;
   protected HRegionLocation location;
@@ -186,7 +186,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
     }
   }
 
-  PayloadCarryingRpcController getCurrentPayloadCarryingRpcController() {
+  HBaseRpcController getCurrentPayloadCarryingRpcController() {
     return this.controller;
   }
 
@@ -197,5 +197,5 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
    * class.
    * @throws Exception
    */
-  protected abstract T call(PayloadCarryingRpcController rpcController) throws Exception;
+  protected abstract T call(HBaseRpcController rpcController) throws Exception;
 }

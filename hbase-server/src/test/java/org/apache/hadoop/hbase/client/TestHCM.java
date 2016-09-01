@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -548,7 +548,7 @@ public class TestHCM {
         (ClusterConnection) TEST_UTIL.getConnection(),
           new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, ROW) {
       @Override
-      public Object call(PayloadCarryingRpcController controller) throws Exception {
+      public Object call(HBaseRpcController controller) throws Exception {
         return null;
       }
     };

@@ -22,6 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +56,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -68,10 +72,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
-import com.google.protobuf.ServiceException;
 
 @Category(LargeTests.class)
 public class TestEndToEndSplitTransaction {
@@ -164,7 +164,7 @@ public class TestEndToEndSplitTransaction {
         regionName, new Scan(row), 1, true);
       try {
         server.getRSRpcServices().scan(
-          new PayloadCarryingRpcController(), scanRequest);
+          new HBaseRpcControllerImpl(), scanRequest);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }

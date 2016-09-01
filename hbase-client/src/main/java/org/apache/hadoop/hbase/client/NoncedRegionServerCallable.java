@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 @InterfaceAudience.Private
 public abstract class NoncedRegionServerCallable<T> extends AbstractRegionServerCallable<T> {
   private ClientService.BlockingInterface stub;
-  private final PayloadCarryingRpcController rpcController;
+  private final HBaseRpcController rpcController;
   private final long nonce;
 
   /**
@@ -59,7 +59,7 @@ public abstract class NoncedRegionServerCallable<T> extends AbstractRegionServer
     this(connection, rpcControllerFactory.newController(), tableName, row);
   }
 
-  public NoncedRegionServerCallable(Connection connection, PayloadCarryingRpcController rpcController,
+  public NoncedRegionServerCallable(Connection connection, HBaseRpcController rpcController,
       TableName tableName, byte [] row) {
     super(connection, tableName, row);
     this.rpcController = rpcController;
@@ -111,9 +111,9 @@ public abstract class NoncedRegionServerCallable<T> extends AbstractRegionServer
    * class.
    * @throws Exception
    */
-  protected abstract T call(PayloadCarryingRpcController rpcController) throws Exception;
+  protected abstract T call(HBaseRpcController rpcController) throws Exception;
 
-  public PayloadCarryingRpcController getRpcController() {
+  public HBaseRpcController getRpcController() {
     return this.rpcController;
   }
 

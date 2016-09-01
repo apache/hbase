@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -631,7 +631,7 @@ public class HTable implements Table {
         new NoncedRegionServerCallable<Result>(this.connection,
         this.rpcControllerFactory, getName(), append.getRow()) {
       @Override
-      protected Result call(PayloadCarryingRpcController controller) throws Exception {
+      protected Result call(HBaseRpcController controller) throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
         MutateResponse response = getStub().mutate(controller, request);
@@ -653,7 +653,7 @@ public class HTable implements Table {
         new NoncedRegionServerCallable<Result>(this.connection,
         this.rpcControllerFactory, getName(), increment.getRow()) {
       @Override
-      protected Result call(PayloadCarryingRpcController controller) throws Exception {
+      protected Result call(HBaseRpcController controller) throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
         MutateResponse response = getStub().mutate(controller, request);
@@ -699,7 +699,7 @@ public class HTable implements Table {
         new NoncedRegionServerCallable<Long>(this.connection, this.rpcControllerFactory, getName(),
             row) {
       @Override
-      protected Long call(PayloadCarryingRpcController controller) throws Exception {
+      protected Long call(HBaseRpcController controller) throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
           getLocation().getRegionInfo().getRegionName(), row, family,
           qualifier, amount, durability, getNonceGroup(), getNonce());

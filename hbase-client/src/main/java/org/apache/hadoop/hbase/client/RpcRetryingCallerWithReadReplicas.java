@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -89,7 +89,7 @@ public class RpcRetryingCallerWithReadReplicas {
    */
   class ReplicaRegionServerCallable extends RegionServerCallable<Result> implements Cancellable {
     final int id;
-    private final PayloadCarryingRpcController controller;
+    private final HBaseRpcController controller;
 
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection, rpcControllerFactory,
@@ -144,7 +144,7 @@ public class RpcRetryingCallerWithReadReplicas {
       ClientProtos.GetRequest request =
           RequestConverter.buildGetRequest(reg, get);
       // Presumption that we are passed a PayloadCarryingRpcController here!
-      PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController)controller;
+      HBaseRpcController pcrc = (HBaseRpcController)controller;
       pcrc.setCallTimeout(callTimeout);
       ClientProtos.GetResponse response = getStub().get(controller, request);
       if (response == null) {
