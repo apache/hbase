@@ -24,6 +24,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,21 +42,17 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import java.io.File;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Test our testing utility class
@@ -442,5 +446,37 @@ public class TestHBaseTestingUtility {
             htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
     assertEquals(nonDefaultRegionServerPort
             , htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+  }
+  
+  @Test public void testMRYarnConfigsPopulation() throws IOException {
+    Map<String, String> dummyProps = new HashMap<>();
+    dummyProps.put("mapreduce.jobtracker.address", "dummyhost:11234");
+    dummyProps.put("yarn.resourcemanager.address", "dummyhost:11235");
+    dummyProps.put("mapreduce.jobhistory.address", "dummyhost:11236");
+    dummyProps.put("yarn.resourcemanager.scheduler.address", "dummyhost:11237");
+    dummyProps.put("mapreduce.jobhistory.webapp.address", "dummyhost:11238");
+    dummyProps.put("yarn.resourcemanager.webapp.address", "dummyhost:11239");
+  
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    
+    // populate the mr props to the Configuration instance
+    for (Entry<String, String> entry : dummyProps.entrySet()) {
+      hbt.getConfiguration().set(entry.getKey(), entry.getValue());
+    }
+    
+    for (Entry<String,String> entry : dummyProps.entrySet()) {
+      assertTrue("The Configuration for key " + entry.getKey() +" and value: " + entry.getValue() +
+                 " is not populated correctly", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+    }
+
+    hbt.startMiniMapReduceCluster();
+    
+    // Confirm that MiniMapReduceCluster overwrites the mr properties and updates the Configuration 
+    for (Entry<String,String> entry : dummyProps.entrySet()) {
+      assertFalse("The MR prop: " + entry.getValue() + " is not overwritten when map reduce mini"+
+                  "cluster is started", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+    }
+    
+    hbt.shutdownMiniMapReduceCluster();
   }
 }
