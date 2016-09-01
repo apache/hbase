@@ -207,6 +207,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dimaspivak</id>
+      <name>Dima Spivak</name>
+      <email>dimaspivak@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>dmeil</id>
       <name>Doug Meil</name>
       <email>dmeil@apache.org</email>
