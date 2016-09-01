@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProt
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -284,13 +283,8 @@ public class IntegrationTestRpcClient {
         EchoResponseProto ret;
         TestRpcServer server = cluster.getRandomServer();
         try {
-          User user = User.getCurrent();
-          InetSocketAddress address = server.getListenerAddress();
-          if (address == null) {
-            throw new IOException("Listener channel is closed");
-          }
           sending.set(true);
-          BlockingInterface stub = newBlockingStub(rpcClient, address, user);
+          BlockingInterface stub = newBlockingStub(rpcClient, server.getListenerAddress());
           ret = stub.echo(null, param);
         } catch (Exception e) {
           LOG.warn(e);

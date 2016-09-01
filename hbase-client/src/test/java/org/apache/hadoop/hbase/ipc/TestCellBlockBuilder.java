@@ -67,19 +67,19 @@ public class TestCellBlockBuilder {
     doBuildCellBlockUndoCellBlock(this.builder, new KeyValueCodec(), new GzipCodec());
   }
 
-  static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder util, final Codec codec,
+  static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder builder, final Codec codec,
       final CompressionCodec compressor) throws IOException {
-    doBuildCellBlockUndoCellBlock(util, codec, compressor, 10, 1, false);
+    doBuildCellBlockUndoCellBlock(builder, codec, compressor, 10, 1, false);
   }
 
-  static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder util, final Codec codec,
+  static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder builder, final Codec codec,
       final CompressionCodec compressor, final int count, final int size, final boolean sized)
       throws IOException {
     Cell[] cells = getCells(count, size);
     CellScanner cellScanner = sized ? getSizedCellScanner(cells)
         : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
-    ByteBuffer bb = util.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = util.createCellScannerReusingBuffers(codec, compressor, bb);
+    ByteBuffer bb = builder.buildCellBlock(codec, compressor, cellScanner);
+    cellScanner = builder.createCellScannerReusingBuffers(codec, compressor, bb);
     int i = 0;
     while (cellScanner.advance()) {
       i++;
@@ -143,13 +143,13 @@ public class TestCellBlockBuilder {
     System.exit(errCode);
   }
 
-  private static void timerTests(final CellBlockBuilder util, final int count, final int size,
+  private static void timerTests(final CellBlockBuilder builder, final int count, final int size,
       final Codec codec, final CompressionCodec compressor) throws IOException {
     final int cycles = 1000;
     StopWatch timer = new StopWatch();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(util, timer, count, size, codec, compressor, false);
+      timerTest(builder, timer, count, size, codec, compressor, false);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + false + ", count="
@@ -157,17 +157,17 @@ public class TestCellBlockBuilder {
     timer.reset();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(util, timer, count, size, codec, compressor, true);
+      timerTest(builder, timer, count, size, codec, compressor, true);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + true + ", count="
         + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
   }
 
-  private static void timerTest(final CellBlockBuilder util, final StopWatch timer, final int count,
+  private static void timerTest(final CellBlockBuilder builder, final StopWatch timer, final int count,
       final int size, final Codec codec, final CompressionCodec compressor, final boolean sized)
       throws IOException {
-    doBuildCellBlockUndoCellBlock(util, codec, compressor, count, size, sized);
+    doBuildCellBlockUndoCellBlock(builder, codec, compressor, count, size, sized);
   }
 
   /**
@@ -187,10 +187,10 @@ public class TestCellBlockBuilder {
         usage(1);
       }
     }
-    CellBlockBuilder util = new CellBlockBuilder(HBaseConfiguration.create());
+    CellBlockBuilder buildr = new CellBlockBuilder(HBaseConfiguration.create());
     ((Log4JLogger) CellBlockBuilder.LOG).getLogger().setLevel(Level.ALL);
-    timerTests(util, count, size, new KeyValueCodec(), null);
-    timerTests(util, count, size, new KeyValueCodec(), new DefaultCodec());
-    timerTests(util, count, size, new KeyValueCodec(), new GzipCodec());
+    timerTests(buildr, count, size, new KeyValueCodec(), null);
+    timerTests(buildr, count, size, new KeyValueCodec(), new DefaultCodec());
+    timerTests(buildr, count, size, new KeyValueCodec(), new GzipCodec());
   }
 }
