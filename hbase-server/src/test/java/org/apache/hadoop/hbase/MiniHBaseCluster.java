@@ -677,11 +677,12 @@ public class MiniHBaseCluster extends HBaseCluster {
     int count = 0;
     for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      HRegion metaRegion =
-        hrs.getOnlineRegion(regionName);
-      if (metaRegion != null) {
-        index = count;
-        break;
+      if (!hrs.isStopped()) {
+        HRegion region = hrs.getOnlineRegion(regionName);
+        if (region != null) {
+          index = count;
+          break;
+        }
       }
       count++;
     }
