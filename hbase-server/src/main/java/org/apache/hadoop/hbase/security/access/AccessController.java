@@ -1314,7 +1314,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
-    requirePermission(getActiveUser(ctx), "snapshot", hTableDescriptor.getTableName(), null, null,
+    requirePermission(getActiveUser(ctx), "snapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
       Permission.Action.ADMIN);
   }
 
@@ -1324,9 +1324,11 @@ public class AccessController extends BaseMasterAndRegionObserver
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
       // list it, if user is the owner of snapshot
-      // TODO: We are not logging this for audit
+      AuthResult result = AuthResult.allow("listSnapshot " + snapshot.getName(),
+          "Snapshot owner check allowed", user, null, null, null);
+      logResult(result);
     } else {
-      requirePermission(user, "listSnapshot", Action.ADMIN);
+      requirePermission(user, "listSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
@@ -1334,7 +1336,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
-    requirePermission(getActiveUser(ctx), "clone", Action.ADMIN);
+    requirePermission(getActiveUser(ctx), "cloneSnapshot " + snapshot.getName(), Action.ADMIN);
   }
 
   @Override
@@ -1343,10 +1345,10 @@ public class AccessController extends BaseMasterAndRegionObserver
       throws IOException {
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
-      requirePermission(user, "restoreSnapshot", hTableDescriptor.getTableName(), null, null,
+      requirePermission(user, "restoreSnapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
         Permission.Action.ADMIN);
     } else {
-      requirePermission(user, "restoreSnapshot", Action.ADMIN);
+      requirePermission(user, "restoreSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
@@ -1356,9 +1358,11 @@ public class AccessController extends BaseMasterAndRegionObserver
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
       // Snapshot owner is allowed to delete the snapshot
-      // TODO: We are not logging this for audit
+      AuthResult result = AuthResult.allow("deleteSnapshot " + snapshot.getName(),
+          "Snapshot owner check allowed", user, null, null, null);
+      logResult(result);
     } else {
-      requirePermission(user, "deleteSnapshot", Action.ADMIN);
+      requirePermission(user, "deleteSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
