@@ -22,41 +22,25 @@ import org.apache.commons.logging.LogFactory;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.VersionAnnotation;
-import org.apache.commons.logging.Log;
 
 /**
- * This class finds the package info for hbase and the VersionAnnotation
- * information.  Taken from hadoop.  Only name of annotation is different.
+ * This class finds the Version information for HBase.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class VersionInfo {
   private static final Log LOG = LogFactory.getLog(VersionInfo.class.getName());
-  private static Package myPackage;
-  private static VersionAnnotation version;
-
-  static {
-    myPackage = VersionAnnotation.class.getPackage();
-    version = myPackage.getAnnotation(VersionAnnotation.class);
-  }
-
-  /**
-   * Get the meta-data for the hbase package.
-   * @return package
-   */
-  static Package getPackage() {
-    return myPackage;
-  }
 
   /**
    * Get the hbase version.
    * @return the hbase version string, eg. "0.6.3-dev"
    */
   public static String getVersion() {
-    return version != null ? version.version() : "Unknown";
+    return Version.version;
   }
 
   /**
@@ -64,7 +48,7 @@ public class VersionInfo {
    * @return the revision number, eg. "451451"
    */
   public static String getRevision() {
-    return version != null ? version.revision() : "Unknown";
+    return Version.revision;
   }
 
   /**
@@ -72,7 +56,7 @@ public class VersionInfo {
    * @return the compilation date in unix date format
    */
   public static String getDate() {
-    return version != null ? version.date() : "Unknown";
+    return Version.date;
   }
 
   /**
@@ -80,7 +64,7 @@ public class VersionInfo {
    * @return the username of the user
    */
   public static String getUser() {
-    return version != null ? version.user() : "Unknown";
+    return Version.user;
   }
 
   /**
@@ -88,7 +72,7 @@ public class VersionInfo {
    * @return the url
    */
   public static String getUrl() {
-    return version != null ? version.url() : "Unknown";
+    return Version.url;
   }
 
   static String[] versionReport() {
@@ -105,7 +89,7 @@ public class VersionInfo {
    * @return a string that uniquely identifies the source
    **/
   public static String getSrcChecksum() {
-    return version != null ? version.srcChecksum() : "Unknown";
+    return Version.srcChecksum;
   }
 
   public static void writeTo(PrintWriter out) {
