@@ -54,6 +54,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.never;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({MediumTests.class})
@@ -111,10 +112,11 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
     Canary canary = new Canary(executor, sink);
-    String[] args = { "-t", "10000", "testTable" };
+    String[] args = { "-writeSniffing", "-t", "10000", "testTable" };
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
-    verify(sink, atLeastOnce())
-        .publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
+    assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
+    verify(sink, atLeastOnce()).publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
   }
 
   //no table created, so there should be no regions
@@ -163,13 +165,15 @@ public class TestCanaryTool {
     ToolRunner.run(conf, canary, args);
     verify(sink, atLeastOnce())
         .publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
-  
+
   private void runRegionserverCanary() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary canary = new Canary(executor, new Canary.RegionServerStdOutSink());
     String[] args = { "-t", "10000", "-regionserver"};
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
 
 }
