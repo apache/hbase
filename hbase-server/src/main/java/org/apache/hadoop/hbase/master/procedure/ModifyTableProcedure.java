@@ -25,7 +25,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,8 +56,6 @@ public class ModifyTableProcedure
     extends StateMachineProcedure<MasterProcedureEnv, ModifyTableState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(ModifyTableProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private HTableDescriptor unmodifiedHTableDescriptor = null;
   private HTableDescriptor modifiedHTableDescriptor;
@@ -140,12 +137,11 @@ public class ModifyTableProcedure
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      if (!isRollbackSupported(state)) {
-        // We reach a state that cannot be rolled back. We just need to keep retry.
-        LOG.warn("Error trying to modify table=" + getTableName() + " state=" + state, e);
-      } else {
-        LOG.error("Error trying to modify table=" + getTableName() + " state=" + state, e);
+      if (isRollbackSupported(state)) {
         setFailure("master-modify-table", e);
+      } else {
+        LOG.warn("Retriable error trying to modify table=" + getTableName() +
+          " (in state=" + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -154,41 +150,25 @@ public class ModifyTableProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == ModifyTableState.MODIFY_TABLE_PREPARE ||
+        state == ModifyTableState.MODIFY_TABLE_PRE_OPERATION) {
+      // nothing to rollback, pre-modify is just checks.
+      // TODO: coprocessor rollback semantic is still undefined.
+      return;
     }
-    try {
-      switch (state) {
-      case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-        break; // Nothing to undo.
-      case MODIFY_TABLE_POST_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to un-modify?
-        break;
-      case MODIFY_TABLE_DELETE_FS_LAYOUT:
-        // Once we reach to this state - we could NOT rollback - as it is tricky to undelete
-        // the deleted files. We are not suppose to reach here, throw exception so that we know
-        // there is a code bug to investigate.
-        assert deleteColumnFamilyInModify;
-        throw new UnsupportedOperationException(this + " rollback of state=" + state
-            + " is unsupported.");
-      case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
-        // Undo the replica column update.
-        updateReplicaColumnsIfNeeded(env, modifiedHTableDescriptor, unmodifiedHTableDescriptor);
-        break;
-      case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
-        restoreTableDescriptor(env);
-        break;
+
+    // The delete doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final ModifyTableState state) {
+    switch (state) {
       case MODIFY_TABLE_PRE_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to un-modify?
-        break;
       case MODIFY_TABLE_PREPARE:
-        break; // Nothing to undo.
+        return true;
       default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      LOG.warn("Fail trying to rollback modify table=" + getTableName() + " state=" + state, e);
-      throw e;
+        return false;
     }
   }
 
@@ -210,21 +190,6 @@ public class ModifyTableProcedure
   @Override
   protected ModifyTableState getInitialState() {
     return ModifyTableState.MODIFY_TABLE_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(final ModifyTableState state) {
-    if (aborted.get() && isRollbackSupported(state)) {
-      setAbortFailure("modify-table", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override
@@ -491,24 +456,6 @@ public class ModifyTableProcedure
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     }
-  }
-
-  /*
-   * Check whether we are in the state that can be rollback
-   */
-  private boolean isRollbackSupported(final ModifyTableState state) {
-    if (deleteColumnFamilyInModify) {
-      switch (state) {
-      case MODIFY_TABLE_DELETE_FS_LAYOUT:
-      case MODIFY_TABLE_POST_OPERATION:
-      case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-        // It is not safe to rollback if we reach to these states.
-        return false;
-      default:
-        break;
-      }
-    }
-    return true;
   }
 
   private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {

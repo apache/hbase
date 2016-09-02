@@ -131,8 +131,13 @@ public class TestProcedureAdmin {
     // Submit an un-abortable procedure
     long procId = procExec.submitProcedure(
         new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
-    // Wait for one step to complete
+    // Wait for a couple of steps to complete (first step "prepare" is abortable)
     ProcedureTestingUtility.waitProcedure(procExec, procId);
+    for (int i = 0; i < 2; ++i) {
+      ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
+      ProcedureTestingUtility.restart(procExec);
+      ProcedureTestingUtility.waitProcedure(procExec, procId);
+    }
 
     boolean abortResult = procExec.abort(procId, true);
     assertFalse(abortResult);

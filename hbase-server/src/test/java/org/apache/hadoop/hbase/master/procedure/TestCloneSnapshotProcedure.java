@@ -93,6 +93,12 @@ public class TestCloneSnapshotProcedure {
   @After
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
+    TableName[] tables = UTIL.getHBaseAdmin().listTableNames();
+    for (int i = 0; i < tables.length; ++i) {
+      UTIL.deleteTable(tables[i]);
+    }
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    snapshot = null;
   }
 
   private void resetProcExecutorTestingKillFlag() {
@@ -211,11 +217,7 @@ public class TestCloneSnapshotProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = CloneSnapshotState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      CloneSnapshotState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(
       UTIL.getHBaseCluster().getMaster(),
@@ -238,16 +240,11 @@ public class TestCloneSnapshotProcedure {
     long procId = procExec.submitProcedure(
       new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
 
-    int numberOfSteps = CloneSnapshotState.values().length - 2; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      CloneSnapshotState.values());
+    int numberOfSteps = 0; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), clonedTableName);
-
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

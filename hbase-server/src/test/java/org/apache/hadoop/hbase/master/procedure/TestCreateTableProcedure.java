@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -209,8 +207,7 @@ public class TestCreateTableProcedure {
     // Restart the executor and execute the step twice
     // NOTE: the 6 (number of CreateTableState steps) is hardcoded,
     //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec, procId, 6, CreateTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 6);
 
     MasterProcedureTestingUtility.validateTableCreation(
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
@@ -230,64 +227,8 @@ public class TestCreateTableProcedure {
     testRollbackAndDoubleExecution(htd);
   }
 
-  @Test(timeout=90000)
-  public void testRollbackRetriableFailure() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackRetriableFailure");
-
-    // create the table
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-
-    // Start the Create procedure && kill the executor
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
-    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
-    HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
-    long procId = procExec.submitProcedure(
-      new FaultyCreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
-
-    // NOTE: the 4 (number of CreateTableState steps) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRollbackRetriableFailure(
-        procExec, procId, 4, CreateTableState.values());
-
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
-
-    // are we able to create the table after a rollback?
-    resetProcExecutorTestingKillFlag();
-    testSimpleCreate(tableName, splitKeys);
-  }
-
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
-  }
-
-  public static class FaultyCreateTableProcedure extends CreateTableProcedure {
-    private int retries = 0;
-
-    public FaultyCreateTableProcedure() {
-      // Required by the Procedure framework to create the procedure on replay
-    }
-
-    public FaultyCreateTableProcedure(final MasterProcedureEnv env,
-        final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions)
-        throws IOException {
-      super(env, hTableDescriptor, newRegions);
-    }
-
-    @Override
-    protected void rollbackState(final MasterProcedureEnv env, final CreateTableState state)
-        throws IOException {
-      if (retries++ < 3) {
-        LOG.info("inject rollback failure state=" + state);
-        throw new IOException("injected failure number " + retries);
-      } else {
-        super.rollbackState(env, state);
-        retries = 0;
-      }
-    }
   }
 
   private void testRollbackAndDoubleExecution(HTableDescriptor htd) throws Exception {
@@ -304,10 +245,9 @@ public class TestCreateTableProcedure {
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
 
-    // NOTE: the 4 (number of CreateTableState steps) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-        procExec, procId, 4, CreateTableState.values());
+    int numberOfSteps = 0; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+
     TableName tableName = htd.getTableName();
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), tableName);

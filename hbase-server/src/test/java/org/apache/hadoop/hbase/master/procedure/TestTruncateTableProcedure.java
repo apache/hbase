@@ -86,6 +86,8 @@ public class TestTruncateTableProcedure {
 
   @After
   public void tearDown() throws Exception {
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    assertTrue("expected executor to be running", procExec.isRunning());
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
@@ -223,8 +225,7 @@ public class TestTruncateTableProcedure {
     // Restart the executor and execute the step twice
     // NOTE: the 7 (number of TruncateTableState steps) is hardcoded,
     //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec, procId, 7, TruncateTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 7);
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     UTIL.waitUntilAllRegionsAssigned(tableName);

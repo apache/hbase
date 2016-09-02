@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,8 +59,6 @@ public class CreateTableProcedure
     extends StateMachineProcedure<MasterProcedureEnv, CreateTableState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(CreateTableProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   // used for compatibility with old clients
   private final ProcedurePrepareLatch syncLatch;
@@ -137,8 +134,11 @@ public class CreateTableProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.error("Error trying to create table=" + getTableName() + " state=" + state, e);
-      setFailure("master-create-table", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-create-table", e);
+      } else {
+        LOG.warn("Retriable error trying to create table=" + getTableName() + " state=" + state, e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -146,38 +146,26 @@ public class CreateTableProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final CreateTableState state)
       throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == CreateTableState.CREATE_TABLE_PRE_OPERATION) {
+      // nothing to rollback, pre-create is just table-state checks.
+      // We can fail if the table does exist or the descriptor is malformed.
+      // TODO: coprocessor rollback semantic is still undefined.
+      DeleteTableProcedure.deleteTableStates(env, getTableName());
+      ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+      return;
     }
-    try {
-      switch (state) {
-        case CREATE_TABLE_POST_OPERATION:
-          break;
-        case CREATE_TABLE_UPDATE_DESC_CACHE:
-          DeleteTableProcedure.deleteTableDescriptorCache(env, getTableName());
-          break;
-        case CREATE_TABLE_ASSIGN_REGIONS:
-          DeleteTableProcedure.deleteAssignmentState(env, getTableName());
-          break;
-        case CREATE_TABLE_ADD_TO_META:
-          DeleteTableProcedure.deleteFromMeta(env, getTableName(), newRegions);
-          break;
-        case CREATE_TABLE_WRITE_FS_LAYOUT:
-          DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, false);
-          break;
-        case CREATE_TABLE_PRE_OPERATION:
-          DeleteTableProcedure.deleteTableStates(env, getTableName());
-          // TODO-MAYBE: call the deleteTable coprocessor event?
-          ProcedurePrepareLatch.releaseLatch(syncLatch, this);
-          break;
-        default:
-          throw new UnsupportedOperationException("unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed rollback attempt step=" + state + " table=" + getTableName(), e);
-      throw e;
+
+    // The procedure doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final CreateTableState state) {
+    switch (state) {
+      case CREATE_TABLE_PRE_OPERATION:
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -197,15 +185,6 @@ public class CreateTableProcedure
   }
 
   @Override
-  protected void setNextState(final CreateTableState state) {
-    if (aborted.get()) {
-      setAbortFailure("create-table", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
   public TableName getTableName() {
     return hTableDescriptor.getTableName();
   }
@@ -213,12 +192,6 @@ public class CreateTableProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.CREATE;
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

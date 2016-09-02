@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,8 +64,6 @@ public class RestoreSnapshotProcedure
     extends StateMachineProcedure<MasterProcedureEnv, RestoreSnapshotState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private HTableDescriptor modifiedHTableDescriptor;
   private List<HRegionInfo> regionsToRestore = null;
@@ -155,8 +152,12 @@ public class RestoreSnapshotProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.error("Error trying to restore snapshot=" + getTableName() + " state=" + state, e);
-      setFailure("master-restore-snapshot", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-restore-snapshot", e);
+      } else {
+        LOG.warn("Retriable error trying to restore snapshot=" + snapshot.getName() +
+          " to table=" + getTableName() + " (in state=" + state + ")", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -164,10 +165,6 @@ public class RestoreSnapshotProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final RestoreSnapshotState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
-    }
-
     if (state == RestoreSnapshotState.RESTORE_SNAPSHOT_PRE_OPERATION) {
       // nothing to rollback
       return;
@@ -175,6 +172,16 @@ public class RestoreSnapshotProcedure
 
     // The restore snapshot doesn't have a rollback. The execution will succeed, at some point.
     throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final RestoreSnapshotState state) {
+    switch (state) {
+      case RESTORE_SNAPSHOT_PRE_OPERATION:
+        return true;
+      default:
+        return false;
+    }
   }
 
   @Override
@@ -193,15 +200,6 @@ public class RestoreSnapshotProcedure
   }
 
   @Override
-  protected void setNextState(final RestoreSnapshotState state) {
-    if (aborted.get()) {
-      setAbortFailure("create-table", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
   public TableName getTableName() {
     return modifiedHTableDescriptor.getTableName();
   }
@@ -213,8 +211,8 @@ public class RestoreSnapshotProcedure
 
   @Override
   public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
+    // TODO: We may be able to abort if the procedure is not started yet.
+    return false;
   }
 
   @Override

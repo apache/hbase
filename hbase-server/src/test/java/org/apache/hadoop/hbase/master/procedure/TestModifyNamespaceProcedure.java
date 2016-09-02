@@ -230,11 +230,7 @@ public class TestModifyNamespaceProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyNamespaceState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyNamespaceState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     // Validate
@@ -264,13 +260,8 @@ public class TestModifyNamespaceProcedure {
       nonceGroup,
       nonce);
 
-    // Failing in the middle of proc
-    int numberOfSteps = ModifyNamespaceState.values().length - 2;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyNamespaceState.values());
+    int numberOfSteps = 0; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate
     NamespaceDescriptor currentNsDescriptor =

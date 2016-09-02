@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,8 +47,6 @@ public class AddColumnFamilyProcedure
     extends StateMachineProcedure<MasterProcedureEnv, AddColumnFamilyState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(AddColumnFamilyProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
@@ -118,10 +115,12 @@ public class AddColumnFamilyProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Error trying to add the column family" + getColumnFamilyName() + " to the table "
-          + tableName + " (in state=" + state + ")", e);
-
-      setFailure("master-add-columnfamily", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-add-columnfamily", e);
+      } else {
+        LOG.warn("Retriable error trying to add the column family " + getColumnFamilyName() +
+          " to the table " + tableName + " (in state=" + state + ")", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -129,33 +128,26 @@ public class AddColumnFamilyProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final AddColumnFamilyState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == AddColumnFamilyState.ADD_COLUMN_FAMILY_PREPARE ||
+        state == AddColumnFamilyState.ADD_COLUMN_FAMILY_PRE_OPERATION) {
+      // nothing to rollback, pre is just table-state checks.
+      // We can fail if the table does not exist or is not disabled.
+      // TODO: coprocessor rollback semantic is still undefined.
+      return;
     }
-    try {
-      switch (state) {
-      case ADD_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-        break; // Nothing to undo.
-      case ADD_COLUMN_FAMILY_POST_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
-      case ADD_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR:
-        restoreTableDescriptor(env);
-        break;
-      case ADD_COLUMN_FAMILY_PRE_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
+
+    // The procedure doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final AddColumnFamilyState state) {
+    switch (state) {
       case ADD_COLUMN_FAMILY_PREPARE:
-        break; // nothing to do
+      case ADD_COLUMN_FAMILY_PRE_OPERATION:
+        return true;
       default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed rollback attempt step " + state + " for adding the column family"
-          + getColumnFamilyName() + " to the table " + tableName, e);
-      throw e;
+        return false;
     }
   }
 
@@ -177,21 +169,6 @@ public class AddColumnFamilyProcedure
   @Override
   protected AddColumnFamilyState getInitialState() {
     return AddColumnFamilyState.ADD_COLUMN_FAMILY_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(AddColumnFamilyState state) {
-    if (aborted.get()) {
-      setAbortFailure("add-columnfamily", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

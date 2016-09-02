@@ -142,7 +142,11 @@ public class TruncateTableProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (HBaseException|IOException e) {
-      LOG.warn("Retriable error trying to truncate table=" + getTableName() + " state=" + state, e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-truncate-table", e);
+      } else {
+        LOG.warn("Retriable error trying to truncate table=" + getTableName() + " state=" + state, e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -152,6 +156,7 @@ public class TruncateTableProcedure
     if (state == TruncateTableState.TRUNCATE_TABLE_PRE_OPERATION) {
       // nothing to rollback, pre-truncate is just table-state checks.
       // We can fail if the table does not exist or is not disabled.
+      // TODO: coprocessor rollback semantic is still undefined.
       return;
     }
 
@@ -162,6 +167,16 @@ public class TruncateTableProcedure
   @Override
   protected void completionCleanup(final MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final TruncateTableState state) {
+    switch (state) {
+      case TRUNCATE_TABLE_PRE_OPERATION:
+        return true;
+      default:
+        return false;
+    }
   }
 
   @Override

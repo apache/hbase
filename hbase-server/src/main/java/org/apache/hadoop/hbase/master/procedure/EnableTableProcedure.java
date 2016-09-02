@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -59,8 +58,6 @@ public class EnableTableProcedure
     extends StateMachineProcedure<MasterProcedureEnv, EnableTableState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(EnableTableProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   // This is for back compatible with 1.0 asynchronized operations.
   private final ProcedurePrepareLatch syncLatch;
@@ -150,8 +147,12 @@ public class EnableTableProcedure
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.error("Error trying to enable table=" + tableName + " state=" + state, e);
-      setFailure("master-enable-table", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-enable-table", e);
+      } else {
+        LOG.warn("Retriable error trying to enable table=" + tableName +
+          " (in state=" + state + ")", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -159,39 +160,30 @@ public class EnableTableProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final EnableTableState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
-    }
-    try {
-      switch (state) {
-      case ENABLE_TABLE_POST_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo (eg. DisableTableProcedure.preDisable())?
-        break;
-      case ENABLE_TABLE_SET_ENABLED_TABLE_STATE:
-        DisableTableProcedure.setTableStateToDisabling(env, tableName);
-        break;
-      case ENABLE_TABLE_MARK_REGIONS_ONLINE:
-        markRegionsOfflineDuringRecovery(env);
-        break;
-      case ENABLE_TABLE_SET_ENABLING_TABLE_STATE:
-        DisableTableProcedure.setTableStateToDisabled(env, tableName);
-        break;
+    // nothing to rollback, prepare-disable is just table-state checks.
+    // We can fail if the table does not exist or is not disabled.
+    switch (state) {
       case ENABLE_TABLE_PRE_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo (eg. DisableTableProcedure.postDisable())?
-        break;
+        return;
       case ENABLE_TABLE_PREPARE:
-        // Nothing to undo for this state.
-        // We do need to count down the latch count so that we don't stuck.
         ProcedurePrepareLatch.releaseLatch(syncLatch, this);
-        break;
+        return;
       default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed enable table rollback attempt step=" + state + " table=" + tableName, e);
-      throw e;
+        break;
+    }
+
+    // The delete doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final EnableTableState state) {
+    switch (state) {
+      case ENABLE_TABLE_PREPARE:
+      case ENABLE_TABLE_PRE_OPERATION:
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -208,21 +200,6 @@ public class EnableTableProcedure
   @Override
   protected EnableTableState getInitialState() {
     return EnableTableState.ENABLE_TABLE_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(final EnableTableState state) {
-    if (aborted.get()) {
-      setAbortFailure("Enable-table", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

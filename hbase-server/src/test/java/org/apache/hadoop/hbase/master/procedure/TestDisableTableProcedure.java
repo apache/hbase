@@ -196,11 +196,7 @@ public class TestDisableTableProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DisableTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      DisableTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
     MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
       tableName);
   }

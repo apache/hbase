@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,8 +48,6 @@ public class ModifyColumnFamilyProcedure
     extends StateMachineProcedure<MasterProcedureEnv, ModifyColumnFamilyState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(ModifyColumnFamilyProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
@@ -116,10 +113,12 @@ public class ModifyColumnFamilyProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Error trying to modify the column family " + getColumnFamilyName()
-          + " of the table " + tableName + "(in state=" + state + ")", e);
-
-      setFailure("master-modify-columnfamily", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-modify-columnfamily", e);
+      } else {
+        LOG.warn("Retriable error trying to disable table=" + tableName +
+          " (in state=" + state + ")", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -127,33 +126,25 @@ public class ModifyColumnFamilyProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final ModifyColumnFamilyState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == ModifyColumnFamilyState.MODIFY_COLUMN_FAMILY_PREPARE ||
+        state == ModifyColumnFamilyState.MODIFY_COLUMN_FAMILY_PRE_OPERATION) {
+      // nothing to rollback, pre-modify is just checks.
+      // TODO: coprocessor rollback semantic is still undefined.
+      return;
     }
-    try {
-      switch (state) {
-      case MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-        break; // Nothing to undo.
-      case MODIFY_COLUMN_FAMILY_POST_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
-      case MODIFY_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR:
-        restoreTableDescriptor(env);
-        break;
+
+    // The delete doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final ModifyColumnFamilyState state) {
+    switch (state) {
       case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
       case MODIFY_COLUMN_FAMILY_PREPARE:
-        break; // nothing to do
+        return true;
       default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed rollback attempt step " + state + " for adding the column family"
-          + getColumnFamilyName() + " to the table " + tableName, e);
-      throw e;
+        return false;
     }
   }
 
@@ -175,21 +166,6 @@ public class ModifyColumnFamilyProcedure
   @Override
   protected ModifyColumnFamilyState getInitialState() {
     return ModifyColumnFamilyState.MODIFY_COLUMN_FAMILY_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(ModifyColumnFamilyState state) {
-    if (aborted.get()) {
-      setAbortFailure("modify-columnfamily", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

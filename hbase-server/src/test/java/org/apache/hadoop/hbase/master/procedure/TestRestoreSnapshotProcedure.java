@@ -261,11 +261,7 @@ public class TestRestoreSnapshotProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = RestoreSnapshotState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      RestoreSnapshotState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     resetProcExecutorTestingKillFlag();
     validateSnapshotRestore();

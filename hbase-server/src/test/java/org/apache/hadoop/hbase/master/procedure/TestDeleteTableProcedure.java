@@ -229,8 +229,7 @@ public class TestDeleteTableProcedure {
     // Restart the executor and execute the step twice
     // NOTE: the 6 (number of DeleteTableState steps) is hardcoded,
     //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec, procId, 6, DeleteTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 6);
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), tableName);

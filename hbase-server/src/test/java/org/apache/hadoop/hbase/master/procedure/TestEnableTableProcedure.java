@@ -185,11 +185,7 @@ public class TestEnableTableProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = EnableTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      EnableTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
     MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
       tableName);
   }
@@ -211,12 +207,8 @@ public class TestEnableTableProcedure {
     long procId = procExec.submitProcedure(
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
 
-    int numberOfSteps = EnableTableState.values().length - 2; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      EnableTableState.values());
+    int numberOfSteps = 1; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
     MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
       tableName);
   }

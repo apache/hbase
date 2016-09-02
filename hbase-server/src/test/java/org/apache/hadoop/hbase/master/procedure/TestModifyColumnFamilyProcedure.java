@@ -178,11 +178,7 @@ public class TestModifyColumnFamilyProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyColumnFamilyState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf3, columnDescriptor);
@@ -212,8 +208,7 @@ public class TestModifyColumnFamilyProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
-      ModifyColumnFamilyState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf4, columnDescriptor);
@@ -241,13 +236,8 @@ public class TestModifyColumnFamilyProcedure {
       nonceGroup,
       nonce);
 
-    // Failing in the middle of proc
-    int numberOfSteps = ModifyColumnFamilyState.values().length - 2;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyColumnFamilyState.values());
+    int numberOfSteps = 1; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

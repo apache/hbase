@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,8 +70,6 @@ public class CloneSnapshotProcedure
     extends StateMachineProcedure<MasterProcedureEnv, CloneSnapshotState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(CloneSnapshotProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private User user;
   private HTableDescriptor hTableDescriptor;
@@ -162,8 +159,12 @@ public class CloneSnapshotProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.error("Error trying to create table=" + getTableName() + " state=" + state, e);
-      setFailure("master-create-table", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-clone-snapshot", e);
+      } else {
+        LOG.warn("Retriable error trying to clone snapshot=" + snapshot.getName() +
+          " to table=" + getTableName() + " state=" + state, e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -171,38 +172,23 @@ public class CloneSnapshotProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final CloneSnapshotState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == CloneSnapshotState.CLONE_SNAPSHOT_PRE_OPERATION) {
+      DeleteTableProcedure.deleteTableStates(env, getTableName());
+      // TODO-MAYBE: call the deleteTable coprocessor event?
+      return;
     }
-    try {
-      switch (state) {
-        case CLONE_SNAPSHOT_POST_OPERATION:
-          // TODO-MAYBE: call the deleteTable coprocessor event?
-          break;
-        case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
-          DeleteTableProcedure.deleteTableDescriptorCache(env, getTableName());
-          break;
-        case CLONE_SNAPSHOT_ASSIGN_REGIONS:
-          DeleteTableProcedure.deleteAssignmentState(env, getTableName());
-          break;
-        case CLONE_SNAPSHOT_ADD_TO_META:
-          DeleteTableProcedure.deleteFromMeta(env, getTableName(), newRegions);
-          break;
-        case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
-          DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, false);
-          break;
-        case CLONE_SNAPSHOT_PRE_OPERATION:
-          DeleteTableProcedure.deleteTableStates(env, getTableName());
-          // TODO-MAYBE: call the deleteTable coprocessor event?
-          break;
-        default:
-          throw new UnsupportedOperationException("unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed rollback attempt step=" + state + " table=" + getTableName(), e);
-      throw e;
+
+    // The procedure doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final CloneSnapshotState state) {
+    switch (state) {
+      case CLONE_SNAPSHOT_PRE_OPERATION:
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -222,15 +208,6 @@ public class CloneSnapshotProcedure
   }
 
   @Override
-  protected void setNextState(final CloneSnapshotState state) {
-    if (aborted.get()) {
-      setAbortFailure("clone-snapshot", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
   public TableName getTableName() {
     return hTableDescriptor.getTableName();
   }
@@ -238,12 +215,6 @@ public class CloneSnapshotProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.CREATE; // Clone is creating a table
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

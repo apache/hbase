@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,8 +49,6 @@ public class DeleteColumnFamilyProcedure
     extends StateMachineProcedure<MasterProcedureEnv, DeleteColumnFamilyState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(DeleteColumnFamilyProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private HTableDescriptor unmodifiedHTableDescriptor;
   private TableName tableName;
@@ -125,14 +122,11 @@ public class DeleteColumnFamilyProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      if (!isRollbackSupported(state)) {
-        // We reach a state that cannot be rolled back. We just need to keep retry.
-        LOG.warn("Error trying to delete the column family " + getColumnFamilyName()
-          + " from table " + tableName + "(in state=" + state + ")", e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-delete-columnfamily", e);
       } else {
-        LOG.error("Error trying to delete the column family " + getColumnFamilyName()
-          + " from table " + tableName + "(in state=" + state + ")", e);
-        setFailure("master-delete-column-family", e);
+        LOG.warn("Retriable error trying to delete the column family " + getColumnFamilyName() +
+          " from table " + tableName + " (in state=" + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -141,39 +135,26 @@ public class DeleteColumnFamilyProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DeleteColumnFamilyState state)
       throws IOException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " rollback state=" + state);
+    if (state == DeleteColumnFamilyState.DELETE_COLUMN_FAMILY_PREPARE ||
+        state == DeleteColumnFamilyState.DELETE_COLUMN_FAMILY_PRE_OPERATION) {
+      // nothing to rollback, pre is just table-state checks.
+      // We can fail if the table does not exist or is not disabled.
+      // TODO: coprocessor rollback semantic is still undefined.
+      return;
     }
-    try {
-      switch (state) {
-      case DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-        break; // Nothing to undo.
-      case DELETE_COLUMN_FAMILY_POST_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
-      case DELETE_COLUMN_FAMILY_DELETE_FS_LAYOUT:
-        // Once we reach to this state - we could NOT rollback - as it is tricky to undelete
-        // the deleted files. We are not suppose to reach here, throw exception so that we know
-        // there is a code bug to investigate.
-        throw new UnsupportedOperationException(this + " rollback of state=" + state
-            + " is unsupported.");
-      case DELETE_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR:
-        restoreTableDescriptor(env);
-        break;
+
+    // The procedure doesn't have a rollback. The execution will succeed, at some point.
+    throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final DeleteColumnFamilyState state) {
+    switch (state) {
       case DELETE_COLUMN_FAMILY_PRE_OPERATION:
-        // TODO-MAYBE: call the coprocessor event to undo?
-        break;
       case DELETE_COLUMN_FAMILY_PREPARE:
-        break; // nothing to do
+        return true;
       default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      }
-    } catch (IOException e) {
-      // This will be retried. Unless there is a bug in the code,
-      // this should be just a "temporary error" (e.g. network down)
-      LOG.warn("Failed rollback attempt step " + state + " for deleting the column family"
-          + getColumnFamilyName() + " to the table " + tableName, e);
-      throw e;
+        return false;
     }
   }
 
@@ -195,21 +176,6 @@ public class DeleteColumnFamilyProcedure
   @Override
   protected DeleteColumnFamilyState getInitialState() {
     return DeleteColumnFamilyState.DELETE_COLUMN_FAMILY_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(DeleteColumnFamilyState state) {
-    if (aborted.get() && isRollbackSupported(state)) {
-      setAbortFailure("delete-columnfamily", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override
@@ -427,22 +393,6 @@ public class DeleteColumnFamilyProcedure
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     }
-  }
-
-  /*
-   * Check whether we are in the state that can be rollback
-   */
-  private boolean isRollbackSupported(final DeleteColumnFamilyState state) {
-    switch (state) {
-    case DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-    case DELETE_COLUMN_FAMILY_POST_OPERATION:
-    case DELETE_COLUMN_FAMILY_DELETE_FS_LAYOUT:
-        // It is not safe to rollback if we reach to these states.
-        return false;
-      default:
-        break;
-    }
-    return true;
   }
 
   private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {

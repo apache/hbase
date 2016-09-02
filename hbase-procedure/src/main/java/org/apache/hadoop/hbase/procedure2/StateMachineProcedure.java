@@ -21,9 +21,12 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData;
@@ -43,6 +46,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachinePr
 @InterfaceStability.Evolving
 public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
+  private static final Log LOG = LogFactory.getLog(StateMachineProcedure.class);
+
+  private final AtomicBoolean aborted = new AtomicBoolean(false);
+
   private Flow stateFlow = Flow.HAS_MORE_STATE;
   private int stateCount = 0;
   private int[] states = null;
@@ -96,6 +103,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * @param state the state enum object
    */
   protected void setNextState(final TState state) {
+    if (aborted.get() && isRollbackSupported(getCurrentState())) {
+      setAbortFailure(getClass().getSimpleName(), "abort requested");
+    }
     setNextState(getStateId(state));
   }
 
@@ -129,7 +139,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
-      if (!hasMoreState()) return null;
+      if (!hasMoreState() || isFailed()) return null;
 
       TState state = getCurrentState();
       if (stateCount == 0) {
@@ -160,6 +170,25 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     } finally {
       updateTimestamp();
     }
+  }
+
+  @Override
+  protected boolean abort(final TEnvironment env) {
+    final TState state = getCurrentState();
+    if (isRollbackSupported(state)) {
+      LOG.debug("abort requested for " + getClass().getSimpleName() + " state=" + state);
+      aborted.set(true);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Used by the default implementation of abort() to know if the current state can be aborted
+   * and rollback can be triggered.
+   */
+  protected boolean isRollbackSupported(final TState state) {
+    return false;
   }
 
   @Override

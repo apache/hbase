@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DispatchMergingRegionsState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -245,11 +243,7 @@ public class TestDispatchMergingRegionsProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DispatchMergingRegionsState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      DispatchMergingRegionsState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     assertEquals(2, admin.getTableRegions(tableName).size());
@@ -283,11 +277,7 @@ public class TestDispatchMergingRegionsProcedure {
         procExec.getEnvironment(), tableName, regionsToMerge, true));
 
     int numberOfSteps = DispatchMergingRegionsState.values().length - 3;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      DispatchMergingRegionsState.values());
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

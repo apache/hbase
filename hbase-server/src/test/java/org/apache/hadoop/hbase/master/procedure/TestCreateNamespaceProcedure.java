@@ -239,11 +239,7 @@ public class TestCreateNamespaceProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = CreateNamespaceState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      CreateNamespaceState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate the creation of namespace
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -265,12 +261,8 @@ public class TestCreateNamespaceProcedure {
       nonceGroup,
       nonce);
 
-    int numberOfSteps = CreateNamespaceState.values().length - 2; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      CreateNamespaceState.values());
+    int numberOfSteps = 0; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate the non-existence of namespace
     try {

@@ -228,8 +228,7 @@ public class TestAddColumnFamilyProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = AddColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
-      AddColumnFamilyState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyAddition(UTIL.getHBaseCluster().getMaster(),
       tableName, cf4);
@@ -255,8 +254,7 @@ public class TestAddColumnFamilyProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = AddColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
-      AddColumnFamilyState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyAddition(UTIL.getHBaseCluster().getMaster(),
       tableName, cf5);
@@ -280,9 +278,8 @@ public class TestAddColumnFamilyProcedure {
       nonceGroup,
       nonce);
 
-    int numberOfSteps = AddColumnFamilyState.values().length - 2; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
-      AddColumnFamilyState.values());
+    int numberOfSteps = 1; // failing at "pre operations"
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
       tableName, cf6);

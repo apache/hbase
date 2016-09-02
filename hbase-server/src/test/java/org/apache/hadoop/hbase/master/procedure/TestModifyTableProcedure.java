@@ -256,11 +256,7 @@ public class TestModifyTableProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -298,8 +294,7 @@ public class TestModifyTableProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
-      ModifyTableState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -334,13 +329,8 @@ public class TestModifyTableProcedure {
     long procId = procExec.submitProcedure(
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
-    // Restart the executor and rollback the step twice
-    int numberOfSteps = ModifyTableState.values().length - 4; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyTableState.values());
+    int numberOfSteps = 1; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // cf2 should not be present
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
@@ -372,56 +362,12 @@ public class TestModifyTableProcedure {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and rollback the step twice
-    int numberOfSteps = ModifyTableState.values().length - 4; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyTableState.values());
+    int numberOfSteps = 1; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // cf2 should not be present
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1");
-  }
-
-  @Test(timeout = 60000)
-  public void testRollbackAndDoubleExecutionAfterPONR() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecutionAfterPONR");
-    final String familyToAddName = "cf2";
-    final String familyToRemove = "cf1";
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, familyToRemove);
-    UTIL.getHBaseAdmin().disableTable(tableName);
-
-    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
-    htd.setCompactionEnabled(!htd.isCompactionEnabled());
-    htd.addFamily(new HColumnDescriptor(familyToAddName));
-    htd.removeFamily(familyToRemove.getBytes());
-    htd.setRegionReplication(3);
-
-    // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
-
-    // Failing after MODIFY_TABLE_DELETE_FS_LAYOUT we should not trigger the rollback.
-    // NOTE: the 5 (number of MODIFY_TABLE_DELETE_FS_LAYOUT + 1 step) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 5;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecutionAfterPONR(
-      procExec,
-      procId,
-      numberOfSteps,
-      ModifyTableState.values());
-
-    // "cf2" should be added and "cf1" should be removed
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
-      tableName, regions, false, familyToAddName);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

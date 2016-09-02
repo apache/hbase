@@ -215,11 +215,7 @@ public class TestDeleteNamespaceProcedure {
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DeleteNamespaceState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      DeleteNamespaceState.values());
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate the deletion of namespace
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -237,17 +233,14 @@ public class TestDeleteNamespaceProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the DeleteNamespace procedure && kill the executor
+    LOG.info("SUBMIT DELTET");
     long procId = procExec.submitProcedure(
       new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
       nonceGroup,
       nonce);
 
-    int numberOfSteps = DeleteNamespaceState.values().length - 2; // failing in the middle of proc
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps,
-      DeleteNamespaceState.values());
+    int numberOfSteps = 0; // failing at pre operation
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate the namespace still exists
     NamespaceDescriptor createdNsDescriptor=

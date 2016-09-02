@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,8 +55,6 @@ public class DisableTableProcedure
     extends StateMachineProcedure<MasterProcedureEnv, DisableTableState>
     implements TableProcedureInterface {
   private static final Log LOG = LogFactory.getLog(DisableTableProcedure.class);
-
-  private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   // This is for back compatible with 1.0 asynchronized operations.
   private final ProcedurePrepareLatch syncLatch;
@@ -157,7 +154,12 @@ public class DisableTableProcedure
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Retriable error trying to disable table=" + tableName + " state=" + state, e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-disable-table", e);
+      } else {
+        LOG.warn("Retriable error trying to disable table=" + tableName +
+          " (in state=" + state + ")", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -165,15 +167,31 @@ public class DisableTableProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DisableTableState state)
       throws IOException {
-    if (state == DisableTableState.DISABLE_TABLE_PREPARE) {
-      // nothing to rollback, prepare-disable is just table-state checks.
-      // We can fail if the table does not exist or is not disabled.
-      ProcedurePrepareLatch.releaseLatch(syncLatch, this);
-      return;
+    // nothing to rollback, prepare-disable is just table-state checks.
+    // We can fail if the table does not exist or is not disabled.
+    switch (state) {
+      case DISABLE_TABLE_PRE_OPERATION:
+        return;
+      case DISABLE_TABLE_PREPARE:
+        ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+        return;
+      default:
+        break;
     }
 
     // The delete doesn't have a rollback. The execution will succeed, at some point.
     throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final DisableTableState state) {
+    switch (state) {
+      case DISABLE_TABLE_PREPARE:
+      case DISABLE_TABLE_PRE_OPERATION:
+        return true;
+      default:
+        return false;
+    }
   }
 
   @Override
@@ -189,21 +207,6 @@ public class DisableTableProcedure
   @Override
   protected DisableTableState getInitialState() {
     return DisableTableState.DISABLE_TABLE_PREPARE;
-  }
-
-  @Override
-  protected void setNextState(final DisableTableState state) {
-    if (aborted.get()) {
-      setAbortFailure("disable-table", "abort requested");
-    } else {
-      super.setNextState(state);
-    }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
-    return true;
   }
 
   @Override

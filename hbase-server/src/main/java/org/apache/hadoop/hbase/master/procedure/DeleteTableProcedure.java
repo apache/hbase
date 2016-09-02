@@ -148,7 +148,11 @@ public class DeleteTableProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (HBaseException|IOException e) {
-      LOG.warn("Retriable error trying to delete table=" + getTableName() + " state=" + state, e);
+      if (isRollbackSupported(state)) {
+        setFailure("master-delete-table", e);
+      } else {
+        LOG.warn("Retriable error trying to delete table=" + getTableName() + " state=" + state, e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -158,12 +162,23 @@ public class DeleteTableProcedure
     if (state == DeleteTableState.DELETE_TABLE_PRE_OPERATION) {
       // nothing to rollback, pre-delete is just table-state checks.
       // We can fail if the table does not exist or is not disabled.
+      // TODO: coprocessor rollback semantic is still undefined.
       ProcedurePrepareLatch.releaseLatch(syncLatch, this);
       return;
     }
 
     // The delete doesn't have a rollback. The execution will succeed, at some point.
     throw new UnsupportedOperationException("unhandled state=" + state);
+  }
+
+  @Override
+  protected boolean isRollbackSupported(final DeleteTableState state) {
+    switch (state) {
+      case DELETE_TABLE_PRE_OPERATION:
+        return true;
+      default:
+        return false;
+    }
   }
 
   @Override
@@ -189,12 +204,6 @@ public class DeleteTableProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.DELETE;
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    // TODO: We may be able to abort if the procedure is not started yet.
-    return false;
   }
 
   @Override
