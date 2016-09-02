@@ -1,5 +1,43 @@
 HBase Change Log
 
+Release 0.98.22 - 9/9/2016
+
+** Sub-task
+    * [HBASE-16318] - fail build if license isn't in whitelist
+
+** Bug
+    * [HBASE-15635] - Mean age of Blocks in cache (seconds) on webUI should be greater than zero
+    * [HBASE-16315] - RegionSizeCalculator prints region names as binary without escapes
+    * [HBASE-16360] - TableMapReduceUtil addHBaseDependencyJars has the wrong class name for PrefixTreeCodec
+    * [HBASE-16375] - Mapreduce mini cluster using HBaseTestingUtility not setting correct resourcemanager and jobhistory webapp address of MapReduceTestingShim  
+    * [HBASE-16377] - ServerName check is ineffective in region_mover.rb
+    * [HBASE-16402] - RegionServerCoprocessorHost should be initialized before RpcServer starts
+    * [HBASE-16464] - archive folder grows bigger and bigger due to corrupt snapshot under tmp dir
+    * [HBASE-16471] - Region Server metrics context will be wrong when machine hostname contain "master" word
+    * [HBASE-16495] - When accessed via Thrift, all column families have timeToLive equal to -1
+    * [HBASE-16512] - when locate meta region, we should respect the param "useCache" passed in on 0.98
+    * [HBASE-16527] - IOExceptions from DFS client still can cause CatalogJanitor to delete referenced files
+    * [HBASE-16535] - Use regex to exclude generated classes for findbugs
+    * [HBASE-16538] - Version mismatch in HBaseConfiguration.checkDefaultsVersion
+    * [HBASE-16552] - MiniHBaseCluster#getServerWith() does not ignore stopped RSs
+
+** Improvement
+    * [HBASE-16299] - Update REST API scanner with ability to do reverse scan
+    * [HBASE-16379] - [replication] Minor improvement to replication/copy_tables_desc.rb
+    * [HBASE-16385] - Have hbase-rest pull hbase.rest.port from Constants.java
+    * [HBASE-16399] - Provide an API to get list of failed regions and servername in Canary
+    * [HBASE-16448] - Custom metrics for custom replication endpoints
+    * [HBASE-16502] - Reduce garbage in BufferedDataBlockEncoder
+
+** Task
+    * [HBASE-16340] - ensure no Xerces jars included
+    * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
+    * [HBASE-16518] - Remove old .arcconfig file
+
+** Test
+    * [HBASE-16400] - TestHBaseFsck fails on HBase-0.98-on-Hadoop-1.1 build
+
+
 Release 0.98.21 - 8/15/2016
 
 ** Sub-task
