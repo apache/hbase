@@ -145,7 +145,7 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
     try {
       setupProcedureStore();
       ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-      Future<Integer>[] futures = (Future<Integer>[]) new Object[numThreads];
+      Future<?>[] futures = new Future<?>[numThreads];
       // Start worker threads.
       long start = System.currentTimeMillis();
       for (int i = 0; i < numThreads; i++) {
@@ -153,7 +153,7 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
       }
       boolean failure = false;
       try {
-        for (Future<Integer> future : futures) {
+        for (Future<?> future : futures) {
           long timeout = start + WORKER_THREADS_TIMEOUT_SEC * 1000 - System.currentTimeMillis();
           failure |= (future.get(timeout, TimeUnit.MILLISECONDS).equals(EXIT_FAILURE));
         }
