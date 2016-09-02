@@ -40,6 +40,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -113,11 +114,15 @@ public final class Canary implements Tool {
     public long incReadFailureCount();
     public void publishReadFailure(HRegionInfo region, Exception e);
     public void publishReadFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
+    public void updateReadFailedHostList(HRegionInfo region, String serverName);
+    public Map<String,String> getReadFailures();
     public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
     public long getWriteFailureCount();
     public void publishWriteFailure(HRegionInfo region, Exception e);
     public void publishWriteFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
     public void publishWriteTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
+    public void updateWriteFailedHostList(HRegionInfo region, String serverName);
+    public Map<String,String> getWriteFailures();
   }
   // new extended sink for output regionserver mode info
   // do not change the Sink interface directly due to maintaining the API
@@ -131,6 +136,9 @@ public final class Canary implements Tool {
   public static class StdOutSink implements Sink {
     private AtomicLong readFailureCount = new AtomicLong(0),
         writeFailureCount = new AtomicLong(0);
+
+    private Map<String, String> readFailures = new ConcurrentHashMap<String, String>();
+    private Map<String, String> writeFailures = new ConcurrentHashMap<String, String>();
 
     @Override
     public long getReadFailureCount() {
@@ -156,9 +164,24 @@ public final class Canary implements Tool {
     }
 
     @Override
+    public void updateReadFailedHostList(HRegionInfo region, String serverName) {
+      readFailures.put(region.getRegionNameAsString(), serverName);
+    }
+
+    @Override
     public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime) {
       LOG.info(String.format("read from region %s column family %s in %dms",
-               region.getRegionNameAsString(), column.getNameAsString(), msTime));
+        region.getRegionNameAsString(), column.getNameAsString(), msTime));
+    }
+
+    @Override
+    public Map<String, String> getReadFailures() {
+      return readFailures;
+    }
+
+    @Override
+    public Map<String, String> getWriteFailures() {
+      return writeFailures;
     }
 
     @Override
@@ -184,6 +207,12 @@ public final class Canary implements Tool {
       LOG.info(String.format("write to region %s column family %s in %dms",
         region.getRegionNameAsString(), column.getNameAsString(), msTime));
     }
+
+    @Override
+    public void updateWriteFailedHostList(HRegionInfo region, String serverName) {
+      writeFailures.put(region.getRegionNameAsString(), serverName);
+    }
+
   }
   // a ExtendedSink implementation
   public static class RegionServerStdOutSink extends StdOutSink implements ExtendedSink {
@@ -265,14 +294,16 @@ public final class Canary implements Tool {
     private Sink sink;
     private TaskType taskType;
     private boolean rawScanEnabled;
+    private ServerName serverName;
 
-    RegionTask(HConnection connection, HRegionInfo region, Sink sink, TaskType taskType,
-        boolean rawScanEnabled) {
+    RegionTask(HConnection connection, HRegionInfo region, ServerName serverName, Sink sink,
+        TaskType taskType, boolean rawScanEnabled) {
       this.connection = connection;
       this.region = region;
       this.sink = sink;
       this.taskType = taskType;
       this.rawScanEnabled = rawScanEnabled;
+      this.serverName = serverName;
     }
 
     @Override
@@ -356,6 +387,7 @@ public final class Canary implements Tool {
           sink.publishReadTiming(region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(region, column, e);
+          sink.updateReadFailedHostList(region, serverName.getHostname());
         } finally {
           if (rs != null) {
             rs.close();
@@ -412,6 +444,7 @@ public final class Canary implements Tool {
         table.close();
       } catch (IOException e) {
         sink.publishWriteFailure(region, e);
+        sink.updateWriteFailedHostList(region, serverName.getHostname());
       }
       return null;
     }
@@ -483,9 +516,11 @@ public final class Canary implements Tool {
         LOG.debug("The targeted table was disabled.  Assuming success.");
       } catch (DoNotRetryIOException dnrioe) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
+        sink.updateReadFailedHostList(region, serverName);
         LOG.error(dnrioe);
       } catch (IOException e) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
+        sink.updateReadFailedHostList(region, serverName);
         LOG.error(e);
       } finally {
         if (table != null) {
@@ -718,6 +753,14 @@ public final class Canary implements Tool {
     }
 
     return monitor.errorCode;
+  }
+
+  public Map<String, String> getReadFailures()  {
+    return sink.getReadFailures();
+  }
+
+  public Map<String, String> getWriteFailures()  {
+    return sink.getWriteFailures();
   }
 
   private void printUsageAndExit() {
@@ -1103,8 +1146,8 @@ public final class Canary implements Tool {
     }
     List<RegionTask> tasks = new ArrayList<RegionTask>();
     try {
-      for (HRegionInfo region : ((HTable)table).getRegionLocations().keySet()) {
-        tasks.add(new RegionTask(connection, region, sink, taskType, rawScanEnabled));
+      for (Map.Entry<HRegionInfo, ServerName> region : ((HTable)table).getRegionLocations().entrySet()) {
+        tasks.add(new RegionTask(connection, region.getKey(), region.getValue(), sink, taskType, rawScanEnabled));
       }
     } finally {
       table.close();
