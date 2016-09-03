@@ -243,7 +243,7 @@ public class HRegionFileSystem {
     FileStatus[] files = FSUtils.listStatus(fs, getStoreDir(familyName));
     if (files != null) {
       for(FileStatus stat: files) {
-        if(stat.isDirectory()) {
+        if(stat.isDir()) {
           continue;
         }
         if(StoreFileInfo.isReference(stat.getPath())) {
