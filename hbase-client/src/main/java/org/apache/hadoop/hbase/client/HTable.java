@@ -196,6 +196,12 @@ public class HTable implements Table {
     cleanupConnectionOnClose = false;
     // used from tests, don't trust the connection is real
     this.mutator = new BufferedMutatorImpl(conn, null, null, params);
+    this.readRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
+        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.writeRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
   }
 
   /**
@@ -453,7 +459,7 @@ public class HTable implements Table {
     }
     try {
       Object[] r1 = new Object[gets.size()];
-      batch((List<? extends Row>)gets, r1);
+      batch((List<? extends Row>)gets, r1, readRpcTimeout);
       // Translate.
       Result [] results = new Result[r1.length];
       int i = 0;
@@ -474,6 +480,15 @@ public class HTable implements Table {
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results);
+    ars.waitUntilDone();
+    if (ars.hasError()) {
+      throw ars.getErrors();
+    }
+  }
+
+  public void batch(final List<? extends Row> actions, final Object[] results, int timeout)
+      throws InterruptedException, IOException {
+    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results, null, timeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -529,7 +544,7 @@ public class HTable implements Table {
   throws IOException {
     Object[] results = new Object[deletes.size()];
     try {
-      batch(deletes, results);
+      batch(deletes, results, writeRpcTimeout);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     } finally {
@@ -866,7 +881,7 @@ public class HTable implements Table {
 
     Object[] r1= new Object[exists.size()];
     try {
-      batch(exists, r1);
+      batch(exists, r1, readRpcTimeout);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
@@ -909,17 +924,6 @@ public class HTable implements Table {
     throws IOException, InterruptedException {
     this.batchCallback(list, results, callback);
   }
-
-
-  /**
-   * Parameterized batch processing, allowing varying return types for different
-   * {@link Row} implementations.
-   */
-  public void processBatch(final List<? extends Row> list, final Object[] results)
-    throws IOException, InterruptedException {
-    this.batch(list, results);
-  }
-
 
   @Override
   public void close() throws IOException {
