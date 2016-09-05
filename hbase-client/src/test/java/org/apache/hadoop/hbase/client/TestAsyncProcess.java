@@ -152,7 +152,7 @@ public class TestAsyncProcess {
     public List<AsyncRequestFuture> allReqs = new ArrayList<AsyncRequestFuture>();
     public AtomicInteger callsCt = new AtomicInteger();
     private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-
+    private long previousTimeout = -1;
     @Override
     protected <Res> AsyncRequestFutureImpl<Res> createAsyncRequestFuture(TableName tableName,
         List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
@@ -208,7 +208,13 @@ public class TestAsyncProcess {
       // We use results in tests to check things, so override to always save them.
       return super.submit(DUMMY_TABLE, rows, atLeastOne, callback, true);
     }
-
+    @Override
+    public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
+      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
+      PayloadCarryingServerCallable callable, int curTimeout) {
+      previousTimeout = curTimeout;
+      return super.submitAll(pool, tableName, rows, callback, results, callable, curTimeout);
+    }
 
     @Override
     protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
@@ -1277,7 +1283,7 @@ public class TestAsyncProcess {
 
     Object[] res = new Object[puts.size()];
     try {
-      ht.processBatch(puts, res);
+      ht.batch(puts, res);
       Assert.fail();
     } catch (RetriesExhaustedException expected) {
     }
@@ -1315,6 +1321,46 @@ public class TestAsyncProcess {
     }
     // Checking that the ErrorsServers came into play and didn't make us stop immediately
     Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+  }
+
+  @Test
+  public void testReadAndWriteTimeout() throws IOException {
+    final long readTimeout = 10 * 1000;
+    final long writeTimeout = 20 * 1000;
+    Configuration copyConf = new Configuration(conf);
+    copyConf.setLong(HConstants.HBASE_RPC_READ_TIMEOUT_KEY, readTimeout);
+    copyConf.setLong(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, writeTimeout);
+    ClusterConnection conn = createHConnection();
+    Mockito.when(conn.getConfiguration()).thenReturn(copyConf);
+    BufferedMutatorParams bufferParam = new BufferedMutatorParams(DUMMY_TABLE);
+    try (HTable ht = new HTable(conn, bufferParam)) {
+      MyAsyncProcess ap = new MyAsyncProcess(conn, copyConf, true);
+      ht.multiAp = ap;
+      List<Get> gets = new LinkedList<>();
+      gets.add(new Get(DUMMY_BYTES_1));
+      gets.add(new Get(DUMMY_BYTES_2));
+      try {
+        ht.get(gets);
+      } catch (ClassCastException e) {
+        // No result response on this test.
+      }
+      assertEquals(readTimeout, ap.previousTimeout);
+      ap.previousTimeout = -1;
+
+      try {
+        ht.existsAll(gets);
+      } catch (ClassCastException e) {
+        // No result response on this test.
+      }
+      assertEquals(readTimeout, ap.previousTimeout);
+      ap.previousTimeout = -1;
+
+      List<Delete> deletes = new LinkedList<>();
+      deletes.add(new Delete(DUMMY_BYTES_1));
+      deletes.add(new Delete(DUMMY_BYTES_2));
+      ht.delete(deletes);
+      assertEquals(writeTimeout, ap.previousTimeout);
+    }
   }
 
   @Test

@@ -42,5 +42,5 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   RegionServerServices getRegionServerServices();
 
   /** @return shared data between all instances of this coprocessor */
-  ConcurrentMap<String, Object> getSharedData(); 
+  ConcurrentMap<String, Object> getSharedData();
 }
