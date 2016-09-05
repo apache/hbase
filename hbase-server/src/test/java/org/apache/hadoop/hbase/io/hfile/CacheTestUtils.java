@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class CacheTestUtils {
 
   private static final boolean includesMemstoreTS = true;
@@ -333,7 +335,7 @@ public class CacheTestUtils {
   }
 
 
-  private static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
+  public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
     Random rand = new Random();
     HashSet<String> usedStrings = new HashSet<String>();
@@ -376,8 +378,17 @@ public class CacheTestUtils {
     return returnedBlocks;
   }
 
-  private static class HFileBlockPair {
+  @VisibleForTesting
+  public static class HFileBlockPair {
     BlockCacheKey blockName;
     HFileBlock block;
+
+    public BlockCacheKey getBlockName() {
+      return this.blockName;
+    }
+
+    public HFileBlock getBlock() {
+      return this.block;
+    }
   }
 }
