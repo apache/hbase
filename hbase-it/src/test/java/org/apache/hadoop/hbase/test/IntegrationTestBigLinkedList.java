@@ -116,6 +116,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.jruby.RubyProcess;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -256,6 +257,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      */
     public static final String MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY =
         "generator.multiple.columnfamilies";
+
+    public static final String USAGE =  "Usage : " + Generator.class.getSimpleName() +
+            " <num mappers> <num nodes per map> <tmp output dir> [<width> <wrap multiplier> \n" +
+            "where <num nodes per map> should be a multiple of width*wrap multiplier, " +
+            "25M by default \n";
 
     static class GeneratorInputFormat extends InputFormat<BytesWritable,NullWritable> {
       static class GeneratorInputSplit extends InputSplit implements Writable {
@@ -499,20 +505,19 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     @Override
     public int run(String[] args) throws Exception {
       if (args.length < 3) {
-        System.out.println("Usage : " + Generator.class.getSimpleName() +
-            " <num mappers> <num nodes per map> <tmp output dir> [<width> <wrap multiplier>]");
-        System.out.println("   where <num nodes per map> should be a multiple of " +
-            " width*wrap multiplier, 25M by default");
-        return 0;
+        System.err.println(USAGE);
+        return 1;
       }
 
       int numMappers = Integer.parseInt(args[0]);
       long numNodes = Long.parseLong(args[1]);
       Path tmpOutput = new Path(args[2]);
       Integer width = (args.length < 4) ? null : Integer.parseInt(args[3]);
-      Integer wrapMuplitplier = (args.length < 5) ? null : Integer.parseInt(args[4]);
-      return run(numMappers, numNodes, tmpOutput, width, wrapMuplitplier);
+      Integer wrapMultiplier = (args.length < 5) ? null : Integer.parseInt(args[4]);
+      return run(numMappers, numNodes, tmpOutput, width, wrapMultiplier);
     }
+
+
 
     protected void createSchema() throws IOException {
       Configuration conf = getConf();
@@ -619,12 +624,22 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
 
     public int run(int numMappers, long numNodes, Path tmpOutput,
-        Integer width, Integer wrapMuplitplier) throws Exception {
-      int ret = runRandomInputGenerator(numMappers, numNodes, tmpOutput, width, wrapMuplitplier);
+        Integer width, Integer wrapMultiplier) throws Exception {
+      long wrap = (long)width*wrapMultiplier;
+      if (wrap < numNodes && numNodes % wrap != 0) {
+        /**
+         *  numNodes should be a multiple of width*wrapMultiplier.
+         *  If numNodes less than wrap, wrap will be set to be equal with numNodes,
+         *  See {@link GeneratorMapper#setup(Mapper.Context)}
+         * */
+        System.err.println(USAGE);
+        return 1;
+      }
+      int ret = runRandomInputGenerator(numMappers, numNodes, tmpOutput, width, wrapMultiplier);
       if (ret > 0) {
         return ret;
       }
-      return runGenerator(numMappers, numNodes, tmpOutput, width, wrapMuplitplier);
+      return runGenerator(numMappers, numNodes, tmpOutput, width, wrapMultiplier);
     }
   }
 
