@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -341,25 +342,31 @@ public final class BucketAllocator {
     // we've found. we can only reconfigure each bucket once; if more than once,
     // we know there's a bug, so we just log the info, throw, and start again...
     boolean[] reconfigured = new boolean[buckets.length];
-    for (Map.Entry<BlockCacheKey, BucketEntry> entry : map.entrySet()) {
+    int sizeNotMatchedCount = 0;
+    int insufficientCapacityCount = 0;
+    Iterator<Map.Entry<BlockCacheKey, BucketEntry>> iterator = map.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<BlockCacheKey, BucketEntry> entry = iterator.next();
       long foundOffset = entry.getValue().offset();
       int foundLen = entry.getValue().getLength();
       int bucketSizeIndex = -1;
-      for (int i = 0; i < bucketSizes.length; ++i) {
-        if (foundLen <= bucketSizes[i]) {
+      for (int i = 0; i < this.bucketSizes.length; ++i) {
+        if (foundLen <= this.bucketSizes[i]) {
           bucketSizeIndex = i;
           break;
         }
       }
       if (bucketSizeIndex == -1) {
-        throw new BucketAllocatorException(
-            "Can't match bucket size for the block with size " + foundLen);
+        sizeNotMatchedCount++;
+        iterator.remove();
+        continue;
       }
       int bucketNo = (int) (foundOffset / bucketCapacity);
-      if (bucketNo < 0 || bucketNo >= buckets.length)
-        throw new BucketAllocatorException("Can't find bucket " + bucketNo
-            + ", total buckets=" + buckets.length
-            + "; did you shrink the cache?");
+      if (bucketNo < 0 || bucketNo >= buckets.length) {
+        insufficientCapacityCount++;
+        iterator.remove();
+        continue;
+      }
       Bucket b = buckets[bucketNo];
       if (reconfigured[bucketNo]) {
         if (b.sizeIndex() != bucketSizeIndex)
@@ -381,6 +388,15 @@ public final class BucketAllocator {
       buckets[bucketNo].addAllocation(foundOffset);
       usedSize += buckets[bucketNo].getItemAllocationSize();
       bucketSizeInfos[bucketSizeIndex].blockAllocated(b);
+    }
+
+    if (sizeNotMatchedCount > 0) {
+      LOG.warn("There are " + sizeNotMatchedCount + " blocks which can't be rebuilt because "
+          + "there is no matching bucket size for these blocks");
+    }
+    if (insufficientCapacityCount > 0) {
+      LOG.warn("There are " + insufficientCapacityCount + " blocks which can't be rebuilt - "
+          + "did you shrink the cache?");
     }
   }
 

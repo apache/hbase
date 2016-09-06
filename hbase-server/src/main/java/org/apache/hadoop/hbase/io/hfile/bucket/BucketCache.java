@@ -920,12 +920,13 @@ public class BucketCache implements BlockCache, HeapSize {
             + ", expected:" + backingMap.getClass().getName());
       UniqueIndexMap<Integer> deserMap = (UniqueIndexMap<Integer>) ois
           .readObject();
+      ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMapFromFile =
+          (ConcurrentHashMap<BlockCacheKey, BucketEntry>) ois.readObject();
       BucketAllocator allocator = new BucketAllocator(cacheCapacity, bucketSizes,
-          backingMap, realCacheSize);
-      backingMap = (ConcurrentHashMap<BlockCacheKey, BucketEntry>) ois
-          .readObject();
+        backingMapFromFile, realCacheSize);
       bucketAllocator = allocator;
       deserialiserMap = deserMap;
+      backingMap = backingMapFromFile;
     } finally {
       if (ois != null) ois.close();
       if (fis != null) fis.close();
