@@ -763,7 +763,7 @@ public class RecoverableZooKeeper {
   }
 
   public void sync(String path, AsyncCallback.VoidCallback cb, Object ctx) throws KeeperException {
-    checkZk().sync(path, null, null);
+    checkZk().sync(path, cb, null);
   }
 
   /**

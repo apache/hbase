@@ -199,6 +199,7 @@ import com.google.protobuf.Service;
 public class HMaster extends HRegionServer implements MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
+
   /**
    * Protection against zombie master. Started once Master accepts active responsibility and
    * starts taking over responsibilities. Allows a finite time window before giving up ownership.
