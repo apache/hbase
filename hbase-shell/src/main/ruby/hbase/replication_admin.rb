@@ -51,8 +51,6 @@ module Hbase
         # or neither are provided
         if endpoint_classname.nil? and cluster_key.nil?
           raise(ArgumentError, "Either ENDPOINT_CLASSNAME or CLUSTER_KEY must be specified.")
-        elsif !endpoint_classname.nil? and !cluster_key.nil?
-          raise(ArgumentError, "ENDPOINT_CLASSNAME and CLUSTER_KEY cannot both be specified.")
         end
 
         # Cluster Key is required for ReplicationPeerConfig for a custom replication endpoint
