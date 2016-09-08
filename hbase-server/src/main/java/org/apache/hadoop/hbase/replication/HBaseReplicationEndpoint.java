@@ -130,7 +130,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.fatal("The HBaseReplicationEndpoint corresponding to peer " + ctx.getPeerId()
+    LOG.error("The HBaseReplicationEndpoint corresponding to peer " + ctx.getPeerId()
         + " was aborted for the following reason(s):" + why, e);
   }
 
@@ -218,7 +218,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
           LOG.info("Detected change to peer region servers, fetching updated list");
           replicationEndpoint.setRegionServers(fetchSlavesAddresses(replicationEndpoint.getZkw()));
         } catch (KeeperException e) {
-          LOG.fatal("Error reading slave addresses", e);
+          LOG.error("Error reading slave addresses", e);
         }
       }
     }
