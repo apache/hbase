@@ -46,7 +46,7 @@ public class BlockingRpcCallback<R> implements RpcCallback<R> {
     synchronized (this) {
       result = parameter;
       resultSet = true;
-      this.notify();
+      this.notifyAll();
     }
   }
 

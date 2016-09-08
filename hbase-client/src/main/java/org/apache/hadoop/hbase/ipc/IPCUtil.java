@@ -30,15 +30,19 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Utility to help ipc'ing.
  */
 @InterfaceAudience.Private
-public class IPCUtil {
+class IPCUtil {
 
   /**
    * Write out header, param, and cell block if there is one.
@@ -93,18 +97,32 @@ public class IPCUtil {
     return totalSize;
   }
 
-  /**
-   * @return True if the exception is a fatal connection exception.
-   */
-  public static boolean isFatalConnectionException(final ExceptionResponse e) {
-    return e.getExceptionClassName().equals(FatalConnectionException.class.getName());
+  static RequestHeader buildRequestHeader(Call call, CellBlockMeta cellBlockMeta) {
+    RequestHeader.Builder builder = RequestHeader.newBuilder();
+    builder.setCallId(call.id);
+    if (call.span != null) {
+      builder.setTraceInfo(RPCTInfo.newBuilder().setParentId(call.span.getSpanId())
+          .setTraceId(call.span.getTraceId()));
+    }
+    builder.setMethodName(call.md.getName());
+    builder.setRequestParam(call.param != null);
+    if (cellBlockMeta != null) {
+      builder.setCellBlockMeta(cellBlockMeta);
+    }
+    // Only pass priority if there is one set.
+    if (call.priority != HBaseRpcController.PRIORITY_UNSET) {
+      builder.setPriority(call.priority);
+    }
+    builder.setTimeout(call.timeout);
+
+    return builder.build();
   }
 
   /**
    * @param e exception to be wrapped
    * @return RemoteException made from passed <code>e</code>
    */
-  public static RemoteException createRemoteException(final ExceptionResponse e) {
+  static RemoteException createRemoteException(final ExceptionResponse e) {
     String innerExceptionClassName = e.getExceptionClassName();
     boolean doNotRetry = e.getDoNotRetry();
     return e.hasHostname() ?
@@ -112,6 +130,21 @@ public class IPCUtil {
         new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), e.getHostname(),
             e.getPort(), doNotRetry)
         : new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry);
+  }
+
+  /**
+   * @return True if the exception is a fatal connection exception.
+   */
+  static boolean isFatalConnectionException(final ExceptionResponse e) {
+    return e.getExceptionClassName().equals(FatalConnectionException.class.getName());
+  }
+
+  static IOException toIOE(Throwable t) {
+    if (t instanceof IOException) {
+      return (IOException) t;
+    } else {
+      return new IOException(t);
+    }
   }
 
   /**
@@ -124,7 +157,7 @@ public class IPCUtil {
    * @param exception the relevant exception
    * @return an exception to throw
    */
-  public static IOException wrapException(InetSocketAddress addr, Exception exception) {
+  static IOException wrapException(InetSocketAddress addr, Exception exception) {
     if (exception instanceof ConnectException) {
       // connection refused; include the host:port in the error
       return (ConnectException) new ConnectException(
@@ -139,5 +172,11 @@ public class IPCUtil {
       return (IOException) new IOException(
           "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
     }
+  }
+
+  static void setCancelled(Call call) {
+    call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
+        + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimetout="
+        + call.timeout));
   }
 }

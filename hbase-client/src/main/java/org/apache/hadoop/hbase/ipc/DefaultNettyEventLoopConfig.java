@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
- * Client-side call timeout
+ * The default netty event loop config
  */
-@SuppressWarnings("serial")
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class CallTimeoutException extends HBaseIOException {
+@InterfaceAudience.Private
+class DefaultNettyEventLoopConfig {
 
-  public CallTimeoutException(final String msg) {
-    super(msg);
-  }
+  public static final Pair<EventLoopGroup, Class<? extends Channel>> GROUP_AND_CHANNEL_CLASS = Pair
+      .<EventLoopGroup, Class<? extends Channel>> newPair(new NioEventLoopGroup(),
+        NioSocketChannel.class);
 }

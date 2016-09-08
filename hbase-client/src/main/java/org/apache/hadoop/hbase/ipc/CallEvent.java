@@ -17,18 +17,24 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Converts exceptions to other exceptions
+ * Used to tell netty handler the call is cancelled, timeout...
  */
 @InterfaceAudience.Private
-public interface IOExceptionConverter {
-  /**
-   * Converts given IOException
-   * @param e exception to convert
-   * @return converted IOException
-   */
-  IOException convert(IOException e);
+class CallEvent {
+
+  public enum Type {
+    TIMEOUT, CANCELLED
+  }
+
+  final Type type;
+
+  final Call call;
+
+  CallEvent(Type type, Call call) {
+    this.type = type;
+    this.call = call;
+  }
 }

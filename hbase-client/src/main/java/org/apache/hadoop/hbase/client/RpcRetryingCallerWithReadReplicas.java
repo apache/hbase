@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -97,7 +100,6 @@ public class RpcRetryingCallerWithReadReplicas {
       this.id = id;
       this.location = location;
       this.controller = rpcControllerFactory.newController();
-      controller.setPriority(tableName);
     }
 
     @Override
@@ -134,6 +136,11 @@ public class RpcRetryingCallerWithReadReplicas {
       setStub(cConnection.getClient(dest));
     }
 
+    private void initRpcController() {
+      controller.reset();
+      controller.setCallTimeout(callTimeout);
+      controller.setPriority(tableName);
+    }
     @Override
     protected Result rpcCall() throws Exception {
       if (controller.isCanceled()) return null;
@@ -141,16 +148,13 @@ public class RpcRetryingCallerWithReadReplicas {
         throw new InterruptedIOException();
       }
       byte[] reg = location.getRegionInfo().getRegionName();
-      ClientProtos.GetRequest request =
-          RequestConverter.buildGetRequest(reg, get);
-      // Presumption that we are passed a PayloadCarryingRpcController here!
-      HBaseRpcController pcrc = (HBaseRpcController)controller;
-      pcrc.setCallTimeout(callTimeout);
+      ClientProtos.GetRequest request = RequestConverter.buildGetRequest(reg, get);
+      initRpcController();
       ClientProtos.GetResponse response = getStub().get(controller, request);
       if (response == null) {
         return null;
       }
-      return ProtobufUtil.toResult(response.getResult(), pcrc.cellScanner());
+      return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
     }
 
     @Override
@@ -183,7 +187,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RegionLocations rl = getRegionLocations(true, (isTargetReplicaSpecified ? get.getReplicaId()
         : RegionReplicaUtil.DEFAULT_REPLICA_ID), cConnection, tableName, get.getRow());
-    ResultBoundedCompletionService<Result> cs =
+   final ResultBoundedCompletionService<Result> cs =
         new ResultBoundedCompletionService<Result>(this.rpcRetryingCallerFactory, pool, rl.size());
 
     if(isTargetReplicaSpecified) {
@@ -207,7 +211,6 @@ public class RpcRetryingCallerWithReadReplicas {
       // submit call for the all of the secondaries at once
       addCallsForReplica(cs, rl, 1, rl.size() - 1);
     }
-
     try {
       try {
         long start = EnvironmentEdgeManager.currentTime();

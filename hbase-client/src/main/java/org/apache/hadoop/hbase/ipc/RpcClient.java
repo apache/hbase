@@ -30,7 +30,8 @@ import org.apache.hadoop.hbase.security.User;
 /**
  * Interface for RpcClient implementations so ConnectionManager can handle it.
  */
-@InterfaceAudience.Private public interface RpcClient extends Closeable {
+@InterfaceAudience.Private
+public interface RpcClient extends Closeable {
   String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
   int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
   String IDLE_TIME = "hbase.ipc.client.connection.minIdleTimeBeforeClose";
@@ -79,7 +80,8 @@ import org.apache.hadoop.hbase.security.User;
    *
    * @return A rpc channel that goes via this rpc client instance.
    */
-  RpcChannel createProtobufRpcChannel(final ServerName sn, final User user, int rpcTimeout);
+  RpcChannel createRpcChannel(final ServerName sn, final User user, int rpcTimeout)
+      throws IOException;
 
   /**
    * Interrupt the connections to the given server. This should be called if the server

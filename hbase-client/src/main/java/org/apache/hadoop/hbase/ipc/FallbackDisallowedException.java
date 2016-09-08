@@ -17,31 +17,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.Message;
-import java.io.IOException;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * Interface to convert Messages to specific types
- * @param <M> Message Type to convert
- * @param <O> Output Type
+ * Indicate that the rpc server tells client to fallback to simple auth but client is disabled to do
+ * so.
  */
-@InterfaceAudience.Private
-public interface MessageConverter<M,O> {
-  /**
-   * Converts Message to Output
-   * @param msg to convert
-   * @param cellScanner to use for conversion
-   * @return Output
-   * @throws IOException if message could not be converted to response
-   */
-  O convert(M msg, CellScanner cellScanner) throws IOException;
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class FallbackDisallowedException extends HBaseIOException {
 
-  MessageConverter<Message,Message> NO_CONVERTER = new MessageConverter<Message, Message>() {
-    @Override
-    public Message convert(Message msg, CellScanner cellScanner) throws IOException {
-      return msg;
-    }
-  };
+  private static final long serialVersionUID = -6942845066279358253L;
+
+  public FallbackDisallowedException() {
+    super("Server asks us to fall back to SIMPLE auth, "
+        + "but this client is configured to only allow secure connections.");
+  }
 }

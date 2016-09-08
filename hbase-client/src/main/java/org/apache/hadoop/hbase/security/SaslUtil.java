@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
@@ -30,7 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SaslUtil {
-  private static final Log log = LogFactory.getLog(SaslUtil.class);
+  private static final Log LOG = LogFactory.getLog(SaslUtil.class);
   public static final String SASL_DEFAULT_REALM = "default";
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
@@ -51,7 +53,7 @@ public class SaslUtil {
 
     public boolean matches(String stringQop) {
       if (saslQop.equals(stringQop)) {
-        log.warn("Use authentication/integrity/privacy as value for rpc protection "
+        LOG.warn("Use authentication/integrity/privacy as value for rpc protection "
             + "configurations instead of auth/auth-int/auth-conf.");
         return true;
       }
@@ -112,5 +114,13 @@ public class SaslUtil {
     saslProps.put(Sasl.QOP, saslQop);
     saslProps.put(Sasl.SERVER_AUTH, "true");
     return saslProps;
+  }
+
+  static void safeDispose(SaslClient saslClient) {
+    try {
+      saslClient.dispose();
+    } catch (SaslException e) {
+      LOG.error("Error disposing of SASL client", e);
+    }
   }
 }

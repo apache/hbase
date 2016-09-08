@@ -190,6 +190,7 @@ public class TestRegionReplicaFailover {
             LOG.info("Aborting region server hosting primary region replica");
             rs.getRegionServer().abort("for test");
             aborted = true;
+            break;
           }
         }
       }
@@ -251,6 +252,7 @@ public class TestRegionReplicaFailover {
             LOG.info("Aborting region server hosting secondary region replica");
             rs.getRegionServer().abort("for test");
             aborted = true;
+            break;
           }
         }
       }

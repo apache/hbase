@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
 
 /**
  * Provides ability to create multiple Connection instances and allows to process a batch of

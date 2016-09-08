@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,37 +18,41 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ RPCTests.class, SmallTests.class })
-public class TestGlobalEventLoopGroup {
+public class TestBlockingIPC extends AbstractTestIPC {
 
-  @Test
-  public void test() {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(AsyncRpcClient.USE_GLOBAL_EVENT_LOOP_GROUP, true);
-    AsyncRpcClient client = new AsyncRpcClient(conf);
-    assertNotNull(AsyncRpcClient.GLOBAL_EVENT_LOOP_GROUP);
-    AsyncRpcClient client1 = new AsyncRpcClient(conf);
-    assertSame(client.bootstrap.group(), client1.bootstrap.group());
-    client1.close();
-    assertFalse(client.bootstrap.group().isShuttingDown());
+  @Override
+  protected BlockingRpcClient createRpcClientNoCodec(Configuration conf) {
+    return new BlockingRpcClient(conf) {
+      @Override
+      Codec getCodec() {
+        return null;
+      }
+    };
+  }
 
-    conf.setBoolean(AsyncRpcClient.USE_GLOBAL_EVENT_LOOP_GROUP, false);
-    AsyncRpcClient client2 = new AsyncRpcClient(conf);
-    assertNotSame(client.bootstrap.group(), client2.bootstrap.group());
-    client2.close();
+  @Override
+  protected BlockingRpcClient createRpcClient(Configuration conf) {
+    return new BlockingRpcClient(conf);
+  }
 
-    client.close();
+  @Override
+  protected BlockingRpcClient createRpcClientRTEDuringConnectionSetup(Configuration conf)
+      throws IOException {
+    return new BlockingRpcClient(conf) {
+
+      @Override
+      boolean isTcpNoDelay() {
+        throw new RuntimeException("Injected fault");
+      }
+    };
   }
 }

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.security.User;
  * to servers are uniquely identified by &lt;remoteAddress, ticket, serviceName&gt;
  */
 @InterfaceAudience.Private
-public class ConnectionId {
+class ConnectionId {
   private static final int PRIME = 16777619;
   final User ticket;
   final String serviceName;

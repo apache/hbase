@@ -62,7 +62,7 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
   }
 
   public static Interface newStub(RpcClient client, InetSocketAddress addr) throws IOException {
-    return TestProtobufRpcProto.newStub(client.createProtobufRpcChannel(
+    return TestProtobufRpcProto.newStub(client.createRpcChannel(
       ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()),
       User.getCurrent(), 0));
   }

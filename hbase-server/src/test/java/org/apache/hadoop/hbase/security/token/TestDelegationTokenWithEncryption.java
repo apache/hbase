@@ -19,6 +19,9 @@
 package org.apache.hadoop.hbase.security.token;
 
 import com.google.protobuf.ServiceException;
+
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -29,10 +32,10 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
+import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
+import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.ipc.RpcClientImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,7 +46,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestDelegationTokenWithEncryption extends SecureTestCluster {
@@ -84,8 +86,8 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
       tableDescriptor.addFamily(new HColumnDescriptor("family"));
       admin.createTable(tableDescriptor);
 
-      testPutGetWithDelegationToken(RpcClientImpl.class);
-      testPutGetWithDelegationToken(AsyncRpcClient.class);
+      testPutGetWithDelegationToken(BlockingRpcClient.class);
+      testPutGetWithDelegationToken(NettyRpcClient.class);
     }
   }
 }

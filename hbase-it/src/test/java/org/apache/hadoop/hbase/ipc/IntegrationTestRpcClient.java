@@ -47,7 +47,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
@@ -93,15 +92,13 @@ public class IntegrationTestRpcClient {
     }
   }
 
-  protected AbstractRpcClient createRpcClient(Configuration conf, boolean isSyncClient) {
-    return isSyncClient ?
-        new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT) :
-          new AsyncRpcClient(conf) {
-          @Override
-          Codec getCodec() {
-            return null;
-          }
-        };
+  protected AbstractRpcClient<?> createRpcClient(Configuration conf, boolean isSyncClient) {
+    return isSyncClient ? new BlockingRpcClient(conf) : new NettyRpcClient(conf) {
+      @Override
+      Codec getCodec() {
+        return null;
+      }
+    };
   }
 
   static String BIG_PAYLOAD;
@@ -258,7 +255,7 @@ public class IntegrationTestRpcClient {
   }
 
   static class SimpleClient extends Thread {
-    AbstractRpcClient rpcClient;
+    AbstractRpcClient<?> rpcClient;
     AtomicBoolean running = new  AtomicBoolean(true);
     AtomicBoolean sending = new AtomicBoolean(false);
     AtomicReference<Throwable> exception = new AtomicReference<>(null);
@@ -267,7 +264,7 @@ public class IntegrationTestRpcClient {
     long numCalls = 0;
     Random random = new Random();
 
-    public SimpleClient(Cluster cluster, AbstractRpcClient rpcClient, String id) {
+    public SimpleClient(Cluster cluster, AbstractRpcClient<?> rpcClient, String id) {
       this.cluster = cluster;
       this.rpcClient = rpcClient;
       this.id = id;
@@ -327,7 +324,7 @@ public class IntegrationTestRpcClient {
     cluster.startServer();
     conf.setBoolean(SPECIFIC_WRITE_THREAD, true);
     for(int i = 0; i <1000; i++) {
-      AbstractRpcClient rpcClient = createRpcClient(conf, true);
+      AbstractRpcClient<?> rpcClient = createRpcClient(conf, true);
       SimpleClient client = new SimpleClient(cluster, rpcClient, "Client1");
       client.start();
       while(!client.isSending()) {
@@ -419,7 +416,7 @@ public class IntegrationTestRpcClient {
     ArrayList<SimpleClient> clients = new ArrayList<>();
 
     // all threads should share the same rpc client
-    AbstractRpcClient rpcClient = createRpcClient(conf, isSyncClient);
+    AbstractRpcClient<?> rpcClient = createRpcClient(conf, isSyncClient);
 
     for (int i = 0; i < 30; i++) {
       String clientId = "client_" + i + "_";

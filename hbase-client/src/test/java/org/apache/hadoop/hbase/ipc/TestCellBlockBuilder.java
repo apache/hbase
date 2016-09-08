@@ -27,7 +27,6 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -53,11 +52,11 @@ public class TestCellBlockBuilder {
 
   private static final Log LOG = LogFactory.getLog(TestCellBlockBuilder.class);
 
-  CellBlockBuilder builder;
+  private CellBlockBuilder builder;
 
   @Before
   public void before() {
-    this.builder = new CellBlockBuilder(new Configuration());
+    this.builder = new CellBlockBuilder(HBaseConfiguration.create());
   }
 
   @Test
@@ -164,9 +163,9 @@ public class TestCellBlockBuilder {
         + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
   }
 
-  private static void timerTest(final CellBlockBuilder builder, final StopWatch timer, final int count,
-      final int size, final Codec codec, final CompressionCodec compressor, final boolean sized)
-      throws IOException {
+  private static void timerTest(final CellBlockBuilder builder, final StopWatch timer,
+      final int count, final int size, final Codec codec, final CompressionCodec compressor,
+      final boolean sized) throws IOException {
     doBuildCellBlockUndoCellBlock(builder, codec, compressor, count, size, sized);
   }
 
@@ -187,10 +186,10 @@ public class TestCellBlockBuilder {
         usage(1);
       }
     }
-    CellBlockBuilder buildr = new CellBlockBuilder(HBaseConfiguration.create());
+    CellBlockBuilder builder = new CellBlockBuilder(HBaseConfiguration.create());
     ((Log4JLogger) CellBlockBuilder.LOG).getLogger().setLevel(Level.ALL);
-    timerTests(buildr, count, size, new KeyValueCodec(), null);
-    timerTests(buildr, count, size, new KeyValueCodec(), new DefaultCodec());
-    timerTests(buildr, count, size, new KeyValueCodec(), new GzipCodec());
+    timerTests(builder, count, size, new KeyValueCodec(), null);
+    timerTests(builder, count, size, new KeyValueCodec(), new DefaultCodec());
+    timerTests(builder, count, size, new KeyValueCodec(), new GzipCodec());
   }
 }
