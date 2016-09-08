@@ -114,16 +114,6 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   }
 
   @Override
-  public void setDeadline(long deadline) {
-    delegate.setDeadline(deadline);
-  }
-
-  @Override
-  public long getDeadline() {
-    return delegate.getDeadline();
-  }
-
-  @Override
   public void setFailed(IOException e) {
     delegate.setFailed(e);
   }
