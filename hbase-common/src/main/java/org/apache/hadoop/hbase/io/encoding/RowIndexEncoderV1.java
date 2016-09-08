@@ -17,12 +17,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
-import org.apache.hadoop.io.WritableUtils;
 
 @InterfaceAudience.Private
 public class RowIndexEncoderV1 {
@@ -32,14 +28,15 @@ public class RowIndexEncoderV1 {
   private Cell lastCell = null;
 
   private DataOutputStream out;
-  private HFileBlockDefaultEncodingContext encodingCtx;
+  private NoneEncoder encoder;
   private int startOffset = -1;
   private ByteArrayOutputStream rowsOffsetBAOS = new ByteArrayOutputStream(
       64 * 4);
 
-  public RowIndexEncoderV1(DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) {
+  public RowIndexEncoderV1(DataOutputStream out,
+      HFileBlockDefaultEncodingContext encodingCtx) {
     this.out = out;
-    this.encodingCtx = encodingCtx;
+    this.encoder = new NoneEncoder(out, encodingCtx);
   }
 
   public int write(Cell cell) throws IOException {
@@ -50,30 +47,8 @@ public class RowIndexEncoderV1 {
       }
       rowsOffsetBAOS.writeInt(out.size() - startOffset);
     }
-    int klength = KeyValueUtil.keyLength(cell);
-    int vlength = cell.getValueLength();
-    out.writeInt(klength);
-    out.writeInt(vlength);
-    CellUtil.writeFlatKey(cell, out);
-    // Write the value part
-    CellUtil.writeValue(out, cell, vlength);
-    int encodedKvSize = klength + vlength
-        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-    // Write the additional tag into the stream
-    if (encodingCtx.getHFileContext().isIncludesTags()) {
-      int tagsLength = cell.getTagsLength();
-      out.writeShort(tagsLength);
-      if (tagsLength > 0) {
-        CellUtil.writeTags(out, cell, tagsLength);
-      }
-      encodedKvSize += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
-    }
-    if (encodingCtx.getHFileContext().isIncludesMvcc()) {
-      WritableUtils.writeVLong(out, cell.getSequenceId());
-      encodedKvSize += WritableUtils.getVIntSize(cell.getSequenceId());
-    }
     lastCell = cell;
-    return encodedKvSize;
+    return encoder.write(cell);
   }
 
   protected boolean checkRow(final Cell cell) throws IOException {

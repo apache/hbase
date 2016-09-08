@@ -29,17 +29,14 @@ import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
+import org.apache.hadoop.hbase.io.encoding.AbstractDataBlockEncoder.AbstractEncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 
 @InterfaceAudience.Private
-public class RowIndexSeekerV1 implements EncodedSeeker {
-
-  private HFileBlockDecodingContext decodingCtx;
-  private final CellComparator comparator;
+public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   // A temp pair object which will be reused by ByteBuff#asSubByteBuffer calls. This avoids too
   // many object creations.
@@ -54,8 +51,7 @@ public class RowIndexSeekerV1 implements EncodedSeeker {
 
   public RowIndexSeekerV1(CellComparator comparator,
       HFileBlockDecodingContext decodingCtx) {
-    this.comparator = comparator;
-    this.decodingCtx = decodingCtx;
+    super(comparator, decodingCtx);
   }
 
   @Override
@@ -291,14 +287,6 @@ public class RowIndexSeekerV1 implements EncodedSeeker {
     current.nextKvOffset = currentBuffer.position();
     current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(),
         current.keyLength);
-  }
-
-  protected boolean includesMvcc() {
-    return this.decodingCtx.getHFileContext().isIncludesMvcc();
-  }
-
-  protected boolean includesTags() {
-    return this.decodingCtx.getHFileContext().isIncludesTags();
   }
 
   protected void decodeTags() {

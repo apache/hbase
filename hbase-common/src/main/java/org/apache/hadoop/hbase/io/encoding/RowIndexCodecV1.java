@@ -23,15 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -51,7 +48,7 @@ import org.apache.hadoop.io.WritableUtils;
  *
 */
 @InterfaceAudience.Private
-public class RowIndexCodecV1 implements DataBlockEncoder {
+public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
 
   private static class RowIndexEncodingState extends EncodingState {
     RowIndexEncoderV1 encoder = null;
@@ -92,11 +89,7 @@ public class RowIndexCodecV1 implements DataBlockEncoder {
         .getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
     encoder.flush();
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
+    postEncoding(encodingCtx);
   }
 
   @Override
@@ -139,17 +132,6 @@ public class RowIndexCodecV1 implements DataBlockEncoder {
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
-      DataBlockEncoding encoding, byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
-  }
-
-  @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
-  }
-
-  @Override
   public Cell getFirstKeyCellInBlock(ByteBuff block) {
     block.mark();
     int keyLength = block.getInt();
@@ -163,15 +145,6 @@ public class RowIndexCodecV1 implements DataBlockEncoder {
   public EncodedSeeker createSeeker(CellComparator comparator,
       HFileBlockDecodingContext decodingCtx) {
     return new RowIndexSeekerV1(comparator, decodingCtx);
-  }
-
-  protected Cell createFirstKeyCell(ByteBuffer key, int keyLength) {
-    if (key.hasArray()) {
-      return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset()
-          + key.position(), keyLength);
-    } else {
-      return new ByteBufferedKeyOnlyKeyValue(key, key.position(), keyLength);
-    }
   }
 
 }

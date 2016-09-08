@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.ByteBufferedCell;
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -36,8 +35,6 @@ import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -51,7 +48,7 @@ import org.apache.hadoop.io.WritableUtils;
  * Base class for all data block encoders that use a buffer.
  */
 @InterfaceAudience.Private
-abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
+abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   /**
    * TODO: This datablockencoder is dealing in internals of hfileblocks. Purge reference to HFBs
    */
@@ -682,11 +679,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  protected abstract static class
-      BufferedEncodedSeeker<STATE extends SeekerState>
-      implements EncodedSeeker {
-    protected HFileBlockDecodingContext decodingCtx;
-    protected final CellComparator comparator;
+  protected abstract static class BufferedEncodedSeeker<STATE extends SeekerState>
+      extends AbstractEncodedSeeker {
     protected ByteBuff currentBuffer;
     protected TagCompressionContext tagCompressionContext = null;
     protected  KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
@@ -697,8 +691,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     public BufferedEncodedSeeker(CellComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
-      this.comparator = comparator;
-      this.decodingCtx = decodingCtx;
+      super(comparator, decodingCtx);
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
           tagCompressionContext = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
@@ -708,14 +701,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
       current = createSeekerState(); // always valid
       previous = createSeekerState(); // may not be valid
-    }
-
-    protected boolean includesMvcc() {
-      return this.decodingCtx.getHFileContext().isIncludesMvcc();
-    }
-
-    protected boolean includesTags() {
-      return this.decodingCtx.getHFileContext().isIncludesTags();
     }
 
     @Override
@@ -1049,17 +1034,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(DataBlockEncoding encoding,
-      byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
-  }
-
-  @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
-  }
-
   protected abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
       throws IOException;
@@ -1139,19 +1113,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     Bytes.putInt(uncompressedBytesWithHeader,
       HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
         );
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
+    postEncoding(encodingCtx);
   }
 
-  protected Cell createFirstKeyCell(ByteBuffer key, int keyLength) {
-    if (key.hasArray()) {
-      return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset() + key.position(),
-          keyLength);
-    } else {
-      return new ByteBufferedKeyOnlyKeyValue(key, key.position(), keyLength);
-    }
-  }
 }
