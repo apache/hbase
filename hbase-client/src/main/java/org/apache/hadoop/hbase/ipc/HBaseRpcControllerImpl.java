@@ -51,6 +51,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   private IOException exception;
 
+  private long deadline = Long.MAX_VALUE;
+
   /**
    * Priority to set on this request. Set it here in controller so available composing the request.
    * This is the ordained way of setting priorities going forward. We will be undoing the old
@@ -117,6 +119,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     cellScanner = null;
     exception = null;
     callTimeout = null;
+    deadline = Long.MAX_VALUE;
     // In the implementations of some callable with replicas, rpc calls are executed in a executor
     // and we could cancel the operation from outside which means there could be a race between
     // reset and startCancel. Although I think the race should be handled by the callable since the
@@ -145,6 +148,16 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   @Override
   public boolean hasCallTimeout() {
     return callTimeout != null;
+  }
+
+  @Override
+  public void setDeadline(long deadline) {
+    this.deadline = deadline;
+  }
+
+  @Override
+  public long getDeadline() {
+    return this.deadline;
   }
 
   @Override

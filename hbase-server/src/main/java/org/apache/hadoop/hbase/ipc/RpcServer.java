@@ -400,7 +400,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return "callId: " + this.id + " service: " + serviceName +
           " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
           " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-          " connection: " + connection.toString();
+          " connection: " + connection.toString() +
+          " timeout: " + timeout;
     }
 
     String toTraceString() {
@@ -2207,6 +2208,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       //get an instance of the method arg type
       HBaseRpcController controller = new HBaseRpcControllerImpl(cellScanner);
       controller.setCallTimeout(timeout);
+      controller.setDeadline(timeout > 0 ? receiveTime + timeout : Long.MAX_VALUE);
       Message result = service.callBlockingMethod(md, controller, param);
       long endTime = System.currentTimeMillis();
       int processingTime = (int) (endTime - startTime);

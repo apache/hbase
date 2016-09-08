@@ -282,15 +282,16 @@ public interface Region extends ConfigurationObserver {
   }
 
   /**
-   * Tries to acquire a lock on the given row.
-   * @param waitForLock if true, will block until the lock is available.
-   *        Otherwise, just tries to obtain the lock and returns
-   *        false if unavailable.
-   * @return the row lock if acquired,
-   *   null if waitForLock was false and the lock was not acquired
-   * @throws IOException if waitForLock was true and the lock could not be acquired after waiting
+   *
+   * Get a row lock for the specified row. All locks are reentrant.
+   *
+   * Before calling this function make sure that a region operation has already been
+   * started (the calling thread has already acquired the region-close-guard lock).
+   * @param row The row actions will be performed against
+   * @param readLock is the lock reader or writer. True indicates that a non-exlcusive
+   *                 lock is requested
    */
-  RowLock getRowLock(byte[] row, boolean waitForLock) throws IOException;
+  RowLock getRowLock(byte[] row, boolean readLock) throws IOException;
 
   /**
    * If the given list of row locks is not null, releases all locks.

@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -197,7 +198,7 @@ import org.apache.htrace.TraceScope;
 
 @SuppressWarnings("deprecation")
 @InterfaceAudience.Private
-public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
+public class HRegion implements HeapSize, PropagatingConfigurationObserver, AsyncRegion {
   private static final Log LOG = LogFactory.getLog(HRegion.class);
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
@@ -5293,6 +5294,200 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLocks.get(i).release();
       }
       rowLocks.clear();
+    }
+  }
+
+  @Override
+  public void append(RegionOperationContext<Result> context, Append append, long nonceGroup,
+      long nonce) {
+    try {
+      context.done(append(append, nonceGroup, nonce));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void batchMutate(RegionOperationContext<OperationStatus[]> context, Mutation[] mutations,
+      long nonceGroup, long nonce) {
+    try {
+      context.done(batchMutate(mutations, nonceGroup, nonce));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void batchReplay(RegionOperationContext<OperationStatus[]> context,
+      MutationReplay[] mutations, long replaySeqId) {
+    try {
+      context.done(batchReplay(mutations, replaySeqId));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void checkAndMutate(RegionOperationContext<Boolean> context, byte[] row, byte[] family,
+      byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      Mutation mutation, boolean writeToWAL) {
+    try {
+      context.done(
+          checkAndMutate(row, family, qualifier, compareOp, comparator, mutation, writeToWAL));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void checkAndRowMutate(RegionOperationContext<Boolean> context, byte[] row, byte[] family,
+      byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      RowMutations mutations, boolean writeToWAL) {
+    try {
+      context.done(
+          checkAndRowMutate(row, family, qualifier, compareOp, comparator, mutations, writeToWAL));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void delete(RegionOperationContext<Void> context, Delete delete) {
+    try {
+      delete(delete);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void get(RegionOperationContext<Result> context, Get get) {
+    try {
+      context.done(get(get));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void get(RegionOperationContext<List<Cell>> context, Get get, boolean withCoprocessor) {
+    try {
+      context.done(get(get, withCoprocessor));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void get(RegionOperationContext<List<Cell>> context, Get get, boolean withCoprocessor,
+      long nonceGroup, long nonce) {
+    try {
+      context.done(get(get, withCoprocessor, nonceGroup, nonce));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void getScanner(RegionOperationContext<RegionScanner> context, Scan scan) {
+    try {
+      context.done(getScanner(scan));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void getScanner(RegionOperationContext<RegionScanner> context, Scan scan,
+      List<KeyValueScanner> additionalScanners) {
+    try {
+      context.done(getScanner(scan, additionalScanners));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void getRowLock(RegionOperationContext<RowLock> context, byte[] row, boolean readLock) {
+    try {
+      context.done(getRowLock(row, readLock));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void increment(RegionOperationContext<Result> context, Increment increment,
+      long nonceGroup, long nonce) {
+    try {
+      context.done(increment(increment, nonceGroup, nonce));
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void mutateRow(RegionOperationContext<Void> context, RowMutations mutations) {
+    try {
+      mutateRow(mutations);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void mutateRowsWithLocks(RegionOperationContext<Void> context,
+      Collection<Mutation> mutations, Collection<byte[]> rowsToLock, long nonceGroup, long nonce) {
+    try {
+      mutateRowsWithLocks(mutations, rowsToLock, nonceGroup, nonce);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void processRowsWithLocks(RegionOperationContext<Void> context,
+      RowProcessor<?, ?> processor) {
+    try {
+      processRowsWithLocks(processor);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void processRowsWithLocks(RegionOperationContext<Void> context,
+      RowProcessor<?, ?> processor, long nonceGroup, long nonce) {
+    try {
+      processRowsWithLocks(processor, nonceGroup, nonce);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void processRowsWithLocks(RegionOperationContext<Void> context,
+      RowProcessor<?, ?> processor, long timeout, long nonceGroup, long nonce) {
+    try {
+      processRowsWithLocks(processor, timeout, nonceGroup, nonce);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
+    }
+  }
+
+  @Override
+  public void put(RegionOperationContext<Void> context, Put put) {
+    try {
+      put(put);
+      context.done(null);
+    } catch (Throwable e) {
+      context.error(e);
     }
   }
 

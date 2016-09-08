@@ -67,6 +67,10 @@ public interface HBaseRpcController extends RpcController, CellScannable {
 
   boolean hasCallTimeout();
 
+  void setDeadline(long deadline);
+
+  long getDeadline();
+
   /**
    * Set failed with an exception to pass on. For use in async rpc clients
    * @param e exception to set with
