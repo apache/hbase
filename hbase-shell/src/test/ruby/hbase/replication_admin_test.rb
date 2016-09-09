@@ -54,14 +54,6 @@ module Hbase
       end
     end
 
-    define_test "add_peer: fail when both CLUSTER_KEY and ENDPOINT_CLASSNAME are specified" do
-      assert_raise(ArgumentError) do
-        args = { CLUSTER_KEY => 'zk1,zk2,zk3:2182:/hbase-prod',
-                 ENDPOINT_CLASSNAME => 'org.apache.hadoop.hbase.MyReplicationEndpoint' }
-        replication_admin.add_peer(@peer_id, args)
-      end
-    end
-
     define_test "add_peer: args must be a string or number" do
       assert_raise(ArgumentError) do
         replication_admin.add_peer(@peer_id, 1)
@@ -151,7 +143,10 @@ module Hbase
       assert_equal(1, replication_admin.list_peers.length)
       assert(replication_admin.list_peers.key?(@peer_id))
       assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id))
-      assert_equal(table_cfs_str, replication_admin.show_peer_tableCFs(@peer_id))
+      # Note: below assertion is dependent on the sort order of an unordered
+      # map and hence flaky depending on JVM
+      # Commenting out until HBASE-16274 is worked.
+      #assert_equal(table_cfs_str, replication_admin.show_peer_tableCFs(@peer_id))
 
       # cleanup for future tests
       replication_admin.remove_peer(@peer_id)
@@ -178,11 +173,14 @@ module Hbase
     end
 
     define_test "get_peer_config: works with replicationendpointimpl peer and config params" do
-      repl_impl = "org.apache.hadoop.hbase.replication.ReplicationEndpointForTest"
+      cluster_key = 'localhost:2181:/hbase-test'
+      repl_impl = 'org.apache.hadoop.hbase.replication.ReplicationEndpointForTest'
       config_params = { "config1" => "value1", "config2" => "value2" }
-      args = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params}
+      args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => repl_impl,
+               CONFIG => config_params }
       replication_admin.add_peer(@peer_id, args)
       peer_config = replication_admin.get_peer_config(@peer_id)
+      assert_equal(cluster_key, peer_config.get_cluster_key)
       assert_equal(repl_impl, peer_config.get_replication_endpoint_impl)
       assert_equal(2, peer_config.get_configuration.size)
       assert_equal("value1", peer_config.get_configuration.get("config1"))
