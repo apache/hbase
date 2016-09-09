@@ -21,15 +21,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Just copy data, do not do any kind of compression. Use for comparison and
@@ -38,31 +34,36 @@ import org.apache.hadoop.io.WritableUtils;
 @InterfaceAudience.Private
 public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
-  @Override
-  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
-      DataOutputStream out) throws IOException {
-    int klength = KeyValueUtil.keyLength(cell);
-    int vlength = cell.getValueLength();
+  private static class CopyKeyEncodingState extends EncodingState {
+    NoneEncoder encoder = null;
+  }
 
-    out.writeInt(klength);
-    out.writeInt(vlength);
-    CellUtil.writeFlatKey(cell, out);
-    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
-    int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-    // Write the additional tag into the stream
-    if (encodingContext.getHFileContext().isIncludesTags()) {
-      int tagsLength = cell.getTagsLength();
-      out.writeShort(tagsLength);
-      if (tagsLength > 0) {
-        out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
-      }
-      size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
+  @Override
+  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx,
+      DataOutputStream out) throws IOException {
+    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
+      throw new IOException(this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultEncodingContext.class.getName() + " as the "
+          + "encoding context.");
     }
-    if (encodingContext.getHFileContext().isIncludesMvcc()) {
-      WritableUtils.writeVLong(out, cell.getSequenceId());
-      size += WritableUtils.getVIntSize(cell.getSequenceId());
-    }
-    return size;
+
+    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    encodingCtx.prepareEncoding(out);
+
+    NoneEncoder encoder = new NoneEncoder(out, encodingCtx);
+    CopyKeyEncodingState state = new CopyKeyEncodingState();
+    state.encoder = encoder;
+    blkEncodingCtx.setEncodingState(state);
+  }
+
+  @Override
+  public int internalEncode(Cell cell,
+      HFileBlockDefaultEncodingContext encodingContext, DataOutputStream out)
+      throws IOException {
+    CopyKeyEncodingState state = (CopyKeyEncodingState) encodingContext
+        .getEncodingState();
+    NoneEncoder encoder = state.encoder;
+    return encoder.write(cell);
   }
 
   @Override

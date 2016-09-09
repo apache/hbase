@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,7 +44,7 @@ import org.apache.hadoop.io.WritableUtils;
  * Base class for all data block encoders that use a buffer.
  */
 @InterfaceAudience.Private
-abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
+abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   /**
    * TODO: This datablockencoder is dealing in internals of hfileblocks. Purge reference to HFBs
    */
@@ -517,11 +515,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  protected abstract static class
-      BufferedEncodedSeeker<STATE extends SeekerState>
-      implements EncodedSeeker {
-    protected HFileBlockDecodingContext decodingCtx;
-    protected final KVComparator comparator;
+  protected abstract static class BufferedEncodedSeeker<STATE extends SeekerState>
+      extends AbstractEncodedSeeker {
     protected final SamePrefixComparator<byte[]> samePrefixComparator;
     protected ByteBuffer currentBuffer;
     protected STATE current, previous;
@@ -529,9 +524,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     public BufferedEncodedSeeker(KVComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
-      this.comparator = comparator;
+      super(comparator, decodingCtx);
       this.samePrefixComparator = comparator;
-      this.decodingCtx = decodingCtx;
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
           tagCompressionContext = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
@@ -541,14 +535,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
       current = createSeekerState(); // always valid
       previous = createSeekerState(); // may not be valid
-    }
-    
-    protected boolean includesMvcc() {
-      return this.decodingCtx.getHFileContext().isIncludesMvcc();
-    }
-
-    protected boolean includesTags() {
-      return this.decodingCtx.getHFileContext().isIncludesTags();
     }
 
     @Override
@@ -880,17 +866,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(DataBlockEncoding encoding,
-      byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
-  }
-
-  @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
-  }
-
   protected abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
       throws IOException;
@@ -970,10 +945,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     Bytes.putInt(uncompressedBytesWithHeader,
       HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
         );
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
+    postEncoding(encodingCtx);
   }
 }

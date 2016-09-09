@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -45,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
 */
 @InterfaceAudience.Private
-public class RowIndexCodecV1 implements DataBlockEncoder {
+public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
 
   private static class RowIndexEncodingState extends EncodingState {
     RowIndexEncoderV1 encoder = null;
@@ -86,11 +84,7 @@ public class RowIndexCodecV1 implements DataBlockEncoder {
         .getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
     encoder.flush();
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
+    postEncoding(encodingCtx);
   }
 
   @Override
@@ -149,17 +143,6 @@ public class RowIndexCodecV1 implements DataBlockEncoder {
   public EncodedSeeker createSeeker(KVComparator comparator,
       HFileBlockDecodingContext decodingCtx) {
     return new RowIndexSeekerV1(comparator, decodingCtx);
-  }
-
-  @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
-      DataBlockEncoding encoding, byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
-  }
-
-  @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
   }
 
 }

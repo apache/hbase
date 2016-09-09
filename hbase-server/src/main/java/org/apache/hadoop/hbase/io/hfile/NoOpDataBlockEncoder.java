@@ -19,17 +19,15 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.hbase.io.encoding.NoneEncoder;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -40,35 +38,21 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   public static final NoOpDataBlockEncoder INSTANCE =
       new NoOpDataBlockEncoder();
 
+  private static class NoneEncodingState extends EncodingState {
+    NoneEncoder encoder = null;
+  }
+
   /** Cannot be instantiated. Use {@link #INSTANCE} instead. */
   private NoOpDataBlockEncoder() {
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
-      throws IOException {
-    int klength = KeyValueUtil.keyLength(cell);
-    int vlength = cell.getValueLength();
-
-    out.writeInt(klength);
-    out.writeInt(vlength);
-    CellUtil.writeFlatKey(cell, out);
-    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
-    int encodedKvSize = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-    // Write the additional tag into the stream
-    if (encodingCtx.getHFileContext().isIncludesTags()) {
-      int tagsLength = cell.getTagsLength();
-      out.writeShort(tagsLength);
-      if (tagsLength > 0) {
-        out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
-      }
-      encodedKvSize += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
-    }
-    if (encodingCtx.getHFileContext().isIncludesMvcc()) {
-      WritableUtils.writeVLong(out, cell.getSequenceId());
-      encodedKvSize += WritableUtils.getVIntSize(cell.getSequenceId());
-    }
-    return encodedKvSize;
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx,
+      DataOutputStream out) throws IOException {
+    NoneEncodingState state = (NoneEncodingState) encodingCtx
+        .getEncodingState();
+    NoneEncoder encoder = state.encoder;
+    return encoder.write(cell);
   }
 
   @Override
@@ -107,8 +91,21 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
-      throws IOException {
+  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx,
+      DataOutputStream out) throws IOException {
+    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
+      throw new IOException(this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultEncodingContext.class.getName() + " as the "
+          + "encoding context.");
+    }
+
+    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    encodingCtx.prepareEncoding(out);
+
+    NoneEncoder encoder = new NoneEncoder(out, encodingCtx);
+    NoneEncodingState state = new NoneEncodingState();
+    state.encoder = encoder;
+    blkEncodingCtx.setEncodingState(state);
   }
 
   @Override
