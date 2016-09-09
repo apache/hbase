@@ -124,7 +124,8 @@ public class TestRegionLocationFinder {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       for (Region region : server.getOnlineRegions(tableName)) {
-        List<ServerName> servers = finder.getTopBlockLocations(region.getRegionInfo());
+        List<ServerName> servers = finder.getTopBlockLocations(finder
+            .getBlockDistribution(region.getRegionInfo()));
         // test table may have empty region
         if (region.getHDFSBlocksDistribution().getUniqueBlocksTotalWeight() == 0) {
           continue;
