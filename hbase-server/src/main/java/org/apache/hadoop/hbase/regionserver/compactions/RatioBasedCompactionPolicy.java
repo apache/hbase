@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The default algorithm for selecting files for compaction.
@@ -61,7 +62,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
     }
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (lowTimestamp > 0L && lowTimestamp < (now - mcTime)) {
       // Major compaction time has elapsed.
       long cfTTL = this.storeConfigInfo.getStoreFileTtl();
