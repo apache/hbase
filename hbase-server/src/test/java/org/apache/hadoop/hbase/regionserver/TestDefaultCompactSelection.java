@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -35,6 +37,8 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
 
   @Test
   public void testCompactionRatio() throws IOException {
+    TimeOffsetEnvironmentEdge edge = new TimeOffsetEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
     /**
      * NOTE: these tests are specific to describe the implementation of the
      * current compaction algorithm.  Developed to ensure that refactoring
@@ -91,10 +95,17 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
     store.storeEngine.getCompactionPolicy().setConf(conf);
     try {
+      // The modTime of the mocked store file is currentTimeMillis, so we need to increase the
+      // timestamp a bit to make sure that now - lowestModTime is greater than major compaction
+      // period(1ms).
       // trigger an aged major compaction
-      compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
+      List<StoreFile> candidates = sfCreate(50, 25, 12, 12);
+      edge.increment(2);
+      compactEquals(candidates, 50, 25, 12, 12);
       // major sure exceeding maxCompactSize also downgrades aged minors
-      compactEquals(sfCreate(100,50,23,12,12), 23, 12, 12);
+      candidates = sfCreate(100, 50, 23, 12, 12);
+      edge.increment(2);
+      compactEquals(candidates, 23, 12, 12);
     } finally {
       conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
       conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
