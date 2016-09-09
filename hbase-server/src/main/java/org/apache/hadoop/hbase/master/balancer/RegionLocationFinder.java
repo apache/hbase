@@ -21,10 +21,12 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 class RegionLocationFinder {
   private static final Log LOG = LogFactory.getLog(RegionLocationFinder.class);
   private static final long CACHE_TIME = 240 * 60 * 1000;
+  private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION = new HDFSBlocksDistribution();
   private Configuration conf;
   private volatile ClusterStatus status;
   private MasterServices services;
@@ -164,8 +167,8 @@ class RegionLocationFinder {
     return includesUserTables;
   }
 
-  protected List<ServerName> getTopBlockLocations(HRegionInfo region) {
-    HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
+  protected List<ServerName> getTopBlockLocations(
+      HDFSBlocksDistribution blocksDistribution) {
     List<String> topHosts = blocksDistribution.getTopHosts();
     return mapHostNameToServerName(topHosts);
   }
@@ -208,7 +211,7 @@ class RegionLocationFinder {
           + region.getEncodedName(), ioe);
     }
 
-    return new HDFSBlocksDistribution();
+    return EMPTY_BLOCK_DISTRIBUTION;
   }
 
   /**
@@ -293,6 +296,15 @@ class RegionLocationFinder {
       blockDistbn = internalGetTopBlockLocation(hri);
       cache.put(hri, blockDistbn);
       return blockDistbn;
+    }
+  }
+
+  public ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
+      HRegionInfo hri) {
+    try {
+      return loader.reload(hri, EMPTY_BLOCK_DISTRIBUTION);
+    } catch (Exception e) {
+      return Futures.immediateFuture(EMPTY_BLOCK_DISTRIBUTION);
     }
   }
 }
