@@ -392,15 +392,7 @@ class AsyncProcess {
     }
     throw new RuntimeException("Neither AsyncProcess nor request have ExecutorService");
   }
-  /**
-   * See {@link #submit(ExecutorService, TableName, List, boolean, Batch.Callback, boolean)}.
-   * Uses default ExecutorService for this AP (must have been created with one).
-   */
-  public <CResult> AsyncRequestFuture submit(TableName tableName, final List<? extends Row> rows,
-      boolean atLeastOne, Batch.Callback<CResult> callback, boolean needResults)
-      throws InterruptedIOException {
-    return submit(null, tableName, rows, atLeastOne, callback, needResults);
-  }
+
   /**
    * See {@link #submit(ExecutorService, TableName, RowAccess, boolean, Batch.Callback, boolean)}.
    * Uses default ExecutorService for this AP (must have been created with one).
@@ -529,7 +521,7 @@ class AsyncProcess {
       List<Integer> locationErrorRows, Map<ServerName, MultiAction<Row>> actionsByServer,
       ExecutorService pool) {
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
-      tableName, retainedActions, nonceGroup, pool, callback, results, needResults);
+      tableName, retainedActions, nonceGroup, pool, callback, results, needResults, null, timeout);
     // Add location errors if any
     if (locationErrors != null) {
       for (int i = 0; i < locationErrors.size(); ++i) {
@@ -563,14 +555,6 @@ class AsyncProcess {
     }
 
     multiAction.add(regionName, action);
-  }
-  /**
-   * See {@link #submitAll(ExecutorService, TableName, List, Batch.Callback, Object[])}.
-   * Uses default ExecutorService for this AP (must have been created with one).
-   */
-  public <CResult> AsyncRequestFuture submitAll(TableName tableName,
-      List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
-    return submitAll(null, tableName, rows, callback, results, null, timeout);
   }
 
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
@@ -1783,15 +1767,6 @@ class AsyncProcess {
     return new AsyncRequestFutureImpl<CResult>(
         tableName, actions, nonceGroup, getPool(pool), needResults,
         results, callback, callable, curTimeout);
-  }
-
-  @VisibleForTesting
-  /** Create AsyncRequestFuture. Isolated to be easily overridden in the tests. */
-  protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
-      TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
-      Batch.Callback<CResult> callback, Object[] results, boolean needResults) {
-    return createAsyncRequestFuture(
-        tableName, actions, nonceGroup, pool, callback, results, needResults, null, timeout);
   }
 
   /**

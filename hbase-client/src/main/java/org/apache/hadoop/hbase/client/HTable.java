@@ -1218,7 +1218,7 @@ public class HTable implements Table {
             RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
             true, RpcControllerFactory.instantiate(configuration), readRpcTimeout);
 
-    AsyncRequestFuture future = asyncProcess.submitAll(tableName, execs,
+    AsyncRequestFuture future = asyncProcess.submitAll(null, tableName, execs,
         new Callback<ClientProtos.CoprocessorServiceResult>() {
           @Override
           public void update(byte[] region, byte[] row,
