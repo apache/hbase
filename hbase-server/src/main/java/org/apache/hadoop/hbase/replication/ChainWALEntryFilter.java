@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -34,9 +35,11 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public class ChainWALEntryFilter implements WALEntryFilter {
 
   private final WALEntryFilter[] filters;
+  private WALCellFilter[] cellFilters;
 
   public ChainWALEntryFilter(WALEntryFilter...filters) {
     this.filters = filters;
+    initCellFilters();
   }
 
   public ChainWALEntryFilter(List<WALEntryFilter> filters) {
@@ -49,8 +52,18 @@ public class ChainWALEntryFilter implements WALEntryFilter {
         rawFilters.add(filter);
       }
     }
-
     this.filters = rawFilters.toArray(new WALEntryFilter[rawFilters.size()]);
+    initCellFilters();
+  }
+
+  public void initCellFilters() {
+    ArrayList<WALCellFilter> cellFilters = new ArrayList<>(filters.length);
+    for (WALEntryFilter filter : filters) {
+      if (filter instanceof WALCellFilter) {
+        cellFilters.add((WALCellFilter) filter);
+      }
+    }
+    this.cellFilters = cellFilters.toArray(new WALCellFilter[cellFilters.size()]);
   }
 
   @Override
@@ -61,7 +74,30 @@ public class ChainWALEntryFilter implements WALEntryFilter {
       }
       entry = filter.filter(entry);
     }
+    filterCells(entry);
     return entry;
   }
 
+  private void filterCells(Entry entry) {
+    if (entry == null || cellFilters.length == 0) {
+      return;
+    }
+    ArrayList<Cell> cells = entry.getEdit().getCells();
+    int size = cells.size();
+    for (int i = size - 1; i >= 0; i--) {
+      Cell cell = cells.get(i);
+      for (WALCellFilter filter : cellFilters) {
+        cell = filter.filterCell(entry, cell);
+        if (cell != null) {
+          cells.set(i, cell);
+        } else {
+          cells.remove(i);
+          break;
+        }
+      }
+    }
+    if (cells.size() < size / 2) {
+      cells.trimToSize();
+    }
+  }
 }

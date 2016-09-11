@@ -78,7 +78,7 @@ public class TestReplicationWALEntryFilters {
 
   @Test
   public void testScopeWALEntryFilter() {
-    ScopeWALEntryFilter filter = new ScopeWALEntryFilter();
+    WALEntryFilter filter = new ChainWALEntryFilter(new ScopeWALEntryFilter());
 
     Entry userEntry = createEntry(null, a, b);
     Entry userEntryA = createEntry(null, a);
@@ -201,14 +201,14 @@ public class TestReplicationWALEntryFilters {
 
     when(peer.getTableCFs()).thenReturn(null);
     Entry userEntry = createEntry(null, a, b, c);
-    TableCfWALEntryFilter filter = new TableCfWALEntryFilter(peer);
+    WALEntryFilter filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     // empty map
     userEntry = createEntry(null, a, b, c);
     Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
     when(peer.getTableCFs()).thenReturn(tableCfs);
-    filter = new TableCfWALEntryFilter(peer);
+    filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
     // table bar
@@ -216,7 +216,7 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("bar"), null);
     when(peer.getTableCFs()).thenReturn(tableCfs);
-    filter = new TableCfWALEntryFilter(peer);
+    filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
     // table foo:a
@@ -224,7 +224,7 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
-    filter = new TableCfWALEntryFilter(peer);
+    filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a), filter.filter(userEntry));
 
     // table foo:a,c
@@ -232,7 +232,7 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
-    filter = new TableCfWALEntryFilter(peer);
+    filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a,c), filter.filter(userEntry));
   }
 
