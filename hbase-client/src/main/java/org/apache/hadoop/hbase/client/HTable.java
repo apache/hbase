@@ -630,17 +630,17 @@ public class HTable implements Table {
   public Result append(final Append append) throws IOException {
     checkHasFamilies(append);
     NoncedRegionServerCallable<Result> callable =
-        new NoncedRegionServerCallable<Result>(this.connection,
-        this.rpcControllerFactory, getName(), append.getRow()) {
-      @Override
-      protected Result call(HBaseRpcController controller) throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
-        MutateResponse response = getStub().mutate(controller, request);
-        if (!response.hasResult()) return null;
-        return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
-      }
-    };
+        new NoncedRegionServerCallable<Result>(this.connection, this.rpcControllerFactory,
+            getName(), append.getRow()) {
+          @Override
+          protected Result rpcCall() throws Exception {
+            MutateRequest request = RequestConverter.buildMutateRequest(
+              getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
+            MutateResponse response = getStub().mutate(getRpcController(), request);
+            if (!response.hasResult()) return null;
+            return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          }
+        };
     return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeout).
         callWithRetries(callable, this.operationTimeout);
   }
@@ -652,16 +652,16 @@ public class HTable implements Table {
   public Result increment(final Increment increment) throws IOException {
     checkHasFamilies(increment);
     NoncedRegionServerCallable<Result> callable =
-        new NoncedRegionServerCallable<Result>(this.connection,
-        this.rpcControllerFactory, getName(), increment.getRow()) {
-      @Override
-      protected Result call(HBaseRpcController controller) throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
-        MutateResponse response = getStub().mutate(controller, request);
-        // Should this check for null like append does?
-        return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
-      }
+      new NoncedRegionServerCallable<Result>(this.connection,
+      this.rpcControllerFactory, getName(), increment.getRow()) {
+        @Override
+        protected Result rpcCall() throws Exception {
+          MutateRequest request = RequestConverter.buildMutateRequest(
+            getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
+          MutateResponse response = getStub().mutate(getRpcController(), request);
+          // Should this check for null like append does?
+          return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+        }
     };
     return rpcCallerFactory.<Result> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
@@ -701,12 +701,12 @@ public class HTable implements Table {
         new NoncedRegionServerCallable<Long>(this.connection, this.rpcControllerFactory, getName(),
             row) {
       @Override
-      protected Long call(HBaseRpcController controller) throws Exception {
+      protected Long rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family,
-          qualifier, amount, durability, getNonceGroup(), getNonce());
-        MutateResponse response = getStub().mutate(controller, request);
-        Result result = ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
+            getLocation().getRegionInfo().getRegionName(), row, family,
+            qualifier, amount, durability, getNonceGroup(), getNonce());
+        MutateResponse response = getStub().mutate(getRpcController(), request);
+        Result result = ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
       }
     };
