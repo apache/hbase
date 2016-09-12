@@ -29,12 +29,14 @@ import java.util.Set;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Interface used to manage RSGroupInfo storage. An implementation
  * has the option to support offline mode.
  * See {@link RSGroupBasedLoadBalancer}
  */
+@InterfaceAudience.Private
 public interface RSGroupInfoManager {
   //Assigned before user tables
   public static final TableName RSGROUP_TABLE_NAME =
