@@ -479,16 +479,18 @@ public class HTable implements Table {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
-    }
+    batch(actions, results, -1);
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int timeout)
       throws InterruptedException, IOException {
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results, null, timeout);
+    AsyncRequestFuture ars = null;
+    if (timeout != -1) {
+      ars = multiAp.submitAll(pool, tableName, actions, null, results, null, timeout);
+    } else {
+      // use default timeout in AP
+      ars = multiAp.submitAll(pool, tableName, actions, null, results);
+    }
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -720,20 +722,7 @@ public class HTable implements Table {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
-    RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(this.connection, this.rpcControllerFactory,
-            getName(), row) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), CompareType.EQUAL, put);
-        MutateResponse response = getStub().mutate(getRpcController(), request);
-        return Boolean.valueOf(response.getProcessed());
-      }
-    };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
   }
 
   /**
@@ -768,20 +757,7 @@ public class HTable implements Table {
   public boolean checkAndDelete(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Delete delete)
   throws IOException {
-    RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(this.connection, this.rpcControllerFactory,
-            getName(), row) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), CompareType.EQUAL, delete);
-        MutateResponse response = getStub().mutate(getRpcController(), request);
-        return Boolean.valueOf(response.getProcessed());
-      }
-    };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
   }
 
   /**
