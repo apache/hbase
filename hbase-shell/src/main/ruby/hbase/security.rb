@@ -174,12 +174,9 @@ module Hbase
 
      # Does Namespace exist
     def namespace_exists?(namespace_name)
-      namespaceDesc = @admin.getNamespaceDescriptor(namespace_name)
-      if(namespaceDesc == nil)
-        return false
-      else
-        return true
-      end
+      return @admin.getNamespaceDescriptor(namespace_name) != nil
+    rescue org.apache.hadoop.hbase.NamespaceNotFoundException => e
+      return false
     end
 
     # Make sure that security features are available
