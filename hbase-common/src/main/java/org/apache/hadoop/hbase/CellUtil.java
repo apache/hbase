@@ -1974,7 +1974,11 @@ public final class CellUtil {
    * These cells are used in reseeks/seeks to improve the read performance.
    * They are not real cells that are returned back to the clients
    */
-  private static abstract class EmptyByteBufferedCell extends ByteBufferedCell {
+  private static abstract class EmptyByteBufferedCell extends ByteBufferedCell implements SettableSequenceId {
+    @Override
+    public void setSequenceId(long seqId) {
+      // Fake cells don't need seqId, so leaving it as a noop.
+    }
 
     @Override
     public byte[] getRowArray() {
