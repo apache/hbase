@@ -1163,7 +1163,7 @@
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
-    <compileSource>1.7</compileSource>
+    <compileSource>1.8</compileSource>
     <!-- Build dependencies -->
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
