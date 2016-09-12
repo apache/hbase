@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor.DefaultVisitorBase;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -91,7 +90,6 @@ import org.apache.zookeeper.KeeperException;
  * It also makes use of zookeeper to store group information needed
  * for bootstrapping during offline mode.
  */
-@InterfaceAudience.Private
 public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListener {
   private static final Log LOG = LogFactory.getLog(RSGroupInfoManagerImpl.class);
 

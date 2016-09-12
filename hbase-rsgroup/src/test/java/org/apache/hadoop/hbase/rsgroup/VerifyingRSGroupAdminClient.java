@@ -24,7 +24,6 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -43,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@InterfaceAudience.Private
 public class VerifyingRSGroupAdminClient extends RSGroupAdmin {
   private Table table;
   private ZooKeeperWatcher zkw;
