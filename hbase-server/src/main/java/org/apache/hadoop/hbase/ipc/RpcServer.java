@@ -2003,6 +2003,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           LOG.trace(ignored);
         }
       }
+      rpcCount.destroy();
     }
 
     private UserGroupInformation createUser(ConnectionHeader head) {
