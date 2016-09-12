@@ -181,6 +181,10 @@ public class Counter {
     return sum;
   }
 
+  public void destroy() {
+    indexHolderThreadLocal.remove();
+  }
+
   @Override
   public String toString() {
     Cell[] cells = containerRef.get().cells;

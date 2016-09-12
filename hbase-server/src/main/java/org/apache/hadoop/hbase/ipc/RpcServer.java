@@ -1957,6 +1957,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           LOG.trace("Ignored exception", ignored);
         }
       }
+      rpcCount.destroy();
     }
 
     private UserGroupInformation createUser(ConnectionHeader head) {
