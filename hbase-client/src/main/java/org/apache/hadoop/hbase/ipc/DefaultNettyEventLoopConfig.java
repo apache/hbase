@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
@@ -32,6 +33,8 @@ import org.apache.hadoop.hbase.util.Pair;
 class DefaultNettyEventLoopConfig {
 
   public static final Pair<EventLoopGroup, Class<? extends Channel>> GROUP_AND_CHANNEL_CLASS = Pair
-      .<EventLoopGroup, Class<? extends Channel>> newPair(new NioEventLoopGroup(),
+      .<EventLoopGroup, Class<? extends Channel>> newPair(
+        new NioEventLoopGroup(0,
+            new DefaultThreadFactory("Default-IPC-NioEventLoopGroup", true, Thread.MAX_PRIORITY)),
         NioSocketChannel.class);
 }

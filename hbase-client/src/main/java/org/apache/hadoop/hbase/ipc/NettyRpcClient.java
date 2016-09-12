@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -51,7 +52,8 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
         .getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
-      this.group = new NioEventLoopGroup();
+      this.group = new NioEventLoopGroup(0,
+          new DefaultThreadFactory("IPC-NioEventLoopGroup", true, Thread.MAX_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {
