@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ProcedureUtil;
@@ -1981,7 +1982,8 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public NamespaceDescriptor getNamespaceDescriptor(final String name) throws IOException {
+  public NamespaceDescriptor getNamespaceDescriptor(final String name)
+      throws NamespaceNotFoundException, IOException {
     return executeCallable(new MasterCallable<NamespaceDescriptor>(getConnection(),
         getRpcControllerFactory()) {
       @Override

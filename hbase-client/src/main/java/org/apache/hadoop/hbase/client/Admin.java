@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -1085,9 +1086,11 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param name name of namespace descriptor
    * @return A descriptor
+   * @throws org.apache.hadoop.hbase.NamespaceNotFoundException
+   * @throws IOException if a remote or network exception occurs
    */
   NamespaceDescriptor getNamespaceDescriptor(final String name)
-  throws IOException;
+  throws NamespaceNotFoundException, IOException;
 
   /**
    * List available namespace descriptors
