@@ -362,8 +362,16 @@ public class Scan extends Query {
    * @param startRow row to start scan on (inclusive)
    * Note: In order to make startRow exclusive add a trailing 0 byte
    * @return this
+   * @throws IllegalArgumentException if startRow does not meet criteria
+   * for a row key (when length exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan setStartRow(byte [] startRow) {
+    if (Bytes.len(startRow) > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException(
+        "startRow's length must be less than or equal to " +
+        HConstants.MAX_ROW_LENGTH + " to meet the criteria" +
+        " for a row key.");
+    }
     this.startRow = startRow;
     return this;
   }
@@ -376,8 +384,16 @@ public class Scan extends Query {
    * use {@link #setRowPrefixFilter(byte[])}.
    * The 'trailing 0' will not yield the desired result.</p>
    * @return this
+   * @throws IllegalArgumentException if stopRow does not meet criteria
+   * for a row key (when length exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan setStopRow(byte [] stopRow) {
+    if (Bytes.len(stopRow) > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException(
+        "stopRow's length must be less than or equal to " +
+        HConstants.MAX_ROW_LENGTH + " to meet the criteria" +
+        " for a row key.");
+    }
     this.stopRow = stopRow;
     return this;
   }

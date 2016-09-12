@@ -25,10 +25,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -129,6 +130,32 @@ public class TestScan {
       scan.setAuthorizations(new Authorizations("/B"));
     } catch (IllegalArgumentException e) {
       fail("should not throw exception");
+    }
+  }
+
+  @Test
+  public void testSetStartRowAndSetStopRow() {
+    Scan scan = new Scan();
+    scan.setStartRow(null);
+    scan.setStartRow(new byte[1]);
+    scan.setStartRow(new byte[HConstants.MAX_ROW_LENGTH]);
+    try {
+      scan.setStartRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      fail("should've thrown exception");
+    } catch (IllegalArgumentException iae) {
+    } catch (Exception e) {
+      fail("expected IllegalArgumentException to be thrown");
+    }
+
+    scan.setStopRow(null);
+    scan.setStopRow(new byte[1]);
+    scan.setStopRow(new byte[HConstants.MAX_ROW_LENGTH]);
+    try {
+      scan.setStopRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      fail("should've thrown exception");
+    } catch (IllegalArgumentException iae) {
+    } catch (Exception e) {
+      fail("expected IllegalArgumentException to be thrown");
     }
   }
 }
