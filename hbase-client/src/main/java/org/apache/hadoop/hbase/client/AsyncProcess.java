@@ -756,7 +756,7 @@ class AsyncProcess {
 
       @Override
       public void run() {
-        AbstractResponse res;
+        AbstractResponse res = null;
         CancellableRegionServerCallable callable = currentCallable;
         try {
           // setup the callable based on the actions, if we don't have one already from the request
@@ -802,7 +802,7 @@ class AsyncProcess {
           throw new RuntimeException(t);
         } finally {
           decTaskCounters(multiAction.getRegions(), server);
-          if (callsInProgress != null && callable != null) {
+          if (callsInProgress != null && callable != null && res != null) {
             callsInProgress.remove(callable);
           }
         }
