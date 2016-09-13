@@ -52,34 +52,29 @@ public abstract class AbstractMemStore implements MemStore {
   private final CellComparator comparator;
 
   // active segment absorbs write operations
-  private volatile MutableSegment active;
+  protected volatile MutableSegment active;
   // Snapshot of memstore.  Made for flusher.
-  private volatile ImmutableSegment snapshot;
+  protected volatile ImmutableSegment snapshot;
   protected volatile long snapshotId;
   // Used to track when to flush
   private volatile long timeOfOldestEdit;
 
-  public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT +
-          (4 * ClassSize.REFERENCE) +
-          (2 * Bytes.SIZEOF_LONG));
+  public final static long FIXED_OVERHEAD = ClassSize
+      .align(ClassSize.OBJECT + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG));
 
-  public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      (ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER +
-      ClassSize.CELL_SET + ClassSize.CONCURRENT_SKIPLISTMAP));
-
+  public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c) {
     this.conf = conf;
     this.comparator = c;
     resetActive();
-    this.snapshot = SegmentFactory.instance().createImmutableSegment(c, 0);
+    this.snapshot = SegmentFactory.instance().createImmutableSegment(c);
     this.snapshotId = NO_SNAPSHOT_ID;
   }
 
   protected void resetActive() {
     // Reset heap to not include any keys
-    this.active = SegmentFactory.instance().createMutableSegment(conf, comparator, DEEP_OVERHEAD);
+    this.active = SegmentFactory.instance().createMutableSegment(conf, comparator);
     this.timeOfOldestEdit = Long.MAX_VALUE;
   }
 
@@ -200,8 +195,7 @@ public abstract class AbstractMemStore implements MemStore {
     // create a new snapshot and let the old one go.
     Segment oldSnapshot = this.snapshot;
     if (!this.snapshot.isEmpty()) {
-      this.snapshot = SegmentFactory.instance().createImmutableSegment(
-          getComparator(), 0);
+      this.snapshot = SegmentFactory.instance().createImmutableSegment(this.comparator);
     }
     this.snapshotId = NO_SNAPSHOT_ID;
     oldSnapshot.close();
@@ -213,12 +207,12 @@ public abstract class AbstractMemStore implements MemStore {
    */
   @Override
   public long heapSize() {
-    return getActive().getSize();
+    return size();
   }
 
   @Override
   public long getSnapshotSize() {
-    return getSnapshot().getSize();
+    return this.snapshot.keySize();
   }
 
   @Override
@@ -385,7 +379,7 @@ public abstract class AbstractMemStore implements MemStore {
     // so we cant add the new Cell w/o knowing what's there already, but we also
     // want to take this chance to delete some cells. So two loops (sad)
 
-    SortedSet<Cell> ss = getActive().tailSet(firstCell);
+    SortedSet<Cell> ss = this.active.tailSet(firstCell);
     for (Cell cell : ss) {
       // if this isnt the row we are interested in, then bail:
       if (!CellUtil.matchingColumn(cell, family, qualifier)
@@ -433,29 +427,25 @@ public abstract class AbstractMemStore implements MemStore {
     }
   }
 
+  /**
+   * @return The size of the active segment. Means sum of all cell's size.
+   */
   protected long keySize() {
-    return heapSize() - DEEP_OVERHEAD;
+    return this.active.keySize();
   }
 
   protected CellComparator getComparator() {
     return comparator;
   }
 
-  protected MutableSegment getActive() {
+  @VisibleForTesting
+  MutableSegment getActive() {
     return active;
   }
 
-  protected ImmutableSegment getSnapshot() {
+  @VisibleForTesting
+  ImmutableSegment getSnapshot() {
     return snapshot;
-  }
-
-  protected AbstractMemStore setSnapshot(ImmutableSegment snapshot) {
-    this.snapshot = snapshot;
-    return this;
-  }
-
-  protected void setSnapshotSize(long snapshotSize) {
-    getSnapshot().setSize(snapshotSize);
   }
 
   /**
@@ -464,7 +454,6 @@ public abstract class AbstractMemStore implements MemStore {
   protected abstract void checkActiveSize();
 
   /**
-   * Returns an ordered list of segments from most recent to oldest in memstore
    * @return an ordered list of segments from most recent to oldest in memstore
    */
   protected abstract List<Segment> getSegments() throws IOException;

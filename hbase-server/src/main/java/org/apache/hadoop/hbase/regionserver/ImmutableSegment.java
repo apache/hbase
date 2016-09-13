@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.client.Scan;
@@ -37,11 +38,12 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class ImmutableSegment extends Segment {
-  /**
-   * This is an immutable segment so use the read-only TimeRange rather than the heavy-weight
-   * TimeRangeTracker with all its synchronization when doing time range stuff.
-   */
-  private final TimeRange timeRange;
+
+  private static final long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD
+      + (2 * ClassSize.REFERENCE) // Refs to timeRange and type
+      + ClassSize.TIMERANGE;
+  public static final long DEEP_OVERHEAD_CSLM = DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
+  public static final long DEEP_OVERHEAD_CAM = DEEP_OVERHEAD + ClassSize.CELL_ARRAY_MAP;
 
   /**
    * Types of ImmutableSegment
@@ -50,6 +52,12 @@ public class ImmutableSegment extends Segment {
     SKIPLIST_MAP_BASED,
     ARRAY_MAP_BASED,
   }
+
+  /**
+   * This is an immutable segment so use the read-only TimeRange rather than the heavy-weight
+   * TimeRangeTracker with all its synchronization when doing time range stuff.
+   */
+  private final TimeRange timeRange;
 
   private Type type = Type.SKIPLIST_MAP_BASED;
 
@@ -66,9 +74,8 @@ public class ImmutableSegment extends Segment {
    */
   protected ImmutableSegment(Segment segment) {
     super(segment);
-    type = Type.SKIPLIST_MAP_BASED;
-    TimeRangeTracker trt = getTimeRangeTracker();
-    this.timeRange =  trt == null? null: trt.toTimeRange();
+    this.type = Type.SKIPLIST_MAP_BASED;
+    this.timeRange = this.timeRangeTracker == null ? null : this.timeRangeTracker.toTimeRange();
   }
 
   /**------------------------------------------------------------------------
@@ -80,20 +87,14 @@ public class ImmutableSegment extends Segment {
    */
   protected ImmutableSegment(CellComparator comparator, MemStoreCompactorIterator iterator,
       MemStoreLAB memStoreLAB, int numOfCells, Type type) {
-
-    super(null,  // initiailize the CellSet with NULL
-        comparator, memStoreLAB,
-        // initial size of segment metadata (the data per cell is added in createCellArrayMapSet)
-        CompactingMemStore.DEEP_OVERHEAD_PER_PIPELINE_CELL_ARRAY_ITEM,
-        ClassSize.CELL_ARRAY_MAP_ENTRY);
-
+    super(null, // initiailize the CellSet with NULL
+        comparator, memStoreLAB);
+    this.type = type;
     // build the true CellSet based on CellArrayMap
     CellSet cs = createCellArrayMapSet(numOfCells, iterator);
 
     this.setCellSet(null, cs);            // update the CellSet of the new Segment
-    this.type = type;
-    TimeRangeTracker trt = getTimeRangeTracker();
-    this.timeRange =  trt == null? null: trt.toTimeRange();
+    this.timeRange = this.timeRangeTracker == null ? null : this.timeRangeTracker.toTimeRange();
   }
 
   /**------------------------------------------------------------------------
@@ -101,15 +102,11 @@ public class ImmutableSegment extends Segment {
    * list of older ImmutableSegments.
    * The given iterator returns the Cells that "survived" the compaction.
    */
-  protected ImmutableSegment(
-      CellComparator comparator, MemStoreCompactorIterator iterator, MemStoreLAB memStoreLAB) {
-
-    super(new CellSet(comparator),  // initiailize the CellSet with empty CellSet
-        comparator, memStoreLAB,
-        // initial size of segment metadata (the data per cell is added in internalAdd)
-        CompactingMemStore.DEEP_OVERHEAD_PER_PIPELINE_SKIPLIST_ITEM,
-        ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
-
+  protected ImmutableSegment(CellComparator comparator, MemStoreCompactorIterator iterator,
+      MemStoreLAB memStoreLAB) {
+    super(new CellSet(comparator), // initiailize the CellSet with empty CellSet
+        comparator, memStoreLAB);
+    type = Type.SKIPLIST_MAP_BASED;
     while (iterator.hasNext()) {
       Cell c = iterator.next();
       // The scanner is doing all the elimination logic
@@ -118,9 +115,7 @@ public class ImmutableSegment extends Segment {
       boolean usedMSLAB = (newKV != c);
       internalAdd(newKV, usedMSLAB); //
     }
-    type = Type.SKIPLIST_MAP_BASED;
-    TimeRangeTracker trt = getTimeRangeTracker();
-    this.timeRange =  trt == null? null: trt.toTimeRange();
+    this.timeRange = this.timeRangeTracker == null ? null : this.timeRangeTracker.toTimeRange();
   }
 
   /////////////////////  PUBLIC METHODS  /////////////////////
@@ -144,14 +139,16 @@ public class ImmutableSegment extends Segment {
     return this.timeRange.getMin();
   }
 
+
   @Override
-  public long keySize() {
-    switch (type){
+  public long size() {
+    switch (this.type) {
     case SKIPLIST_MAP_BASED:
-      return size.get() - CompactingMemStore.DEEP_OVERHEAD_PER_PIPELINE_SKIPLIST_ITEM;
+      return keySize() + DEEP_OVERHEAD_CSLM;
     case ARRAY_MAP_BASED:
-      return size.get() - CompactingMemStore.DEEP_OVERHEAD_PER_PIPELINE_CELL_ARRAY_ITEM;
-    default: throw new IllegalStateException();
+      return keySize() + DEEP_OVERHEAD_CAM;
+    default:
+      throw new RuntimeException("Unknown type " + type);
     }
   }
 
@@ -170,9 +167,6 @@ public class ImmutableSegment extends Segment {
     if (isFlat()) return false;
     CellSet oldCellSet = getCellSet();
     int numOfCells = getCellsCount();
-
-    // each Cell is now represented in CellArrayMap
-    constantCellMetaDataSize = ClassSize.CELL_ARRAY_MAP_ENTRY;
 
     // build the new (CellSet CellArrayMap based)
     CellSet  newCellSet = recreateCellArrayMapSet(numOfCells);
@@ -214,6 +208,19 @@ public class ImmutableSegment extends Segment {
     return new CellSet(cam);
   }
 
+  protected long heapSizeChange(Cell cell, boolean succ) {
+    if (succ) {
+      switch (this.type) {
+      case SKIPLIST_MAP_BASED:
+        return ClassSize
+            .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
+      case ARRAY_MAP_BASED:
+        return ClassSize.align(ClassSize.CELL_ARRAY_MAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
+      }
+    }
+    return 0;
+  }
+
   /*------------------------------------------------------------------------*/
   // Create CellSet based on CellArrayMap from current ConcurrentSkipListMap based CellSet
   // (without compacting iterator)
@@ -239,5 +246,4 @@ public class ImmutableSegment extends Segment {
     CellArrayMap cam = new CellArrayMap(getComparator(), cells, 0, idx, false);
     return new CellSet(cam);
   }
-
 }

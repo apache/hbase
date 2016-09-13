@@ -36,7 +36,7 @@ public class MemStoreSnapshot {
   public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
-    this.size = snapshot.getSize();
+    this.size = snapshot.keySize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
     this.scanner = snapshot.getKeyValueScanner();
     this.tagsPresent = snapshot.isTagsPresent();

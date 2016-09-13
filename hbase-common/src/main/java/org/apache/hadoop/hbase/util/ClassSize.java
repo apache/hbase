@@ -46,6 +46,12 @@ public class ClassSize {
   /** Overhead for ArrayList(0) */
   public static final int ARRAYLIST;
 
+  /** Overhead for LinkedList(0) */
+  public static final int LINKEDLIST;
+
+  /** Overhead for a single entry in LinkedList */
+  public static final int LINKEDLIST_ENTRY;
+
   /** Overhead for ByteBuffer */
   public static final int BYTE_BUFFER;
 
@@ -99,6 +105,9 @@ public class ClassSize {
 
   /** Overhead for AtomicBoolean */
   public static final int ATOMIC_BOOLEAN;
+
+  /** Overhead for AtomicReference */
+  public static final int ATOMIC_REFERENCE;
 
   /** Overhead for CopyOnWriteArraySet */
   public static final int COPYONWRITE_ARRAYSET;
@@ -240,6 +249,10 @@ public class ClassSize {
 
     ARRAYLIST = align(OBJECT + REFERENCE + (2 * Bytes.SIZEOF_INT)) + align(ARRAY);
 
+    LINKEDLIST = align(OBJECT + (2 * Bytes.SIZEOF_INT) + (2 * REFERENCE));
+
+    LINKEDLIST_ENTRY = align(OBJECT + (2 * REFERENCE));
+
     //noinspection PointlessArithmeticExpression
     BYTE_BUFFER = align(OBJECT + REFERENCE +
         (5 * Bytes.SIZEOF_INT) +
@@ -291,6 +304,8 @@ public class ClassSize {
     ATOMIC_INTEGER = align(OBJECT + Bytes.SIZEOF_INT);
 
     ATOMIC_BOOLEAN = align(OBJECT + Bytes.SIZEOF_BOOLEAN);
+
+    ATOMIC_REFERENCE = align(OBJECT + REFERENCE);
 
     COPYONWRITE_ARRAYSET = align(OBJECT + REFERENCE);
 

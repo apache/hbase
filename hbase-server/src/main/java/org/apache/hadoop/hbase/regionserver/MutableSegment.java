@@ -21,17 +21,21 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.ClassSize;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A mutable segment in memstore, specifically the active segment.
  */
 @InterfaceAudience.Private
 public class MutableSegment extends Segment {
-  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
-      long size) {
-    super(cellSet, comparator, memStoreLAB, size, ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
+
+  public final static long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
+
+  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
+    super(cellSet, comparator, memStoreLAB);
   }
 
   /**
@@ -44,29 +48,28 @@ public class MutableSegment extends Segment {
     return internalAdd(cell, mslabUsed);
   }
 
-  //methods for test
-
   /**
    * Returns the first cell in the segment
    * @return the first cell in the segment
    */
+  @VisibleForTesting
   Cell first() {
     return this.getCellSet().first();
   }
 
   @Override
   public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return (getTimeRangeTracker().includesTimeRange(scan.getTimeRange())
-        && (getTimeRangeTracker().getMax() >= oldestUnexpiredTS));
+    return (this.timeRangeTracker.includesTimeRange(scan.getTimeRange())
+        && (this.timeRangeTracker.getMax() >= oldestUnexpiredTS));
   }
 
   @Override
   public long getMinTimestamp() {
-    return getTimeRangeTracker().getMin();
+    return this.timeRangeTracker.getMin();
   }
 
   @Override
-  public long keySize() {
-    return size.get() - CompactingMemStore.DEEP_OVERHEAD_PER_PIPELINE_SKIPLIST_ITEM;
+  public long size() {
+    return keySize() + DEEP_OVERHEAD;
   }
 }
