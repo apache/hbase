@@ -243,6 +243,14 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
       return this.code;
     }
 
+    private static Type[] codeArray = new Type[256];
+
+    static {
+      for (Type t : Type.values()) {
+        codeArray[t.code & 0xff] = t;
+      }
+    }
+
     /**
      * Cannot rely on enum ordinals . They change if item is removed or moved.
      * Do our own codes.
@@ -250,10 +258,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @return Type associated with passed code.
      */
     public static Type codeToType(final byte b) {
-      for (Type t : Type.values()) {
-        if (t.getCode() == b) {
-          return t;
-        }
+      Type t = codeArray[b & 0xff];
+      if (t != null) {
+        return t;
       }
       throw new RuntimeException("Unknown code " + b);
     }
