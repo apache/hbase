@@ -33,37 +33,30 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.AddColumnFamilyState;
-import org.apache.hadoop.hbase.security.User;
 
 /**
  * The procedure to add a column family to an existing table.
  */
 @InterfaceAudience.Private
 public class AddColumnFamilyProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, AddColumnFamilyState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<AddColumnFamilyState> {
   private static final Log LOG = LogFactory.getLog(AddColumnFamilyProcedure.class);
 
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
   private HColumnDescriptor cfDescriptor;
-  private User user;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
-  // used for compatibility with old clients, until 2.0 the client had a sync behavior
-  private final ProcedurePrepareLatch syncLatch;
-
   public AddColumnFamilyProcedure() {
+    super();
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
-    this.syncLatch = null;
   }
 
   public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
@@ -73,14 +66,12 @@ public class AddColumnFamilyProcedure
 
   public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
       final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
-    this.syncLatch = latch;
   }
 
   @Override
@@ -153,7 +144,7 @@ public class AddColumnFamilyProcedure
 
   @Override
   protected void completionCleanup(final MasterProcedureEnv env) {
-    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+    releaseSyncLatch();
   }
 
   @Override
@@ -172,23 +163,12 @@ public class AddColumnFamilyProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, tableName);
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, tableName);
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.AddColumnFamilyStateData.Builder addCFMsg =
         MasterProcedureProtos.AddColumnFamilyStateData.newBuilder()
-            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setColumnfamilySchema(ProtobufUtil.convertToColumnFamilySchema(cfDescriptor));
     if (unmodifiedHTableDescriptor != null) {
@@ -205,7 +185,7 @@ public class AddColumnFamilyProcedure
 
     MasterProcedureProtos.AddColumnFamilyStateData addCFMsg =
         MasterProcedureProtos.AddColumnFamilyStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(addCFMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(addCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(addCFMsg.getTableName());
     cfDescriptor = ProtobufUtil.convertToHColumnDesc(addCFMsg.getColumnfamilySchema());
     if (addCFMsg.hasUnmodifiedTableSchema()) {
@@ -244,7 +224,7 @@ public class AddColumnFamilyProcedure
    */
   private void prepareAdd(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table is allowed to be modified.
-    MasterDDLOperationHelper.checkTableModifiable(env, tableName);
+    checkTableModifiable(env);
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
     unmodifiedHTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
@@ -369,10 +349,10 @@ public class AddColumnFamilyProcedure
     if (cpHost != null) {
       switch (state) {
         case ADD_COLUMN_FAMILY_PRE_OPERATION:
-          cpHost.preAddColumnFamilyAction(tableName, cfDescriptor, user);
+          cpHost.preAddColumnFamilyAction(tableName, cfDescriptor, getUser());
           break;
         case ADD_COLUMN_FAMILY_POST_OPERATION:
-          cpHost.postCompletedAddColumnFamilyAction(tableName, cfDescriptor, user);
+          cpHost.postCompletedAddColumnFamilyAction(tableName, cfDescriptor, getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);

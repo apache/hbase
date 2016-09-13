@@ -40,28 +40,21 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 
 @InterfaceAudience.Private
 public class TruncateTableProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, TruncateTableState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<TruncateTableState> {
   private static final Log LOG = LogFactory.getLog(TruncateTableProcedure.class);
 
   private boolean preserveSplits;
   private List<HRegionInfo> regions;
-  private User user;
   private HTableDescriptor hTableDescriptor;
   private TableName tableName;
 
-  // used for compatibility with old clients, until 2.0 the client had a sync behavior
-  private final ProcedurePrepareLatch syncLatch;
-
   public TruncateTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
-    syncLatch = null;
+    super();
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
@@ -71,11 +64,9 @@ public class TruncateTableProcedure
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       boolean preserveSplits, ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
-    this.syncLatch = latch;
   }
 
   @Override
@@ -166,7 +157,7 @@ public class TruncateTableProcedure
 
   @Override
   protected void completionCleanup(final MasterProcedureEnv env) {
-    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+    releaseSyncLatch();
   }
 
   @Override
@@ -211,17 +202,6 @@ public class TruncateTableProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
   public void toStringClassDetails(StringBuilder sb) {
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
@@ -237,7 +217,7 @@ public class TruncateTableProcedure
 
     MasterProcedureProtos.TruncateTableStateData.Builder state =
       MasterProcedureProtos.TruncateTableStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setPreserveSplits(preserveSplits);
     if (hTableDescriptor != null) {
       state.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
@@ -258,7 +238,7 @@ public class TruncateTableProcedure
 
     MasterProcedureProtos.TruncateTableStateData state =
       MasterProcedureProtos.TruncateTableStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(state.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     if (state.hasTableSchema()) {
       hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
       tableName = hTableDescriptor.getTableName();
@@ -291,7 +271,7 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      cpHost.preTruncateTableAction(tableName, user);
+      cpHost.preTruncateTableAction(tableName, getUser());
     }
     return true;
   }
@@ -301,7 +281,7 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      cpHost.postCompletedTruncateTableAction(tableName, user);
+      cpHost.postCompletedTruncateTableAction(tableName, getUser());
     }
   }
 }

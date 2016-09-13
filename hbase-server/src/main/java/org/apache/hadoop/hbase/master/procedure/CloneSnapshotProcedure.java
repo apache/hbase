@@ -47,12 +47,10 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -67,11 +65,9 @@ import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public class CloneSnapshotProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, CloneSnapshotState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<CloneSnapshotState> {
   private static final Log LOG = LogFactory.getLog(CloneSnapshotProcedure.class);
 
-  private User user;
   private HTableDescriptor hTableDescriptor;
   private SnapshotDescription snapshot;
   private List<HRegionInfo> newRegions = null;
@@ -97,10 +93,9 @@ public class CloneSnapshotProcedure
    */
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+    super(env);
     this.hTableDescriptor = hTableDescriptor;
     this.snapshot = snapshot;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
 
     getMonitorStatus();
   }
@@ -233,7 +228,7 @@ public class CloneSnapshotProcedure
 
     MasterProcedureProtos.CloneSnapshotStateData.Builder cloneSnapshotMsg =
       MasterProcedureProtos.CloneSnapshotStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
         .setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     if (newRegions != null) {
@@ -264,7 +259,7 @@ public class CloneSnapshotProcedure
 
     MasterProcedureProtos.CloneSnapshotStateData cloneSnapshotMsg =
       MasterProcedureProtos.CloneSnapshotStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo()));
     snapshot = cloneSnapshotMsg.getSnapshot();
     hTableDescriptor = ProtobufUtil.convertToHTableDesc(cloneSnapshotMsg.getTableSchema());
     if (cloneSnapshotMsg.getRegionInfoCount() == 0) {
@@ -288,19 +283,6 @@ public class CloneSnapshotProcedure
     }
     // Make sure that the monitor status is set up
     getMonitorStatus();
-  }
-
-  @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) {
-      return false;
-    }
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
   }
 
   /**
@@ -339,7 +321,7 @@ public class CloneSnapshotProcedure
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      cpHost.preCreateTableAction(hTableDescriptor, null, user);
+      cpHost.preCreateTableAction(hTableDescriptor, null, getUser());
     }
   }
 
@@ -355,7 +337,7 @@ public class CloneSnapshotProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = (newRegions == null) ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, user);
+      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, getUser());
     }
   }
 

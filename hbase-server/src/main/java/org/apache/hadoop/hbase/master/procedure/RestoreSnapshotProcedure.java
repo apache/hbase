@@ -46,13 +46,11 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -61,8 +59,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 @InterfaceAudience.Private
 public class RestoreSnapshotProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, RestoreSnapshotState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<RestoreSnapshotState> {
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotProcedure.class);
 
   private HTableDescriptor modifiedHTableDescriptor;
@@ -72,7 +69,6 @@ public class RestoreSnapshotProcedure
   private Map<String, Pair<String, String>> parentsToChildrenPairMap =
     new HashMap<String, Pair<String, String>>();
 
-  private User user;
   private SnapshotDescription snapshot;
 
   // Monitor
@@ -97,13 +93,11 @@ public class RestoreSnapshotProcedure
       final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor,
       final SnapshotDescription snapshot) {
+    super(env);
     // This is the new schema we are going to write out as this modification.
     this.modifiedHTableDescriptor = hTableDescriptor;
     // Snapshot information
     this.snapshot = snapshot;
-    // User and owner information
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
 
     // Monitor
     getMonitorStatus();
@@ -231,7 +225,7 @@ public class RestoreSnapshotProcedure
 
     MasterProcedureProtos.RestoreSnapshotStateData.Builder restoreSnapshotMsg =
       MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
         .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor));
 
@@ -273,7 +267,7 @@ public class RestoreSnapshotProcedure
 
     MasterProcedureProtos.RestoreSnapshotStateData restoreSnapshotMsg =
       MasterProcedureProtos.RestoreSnapshotStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
     modifiedHTableDescriptor =
       ProtobufUtil.convertToHTableDesc(restoreSnapshotMsg.getModifiedTableSchema());
@@ -314,19 +308,6 @@ public class RestoreSnapshotProcedure
             parentToChildrenPair.getChild2RegionName()));
       }
     }
-  }
-
-  @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) {
-      return false;
-    }
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
   }
 
   /**

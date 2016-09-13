@@ -49,31 +49,24 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, DeleteTableState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<DeleteTableState> {
   private static final Log LOG = LogFactory.getLog(DeleteTableProcedure.class);
 
   private List<HRegionInfo> regions;
-  private User user;
   private TableName tableName;
-
-  // used for compatibility with old clients
-  private final ProcedurePrepareLatch syncLatch;
 
   public DeleteTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
-    syncLatch = null;
+    super();
   }
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName) {
@@ -82,13 +75,8 @@ public class DeleteTableProcedure
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       final ProcedurePrepareLatch syncLatch) {
+    super(env, syncLatch);
     this.tableName = tableName;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
-
-    // used for compatibility with clients without procedures
-    // they need a sync TableNotFoundException, TableNotDisabledException, ...
-    this.syncLatch = syncLatch;
   }
 
   @Override
@@ -102,7 +90,7 @@ public class DeleteTableProcedure
         case DELETE_TABLE_PRE_OPERATION:
           // Verify if we can delete the table
           boolean deletable = prepareDelete(env);
-          ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+          releaseSyncLatch();
           if (!deletable) {
             assert isFailed() : "the delete should have an exception here";
             return Flow.NO_MORE_STATE;
@@ -163,7 +151,7 @@ public class DeleteTableProcedure
       // nothing to rollback, pre-delete is just table-state checks.
       // We can fail if the table does not exist or is not disabled.
       // TODO: coprocessor rollback semantic is still undefined.
-      ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+      releaseSyncLatch();
       return;
     }
 
@@ -207,31 +195,12 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (table=");
-    sb.append(getTableName());
-    sb.append(")");
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.DeleteTableStateData.Builder state =
       MasterProcedureProtos.DeleteTableStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (regions != null) {
       for (HRegionInfo hri: regions) {
@@ -247,7 +216,7 @@ public class DeleteTableProcedure
 
     MasterProcedureProtos.DeleteTableStateData state =
       MasterProcedureProtos.DeleteTableStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(state.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     tableName = ProtobufUtil.toTableName(state.getTableName());
     if (state.getRegionInfoCount() == 0) {
       regions = null;
@@ -274,7 +243,7 @@ public class DeleteTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
-      cpHost.preDeleteTableAction(tableName, user);
+      cpHost.preDeleteTableAction(tableName, getUser());
     }
     return true;
   }
@@ -286,7 +255,7 @@ public class DeleteTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
-      cpHost.postCompletedDeleteTableAction(tableName, user);
+      cpHost.postCompletedDeleteTableAction(tableName, getUser());
     }
   }
 

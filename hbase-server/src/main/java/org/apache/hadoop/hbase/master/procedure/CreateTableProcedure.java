@@ -41,12 +41,10 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -56,20 +54,15 @@ import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public class CreateTableProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, CreateTableState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<CreateTableState> {
   private static final Log LOG = LogFactory.getLog(CreateTableProcedure.class);
-
-  // used for compatibility with old clients
-  private final ProcedurePrepareLatch syncLatch;
 
   private HTableDescriptor hTableDescriptor;
   private List<HRegionInfo> newRegions;
-  private User user;
 
   public CreateTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
-    syncLatch = null;
+    super();
   }
 
   public CreateTableProcedure(final MasterProcedureEnv env,
@@ -80,14 +73,9 @@ public class CreateTableProcedure
   public CreateTableProcedure(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
       final ProcedurePrepareLatch syncLatch) {
+    super(env, syncLatch);
     this.hTableDescriptor = hTableDescriptor;
     this.newRegions = newRegions != null ? Lists.newArrayList(newRegions) : null;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
-
-    // used for compatibility with clients without procedures
-    // they need a sync TableExistsException
-    this.syncLatch = syncLatch;
   }
 
   @Override
@@ -101,7 +89,7 @@ public class CreateTableProcedure
         case CREATE_TABLE_PRE_OPERATION:
           // Verify if we can create the table
           boolean exists = !prepareCreate(env);
-          ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+          releaseSyncLatch();
 
           if (exists) {
             assert isFailed() : "the delete should have an exception here";
@@ -151,7 +139,7 @@ public class CreateTableProcedure
       // We can fail if the table does exist or the descriptor is malformed.
       // TODO: coprocessor rollback semantic is still undefined.
       DeleteTableProcedure.deleteTableStates(env, getTableName());
-      ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+      releaseSyncLatch();
       return;
     }
 
@@ -195,20 +183,12 @@ public class CreateTableProcedure
   }
 
   @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (table=");
-    sb.append(getTableName());
-    sb.append(")");
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.CreateTableStateData.Builder state =
       MasterProcedureProtos.CreateTableStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(this.user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     if (newRegions != null) {
       for (HRegionInfo hri: newRegions) {
@@ -224,7 +204,7 @@ public class CreateTableProcedure
 
     MasterProcedureProtos.CreateTableStateData state =
       MasterProcedureProtos.CreateTableStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(state.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
     if (state.getRegionInfoCount() == 0) {
       newRegions = null;
@@ -242,11 +222,6 @@ public class CreateTableProcedure
       return false;
     }
     return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
   }
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
@@ -278,7 +253,7 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = newRegions == null ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.preCreateTableAction(hTableDescriptor, regions, user);
+      cpHost.preCreateTableAction(hTableDescriptor, regions, getUser());
     }
   }
 
@@ -288,7 +263,7 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = (newRegions == null) ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, user);
+      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, getUser());
     }
   }
 
