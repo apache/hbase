@@ -218,7 +218,7 @@ public class TestAsyncProcess {
       // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
     }
     @Override
-    protected RpcRetryingCaller<MultiResponse> createCaller(
+    protected RpcRetryingCaller<AbstractResponse> createCaller(
         CancellableRegionServerCallable callable) {
       callsCt.incrementAndGet();
       MultiServerCallable callable1 = (MultiServerCallable) callable;
@@ -234,9 +234,9 @@ public class TestAsyncProcess {
             }
           });
 
-      return new RpcRetryingCallerImpl<MultiResponse>(100, 10, 9) {
+      return new RpcRetryingCallerImpl<AbstractResponse>(100, 10, 9) {
         @Override
-        public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
+        public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
                                                 int callTimeout)
         throws IOException, RuntimeException {
           try {
@@ -252,7 +252,7 @@ public class TestAsyncProcess {
     }
   }
 
-  static class CallerWithFailure extends RpcRetryingCallerImpl<MultiResponse>{
+  static class CallerWithFailure extends RpcRetryingCallerImpl<AbstractResponse>{
 
     private final IOException e;
 
@@ -262,7 +262,7 @@ public class TestAsyncProcess {
     }
 
     @Override
-    public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
+    public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
                                             int callTimeout)
         throws IOException, RuntimeException {
       throw e;
@@ -281,7 +281,7 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected RpcRetryingCaller<MultiResponse> createCaller(
+    protected RpcRetryingCaller<AbstractResponse> createCaller(
       CancellableRegionServerCallable callable) {
       callsCt.incrementAndGet();
       return new CallerWithFailure(ioe);
@@ -332,7 +332,7 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected RpcRetryingCaller<MultiResponse> createCaller(
+    protected RpcRetryingCaller<AbstractResponse> createCaller(
         CancellableRegionServerCallable payloadCallable) {
       MultiServerCallable<Row> callable = (MultiServerCallable) payloadCallable;
       final MultiResponse mr = createMultiResponse(
@@ -362,9 +362,9 @@ public class TestAsyncProcess {
         replicaCalls.incrementAndGet();
       }
 
-      return new RpcRetryingCallerImpl<MultiResponse>(100, 10, 9) {
+      return new RpcRetryingCallerImpl<AbstractResponse>(100, 10, 9) {
         @Override
-        public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
+        public MultiResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
                                                 int callTimeout)
         throws IOException, RuntimeException {
           long sleep = -1;

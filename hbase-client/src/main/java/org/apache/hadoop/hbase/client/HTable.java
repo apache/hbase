@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -524,18 +523,25 @@ public class HTable implements Table {
   @Override
   public void delete(final Delete delete)
   throws IOException {
-    RegionServerCallable<Boolean> callable = new RegionServerCallable<Boolean>(connection,
-        this.rpcControllerFactory, getName(), delete.getRow()) {
+    CancellableRegionServerCallable<SingleResponse> callable =
+        new CancellableRegionServerCallable<SingleResponse>(
+            connection, getName(), delete.getRow(), this.rpcControllerFactory) {
       @Override
-      protected Boolean rpcCall() throws Exception {
+      protected SingleResponse rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), delete);
         MutateResponse response = getStub().mutate(getRpcController(), request);
-        return Boolean.valueOf(response.getProcessed());
+        return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
-    rpcCallerFactory.<Boolean> newCaller(writeRpcTimeout).callWithRetries(callable,
-        this.operationTimeout);
+    List<Row> rows = new ArrayList<Row>();
+    rows.add(delete);
+    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
+        null, null, callable, operationTimeout);
+    ars.waitUntilDone();
+    if (ars.hasError()) {
+      throw ars.getErrors();
+    }
   }
 
   /**
@@ -768,21 +774,30 @@ public class HTable implements Table {
       final byte [] qualifier, final CompareOp compareOp, final byte [] value,
       final Delete delete)
   throws IOException {
-    RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(this.connection, this.rpcControllerFactory,
-            getName(), row) {
+    CancellableRegionServerCallable<SingleResponse> callable =
+        new CancellableRegionServerCallable<SingleResponse>(
+            this.connection, getName(), row, this.rpcControllerFactory) {
       @Override
-      protected Boolean rpcCall() throws Exception {
+      protected SingleResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(compareOp.name());
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
           new BinaryComparator(value), compareType, delete);
         MutateResponse response = getStub().mutate(getRpcController(), request);
-        return Boolean.valueOf(response.getProcessed());
+        return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).callWithRetries(callable,
-        this.operationTimeout);
+    List<Row> rows = new ArrayList<Row>();
+    rows.add(delete);
+
+    Object[] results = new Object[1];
+    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
+        null, results, callable, operationTimeout);
+    ars.waitUntilDone();
+    if (ars.hasError()) {
+      throw ars.getErrors();
+    }
+    return ((SingleResponse.Entry)results[0]).isProcessed();
   }
 
   /**
