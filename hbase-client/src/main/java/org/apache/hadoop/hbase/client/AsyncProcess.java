@@ -756,14 +756,14 @@ class AsyncProcess {
 
       @Override
       public void run() {
-        MultiResponse res;
+        AbstractResponse res;
         CancellableRegionServerCallable callable = currentCallable;
         try {
           // setup the callable based on the actions, if we don't have one already from the request
           if (callable == null) {
             callable = createCallable(server, tableName, multiAction);
           }
-          RpcRetryingCaller<MultiResponse> caller = createCaller(callable);
+          RpcRetryingCaller<AbstractResponse> caller = createCaller(callable);
           try {
             if (callsInProgress != null) {
               callsInProgress.add(callable);
@@ -785,9 +785,16 @@ class AsyncProcess {
             receiveGlobalFailure(multiAction, server, numAttempt, t);
             return;
           }
-
-          // Normal case: we received an answer from the server, and it's not an exception.
-          receiveMultiAction(multiAction, server, res, numAttempt);
+          if (res.type() == AbstractResponse.ResponseType.MULTI) {
+            // Normal case: we received an answer from the server, and it's not an exception.
+            receiveMultiAction(multiAction, server, (MultiResponse) res, numAttempt);
+          } else {
+            if (results != null) {
+              SingleResponse singleResponse = (SingleResponse) res;
+              results[0] = singleResponse.getEntry();
+            }
+            decActionCounter(1);
+          }
         } catch (Throwable t) {
           // Something really bad happened. We are on the send thread that will now die.
           LOG.error("Internal AsyncProcess #" + id + " error for "
@@ -1782,8 +1789,9 @@ class AsyncProcess {
    * Create a caller. Isolated to be easily overridden in the tests.
    */
   @VisibleForTesting
-  protected RpcRetryingCaller<MultiResponse> createCaller(CancellableRegionServerCallable callable) {
-    return rpcCallerFactory.<MultiResponse> newCaller();
+  protected RpcRetryingCaller<AbstractResponse> createCaller(
+      CancellableRegionServerCallable callable) {
+    return rpcCallerFactory.<AbstractResponse> newCaller();
   }
 
   @VisibleForTesting

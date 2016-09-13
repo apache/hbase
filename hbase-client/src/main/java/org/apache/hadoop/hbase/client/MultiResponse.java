@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A container for Result objects, grouped by regionName.
  */
 @InterfaceAudience.Private
-public class MultiResponse {
+public class MultiResponse extends AbstractResponse {
 
   // map of regionName to map of Results by the original index for that Result
   private Map<byte[], RegionResult> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -99,6 +99,11 @@ public class MultiResponse {
 
   public Map<byte[], RegionResult> getResults(){
     return this.results;
+  }
+
+  @Override
+  public ResponseType type() {
+    return ResponseType.MULTI;
   }
 
   static class RegionResult{

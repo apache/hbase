@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.SingleResponse;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -147,6 +148,19 @@ public final class ResponseConverter {
     }
 
     return results;
+  }
+
+
+  public static SingleResponse getResult(final ClientProtos.MutateRequest request,
+                                         final ClientProtos.MutateResponse response,
+                                         final CellScanner cells)
+      throws IOException {
+    SingleResponse singleResponse = new SingleResponse();
+    SingleResponse.Entry entry = new SingleResponse.Entry();
+    entry.setResult(ProtobufUtil.toResult(response.getResult(), cells));
+    entry.setProcessed(response.getProcessed());
+    singleResponse.setEntry(entry);
+    return singleResponse;
   }
 
   /**

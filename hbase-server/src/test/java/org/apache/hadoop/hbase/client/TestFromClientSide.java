@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
@@ -1855,6 +1856,33 @@ public class TestFromClientSide {
     }
     ht.close();
     admin.close();
+  }
+
+  @Test
+  public void testDeleteWithFailed() throws Exception {
+    TableName TABLE = TableName.valueOf("testDeleteWithFailed");
+
+    byte [][] ROWS = makeNAscii(ROW, 6);
+    byte [][] FAMILIES = makeNAscii(FAMILY, 3);
+    byte [][] VALUES = makeN(VALUE, 5);
+    long [] ts = {1000, 2000, 3000, 4000, 5000};
+
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
+
+    Put put = new Put(ROW);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+    ht.put(put);
+
+    // delete wrong family
+    Delete delete = new Delete(ROW);
+    delete.addFamily(FAMILIES[1], ts[0]);
+    ht.delete(delete);
+
+    Get get = new Get(ROW);
+    get.addFamily(FAMILIES[0]);
+    get.setMaxVersions(Integer.MAX_VALUE);
+    Result result = ht.get(get);
+    assertTrue(Bytes.equals(result.getValue(FAMILIES[0], QUALIFIER), VALUES[0]));
   }
 
   @Test
@@ -4619,6 +4647,24 @@ public class TestFromClientSide {
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value2, put2);
     assertEquals(ok, true);
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value2, put3);
+    assertEquals(ok, true);
+  }
+
+  @Test
+  public void testCheckAndDelete() throws IOException {
+    final byte [] value1 = Bytes.toBytes("aaaa");
+
+    Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndDelete"),
+        FAMILY);
+
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, value1);
+    table.put(put);
+
+    Delete delete = new Delete(ROW);
+    delete.addColumns(FAMILY, QUALIFIER);
+
+    boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, value1, delete);
     assertEquals(ok, true);
   }
 
