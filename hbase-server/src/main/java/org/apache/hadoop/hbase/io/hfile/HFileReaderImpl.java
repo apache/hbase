@@ -662,7 +662,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         long i = 0;
         offsetFromPos++;
         if (remaining >= Bytes.SIZEOF_INT) {
-          i = blockBuffer.getIntAfterPosition(offsetFromPos);
+          // The int read has to be converted to unsigned long so the & op
+          i = (blockBuffer.getIntAfterPosition(offsetFromPos) & 0x00000000ffffffffL);
           remaining -= Bytes.SIZEOF_INT;
           offsetFromPos += Bytes.SIZEOF_INT;
         }
