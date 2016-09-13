@@ -40,6 +40,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +50,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.junit.Assert.assertEquals;
@@ -310,16 +312,104 @@ public class TestHeapSize  {
     // DefaultMemStore Deep Overhead
     actual = DefaultMemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+
+    // CompactingMemStore Deep Overhead
+    cl = CompactingMemStore.class;
+    actual = CompactingMemStore.DEEP_OVERHEAD;
+    expected = ClassSize.estimateBase(cl, false);
+    expected += ClassSize.estimateBase(AtomicBoolean.class, false);
+    expected += ClassSize.estimateBase(AtomicBoolean.class, false);
+    expected += ClassSize.estimateBase(CompactionPipeline.class, false);
+    expected += ClassSize.estimateBase(LinkedList.class, false);
+    expected += ClassSize.estimateBase(MemStoreCompactor.class, false);
+    expected += ClassSize.estimateBase(AtomicBoolean.class, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicBoolean.class, true);
+      ClassSize.estimateBase(AtomicBoolean.class, true);
+      ClassSize.estimateBase(CompactionPipeline.class, true);
+      ClassSize.estimateBase(LinkedList.class, true);
+      ClassSize.estimateBase(MemStoreCompactor.class, true);
+      ClassSize.estimateBase(AtomicBoolean.class, true);
+      assertEquals(expected, actual);
+    }
+
+    // Segment Deep overhead
+    cl = Segment.class;
+    actual = Segment.DEEP_OVERHEAD;
+    expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += ClassSize.estimateBase(AtomicReference.class, false);
     expected += ClassSize.estimateBase(CellSet.class, false);
-    expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
     expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
       ClassSize.estimateBase(TimeRangeTracker.class, true);
+      assertEquals(expected, actual);
+    }
+
+    // MutableSegment Deep overhead
+    cl = MutableSegment.class;
+    actual = MutableSegment.DEEP_OVERHEAD;
+    expected = ClassSize.estimateBase(cl, false);
+    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += ClassSize.estimateBase(AtomicReference.class, false);
+    expected += ClassSize.estimateBase(CellSet.class, false);
+    expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
+    expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicReference.class, true);
+      ClassSize.estimateBase(CellSet.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
+      ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
+      assertEquals(expected, actual);
+    }
+
+    // ImmutableSegment Deep overhead
+    cl = ImmutableSegment.class;
+    actual = ImmutableSegment.DEEP_OVERHEAD_CSLM;
+    expected = ClassSize.estimateBase(cl, false);
+    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += ClassSize.estimateBase(AtomicReference.class, false);
+    expected += ClassSize.estimateBase(CellSet.class, false);
+    expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
+    expected += ClassSize.estimateBase(TimeRange.class, false);
+    expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicReference.class, true);
+      ClassSize.estimateBase(CellSet.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
+      ClassSize.estimateBase(TimeRange.class, true);
+      ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
+      assertEquals(expected, actual);
+    }
+    actual = ImmutableSegment.DEEP_OVERHEAD_CAM;
+    expected = ClassSize.estimateBase(cl, false);
+    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += ClassSize.estimateBase(AtomicReference.class, false);
+    expected += ClassSize.estimateBase(CellSet.class, false);
+    expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
+    expected += ClassSize.estimateBase(TimeRange.class, false);
+    expected += ClassSize.estimateBase(CellArrayMap.class, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicReference.class, true);
+      ClassSize.estimateBase(CellSet.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
+      ClassSize.estimateBase(TimeRange.class, true);
+      ClassSize.estimateBase(CellArrayMap.class, true);
       assertEquals(expected, actual);
     }
 

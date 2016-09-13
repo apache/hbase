@@ -172,8 +172,9 @@ public class TestPerColumnFamilyFlush {
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    assertEquals(totalMemstoreSize + 3 * DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize
-        + cf2MemstoreSize + cf3MemstoreSize);
+    assertEquals(
+        totalMemstoreSize + (3 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
+        cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize);
 
     // Flush!
     region.flush(false);
@@ -192,7 +193,7 @@ public class TestPerColumnFamilyFlush {
 
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
     // Nothing should have happened to CF2, ...
     assertEquals(cf2MemstoreSize, oldCF2MemstoreSize);
     // ... or CF3
@@ -201,8 +202,9 @@ public class TestPerColumnFamilyFlush {
     // LSN in the memstore of CF2.
     assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF2);
     // Of course, this should hold too.
-    assertEquals(totalMemstoreSize + 2 * DefaultMemStore.DEEP_OVERHEAD, cf2MemstoreSize
-        + cf3MemstoreSize);
+    assertEquals(
+        totalMemstoreSize + (2 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
+        cf2MemstoreSize + cf3MemstoreSize);
 
     // Now add more puts (mostly for CF2), so that we only flush CF2 this time.
     for (int i = 1200; i < 2400; i++) {
@@ -229,11 +231,12 @@ public class TestPerColumnFamilyFlush {
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // CF1 and CF2, both should be absent.
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf2MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize);
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
-    assertEquals(totalMemstoreSize + DefaultMemStore.DEEP_OVERHEAD, cf3MemstoreSize);
+    assertEquals(totalMemstoreSize + (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD),
+        cf3MemstoreSize);
     assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF3);
 
     // What happens when we hit the memstore limit, but we are not able to find
@@ -296,8 +299,9 @@ public class TestPerColumnFamilyFlush {
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    assertEquals(totalMemstoreSize + 3 * DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize
-        + cf2MemstoreSize + cf3MemstoreSize);
+    assertEquals(
+        totalMemstoreSize + (3 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
+        cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize);
 
     // Flush!
     region.flush(false);
@@ -310,9 +314,9 @@ public class TestPerColumnFamilyFlush {
         region.getWAL().getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // Everything should have been cleared
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf2MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf3MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize);
+    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf3MemstoreSize);
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -379,12 +383,13 @@ public class TestPerColumnFamilyFlush {
       cf3MemstoreSize = desiredRegion.getStore(FAMILY3).getMemStoreSize();
 
       // CF1 Should have been flushed
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf1MemstoreSize);
+      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
       // CF2 and CF3 shouldn't have been flushed.
       assertTrue(cf2MemstoreSize > 0);
       assertTrue(cf3MemstoreSize > 0);
-      assertEquals(totalMemstoreSize + 2 * DefaultMemStore.DEEP_OVERHEAD, cf2MemstoreSize
-          + cf3MemstoreSize);
+      assertEquals(
+          totalMemstoreSize + (2 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
+          cf2MemstoreSize + cf3MemstoreSize);
 
       // Wait for the RS report to go across to the master, so that the master
       // is aware of which sequence ids have been flushed, before we kill the RS.
@@ -521,12 +526,12 @@ public class TestPerColumnFamilyFlush {
       });
       LOG.info("Finished waiting on flush after too many WALs...");
       // Individual families should have been flushed.
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD,
-        desiredRegion.getStore(FAMILY1).getMemStoreSize());
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD,
-        desiredRegion.getStore(FAMILY2).getMemStoreSize());
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD,
-        desiredRegion.getStore(FAMILY3).getMemStoreSize());
+      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
+          desiredRegion.getStore(FAMILY1).getMemStoreSize());
+      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
+          desiredRegion.getStore(FAMILY2).getMemStoreSize());
+      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
+          desiredRegion.getStore(FAMILY3).getMemStoreSize());
       // let WAL cleanOldLogs
       assertNull(getWAL(desiredRegion).rollWriter(true));
       assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);

@@ -333,7 +333,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
   private void addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
-    long size = hmc.getActive().getSize();//
+    long size = hmc.getActive().size();//
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
       Threads.sleep(1); // to make sure each kv gets a different ts
@@ -343,7 +343,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
       hmc.add(kv);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp" + kv.getTimestamp());
     }
-    regionServicesForStores.addAndGetGlobalMemstoreSize(hmc.getActive().getSize() - size);//
+    regionServicesForStores.addAndGetGlobalMemstoreSize(hmc.getActive().size() - size);//
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {

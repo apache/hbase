@@ -22,6 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,7 +40,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * therefore no special synchronization is required.
  */
 @InterfaceAudience.Private
-class MemStoreCompactor {
+public class MemStoreCompactor {
+
+  public static final long DEEP_OVERHEAD = ClassSize
+      .align(ClassSize.OBJECT + 4 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT + Bytes.SIZEOF_DOUBLE
+          + ClassSize.ATOMIC_BOOLEAN);
 
   // Option for external guidance whether flattening is allowed
   static final String MEMSTORE_COMPACTOR_FLATTENING = "hbase.hregion.compacting.memstore.flatten";
@@ -59,6 +65,15 @@ class MemStoreCompactor {
   static final boolean MEMSTORE_COMPACTOR_AVOID_SPECULATIVE_SCAN_DEFAULT = false;
 
   private static final Log LOG = LogFactory.getLog(MemStoreCompactor.class);
+
+  /**
+   * Types of Compaction
+   */
+  private enum Type {
+    COMPACT_TO_SKIPLIST_MAP,
+    COMPACT_TO_ARRAY_MAP
+  }
+
   private CompactingMemStore compactingMemStore;
 
   // a static version of the segment list from the pipeline
@@ -73,13 +88,6 @@ class MemStoreCompactor {
   double fraction = 0.8;
 
   int immutCellsNum = 0;  // number of immutable for compaction cells
-  /**
-   * Types of Compaction
-   */
-  private enum Type {
-    COMPACT_TO_SKIPLIST_MAP,
-    COMPACT_TO_ARRAY_MAP
-  }
 
   private Type type = Type.COMPACT_TO_ARRAY_MAP;
 
