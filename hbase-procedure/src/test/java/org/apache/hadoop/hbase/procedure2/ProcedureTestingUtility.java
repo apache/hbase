@@ -299,6 +299,17 @@ public class ProcedureTestingUtility {
         data = null;
       }
     }
+
+    // Mark acquire/release lock functions public for test uses.
+    @Override
+    public boolean acquireLock(Void env) {
+      return true;
+    }
+
+    @Override
+    public void releaseLock(Void env) {
+      // no-op
+    }
   }
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
