@@ -122,8 +122,9 @@ public class IPCUtil {
     if (codec == null) throw new CellScannerButNoCodecException();
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
     ByteBufferOutputStream baos = null;
+    ByteBuffer bb = null;
     if (pool != null) {
-      ByteBuffer bb = pool.getBuffer();
+      bb = pool.getBuffer();
       bufferSize = bb.capacity();
       baos = new ByteBufferOutputStream(bb);
     } else {
@@ -155,7 +156,12 @@ public class IPCUtil {
       encoder.flush();
       // If no cells, don't mess around.  Just return null (could be a bunch of existence checking
       // gets or something -- stuff that does not return a cell).
-      if (count == 0) return null;
+      if (count == 0) {
+        if (pool != null && bb != null) {
+          pool.putBuffer(bb);
+        }
+        return null;
+      }
     } catch (BufferOverflowException e) {
       throw new DoNotRetryIOException(e);
     } finally {
