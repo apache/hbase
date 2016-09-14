@@ -723,6 +723,18 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS = 1;
 
   /**
+   * The maximum number of concurrent pending RPC requests for one server in process level.
+   */
+  public static final String HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD =
+      "hbase.client.perserver.requests.threshold";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD}.
+   */
+  public static final int DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD = Integer.MAX_VALUE;
+
+
+  /**
    * Parameter name for server pause value, used mostly as value to wait before
    * running a retry of a failed operation.
    */
