@@ -487,22 +487,32 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.client.max.total.tasks</name>
     <value>100</value>
-    <description>The maximum number of concurrent tasks a single HTable instance will
+    <description>The maximum number of concurrent mutation tasks a single HTable instance will
     send to the cluster.</description>
   </property>
   <property>
     <name>hbase.client.max.perserver.tasks</name>
     <value>5</value>
-    <description>The maximum number of concurrent tasks a single HTable instance will
+    <description>The maximum number of concurrent mutation tasks a single HTable instance will
     send to a single region server.</description>
   </property>
   <property>
     <name>hbase.client.max.perregion.tasks</name>
     <value>1</value>
-    <description>The maximum number of concurrent connections the client will
+    <description>The maximum number of concurrent mutation tasks the client will
     maintain to a single Region. That is, if there is already
     hbase.client.max.perregion.tasks writes in progress for this region, new puts
     won't be sent to this region until some writes finishes.</description>
+  </property>
+  <property>
+    <name>hbase.client.perserver.requests.threshold</name>
+    <value>2147483647</value>
+    <description>The max number of concurrent pending requests for one server in all client threads
+    (process level). Exceeding requests will be thrown ServerTooBusyException immediately to prevent
+    user's threads being occupied and blocked by only one slow region server. If you use a fix
+    number of threads to access HBase in a synchronous way, set this to a suitable value which is
+    related to the number of threads will help you. See
+    https://issues.apache.org/jira/browse/HBASE-16388 for details.</description>
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>
