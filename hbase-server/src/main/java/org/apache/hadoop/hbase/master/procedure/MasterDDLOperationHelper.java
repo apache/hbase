@@ -29,11 +29,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -54,20 +52,6 @@ public final class MasterDDLOperationHelper {
   private static final Log LOG = LogFactory.getLog(MasterDDLOperationHelper.class);
 
   private MasterDDLOperationHelper() {}
-
-  /**
-   * Check whether a table is modifiable - exists and either offline or online with config set
-   * @param env MasterProcedureEnv
-   * @param tableName name of the table
-   * @throws IOException
-   */
-  public static void checkTableModifiable(final MasterProcedureEnv env, final TableName tableName)
-      throws IOException {
-    // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
-      throw new TableNotFoundException(tableName);
-    }
-  }
 
   /**
    * Remove the column family from the file system

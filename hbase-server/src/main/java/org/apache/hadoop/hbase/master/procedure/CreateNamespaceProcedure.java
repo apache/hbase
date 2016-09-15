@@ -26,11 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
@@ -41,8 +39,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class CreateNamespaceProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, CreateNamespaceState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineNamespaceProcedure<CreateNamespaceState> {
   private static final Log LOG = LogFactory.getLog(CreateNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
@@ -54,9 +51,9 @@ public class CreateNamespaceProcedure
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) {
+    super(env);
     this.nsDescriptor = nsDescriptor;
     this.traceEnabled = null;
-    this.setOwner(env.getRequestUser().getUGI().getShortUserName());
   }
 
   @Override
@@ -157,14 +154,6 @@ public class CreateNamespaceProcedure
     nsDescriptor = ProtobufUtil.toNamespaceDescriptor(createNamespaceMsg.getNamespaceDescriptor());
   }
 
-  @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (Namespace=");
-    sb.append(nsDescriptor.getName());
-    sb.append(")");
-  }
-
   private boolean isBootstrapNamespace() {
     return nsDescriptor.equals(NamespaceDescriptor.DEFAULT_NAMESPACE) ||
         nsDescriptor.equals(NamespaceDescriptor.SYSTEM_NAMESPACE);
@@ -184,21 +173,12 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseNamespaceExclusiveLock(this, getNamespaceName());
-  }
-
-  @Override
-  public TableName getTableName() {
-    return TableName.NAMESPACE_TABLE_NAME;
-  }
-
-  @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.EDIT;
   }
 
-  private String getNamespaceName() {
+  @Override
+  protected String getNamespaceName() {
     return nsDescriptor.getName();
   }
 

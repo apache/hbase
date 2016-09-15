@@ -31,12 +31,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceState;
@@ -47,8 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class DeleteNamespaceProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, DeleteNamespaceState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineNamespaceProcedure<DeleteNamespaceState> {
   private static final Log LOG = LogFactory.getLog(DeleteNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
@@ -61,10 +58,10 @@ public class DeleteNamespaceProcedure
   }
 
   public DeleteNamespaceProcedure(final MasterProcedureEnv env, final String namespaceName) {
+    super(env);
     this.namespaceName = namespaceName;
     this.nsDescriptor = null;
     this.traceEnabled = null;
-    this.setOwner(env.getRequestUser().getUGI().getShortUserName());
   }
 
   @Override
@@ -176,35 +173,12 @@ public class DeleteNamespaceProcedure
   }
 
   @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (Namespace=");
-    sb.append(namespaceName);
-    sb.append(")");
-  }
-
-  @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseNamespaceExclusiveLock(this, getNamespaceName());
-  }
-
-  @Override
-  public TableName getTableName() {
-    return TableName.NAMESPACE_TABLE_NAME;
-  }
-
-  @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.EDIT;
   }
 
-  private String getNamespaceName() {
+  @Override
+  protected String getNamespaceName() {
     return namespaceName;
   }
 

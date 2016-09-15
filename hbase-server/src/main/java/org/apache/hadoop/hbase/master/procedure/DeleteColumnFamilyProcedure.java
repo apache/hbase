@@ -33,11 +33,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteColumnFamilyState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,27 +44,22 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class DeleteColumnFamilyProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, DeleteColumnFamilyState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<DeleteColumnFamilyState> {
   private static final Log LOG = LogFactory.getLog(DeleteColumnFamilyProcedure.class);
 
   private HTableDescriptor unmodifiedHTableDescriptor;
   private TableName tableName;
   private byte [] familyName;
   private boolean hasMob;
-  private User user;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
-  // used for compatibility with old clients, until 2.0 the client had a sync behavior
-  private final ProcedurePrepareLatch syncLatch;
-
   public DeleteColumnFamilyProcedure() {
+    super();
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
-    this.syncLatch = null;
   }
 
   public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
@@ -76,14 +69,12 @@ public class DeleteColumnFamilyProcedure
 
   public DeleteColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
       final byte[] familyName, final ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.tableName = tableName;
     this.familyName = familyName;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
-    this.syncLatch = latch;
   }
 
   @Override
@@ -160,7 +151,7 @@ public class DeleteColumnFamilyProcedure
 
   @Override
   protected void completionCleanup(final MasterProcedureEnv env) {
-    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+    releaseSyncLatch();
   }
 
   @Override
@@ -179,23 +170,12 @@ public class DeleteColumnFamilyProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, tableName);
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, tableName);
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.DeleteColumnFamilyStateData.Builder deleteCFMsg =
         MasterProcedureProtos.DeleteColumnFamilyStateData.newBuilder()
-            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setColumnfamilyName(ByteStringer.wrap(familyName));
     if (unmodifiedHTableDescriptor != null) {
@@ -211,7 +191,7 @@ public class DeleteColumnFamilyProcedure
     super.deserializeStateData(stream);
     MasterProcedureProtos.DeleteColumnFamilyStateData deleteCFMsg =
         MasterProcedureProtos.DeleteColumnFamilyStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(deleteCFMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(deleteCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(deleteCFMsg.getTableName());
     familyName = deleteCFMsg.getColumnfamilyName().toByteArray();
 
@@ -251,7 +231,7 @@ public class DeleteColumnFamilyProcedure
    */
   private void prepareDelete(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table is allowed to be modified.
-    MasterDDLOperationHelper.checkTableModifiable(env, tableName);
+    checkTableModifiable(env);
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
     unmodifiedHTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
@@ -384,10 +364,10 @@ public class DeleteColumnFamilyProcedure
     if (cpHost != null) {
       switch (state) {
         case DELETE_COLUMN_FAMILY_PRE_OPERATION:
-          cpHost.preDeleteColumnFamilyAction(tableName, familyName, user);
+          cpHost.preDeleteColumnFamilyAction(tableName, familyName, getUser());
           break;
         case DELETE_COLUMN_FAMILY_POST_OPERATION:
-          cpHost.postCompletedDeleteColumnFamilyAction(tableName, familyName, user);
+          cpHost.postCompletedDeleteColumnFamilyAction(tableName, familyName, getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);

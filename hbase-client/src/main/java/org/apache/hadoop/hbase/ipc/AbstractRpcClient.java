@@ -23,6 +23,9 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.MethodDescriptor;
@@ -137,6 +140,16 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   private final ScheduledFuture<?> cleanupIdleConnectionTask;
 
+  private int maxConcurrentCallsPerServer;
+
+  private static final LoadingCache<InetSocketAddress, AtomicInteger> concurrentCounterCache =
+      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS).
+          build(new CacheLoader<InetSocketAddress, AtomicInteger>() {
+            @Override public AtomicInteger load(InetSocketAddress key) throws Exception {
+              return new AtomicInteger(0);
+            }
+          });
+
   /**
    * Construct an IPC client for the cluster <code>clusterId</code>
    * @param conf configuration
@@ -167,6 +180,9 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     this.readTO = conf.getInt(SOCKET_TIMEOUT_READ, DEFAULT_SOCKET_TIMEOUT_READ);
     this.writeTO = conf.getInt(SOCKET_TIMEOUT_WRITE, DEFAULT_SOCKET_TIMEOUT_WRITE);
     this.metrics = metrics;
+    this.maxConcurrentCallsPerServer = conf.getInt(
+        HConstants.HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD,
+        HConstants.DEFAULT_HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD);
 
     this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
 
@@ -382,16 +398,22 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       final RpcCallback<Message> callback) {
     final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
     cs.setStartTime(EnvironmentEdgeManager.currentTime());
+    final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
     Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
         hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
 
           @Override
           public void run(Call call) {
+            counter.decrementAndGet();
             onCallFinished(call, hrc, addr, callback);
           }
         }, cs);
     ConnectionId remoteId = new ConnectionId(ticket, md.getService().getName(), addr);
+    int count = counter.incrementAndGet();
     try {
+      if (count > maxConcurrentCallsPerServer) {
+        throw new ServerTooBusyException(addr, count);
+      }
       T connection = getConnection(remoteId);
       connection.sendRequest(call, hrc);
     } catch (Exception e) {

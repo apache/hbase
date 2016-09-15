@@ -41,27 +41,20 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableStateManager;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.htrace.Trace;
 
 @InterfaceAudience.Private
 public class DisableTableProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, DisableTableState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<DisableTableState> {
   private static final Log LOG = LogFactory.getLog(DisableTableProcedure.class);
-
-  // This is for back compatible with 1.0 asynchronized operations.
-  private final ProcedurePrepareLatch syncLatch;
 
   private TableName tableName;
   private boolean skipTableStateCheck;
-  private User user;
 
   private Boolean traceEnabled = null;
 
@@ -72,7 +65,7 @@ public class DisableTableProcedure
   }
 
   public DisableTableProcedure() {
-    syncLatch = null;
+    super();
   }
 
   /**
@@ -94,20 +87,9 @@ public class DisableTableProcedure
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch) {
+    super(env, syncLatch);
     this.tableName = tableName;
     this.skipTableStateCheck = skipTableStateCheck;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
-
-    // Compatible with 1.0: We use latch to make sure that this procedure implementation is
-    // compatible with 1.0 asynchronized operations. We need to lock the table and check
-    // whether the Disable operation could be performed (table exists and online; table state
-    // is ENABLED). Once it is done, we are good to release the latch and the client can
-    // start asynchronously wait for the operation.
-    //
-    // Note: the member syncLatch could be null if we are in failover or recovery scenario.
-    // This is ok for backward compatible, as 1.0 client would not able to peek at procedure.
-    this.syncLatch = syncLatch;
   }
 
   @Override
@@ -173,7 +155,7 @@ public class DisableTableProcedure
       case DISABLE_TABLE_PRE_OPERATION:
         return;
       case DISABLE_TABLE_PREPARE:
-        ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+        releaseSyncLatch();
         return;
       default:
         break;
@@ -210,23 +192,12 @@ public class DisableTableProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, tableName);
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, tableName);
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.DisableTableStateData.Builder disableTableMsg =
         MasterProcedureProtos.DisableTableStateData.newBuilder()
-            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setSkipTableStateCheck(skipTableStateCheck);
 
@@ -239,17 +210,9 @@ public class DisableTableProcedure
 
     MasterProcedureProtos.DisableTableStateData disableTableMsg =
         MasterProcedureProtos.DisableTableStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(disableTableMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(disableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(disableTableMsg.getTableName());
     skipTableStateCheck = disableTableMsg.getSkipTableStateCheck();
-  }
-
-  @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (table=");
-    sb.append(tableName);
-    sb.append(")");
   }
 
   @Override
@@ -297,7 +260,7 @@ public class DisableTableProcedure
     }
 
     // We are done the check. Future actions in this procedure could be done asynchronously.
-    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+    releaseSyncLatch();
 
     return canTableBeDisabled;
   }
@@ -457,10 +420,10 @@ public class DisableTableProcedure
     if (cpHost != null) {
       switch (state) {
         case DISABLE_TABLE_PRE_OPERATION:
-          cpHost.preDisableTableAction(tableName, user);
+          cpHost.preDisableTableAction(tableName, getUser());
           break;
         case DISABLE_TABLE_POST_OPERATION:
-          cpHost.postCompletedDisableTableAction(tableName, user);
+          cpHost.postCompletedDisableTableAction(tableName, getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);

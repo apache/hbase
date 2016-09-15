@@ -23,7 +23,8 @@ module Shell
       def help
         return <<-EOF
 Delete all cells in a given row; pass a table name, row, and optionally
-a column and timestamp. Examples:
+a column and timestamp. Deleteall also support deleting a row range using a
+row key prefix. Examples:
 
   hbase> deleteall 'ns1:t1', 'r1'
   hbase> deleteall 't1', 'r1'
@@ -31,13 +32,21 @@ a column and timestamp. Examples:
   hbase> deleteall 't1', 'r1', 'c1', ts1
   hbase> deleteall 't1', 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
+ROWPREFIXFILTER can be used to delete row ranges
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1'        //delete certain column family in the row ranges
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
+CACHE can be used to specify how many deletes batched to be sent to server at one time, default is 100
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix', CACHE => 100}
+
+
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
 
-  hbase> t.deleteall 'r1'
-  hbase> t.deleteall 'r1', 'c1'
-  hbase> t.deleteall 'r1', 'c1', ts1
   hbase> t.deleteall 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+  hbase> t.deleteall {ROWPREFIXFILTER => 'prefix', CACHE => 100}, 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 EOF
       end
 

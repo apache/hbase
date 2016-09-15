@@ -44,33 +44,26 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyTableState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, ModifyTableState>
-    implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<ModifyTableState> {
   private static final Log LOG = LogFactory.getLog(ModifyTableProcedure.class);
 
   private HTableDescriptor unmodifiedHTableDescriptor = null;
   private HTableDescriptor modifiedHTableDescriptor;
-  private User user;
   private boolean deleteColumnFamilyInModify;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled = null;
 
-  // used for compatibility with old clients, until 2.0 the client had a sync behavior
-  private final ProcedurePrepareLatch syncLatch;
-
   public ModifyTableProcedure() {
+    super();
     initilize();
-    this.syncLatch = null;
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd) {
@@ -79,11 +72,9 @@ public class ModifyTableProcedure
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd,
       final ProcedurePrepareLatch latch) {
+    super(env, latch);
     initilize();
     this.modifiedHTableDescriptor = htd;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
-    this.syncLatch = latch;
   }
 
   private void initilize() {
@@ -174,7 +165,7 @@ public class ModifyTableProcedure
 
   @Override
   protected void completionCleanup(final MasterProcedureEnv env) {
-    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+    releaseSyncLatch();
   }
 
   @Override
@@ -193,23 +184,12 @@ public class ModifyTableProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
-  }
-
-  @Override
   public void serializeStateData(final OutputStream stream) throws IOException {
     super.serializeStateData(stream);
 
     MasterProcedureProtos.ModifyTableStateData.Builder modifyTableMsg =
         MasterProcedureProtos.ModifyTableStateData.newBuilder()
-            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor))
             .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify);
 
@@ -227,7 +207,7 @@ public class ModifyTableProcedure
 
     MasterProcedureProtos.ModifyTableStateData modifyTableMsg =
         MasterProcedureProtos.ModifyTableStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo()));
     modifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(modifyTableMsg.getModifiedTableSchema());
     deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();
 
@@ -235,14 +215,6 @@ public class ModifyTableProcedure
       unmodifiedHTableDescriptor =
           ProtobufUtil.convertToHTableDesc(modifyTableMsg.getUnmodifiedTableSchema());
     }
-  }
-
-  @Override
-  public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" (table=");
-    sb.append(getTableName());
-    sb.append(")");
   }
 
   @Override
@@ -447,10 +419,10 @@ public class ModifyTableProcedure
     if (cpHost != null) {
       switch (state) {
         case MODIFY_TABLE_PRE_OPERATION:
-          cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor, user);
+          cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor, getUser());
           break;
         case MODIFY_TABLE_POST_OPERATION:
-          cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor, user);
+          cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor,getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);

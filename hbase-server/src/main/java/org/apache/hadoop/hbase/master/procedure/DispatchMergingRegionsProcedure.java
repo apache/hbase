@@ -42,11 +42,9 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DispatchMergingRegionsState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -54,8 +52,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class DispatchMergingRegionsProcedure
-extends StateMachineProcedure<MasterProcedureEnv, DispatchMergingRegionsState>
-implements TableProcedureInterface {
+    extends AbstractStateMachineTableProcedure<DispatchMergingRegionsState> {
   private static final Log LOG = LogFactory.getLog(DispatchMergingRegionsProcedure.class);
 
   private final AtomicBoolean aborted = new AtomicBoolean(false);
@@ -66,7 +63,6 @@ implements TableProcedureInterface {
   private String regionsToMergeListFullName;
   private String regionsToMergeListEncodedName;
 
-  private User user;
   private TableName tableName;
   private HRegionInfo [] regionsToMerge;
   private boolean forcible;
@@ -85,6 +81,7 @@ implements TableProcedureInterface {
       final TableName tableName,
       final HRegionInfo [] regionsToMerge,
       final boolean forcible) {
+    super(env);
     this.traceEnabled = isTraceEnabled();
     this.assignmentManager = getAssignmentManager(env);
     this.tableName = tableName;
@@ -93,9 +90,6 @@ implements TableProcedureInterface {
     assert(regionsToMerge.length == 2);
     this.regionsToMerge = regionsToMerge;
     this.forcible = forcible;
-
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
 
     this.timeout = -1;
     this.regionsToMergeListFullName = getRegionsToMergeListFullNameString();
@@ -220,7 +214,7 @@ implements TableProcedureInterface {
 
     MasterProcedureProtos.DispatchMergingRegionsStateData.Builder dispatchMergingRegionsMsg =
         MasterProcedureProtos.DispatchMergingRegionsStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(user))
+        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setTableName(ProtobufUtil.toProtoTableName(tableName))
         .setForcible(forcible);
     for (HRegionInfo hri: regionsToMerge) {
@@ -235,7 +229,7 @@ implements TableProcedureInterface {
 
     MasterProcedureProtos.DispatchMergingRegionsStateData dispatchMergingRegionsMsg =
         MasterProcedureProtos.DispatchMergingRegionsStateData.parseDelimitedFrom(stream);
-    user = MasterProcedureUtil.toUserInfo(dispatchMergingRegionsMsg.getUserInfo());
+    setUser(MasterProcedureUtil.toUserInfo(dispatchMergingRegionsMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(dispatchMergingRegionsMsg.getTableName());
 
     assert(dispatchMergingRegionsMsg.getRegionInfoCount() == 2);
@@ -419,7 +413,7 @@ implements TableProcedureInterface {
           regionsToMerge[0],
           regionsToMerge[1],
           forcible,
-          user);
+          getUser());
         LOG.info("Sent merge to server " + getServerName(env) + " for region " +
             getRegionsToMergeListEncodedNameString() + ", focible=" + forcible);
         return;

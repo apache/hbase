@@ -160,6 +160,62 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
+    # Create a Delete mutation
+    def _createdelete_internal(row, column = nil,
+        timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+      temptimestamp = timestamp
+      if temptimestamp.kind_of?(Hash)
+        timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
+      end
+      d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp)
+      if temptimestamp.kind_of?(Hash)
+        temptimestamp.each do |k, v|
+          if v.kind_of?(String)
+            set_cell_visibility(d, v) if v
+          end
+        end
+      end
+      if args.any?
+         visibility = args[VISIBILITY]
+         set_cell_visibility(d, visibility) if visibility
+      end
+      if column
+        family, qualifier = parse_column_name(column)
+        d.addColumns(family, qualifier, timestamp)
+      end
+      return d
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Delete rows using prefix
+    def _deleterows_internal(row, column = nil,
+        timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args={})
+      cache = row["CACHE"] ? row["CACHE"] : 100
+      prefix = row["ROWPREFIXFILTER"]
+
+      # create scan to get table names using prefix
+      scan = org.apache.hadoop.hbase.client.Scan.new
+      scan.setRowPrefixFilter(prefix.to_java_bytes)
+      # Run the scanner to get all rowkeys
+      scanner = @table.getScanner(scan)
+      # Create a list to store all deletes
+      list = java.util.ArrayList.new
+      # Iterate results
+      iter = scanner.iterator
+      while iter.hasNext
+        row = iter.next
+        key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
+        d = _createdelete_internal(key, column, timestamp, args)
+        list.add(d)
+        if list.size >= cache
+          @table.delete(list)
+          list.clear
+        end
+      end
+      @table.delete(list)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Delete a cell
     def _delete_internal(row, column,
     			timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
@@ -175,27 +231,12 @@ EOF
       if is_meta_table?
         raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
       end
-      temptimestamp = timestamp
-      if temptimestamp.kind_of?(Hash)
-      	  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
+      if row.kind_of?(Hash)
+        _deleterows_internal(row, column, timestamp, args)
+      else
+        d = _createdelete_internal(row, column, timestamp, args)
+        @table.delete(d)
       end
-      d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp)
-      if temptimestamp.kind_of?(Hash)
-      	temptimestamp.each do |k, v|
-      	  if v.kind_of?(String)
-      	  	set_cell_visibility(d, v) if v
-      	  end
-      	 end
-      end
-      if args.any?
-         visibility = args[VISIBILITY]
-         set_cell_visibility(d, visibility) if visibility
-      end
-      if column
-        family, qualifier = parse_column_name(column)
-        d.addColumns(family, qualifier, timestamp)
-      end
-      @table.delete(d)
     end
 
     #----------------------------------------------------------------------------------------------

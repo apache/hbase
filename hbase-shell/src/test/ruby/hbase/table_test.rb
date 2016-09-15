@@ -120,6 +120,10 @@ module Hbase
       
       @test_table.put(105, "x:a", "3")
       @test_table.put(105, "x:a", "4")
+
+      @test_table.put("111", "x:a", "5")
+      @test_table.put("111", "x:b", "6")
+      @test_table.put("112", "x:a", "5")
     end
 
     def teardown
@@ -179,6 +183,14 @@ module Hbase
       @test_table.deleteall(105)
       res = @test_table._get_internal('105', 'x:a')
       assert_nil(res)
+    end
+
+    define_test "deletall should work with row prefix" do
+      @test_table.deleteall({ROWPREFIXFILTER => '11'})
+      res1 = @test_table._get_internal('111')
+      assert_nil(res1)
+      res2 = @test_table._get_internal('112')
+      assert_nil(res2)
     end
 
     define_test "append should work with value" do
