@@ -55,6 +55,7 @@ public class TestClusterId {
 
   @Before
   public void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(ShutdownHook.RUN_SHUTDOWN_HOOK, false);
   }
 
   @After
