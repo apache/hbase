@@ -609,15 +609,17 @@ public class ProcedureExecutor<TEnvironment> {
    * @param chore the chore to add
    */
   public void addChore(final ProcedureInMemoryChore chore) {
+    chore.setState(ProcedureState.RUNNABLE);
     waitingTimeout.add(chore);
   }
 
   /**
    * Remove a chore procedure from the executor
    * @param chore the chore to remove
-   * @return whether the chore is removed
+   * @return whether the chore is removed, or it will be removed later
    */
   public boolean removeChore(final ProcedureInMemoryChore chore) {
+    chore.setState(ProcedureState.FINISHED);
     return waitingTimeout.remove(chore);
   }
 
@@ -907,13 +909,15 @@ public class ProcedureExecutor<TEnvironment> {
       // instead of bringing the Chore class in, we reuse this timeout thread for
       // this special case.
       if (proc instanceof ProcedureInMemoryChore) {
-        try {
-          ((ProcedureInMemoryChore)proc).periodicExecute(getEnvironment());
-        } catch (Throwable e) {
-          LOG.error("Ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
+        if (proc.isRunnable()) {
+          try {
+            ((ProcedureInMemoryChore)proc).periodicExecute(getEnvironment());
+          } catch (Throwable e) {
+            LOG.error("Ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
+          }
+          proc.setStartTime(EnvironmentEdgeManager.currentTime());
+          if (proc.isRunnable()) waitingTimeout.add(proc);
         }
-        proc.setStartTime(EnvironmentEdgeManager.currentTime());
-        waitingTimeout.add(proc);
         continue;
       }
 
