@@ -268,12 +268,13 @@ public class TestMasterProcedureScheduler {
     assertEquals(true, queue.tryAcquireTableSharedLock(rdProc, tableName));
 
     // Fetch the 3rd item and verify that the lock can't be acquired
-    Procedure wrProc = queue.poll();
-    assertEquals(3, wrProc.getProcId());
-    assertEquals(false, queue.tryAcquireTableExclusiveLock(wrProc, tableName));
+    assertEquals(null, queue.poll(0));
 
     // release the rdlock of item 2 and take the wrlock for the 3d item
     queue.releaseTableSharedLock(rdProc, tableName);
+
+    // Fetch the 3rd item and take the write lock
+    Procedure wrProc = queue.poll();
     assertEquals(true, queue.tryAcquireTableExclusiveLock(wrProc, tableName));
 
     // Fetch 4th item and verify that the lock can't be acquired
@@ -386,6 +387,50 @@ public class TestMasterProcedureScheduler {
   }
 
   @Test
+  public void testXLockWaitingForExecutingSharedLockToRelease() {
+    final TableName tableName = TableName.valueOf("testtb");
+    final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
+
+    queue.addBack(new TestRegionProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.ASSIGN, regionA));
+    queue.addBack(new TestTableProcedure(2, tableName,
+          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(new TestRegionProcedure(3, tableName,
+        TableProcedureInterface.TableOperationType.UNASSIGN, regionA));
+
+    // Fetch the 1st item and take the shared lock
+    Procedure proc = queue.poll();
+    assertEquals(1, proc.getProcId());
+    assertEquals(false, queue.waitRegion(proc, regionA));
+
+    // the xlock operation in the queue can't be executed
+    assertEquals(null, queue.poll(0));
+
+    // release the shared lock
+    queue.wakeRegion(proc, regionA);
+
+    // Fetch the 2nd item and take the xlock
+    proc = queue.poll();
+    assertEquals(2, proc.getProcId());
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+
+    // everything is locked by the table operation
+    assertEquals(null, queue.poll(0));
+
+    // release the table xlock
+    queue.releaseTableExclusiveLock(proc, tableName);
+
+    // grab the last item in the queue
+    proc = queue.poll();
+    assertEquals(3, proc.getProcId());
+
+    // lock and unlock the region
+    assertEquals(false, queue.waitRegion(proc, regionA));
+    assertEquals(null, queue.poll(0));
+    queue.wakeRegion(proc, regionA);
+  }
+
+  @Test
   public void testVerifyRegionLocks() throws Exception {
     final TableName tableName = TableName.valueOf("testtb");
     final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
@@ -417,24 +462,24 @@ public class TestMasterProcedureScheduler {
     // Fetch the 2nd item and the the lock on regionA and regionB
     Procedure mergeProc = queue.poll();
     assertEquals(2, mergeProc.getProcId());
-    assertEquals(true, queue.waitRegions(mergeProc, tableName, regionA, regionB));
+    assertEquals(false, queue.waitRegions(mergeProc, tableName, regionA, regionB));
 
     // Fetch the 3rd item and the try to lock region A which will fail
     // because already locked. this procedure will go in waiting.
     // (this stuff will be explicit until we get rid of the zk-lock)
     Procedure procA = queue.poll();
     assertEquals(3, procA.getProcId());
-    assertEquals(false, queue.waitRegions(procA, tableName, regionA));
+    assertEquals(true, queue.waitRegions(procA, tableName, regionA));
 
     // Fetch the 4th item, same story as the 3rd
     Procedure procB = queue.poll();
     assertEquals(4, procB.getProcId());
-    assertEquals(false, queue.waitRegions(procB, tableName, regionB));
+    assertEquals(true, queue.waitRegions(procB, tableName, regionB));
 
     // Fetch the 5th item, since it is a non-locked region we are able to execute it
     Procedure procC = queue.poll();
     assertEquals(5, procC.getProcId());
-    assertEquals(true, queue.waitRegions(procC, tableName, regionC));
+    assertEquals(false, queue.waitRegions(procC, tableName, regionC));
 
     // 3rd and 4th are in the region suspended queue
     assertEquals(null, queue.poll(0));
@@ -445,12 +490,12 @@ public class TestMasterProcedureScheduler {
     // Fetch the 3rd item, now the lock on the region is available
     procA = queue.poll();
     assertEquals(3, procA.getProcId());
-    assertEquals(true, queue.waitRegions(procA, tableName, regionA));
+    assertEquals(false, queue.waitRegions(procA, tableName, regionA));
 
     // Fetch the 4th item, now the lock on the region is available
     procB = queue.poll();
     assertEquals(4, procB.getProcId());
-    assertEquals(true, queue.waitRegions(procB, tableName, regionB));
+    assertEquals(false, queue.waitRegions(procB, tableName, regionB));
 
     // release the locks on the regions
     queue.wakeRegions(procA, tableName, regionA);
@@ -499,7 +544,7 @@ public class TestMasterProcedureScheduler {
     for (int i = 0; i < subProcs.length; ++i) {
       TestRegionProcedure regionProc = (TestRegionProcedure)queue.poll(0);
       assertEquals(subProcs[i].getProcId(), regionProc.getProcId());
-      assertEquals(true, queue.waitRegions(regionProc, tableName, regionProc.getRegionInfo()));
+      assertEquals(false, queue.waitRegions(regionProc, tableName, regionProc.getRegionInfo()));
     }
 
     // nothing else in the queue
@@ -534,12 +579,12 @@ public class TestMasterProcedureScheduler {
     // Suspend
     // TODO: If we want to keep the zk-lock we need to retain the lock on suspend
     ProcedureEvent event = new ProcedureEvent("testSuspendedTableQueueEvent");
-    queue.waitEvent(event, proc, true);
+    assertEquals(true, queue.waitEvent(event, proc, true));
     queue.releaseTableExclusiveLock(proc, tableName);
     assertEquals(null, queue.poll(0));
 
     // Resume
-    queue.wake(event);
+    queue.wakeEvent(event);
 
     proc = queue.poll();
     assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
@@ -566,14 +611,14 @@ public class TestMasterProcedureScheduler {
 
     // suspend
     ProcedureEvent event = new ProcedureEvent("testSuspendedProcedureEvent");
-    queue.waitEvent(event, proc);
+    assertEquals(true, queue.waitEvent(event, proc));
 
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
     assertEquals(null, queue.poll(0));
 
     // resume
-    queue.wake(event);
+    queue.wakeEvent(event);
 
     proc = queue.poll();
     assertEquals(1, proc.getProcId());
@@ -740,11 +785,15 @@ public class TestMasterProcedureScheduler {
     }
 
     public TestTableProcedure(long procId, TableName tableName, TableOperationType opType) {
-      super(procId);
+      this(-1, procId, tableName, opType);
+    }
+
+    public TestTableProcedure(long parentProcId, long procId, TableName tableName,
+        TableOperationType opType) {
+      super(procId, parentProcId);
       this.tableName = tableName;
       this.opType = opType;
     }
-
     @Override
     public TableName getTableName() {
       return tableName;
@@ -753,6 +802,14 @@ public class TestMasterProcedureScheduler {
     @Override
     public TableOperationType getTableOperationType() {
       return opType;
+    }
+
+    @Override
+    public void toStringClassDetails(final StringBuilder sb) {
+      sb.append(getClass().getSimpleName());
+      sb.append(" (table=");
+      sb.append(getTableName());
+      sb.append(")");
     }
   }
 
@@ -770,15 +827,20 @@ public class TestMasterProcedureScheduler {
 
     public TestRegionProcedure(long parentProcId, long procId, TableName tableName,
         TableOperationType opType, HRegionInfo... regionInfo) {
-      super(procId, tableName, opType);
+      super(parentProcId, procId, tableName, opType);
       this.regionInfo = regionInfo;
-      if (parentProcId > 0) {
-        setParentProcId(parentProcId);
-      }
     }
 
     public HRegionInfo[] getRegionInfo() {
       return regionInfo;
+    }
+
+    @Override
+    public void toStringClassDetails(final StringBuilder sb) {
+      sb.append(getClass().getSimpleName());
+      sb.append(" (region=");
+      sb.append(getRegionInfo());
+      sb.append(")");
     }
   }
 

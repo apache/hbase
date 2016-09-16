@@ -253,7 +253,7 @@ public class DispatchMergingRegionsProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    return env.getProcedureQueue().waitRegions(
+    return !env.getProcedureQueue().waitRegions(
       this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
   }
 

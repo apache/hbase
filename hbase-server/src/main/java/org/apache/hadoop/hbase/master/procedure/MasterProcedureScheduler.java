@@ -133,7 +133,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         // a group for all the non-table/non-server procedures or try to find a key for your
         // non-table/non-server procedures and implement something similar to the TableRunQueue.
         throw new UnsupportedOperationException(
-          "RQs for non-table/non-server procedures are not implemented yet");
+          "RQs for non-table/non-server procedures are not implemented yet: " + proc);
       }
       if (notify) {
         schedWaitCond.signal();
@@ -148,7 +148,6 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     if (proc.isSuspended()) return;
 
     queue.add(proc, addFront);
-
     if (!(queue.isSuspended() || queue.hasExclusiveLock())) {
       // the queue is not suspended or removed from the fairq (run-queue)
       // because someone has an xlock on it.
@@ -157,7 +156,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         fairq.add(queue);
       }
       queueSize++;
-    } else if (proc.hasParent() && queue.isLockOwner(proc.getParentProcId())) {
+    } else if (queue.hasParentLock(proc)) {
       assert addFront : "expected to add a child in the front";
       assert !queue.isSuspended() : "unexpected suspended state for the queue";
       // our (proc) parent has the xlock,
@@ -211,17 +210,24 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private <T extends Comparable<T>> Procedure doPoll(final FairQueue<T> fairq) {
-    Queue<T> rq = fairq.poll();
+    final Queue<T> rq = fairq.poll();
     if (rq == null || !rq.isAvailable()) {
       return null;
     }
 
     assert !rq.isSuspended() : "rq=" + rq + " is suspended";
-    Procedure pollResult = rq.poll();
+    final Procedure pollResult = rq.peek();
+    final boolean xlockReq = rq.requireExclusiveLock(pollResult);
+    if (xlockReq && rq.isLocked() && !rq.hasParentLock(pollResult)) {
+      // someone is already holding the lock (e.g. shared lock). avoid a yield
+      return null;
+    }
+
+    rq.poll();
     this.queueSize--;
-    if (rq.isEmpty() || rq.requireExclusiveLock(pollResult)) {
+    if (rq.isEmpty() || xlockReq) {
       removeFromRunQueue(fairq, rq);
-    } else if (pollResult.hasParent() && rq.isLockOwner(pollResult.getParentProcId())) {
+    } else if (rq.hasParentLock(pollResult)) {
       // if the rq is in the fairq because of runnable child
       // check if the next procedure is still a child.
       // if not, remove the rq from the fairq and go back to the xlock state
@@ -291,7 +297,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       TableProcedureInterface iProcTable = (TableProcedureInterface)proc;
       boolean tableDeleted;
       if (proc.hasException()) {
-        IOException procEx =  proc.getException().unwrapRemoteException();
+        IOException procEx = proc.getException().unwrapRemoteException();
         if (iProcTable.getTableOperationType() == TableOperationType.CREATE) {
           // create failed because the table already exist
           tableDeleted = !(procEx instanceof TableExistsException);
@@ -341,16 +347,30 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   // ============================================================================
   //  Event Helpers
   // ============================================================================
-  public boolean waitEvent(ProcedureEvent event, Procedure procedure) {
+  /**
+   * Suspend the procedure if the event is not ready yet.
+   * @param event the event to wait on
+   * @param procedure the procedure waiting on the event
+   * @return true if the procedure has to wait for the event to be ready, false otherwise.
+   */
+  public boolean waitEvent(final ProcedureEvent event, final Procedure procedure) {
     return waitEvent(event, procedure, false);
   }
 
-  public boolean waitEvent(ProcedureEvent event, Procedure procedure, boolean suspendQueue) {
+  /**
+   * Suspend the procedure if the event is not ready yet.
+   * @param event the event to wait on
+   * @param procedure the procedure waiting on the event
+   * @param suspendQueue true if the entire queue of the procedure should be suspended
+   * @return true if the procedure has to wait for the event to be ready, false otherwise.
+   */
+  public boolean waitEvent(final ProcedureEvent event, final Procedure procedure,
+      final boolean suspendQueue) {
     return waitEvent(event, /* lockEvent= */false, procedure, suspendQueue);
   }
 
-  private boolean waitEvent(ProcedureEvent event, boolean lockEvent,
-      Procedure procedure, boolean suspendQueue) {
+  private boolean waitEvent(final ProcedureEvent event, final boolean lockEvent,
+      final Procedure procedure, final boolean suspendQueue) {
     synchronized (event) {
       if (event.isReady()) {
         if (lockEvent) {
@@ -371,13 +391,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         // a group for all the non-table/non-server procedures or try to find a key for your
         // non-table/non-server procedures and implement something similar to the TableRunQueue.
         throw new UnsupportedOperationException(
-          "RQs for non-table/non-server procedures are not implemented yet");
+          "RQs for non-table/non-server procedures are not implemented yet: " + procedure);
       }
     }
     return true;
   }
 
-  private void waitTableEvent(ProcedureEvent event, Procedure procedure) {
+  private void waitTableEvent(final ProcedureEvent event, final Procedure procedure) {
     final TableName tableName = getTableName(procedure);
     final boolean isDebugEnabled = LOG.isDebugEnabled();
 
@@ -398,7 +418,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
-  private void waitServerEvent(ProcedureEvent event, Procedure procedure) {
+  private void waitServerEvent(final ProcedureEvent event, final Procedure procedure) {
     final ServerName serverName = getServerName(procedure);
     final boolean isDebugEnabled = LOG.isDebugEnabled();
 
@@ -420,39 +440,37 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
-  public void suspend(ProcedureEvent event) {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
+  /**
+   * Mark the event has not ready.
+   * procedures calling waitEvent() will be suspended.
+   * @param event the event to mark as suspended/not ready
+   */
+  public void suspendEvent(final ProcedureEvent event) {
+    final boolean isTraceEnabled = LOG.isTraceEnabled();
     synchronized (event) {
       event.setReady(false);
-      if (isDebugEnabled) {
-        LOG.debug("Suspend event " + event);
+      if (isTraceEnabled) {
+        LOG.trace("Suspend event " + event);
       }
     }
   }
 
-  public void wake(ProcedureEvent event) {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
+  /**
+   * Wake every procedure waiting for the specified event
+   * (By design each event has only one "wake" caller)
+   * @param event the event to wait
+   */
+  public void wakeEvent(final ProcedureEvent event) {
+    final boolean isTraceEnabled = LOG.isTraceEnabled();
     synchronized (event) {
       event.setReady(true);
-      if (isDebugEnabled) {
-        LOG.debug("Wake event " + event);
+      if (isTraceEnabled) {
+        LOG.trace("Wake event " + event);
       }
 
       schedLock.lock();
       try {
-        while (event.hasWaitingTables()) {
-          Queue<TableName> queue = event.popWaitingTable();
-          addToRunQueue(tableRunQueue, queue);
-        }
-        // TODO: This will change once we have the new AM
-        while (event.hasWaitingServers()) {
-          Queue<ServerName> queue = event.popWaitingServer();
-          addToRunQueue(serverRunQueue, queue);
-        }
-
-        while (event.hasWaitingProcedures()) {
-          wakeProcedure(event.popWaitingProcedure(false));
-        }
+        popEventWaitingObjects(event);
 
         if (queueSize > 1) {
           schedWaitCond.signalAll();
@@ -465,12 +483,61 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     }
   }
 
-  private void suspendProcedure(BaseProcedureEvent event, Procedure procedure) {
+  /**
+   * Wake every procedure waiting for the specified events.
+   * (By design each event has only one "wake" caller)
+   * @param events the list of events to wake
+   * @param count the number of events in the array to wake
+   */
+  public void wakeEvents(final ProcedureEvent[] events, final int count) {
+    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    schedLock.lock();
+    try {
+      for (int i = 0; i < count; ++i) {
+        final ProcedureEvent event = events[i];
+        synchronized (event) {
+          event.setReady(true);
+          if (isTraceEnabled) {
+            LOG.trace("Wake event " + event);
+          }
+          popEventWaitingObjects(event);
+        }
+      }
+
+      if (queueSize > 1) {
+        schedWaitCond.signalAll();
+      } else if (queueSize > 0) {
+        schedWaitCond.signal();
+      }
+    } finally {
+      schedLock.unlock();
+    }
+  }
+
+  private void popEventWaitingObjects(final ProcedureEvent event) {
+    while (event.hasWaitingTables()) {
+      final Queue<TableName> queue = event.popWaitingTable();
+      queue.setSuspended(false);
+      addToRunQueue(tableRunQueue, queue);
+    }
+    // TODO: This will change once we have the new AM
+    while (event.hasWaitingServers()) {
+      final Queue<ServerName> queue = event.popWaitingServer();
+      queue.setSuspended(false);
+      addToRunQueue(serverRunQueue, queue);
+    }
+
+    while (event.hasWaitingProcedures()) {
+      wakeProcedure(event.popWaitingProcedure(false));
+    }
+  }
+
+  private void suspendProcedure(final BaseProcedureEvent event, final Procedure procedure) {
     procedure.suspend();
     event.suspendProcedure(procedure);
   }
 
-  private void wakeProcedure(Procedure procedure) {
+  private void wakeProcedure(final Procedure procedure) {
     procedure.resume();
     doAdd(procedure, /* addFront= */ true, /* notify= */false);
   }
@@ -478,7 +545,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   private static abstract class BaseProcedureEvent {
     private ArrayDeque<Procedure> waitingProcedures = null;
 
-    protected void suspendProcedure(Procedure proc) {
+    protected void suspendProcedure(final Procedure proc) {
       if (waitingProcedures == null) {
         waitingProcedures = new ArrayDeque<Procedure>();
       }
@@ -489,7 +556,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return waitingProcedures != null;
     }
 
-    protected Procedure popWaitingProcedure(boolean popFront) {
+    protected Procedure popWaitingProcedure(final boolean popFront) {
       // it will be nice to use IterableList on a procedure and avoid allocations...
       Procedure proc = popFront ? waitingProcedures.removeFirst() : waitingProcedures.removeLast();
       if (waitingProcedures.isEmpty()) {
@@ -506,7 +573,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     private Queue<TableName> waitingTables = null;
     private boolean ready = false;
 
-    public ProcedureEvent(String description) {
+    protected ProcedureEvent() {
+      this(null);
+    }
+
+    public ProcedureEvent(final String description) {
       this.description = description;
     }
 
@@ -533,7 +604,6 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     private Queue<TableName> popWaitingTable() {
       Queue<TableName> node = waitingTables;
       waitingTables = AvlIterableList.remove(waitingTables, node);
-      node.setSuspended(false);
       return node;
     }
 
@@ -544,13 +614,20 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     private Queue<ServerName> popWaitingServer() {
       Queue<ServerName> node = waitingServers;
       waitingServers = AvlIterableList.remove(waitingServers, node);
-      node.setSuspended(false);
       return node;
+    }
+
+    protected String getDescription() {
+      if (description == null) {
+        // you should override this method if you are using the default constructor
+        throw new UnsupportedOperationException();
+      }
+      return description;
     }
 
     @Override
     public String toString() {
-      return String.format("ProcedureEvent(%s)", description);
+      return String.format("%s(%s)", getClass().getSimpleName(), getDescription());
     }
   }
 
@@ -692,9 +769,9 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return exclusiveLockProcIdOwner == procId;
     }
 
-    public boolean tryExclusiveLock(long procIdOwner) {
+    public boolean tryExclusiveLock(final long procIdOwner) {
       assert procIdOwner != Long.MIN_VALUE;
-      if (hasExclusiveLock()) return false;
+      if (hasExclusiveLock() && !isLockOwner(procIdOwner)) return false;
       exclusiveLockProcIdOwner = procIdOwner;
       return true;
     }
@@ -747,8 +824,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         // if we have an exclusive lock already taken
         // only child of the lock owner can be executed
         Procedure availProc = peek();
-        return availProc != null && availProc.hasParent() &&
-               isLockOwner(availProc.getParentProcId());
+        return availProc != null && hasParentLock(availProc);
       }
 
       // no xlock
@@ -1077,10 +1153,23 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   // ============================================================================
   //  Region Locking Helpers
   // ============================================================================
+  /**
+   * Suspend the procedure if the specified region is already locked.
+   * @param procedure the procedure trying to acquire the lock on the region
+   * @param regionInfo the region we are trying to lock
+   * @return true if the procedure has to wait for the regions to be available
+   */
   public boolean waitRegion(final Procedure procedure, final HRegionInfo regionInfo) {
     return waitRegions(procedure, regionInfo.getTable(), regionInfo);
   }
 
+  /**
+   * Suspend the procedure if the specified set of regions are already locked.
+   * @param procedure the procedure trying to acquire the lock on the regions
+   * @param table the table name of the regions we are trying to lock
+   * @param regionInfo the list of regions we are trying to lock
+   * @return true if the procedure has to wait for the regions to be available
+   */
   public boolean waitRegions(final Procedure procedure, final TableName table,
       final HRegionInfo... regionInfo) {
     Arrays.sort(regionInfo);
@@ -1092,7 +1181,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     } else {
       // acquire the table shared-lock
       queue = tryAcquireTableQueueSharedLock(procedure, table);
-      if (queue == null) return false;
+      if (queue == null) return true;
     }
 
     // acquire region xlocks or wait
@@ -1101,6 +1190,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     synchronized (queue) {
       for (int i = 0; i < regionInfo.length; ++i) {
         assert regionInfo[i].getTable().equals(table);
+        assert i == 0 || regionInfo[i] != regionInfo[i-1] : "duplicate region: " + regionInfo[i];
+
         event[i] = queue.getRegionEvent(regionInfo[i]);
         if (!event[i].tryExclusiveLock(procedure.getProcId())) {
           suspendProcedure(event[i], procedure);
@@ -1116,13 +1207,23 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     if (!hasLock && !procedure.hasParent()) {
       releaseTableSharedLock(procedure, table);
     }
-    return hasLock;
+    return !hasLock;
   }
 
+  /**
+   * Wake the procedures waiting for the specified region
+   * @param procedure the procedure that was holding the region
+   * @param regionInfo the region the procedure was holding
+   */
   public void wakeRegion(final Procedure procedure, final HRegionInfo regionInfo) {
     wakeRegions(procedure, regionInfo.getTable(), regionInfo);
   }
 
+  /**
+   * Wake the procedures waiting for the specified regions
+   * @param procedure the procedure that was holding the regions
+   * @param regionInfo the list of regions the procedure was holding
+   */
   public void wakeRegions(final Procedure procedure,final TableName table,
       final HRegionInfo... regionInfo) {
     Arrays.sort(regionInfo);
@@ -1132,8 +1233,11 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     int numProcs = 0;
     final Procedure[] nextProcs = new Procedure[regionInfo.length];
     synchronized (queue) {
+      HRegionInfo prevRegion = null;
       for (int i = 0; i < regionInfo.length; ++i) {
         assert regionInfo[i].getTable().equals(table);
+        assert i == 0 || regionInfo[i] != regionInfo[i-1] : "duplicate region: " + regionInfo[i];
+
         RegionEvent event = queue.getRegionEvent(regionInfo[i]);
         event.releaseExclusiveLock();
         if (event.hasWaitingProcedures()) {
@@ -1365,9 +1469,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return exclusiveLockProcIdOwner == procId;
     }
 
-    public synchronized boolean tryExclusiveLock(long procIdOwner) {
+    public synchronized boolean hasParentLock(final Procedure proc) {
+      return proc.hasParent() && isLockOwner(proc.getParentProcId());
+    }
+
+    public synchronized boolean tryExclusiveLock(final long procIdOwner) {
       assert procIdOwner != Long.MIN_VALUE;
-      if (isLocked()) return false;
+      if (isLocked() && !isLockOwner(procIdOwner)) return false;
       exclusiveLockProcIdOwner = procIdOwner;
       return true;
     }
@@ -1396,7 +1504,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     @Override
     public String toString() {
-      return String.format("%s(%s)", getClass().getSimpleName(), key);
+      return String.format("%s(%s, suspended=%s xlock=%s sharedLock=%s size=%s)",
+        getClass().getSimpleName(), key, isSuspended(), hasExclusiveLock(), sharedLock, size());
     }
   }
 

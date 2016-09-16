@@ -137,18 +137,18 @@ public class MasterProcedureEnv {
   }
 
   public void wake(ProcedureEvent event) {
-    procSched.wake(event);
+    procSched.wakeEvent(event);
   }
 
   public void suspend(ProcedureEvent event) {
-    procSched.suspend(event);
+    procSched.suspendEvent(event);
   }
 
   public void setEventReady(ProcedureEvent event, boolean isReady) {
     if (isReady) {
-      procSched.wake(event);
+      procSched.wakeEvent(event);
     } else {
-      procSched.suspend(event);
+      procSched.suspendEvent(event);
     }
   }
 }

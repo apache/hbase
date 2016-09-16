@@ -558,7 +558,7 @@ public class TestAccessController extends SecureTestUtil {
 
     @Override
     public TableOperationType getTableOperationType() {
-      return null;
+      return TableOperationType.EDIT;
     }
 
     @Override
