@@ -174,7 +174,7 @@ public class TestCompaction {
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
-      FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
+      FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionStorage().getTempDir());
       assertEquals(0, ls.length);
 
     } finally {
@@ -249,11 +249,11 @@ public class TestCompaction {
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
-    Path dstPath = store.getRegionFileSystem().createTempName();
+    Path dstPath = store.getRegionStorage().createTempName();
     FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, (long)1024, null);
     stream.writeChars("CORRUPT FILE!!!!");
     stream.close();
-    Path origPath = store.getRegionFileSystem().commitStoreFile(
+    Path origPath = store.getRegionStorage().commitStoreFile(
       Bytes.toString(COLUMN_FAMILY), dstPath);
 
     try {

@@ -100,7 +100,7 @@ public class TestSplitTransaction {
 
   @After public void teardown() throws IOException {
     if (this.parent != null && !this.parent.isClosed()) this.parent.close();
-    Path regionDir = this.parent.getRegionFileSystem().getRegionDir();
+    Path regionDir = this.parent.getRegionStorage().getRegionDir();
     if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
       throw new IOException("Failed delete of " + regionDir);
     }
@@ -143,7 +143,7 @@ public class TestSplitTransaction {
     // Make sure that region a and region b are still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-    Path tableDir =  this.parent.getRegionFileSystem().getTableDir();
+    Path tableDir =  this.parent.getRegionStorage().getTableDir();
     Path daughterADir = new Path(tableDir, spiedUponSt.getFirstDaughter().getEncodedName());
     Path daughterBDir = new Path(tableDir, spiedUponSt.getSecondDaughter().getEncodedName());
     assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterADir));
@@ -245,13 +245,13 @@ public class TestSplitTransaction {
     when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
     PairOfSameType<Region> daughters = st.execute(mockServer, null);
     // Do some assertions about execution.
-    assertTrue(this.fs.exists(this.parent.getRegionFileSystem().getSplitsDir()));
+    assertTrue(this.fs.exists(this.parent.getRegionStorage().getSplitsDir()));
     // Assert the parent region is closed.
     assertTrue(this.parent.isClosed());
 
     // Assert splitdir is empty -- because its content will have been moved out
     // to be under the daughter region dirs.
-    assertEquals(0, this.fs.listStatus(this.parent.getRegionFileSystem().getSplitsDir()).length);
+    assertEquals(0, this.fs.listStatus(this.parent.getRegionStorage().getSplitsDir()).length);
     // Check daughters have correct key span.
     assertTrue(Bytes.equals(parent.getRegionInfo().getStartKey(),
       daughters.getFirst().getRegionInfo().getStartKey()));
@@ -288,7 +288,7 @@ public class TestSplitTransaction {
     SplitTransactionImpl spiedUponSt = spy(st);
     doThrow(new IOException("Failing split. Expected reference file count isn't equal."))
         .when(spiedUponSt).assertReferenceFileCount(anyInt(),
-        eq(new Path(this.parent.getRegionFileSystem().getTableDir(),
+        eq(new Path(this.parent.getRegionStorage().getTableDir(),
             st.getSecondDaughter().getEncodedName())));
 
     // Run the execute.  Look at what it returns.
@@ -315,7 +315,7 @@ public class TestSplitTransaction {
     SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
     SplitTransactionImpl spiedUponSt = spy(st);
     doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
-        eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
+        eq(parent.getRegionStorage().getSplitsDir(st.getFirstDaughter())));
     when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
         thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.

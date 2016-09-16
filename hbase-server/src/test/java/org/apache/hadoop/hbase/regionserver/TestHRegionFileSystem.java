@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.FSUtilsWithRetries;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -50,9 +50,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestHRegionFileSystem {
+public class TestHRegionStorage {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestHRegionFileSystem.class);
+  private static final Log LOG = LogFactory.getLog(TestHRegionStorage.class);
 
   @Test
   public void testOnDiskRegionCreation() throws IOException {
@@ -62,22 +62,22 @@ public class TestHRegionFileSystem {
 
     // Create a Region
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
-    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, rootDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(conf, fs, rootDir, hri, true);
 
     // Verify if the region is on disk
     Path regionDir = regionFs.getRegionDir();
     assertTrue("The region folder should be created", fs.exists(regionDir));
 
     // Verify the .regioninfo
-    HRegionInfo hriVerify = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    HRegionInfo hriVerify = RegionStorage.open(conf, regionDir, false).getRegionInfo();
     assertEquals(hri, hriVerify);
 
     // Open the region
-    regionFs = RegionFileSystem.open(conf, fs, rootDir, hri, false);
+    regionFs = RegionStorage.open(conf, fs, rootDir, hri, false);
     assertEquals(regionDir, regionFs.getRegionDir());
 
     // Delete the region
-    RegionFileSystem.destroy(conf, fs, rootDir, hri);
+    RegionStorage.destroy(conf, fs, rootDir, hri);
     assertFalse("The region folder should be removed", fs.exists(regionDir));
 
     fs.delete(rootDir, true);
@@ -207,7 +207,7 @@ public class TestHRegionFileSystem {
     // Create a Region
     String familyName = "cf";
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
-    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, rootDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(conf, fs, rootDir, hri, true);
 
     // New region, no store files
     Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);

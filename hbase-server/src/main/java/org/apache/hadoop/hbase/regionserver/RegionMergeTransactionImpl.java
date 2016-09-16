@@ -39,7 +39,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.LoggingProgressable;
 import org.apache.hadoop.hbase.security.User;
@@ -59,7 +60,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
   private final HRegion region_a;
   private final HRegion region_b;
   // merges dir is under region_a
-  private final Path mergesdir;
+  private final StorageIdentifier mergesdir;
   // We only merge adjacent regions if forcible is false
   private final boolean forcible;
   private final long masterSystemTime;
@@ -148,7 +149,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     }
     this.forcible = forcible;
     this.masterSystemTime = masterSystemTime;
-    this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
+    this.mergesdir = region_a.getRegionStorage().getMergesContainer();
   }
 
   private void transition(RegionMergeTransactionPhase nextPhase) throws IOException {
@@ -383,7 +384,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
 
     transition(RegionMergeTransactionPhase.SET_MERGING);
 
-    this.region_a.getRegionFileSystem().createMergesDir();
+    this.region_a.getRegionStorage().createMergesContainer();
 
     transition(RegionMergeTransactionPhase.CREATED_MERGE_DIR);
 
@@ -557,7 +558,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       Map<byte[], List<StoreFile>> hstoreFilesOfRegionB)
       throws IOException {
     // Create reference file(s) of region A in mergdir
-    RegionFileSystem fs_a = this.region_a.getRegionFileSystem();
+    RegionStorage fs_a = this.region_a.getRegionStorage();
     for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionA.entrySet()) {
       String familyName = Bytes.toString(entry.getKey());
       for (StoreFile storeFile : entry.getValue()) {
@@ -565,7 +566,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       }
     }
     // Create reference file(s) of region B in mergedir
-    RegionFileSystem fs_b = this.region_b.getRegionFileSystem();
+    RegionStorage fs_b = this.region_b.getRegionStorage();
     for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionB.entrySet()) {
       String familyName = Bytes.toString(entry.getKey());
       for (StoreFile storeFile : entry.getValue()) {
@@ -616,7 +617,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
         case CREATED_MERGE_DIR:
           this.region_a.writestate.writesEnabled = true;
           this.region_b.writestate.writesEnabled = true;
-          this.region_a.getRegionFileSystem().cleanupMergesDir();
+          this.region_a.getRegionStorage().cleanupMergesContainer();
           break;
 
         case CLOSED_REGION_A:
@@ -655,7 +656,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
           break;
 
         case STARTED_MERGED_REGION_CREATION:
-          this.region_a.getRegionFileSystem().cleanupMergedRegion(
+          this.region_a.getRegionStorage().cleanupMergedRegion(
               this.mergedRegionInfo);
           break;
 
@@ -688,7 +689,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
   }
 
   @VisibleForTesting
-  Path getMergesDir() {
+  StorageIdentifier getMergesDir() {
     return this.mergesdir;
   }
 

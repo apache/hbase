@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -317,7 +319,7 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     transition(SplitTransactionPhase.SET_SPLITTING);
 
-    this.parent.getRegionFileSystem().createSplitsDir();
+    this.parent.getRegionStorage().createSplitsContainer();
 
     transition(SplitTransactionPhase.CREATE_SPLIT_DIR);
 
@@ -364,25 +366,29 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     transition(SplitTransactionPhase.STARTED_REGION_A_CREATION);
 
+    // TODO with referenceFileCount in RegionStorage this should clean up
     assertReferenceFileCount(expectedReferences.getFirst(),
-        this.parent.getRegionFileSystem().getSplitsDir(this.hri_a));
+        ((LegacyPathIdentifier)this.parent.getRegionStorage().getSplitsContainer(this.hri_a)).path);
     HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
     assertReferenceFileCount(expectedReferences.getFirst(),
-        new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_a.getEncodedName()));
+        new Path(((LegacyPathIdentifier)this.parent.getRegionStorage().getTableContainer()).path,
+            this.hri_a.getEncodedName()));
 
     // Ditto
 
     transition(SplitTransactionPhase.STARTED_REGION_B_CREATION);
 
     assertReferenceFileCount(expectedReferences.getSecond(),
-        this.parent.getRegionFileSystem().getSplitsDir(this.hri_b));
+        ((LegacyPathIdentifier)this.parent.getRegionStorage().getSplitsContainer(this.hri_b)).path);
     HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
     assertReferenceFileCount(expectedReferences.getSecond(),
-        new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_b.getEncodedName()));
+        new Path(((LegacyPathIdentifier)this.parent.getRegionStorage().getTableContainer()).path,
+            this.hri_b.getEncodedName()));
 
     return new PairOfSameType<Region>(a, b);
   }
 
+  // TODO file count should be in RegionStorage
   @VisibleForTesting
   void assertReferenceFileCount(int expectedReferenceFileCount, Path dir)
       throws IOException {
@@ -606,7 +612,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     ThreadFactory factory = builder.build();
     ThreadPoolExecutor threadPool =
       (ThreadPoolExecutor) Executors.newFixedThreadPool(maxThreads, factory);
-    List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>> (nbFiles);
+    List<Future<Pair<StorageIdentifier,StorageIdentifier>>> futures = new ArrayList<> (nbFiles);
 
     // Split each store file.
     for (Map.Entry<byte[], List<StoreFile>> entry: hstoreFilesToSplit.entrySet()) {
@@ -638,9 +644,9 @@ public class SplitTransactionImpl implements SplitTransaction {
     int created_a = 0;
     int created_b = 0;
     // Look for any exception
-    for (Future<Pair<Path, Path>> future : futures) {
+    for (Future<Pair<StorageIdentifier, StorageIdentifier>> future : futures) {
       try {
-        Pair<Path, Path> p = future.get();
+        Pair<StorageIdentifier, StorageIdentifier> p = future.get();
         created_a += p.getFirst() != null ? 1 : 0;
         created_b += p.getSecond() != null ? 1 : 0;
       } catch (InterruptedException e) {
@@ -657,32 +663,32 @@ public class SplitTransactionImpl implements SplitTransaction {
     return new Pair<Integer, Integer>(created_a, created_b);
   }
 
-  private Pair<Path, Path> splitStoreFile(final byte[] family, final StoreFile sf)
+  private Pair<StorageIdentifier, StorageIdentifier> splitStoreFile(final byte[] family, final StoreFile sf)
       throws IOException {
     if (LOG.isDebugEnabled()) {
         LOG.debug("Splitting started for store file: " + sf.getPath() + " for region: " +
                   this.parent);
     }
-    RegionFileSystem fs = this.parent.getRegionFileSystem();
+    RegionStorage fs = this.parent.getRegionStorage();
     String familyName = Bytes.toString(family);
-    Path path_a =
+    StorageIdentifier path_a =
         fs.splitStoreFile(this.hri_a, familyName, sf, this.splitrow, false,
           this.parent.getSplitPolicy());
-    Path path_b =
+    StorageIdentifier path_b =
         fs.splitStoreFile(this.hri_b, familyName, sf, this.splitrow, true,
           this.parent.getSplitPolicy());
     if (LOG.isDebugEnabled()) {
         LOG.debug("Splitting complete for store file: " + sf.getPath() + " for region: " +
                   this.parent);
     }
-    return new Pair<Path,Path>(path_a, path_b);
+    return new Pair<StorageIdentifier, StorageIdentifier>(path_a, path_b);
   }
 
   /**
    * Utility class used to do the file splitting / reference writing
    * in parallel instead of sequentially.
    */
-  private class StoreFileSplitter implements Callable<Pair<Path,Path>> {
+  private class StoreFileSplitter implements Callable<Pair<StorageIdentifier,StorageIdentifier>> {
     private final byte[] family;
     private final StoreFile sf;
 
@@ -696,7 +702,7 @@ public class SplitTransactionImpl implements SplitTransaction {
       this.family = family;
     }
 
-    public Pair<Path,Path> call() throws IOException {
+    public Pair<StorageIdentifier,StorageIdentifier> call() throws IOException {
       return splitStoreFile(family, sf);
     }
   }
@@ -741,7 +747,7 @@ public class SplitTransactionImpl implements SplitTransaction {
 
       case CREATE_SPLIT_DIR:
         this.parent.writestate.writesEnabled = true;
-        this.parent.getRegionFileSystem().cleanupSplitsDir();
+        this.parent.getRegionStorage().cleanupSplitsContainer();
         break;
 
       case CLOSED_PARENT_REGION:
@@ -760,11 +766,11 @@ public class SplitTransactionImpl implements SplitTransaction {
         break;
 
       case STARTED_REGION_A_CREATION:
-        this.parent.getRegionFileSystem().cleanupDaughterRegion(this.hri_a);
+        this.parent.getRegionStorage().cleanupDaughterRegion(this.hri_a);
         break;
 
       case STARTED_REGION_B_CREATION:
-        this.parent.getRegionFileSystem().cleanupDaughterRegion(this.hri_b);
+        this.parent.getRegionStorage().cleanupDaughterRegion(this.hri_b);
         break;
 
       case OFFLINED_PARENT:

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -91,13 +91,13 @@ public class TestDefaultCompactSelection extends TestCase {
     region = HBaseTestingUtility.createRegionAndWAL(info, basedir, conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region);
 
-    RegionFileSystem rfs = RegionFileSystem.open(conf, fs, basedir, info, false);
+    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
     region = new HRegion(rfs, htd,
       wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
 
     store = new HStore(region, hcd, conf);
 
-    TEST_FILE = region.getRegionFileSystem().createTempName();
+    TEST_FILE = region.getRegionStorage().createTempName();
     fs.createNewFile(TEST_FILE);
   }
 

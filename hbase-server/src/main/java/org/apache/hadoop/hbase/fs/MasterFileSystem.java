@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.legacy.LegacyMasterFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -147,7 +147,7 @@ public abstract class MasterFileSystem {
   //  PUBLIC Methods - Table Region related
   // ==========================================================================
   public void deleteRegion(HRegionInfo regionInfo) throws IOException {
-    RegionFileSystem.destroy(conf, fs, rootDir, regionInfo);
+    RegionStorage.destroy(conf, regionInfo);
   }
 
   public Collection<HRegionInfo> getRegions(TableName tableName) throws IOException {
@@ -157,14 +157,14 @@ public abstract class MasterFileSystem {
   public abstract Collection<HRegionInfo> getRegions(FsContext ctx, TableName tableName)
     throws IOException;
 
-  // TODO: Move in HRegionFileSystem
+  // TODO: Move in HRegionStorage
   public void deleteFamilyFromFS(HRegionInfo regionInfo, byte[] familyName, boolean hasMob)
       throws IOException {
-    getRegionFileSystem(regionInfo).deleteFamily(Bytes.toString(familyName), hasMob);
+    getRegionStorage(regionInfo).deleteFamily(Bytes.toString(familyName), hasMob);
   }
 
-  public RegionFileSystem getRegionFileSystem(HRegionInfo regionInfo) throws IOException {
-    return RegionFileSystem.open(conf, fs, rootDir, regionInfo, false);
+  public RegionStorage getRegionStorage(HRegionInfo regionInfo) throws IOException {
+    return RegionStorage.open(conf, regionInfo, false);
   }
 
   // ==========================================================================
@@ -202,7 +202,7 @@ public abstract class MasterFileSystem {
   public void visitStoreFiles(FsContext ctx, TableName table, StoreFileVisitor visitor)
       throws IOException {
     for (HRegionInfo hri: getRegions(ctx, table)) {
-      RegionFileSystem.open(conf, fs, rootDir, hri, false).visitStoreFiles(visitor);
+      RegionStorage.open(conf, hri, false).visitStoreFiles(visitor);
     }
   }
 

@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -221,7 +221,7 @@ public class TestRegionObserverScannerOpenHook {
   public static class CompactionCompletionNotifyingRegion extends HRegion {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
-    public CompactionCompletionNotifyingRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+    public CompactionCompletionNotifyingRegion(final RegionStorage rfs, final HTableDescriptor htd,
         final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }

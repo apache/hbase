@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -186,7 +186,7 @@ public class TestStore {
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, null, methodName);
-    RegionFileSystem rfs = RegionFileSystem.open(conf, fs, basedir, info, false);
+    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
     HRegion region = new HRegion(rfs, htd,
       wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
 
@@ -774,7 +774,7 @@ public class TestStore {
         LOG.info("Before flush, we should have no files");
 
         Collection<StoreFileInfo> files =
-          store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+          store.getRegionStorage().getStoreFiles(store.getColumnFamilyName());
         Assert.assertEquals(0, files != null ? files.size() : 0);
 
         //flush
@@ -787,7 +787,7 @@ public class TestStore {
         }
 
         LOG.info("After failed flush, we should still have no files!");
-        files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        files = store.getRegionStorage().getStoreFiles(store.getColumnFamilyName());
         Assert.assertEquals(0, files != null ? files.size() : 0);
         store.getHRegion().getWAL().close();
         return null;
@@ -1028,7 +1028,7 @@ public class TestStore {
     for (int i = 0; i <= index; i++) {
       sf = it.next();
     }
-    store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
+    store.getRegionStorage().removeStoreFiles(store.getColumnFamilyName(), Lists.newArrayList(sf));
   }
 
   private void closeCompactedFile(int index) throws IOException {

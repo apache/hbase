@@ -52,7 +52,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -103,6 +104,8 @@ public class CompactionTool extends Configured implements Tool {
     /**
      * Execute the compaction on the specified path.
      *
+     * TODO either retool in terms of region info or remove outright
+     *
      * @param path Directory path on which to run compaction.
      * @param compactOnce Execute just a single step of compaction.
      * @param major Request major compaction.
@@ -112,8 +115,8 @@ public class CompactionTool extends Configured implements Tool {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
         HTableDescriptor htd = LegacyTableDescriptor.getTableDescriptorFromFs(fs, tableDir);
-        HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-        compactStoreFiles(tableDir, htd, hri,
+        final RegionStorage rs = RegionStorage.open(conf, new LegacyPathIdentifier(regionDir), false);
+        compactStoreFiles(tableDir, htd, rs.getRegionInfo(),
             path.getName(), compactOnce, major);
       } else if (isRegionDir(fs, path)) {
         Path tableDir = path.getParent();
@@ -138,9 +141,10 @@ public class CompactionTool extends Configured implements Tool {
     private void compactRegion(final Path tableDir, final HTableDescriptor htd,
         final Path regionDir, final boolean compactOnce, final boolean major)
         throws IOException {
-      HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+      final RegionStorage rs = RegionStorage.open(conf, new LegacyPathIdentifier(regionDir), false);
+      // todo use RegionStorage to iterate instead of FSUtils
       for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
-        compactStoreFiles(tableDir, htd, hri, familyDir.getName(), compactOnce, major);
+        compactStoreFiles(tableDir, htd, rs.getRegionInfo(), familyDir.getName(), compactOnce, major);
       }
     }
 
@@ -181,7 +185,7 @@ public class CompactionTool extends Configured implements Tool {
     private static HStore getStore(final Configuration conf, final FileSystem fs,
         final Path tableDir, final HTableDescriptor htd, final HRegionInfo hri,
         final String familyName, final Path tempDir) throws IOException {
-      RegionFileSystem regionFs = null;
+      RegionStorage regionFs = null;
       HRegion region = new HRegion(regionFs, htd, null, null);
       return new HStore(region, htd.getFamily(Bytes.toBytes(familyName)), conf);
     }

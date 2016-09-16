@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -661,7 +661,7 @@ public class TestAtomicOperation {
 
   public static class MockHRegion extends HRegion {
 
-    public MockHRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+    public MockHRegion(final RegionStorage rfs, final HTableDescriptor htd,
         final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }

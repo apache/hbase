@@ -144,7 +144,7 @@ class HMerge {
     protected final WALFactory walFactory;
     private final long maxFilesize;
 
-
+    // TODO update for RegionStorage
     protected Merger(Configuration conf, FileSystem fs, final TableName tableName)
     throws IOException {
       this.conf = conf;
@@ -192,14 +192,14 @@ class HMerge {
       long nextSize = 0;
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
-          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd,
+          currentRegion = HRegion.openHRegion(info[i], this.htd,
               walFactory.getWAL(info[i].getEncodedNameAsBytes(),
-                info[i].getTable().getNamespace()));
+                info[i].getTable().getNamespace()), conf);
           currentSize = currentRegion.getLargestHStoreSize();
         }
-        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd,
+        nextRegion = HRegion.openHRegion(info[i + 1], this.htd,
             walFactory.getWAL(info[i + 1].getEncodedNameAsBytes(),
-              info[i + 1].getTable().getNamespace()));
+              info[i + 1].getTable().getNamespace()), conf);
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {

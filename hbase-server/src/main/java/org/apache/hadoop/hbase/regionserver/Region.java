@@ -220,6 +220,7 @@ public interface Region extends ConfigurationObserver {
   /** @return the MetricsRegion for this region */
   MetricsRegion getMetrics();
 
+  /* TODO make this something like host locality so it generalizes */
   /** @return the block distribution for all Stores managed by this region */
   HDFSBlocksDistribution getHDFSBlocksDistribution();
 

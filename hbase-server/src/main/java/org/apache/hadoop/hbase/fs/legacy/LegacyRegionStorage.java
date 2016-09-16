@@ -40,25 +40,22 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RemoteException;
+
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.FSUtilsWithRetries;
-import org.apache.hadoop.hbase.fs.FsContext;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.MetaUtils;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MetaUtils;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -75,8 +72,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
-public class LegacyRegionFileSystem extends RegionFileSystem {
-  private static final Log LOG = LogFactory.getLog(LegacyRegionFileSystem.class);
+public class LegacyRegionStorage extends RegionStorage<LegacyPathIdentifier> {
+  private static final Log LOG = LogFactory.getLog(LegacyRegionStorage.class);
 
   private final Path tableDir;
   private final Path regionDir;
@@ -87,26 +84,41 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
 
   private final FSUtilsWithRetries fsWithRetries;
 
-  public LegacyRegionFileSystem(Configuration conf, FileSystem fs, Path rootDir, HRegionInfo hri) {
-    super(conf, fs, rootDir, hri);
+  public LegacyRegionStorage(Configuration conf, FileSystem fs, LegacyPathIdentifier rootContainer, LegacyPathIdentifier regionContainer) throws IOException {
+    this(conf, fs, rootContainer, loadRegionInfoFileContent(fs, regionContainer.path));
+  }
 
-    Path dataDir = LegacyLayout.getDataDir(rootDir);
+  public LegacyRegionStorage(Configuration conf, FileSystem fs, LegacyPathIdentifier rootContainer, HRegionInfo hri) {
+    super(conf, fs, rootContainer, hri);
+
+    Path dataDir = LegacyLayout.getDataDir(rootContainer.path);
     this.tableDir = LegacyLayout.getTableDir(dataDir, hri.getTable());
     this.regionDir = LegacyLayout.getRegionDir(tableDir, hri);
-    this.mobDir = LegacyLayout.getDataDir(LegacyLayout.getMobDir(rootDir));
+    this.mobDir = LegacyLayout.getDataDir(LegacyLayout.getMobDir(rootContainer.path));
     this.fsWithRetries = new FSUtilsWithRetries(conf, fs);
 
     this.regionInfoForFs = ServerRegionReplicaUtil.getRegionInfoForFs(hri);
   }
 
-  public Path getRegionDir() {
-    return regionDir;
+  @Override
+  public LegacyPathIdentifier getRegionContainer() {
+    return new LegacyPathIdentifier(regionDir);
   }
 
-  public Path getTableDir() {
-    return tableDir;
+  @Override
+  public LegacyPathIdentifier getTableContainer() {
+    return new LegacyPathIdentifier(tableDir);
   }
 
+  public static HRegionInfo loadRegionInfoFileContent(FileSystem fs, Path regionContainer)
+      throws IOException {
+    FSDataInputStream in = fs.open(new Path(regionContainer, ".regioninfo"));
+    try {
+      return HRegionInfo.parseFrom(in);
+    } finally {
+      in.close();
+    }
+  }
   // ==========================================================================
   //  PUBLIC Methods - Families Related
   // ==========================================================================
@@ -163,15 +175,16 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
   //  Temp Helpers
   // ===========================================================================
   /** @return {@link Path} to the region's temp directory, used for file creations */
-  public Path getTempDir() {
-    return LegacyLayout.getRegionTempDir(regionDir);
+  @Override
+  public LegacyPathIdentifier getTempContainer() {
+    return new LegacyPathIdentifier(LegacyLayout.getRegionTempDir(regionDir));
   }
 
   /**
    * Clean up any temp detritus that may have been left around from previous operation attempts.
    */
-  public void cleanupTempDir() throws IOException {
-    fsWithRetries.deleteDir(getTempDir());
+  public void cleanupTempContainer() throws IOException {
+    fsWithRetries.deleteDir(getTempContainer().path);
   }
 
   // ===========================================================================
@@ -182,8 +195,8 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @param familyName Column Family Name
    * @return {@link Path} to the directory of the specified family
    */
-  public Path getStoreDir(final String familyName) {
-    return LegacyLayout.getFamilyDir(getRegionDir(), familyName);
+  public LegacyPathIdentifier getStoreContainer(final String familyName) {
+    return new LegacyPathIdentifier(LegacyLayout.getFamilyDir(getRegionContainer().path, familyName));
   }
 
   /**
@@ -192,11 +205,11 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @return {@link Path} to the directory of the specified family
    * @throws IOException if the directory creation fails.
    */
-  public Path createStoreDir(final String familyName) throws IOException {
-    Path storeDir = getStoreDir(familyName);
+  public LegacyPathIdentifier createStoreContainer(final String familyName) throws IOException {
+    Path storeDir = getStoreContainer(familyName).path;
     if (!fsWithRetries.createDir(storeDir))
       throw new IOException("Failed creating "+storeDir);
-    return storeDir;
+    return new LegacyPathIdentifier(storeDir);
   }
 
   // ==========================================================================
@@ -206,7 +219,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
   @Override
   public Collection<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
       throws IOException {
-    Path familyDir = getStoreDir(familyName);
+    Path familyDir = getStoreContainer(familyName).path;
     FileStatus[] files = FSUtils.listStatus(getFileSystem(), familyDir);
     if (files == null) {
       if (LOG.isDebugEnabled()) {
@@ -237,9 +250,9 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @param fileName File Name
    * @return The qualified Path for the specified family/file
    */
-  public Path getStoreFilePath(final String familyName, final String fileName) {
-    Path familyDir = getStoreDir(familyName);
-    return LegacyLayout.getStoreFile(familyDir, fileName).makeQualified(getFileSystem());
+  public LegacyPathIdentifier getStoreFileStorageIdentifier(final String familyName, final String fileName) {
+    Path familyDir = getStoreContainer(familyName).path;
+    return new LegacyPathIdentifier(LegacyLayout.getStoreFile(familyDir, fileName).makeQualified(getFileSystem()));
   }
 
   /**
@@ -251,10 +264,15 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    */
   public StoreFileInfo getStoreFileInfo(final String familyName, final String fileName)
       throws IOException {
-    Path familyDir = getStoreDir(familyName);
+    Path familyDir = getStoreContainer(familyName).path;
     return ServerRegionReplicaUtil.getStoreFileInfo(getConfiguration(),
       getFileSystem(), getRegionInfo(), regionInfoForFs, familyName,
       LegacyLayout.getStoreFile(familyDir, fileName));
+  }
+
+  @Override
+  public long getStoreFileLen(final StoreFile store) throws IOException {
+    return store.getFileInfo().getFileStatus().getLen();
   }
 
   /**
@@ -264,7 +282,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @throws IOException
    */
   public boolean hasReferences(final String familyName) throws IOException {
-    FileStatus[] files = FSUtils.listStatus(getFileSystem(), getStoreDir(familyName));
+    FileStatus[] files = FSUtils.listStatus(getFileSystem(), getStoreContainer(familyName).path);
     if (files != null) {
       for(FileStatus stat: files) {
         if(stat.isDirectory()) {
@@ -316,8 +334,8 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    *
    * @return Unique {@link Path} of the temporary file
    */
-  public Path createTempName() {
-    return createTempName(null);
+  public LegacyPathIdentifier getTempIdentifier() {
+    return new LegacyPathIdentifier(createTempName(null));
   }
 
   /**
@@ -333,18 +351,20 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @return Unique {@link Path} of the temporary file
    */
   public Path createTempName(final String suffix) {
-    return new Path(getTempDir(), generateUniqueName(suffix));
+    return new Path(getTempContainer().path, generateUniqueName(suffix));
   }
 
   /**
    * Move the file from a build/temp location to the main family store directory.
    * @param familyName Family that will gain the file
    * @param buildPath {@link Path} to the file to commit.
-   * @return The new {@link Path} of the committed file
+   * @return The StoreFile representing the newly committed file
    * @throws IOException
    */
-  public Path commitStoreFile(final String familyName, final Path buildPath) throws IOException {
-    return commitStoreFile(familyName, buildPath, -1, false);
+  @Override
+  public StoreFile commitStoreFile(final String familyName, final LegacyPathIdentifier buildPath, final CacheConfig cacheConf,  final BloomType cfBloomType, final RegionCoprocessorHost coprocessorHost) throws IOException {
+    final Path path = commitStoreFile(familyName, buildPath.path, -1, false);
+    return createStoreFileAndReader(path, cacheConf, cfBloomType, coprocessorHost);
   }
 
   /**
@@ -358,7 +378,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    */
   private Path commitStoreFile(final String familyName, final Path buildPath,
       final long seqNum, final boolean generateNewName) throws IOException {
-    Path storeDir = getStoreDir(familyName);
+    Path storeDir = getStoreContainer(familyName).path;
     if(!fsWithRetries.createDir(storeDir))
       throw new IOException("Failed creating " + storeDir);
 
@@ -390,21 +410,9 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
     for (Map.Entry<byte[], List<StoreFile>> es: storeFiles.entrySet()) {
       String familyName = Bytes.toString(es.getKey());
       for (StoreFile sf: es.getValue()) {
-        commitStoreFile(familyName, sf.getPath());
+        commitStoreFile(familyName, sf.getPath(), -1, false);
       }
     }
-  }
-
-  /**
-   * Archives the specified store file from the specified family.
-   * @param familyName Family that contains the store files
-   * @param filePath {@link Path} to the store file to remove
-   * @throws IOException if the archiving fails
-   */
-  public void removeStoreFile(final String familyName, final Path filePath)
-      throws IOException {
-    HFileArchiver.archiveStoreFile(getConfiguration(), getFileSystem(), this.regionInfoForFs,
-        this.tableDir, Bytes.toBytes(familyName), filePath);
   }
 
   /**
@@ -421,54 +429,68 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
 
   /**
    * Bulk load: Add a specified store file to the specified family.
-   * If the source file is on the same different file-system is moved from the
+   * If the source file is on the same file-system is moved from the
    * source location to the destination location, otherwise is copied over.
    *
    * @param familyName Family that will gain the file
    * @param srcPath {@link Path} to the file to import
    * @param seqNum Bulk Load sequence number
-   * @return The destination {@link Path} of the bulk loaded file
+   * @return a StoreFile representation of the bulk loaded file
    * @throws IOException
    */
-  public Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+  @Override
+  public StoreFile bulkLoadStoreFile(final String familyName, LegacyPathIdentifier src, long seqNum, final CacheConfig cacheConf, final BloomType cfBloomType, final RegionCoprocessorHost coprocessorHost)
       throws IOException {
     // Copy the file if it's on another filesystem
     FileSystem fs = getFileSystem();
-    FileSystem srcFs = srcPath.getFileSystem(getConfiguration());
+    FileSystem srcFs = src.path.getFileSystem(getConfiguration());
     FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
+    Path commitPath = src.path;
 
     // We can't compare FileSystem instances as equals() includes UGI instance
     // as part of the comparison and won't work when doing SecureBulkLoad
     // TODO deal with viewFS
     if (!FSHDFSUtils.isSameHdfs(getConfiguration(), srcFs, desFs)) {
-      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
+      LOG.info("Bulk-load file " + src+ " is on different filesystem than " +
           "the destination store. Copying file over to destination filesystem.");
-      Path tmpPath = createTempName();
-      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, getConfiguration());
-      LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
-      srcPath = tmpPath;
+      Path tmpPath = getTempIdentifier().path;
+      FileUtil.copy(srcFs, src.path, fs, tmpPath, false, getConfiguration());
+      LOG.info("Copied " + src + " to temporary path on destination filesystem: " + tmpPath);
+      commitPath = tmpPath;
     }
 
-    return commitStoreFile(familyName, srcPath, seqNum, true);
+    final Path result = commitStoreFile(familyName, commitPath, seqNum, true);
+    return createStoreFileAndReader(result, cacheConf, cfBloomType, coprocessorHost);
+  }
+
+  private StoreFile createStoreFileAndReader(final Path p, final CacheConfig cacheConf,  final BloomType cfBloomType, final RegionCoprocessorHost coprocessorHost) throws IOException {
+    final Configuration conf = getConfiguration();
+    final StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    info.setRegionCoprocessorHost(coprocessorHost);
+    StoreFile storeFile = new StoreFile(this.getFileSystem(), info, conf, cacheConf, cfBloomType);
+    StoreFileReader r = storeFile.createReader();
+    HRegionInfo region = getRegionInfo();
+    r.setReplicaStoreFile(region.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID);
+    return storeFile;
   }
 
   // ===========================================================================
   //  Splits Helpers
   // ===========================================================================
   /** @return {@link Path} to the temp directory used during split operations */
-  public Path getSplitsDir() {
-    return LegacyLayout.getRegionSplitsDir(getRegionDir());
+  public LegacyPathIdentifier getSplitsContainer() {
+    return new LegacyPathIdentifier(LegacyLayout.getRegionSplitsDir(getRegionContainer().path));
   }
 
-  public Path getSplitsDir(final HRegionInfo hri) {
-    return LegacyLayout.getRegionSplitsDir(getSplitsDir(), hri);
+  public LegacyPathIdentifier getSplitsContainer(final HRegionInfo hri) {
+    return new LegacyPathIdentifier(LegacyLayout.getRegionSplitsDir(getSplitsContainer().path, hri));
   }
 
   /**
    * Clean up any split detritus that may have been left around from previous split attempts.
    */
-  public void cleanupSplitsDir() throws IOException {
-    fsWithRetries.deleteDir(getSplitsDir());
+  public void cleanupSplitsContainer() throws IOException {
+    fsWithRetries.deleteDir(getSplitsContainer().path);
   }
 
   /**
@@ -478,7 +500,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @throws IOException
    */
   public void cleanupAnySplitDetritus() throws IOException {
-    Path splitdir = this.getSplitsDir();
+    Path splitdir = this.getSplitsContainer().path;
     if (!fsWithRetries.exists(splitdir)) return;
     // Look at the splitdir.  It could have the encoded names of the daughter
     // regions we tried to make.  See if the daughter regions actually got made
@@ -497,7 +519,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
         }
       }
     }
-    cleanupSplitsDir();
+    cleanupSplitsContainer();
     LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 
@@ -520,10 +542,10 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @param regionInfo                 daughter {@link org.apache.hadoop.hbase.HRegionInfo}
    * @throws IOException
    */
-  public Path commitDaughterRegion(final HRegionInfo regionInfo)
+  public LegacyPathIdentifier commitDaughterRegion(final HRegionInfo regionInfo)
       throws IOException {
     Path regionDir = LegacyLayout.getRegionDir(tableDir, regionInfo);
-    Path daughterTmpDir = this.getSplitsDir(regionInfo);
+    Path daughterTmpDir = this.getSplitsContainer(regionInfo).path;
 
     if (fsWithRetries.exists(daughterTmpDir)) {
 
@@ -538,17 +560,18 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
       }
     }
 
-    return regionDir;
+    return new LegacyPathIdentifier(regionDir);
   }
 
   /**
    * Create the region splits directory.
    */
-  public void createSplitsDir() throws IOException {
-    createTempDir(getSplitsDir());
+  @Override
+  public void createSplitsContainer() throws IOException {
+    createTransientDir(getSplitsContainer().path);
   }
 
-  void createTempDir(Path dir) throws IOException {
+  void createTransientDir(Path dir) throws IOException {
     if (fsWithRetries.exists(dir)) {
       LOG.info("The " + dir + " directory exists.  Hence deleting it to recreate it");
       if (!fsWithRetries.deleteDir(dir)) {
@@ -573,7 +596,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
+  public LegacyPathIdentifier splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
       final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
           throws IOException {
 
@@ -609,7 +632,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
       }
     }
 
-    Path splitDir = new Path(getSplitsDir(hri), familyName);
+    Path splitDir = new Path(getSplitsContainer(hri).path, familyName);
     // A reference to the bottom half of the hsf store file.
     Reference r =
       top ? Reference.createTopReference(splitRow): Reference.createBottomReference(splitRow);
@@ -621,26 +644,27 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
     // Write reference with same file id only with the other region name as
     // suffix and into the new region location (under same family).
     Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
-    return r.write(getFileSystem(), p);
+    p = r.write(getFileSystem(), p);
+    return p == null ? null : new LegacyPathIdentifier(p);
   }
 
   // ===========================================================================
   //  Merge Helpers
   // ===========================================================================
   /** @return {@link Path} to the temp directory used during merge operations */
-  public Path getMergesDir() {
-    return LegacyLayout.getRegionMergesDir(getRegionDir());
+  public LegacyPathIdentifier getMergesContainer() {
+    return new LegacyPathIdentifier(LegacyLayout.getRegionMergesDir(getRegionContainer().path));
   }
 
-  Path getMergesDir(final HRegionInfo hri) {
-    return LegacyLayout.getRegionMergesDir(getMergesDir(), hri);
+  public LegacyPathIdentifier getMergesContainer(final HRegionInfo hri) {
+    return new LegacyPathIdentifier(LegacyLayout.getRegionMergesDir(getMergesContainer().path, hri));
   }
 
   /**
    * Clean up any merge detritus that may have been left around from previous merge attempts.
    */
-  public void cleanupMergesDir() throws IOException {
-    fsWithRetries.deleteDir(getMergesDir());
+  public void cleanupMergesContainer() throws IOException {
+    fsWithRetries.deleteDir(getMergesContainer().path);
   }
 
   /**
@@ -658,10 +682,11 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
   /**
    * Create the region merges directory.
    * @throws IOException If merges dir already exists or we fail to create it.
-   * @see HRegionFileSystem#cleanupMergesDir()
+   * @see RegionStorage#cleanupMergesContainer()
    */
-  public void createMergesDir() throws IOException {
-    createTempDir(getMergesDir());
+  @Override
+  public void createMergesContainer() throws IOException {
+    createTransientDir(getMergesContainer().path);
   }
 
   /**
@@ -674,10 +699,11 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
-      final StoreFile f, final Path mergedDir)
+  @Override
+  public LegacyPathIdentifier mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
+      final StoreFile f, final LegacyPathIdentifier mergedDir)
       throws IOException {
-    Path referenceDir = new Path(new Path(mergedDir,
+    Path referenceDir = new Path(new Path(mergedDir.path,
         mergedRegion.getEncodedName()), familyName);
     // A whole reference to the store file.
     Reference r = Reference.createTopReference(regionInfoForFs.getStartKey());
@@ -690,7 +716,8 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
     // suffix and into the new region location (under same family).
     Path p = new Path(referenceDir, f.getPath().getName() + "."
         + mergingRegionName);
-    return r.write(getFileSystem(), p);
+    p = r.write(getFileSystem(), p);
+    return p == null ? null : new LegacyPathIdentifier(p);
   }
 
   /**
@@ -699,9 +726,10 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
    * @param mergedRegionInfo merged region {@link HRegionInfo}
    * @throws IOException
    */
+  @Override
   public void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
-    Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
+    Path mergedRegionTmpDir = this.getMergesContainer(mergedRegionInfo).path;
     // Move the tmp dir in the expected location
     if (mergedRegionTmpDir != null && fsWithRetries.exists(mergedRegionTmpDir)) {
       if (!fsWithRetries.rename(mergedRegionTmpDir, regionDir)) {
@@ -716,11 +744,13 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
   // ===========================================================================
   /**
    * Log the current state of the region
+   * // TODO refactor to "logStorageState"
    * @param LOG log to output information
    * @throws IOException if an unexpected exception occurs
    */
+  @Override
   public void logFileSystemState(final Log LOG) throws IOException {
-    FSUtils.logFileSystemState(getFileSystem(), this.getRegionDir(), LOG);
+    FSUtils.logFileSystemState(getFileSystem(), this.getRegionContainer().path, LOG);
   }
 
   /**
@@ -753,12 +783,12 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
   // ==========================================================================
   @Override
   protected void bootstrap() throws IOException {
-    fsWithRetries.createDir(getRegionDir());
+    fsWithRetries.createDir(getRegionContainer().path);
 
     // Cleanup temporary directories
-    cleanupTempDir();
-    cleanupSplitsDir();
-    cleanupMergesDir();
+    cleanupTempContainer();
+    cleanupSplitsContainer();
+    cleanupMergesContainer();
 
     // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
     checkRegionInfoOnFilesystem();
@@ -766,7 +796,7 @@ public class LegacyRegionFileSystem extends RegionFileSystem {
 
   public void checkRegionInfoOnFilesystem() throws IOException {
     writeRegionInfoFileContent(getConfiguration(), getFileSystem(),
-      LegacyLayout.getRegionInfoFile(getRegionDir()),
+      LegacyLayout.getRegionInfoFile(getRegionContainer().path),
       getRegionInfoFileContent(getRegionInfo()));
   }
 

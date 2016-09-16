@@ -120,6 +120,7 @@ public class StoreFileWriter implements Compactor.CellSink {
     // it no longer writable.
     this.timeRangeTrackerSet = trt != null;
     this.timeRangeTracker = this.timeRangeTrackerSet? trt: new TimeRangeTracker();
+    // TODO move creation of the writer for the StoreFileWriter into RegionStorage
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
         .withComparator(comparator)
@@ -372,6 +373,7 @@ public class StoreFileWriter implements Compactor.CellSink {
       return this;
     }
 
+    // TODO replace with RegionStorage
     /**
      * Use either this method or {@link #withFilePath}, but not both.
      * @param dir Path to column family directory. The directory is created if
@@ -385,6 +387,7 @@ public class StoreFileWriter implements Compactor.CellSink {
       return this;
     }
 
+    // TODO replace with RegionStorage
     /**
      * Use either this method or {@link #withOutputDir}, but not both.
      * @param filePath the StoreFile path to write

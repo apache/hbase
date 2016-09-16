@@ -74,8 +74,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -1093,8 +1093,9 @@ public abstract class FSUtils {
       int cfCount = 0;
       int cfFrag = 0;
       for (HRegionInfo hri: mfs.getRegions(table)) {
-        RegionFileSystem rfs = mfs.getRegionFileSystem(hri);
-        for (String family: rfs.getFamilies()) {
+        RegionStorage rfs = mfs.getRegionStorage(hri);
+        final Collection<String> families = rfs.getFamilies();
+        for (String family: families) {
           cfCount++;
           cfCountTotal++;
           if (rfs.getStoreFiles(family).size() > 1) {

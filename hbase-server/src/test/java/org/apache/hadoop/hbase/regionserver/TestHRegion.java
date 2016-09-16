@@ -90,7 +90,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ServerProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
@@ -683,8 +684,8 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, null, method);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
@@ -736,8 +737,8 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, null, method);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
@@ -791,8 +792,8 @@ public class TestHRegion {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
 
       Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
       for (int i = 1000; i < 1050; i += 10) {
@@ -826,8 +827,8 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, null, method);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
       byte[][] columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
 
@@ -895,8 +896,8 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, null, method);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       long maxSeqId = 3;
@@ -924,14 +925,14 @@ public class TestHRegion {
       assertEquals(3, region.getStore(family).getStorefilesCount());
 
       // now find the compacted file, and manually add it to the recovered edits
-      Path tmpDir = region.getRegionFileSystem().getTempDir();
+      Path tmpDir = region.getRegionStorage().getTempDir();
       FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
       String errorMsg = "Expected to find 1 file in the region temp directory "
           + "from the compaction, could not find any";
       assertNotNull(errorMsg, files);
       assertEquals(errorMsg, 1, files.length);
       // move the file inside region dir
-      Path newFile = region.getRegionFileSystem().commitStoreFile(Bytes.toString(family),
+      Path newFile = region.getRegionStorage().commitStoreFile(Bytes.toString(family),
           files[0].getPath());
 
       byte[] encodedNameAsBytes = this.region.getRegionInfo().getEncodedNameAsBytes();
@@ -941,10 +942,10 @@ public class TestHRegion {
         fakeEncodedNameAsBytes[i] = (byte) (encodedNameAsBytes[i] + 1);
       }
 
-      CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(this.region
+      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(this.region
         .getRegionInfo(), mismatchedRegionName ? fakeEncodedNameAsBytes : null, family,
             storeFiles, Lists.newArrayList(newFile),
-            region.getRegionFileSystem().getStoreDir(Bytes.toString(family)));
+            region.getRegionStorage().getStoreDir(Bytes.toString(family)));
 
       WALUtil.writeCompactionMarker(region.getWAL(), this.region.getReplicationScope(),
           this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
@@ -1011,8 +1012,8 @@ public class TestHRegion {
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, method, CONF, false, Durability.USE_DEFAULT, wal, family);
     try {
-      Path regiondir = region.getRegionFileSystem().getRegionDir();
-      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      Path regiondir = region.getRegionStorage().getRegionDir();
+      FileSystem fs = region.getRegionStorage().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       long maxSeqId = 3;
@@ -2638,9 +2639,9 @@ public class TestHRegion {
           HRegion.openHRegion(subregions[i], null);
           subregions[i].compactStores();
         }
-        Path oldRegionPath = region.getRegionFileSystem().getRegionDir();
-        Path oldRegion1 = subregions[0].getRegionFileSystem().getRegionDir();
-        Path oldRegion2 = subregions[1].getRegionFileSystem().getRegionDir();
+        Path oldRegionPath = region.getRegionStorage().getRegionDir();
+        Path oldRegion1 = subregions[0].getRegionStorage().getRegionDir();
+        Path oldRegion2 = subregions[1].getRegionStorage().getRegionDir();
         long startTime = System.currentTimeMillis();
         region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
         LOG.info("Merge regions elapsed time: "
@@ -4507,8 +4508,8 @@ public class TestHRegion {
 
     // Create a region and skip the initialization (like CreateTableHandler)
     HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF, htd, false);
-    Path regionDir = region.getRegionFileSystem().getRegionDir();
-    FileSystem fs = region.getRegionFileSystem().getFileSystem();
+    Path regionDir = region.getRegionStorage().getRegionDir();
+    FileSystem fs = region.getRegionStorage().getFileSystem();
     HBaseTestingUtility.closeRegionAndWAL(region);
 
     Path regionInfoFile = LegacyLayout.getRegionInfoFile(regionDir);
@@ -4519,7 +4520,7 @@ public class TestHRegion {
 
     // Try to open the region
     region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
-    assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
+    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
     HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
@@ -4533,7 +4534,7 @@ public class TestHRegion {
 
     region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
 //    region = TEST_UTIL.openHRegion(hri, htd);
-    assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
+    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
     HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
@@ -5039,8 +5040,8 @@ public class TestHRegion {
 
       // move the file of the primary region to the archive, simulating a compaction
       Collection<StoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
-      primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
-      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionFileSystem()
+      primaryRegion.getRegionStorage().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
+      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionStorage()
           .getStoreFiles(families[0]);
       Assert.assertTrue(storeFileInfos == null || storeFileInfos.size() == 0);
 
@@ -6099,7 +6100,7 @@ public class TestHRegion {
 
   // Helper for test testOpenRegionWrittenToWALForLogReplay
   static class HRegionWithSeqId extends HRegion {
-    public HRegionWithSeqId(final RegionFileSystem rfs, final HTableDescriptor htd,
+    public HRegionWithSeqId(final RegionStorage rfs, final HTableDescriptor htd,
         final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }

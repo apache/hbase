@@ -111,9 +111,12 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyRegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -1022,11 +1025,15 @@ public class HBaseFsck extends Configured implements Closeable {
         Bytes.add(orphanRegionRange.getSecond(), new byte[1]));
     LOG.info("Creating new region : " + hri);
     HRegion region = HBaseFsckRepair.createHDFSRegionDir(getConf(), hri, template);
-    Path target = region.getRegionFileSystem().getRegionDir();
+    final StorageIdentifier target = region.getRegionStorage().getRegionContainer();
 
-    // rename all the data to new region
-    mergeRegionDirs(target, hi);
-    fixes++;
+    if (target instanceof LegacyPathIdentifier) {
+      // rename all the data to new region
+      mergeRegionDirs(((LegacyPathIdentifier)target).path, hi);
+      fixes++;
+    } else {
+      LOG.info("Skipped ");
+    }
   }
 
   /**
@@ -1191,7 +1198,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-    HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    HRegionInfo hri = LegacyRegionStorage.loadRegionInfoFileContent(fs, regionDir);
     LOG.debug("HRegionInfo read: " + hri.toString());
     hbi.hdfsEntry.hri = hri;
   }
@@ -1424,7 +1431,7 @@ public class HBaseFsck extends Configured implements Closeable {
         Collections.<WALActionsListener>singletonList(new MetricsWAL()),
         "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
         getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
-    HRegion meta = HRegion.createHRegion(c, rootdir, metaDescriptor, metaHRI, wal);
+    HRegion meta = HRegion.createHRegion(c, metaDescriptor, metaHRI, wal);
     MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
   }
@@ -2361,7 +2368,8 @@ public class HBaseFsck extends Configured implements Closeable {
                   LOG.warn(hri + " start and stop keys are in the range of " + region
                       + ". The region might not be cleaned up from hdfs when region " + region
                       + " split failed. Hence deleting from hdfs.");
-                  RegionFileSystem.destroy(getConf(), fs, regionDir.getParent(), hri);
+                  // TODO directly reference LegacyRegionStorage?
+                  RegionStorage.destroy(getConf(), fs, new LegacyPathIdentifier(regionDir.getParent()), hri);
                   return;
                 }
               }
@@ -3004,17 +3012,21 @@ public class HBaseFsck extends Configured implements Closeable {
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
         LOG.info("[" + thread + "] Created new empty container region: " +
             newRegion + " to contain regions: " + Joiner.on(",").join(overlap));
-        debugLsr(region.getRegionFileSystem().getRegionDir());
+        debugLsr(region.getRegionStorage().getRegionContainer());
 
         // all target regions are closed, should be able to safely cleanup.
         boolean didFix= false;
-        Path target = region.getRegionFileSystem().getRegionDir();
-        for (HbckInfo contained : overlap) {
-          LOG.info("[" + thread + "] Merging " + contained  + " into " + target );
-          int merges = mergeRegionDirs(target, contained);
-          if (merges > 0) {
-            didFix = true;
+        StorageIdentifier target = region.getRegionStorage().getRegionContainer();
+        if (target instanceof LegacyPathIdentifier) {
+          for (HbckInfo contained : overlap) {
+            LOG.info("[" + thread + "] Merging " + contained  + " into " + target );
+            int merges = mergeRegionDirs(((LegacyPathIdentifier)target).path, contained);
+            if (merges > 0) {
+              didFix = true;
+            }
           }
+        } else {
+          LOG.info("skipping merge into " + target + " because it is not a Path.");
         }
         if (didFix) {
           fixes++;
@@ -4146,7 +4158,7 @@ public class HBaseFsck extends Configured implements Closeable {
               try {
                 LOG.debug("Loading region info from hdfs:"+ regionDir.getPath());
 
-                Path regioninfoFile = new Path(he.hdfsRegionDir, LegacyLayout.REGION_INFO_FILE);
+                Path regioninfoFile = new Path(regionDir.getPath(), LegacyLayout.REGION_INFO_FILE);
                 boolean regioninfoFileExists = fs.exists(regioninfoFile);
 
                 if (!regioninfoFileExists) {
@@ -4864,6 +4876,14 @@ public class HBaseFsck extends Configured implements Closeable {
   public static void debugLsr(Configuration conf,
       Path p) throws IOException {
     debugLsr(conf, p, new PrintingErrorReporter());
+  }
+
+  void debugLsr(StorageIdentifier id) throws IOException {
+    if (id instanceof LegacyPathIdentifier) {
+      debugLsr(((LegacyPathIdentifier)id).path);
+    } else {
+      LOG.debug("identifier '" + id + "' is not a Path; skipping long output.");
+    }
   }
 
   /**

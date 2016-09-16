@@ -76,7 +76,7 @@ import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -1033,11 +1033,11 @@ public class TestSplitTransactionOnCluster {
       assertEquals(storefiles.size(), 1);
       assertFalse(region.hasReferences());
       Path referencePath =
-          region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
+          region.getRegionStorage().splitStoreFile(region.getRegionInfo(), "f",
             storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
       assertNull(referencePath);
       referencePath =
-          region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "i_f",
+          region.getRegionStorage().splitStoreFile(region.getRegionInfo(), "i_f",
             storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
       assertNotNull(referencePath);
     } finally {

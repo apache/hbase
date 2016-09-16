@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -727,8 +727,7 @@ public class RegionSplitter {
             if (sk.length == 0)
               sk = splitAlgo.firstRow();
 
-            RegionFileSystem regionFs = RegionFileSystem.open(
-              connection.getConfiguration(), fs, tableDir, hri, true);
+            RegionStorage regionFs = RegionStorage.open(connection.getConfiguration(), hri, true);
 
             // Check every Column Family for that region -- check does not have references.
             boolean refFound = false;

@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -251,7 +251,7 @@ public class TestRegionMergeTransactionOnCluster {
       admin.compactRegion(mergedRegionInfo.getRegionName());
       // wait until merged region doesn't have reference file
       long timeout = System.currentTimeMillis() + waitTime;
-      RegionFileSystem hrfs = RegionFileSystem.open(
+      RegionStorage hrfs = RegionStorage.open(
           TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo, false);
       while (System.currentTimeMillis() < timeout) {
         for(HColumnDescriptor colFamily : columnFamilies) {

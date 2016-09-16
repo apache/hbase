@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -79,15 +79,15 @@ public class TestHRegionInfo {
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    HRegionInfo deserializedHri = RegionFileSystem.loadRegionInfoFileContent(
-        r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
+    HRegionInfo deserializedHri = RegionStorage.open(r.getRegionStorage().getConfiguration(),
+        r.getRegionStorage.getRegionContainer(), false).getRegionInfo();
     assertTrue(hri.equals(deserializedHri));
     HBaseTestingUtility.closeRegionAndWAL(r);
   }
 
   long getModTime(final HRegion r) throws IOException {
-    FileStatus[] statuses = r.getRegionFileSystem().getFileSystem().listStatus(
-      LegacyLayout.getRegionInfoFile(r.getRegionFileSystem().getRegionDir()));
+    FileStatus[] statuses = r.getRegionStorage().getFileSystem().listStatus(
+      LegacyLayout.getRegionInfoFile(r.getRegionStorage().getRegionDir()));
     assertTrue(statuses != null && statuses.length == 1);
     return statuses[0].getModificationTime();
   }

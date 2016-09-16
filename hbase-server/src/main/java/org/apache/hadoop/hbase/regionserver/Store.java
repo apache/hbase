@@ -157,7 +157,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   FileSystem getFileSystem();
 
-
+  // TODO move createWriterInTmp calls to RegionStorage as somethign like "createTempStoreFileWriter"
   /**
    * @param maxKeyCount
    * @param compression Compression algorithm to use
@@ -298,7 +298,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @param srcPathStr
    * @param sequenceId sequence Id associated with the HFile
    */
-  Path bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
+  StoreFile bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class

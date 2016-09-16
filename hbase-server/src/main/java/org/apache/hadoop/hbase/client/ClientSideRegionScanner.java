@@ -57,7 +57,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
 
     // open region from the snapshot directory
-    this.region = HRegion.openHRegion(conf, fs, rootDir, hri, htd, null, null, null);
+    this.region = HRegion.openHRegion(fs, rootDir, hri, htd, conf);
 
     // create an internal region scanner
     this.scanner = region.getScanner(scan);

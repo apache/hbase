@@ -217,8 +217,9 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   // ==========================================================================
   @Override
   protected void bootstrapMeta() throws IOException {
+    // TODO ask RegionStorage
     if (!FSUtils.metaRegionExists(getFileSystem(), getRootDir())) {
-      bootstrapMeta(getRootDir(), getConfiguration());
+      bootstrapMeta(getConfiguration());
     }
 
     // Create tableinfo-s for hbase:meta if not already there.
@@ -228,7 +229,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
     createTableDescriptor(HTableDescriptor.metaTableDescriptor(getConfiguration()), false);
   }
 
-  private static void bootstrapMeta(final Path rd, final Configuration c) throws IOException {
+  private static void bootstrapMeta(final Configuration c) throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
@@ -238,7 +239,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       HTableDescriptor metaDescriptor = HTableDescriptor.metaTableDescriptor(c);
       MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, false);
-      HRegion meta = HRegion.createHRegion(c, rd, metaDescriptor, metaHRI, null);
+      HRegion meta = HRegion.createHRegion(c, metaDescriptor, metaHRI, null);
       MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, true);
       meta.close();
     } catch (IOException e) {

@@ -227,7 +227,7 @@ public class HFileArchiveTestingUtil {
   public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
       throws IOException {
     return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
-        region.getRegionFileSystem().getTableDir(), store.getFamily().getName());
+        region.getRegionStorage().getTableDir(), store.getFamily().getName());
   }
 
   public static Path getStoreArchivePath(HBaseTestingUtility util, String tableName,

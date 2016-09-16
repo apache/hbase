@@ -148,7 +148,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
@@ -2669,32 +2668,6 @@ public final class ProtobufUtil {
     } catch (IllegalAccessException e) {
       throw new IOException(e);
     }
-  }
-
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
-      List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
-    return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
-  }
-
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
-      byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
-    // compaction descriptor contains relative paths.
-    // input / output paths are relative to the store dir
-    // store dir is relative to region dir
-    CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteStringer.wrap(info.getTable().toBytes()))
-        .setEncodedRegionName(ByteStringer.wrap(
-          regionName == null ? info.getEncodedNameAsBytes() : regionName))
-        .setFamilyName(ByteStringer.wrap(family))
-        .setStoreHomeDir(storeDir.getName()); //make relative
-    for (Path inputPath : inputPaths) {
-      builder.addCompactionInput(inputPath.getName()); //relative path
-    }
-    for (Path outputPath : outputPaths) {
-      builder.addCompactionOutput(outputPath.getName());
-    }
-    builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
-    return builder.build();
   }
 
   public static FlushDescriptor toFlushDescriptor(FlushAction action, HRegionInfo hri,

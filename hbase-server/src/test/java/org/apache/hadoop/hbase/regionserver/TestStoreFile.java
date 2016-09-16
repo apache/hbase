@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -106,7 +106,7 @@ public class TestStoreFile extends HBaseTestCase {
   public void testBasicHalfMapFile() throws Exception {
     final HRegionInfo hri =
         new HRegionInfo(TableName.valueOf("testBasicHalfMapFileTb"));
-    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, testDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(conf, fs, testDir, hri, true);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(2*1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
@@ -156,7 +156,7 @@ public class TestStoreFile extends HBaseTestCase {
   @Test
   public void testReference() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testReferenceTb"));
-    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, testDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(conf, fs, testDir, hri, true);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -221,7 +221,7 @@ public class TestStoreFile extends HBaseTestCase {
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
     FSUtils.setRootDir(testConf, testDir);
-    RegionFileSystem regionFs = RegionFileSystem.open(testConf, fs, testDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(testConf, fs, testDir, hri, true);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
 
     // Make a store file and write data to it.
@@ -265,7 +265,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // adding legal table name chars to verify regex handles it.
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("_original-evil-name"));
-    RegionFileSystem regionFs = RegionFileSystem.open(testConf, fs, testDir, hri, true);
+    RegionStorage regionFs = RegionStorage.open(testConf, fs, testDir, hri, true);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
@@ -278,7 +278,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
     HRegionInfo hriClone = new HRegionInfo(TableName.valueOf("clone"));
-    RegionFileSystem cloneRegionFs = RegionFileSystem.open(testConf, fs, testDir, hriClone, true);
+    RegionStorage cloneRegionFs = RegionStorage.open(testConf, fs, testDir, hriClone, true);
     Path dstPath = cloneRegionFs.getStoreDir(TEST_FAMILY);
     HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
@@ -331,7 +331,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
-  private void checkHalfHFile(final RegionFileSystem regionFs, final StoreFile f)
+  private void checkHalfHFile(final RegionStorage regionFs, final StoreFile f)
       throws IOException {
     Cell midkey = f.createReader().midkey();
     KeyValue midKV = (KeyValue)midkey;
@@ -995,7 +995,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals(startEvicted, cs.getEvictedCount());
   }
 
-  private Path splitStoreFile(final RegionFileSystem regionFs, final HRegionInfo hri,
+  private Path splitStoreFile(final RegionStorage regionFs, final HRegionInfo hri,
       final String family, final StoreFile sf, final byte[] splitKey, boolean isTopRef)
       throws IOException {
     FileSystem fs = regionFs.getFileSystem();

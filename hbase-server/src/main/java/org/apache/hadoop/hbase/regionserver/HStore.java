@@ -68,7 +68,9 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -80,7 +82,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ServerProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -128,7 +130,7 @@ public class HStore implements Store {
   // This stores directory in the filesystem.
   protected final HRegion region;
   private final HColumnDescriptor family;
-  private final RegionFileSystem fs;
+  private final RegionStorage fs;
   protected Configuration conf;
   protected CacheConfig cacheConf;
   private long lastCompactSize = 0;
@@ -201,10 +203,10 @@ public class HStore implements Store {
   protected HStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
 
-    this.fs = region.getRegionFileSystem();
+    this.fs = region.getRegionStorage();
 
     // Assemble the store's home directory and Ensure it exists.
-    fs.createStoreDir(family.getNameAsString());
+    fs.createStoreContainer(family.getNameAsString());
     this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
@@ -336,7 +338,7 @@ public class HStore implements Store {
     return this.fs.getFileSystem();
   }
 
-  public RegionFileSystem getRegionFileSystem() {
+  public RegionStorage getRegionStorage() {
     return this.fs;
   }
 
@@ -734,21 +736,21 @@ public class HStore implements Store {
     }
   }
 
+  /* TODO bulkload rephrased in terms of transfer between RegionStorage impls. */
   @Override
-  public Path bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
-    Path srcPath = new Path(srcPathStr);
-    Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
+  public StoreFile bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
+    LegacyPathIdentifier srcPath = new LegacyPathIdentifier(new Path(srcPathStr));
+    StoreFile sf = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum, cacheConf, family.getBloomFilterType(), this.region.getCoprocessorHost());
 
     LOG.info("Loaded HFile " + srcPath + " into store '" + getColumnFamilyName() + "' as "
-        + dstPath + " - updating store file list.");
+        + sf + " - updating store file list.");
 
-    StoreFile sf = createStoreFileAndReader(dstPath);
     bulkLoadHFile(sf);
 
     LOG.info("Successfully loaded store file " + srcPath + " into store " + this
-        + " (new location: " + dstPath + ")");
+        + " (new location: " + sf + ")");
 
-    return dstPath;
+    return sf;
   }
 
   @Override
@@ -921,10 +923,11 @@ public class HStore implements Store {
   private StoreFile commitFile(final Path path, final long logCacheFlushId, MonitoredTask status)
       throws IOException {
     // Write-out finished successfully, move into the right spot
-    Path dstPath = fs.commitStoreFile(getColumnFamilyName(), path);
+    // TODO move from Path to StoreFileWriter or StorageIdentifier that goes ends-to-end 
+    final StorageIdentifier id = new LegacyPathIdentifier(path);
+    final StoreFile sf = fs.commitStoreFile(getColumnFamilyName(), id, this.cacheConf, this.family.getBloomFilterType(), this.region.getCoprocessorHost());
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
-    StoreFile sf = createStoreFileAndReader(dstPath);
 
     StoreFileReader r = sf.getReader();
     this.storeSize += r.length();
@@ -992,9 +995,10 @@ public class HStore implements Store {
     }
     HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag,
       cryptoContext);
+    // TODO move StoreFileWriter to use RegionStorage directly instead of Path
     StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
         this.getFileSystem())
-            .withFilePath(fs.createTempName())
+            .withFilePath(((LegacyPathIdentifier)fs.getTempIdentifier()).path)
             .withComparator(comparator)
             .withBloomType(family.getBloomFilterType())
             .withMaxKeyCount(maxKeyCount)
@@ -1223,7 +1227,7 @@ public class HStore implements Store {
       // Ready to go. Have list of files to compact.
       LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
           + this + " of " + this.getRegionInfo().getRegionNameAsString()
-          + " into tmpdir=" + fs.getTempDir() + ", totalSize="
+          + " into tmpdir=" + fs.getTempContainer() + ", totalSize="
           + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
 
       // Commence the compaction.
@@ -1298,8 +1302,10 @@ public class HStore implements Store {
   StoreFile moveFileIntoPlace(final Path newFile) throws IOException {
     validateStoreFile(newFile);
     // Move the file into the right spot
-    Path destPath = fs.commitStoreFile(getColumnFamilyName(), newFile);
-    return createStoreFileAndReader(destPath);
+    // TODO work backwards to end up with a StorageIdentifier instead of Path as arg.
+    final StorageIdentifier id = new LegacyPathIdentifier(newFile);
+    final StoreFile sf = fs.commitStoreFile(getColumnFamilyName(), id, this.cacheConf, this.family.getBloomFilterType(), this.region.getCoprocessorHost());
+    return sf;
   }
 
   /**
@@ -1319,8 +1325,8 @@ public class HStore implements Store {
       outputPaths.add(f.getPath());
     }
     HRegionInfo info = this.region.getRegionInfo();
-    CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
-        family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
+    CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(info,
+        family.getName(), inputPaths, outputPaths, fs.getStoreContainer(getFamily().getNameAsString()));
     // Fix reaching into Region to get the maxWaitForSeqId.
     // Does this method belong in Region altogether given it is making so many references up there?
     // Could be Region#writeCompactionMarker(compactionDescriptor);
@@ -1382,6 +1388,7 @@ public class HStore implements Store {
     }
   }
 
+  // TODO move this into RegionStorage
   /**
    * Call to complete a compaction. Its for the case where we find in the WAL a compaction
    * that was not finished.  We could find one recovering a WAL after a regionserver crash.
@@ -1413,7 +1420,7 @@ public class HStore implements Store {
     String familyName = this.getColumnFamilyName();
     List<String> inputFiles = new ArrayList<String>(compactionInputs.size());
     for (String compactionInput : compactionInputs) {
-      Path inputPath = fs.getStoreFilePath(familyName, compactionInput);
+      Path inputPath = ((LegacyPathIdentifier)fs.getStoreFileStorageIdentifier(familyName, compactionInput)).path;
       inputFiles.add(inputPath.getName());
     }
 

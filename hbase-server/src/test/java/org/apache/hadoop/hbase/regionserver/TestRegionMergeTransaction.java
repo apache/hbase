@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,10 +97,10 @@ public class TestRegionMergeTransaction {
   public void teardown() throws IOException {
     for (HRegion region : new HRegion[] { region_a, region_b, region_c }) {
       if (region != null && !region.isClosed()) region.close();
-      if (this.fs.exists(region.getRegionFileSystem().getRegionDir())
-          && !this.fs.delete(region.getRegionFileSystem().getRegionDir(), true)) {
+      if (this.fs.exists(region.getRegionStorage().getRegionDir())
+          && !this.fs.delete(region.getRegionStorage().getRegionDir(), true)) {
         throw new IOException("Failed deleting of "
-            + region.getRegionFileSystem().getRegionDir());
+            + region.getRegionStorage().getRegionDir());
       }
     }
     if (this.wals != null) {
@@ -257,14 +258,16 @@ public class TestRegionMergeTransaction {
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     HRegion mergedRegion = (HRegion)mt.execute(mockServer, null);
     // Do some assertions about execution.
-    assertTrue(this.fs.exists(mt.getMergesDir()));
+    // TODO move tests to rely on RegionStorage
+    final Path mergesdir = ((LegacyPathIdentifier)mt.getMergesDir()).path;
+    assertTrue(this.fs.exists(mergesdir));
     // Assert region_a and region_b is closed.
     assertTrue(region_a.isClosed());
     assertTrue(region_b.isClosed());
 
     // Assert mergedir is empty -- because its content will have been moved out
     // to be under the merged region dirs.
-    assertEquals(0, this.fs.listStatus(mt.getMergesDir()).length);
+    assertEquals(0, this.fs.listStatus(mergesdir).length);
     // Check merged region have correct key span.
     assertTrue(Bytes.equals(this.region_a.getRegionInfo().getStartKey(),
         mergedRegion.getRegionInfo().getStartKey()));
@@ -376,7 +379,7 @@ public class TestRegionMergeTransaction {
     // Make sure that merged region is still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-    Path tableDir = this.region_a.getRegionFileSystem().getRegionDir()
+    Path tableDir = this.region_a.getRegionStorage().getRegionDir()
         .getParent();
     Path mergedRegionDir = new Path(tableDir, mt.getMergedRegionInfo()
         .getEncodedName());

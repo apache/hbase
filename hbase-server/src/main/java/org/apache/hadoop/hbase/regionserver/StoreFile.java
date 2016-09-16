@@ -255,6 +255,7 @@ public class StoreFile {
     return this.fileInfo;
   }
 
+  // TODO replace with StorageIdentifier
   /**
    * @return Path or null if this StoreFile was made with a Stream.
    */
@@ -612,6 +613,7 @@ public class StoreFile {
     return false;
   }
 
+  // TODO move this into RegionStorage
   /**
    * @param fs
    * @param dir Directory to create file in.

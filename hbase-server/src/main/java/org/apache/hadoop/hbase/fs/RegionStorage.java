@@ -36,12 +36,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.fs.legacy.LegacyRegionFileSystem;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyRegionStorage;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -63,7 +65,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -73,7 +74,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.FSUtilsWithRetries;
 import org.apache.hadoop.hbase.fs.FsContext;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MetaUtils;
@@ -89,7 +89,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -102,24 +101,26 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
-public abstract class RegionFileSystem {
-  private static Log LOG = LogFactory.getLog(RegionFileSystem.class);
+public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
+  private static Log LOG = LogFactory.getLog(RegionStorage.class);
 
   private final Configuration conf;
   private final HRegionInfo hri;
   private final FileSystem fs;
-  private final Path rootDir;
+  private final IDENTIFIER rootContainer;
 
-  protected RegionFileSystem(Configuration conf, FileSystem fs, Path rootDir, HRegionInfo hri) {
+  protected RegionStorage(Configuration conf, FileSystem fs, IDENTIFIER rootContainer, HRegionInfo hri) {
     this.conf = conf;
-    this.rootDir = rootDir;
+    this.rootContainer = rootContainer;
     this.hri = hri;
     this.fs = fs;
   }
 
+  /* Probably remove */ 
   public Configuration getConfiguration() { return conf; }
+  /* TODO Definitely remove */
   public FileSystem getFileSystem() { return fs; }
-  public Path getRootDir() { return rootDir; }
+  public IDENTIFIER getRootContainer() { return rootContainer; }
 
   public HRegionInfo getRegionInfo() { return hri; }
   public TableName getTable() { return getRegionInfo().getTable(); }
@@ -192,94 +193,113 @@ public abstract class RegionFileSystem {
   // ==========================================================================
   //  NOOOOO
   // ==========================================================================
+  // TODO refactor to checkRegionInfoInStorage or remove
   public abstract void checkRegionInfoOnFilesystem() throws IOException;
-  public abstract Path getRegionDir();
-  public abstract Path getTableDir();
+  /**
+   * Get an opaque handle to the backing storage associated with this region.
+   *
+   */
+  public abstract IDENTIFIER getRegionContainer();
+  
+  public abstract IDENTIFIER getTableContainer();
 
-  public abstract Path getTempDir();
+  public abstract IDENTIFIER getTempContainer();
 
   public HRegionInfo getRegionInfoForFS() { return hri; }
 
-  public abstract Path getStoreDir(final String familyName);
-  public abstract Path createTempName();
-  public abstract Path createStoreDir(final String familyName) throws IOException;
-  public abstract Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+  /**
+   * Retrieve a referene to the backing storage associated with a particular family within this region.
+   */
+  public abstract IDENTIFIER getStoreContainer(final String familyName);
+   
+  public abstract IDENTIFIER getTempIdentifier();
+  public abstract IDENTIFIER createStoreContainer(final String familyName) throws IOException;
+  /**
+   * Move the given identifier into given family and return a StoreFile object with properly
+   * initialized info and reader objects.
+   */
+  public abstract StoreFile bulkLoadStoreFile(final String familyName, IDENTIFIER srcPath, long seqNum, final CacheConfig cacheConfig, final BloomType cfBloomType, final RegionCoprocessorHost coprocessorHost)
       throws IOException;
 
-  public abstract void cleanupTempDir() throws IOException;
-  public abstract void cleanupSplitsDir() throws IOException;
-  public abstract void cleanupMergesDir() throws IOException;
+  public abstract void cleanupTempContainer() throws IOException;
+  public abstract void cleanupSplitsContainer() throws IOException;
+  public abstract void cleanupMergesContainer() throws IOException;
   public abstract void cleanupAnySplitDetritus() throws IOException;
 
-  public abstract Path commitDaughterRegion(final HRegionInfo regionInfo)
+  public abstract IDENTIFIER commitDaughterRegion(final HRegionInfo regionInfo)
       throws IOException;
   public abstract void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException;
   public abstract StoreFileInfo getStoreFileInfo(final String familyName, final String fileName)
       throws IOException;
 
-  public abstract Path commitStoreFile(final String familyName, final Path buildPath) throws IOException;
+  public abstract StoreFile commitStoreFile(final String familyName, final IDENTIFIER uncommitted, final CacheConfig cacheConf, final BloomType cfBloomType, final RegionCoprocessorHost coprocessorHost) throws IOException;
   public abstract void commitStoreFiles(final Map<byte[], List<StoreFile>> storeFiles) throws IOException;
 
-  public abstract void removeStoreFile(final String familyName, final Path filePath)
-      throws IOException;
   public abstract void removeStoreFiles(final String familyName, final Collection<StoreFile> storeFiles)
       throws IOException;
 
   public abstract boolean hasReferences(final String familyName) throws IOException;
   public abstract boolean hasReferences(final HTableDescriptor htd) throws IOException;
 
-  public abstract Path getStoreFilePath(final String familyName, final String fileName);
+  public abstract IDENTIFIER getStoreFileStorageIdentifier(final String familyName, final String fileName);
+
+  public abstract long getStoreFileLen(final StoreFile store) throws IOException;
 
   public abstract void logFileSystemState(final Log LOG) throws IOException;
 
-  public abstract void createSplitsDir() throws IOException;
-  public abstract Path getSplitsDir();
-  public abstract Path getSplitsDir(final HRegionInfo hri);
+  public abstract void createSplitsContainer() throws IOException;
+  public abstract IDENTIFIER getSplitsContainer();
+  public abstract IDENTIFIER getSplitsContainer(final HRegionInfo hri);
 
-  public abstract Path getMergesDir();
-  public abstract void createMergesDir() throws IOException;
+  public abstract IDENTIFIER getMergesContainer();
+  public abstract void createMergesContainer() throws IOException;
 
-  public abstract Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
-      final StoreFile f, final Path mergedDir)
+  public abstract IDENTIFIER mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
+      final StoreFile f, final IDENTIFIER mergedContainer)
       throws IOException;
 
   public abstract void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException;
 
-  public abstract Path splitStoreFile(final HRegionInfo hri, final String familyName,
+  public abstract IDENTIFIER splitStoreFile(final HRegionInfo hri, final String familyName,
       final StoreFile f, final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
           throws IOException;
 
   public abstract void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException;
 
-  public static HRegionInfo loadRegionInfoFileContent(FileSystem fs, Path regionDir)
-      throws IOException {
-    FSDataInputStream in = fs.open(new Path(regionDir, ".regioninfo"));
-    try {
-      return HRegionInfo.parseFrom(in);
-    } finally {
-      in.close();
-    }
-  }
-
   // ==========================================================================
   //  PUBLIC
   // ==========================================================================
-  public static RegionFileSystem open(Configuration conf, HRegionInfo regionInfo, boolean bootstrap)
+  public static RegionStorage open(Configuration conf, StorageIdentifier regionContainer, boolean bootstrap) throws IOException {
+    RegionStorage rs = getInstance(conf, FSUtils.getCurrentFileSystem(conf), new LegacyPathIdentifier(FSUtils.getRootDir(conf)),
+        regionContainer);
+    if (bootstrap) {
+      rs.bootstrap();
+    }
+    return rs;
+  }
+
+  public static RegionStorage open(Configuration conf, HRegionInfo regionInfo, boolean bootstrap)
       throws IOException {
-    return open(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf),
+    return open(conf, FSUtils.getCurrentFileSystem(conf), new LegacyPathIdentifier(FSUtils.getRootDir(conf)),
         regionInfo, bootstrap);
   }
 
-  public static RegionFileSystem open(Configuration conf, FileSystem fs, Path rootDir,
+  /* TODO remove this method and have the RegionStorage implementation determine the root container */
+  public static RegionStorage open(Configuration conf, FileSystem fs, StorageIdentifier rootContainer,
       HRegionInfo regionInfo, boolean bootstrap) throws IOException {
-    // Cover both bases, the old way of setting default fs and the new.
-    // We're supposed to run on 0.20 and 0.21 anyways.
-    fs = rootDir.getFileSystem(conf);
-    FSUtils.setFsDefault(conf, new Path(fs.getUri()));
-    // make sure the fs has the same conf
-    fs.setConf(conf);
 
-    RegionFileSystem rfs = getInstance(conf, fs, rootDir, regionInfo);
+    if (rootContainer instanceof LegacyPathIdentifier) {
+      // Cover both bases, the old way of setting default fs and the new.
+      // We're supposed to run on 0.20 and 0.21 anyways.
+      fs = ((LegacyPathIdentifier)rootContainer).path.getFileSystem(conf);
+      FSUtils.setFsDefault(conf, new Path(fs.getUri()));
+      // make sure the fs has the same conf
+      fs.setConf(conf);
+    } else {
+      LOG.debug("skipping override of the default FS, since the root container is not a LegacyPathIdentifier.");
+    }
+
+    RegionStorage rfs = getInstance(conf, fs, rootContainer, regionInfo);
     if (bootstrap) {
       // TODO: are bootstrap and create two different things?
       // should switch to bootstrap & read-only
@@ -290,20 +310,31 @@ public abstract class RegionFileSystem {
   }
 
   public static void destroy(Configuration conf, HRegionInfo regionInfo) throws IOException {
-    destroy(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf), regionInfo);
+    destroy(conf, FSUtils.getCurrentFileSystem(conf), new LegacyPathIdentifier(FSUtils.getRootDir(conf)), regionInfo);
   }
 
   public static void destroy(Configuration conf, FileSystem fs,
-      Path rootDir, HRegionInfo regionInfo) throws IOException {
-    getInstance(conf, fs, rootDir, regionInfo).destroy();
+      StorageIdentifier rootContainer, HRegionInfo regionInfo) throws IOException {
+    getInstance(conf, fs, rootContainer, regionInfo).destroy();
   }
 
-  private static RegionFileSystem getInstance(Configuration conf, FileSystem fs,
-      Path rootDir, HRegionInfo regionInfo) throws IOException {
-    String fsType = conf.get("hbase.fs.layout.type", "legacy").toLowerCase();
+  private static RegionStorage getInstance(Configuration conf, FileSystem fs,
+      StorageIdentifier rootContainer, HRegionInfo regionInfo) throws IOException {
+    String fsType = conf.get("hbase.fs.storage.type", "legacy").toLowerCase();
     switch (fsType) {
       case "legacy":
-        return new LegacyRegionFileSystem(conf, fs, rootDir, regionInfo);
+        return new LegacyRegionStorage(conf, fs, (LegacyPathIdentifier)rootContainer, regionInfo);
+      default:
+        throw new IOException("Invalid filesystem type " + fsType);
+    }
+  }
+
+  private static RegionStorage getInstance(Configuration conf, FileSystem fs,
+      StorageIdentifier rootContainer, StorageIdentifier regionContainer) throws IOException {
+    String fsType = conf.get("hbase.fs.storage.type", "legacy").toLowerCase();
+    switch (fsType) {
+      case "legacy":
+        return new LegacyRegionStorage(conf, fs, (LegacyPathIdentifier)rootContainer, (LegacyPathIdentifier)regionContainer);
       default:
         throw new IOException("Invalid filesystem type " + fsType);
     }

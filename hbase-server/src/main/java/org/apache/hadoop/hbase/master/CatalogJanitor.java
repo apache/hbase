@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -195,14 +195,10 @@ public class CatalogJanitor extends ScheduledChore {
    */
   boolean cleanMergeRegion(final HRegionInfo mergedRegion,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
-    FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-    Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
     HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
-    RegionFileSystem regionFs = null;
+    RegionStorage regionFs = null;
     try {
-      regionFs = RegionFileSystem.open(
-          this.services.getConfiguration(), fs, tabledir, mergedRegion, false);
+      regionFs = RegionStorage.open(this.services.getConfiguration(), mergedRegion, false);
     } catch (IOException e) {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
@@ -210,6 +206,8 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.debug("Deleting region " + regionA.getRegionNameAsString() + " and "
           + regionB.getRegionNameAsString()
           + " from fs because merged region no longer holds references");
+      // TODO update HFileArchiver to use RegionStorage
+      FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
       MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
@@ -409,8 +407,7 @@ public class CatalogJanitor extends ScheduledChore {
 
     boolean references = false;
     try {
-      final RegionFileSystem regionFs = RegionFileSystem.open(this.services.getConfiguration(),
-          fs, tabledir, daughter, false);
+      final RegionStorage regionFs = RegionStorage.open(this.services.getConfiguration(), daughter, false);
       final HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
 
       for (HColumnDescriptor family: parentDescriptor.getFamilies()) {

@@ -643,7 +643,7 @@ public abstract class AbstractTestWALReplay {
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       cf_count++;
       if (cf_count == 2) {
-        region.getRegionFileSystem().deleteFamily(hcd.getNameAsString());
+        region.getRegionStorage().deleteFamily(hcd.getNameAsString());
       }
     }
 
@@ -963,7 +963,7 @@ public abstract class AbstractTestWALReplay {
     final int countPerFamily = 10;
     final HTableDescriptor htd = createBasic1FamilyHTD(tableName);
     HRegion region1 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    Path regionDir = region1.getRegionFileSystem().getRegionDir();
+    Path regionDir = region1.getRegionStorage().getRegionDir();
     HBaseTestingUtility.closeRegionAndWAL(region1);
 
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);

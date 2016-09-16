@@ -30,8 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.protobuf.ServerProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -94,7 +94,7 @@ public class TestIOFencing {
     volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
     volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
-    public CompactionBlockerRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+    public CompactionBlockerRegion(final RegionStorage rfs, final HTableDescriptor htd,
         final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }
@@ -153,7 +153,7 @@ public class TestIOFencing {
    */
   public static class BlockCompactionsInPrepRegion extends CompactionBlockerRegion {
 
-    public BlockCompactionsInPrepRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+    public BlockCompactionsInPrepRegion(final RegionStorage rfs, final HTableDescriptor htd,
         final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }
@@ -176,7 +176,7 @@ public class TestIOFencing {
    * entry to go the WAL before blocking, but blocks afterwards
    */
   public static class BlockCompactionsInCompletionRegion extends CompactionBlockerRegion {
-    public BlockCompactionsInCompletionRegion(final RegionFileSystem rfs,
+    public BlockCompactionsInCompletionRegion(final RegionStorage rfs,
         final HTableDescriptor htd, final WAL wal, final RegionServerServices rsServices) {
       super(rfs, htd, wal, rsServices);
     }
@@ -281,7 +281,7 @@ public class TestIOFencing {
       // those entries
       HRegionInfo oldHri = new HRegionInfo(table.getName(),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(oldHri,
+      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(oldHri,
         FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
         new Path("store_dir"));
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(),

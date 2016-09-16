@@ -47,7 +47,8 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -103,6 +104,8 @@ import org.apache.hadoop.io.IOUtils;
  *    </ul>
  *  <li>restore the logs, if any
  * </ul>
+ *
+ * TODO update for MasterStorage / RegionStorage
  */
 @InterfaceAudience.Private
 public class RestoreSnapshotHelper {
@@ -780,8 +783,8 @@ public class RestoreSnapshotHelper {
 
     List<HRegionInfo> regions = new LinkedList<HRegionInfo>();
     for (FileStatus regionDir: regionDirs) {
-      HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir.getPath());
-      regions.add(hri);
+      final RegionStorage rs = RegionStorage.open(conf, new LegacyPathIdentifier(regionDir.getPath()), false);
+      regions.add(rs.getRegionInfo());
     }
     LOG.debug("found " + regions.size() + " regions for table=" +
         tableDesc.getTableName().getNameAsString());

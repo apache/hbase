@@ -136,7 +136,7 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     // now attempt to depose the region
-    Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
+    Path rootDir = region.getRegionStorage().getTableDir().getParent();
     Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
@@ -185,7 +185,7 @@ public class TestHFileArchiving {
     assertEquals(1, servingRegions.size());
     HRegion region = servingRegions.get(0);
 
-    FileSystem fs = region.getRegionFileSystem().getFileSystem();
+    FileSystem fs = region.getRegionStorage().getFileSystem();
 
     // make sure there are some files in the regiondir
     Path rootDir = FSUtils.getRootDir(fs.getConf());

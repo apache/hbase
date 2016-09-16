@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 class FSRegionScanner implements Runnable {
   static private final Log LOG = LogFactory.getLog(FSRegionScanner.class);
 
-  private final RegionFileSystem rfs;
+  private final RegionStorage rfs;
 
   /**
    * Maps region encoded names to maps of hostnames to fractional locality of
@@ -58,7 +58,7 @@ class FSRegionScanner implements Runnable {
   FSRegionScanner(Configuration conf, HRegionInfo hri,
                   Map<String, Map<String, Float>> regionDegreeLocalityMapping)
       throws IOException {
-    this.rfs = RegionFileSystem.open(conf, hri, true);
+    this.rfs = RegionStorage.open(conf, hri, true);
     this.regionDegreeLocalityMapping = regionDegreeLocalityMapping;
   }
 

@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -250,8 +250,7 @@ public final class SnapshotManifest {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
       // Open the RegionFS
-      Path rootDir = null;
-      RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, rootDir, regionInfo, false);
+      RegionStorage regionFs = RegionStorage.open(conf, regionInfo, false);
       monitor.rethrowException();
 
       // 1. dump region meta info into the snapshot directory

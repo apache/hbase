@@ -36,7 +36,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -62,35 +64,36 @@ public final class SnapshotManifestV1 {
   private SnapshotManifestV1() {
   }
 
-  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<RegionFileSystem, Path> {
+  // TODO update for RegionStorage
+  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<RegionStorage, Path> {
     private final Configuration conf;
-    private final Path snapshotDir;
+    private final StorageIdentifier snapshotDir;
     private final FileSystem fs;
 
     public ManifestBuilder(final Configuration conf, final FileSystem fs, final Path snapshotDir) {
-      this.snapshotDir = snapshotDir;
+      this.snapshotDir = new LegacyPathIdentifier(snapshotDir);
       this.conf = conf;
       this.fs = fs;
     }
 
-    public RegionFileSystem regionOpen(final HRegionInfo regionInfo) throws IOException {
-      RegionFileSystem snapshotRegionFs = RegionFileSystem.open(conf, fs,
+    public RegionStorage regionOpen(final HRegionInfo regionInfo) throws IOException {
+      RegionStorage snapshotRegionFs = RegionStorage.open(conf, fs,
           snapshotDir, regionInfo, true);
       return snapshotRegionFs;
     }
 
-    public void regionClose(final RegionFileSystem region) {
+    public void regionClose(final RegionStorage region) {
     }
 
-    public Path familyOpen(final RegionFileSystem snapshotRegionFs, final byte[] familyName) {
-      Path familyDir = snapshotRegionFs.getStoreDir(Bytes.toString(familyName));
+    public Path familyOpen(final RegionStorage snapshotRegionFs, final byte[] familyName) {
+      Path familyDir = ((LegacyPathIdentifier)snapshotRegionFs.getStoreContainer(Bytes.toString(familyName))).path;
       return familyDir;
     }
 
-    public void familyClose(final RegionFileSystem region, final Path family) {
+    public void familyClose(final RegionStorage region, final Path family) {
     }
 
-    public void storeFile(final RegionFileSystem region, final Path familyDir,
+    public void storeFile(final RegionStorage region, final Path familyDir,
         final StoreFileInfo storeFile) throws IOException {
       Path referenceFile = new Path(familyDir, storeFile.getPath().getName());
       boolean success = true;
@@ -125,8 +128,8 @@ public final class SnapshotManifestV1 {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
-          HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, region.getPath());
-          return buildManifestFromDisk(conf, fs, snapshotDir, hri);
+          final RegionStorage rs = RegionStorage.open(conf, new LegacyPathIdentifier(region.getPath()), true);
+          return buildManifestFromDisk(conf, fs, snapshotDir, rs);
         }
       });
     }
@@ -154,13 +157,12 @@ public final class SnapshotManifestV1 {
   }
 
   static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, tableDir, regionInfo, true);
+      final FileSystem fs, final Path tableDir, final RegionStorage regionFs) throws IOException {
     SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
 
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing region-info for snapshot.");
-    manifest.setRegionInfo(HRegionInfo.convert(regionInfo));
+    manifest.setRegionInfo(HRegionInfo.convert(regionFs.getRegionInfo()));
 
     // 2. iterate through all the stores in the region
     LOG.debug("Creating references for hfiles");

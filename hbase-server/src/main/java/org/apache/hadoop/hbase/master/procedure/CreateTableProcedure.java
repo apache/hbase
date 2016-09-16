@@ -284,6 +284,7 @@ public class CreateTableProcedure
           final List<HRegionInfo> newRegions) throws IOException {
         HRegionInfo[] regions = newRegions != null ?
           newRegions.toArray(new HRegionInfo[newRegions.size()]) : null;
+        //TODO this should be RegionStorage
         return ModifyRegionUtils.createRegions(env.getMasterConfiguration(),
             tableRootDir, hTableDescriptor, regions, null);
       }

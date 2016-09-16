@@ -111,7 +111,7 @@ public class TestCompactionPolicy {
 
     store = new HStore(region, hcd, conf);
 
-    TEST_FILE = region.getRegionFileSystem().createTempName();
+    TEST_FILE = region.getRegionStorage().createTempName();
     fs.createNewFile(TEST_FILE);
   }
 

@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.fs.RegionFileSystem;
-import org.apache.hadoop.hbase.fs.legacy.LegacyRegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyRegionStorage;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -81,9 +81,9 @@ public class TestStoreFileRefresherChore {
     return htd;
   }
 
-  static class FailingHRegionFileSystem extends LegacyRegionFileSystem {
+  static class FailingHRegionStorage extends LegacyRegionStorage {
     boolean fail = false;
-    FailingHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir, HRegionInfo regionInfo) {
+    FailingHRegionStorage(Configuration conf, FileSystem fs, Path tableDir, HRegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
 
@@ -103,7 +103,7 @@ public class TestStoreFileRefresherChore {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false, 0, replicaId);
 
-    RegionFileSystem fs = new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir,
+    RegionStorage fs = new FailingHRegionStorage(conf, tableDir.getFileSystem(conf), tableDir,
       info);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
@@ -194,7 +194,7 @@ public class TestStoreFileRefresherChore {
     verifyData(replica1, 0, 100, qf, families);
 
     // simulate an fs failure where we cannot refresh the store files for the replica
-    ((FailingHRegionFileSystem)((HRegion)replica1).getRegionFileSystem()).fail = true;
+    ((FailingHRegionStorage)((HRegion)replica1).getRegionStorage()).fail = true;
 
     // write some more data to primary and flush
     putData(primary, 100, 100, qf, families);
