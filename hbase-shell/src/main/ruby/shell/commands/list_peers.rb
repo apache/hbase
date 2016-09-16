@@ -32,12 +32,15 @@ EOF
       def command()
         peers = replication_admin.list_peers
 
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "STATE", "TABLE_CFS"])
+        formatter.header(["PEER_ID", "CLUSTER_KEY", "ENDPOINT_CLASSNAME",
+          "STATE", "NAMESPACES", "TABLE_CFS"])
 
         peers.entrySet().each do |e|
           state = replication_admin.get_peer_state(e.key)
+          namespaces = replication_admin.show_peer_namespaces(e.value)
           tableCFs = replication_admin.show_peer_tableCFs(e.key)
-          formatter.row([ e.key, e.value, state, tableCFs ])
+          formatter.row([ e.key, e.value.getClusterKey,
+            e.value.getReplicationEndpointImpl, state, namespaces, tableCFs ])
         end
 
         formatter.footer()

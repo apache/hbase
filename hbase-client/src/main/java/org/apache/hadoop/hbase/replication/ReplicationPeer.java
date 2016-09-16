@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -70,6 +71,12 @@ public interface ReplicationPeer {
    * @return the replicable (table, cf-list) map
    */
   public Map<TableName, List<String>> getTableCFs();
+
+  /**
+   * Get replicable namespace set of this peer
+   * @return the replicable namespaces set
+   */
+  public Set<String> getNamespaces();
 
   void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
 

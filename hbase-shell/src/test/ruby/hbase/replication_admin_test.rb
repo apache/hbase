@@ -121,6 +121,49 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
+    define_test "add_peer: multiple zk cluster key and namespaces" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      namespaces = ["ns1", "ns2", "ns3"]
+      namespaces_str = "ns2;ns1;ns3"
+
+      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(cluster_key, peer_config.get_cluster_key)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "add_peer: multiple zk cluster key and namespaces, table_cfs" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      namespaces = ["ns1", "ns2"]
+      table_cfs = { "ns3:table1" => [], "ns3:table2" => ["cf1"],
+        "ns3:table3" => ["cf1", "cf2"] }
+      namespaces_str = "ns2;ns1"
+      table_cfs_str = "ns3.table1;ns3.table3:cf1,cf2;ns3.table2:cf1"
+
+      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
+        TABLE_CFS => table_cfs }
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(cluster_key, peer_config.get_cluster_key)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+      assert_equal(table_cfs_str, command(:show_peer_tableCFs, @peer_id))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
     define_test "add_peer: multiple zk cluster key and table_cfs - peer config" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       table_cfs = { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
@@ -150,6 +193,30 @@ module Hbase
         args = { CLUSTER_KEY => cluster_key }
         command(:add_peer, @peer_id, args, table_cfs_str)
       end
+    end
+
+    define_test "set_peer_namespaces: works with namespaces array" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      namespaces = ["ns1", "ns2"]
+      namespaces_str = "ns2;ns1"
+
+      args = { CLUSTER_KEY => cluster_key }
+      command(:add_peer, @peer_id, args)
+
+      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
+      # but here we have to do it ourselves
+      replication_admin.peer_added(@peer_id)
+
+      command(:set_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
     end
 
     define_test "get_peer_config: works with simple clusterKey peer" do
@@ -221,8 +288,8 @@ module Hbase
       assert_equal("value2", peer_config.get_configuration.get("config2"))
       assert_equal("new_value1", Bytes.to_string(peer_config.get_peer_data.get(Bytes.toBytes("data1"))))
       assert_equal("value2", Bytes.to_string(peer_config.get_peer_data.get(Bytes.toBytes("data2"))))
-
     end
+
     # assert_raise fails on native exceptions - https://jira.codehaus.org/browse/JRUBY-5279
     # Can't catch native Java exception with assert_raise in JRuby 1.6.8 as in the test below.
     # define_test "add_peer: adding a second peer with same id should error" do

@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.client.replication;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -382,6 +384,88 @@ public class TestReplicationAdmin {
     admin.setPeerTableCFs(ID_ONE, tableCFs);
     admin.removePeerTableCFs(ID_ONE, tableCFs);
     assertNull(admin.getPeerTableCFs(ID_ONE));
+
+    admin.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testSetPeerNamespaces() throws Exception {
+    String ns1 = "ns1";
+    String ns2 = "ns2";
+
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
+    admin.addPeer(ID_ONE, rpc);
+    admin.peerAdded(ID_ONE);
+
+    rpc = admin.getPeerConfig(ID_ONE);
+    Set<String> namespaces = new HashSet<String>();
+    namespaces.add(ns1);
+    namespaces.add(ns2);
+    rpc.setNamespaces(namespaces);
+    admin.updatePeerConfig(ID_ONE, rpc);
+    namespaces = admin.getPeerConfig(ID_ONE).getNamespaces();
+    assertEquals(2, namespaces.size());
+    assertTrue(namespaces.contains(ns1));
+    assertTrue(namespaces.contains(ns2));
+
+    rpc = admin.getPeerConfig(ID_ONE);
+    namespaces.clear();
+    namespaces.add(ns1);
+    rpc.setNamespaces(namespaces);
+    admin.updatePeerConfig(ID_ONE, rpc);
+    namespaces = admin.getPeerConfig(ID_ONE).getNamespaces();
+    assertEquals(1, namespaces.size());
+    assertTrue(namespaces.contains(ns1));
+
+    admin.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testNamespacesAndTableCfsConfigConflict() throws ReplicationException {
+    String ns1 = "ns1";
+    String ns2 = "ns2";
+    TableName tab1 = TableName.valueOf("ns1:tabl");
+    TableName tab2 = TableName.valueOf("ns2:tab2");
+
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
+    admin.addPeer(ID_ONE, rpc);
+    admin.peerAdded(ID_ONE);
+
+    rpc = admin.getPeerConfig(ID_ONE);
+    Set<String> namespaces = new HashSet<String>();
+    namespaces.add(ns1);
+    rpc.setNamespaces(namespaces);
+    admin.updatePeerConfig(ID_ONE, rpc);
+    rpc = admin.getPeerConfig(ID_ONE);
+    Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tab1, new ArrayList<String>());
+    rpc.setTableCFsMap(tableCfs);
+    try {
+      admin.updatePeerConfig(ID_ONE, rpc);
+      fail("Should throw ReplicationException, because table " + tab1 + " conflict with namespace "
+          + ns1);
+    } catch (ReplicationException e) {
+      // OK
+    }
+
+    rpc = admin.getPeerConfig(ID_ONE);
+    tableCfs.clear();
+    tableCfs.put(tab2, new ArrayList<String>());
+    rpc.setTableCFsMap(tableCfs);
+    admin.updatePeerConfig(ID_ONE, rpc);
+    rpc = admin.getPeerConfig(ID_ONE);
+    namespaces.clear();
+    namespaces.add(ns2);
+    rpc.setNamespaces(namespaces);
+    try {
+      admin.updatePeerConfig(ID_ONE, rpc);
+      fail("Should throw ReplicationException, because namespace " + ns2 + " conflict with table "
+          + tab2);
+    } catch (ReplicationException e) {
+      // OK
+    }
 
     admin.removePeer(ID_ONE);
   }

@@ -62,6 +62,7 @@ module Hbase
         config = args.fetch(CONFIG, nil)
         data = args.fetch(DATA, nil)
         table_cfs = args.fetch(TABLE_CFS, nil)
+        namespaces = args.fetch(NAMESPACES, nil)
 
         # Create and populate a ReplicationPeerConfig
         replication_peer_config = ReplicationPeerConfig.new
@@ -81,6 +82,14 @@ module Hbase
           data.each{|key, val|
             peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
           }
+        end
+
+        unless namespaces.nil?
+          ns_set = java.util.HashSet.new
+          namespaces.each do |n|
+            ns_set.add(n)
+          end
+          replication_peer_config.set_namespaces(ns_set)
         end
 
         unless table_cfs.nil?
@@ -180,12 +189,39 @@ module Hbase
       end
       @replication_admin.removePeerTableCFs(id, map)
     end
+
+    # Set new namespaces config for the specified peer
+    def set_peer_namespaces(id, namespaces)
+      unless namespaces.nil?
+        ns_set = java.util.HashSet.new
+        namespaces.each do |n|
+          ns_set.add(n)
+        end
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          rpc.setNamespaces(ns_set)
+          @replication_admin.updatePeerConfig(id, rpc)
+        end
+      end
+    end
+
+    # Show the current namespaces config for the specified peer
+    def show_peer_namespaces(peer_config)
+      namespaces = peer_config.get_namespaces
+      if !namespaces.nil?
+        return namespaces.join(';')
+      else
+        return nil
+      end
+    end
+
     #----------------------------------------------------------------------------------------------
     # Enables a table's replication switch
     def enable_tablerep(table_name)
       tableName = TableName.valueOf(table_name)
       @replication_admin.enableTableRep(tableName)
     end
+
     #----------------------------------------------------------------------------------------------
     # Disables a table's replication switch
     def disable_tablerep(table_name)

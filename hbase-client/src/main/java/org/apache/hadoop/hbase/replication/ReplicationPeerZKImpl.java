@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -161,6 +162,15 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   public Map<TableName, List<String>> getTableCFs() {
     this.tableCFs = peerConfig.getTableCFsMap();
     return this.tableCFs;
+  }
+
+  /**
+   * Get replicable namespace set of this peer
+   * @return the replicable namespaces set
+   */
+  @Override
+  public Set<String> getNamespaces() {
+    return this.peerConfig.getNamespaces();
   }
 
   @Override

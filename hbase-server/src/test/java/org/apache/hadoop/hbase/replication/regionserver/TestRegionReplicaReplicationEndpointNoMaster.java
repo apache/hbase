@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint.RegionReplicaReplayCallable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -280,7 +281,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
 
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
+    when(mockPeer.getNamespaces()).thenReturn(null);
     when(mockPeer.getTableCFs()).thenReturn(null);
+    when(mockPeer.getPeerConfig()).thenReturn(new ReplicationPeerConfig());
     when(context.getReplicationPeer()).thenReturn(mockPeer);
 
     replicator.init(context);

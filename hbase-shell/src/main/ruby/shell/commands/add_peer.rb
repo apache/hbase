@@ -27,13 +27,25 @@ must be specified to identify the peer.
 
 For a HBase cluster peer, a cluster key must be provided and is composed like this:
 hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-This gives a full path for HBase to connect to another HBase cluster. An optional parameter for
-table column families identifies which column families will be replicated to the peer cluster.
+This gives a full path for HBase to connect to another HBase cluster.
+An optional parameter for namespaces identifies which namespace's tables will be replicated
+to the peer cluster.
+An optional parameter for table column families identifies which tables and/or column families
+will be replicated to the peer cluster.
+
+Notice: Set a namespace in the peer config means that all tables in this namespace
+will be replicated to the peer cluster. So if you already have set a namespace in peer config,
+then you can't set this namespace's tables in the peer config again.
+
 Examples:
 
   hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase"
   hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
     TABLE_CFS => { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
+  hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
+    NAMESPACES => ["ns1", "ns2", "ns3"]
+  hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
+    NAMESPACES => ["ns1", "ns2"], TABLE_CFS => { "ns3:table1" => [], "ns3:table2" => ["cf1"] }
 
 For a custom replication endpoint, the ENDPOINT_CLASSNAME can be provided. Two optional arguments
 are DATA and CONFIG which can be specified to set different either the peer_data or configuration

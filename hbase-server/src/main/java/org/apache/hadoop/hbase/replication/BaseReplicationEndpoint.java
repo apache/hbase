@@ -72,7 +72,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     if (scopeFilter != null) {
       filters.add(scopeFilter);
     }
-    WALEntryFilter tableCfFilter = getTableCfWALEntryFilter();
+    WALEntryFilter tableCfFilter = getNamespaceTableCfWALEntryFilter();
     if (tableCfFilter != null) {
       filters.add(tableCfFilter);
     }
@@ -87,8 +87,8 @@ public abstract class BaseReplicationEndpoint extends AbstractService
 
   /** Returns a WALEntryFilter for checking replication per table and CF. Subclasses can
    * return null if they don't want this filter */
-  protected WALEntryFilter getTableCfWALEntryFilter() {
-    return new TableCfWALEntryFilter(ctx.getReplicationPeer());
+  protected WALEntryFilter getNamespaceTableCfWALEntryFilter() {
+    return new NamespaceTableCfWALEntryFilter(ctx.getReplicationPeer());
   }
 
   @Override

@@ -189,6 +189,8 @@ public class ReplicationAdmin implements Closeable {
    * @param peerConfig configuration for the replication slave cluster
    */
   public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException {
+    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
+      peerConfig.getTableCFsMap());
     this.replicationPeers.registerPeer(id, peerConfig);
   }
 
@@ -202,8 +204,11 @@ public class ReplicationAdmin implements Closeable {
 
   public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
       throws ReplicationException {
+    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
+      peerConfig.getTableCFsMap());
     this.replicationPeers.updatePeerConfig(id, peerConfig);
   }
+
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
@@ -360,7 +365,6 @@ public class ReplicationAdmin implements Closeable {
         }
       } else {
         throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
-
       }
     }
     setPeerTableCFs(id, preTableCfs);
@@ -376,6 +380,8 @@ public class ReplicationAdmin implements Closeable {
    */
   public void setPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException {
+    checkNamespacesAndTableCfsConfigConflict(
+      this.replicationPeers.getReplicationPeerConfig(id).getNamespaces(), tableCfs);
     this.replicationPeers.setPeerTableCFsConfig(id, tableCfs);
   }
 
@@ -626,5 +632,35 @@ public class ReplicationAdmin implements Closeable {
       }
     }
     return true;
+  }
+
+  /**
+   * Set a namespace in the peer config means that all tables in this namespace
+   * will be replicated to the peer cluster.
+   *
+   * 1. If you already have set a namespace in the peer config, then you can't set any table
+   *    of this namespace to the peer config.
+   * 2. If you already have set a table in the peer config, then you can't set this table's
+   *    namespace to the peer config.
+   *
+   * @param namespaces
+   * @param tableCfs
+   * @throws ReplicationException
+   */
+  private void checkNamespacesAndTableCfsConfigConflict(Set<String> namespaces,
+      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException {
+    if (namespaces == null || namespaces.isEmpty()) {
+      return;
+    }
+    if (tableCfs == null || tableCfs.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
+      TableName table = entry.getKey();
+      if (namespaces.contains(table.getNamespaceAsString())) {
+        throw new ReplicationException(
+            "Table-cfs config conflict with namespaces config in peer");
+      }
+    }
   }
 }

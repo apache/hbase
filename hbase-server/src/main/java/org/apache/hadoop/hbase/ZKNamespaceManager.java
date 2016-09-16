@@ -54,7 +54,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
 
   public ZKNamespaceManager(ZooKeeperWatcher zkw) throws IOException {
     super(zkw);
-    nsZNode = ZooKeeperWatcher.namespaceZNode;
+    nsZNode = zkw.namespaceZNode;
     cache = new ConcurrentSkipListMap<String, NamespaceDescriptor>();
   }
 

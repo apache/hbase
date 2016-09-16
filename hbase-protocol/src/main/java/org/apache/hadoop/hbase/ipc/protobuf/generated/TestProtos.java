@@ -2091,7 +2091,7 @@ public final class TestProtos {
 
       public final boolean isInitialized() {
         if (!hasMs()) {
-
+          
           return false;
         }
         return true;
@@ -2291,7 +2291,7 @@ public final class TestProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -2307,7 +2307,7 @@ public final class TestProtos {
         getAddrBytes() {
       java.lang.Object ref = addr_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         addr_ = b;
@@ -2567,7 +2567,7 @@ public final class TestProtos {
 
       public final boolean isInitialized() {
         if (!hasAddr()) {
-
+          
           return false;
         }
         return true;
@@ -2621,7 +2621,7 @@ public final class TestProtos {
           getAddrBytes() {
         java.lang.Object ref = addr_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           addr_ = b;

@@ -20,38 +20,63 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 import com.google.common.base.Predicate;
 
-public class TableCfWALEntryFilter implements WALEntryFilter, WALCellFilter {
+/**
+ * Filter a WAL Entry by namespaces and table-cfs config in the peer. It first filter entry
+ * by namespaces config, then filter entry by table-cfs config.
+ *
+ * 1. Set a namespace in peer config means that all tables in this namespace will be replicated.
+ * 2. If the namespaces config is null, then the table-cfs config decide which table's edit
+ *    can be replicated. If the table-cfs config is null, then the namespaces config decide
+ *    which table's edit can be replicated.
+ */
+@InterfaceAudience.Private
+public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
-  private static final Log LOG = LogFactory.getLog(TableCfWALEntryFilter.class);
-  private ReplicationPeer peer;
+  private static final Log LOG = LogFactory.getLog(NamespaceTableCfWALEntryFilter.class);
+  private final ReplicationPeer peer;
   private BulkLoadCellFilter bulkLoadFilter = new BulkLoadCellFilter();
 
-  public TableCfWALEntryFilter(ReplicationPeer peer) {
+  public NamespaceTableCfWALEntryFilter(ReplicationPeer peer) {
     this.peer = peer;
   }
 
   @Override
   public Entry filter(Entry entry) {
     TableName tabName = entry.getKey().getTablename();
+    String namespace = tabName.getNamespaceAsString();
+    Set<String> namespaces = this.peer.getNamespaces();
     Map<TableName, List<String>> tableCFs = getTableCfs();
 
-    // If null means user has explicitly not configured any table CFs so all the tables data are
-    // applicable for replication
-    if (tableCFs == null) return entry;
+    // If null means user has explicitly not configured any namespaces and table CFs
+    // so all the tables data are applicable for replication
+    if (namespaces == null && tableCFs == null) {
+      return entry;
+    }
 
-    if (!tableCFs.containsKey(tabName)) {
+    // First filter by namespaces config
+    // If table's namespace in peer config, all the tables data are applicable for replication
+    if (namespaces != null && namespaces.contains(namespace)) {
+      return entry;
+    }
+
+    // Then filter by table-cfs config
+    // return null(prevent replicating) if logKey's table isn't in this peer's
+    // replicaable namespace list and table list
+    if (tableCFs == null || !tableCFs.containsKey(tabName)) {
       return null;
     }
 

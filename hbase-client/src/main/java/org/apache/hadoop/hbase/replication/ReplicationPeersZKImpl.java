@@ -343,7 +343,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       throws ReplicationException {
     ReplicationPeer peer = getConnectedPeer(id);
     if (peer == null){
-      throw new ReplicationException("Could not find peer Id " + id);
+      throw new ReplicationException("Could not find peer Id " + id + " in connected peers");
     }
     ReplicationPeerConfig existingConfig = peer.getPeerConfig();
     if (newConfig.getClusterKey() != null && !newConfig.getClusterKey().isEmpty() &&
@@ -366,6 +366,8 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     // or data that weren't explicitly changed
     existingConfig.getConfiguration().putAll(newConfig.getConfiguration());
     existingConfig.getPeerData().putAll(newConfig.getPeerData());
+    existingConfig.setTableCFsMap(newConfig.getTableCFsMap());
+    existingConfig.setNamespaces(newConfig.getNamespaces());
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),

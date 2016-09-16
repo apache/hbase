@@ -122,7 +122,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing the state of recovering regions
   public String recoveringRegionsZNode;
   // znode containing namespace descriptors
-  public static String namespaceZNode = "namespace";
+  public String namespaceZNode = "namespace";
   // znode of indicating master maintenance mode
   public static String masterMaintZNode = "masterMaintenance";
 

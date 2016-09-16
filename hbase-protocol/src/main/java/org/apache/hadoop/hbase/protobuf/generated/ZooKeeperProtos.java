@@ -4782,6 +4782,20 @@ public final class ZooKeeperProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableCFOrBuilder getTableCfsOrBuilder(
         int index);
+
+    // repeated bytes namespaces = 6;
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getNamespacesList();
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    int getNamespacesCount();
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    com.google.protobuf.ByteString getNamespaces(int index);
   }
   /**
    * Protobuf type {@code hbase.pb.ReplicationPeer}
@@ -4873,6 +4887,14 @@ public final class ZooKeeperProtos {
               tableCfs_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableCF.PARSER, extensionRegistry));
               break;
             }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                namespaces_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              namespaces_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -4889,6 +4911,9 @@ public final class ZooKeeperProtos {
         }
         if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
           tableCfs_ = java.util.Collections.unmodifiableList(tableCfs_);
+        }
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = java.util.Collections.unmodifiableList(namespaces_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -5131,12 +5156,36 @@ public final class ZooKeeperProtos {
       return tableCfs_.get(index);
     }
 
+    // repeated bytes namespaces = 6;
+    public static final int NAMESPACES_FIELD_NUMBER = 6;
+    private java.util.List<com.google.protobuf.ByteString> namespaces_;
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getNamespacesList() {
+      return namespaces_;
+    }
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public int getNamespacesCount() {
+      return namespaces_.size();
+    }
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public com.google.protobuf.ByteString getNamespaces(int index) {
+      return namespaces_.get(index);
+    }
+
     private void initFields() {
       clusterkey_ = "";
       replicationEndpointImpl_ = "";
       data_ = java.util.Collections.emptyList();
       configuration_ = java.util.Collections.emptyList();
       tableCfs_ = java.util.Collections.emptyList();
+      namespaces_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5187,6 +5236,9 @@ public final class ZooKeeperProtos {
       for (int i = 0; i < tableCfs_.size(); i++) {
         output.writeMessage(5, tableCfs_.get(i));
       }
+      for (int i = 0; i < namespaces_.size(); i++) {
+        output.writeBytes(6, namespaces_.get(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5215,6 +5267,15 @@ public final class ZooKeeperProtos {
       for (int i = 0; i < tableCfs_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, tableCfs_.get(i));
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < namespaces_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(namespaces_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getNamespacesList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5255,6 +5316,8 @@ public final class ZooKeeperProtos {
           .equals(other.getConfigurationList());
       result = result && getTableCfsList()
           .equals(other.getTableCfsList());
+      result = result && getNamespacesList()
+          .equals(other.getNamespacesList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5287,6 +5350,10 @@ public final class ZooKeeperProtos {
       if (getTableCfsCount() > 0) {
         hash = (37 * hash) + TABLE_CFS_FIELD_NUMBER;
         hash = (53 * hash) + getTableCfsList().hashCode();
+      }
+      if (getNamespacesCount() > 0) {
+        hash = (37 * hash) + NAMESPACES_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespacesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5427,6 +5494,8 @@ public final class ZooKeeperProtos {
         } else {
           tableCfsBuilder_.clear();
         }
+        namespaces_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -5490,6 +5559,11 @@ public final class ZooKeeperProtos {
         } else {
           result.tableCfs_ = tableCfsBuilder_.build();
         }
+        if (((bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = java.util.Collections.unmodifiableList(namespaces_);
+          bitField0_ = (bitField0_ & ~0x00000020);
+        }
+        result.namespaces_ = namespaces_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5593,6 +5667,16 @@ public final class ZooKeeperProtos {
               tableCfsBuilder_.addAllMessages(other.tableCfs_);
             }
           }
+        }
+        if (!other.namespaces_.isEmpty()) {
+          if (namespaces_.isEmpty()) {
+            namespaces_ = other.namespaces_;
+            bitField0_ = (bitField0_ & ~0x00000020);
+          } else {
+            ensureNamespacesIsMutable();
+            namespaces_.addAll(other.namespaces_);
+          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6539,6 +6623,78 @@ public final class ZooKeeperProtos {
           tableCfs_ = null;
         }
         return tableCfsBuilder_;
+      }
+
+      // repeated bytes namespaces = 6;
+      private java.util.List<com.google.protobuf.ByteString> namespaces_ = java.util.Collections.emptyList();
+      private void ensureNamespacesIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = new java.util.ArrayList<com.google.protobuf.ByteString>(namespaces_);
+          bitField0_ |= 0x00000020;
+         }
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getNamespacesList() {
+        return java.util.Collections.unmodifiableList(namespaces_);
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public int getNamespacesCount() {
+        return namespaces_.size();
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public com.google.protobuf.ByteString getNamespaces(int index) {
+        return namespaces_.get(index);
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder setNamespaces(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNamespacesIsMutable();
+        namespaces_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder addNamespaces(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNamespacesIsMutable();
+        namespaces_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder addAllNamespaces(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureNamespacesIsMutable();
+        super.addAll(values, namespaces_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder clearNamespaces() {
+        namespaces_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000020);
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationPeer)
@@ -9822,24 +9978,24 @@ public final class ZooKeeperProtos {
       "e:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
       "BLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"D\n\007T" +
       "ableCF\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.Ta",
-      "bleName\022\020\n\010families\030\002 \003(\014\"\305\001\n\017Replicatio" +
+      "bleName\022\020\n\010families\030\002 \003(\014\"\331\001\n\017Replicatio" +
       "nPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027replication" +
       "EndpointImpl\030\002 \001(\t\022&\n\004data\030\003 \003(\0132\030.hbase" +
       ".pb.BytesBytesPair\022/\n\rconfiguration\030\004 \003(" +
       "\0132\030.hbase.pb.NameStringPair\022$\n\ttable_cfs" +
-      "\030\005 \003(\0132\021.hbase.pb.TableCF\"g\n\020Replication" +
-      "State\022/\n\005state\030\001 \002(\0162 .hbase.pb.Replicat" +
-      "ionState.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010" +
-      "DISABLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n" +
-      "\010position\030\001 \002(\003\"%\n\017ReplicationLock\022\022\n\nlo",
-      "ck_owner\030\001 \002(\t\"\252\001\n\tTableLock\022\'\n\ntable_na" +
-      "me\030\001 \001(\0132\023.hbase.pb.TableName\022(\n\nlock_ow" +
-      "ner\030\002 \001(\0132\024.hbase.pb.ServerName\022\021\n\tthrea" +
-      "d_id\030\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007purpose" +
-      "\030\005 \001(\t\022\023\n\013create_time\030\006 \001(\003\"\036\n\013SwitchSta" +
-      "te\022\017\n\007enabled\030\001 \001(\010BE\n*org.apache.hadoop" +
-      ".hbase.protobuf.generatedB\017ZooKeeperProt" +
-      "osH\001\210\001\001\240\001\001"
+      "\030\005 \003(\0132\021.hbase.pb.TableCF\022\022\n\nnamespaces\030" +
+      "\006 \003(\014\"g\n\020ReplicationState\022/\n\005state\030\001 \002(\016" +
+      "2 .hbase.pb.ReplicationState.State\"\"\n\005St" +
+      "ate\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027Replic" +
+      "ationHLogPosition\022\020\n\010position\030\001 \002(\003\"%\n\017R",
+      "eplicationLock\022\022\n\nlock_owner\030\001 \002(\t\"\252\001\n\tT" +
+      "ableLock\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb." +
+      "TableName\022(\n\nlock_owner\030\002 \001(\0132\024.hbase.pb" +
+      ".ServerName\022\021\n\tthread_id\030\003 \001(\003\022\021\n\tis_sha" +
+      "red\030\004 \001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013create_tim" +
+      "e\030\006 \001(\003\"\036\n\013SwitchState\022\017\n\007enabled\030\001 \001(\010B" +
+      "E\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9887,7 +10043,7 @@ public final class ZooKeeperProtos {
           internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ReplicationPeer_descriptor,
-              new java.lang.String[] { "Clusterkey", "ReplicationEndpointImpl", "Data", "Configuration", "TableCfs", });
+              new java.lang.String[] { "Clusterkey", "ReplicationEndpointImpl", "Data", "Configuration", "TableCfs", "Namespaces", });
           internal_static_hbase_pb_ReplicationState_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_ReplicationState_fieldAccessorTable = new

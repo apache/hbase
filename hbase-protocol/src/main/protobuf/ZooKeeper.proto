@@ -121,6 +121,7 @@ message ReplicationPeer {
   repeated BytesBytesPair data = 3;
   repeated NameStringPair configuration = 4;
   repeated TableCF table_cfs = 5;
+  repeated bytes namespaces = 6;
 }
 
 /**
