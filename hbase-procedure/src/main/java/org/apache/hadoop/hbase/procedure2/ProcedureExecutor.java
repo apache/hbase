@@ -601,9 +601,10 @@ public class ProcedureExecutor<TEnvironment> {
   /**
    * Remove a chore procedure from the executor
    * @param chore the chore to remove
+   * @return whether the chore is removed
    */
-  public void removeChore(final ProcedureInMemoryChore chore) {
-    waitingTimeout.remove(chore);
+  public boolean removeChore(final ProcedureInMemoryChore chore) {
+    return waitingTimeout.remove(chore);
   }
 
   /**
