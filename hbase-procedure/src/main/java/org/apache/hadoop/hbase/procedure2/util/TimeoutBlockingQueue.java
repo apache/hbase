@@ -92,15 +92,17 @@ public class TimeoutBlockingQueue<E> {
     }
   }
 
-  public void remove(E e) {
+  public boolean remove(E e) {
+    if (e == null) return false;
     lock.lock();
     try {
       for (int i = 0; i < objects.length; ++i) {
-        if (objects[i] == e) {
+        if (e.equals(objects[i])) {
           objects[i] = null;
-          return;
+          return true;
         }
       }
+      return false;
     } finally {
       lock.unlock();
     }

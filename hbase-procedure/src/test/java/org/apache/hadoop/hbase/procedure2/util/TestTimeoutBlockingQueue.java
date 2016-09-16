@@ -137,18 +137,21 @@ public class TestTimeoutBlockingQueue {
     TimeoutBlockingQueue<TestObject> queue =
       new TimeoutBlockingQueue<TestObject>(2, new TestObjectTimeoutRetriever());
 
-    TestObject[] objs = new TestObject[5];
-    for (int i = 0; i < objs.length; ++i) {
+    final int effectiveLen = 5;
+    TestObject[] objs = new TestObject[6];
+    for (int i = 0; i < effectiveLen; ++i) {
       objs[i] = new TestObject(0, i * 10);
       queue.add(objs[i]);
     }
+    objs[effectiveLen] = new TestObject(0, effectiveLen * 10);
     queue.dump();
 
-    for (int i = 0; i < objs.length; i += 2) {
-      queue.remove(objs[i]);
+    for (int i = 0; i < effectiveLen; i += 2) {
+      assertTrue(queue.remove(objs[i]));
     }
+    assertTrue(!queue.remove(objs[effectiveLen]));
 
-    for (int i = 0; i < objs.length; ++i) {
+    for (int i = 0; i < effectiveLen; ++i) {
       TestObject x = queue.poll();
       assertEquals((i % 2) == 0 ? null : objs[i], x);
     }
