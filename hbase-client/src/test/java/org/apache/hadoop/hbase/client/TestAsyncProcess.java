@@ -59,8 +59,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
-import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFutureImpl;
 import org.apache.hadoop.hbase.client.AsyncProcess.ListRowAccess;
 import org.apache.hadoop.hbase.client.AsyncProcess.TaskCountChecker;
 import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
@@ -162,8 +160,9 @@ public class TestAsyncProcess {
         Batch.Callback<Res> callback, Object[] results, boolean needResults,
         CancellableRegionServerCallable callable, int curTimeout) {
       // Test HTable has tableName of null, so pass DUMMY_TABLE
-      AsyncRequestFutureImpl<Res> r = super.createAsyncRequestFuture(
-          DUMMY_TABLE, actions, nonceGroup, pool, callback, results, needResults, null, rpcTimeout);
+      AsyncRequestFutureImpl<Res> r = new MyAsyncRequestFutureImpl<Res>(
+          DUMMY_TABLE, actions, nonceGroup, getPool(pool), needResults,
+          results, callback, callable, curTimeout, this);
       allReqs.add(r);
       return r;
     }
@@ -212,18 +211,14 @@ public class TestAsyncProcess {
       previousTimeout = curTimeout;
       return super.submitAll(pool, tableName, rows, callback, results, callable, curTimeout);
     }
-
-    @Override
-    protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
-      // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
-    }
     @Override
     protected RpcRetryingCaller<AbstractResponse> createCaller(
         CancellableRegionServerCallable callable) {
       callsCt.incrementAndGet();
       MultiServerCallable callable1 = (MultiServerCallable) callable;
       final MultiResponse mr = createMultiResponse(
-          callable1.getMulti(), nbMultiResponse, nbActions, new ResponseGenerator() {
+          callable1.getMulti(), nbMultiResponse, nbActions,
+          new ResponseGenerator() {
             @Override
             public void addResponse(MultiResponse mr, byte[] regionName, Action<Row> a) {
               if (Arrays.equals(FAILS, a.getAction().getRow())) {
@@ -237,8 +232,8 @@ public class TestAsyncProcess {
       return new RpcRetryingCallerImpl<AbstractResponse>(100, 10, 9) {
         @Override
         public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
-                                                int callTimeout)
-        throws IOException, RuntimeException {
+                                                   int callTimeout)
+            throws IOException, RuntimeException {
           try {
             // sleep one second in order for threadpool to start another thread instead of reusing
             // existing one.
@@ -250,6 +245,28 @@ public class TestAsyncProcess {
         }
       };
     }
+
+
+  }
+
+
+
+  static class MyAsyncRequestFutureImpl<Res> extends AsyncRequestFutureImpl<Res> {
+
+    public MyAsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
+                                  ExecutorService pool, boolean needResults, Object[] results,
+                                  Batch.Callback callback,
+                                  CancellableRegionServerCallable callable, int timeout,
+                                  AsyncProcess asyncProcess) {
+      super(tableName, actions, nonceGroup, pool, needResults,
+          results, callback, callable, timeout, asyncProcess);
+    }
+
+    @Override
+    protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+      // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
+    }
+
   }
 
   static class CallerWithFailure extends RpcRetryingCallerImpl<AbstractResponse>{
@@ -287,6 +304,7 @@ public class TestAsyncProcess {
       return new CallerWithFailure(ioe);
     }
   }
+
   /**
    * Make the backoff time always different on each call.
    */
@@ -816,7 +834,7 @@ public class TestAsyncProcess {
 
     puts.add(createPut(1, true));
     // Wait for AP to be free. While ars might have the result, ap counters are decreased later.
-    ap.waitUntilDone();
+    ap.waitForMaximumCurrentTasks(0, null);
     ars = ap.submit(null, DUMMY_TABLE, puts, false, null, true);
     Assert.assertEquals(0, puts.size());
     ars.waitUntilDone();
@@ -869,7 +887,7 @@ public class TestAsyncProcess {
       puts.add(createPut(3, true));
     }
     ap.submit(null, DUMMY_TABLE, puts, true, null, false);
-    ap.waitUntilDone();
+    ap.waitForMaximumCurrentTasks(0, null);
     // More time to wait if there are incorrect task count.
     TimeUnit.SECONDS.sleep(1);
     assertEquals(0, ap.tasksInProgress.get());
@@ -1051,7 +1069,7 @@ public class TestAsyncProcess {
     Put p = createPut(1, false);
     mutator.mutate(p);
 
-    ap.waitUntilDone(); // Let's do all the retries.
+    ap.waitForMaximumCurrentTasks(0, null); // Let's do all the retries.
 
     // We're testing that we're behaving as we were behaving in 0.94: sending exceptions in the
     //  doPut if it fails.
