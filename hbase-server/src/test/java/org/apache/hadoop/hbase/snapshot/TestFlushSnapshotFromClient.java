@@ -325,8 +325,8 @@ public class TestFlushSnapshotFromClient {
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
-    admin.mergeRegionsAsync(regions.get(5).getEncodedNameAsBytes(),
-        regions.get(6).getEncodedNameAsBytes(), true);
+    admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
+        regions.get(5).getEncodedNameAsBytes(), true);
 
     // Verify that there's one region less
     waitRegionsAfterMerge(numRegionsAfterMerge);
@@ -366,8 +366,8 @@ public class TestFlushSnapshotFromClient {
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
-    admin.mergeRegionsAsync(regions.get(5).getEncodedNameAsBytes(),
-        regions.get(6).getEncodedNameAsBytes(), true);
+    admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
+        regions.get(5).getEncodedNameAsBytes(), true);
 
     waitRegionsAfterMerge(numRegionsAfterMerge);
     assertEquals(numRegionsAfterMerge, admin.getTableRegions(TABLE_NAME).size());

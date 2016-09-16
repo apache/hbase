@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -62,7 +62,7 @@ import org.junit.rules.TestRule;
 /**
  * Test Export Snapshot Tool
  */
-@Category({VerySlowRegionServerTests.class, MediumTests.class})
+@Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
@@ -91,12 +91,10 @@ public class TestExportSnapshot {
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -127,7 +125,7 @@ public class TestExportSnapshot {
   }
 
   protected void createTable() throws Exception {
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
+    SnapshotTestingUtils.createPreSplitTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 
   @After

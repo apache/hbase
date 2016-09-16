@@ -25,14 +25,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test Export Snapshot Tool
  */
-@Category(MediumTests.class)
+@Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobExportSnapshot extends TestExportSnapshot {
   private final Log LOG = LogFactory.getLog(getClass());
 
@@ -45,12 +46,11 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @Override
   protected void createTable() throws Exception {
-    MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName, 1, FAMILY);
+    MobSnapshotTestingUtils.createPreSplitMobTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 
   @Override

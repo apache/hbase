@@ -82,9 +82,10 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public final class SnapshotTestingUtils {
-
   private static final Log LOG = LogFactory.getLog(SnapshotTestingUtils.class);
-  private static byte[] KEYS = Bytes.toBytes("0123456789");
+
+  // default number of regions (and keys) given by getSplitKeys() and createTable()
+  private static byte[] KEYS = Bytes.toBytes("0123456");
 
   private SnapshotTestingUtils() {
     // private constructor for utility class
@@ -750,23 +751,32 @@ public final class SnapshotTestingUtils {
   }
 
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
-      int regionReplication, final byte[]... families) throws IOException, InterruptedException {
+      int regionReplication, int nRegions, final byte[]... families)
+      throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
-    byte[][] splitKeys = getSplitKeys();
+    byte[][] splitKeys = getSplitKeys(nRegions);
     util.createTable(htd, splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
         util.getHBaseAdmin().getTableRegions(tableName).size());
   }
 
   public static byte[][] getSplitKeys() {
-    byte[][] splitKeys = new byte[KEYS.length-2][];
+    return getSplitKeys(KEYS.length);
+  }
+
+  public static byte[][] getSplitKeys(int nRegions) {
+    nRegions = nRegions < KEYS.length ? nRegions : (KEYS.length - 1);
+    final byte[][] splitKeys = new byte[nRegions-1][];
+    final int step = KEYS.length / nRegions;
+    int keyIndex = 1;
     for (int i = 0; i < splitKeys.length; ++i) {
-      splitKeys[i] = new byte[] { KEYS[i+1] };
+      splitKeys[i] = new byte[] { KEYS[keyIndex] };
+      keyIndex += step;
     }
     return splitKeys;
   }
@@ -774,6 +784,16 @@ public final class SnapshotTestingUtils {
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
       final byte[]... families) throws IOException, InterruptedException {
     createTable(util, tableName, 1, families);
+  }
+
+  public static void createTable(final HBaseTestingUtility util, final TableName tableName,
+      final int regionReplication, final byte[]... families) throws IOException, InterruptedException {
+    createTable(util, tableName, regionReplication, KEYS.length, families);
+  }
+
+  public static void createPreSplitTable(final HBaseTestingUtility util, final TableName tableName,
+      final int nRegions, final byte[]... families) throws IOException, InterruptedException {
+    createTable(util, tableName, 1, nRegions, families);
   }
 
   public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
@@ -861,6 +881,6 @@ public final class SnapshotTestingUtils {
         }
       }
     }
-    assert(set.size() == getSplitKeys().length + 1);
+    assertEquals(getSplitKeys().length + 1, set.size());
   }
 }

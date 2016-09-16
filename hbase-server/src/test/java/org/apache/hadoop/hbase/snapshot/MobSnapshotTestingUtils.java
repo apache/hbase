@@ -38,6 +38,20 @@ public class MobSnapshotTestingUtils {
   public static void createMobTable(final HBaseTestingUtility util,
       final TableName tableName, int regionReplication,
       final byte[]... families) throws IOException, InterruptedException {
+    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(),
+      regionReplication, families);
+  }
+
+  public static void createPreSplitMobTable(final HBaseTestingUtility util,
+      final TableName tableName, int nRegions, final byte[]... families)
+      throws IOException, InterruptedException {
+    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(nRegions),
+      1, families);
+  }
+
+  private static void createMobTable(final HBaseTestingUtility util,
+      final TableName tableName, final byte[][] splitKeys, int regionReplication,
+      final byte[]... families) throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     for (byte[] family : families) {
@@ -46,7 +60,6 @@ public class MobSnapshotTestingUtils {
       hcd.setMobThreshold(0L);
       htd.addFamily(hcd);
     }
-    byte[][] splitKeys = SnapshotTestingUtils.getSplitKeys();
     util.getHBaseAdmin().createTable(htd, splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
     assertEquals((splitKeys.length + 1) * regionReplication, util
