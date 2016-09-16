@@ -326,6 +326,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
+   * @return true if the procedure is in a RUNNABLE state.
+   */
+  protected synchronized boolean isRunnable() {
+    return state == ProcedureState.RUNNABLE;
+  }
+
+  /**
    * @return true if the procedure has failed.
    *         true may mean failed but not yet rolledback or failed and rolledback.
    */

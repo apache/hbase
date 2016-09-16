@@ -76,15 +76,18 @@ public class TestProcedureInMemoryChore {
     CountDownLatch latch = new CountDownLatch(nCountDown);
     TestLatchChore chore = new TestLatchChore(timeoutMSec, latch);
     procExecutor.addChore(chore);
+    assertTrue(chore.isRunnable());
     latch.await();
 
     // remove the chore and verify it is no longer executed
+    assertTrue(chore.isRunnable());
     procExecutor.removeChore(chore);
     latch = new CountDownLatch(nCountDown);
     chore.setLatch(latch);
     latch.await(timeoutMSec * nCountDown, TimeUnit.MILLISECONDS);
     LOG.info("chore latch count=" + latch.getCount());
-    assertTrue(latch.getCount() > 0);
+    assertFalse(chore.isRunnable());
+    assertTrue("latchCount=" + latch.getCount(), latch.getCount() > 0);
   }
 
   public static class TestLatchChore extends ProcedureInMemoryChore<TestProcEnv> {
