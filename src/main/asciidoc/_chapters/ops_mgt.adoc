@@ -2056,9 +2056,7 @@ $ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot
 [[snapshots_s3]]
 === Storing Snapshots in an Amazon S3 Bucket
 
-For general information and limitations of using Amazon S3 storage with HBase, see
-<<amazon_s3_configuration>>. You can also store and retrieve snapshots from Amazon
-S3, using the following procedure.
+You can store and retrieve snapshots from Amazon S3, using the following procedure.
 
 NOTE: You can also store snapshots in Microsoft Azure Blob Storage. See <<snapshots_azure>>.
 
