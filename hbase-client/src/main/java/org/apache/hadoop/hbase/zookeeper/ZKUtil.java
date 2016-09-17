@@ -1285,9 +1285,6 @@ public class ZKUtil {
    * Sets no watches.  Throws all exceptions besides dealing with deletion of
    * children.
    *
-   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update functionality.
-   * Otherwise, run the list of operations sequentially.
-   *
    * @throws KeeperException
    */
   public static void deleteChildrenRecursively(ZooKeeperWatcher zkw, String node)
@@ -1304,13 +1301,9 @@ public class ZKUtil {
    * Sets no watches. Throws all exceptions besides dealing with deletion of
    * children.
    * <p>
-   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update
-   * functionality. Otherwise, run the list of operations sequentially.
-   * <p>
-   * If all of the following are true:
+   * If the following is true:
    * <ul>
    * <li>runSequentialOnMultiFailure is true
-   * <li>hbase.zookeeper.useMulti is true
    * </ul>
    * on calling multi, we get a ZooKeeper exception that can be handled by a
    * sequential call(*), we retry the operations one-by-one (sequentially).
@@ -1359,13 +1352,9 @@ public class ZKUtil {
    * Sets no watches. Throws all exceptions besides dealing with deletion of
    * children.
    * <p>
-   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update
-   * functionality. Otherwise, run the list of operations sequentially.
-   * <p>
-   * If all of the following are true:
+   * If the following is true:
    * <ul>
    * <li>runSequentialOnMultiFailure is true
-   * <li>hbase.zookeeper.useMulti is true
    * </ul>
    * on calling multi, we get a ZooKeeper exception that can be handled by a
    * sequential call(*), we retry the operations one-by-one (sequentially).
@@ -1636,12 +1625,10 @@ public class ZKUtil {
   }
 
   /**
-   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update functionality.
-   * Otherwise, run the list of operations sequentially.
+   * Use ZooKeeper's multi-update functionality.
    *
    * If all of the following are true:
    * - runSequentialOnMultiFailure is true
-   * - hbase.zookeeper.useMulti is true
    * - on calling multi, we get a ZooKeeper exception that can be handled by a sequential call(*)
    * Then:
    * - we retry the operations one-by-one (sequentially)
@@ -1658,42 +1645,38 @@ public class ZKUtil {
    */
   public static void multiOrSequential(ZooKeeperWatcher zkw, List<ZKUtilOp> ops,
       boolean runSequentialOnMultiFailure) throws KeeperException {
-    if (ops == null) return;
-    boolean useMulti = zkw.getConfiguration().getBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
-
-    if (useMulti) {
-      List<Op> zkOps = new LinkedList<Op>();
-      for (ZKUtilOp op : ops) {
-        zkOps.add(toZooKeeperOp(zkw, op));
-      }
-      try {
-        zkw.getRecoverableZooKeeper().multi(zkOps);
-      } catch (KeeperException ke) {
-       switch (ke.code()) {
-         case NODEEXISTS:
-         case NONODE:
-         case BADVERSION:
-         case NOAUTH:
-           // if we get an exception that could be solved by running sequentially
-           // (and the client asked us to), then break out and run sequentially
-           if (runSequentialOnMultiFailure) {
-             LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
-               + "  Attempting to run operations sequentially because"
-               + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
-             processSequentially(zkw, ops);
-             break;
-           }
-          default:
-            throw ke;
-        }
-      } catch (InterruptedException ie) {
-        zkw.interruptedException(ie);
-      }
-    } else {
-      // run sequentially
-      processSequentially(zkw, ops);
+    if (zkw.getConfiguration().get("hbase.zookeeper.useMulti") != null) {
+      LOG.warn("hbase.zookeeper.useMulti is deprecated. Default to true always.");
     }
+    if (ops == null) return;
 
+    List<Op> zkOps = new LinkedList<Op>();
+    for (ZKUtilOp op : ops) {
+      zkOps.add(toZooKeeperOp(zkw, op));
+    }
+    try {
+      zkw.getRecoverableZooKeeper().multi(zkOps);
+    } catch (KeeperException ke) {
+      switch (ke.code()) {
+      case NODEEXISTS:
+      case NONODE:
+      case BADVERSION:
+      case NOAUTH:
+        // if we get an exception that could be solved by running sequentially
+        // (and the client asked us to), then break out and run sequentially
+        if (runSequentialOnMultiFailure) {
+          LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
+              + "  Attempting to run operations sequentially because"
+              + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
+          processSequentially(zkw, ops);
+          break;
+        }
+      default:
+        throw ke;
+      }
+    } catch (InterruptedException ie) {
+      zkw.interruptedException(ie);
+    }
   }
 
   private static void processSequentially(ZooKeeperWatcher zkw, List<ZKUtilOp> ops)

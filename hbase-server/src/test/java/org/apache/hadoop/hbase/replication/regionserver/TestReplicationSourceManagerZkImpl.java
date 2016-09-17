@@ -62,7 +62,6 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
   // Tests the naming convention of adopted queues for ReplicationQueuesZkImpl
   @Test
   public void testNodeFailoverDeadServerParsing() throws Exception {
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
     ReplicationQueues repQueues =
       ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, server,
@@ -117,7 +116,6 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
 
   @Test
   public void testFailoverDeadServerCversionChange() throws Exception {
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server s0 = new DummyServer("cversion-change0.example.org");
     ReplicationQueues repQueues =
       ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, s0,

@@ -398,16 +398,6 @@ possible configurations would overwhelm and obscure the important.
     for more information.</description>
   </property>
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
-  <property>
-    <name>hbase.zookeeper.useMulti</name>
-    <value>true</value>
-    <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
-    This allows certain ZooKeeper operations to complete more quickly and prevents some issues
-    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
-    IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+
-    and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and
-    will not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).</description>
-  </property>
 
   <!--
   Beginning of properties that are directly mapped from ZooKeeper's zoo.cfg.

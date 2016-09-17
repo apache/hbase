@@ -384,8 +384,9 @@ See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> a
 === ZooKeeper Requirements
 
 ZooKeeper 3.4.x is required as of HBase 1.0.0.
-HBase makes use of the `multi` functionality that is only available since 3.4.0 (The `useMulti` configuration option defaults to `true` in HBase 1.0.0).
-See link:https://issues.apache.org/jira/browse/HBASE-12241[HBASE-12241 (The crash of regionServer when taking deadserver's replication queue breaks replication)] and link:https://issues.apache.org/jira/browse/HBASE-6775[HBASE-6775 (Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix)] for background.
+HBase makes use of the `multi` functionality that is only available since Zookeeper 3.4.0. The `hbase.zookeeper.useMulti` configuration property defaults to `true` in HBase 1.0.0.
+Refer to link:https://issues.apache.org/jira/browse/HBASE-12241[HBASE-12241 (The crash of regionServer when taking deadserver's replication queue breaks replication)] and link:https://issues.apache.org/jira/browse/HBASE-6775[HBASE-6775 (Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix)] for background.
+The property is deprecated and useMulti is always enabled in HBase 2.0.
 
 [[standalone_dist]]
 == HBase run modes: Standalone and Distributed

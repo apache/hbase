@@ -75,9 +75,6 @@ public class TestRSGroups extends TestRSGroupsBase {
         RSGroupBasedLoadBalancer.class.getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
-    TEST_UTIL.getConfiguration().setBoolean(
-        HConstants.ZOOKEEPER_USEMULTI,
-        true);
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().set(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,

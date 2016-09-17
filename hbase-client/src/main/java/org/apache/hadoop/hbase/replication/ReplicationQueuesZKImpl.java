@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -31,8 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -67,8 +64,6 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   /** Znode containing all replication queues for this region server. */
   private String myQueuesZnode;
-  /** Name of znode we use to lock during failover */
-  private final static String RS_LOCK_ZNODE = "lock";
 
   private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
 
@@ -189,42 +184,13 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     } catch (KeeperException e) {
       this.abortable.abort("Failed to getUnClaimedQueueIds for RS" + regionserver, e);
     }
-    if (queues != null) {
-      queues.remove(RS_LOCK_ZNODE);
-    }
     return queues;
   }
 
   @Override
   public Pair<String, SortedSet<String>> claimQueue(String regionserver, String queueId) {
-    if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      LOG.info("Atomically moving " + regionserver + "/" + queueId + "'s WALs to my queue");
-      return moveQueueUsingMulti(regionserver, queueId);
-    } else {
-      LOG.info("Moving " + regionserver + "/" + queueId + "'s wals to my queue");
-      if (!lockOtherRS(regionserver)) {
-        LOG.info("Can not take the lock now");
-        return null;
-      }
-      Pair<String, SortedSet<String>> newQueues;
-      try {
-        newQueues = copyQueueFromLockedRS(regionserver, queueId);
-        removeQueueFromLockedRS(regionserver, queueId);
-      } finally {
-        unlockOtherRS(regionserver);
-      }
-      return newQueues;
-    }
-  }
-
-  private void removeQueueFromLockedRS(String znode, String peerId) {
-    String nodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
-    String peerPath = ZKUtil.joinZNode(nodePath, peerId);
-    try {
-      ZKUtil.deleteNodeRecursively(this.zookeeper, peerPath);
-    } catch (KeeperException e) {
-      LOG.warn("Remove copied queue failed", e);
-    }
+    LOG.info("Atomically moving " + regionserver + "/" + queueId + "'s WALs to my queue");
+    return moveQueueUsingMulti(regionserver, queueId);
   }
 
   @Override
@@ -276,58 +242,6 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
           + this.myQueuesZnode, e);
     }
     return listOfQueues == null ? new ArrayList<String>() : listOfQueues;
-  }
-
-  /**
-   * Try to set a lock in another region server's znode.
-   * @param znode the server names of the other server
-   * @return true if the lock was acquired, false in every other cases
-   */
-  @VisibleForTesting
-  public boolean lockOtherRS(String znode) {
-    try {
-      String parent = ZKUtil.joinZNode(this.queuesZNode, znode);
-      if (parent.equals(this.myQueuesZnode)) {
-        LOG.warn("Won't lock because this is us, we're dead!");
-        return false;
-      }
-      String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
-      ZKUtil.createAndWatch(this.zookeeper, p, lockToByteArray(this.myQueuesZnode));
-    } catch (KeeperException e) {
-      // This exception will pop up if the znode under which we're trying to
-      // create the lock is already deleted by another region server, meaning
-      // that the transfer already occurred.
-      // NoNode => transfer is done and znodes are already deleted
-      // NodeExists => lock znode already created by another RS
-      if (e instanceof KeeperException.NoNodeException
-          || e instanceof KeeperException.NodeExistsException) {
-        LOG.info("Won't transfer the queue," + " another RS took care of it because of: "
-            + e.getMessage());
-      } else {
-        LOG.info("Failed lock other rs", e);
-      }
-      return false;
-    }
-    return true;
-  }
-
-  public String getLockZNode(String znode) {
-    return this.queuesZNode + "/" + znode + "/" + RS_LOCK_ZNODE;
-  }
-
-  @VisibleForTesting
-  public boolean checkLockExists(String znode) throws KeeperException {
-    return ZKUtil.checkExists(zookeeper, getLockZNode(znode)) >= 0;
-  }
-
-  private void unlockOtherRS(String znode){
-    String parent = ZKUtil.joinZNode(this.queuesZNode, znode);
-    String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
-    try {
-      ZKUtil.deleteNode(this.zookeeper, p);
-    } catch (KeeperException e) {
-      this.abortable.abort("Remove lock failed", e);
-    }
   }
 
   /**
@@ -388,76 +302,6 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       Thread.currentThread().interrupt();
     }
     return null;
-  }
-
-  /**
-   * This methods moves all the wals queues from another region server and returns them all sorted
-   * per peer cluster (appended with the dead server's znode)
-   * @param znode server names to copy
-   * @return all wals for the peer of that cluster, null if an error occurred
-   */
-  private Pair<String, SortedSet<String>> copyQueueFromLockedRS(String znode, String peerId) {
-    // TODO this method isn't atomic enough, we could start copying and then
-    // TODO fail for some reason and we would end up with znodes we don't want.
-    try {
-      String nodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
-      ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
-      String clusterPath = ZKUtil.joinZNode(nodePath, peerId);
-      if (!peerExists(replicationQueueInfo.getPeerId())) {
-        LOG.warn("Peer " + peerId + " didn't exist, skipping the replay");
-        // Protection against moving orphaned queues
-        return null;
-      }
-      // We add the name of the recovered RS to the new znode, we can even
-      // do that for queues that were recovered 10 times giving a znode like
-      // number-startcode-number-otherstartcode-number-anotherstartcode-etc
-      String newCluster = peerId + "-" + znode;
-      String newClusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, newCluster);
-
-      List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
-      // That region server didn't have anything to replicate for this cluster
-      if (wals == null || wals.size() == 0) {
-        return null;
-      }
-      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
-          HConstants.EMPTY_BYTE_ARRAY);
-      SortedSet<String> logQueue = new TreeSet<>();
-      for (String wal : wals) {
-        String z = ZKUtil.joinZNode(clusterPath, wal);
-        byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
-        long position = 0;
-        try {
-          position = ZKUtil.parseWALPositionFrom(positionBytes);
-        } catch (DeserializationException e) {
-          LOG.warn("Failed parse of wal position from the following znode: " + z
-              + ", Exception: " + e);
-        }
-        LOG.debug("Creating " + wal + " with data " + position);
-        String child = ZKUtil.joinZNode(newClusterZnode, wal);
-        // Position doesn't actually change, we are just deserializing it for
-        // logging, so just use the already serialized version
-        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, child, positionBytes);
-        logQueue.add(wal);
-      }
-      return new Pair<>(newCluster, logQueue);
-    } catch (KeeperException e) {
-      LOG.warn("Got exception in copyQueueFromLockedRS: ", e);
-    } catch (InterruptedException e) {
-      LOG.warn(e);
-      Thread.currentThread().interrupt();
-    }
-    return null;
-  }
-
-  /**
-   * @param lockOwner
-   * @return Serialized protobuf of <code>lockOwner</code> with pb magic prefix prepended suitable
-   *         for use as content of an replication lock during region server fail over.
-   */
-  static byte[] lockToByteArray(final String lockOwner) {
-    byte[] bytes =
-        ZooKeeperProtos.ReplicationLock.newBuilder().setLockOwner(lockOwner).build().toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
   }
 
   @Override

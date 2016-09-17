@@ -59,7 +59,6 @@ public class TestZKMulti {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean("hbase.zookeeper.useMulti", true);
     Abortable abortable = new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
@@ -314,32 +313,6 @@ public class TestZKMulti {
   }
 
   /**
-   * Verifies that for the given root node, it should delete all the child nodes
-   * recursively using normal sequential way.
-   */
-  @Test (timeout=60000)
-  public void testdeleteChildrenRecursivelySequential() throws Exception {
-    String parentZNode = "/testRootSeq";
-    createZNodeTree(parentZNode);
-    boolean useMulti = zkw.getConfiguration().getBoolean(
-        "hbase.zookeeper.useMulti", false);
-    zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", false);
-    try {
-      // disables the multi-update api execution
-      ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode);
-
-      assertTrue("Wrongly deleted parent znode!",
-          ZKUtil.checkExists(zkw, parentZNode) > -1);
-      List<String> children = zkw.getRecoverableZooKeeper().getChildren(
-          parentZNode, false);
-      assertTrue("Failed to delete child znodes!", 0 == children.size());
-    } finally {
-      // sets back the multi-update api execution
-      zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", useMulti);
-    }
-  }
-
-  /**
    * Verifies that for the given root node, it should delete all the nodes recursively using
    * multi-update api.
    */
@@ -350,26 +323,6 @@ public class TestZKMulti {
 
     ZKUtil.deleteNodeRecursively(zkw, parentZNode);
     assertTrue("Parent znode should be deleted.", ZKUtil.checkExists(zkw, parentZNode) == -1);
-  }
-
-  /**
-   * Verifies that for the given root node, it should delete all the nodes recursively using
-   * normal sequential way.
-   */
-  @Test(timeout = 60000)
-  public void testDeleteNodeRecursivelySequential() throws Exception {
-    String parentZNode = "/testdeleteNodeRecursivelySequential";
-    createZNodeTree(parentZNode);
-    boolean useMulti = zkw.getConfiguration().getBoolean("hbase.zookeeper.useMulti", false);
-    zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", false);
-    try {
-      // disables the multi-update api execution
-      ZKUtil.deleteNodeRecursively(zkw, parentZNode);
-      assertTrue("Parent znode should be deleted.", ZKUtil.checkExists(zkw, parentZNode) == -1);
-    } finally {
-      // sets back the multi-update api execution
-      zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", useMulti);
-    }
   }
 
   @Test(timeout = 60000)

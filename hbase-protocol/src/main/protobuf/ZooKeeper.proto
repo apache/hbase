@@ -143,13 +143,6 @@ message ReplicationHLogPosition {
 }
 
 /**
- * Used by replication. Used to lock a region server during failover.
- */
-message ReplicationLock {
-  required string lock_owner = 1;
-}
-
-/**
  * Metadata associated with a table lock in zookeeper
  */
 message TableLock {

@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -97,12 +96,9 @@ public class TestMultiSlaveReplication {
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
-    conf1.setBoolean(HConstants.ZOOKEEPER_USEMULTI , false);// for testZKLockCleaner
     conf1.setInt("hbase.master.cleaner.interval", 5 * 1000);
     conf1.setClass("hbase.region.replica.replication.replicationQueues.class",
         ReplicationQueuesZKImpl.class, ReplicationQueues.class);
-    conf1.setLong(ReplicationZKLockCleanerChore.TTL_CONFIG_KEY, 0L);
-
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -207,40 +203,6 @@ public class TestMultiSlaveReplication {
 
     utility3.shutdownMiniCluster();
     utility2.shutdownMiniCluster();
-    utility1.shutdownMiniCluster();
-  }
-
-  @Test
-  public void testZKLockCleaner() throws Exception {
-    MiniHBaseCluster cluster = utility1.startMiniCluster(1, 2);
-    HBaseAdmin admin = utility1.getHBaseAdmin();
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("zk")));
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    admin.createTable(table);
-    ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf1);
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
-    replicationAdmin.addPeer("cluster2", rpc, null);
-    HRegionServer rs = cluster.getRegionServer(0);
-    ReplicationQueuesZKImpl zk = new ReplicationQueuesZKImpl(rs.getZooKeeper(), conf1, rs);
-    zk.init(rs.getServerName().toString());
-    List<String> replicators = zk.getListOfReplicators();
-    assertEquals(2, replicators.size());
-    String zNode = cluster.getRegionServer(1).getServerName().toString();
-
-    assertTrue(zk.lockOtherRS(zNode));
-    assertTrue(zk.checkLockExists(zNode));
-    Thread.sleep(10000);
-    assertTrue(zk.checkLockExists(zNode));
-    cluster.abortRegionServer(0);
-    Thread.sleep(10000);
-    HRegionServer rs1 = cluster.getRegionServer(1);
-    zk = new ReplicationQueuesZKImpl(rs1.getZooKeeper(), conf1, rs1);
-    zk.init(rs1.getServerName().toString());
-    assertFalse(zk.checkLockExists(zNode));
-
     utility1.shutdownMiniCluster();
   }
 
