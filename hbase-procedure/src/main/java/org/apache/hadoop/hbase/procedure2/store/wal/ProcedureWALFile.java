@@ -62,6 +62,7 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     this.logFile = logStatus.getPath();
     this.logSize = logStatus.getLen();
     this.timestamp = logStatus.getModificationTime();
+    tracker.setPartialFlag(true);
   }
 
   public ProcedureWALFile(FileSystem fs, Path logFile, ProcedureWALHeader header,
@@ -72,6 +73,7 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     this.startPos = startPos;
     this.logSize = startPos;
     this.timestamp = timestamp;
+    tracker.setPartialFlag(true);
   }
 
   public void open() throws IOException {

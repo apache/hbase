@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -881,24 +880,22 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   private void closeCurrentLogStream() {
+    if (stream == null) return;
     try {
-      if (stream != null) {
-        try {
-          ProcedureWALFile log = logs.getLast();
-          log.setProcIds(storeTracker.getUpdatedMinProcId(), storeTracker.getUpdatedMaxProcId());
-          log.updateLocalTracker(storeTracker);
-          long trailerSize = ProcedureWALFormat.writeTrailer(stream, storeTracker);
-          log.addToSize(trailerSize);
-        } catch (IOException e) {
-          LOG.warn("Unable to write the trailer: " + e.getMessage());
-        }
-        stream.close();
-      }
+      ProcedureWALFile log = logs.getLast();
+      log.setProcIds(storeTracker.getUpdatedMinProcId(), storeTracker.getUpdatedMaxProcId());
+      log.updateLocalTracker(storeTracker);
+      long trailerSize = ProcedureWALFormat.writeTrailer(stream, storeTracker);
+      log.addToSize(trailerSize);
+    } catch (IOException e) {
+      LOG.warn("Unable to write the trailer: " + e.getMessage());
+    }
+    try {
+      stream.close();
     } catch (IOException e) {
       LOG.error("Unable to close the stream", e);
-    } finally {
-      stream = null;
     }
+    stream = null;
   }
 
   // ==========================================================================
@@ -1058,11 +1055,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return maxLogId;
   }
 
+  /**
+   * If last log's tracker is not null, use it as {@link #storeTracker}.
+   * Otherwise, set storeTracker as partial, and let {@link ProcedureWALFormatReader} rebuild
+   * it using entries in the log.
+   */
   private void initTrackerFromOldLogs() {
-    // TODO: Load the most recent tracker available
     if (logs.isEmpty()) return;
     ProcedureWALFile log = logs.getLast();
-    if (log.getTracker() != null) {
+    if (!log.getTracker().isPartial()) {
       storeTracker.resetTo(log.getTracker());
     } else {
       storeTracker.reset();
@@ -1074,7 +1075,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
    * Loads given log file and it's tracker.
    */
   private ProcedureWALFile initOldLog(final FileStatus logFile) throws IOException {
-    ProcedureWALFile log = new ProcedureWALFile(fs, logFile);
+    final ProcedureWALFile log = new ProcedureWALFile(fs, logFile);
     if (logFile.getLen() == 0) {
       LOG.warn("Remove uninitialized log: " + logFile);
       log.removeFile();
@@ -1095,20 +1096,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
       throw new IOException(msg, e);
     }
 
-    if (log.isCompacted()) {
-      try {
-        log.readTrailer();
-      } catch (IOException e) {
-        LOG.warn("Unfinished compacted log: " + logFile, e);
-        log.removeFile();
-        return null;
-      }
-    }
     try {
       log.readTracker();
     } catch (IOException e) {
+      log.getTracker().reset();
+      log.getTracker().setPartialFlag(true);
       LOG.warn("Unable to read tracker for " + log + " - " + e.getMessage());
     }
+
+    log.close();
     return log;
   }
 }

@@ -93,6 +93,7 @@ public class ProcedureStoreTracker {
     private long[] updated;
     /**
      * Keeps track of procedure ids which belong to this bitmap's range and have been deleted.
+     * This represents global state since it's not reset on WAL rolls.
      */
     private long[] deleted;
     /**
@@ -449,8 +450,7 @@ public class ProcedureStoreTracker {
     }
   }
 
-  public void resetToProto(ProcedureProtos.ProcedureStoreTracker trackerProtoBuf)
-      throws IOException {
+  public void resetToProto(final ProcedureProtos.ProcedureStoreTracker trackerProtoBuf) {
     reset();
     for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode: trackerProtoBuf.getNodeList()) {
       final BitSetNode node = new BitSetNode(protoNode);
@@ -536,6 +536,7 @@ public class ProcedureStoreTracker {
     BitSetNode node = getOrCreateNode(procId);
     assert node.contains(procId) : "expected procId=" + procId + " in the node=" + node;
     node.updateState(procId, isDeleted);
+    trackProcIds(procId);
   }
 
   public void reset() {
@@ -543,6 +544,11 @@ public class ProcedureStoreTracker {
     this.partial = false;
     this.map.clear();
     resetUpdates();
+  }
+
+  public boolean isUpdated(long procId) {
+    final Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
+    return entry != null && entry.getValue().contains(procId) && entry.getValue().isUpdated(procId);
   }
 
   /**
@@ -581,6 +587,10 @@ public class ProcedureStoreTracker {
         }
       }
     }
+  }
+
+  public boolean isPartial() {
+    return partial;
   }
 
   public void setPartialFlag(boolean isPartial) {
@@ -720,6 +730,7 @@ public class ProcedureStoreTracker {
       entry.getValue().dump();
     }
   }
+
   /**
    * Iterates over
    * {@link BitSetNode}s in this.map and subtracts with corresponding ones from {@code other}

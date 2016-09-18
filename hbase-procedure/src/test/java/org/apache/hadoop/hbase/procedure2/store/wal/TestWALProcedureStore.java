@@ -360,6 +360,88 @@ public class TestWALProcedureStore {
     assertEquals(0, loader.getCorruptedCount());
   }
 
+  void assertUpdated(final ProcedureStoreTracker tracker, Procedure[] procs,
+      int[] updatedProcs, int[] nonUpdatedProcs) {
+    for (int index : updatedProcs) {
+      long procId = procs[index].getProcId();
+      assertTrue("Procedure id : " + procId, tracker.isUpdated(procId));
+    }
+    for (int index : nonUpdatedProcs) {
+      long procId = procs[index].getProcId();
+      assertFalse("Procedure id : " + procId, tracker.isUpdated(procId));
+    }
+  }
+
+  void assertDeleted(final ProcedureStoreTracker tracker, Procedure[] procs,
+      int[] deletedProcs, int[] nonDeletedProcs) {
+    for (int index : deletedProcs) {
+      long procId = procs[index].getProcId();
+      assertEquals("Procedure id : " + procId,
+          ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(procId));
+    }
+    for (int index : nonDeletedProcs) {
+      long procId = procs[index].getProcId();
+      assertEquals("Procedure id : " + procId,
+          ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(procId));
+    }
+  }
+
+  @Test
+  public void testCorruptedTrailersRebuild() throws Exception {
+    final Procedure[] procs = new Procedure[6];
+    for (int i = 0; i < procs.length; ++i) {
+      procs[i] = new TestSequentialProcedure();
+    }
+    // Log State (I=insert, U=updated, D=delete)
+    //   | log 1 | log 2 | log 3 |
+    // 0 | I, D  |       |       |
+    // 1 | I     |       |       |
+    // 2 | I     | D     |       |
+    // 3 | I     | U     |       |
+    // 4 |       | I     | D     |
+    // 5 |       |       | I     |
+    procStore.insert(procs[0], null);
+    procStore.insert(procs[1], null);
+    procStore.insert(procs[2], null);
+    procStore.insert(procs[3], null);
+    procStore.delete(procs[0], null);
+    procStore.rollWriterForTesting();
+    procStore.delete(procs[2], null);
+    procStore.update(procs[3]);
+    procStore.insert(procs[4], null);
+    procStore.rollWriterForTesting();
+    procStore.delete(procs[4], null);
+    procStore.insert(procs[5], null);
+
+    // Stop the store
+    procStore.stop(false);
+
+    // Remove 4 byte from the trailers
+    final FileStatus[] logs = fs.listStatus(logDir);
+    assertEquals(3, logs.length);
+    for (int i = 0; i < logs.length; ++i) {
+      corruptLog(logs[i], 4);
+    }
+
+    // Restart the store
+    final LoadCounter loader = new LoadCounter();
+    storeRestart(loader);
+    assertEquals(3, loader.getLoadedCount());  // procs 1, 3 and 5
+    assertEquals(0, loader.getCorruptedCount());
+
+    // Check the Trackers
+    final ArrayList<ProcedureWALFile> walFiles = procStore.getActiveLogs();
+    assertEquals(4, walFiles.size());
+    LOG.info("Checking wal " + walFiles.get(0));
+    assertUpdated(walFiles.get(0).getTracker(), procs, new int[]{0, 1, 2, 3}, new int[] {4, 5});
+    LOG.info("Checking wal " + walFiles.get(1));
+    assertUpdated(walFiles.get(1).getTracker(), procs, new int[]{2, 3, 4}, new int[] {0, 1, 5});
+    LOG.info("Checking wal " + walFiles.get(2));
+    assertUpdated(walFiles.get(2).getTracker(), procs, new int[]{4, 5}, new int[] {0, 1, 2, 3});
+    LOG.info("Checking global tracker ");
+    assertDeleted(procStore.getStoreTracker(), procs, new int[]{0, 2, 4}, new int[] {1, 3, 5});
+  }
+
   @Test
   public void testCorruptedEntries() throws Exception {
     // Insert something

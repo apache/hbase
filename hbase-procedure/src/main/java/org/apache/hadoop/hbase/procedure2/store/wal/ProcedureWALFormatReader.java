@@ -101,19 +101,40 @@ public class ProcedureWALFormatReader {
   private final WalProcedureMap localProcedureMap = new WalProcedureMap(1024);
   private final WalProcedureMap procedureMap = new WalProcedureMap(1024);
 
-  //private long compactionLogId;
+  // private long compactionLogId;
   private long maxProcId = 0;
-
+  /**
+   * If tracker for a log file is partial (see {@link ProcedureStoreTracker#partial}), we
+   * re-build the list of procedures updated in that WAL because we need it for log cleaning
+   * purpose. If all procedures updated in a WAL are found to be obsolete, it can be safely deleted.
+   * (see {@link WALProcedureStore#removeInactiveLogs()}).
+   * However, we don't need deleted part of a WAL's tracker for this purpose, so we don't bother
+   * re-building it. (To understand why, take a look at
+   * {@link ProcedureStoreTracker.BitSetNode#subtract(ProcedureStoreTracker.BitSetNode)}).
+   */
+  private ProcedureStoreTracker localTracker;
+  private final ProcedureWALFormat.Loader loader;
+  /**
+   * Global tracker. If set to partial, it will be updated as procedures are loaded from wals,
+   * otherwise not.
+   */
   private final ProcedureStoreTracker tracker;
-  private final boolean hasFastStartSupport;
+  // private final boolean hasFastStartSupport;
 
-  public ProcedureWALFormatReader(final ProcedureStoreTracker tracker) {
+  public ProcedureWALFormatReader(final ProcedureStoreTracker tracker,
+      ProcedureWALFormat.Loader loader) {
     this.tracker = tracker;
+    this.loader = loader;
     // we support fast-start only if we have a clean shutdown.
-    this.hasFastStartSupport = !tracker.isEmpty();
+    // this.hasFastStartSupport = !tracker.isEmpty();
   }
 
-  public void read(ProcedureWALFile log, ProcedureWALFormat.Loader loader) throws IOException {
+  public void read(final ProcedureWALFile log) throws IOException {
+    localTracker = log.getTracker().isPartial() ? log.getTracker() : null;
+    if (localTracker != null) {
+      LOG.info("Rebuilding tracker for log - " + log);
+    }
+
     FSDataInputStream stream = log.getStream();
     try {
       boolean hasMore = true;
@@ -121,7 +142,6 @@ public class ProcedureWALFormatReader {
         ProcedureWALEntry entry = ProcedureWALFormat.readEntry(stream);
         if (entry == null) {
           LOG.warn("nothing left to decode. exiting with missing EOF");
-          hasMore = false;
           break;
         }
         switch (entry.getType()) {
@@ -150,9 +170,13 @@ public class ProcedureWALFormatReader {
       loader.markCorruptedWAL(log, e);
     }
 
+    if (localTracker != null) {
+      localTracker.setPartialFlag(false);
+    }
     if (!localProcedureMap.isEmpty()) {
       log.setProcIds(localProcedureMap.getMinProcId(), localProcedureMap.getMaxProcId());
       procedureMap.mergeTail(localProcedureMap);
+
       //if (hasFastStartSupport) {
         // TODO: Some procedure may be already runnables (see readInitEntry())
         //       (we can also check the "update map" in the log trackers)
@@ -164,7 +188,7 @@ public class ProcedureWALFormatReader {
     }
   }
 
-  public void finalize(ProcedureWALFormat.Loader loader) throws IOException {
+  public void finish() throws IOException {
     // notify the loader about the max proc ID
     loader.setMaxProcId(maxProcId);
 
@@ -185,7 +209,12 @@ public class ProcedureWALFormatReader {
         LOG.trace("read " + entry.getType() + " entry " + proc.getProcId());
       }
       localProcedureMap.add(proc);
-      tracker.setDeleted(proc.getProcId(), false);
+      if (tracker.isPartial()) {
+        tracker.insert(proc.getProcId());
+      }
+    }
+    if (localTracker != null) {
+      localTracker.insert(proc.getProcId());
     }
   }
 
@@ -236,7 +265,13 @@ public class ProcedureWALFormatReader {
     maxProcId = Math.max(maxProcId, procId);
     localProcedureMap.remove(procId);
     assert !procedureMap.contains(procId);
-    tracker.setDeleted(procId, true);
+    if (tracker.isPartial()) {
+      tracker.setDeleted(procId, true);
+    }
+    if (localTracker != null) {
+      // In case there is only delete entry for this procedure in current log.
+      localTracker.setDeleted(procId, true);
+    }
   }
 
   private boolean isDeleted(final long procId) {
@@ -264,7 +299,7 @@ public class ProcedureWALFormatReader {
   //      unlinkFromLinkList = None
   // ==========================================================================
   private static class Entry {
-    // hash-table next
+    // For bucketed linked lists in hash-table.
     protected Entry hashNext;
     // child head
     protected Entry childHead;
@@ -511,6 +546,8 @@ public class ProcedureWALFormatReader {
           childUnlinkedHead = other.childUnlinkedHead;
         }
       }
+      maxProcId = Math.max(maxProcId, other.maxProcId);
+      minProcId = Math.max(minProcId, other.minProcId);
 
       other.clear();
     }
