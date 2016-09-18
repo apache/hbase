@@ -20,6 +20,15 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -59,6 +68,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -108,7 +118,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.BytesWritable;
@@ -129,15 +138,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.TraceInfo;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
 
 /**
  * An RPC server that hosts protobuf described Services.
@@ -227,7 +227,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * This is a running count of the size in bytes of all outstanding calls whether currently
    * executing or queued waiting to be run.
    */
-  protected final Counter callQueueSizeInBytes = new Counter();
+  protected final LongAdder callQueueSizeInBytes = new LongAdder();
 
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
@@ -1204,7 +1204,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private ByteBuffer dataLengthBuffer;
     protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<Call>();
     private final Lock responseWriteLock = new ReentrantLock();
-    private Counter rpcCount = new Counter(); // number of outstanding rpcs
+    private LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
     private long lastContact;
     private InetAddress addr;
     protected Socket socket;
@@ -1310,7 +1310,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
-      return rpcCount.get() == 0;
+      return rpcCount.sum() == 0;
     }
 
     /* Decrement the outstanding RPC count */
@@ -1832,7 +1832,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       }
       // Enforcing the call queue size, this triggers a retry in the client
       // This is a bit late to be doing this check - we have already read in the total request.
-      if ((totalRequestSize + callQueueSizeInBytes.get()) > maxQueueSizeInBytes) {
+      if ((totalRequestSize + callQueueSizeInBytes.sum()) > maxQueueSizeInBytes) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
             responder, totalRequestSize, null, null, 0);
@@ -1959,7 +1959,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           LOG.trace("Ignored exception", ignored);
         }
       }
-      rpcCount.destroy();
     }
 
     private UserGroupInformation createUser(ConnectionHeader head) {
@@ -2685,7 +2684,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server connection from " + connection +
             "; connections=" + size() +
-            ", queued calls size (bytes)=" + callQueueSizeInBytes.get() +
+            ", queued calls size (bytes)=" + callQueueSizeInBytes.sum() +
             ", general queued calls=" + scheduler.getGeneralQueueLength() +
             ", priority queued calls=" + scheduler.getPriorityQueueLength());
       }

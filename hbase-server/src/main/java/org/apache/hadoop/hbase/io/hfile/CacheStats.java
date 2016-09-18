@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.FastLongHistogram;
 
 
@@ -38,64 +38,64 @@ public class CacheStats {
   static final int DEFAULT_WINDOW_PERIODS = 5;
 
   /** The number of getBlock requests that were cache hits */
-  private final Counter hitCount = new Counter();
+  private final LongAdder hitCount = new LongAdder();
 
   /** The number of getBlock requests that were cache hits from primary replica */
-  private final Counter primaryHitCount = new Counter();
-  
+  private final LongAdder primaryHitCount = new LongAdder();
+
   /**
    * The number of getBlock requests that were cache hits, but only from
    * requests that were set to use the block cache.  This is because all reads
    * attempt to read from the block cache even if they will not put new blocks
    * into the block cache.  See HBASE-2253 for more information.
    */
-  private final Counter hitCachingCount = new Counter();
+  private final LongAdder hitCachingCount = new LongAdder();
 
   /** The number of getBlock requests that were cache misses */
-  private final Counter missCount = new Counter();
+  private final LongAdder missCount = new LongAdder();
 
   /** The number of getBlock requests for primary replica that were cache misses */
-  private final Counter primaryMissCount = new Counter();
+  private final LongAdder primaryMissCount = new LongAdder();
   /**
    * The number of getBlock requests that were cache misses, but only from
    * requests that were set to use the block cache.
    */
-  private final Counter missCachingCount = new Counter();
+  private final LongAdder missCachingCount = new LongAdder();
 
   /** The number of times an eviction has occurred */
-  private final Counter evictionCount = new Counter();
+  private final LongAdder evictionCount = new LongAdder();
 
   /** The total number of blocks that have been evicted */
-  private final Counter evictedBlockCount = new Counter();
+  private final LongAdder evictedBlockCount = new LongAdder();
 
   /** The total number of blocks for primary replica that have been evicted */
-  private final Counter primaryEvictedBlockCount = new Counter();
+  private final LongAdder primaryEvictedBlockCount = new LongAdder();
 
   /** The total number of blocks that were not inserted. */
   private final AtomicLong failedInserts = new AtomicLong(0);
 
   /** Per Block Type Counts */
-  private final Counter dataMissCount = new Counter(0);
-  private final Counter leafIndexMissCount = new Counter(0);
-  private final Counter bloomChunkMissCount = new Counter(0);
-  private final Counter metaMissCount = new Counter(0);
-  private final Counter rootIndexMissCount = new Counter(0);
-  private final Counter intermediateIndexMissCount = new Counter(0);
-  private final Counter fileInfoMissCount = new Counter(0);
-  private final Counter generalBloomMetaMissCount = new Counter(0);
-  private final Counter deleteFamilyBloomMissCount = new Counter(0);
-  private final Counter trailerMissCount = new Counter(0);
+  private final LongAdder dataMissCount = new LongAdder();
+  private final LongAdder leafIndexMissCount = new LongAdder();
+  private final LongAdder bloomChunkMissCount = new LongAdder();
+  private final LongAdder metaMissCount = new LongAdder();
+  private final LongAdder rootIndexMissCount = new LongAdder();
+  private final LongAdder intermediateIndexMissCount = new LongAdder();
+  private final LongAdder fileInfoMissCount = new LongAdder();
+  private final LongAdder generalBloomMetaMissCount = new LongAdder();
+  private final LongAdder deleteFamilyBloomMissCount = new LongAdder();
+  private final LongAdder trailerMissCount = new LongAdder();
 
-  private final Counter dataHitCount = new Counter(0);
-  private final Counter leafIndexHitCount = new Counter(0);
-  private final Counter bloomChunkHitCount = new Counter(0);
-  private final Counter metaHitCount = new Counter(0);
-  private final Counter rootIndexHitCount = new Counter(0);
-  private final Counter intermediateIndexHitCount = new Counter(0);
-  private final Counter fileInfoHitCount = new Counter(0);
-  private final Counter generalBloomMetaHitCount = new Counter(0);
-  private final Counter deleteFamilyBloomHitCount = new Counter(0);
-  private final Counter trailerHitCount = new Counter(0);
+  private final LongAdder dataHitCount = new LongAdder();
+  private final LongAdder leafIndexHitCount = new LongAdder();
+  private final LongAdder bloomChunkHitCount = new LongAdder();
+  private final LongAdder metaHitCount = new LongAdder();
+  private final LongAdder rootIndexHitCount = new LongAdder();
+  private final LongAdder intermediateIndexHitCount = new LongAdder();
+  private final LongAdder fileInfoHitCount = new LongAdder();
+  private final LongAdder generalBloomMetaHitCount = new LongAdder();
+  private final LongAdder deleteFamilyBloomHitCount = new LongAdder();
+  private final LongAdder trailerHitCount = new LongAdder();
 
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
@@ -129,10 +129,10 @@ public class CacheStats {
 
   public CacheStats(final String name, int numPeriodsInWindow) {
     this.numPeriodsInWindow = numPeriodsInWindow;
-    this.hitCounts = initializeZeros(numPeriodsInWindow);
-    this.hitCachingCounts = initializeZeros(numPeriodsInWindow);
-    this.requestCounts = initializeZeros(numPeriodsInWindow);
-    this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
+    this.hitCounts = new long[numPeriodsInWindow];
+    this.hitCachingCounts =  new long[numPeriodsInWindow];
+    this.requestCounts =  new long[numPeriodsInWindow];
+    this.requestCachingCounts =  new long[numPeriodsInWindow];
     this.ageAtEviction = new FastLongHistogram();
   }
 
@@ -264,83 +264,83 @@ public class CacheStats {
 
   // All of the counts of misses and hits.
   public long getDataMissCount() {
-    return dataMissCount.get();
+    return dataMissCount.sum();
   }
 
   public long getLeafIndexMissCount() {
-    return leafIndexMissCount.get();
+    return leafIndexMissCount.sum();
   }
 
   public long getBloomChunkMissCount() {
-    return bloomChunkMissCount.get();
+    return bloomChunkMissCount.sum();
   }
 
   public long getMetaMissCount() {
-    return metaMissCount.get();
+    return metaMissCount.sum();
   }
 
   public long getRootIndexMissCount() {
-    return rootIndexMissCount.get();
+    return rootIndexMissCount.sum();
   }
 
   public long getIntermediateIndexMissCount() {
-    return intermediateIndexMissCount.get();
+    return intermediateIndexMissCount.sum();
   }
 
   public long getFileInfoMissCount() {
-    return fileInfoMissCount.get();
+    return fileInfoMissCount.sum();
   }
 
   public long getGeneralBloomMetaMissCount() {
-    return generalBloomMetaMissCount.get();
+    return generalBloomMetaMissCount.sum();
   }
 
   public long getDeleteFamilyBloomMissCount() {
-    return deleteFamilyBloomMissCount.get();
+    return deleteFamilyBloomMissCount.sum();
   }
 
   public long getTrailerMissCount() {
-    return trailerMissCount.get();
+    return trailerMissCount.sum();
   }
 
   public long getDataHitCount() {
-    return dataHitCount.get();
+    return dataHitCount.sum();
   }
 
   public long getLeafIndexHitCount() {
-    return leafIndexHitCount.get();
+    return leafIndexHitCount.sum();
   }
 
   public long getBloomChunkHitCount() {
-    return bloomChunkHitCount.get();
+    return bloomChunkHitCount.sum();
   }
 
   public long getMetaHitCount() {
-    return metaHitCount.get();
+    return metaHitCount.sum();
   }
 
   public long getRootIndexHitCount() {
-    return rootIndexHitCount.get();
+    return rootIndexHitCount.sum();
   }
 
   public long getIntermediateIndexHitCount() {
-    return intermediateIndexHitCount.get();
+    return intermediateIndexHitCount.sum();
   }
 
   public long getFileInfoHitCount() {
-    return fileInfoHitCount.get();
+    return fileInfoHitCount.sum();
   }
 
   public long getGeneralBloomMetaHitCount() {
-    return generalBloomMetaHitCount.get();
+    return generalBloomMetaHitCount.sum();
   }
 
   public long getDeleteFamilyBloomHitCount() {
-    return deleteFamilyBloomHitCount.get();
+    return deleteFamilyBloomHitCount.sum();
   }
 
   public long getTrailerHitCount() {
-    return trailerHitCount.get();
+    return trailerHitCount.sum();
   }
 
   public long getRequestCount() {
@@ -352,59 +352,59 @@ public class CacheStats {
   }
 
   public long getMissCount() {
-    return missCount.get();
+    return missCount.sum();
   }
 
   public long getPrimaryMissCount() {
-    return primaryMissCount.get();
+    return primaryMissCount.sum();
   }
 
   public long getMissCachingCount() {
-    return missCachingCount.get();
+    return missCachingCount.sum();
   }
 
   public long getHitCount() {
-    return hitCount.get();
+    return hitCount.sum();
   }
 
   public long getPrimaryHitCount() {
-    return primaryHitCount.get();
+    return primaryHitCount.sum();
   }
 
   public long getHitCachingCount() {
-    return hitCachingCount.get();
+    return hitCachingCount.sum();
   }
 
   public long getEvictionCount() {
-    return evictionCount.get();
+    return evictionCount.sum();
   }
 
   public long getEvictedCount() {
-    return this.evictedBlockCount.get();
+    return this.evictedBlockCount.sum();
   }
 
   public long getPrimaryEvictedCount() {
-    return primaryEvictedBlockCount.get();
+    return primaryEvictedBlockCount.sum();
   }
 
   public double getHitRatio() {
-    return ((float)getHitCount()/(float)getRequestCount());
+    return ((double) getHitCount() / (double) getRequestCount());
   }
 
   public double getHitCachingRatio() {
-    return ((float)getHitCachingCount()/(float)getRequestCachingCount());
+    return ((double) getHitCachingCount() / (double) getRequestCachingCount());
   }
 
   public double getMissRatio() {
-    return ((float)getMissCount()/(float)getRequestCount());
+    return ((double) getMissCount() / (double) getRequestCount());
   }
 
   public double getMissCachingRatio() {
-    return ((float)getMissCachingCount()/(float)getRequestCachingCount());
+    return ((double) getMissCachingCount() / (double) getRequestCachingCount());
   }
 
   public double evictedPerEviction() {
-    return ((float)getEvictedCount()/(float)getEvictionCount());
+    return ((double) getEvictedCount() / (double) getEvictionCount());
   }
 
   public long getFailedInserts() {
@@ -457,17 +457,7 @@ public class CacheStats {
     return new AgeSnapshot(this.ageAtEviction);
   }
 
-  private static long sum(long [] counts) {
-    long sum = 0;
-    for (long count : counts) sum += count;
-    return sum;
-  }
-
-  private static long [] initializeZeros(int n) {
-    long [] zeros = new long [n];
-    for (int i=0; i<n; i++) {
-      zeros[i] = 0L;
-    }
-    return zeros;
+  private static long sum(long[] counts) {
+    return Arrays.stream(counts).sum();
   }
 }

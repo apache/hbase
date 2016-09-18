@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -43,7 +45,7 @@ public class FastLongHistogram {
    * Bins is a class containing a list of buckets(or bins) for estimation histogram of some data.
    */
   private static class Bins {
-    private final Counter[] counts;
+    private final LongAdder[] counts;
     // inclusive
     private final long binsMin;
     // exclusive
@@ -52,18 +54,18 @@ public class FastLongHistogram {
     private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
     private final AtomicLong max = new AtomicLong(0L);
 
-    private final Counter count = new Counter(0);
-    private final Counter total = new Counter(0);
+    private final LongAdder count = new LongAdder();
+    private final LongAdder total = new LongAdder();
 
     // set to true when any of data has been inserted to the Bins. It is set after the counts are
     // updated.
-    private final AtomicBoolean hasData = new AtomicBoolean(false);
+    private volatile boolean hasData = false;
 
     /**
      * The constructor for creating a Bins without any prior data.
      */
     public Bins(int numBins) {
-      counts = createCounters(numBins + 3);
+      counts = createCounters(numBins);
       this.binsMin = 1L;
 
       // These two numbers are total guesses
@@ -75,25 +77,21 @@ public class FastLongHistogram {
     /**
      * The constructor for creating a Bins with last Bins.
      */
-    public Bins(Bins last, int numOfBins, double minQ, double maxQ) {
+    public Bins(Bins last, int numBins, double minQ, double maxQ) {
       long[] values = last.getQuantiles(new double[] { minQ, maxQ });
       long wd = values[1] - values[0] + 1;
       // expand minQ and maxQ in two ends back assuming uniform distribution
       this.binsMin = Math.max(0L, (long) (values[0] - wd * minQ));
       long binsMax = (long) (values[1] + wd * (1 - maxQ)) + 1;
       // make sure each of bins is at least of width 1
-      this.binsMax = Math.max(binsMax, this.binsMin + numOfBins);
+      this.binsMax = Math.max(binsMax, this.binsMin + numBins);
       this.bins10XMax = Math.max((long) (values[1] + (binsMax - 1) * 9), this.binsMax + 1);
 
-      this.counts = createCounters(numOfBins + 3);
+      this.counts = createCounters(numBins);
     }
 
-    private Counter[] createCounters(int num) {
-      Counter[] counters = new Counter[num];
-      for (int i = 0; i < num; i++) {
-        counters[i] = new Counter();
-      }
-      return counters;
+    private LongAdder[] createCounters(int numBins) {
+      return Stream.generate(LongAdder::new).limit(numBins + 3).toArray(LongAdder[]::new);
     }
 
     private int getIndex(long value) {
@@ -132,14 +130,14 @@ public class FastLongHistogram {
       this.counts[pos].add(count);
 
       // hasData needs to be updated as last
-      this.hasData.set(true);
+      this.hasData = true;
     }
 
     /**
      * Computes the quantiles give the ratios.
      */
     public long[] getQuantiles(double[] quantiles) {
-      if (!this.hasData.get()) {
+      if (!hasData) {
         // No data yet.
         return new long[quantiles.length];
       }
@@ -150,7 +148,7 @@ public class FastLongHistogram {
       long[] counts = new long[this.counts.length];
       long total = 0L;
       for (int i = 0; i < this.counts.length; i++) {
-        counts[i] = this.counts[i].get();
+        counts[i] = this.counts[i].sum();
         total += counts[i];
       }
 
@@ -213,14 +211,8 @@ public class FastLongHistogram {
       return res;
     }
 
-
     long getNumAtOrBelow(long val) {
-      final int targetIndex = getIndex(val);
-      long totalToCurrentIndex = 0;
-      for (int i = 0; i <= targetIndex; i++) {
-        totalToCurrentIndex += this.counts[i].get();
-      }
-      return  totalToCurrentIndex;
+      return Arrays.stream(counts).mapToLong(c -> c.sum()).limit(getIndex(val) + 1).sum();
     }
   }
 
@@ -290,13 +282,13 @@ public class FastLongHistogram {
   }
 
   public long getCount() {
-    return this.bins.count.get();
+    return this.bins.count.sum();
   }
 
   public long getMean() {
     Bins bins = this.bins;
-    long count = bins.count.get();
-    long total = bins.total.get();
+    long count = bins.count.sum();
+    long total = bins.total.sum();
     if (count == 0) {
       return 0;
     }

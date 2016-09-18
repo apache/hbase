@@ -36,7 +36,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     if (!isServerStarted()) {
       return 0;
     }
-    return server.callQueueSizeInBytes.get();
+    return server.callQueueSizeInBytes.sum();
   }
 
   @Override

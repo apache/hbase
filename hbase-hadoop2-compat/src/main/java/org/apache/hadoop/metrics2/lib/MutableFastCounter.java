@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.hbase.util.Counter;
+import java.util.concurrent.atomic.LongAdder;
+
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
 public class MutableFastCounter extends MutableCounter {
 
-  private final Counter counter;
+  private final LongAdder counter;
 
   protected MutableFastCounter(MetricsInfo info, long iVal) {
     super(info);
-    counter = new Counter(iVal);
+    counter = new LongAdder();
+    counter.add(iVal);
   }
 
   @Override
@@ -55,6 +57,6 @@ public class MutableFastCounter extends MutableCounter {
   }
 
   public long value() {
-    return counter.get();
+    return counter.sum();
   }
 }

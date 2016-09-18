@@ -97,7 +97,7 @@ public class TestForceCacheImportantBlocks {
   public void setup() {
     // Make sure we make a new one each time.
     CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
-    HFile.DATABLOCK_READ_COUNT.set(0);
+    HFile.DATABLOCK_READ_COUNT.reset();
   }
 
   @Test
@@ -114,12 +114,12 @@ public class TestForceCacheImportantBlocks {
     CacheStats stats = cache.getStats();
     writeTestData(region);
     assertEquals(0, stats.getHitCount());
-    assertEquals(0, HFile.DATABLOCK_READ_COUNT.get());
+    assertEquals(0, HFile.DATABLOCK_READ_COUNT.sum());
     // Do a single get, take count of caches.  If we are NOT caching DATA blocks, the miss
     // count should go up.  Otherwise, all should be cached and the miss count should not rise.
     region.get(new Get(Bytes.toBytes("row" + 0)));
     assertTrue(stats.getHitCount() > 0);
-    assertTrue(HFile.DATABLOCK_READ_COUNT.get() > 0);
+    assertTrue(HFile.DATABLOCK_READ_COUNT.sum() > 0);
     long missCount = stats.getMissCount();
     region.get(new Get(Bytes.toBytes("row" + 0)));
     if (this.cfCacheEnabled) assertEquals(missCount, stats.getMissCount());

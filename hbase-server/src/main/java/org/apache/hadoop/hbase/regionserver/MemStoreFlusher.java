@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.util.StringUtils.humanReadableInt;
 
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
@@ -37,6 +39,7 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -49,7 +52,6 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -59,8 +61,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Thread that flushes cache on request
@@ -94,7 +94,7 @@ class MemStoreFlusher implements FlushRequester {
   protected long globalMemStoreLimitLowMark;
 
   private long blockingWaitTime;
-  private final Counter updatesBlockedMsHighWater = new Counter();
+  private final LongAdder updatesBlockedMsHighWater = new LongAdder();
 
   private final FlushHandler[] flushHandlers;
   private List<FlushRequestListener> flushRequestListeners = new ArrayList<FlushRequestListener>(1);
@@ -129,7 +129,7 @@ class MemStoreFlusher implements FlushRequester {
         + ", maxHeap=" + TraditionalBinaryPrefix.long2String(max, "", 1));
   }
 
-  public Counter getUpdatesBlockedMsHighWater() {
+  public LongAdder getUpdatesBlockedMsHighWater() {
     return this.updatesBlockedMsHighWater;
   }
 

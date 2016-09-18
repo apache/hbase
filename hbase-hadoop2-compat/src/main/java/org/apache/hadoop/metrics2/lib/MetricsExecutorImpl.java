@@ -48,7 +48,7 @@ public class MetricsExecutorImpl implements MetricsExecutor {
 
   private enum ExecutorSingleton {
     INSTANCE;
-    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1,
+    private final transient ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1,
         new ThreadPoolExecutorThreadFactory("HBase-Metrics2-"));
   }
 

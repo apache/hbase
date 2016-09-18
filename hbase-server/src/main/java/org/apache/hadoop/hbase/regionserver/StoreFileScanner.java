@@ -25,19 +25,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
-import org.apache.hadoop.hbase.util.Counter;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -61,7 +61,7 @@ public class StoreFileScanner implements KeyValueScanner {
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
 
-  private static Counter seekCount;
+  private static LongAdder seekCount;
 
   private final boolean canOptimizeForNonNullColumn;
 
@@ -429,12 +429,12 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   // Test methods
-
   static final long getSeekCount() {
-    return seekCount.get();
+    return seekCount.sum();
   }
+
   static final void instrument() {
-    seekCount = new Counter();
+    seekCount = new LongAdder();
   }
 
   @Override

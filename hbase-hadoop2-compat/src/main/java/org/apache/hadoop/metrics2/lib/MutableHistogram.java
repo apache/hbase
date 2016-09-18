@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.metrics2.lib;
 
+import java.util.concurrent.atomic.LongAdder;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.FastLongHistogram;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -39,7 +40,7 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
 
   protected final String name;
   protected final String desc;
-  protected final Counter counter = new Counter(0);
+  protected final LongAdder counter = new LongAdder();
 
   private boolean metricsInfoStringInited = false;
   private String NUM_OPS_METRIC;
@@ -103,7 +104,7 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
       metricsInfoStringInited = true;
     }
 
-    metricsRecordBuilder.addCounter(Interns.info(NUM_OPS_METRIC, desc), counter.get());
+    metricsRecordBuilder.addCounter(Interns.info(NUM_OPS_METRIC, desc), counter.sum());
     metricsRecordBuilder.addGauge(Interns.info(MIN_METRIC, desc), histo.getMin());
     metricsRecordBuilder.addGauge(Interns.info(MAX_METRIC, desc), histo.getMax());
     metricsRecordBuilder.addGauge(Interns.info(MEAN_METRIC, desc), histo.getMean());

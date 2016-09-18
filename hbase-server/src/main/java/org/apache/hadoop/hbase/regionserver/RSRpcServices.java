@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.BindException;
@@ -36,6 +43,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -177,7 +185,6 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -188,13 +195,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
 
 /**
  * Implements the regionserver RPC services.
@@ -223,19 +223,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
   // Request counter. (Includes requests that are not serviced by regions.)
-  final Counter requestCount = new Counter();
+  final LongAdder requestCount = new LongAdder();
 
   // Request counter for rpc get
-  final Counter rpcGetRequestCount = new Counter();
+  final LongAdder rpcGetRequestCount = new LongAdder();
 
   // Request counter for rpc scan
-  final Counter rpcScanRequestCount = new Counter();
+  final LongAdder rpcScanRequestCount = new LongAdder();
 
   // Request counter for rpc multi
-  final Counter rpcMultiRequestCount = new Counter();
+  final LongAdder rpcMultiRequestCount = new LongAdder();
 
   // Request counter for rpc mutate
-  final Counter rpcMutateRequestCount = new Counter();
+  final LongAdder rpcMutateRequestCount = new LongAdder();
 
   // Server to handle client requests.
   final RpcServerInterface rpcServer;

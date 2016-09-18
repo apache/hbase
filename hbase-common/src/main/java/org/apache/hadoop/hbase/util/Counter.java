@@ -26,9 +26,11 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * High scalable counter. Thread safe.
+ * @deprecated use {@link java.util.concurrent.atomic.LongAdder} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class Counter {
   private static final int MAX_CELLS_LENGTH = 1 << 20;
 

@@ -32,6 +32,7 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import com.google.protobuf.TextFormat;
+
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -74,6 +75,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -176,7 +178,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -264,22 +265,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final RegionServicesForStores regionServicesForStores = new RegionServicesForStores(this);
 
   // Debug possible data loss due to WAL off
-  final Counter numMutationsWithoutWAL = new Counter();
-  final Counter dataInMemoryWithoutWAL = new Counter();
+  final LongAdder numMutationsWithoutWAL = new LongAdder();
+  final LongAdder dataInMemoryWithoutWAL = new LongAdder();
 
   // Debug why CAS operations are taking a while.
-  final Counter checkAndMutateChecksPassed = new Counter();
-  final Counter checkAndMutateChecksFailed = new Counter();
+  final LongAdder checkAndMutateChecksPassed = new LongAdder();
+  final LongAdder checkAndMutateChecksFailed = new LongAdder();
 
   // Number of requests
-  final Counter readRequestsCount = new Counter();
-  final Counter filteredReadRequestsCount = new Counter();
-  final Counter writeRequestsCount = new Counter();
+  final LongAdder readRequestsCount = new LongAdder();
+  final LongAdder filteredReadRequestsCount = new LongAdder();
+  final LongAdder writeRequestsCount = new LongAdder();
 
   // Number of requests blocked by memstore size.
-  private final Counter blockedRequestsCount = new Counter();
+  private final LongAdder blockedRequestsCount = new LongAdder();
 
-  // Compaction counters
+  // Compaction LongAdders
   final AtomicLong compactionsFinished = new AtomicLong(0L);
   final AtomicLong compactionsFailed = new AtomicLong(0L);
   final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
@@ -318,7 +319,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /**
-   * The sequence ID that was encountered when this region was opened.
+   * The sequence ID that was enLongAddered when this region was opened.
    */
   private long openSeqNum = HConstants.NO_SEQNUM;
 
@@ -1146,7 +1147,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public long getReadRequestsCount() {
-    return readRequestsCount.get();
+    return readRequestsCount.sum();
   }
 
   @Override
@@ -1156,12 +1157,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public long getFilteredReadRequestsCount() {
-    return filteredReadRequestsCount.get();
+    return filteredReadRequestsCount.sum();
   }
 
   @Override
   public long getWriteRequestsCount() {
-    return writeRequestsCount.get();
+    return writeRequestsCount.sum();
   }
 
   @Override
@@ -1181,27 +1182,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public long getNumMutationsWithoutWAL() {
-    return numMutationsWithoutWAL.get();
+    return numMutationsWithoutWAL.sum();
   }
 
   @Override
   public long getDataInMemoryWithoutWAL() {
-    return dataInMemoryWithoutWAL.get();
+    return dataInMemoryWithoutWAL.sum();
   }
 
   @Override
   public long getBlockedRequestsCount() {
-    return blockedRequestsCount.get();
+    return blockedRequestsCount.sum();
   }
 
   @Override
   public long getCheckAndMutateChecksPassed() {
-    return checkAndMutateChecksPassed.get();
+    return checkAndMutateChecksPassed.sum();
   }
 
   @Override
   public long getCheckAndMutateChecksFailed() {
-    return checkAndMutateChecksFailed.get();
+    return checkAndMutateChecksFailed.sum();
   }
 
   @Override
@@ -2055,9 +2056,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       // TODO: this should be managed within memstore with the snapshot, updated only after flush
       // successful
-      if (numMutationsWithoutWAL.get() > 0) {
-        numMutationsWithoutWAL.set(0);
-        dataInMemoryWithoutWAL.set(0);
+      if (numMutationsWithoutWAL.sum() > 0) {
+        numMutationsWithoutWAL.reset();
+        dataInMemoryWithoutWAL.reset();
       }
       synchronized (writestate) {
         if (!writestate.flushing && writestate.writesEnabled) {
@@ -4223,7 +4224,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } catch (EOFException eof) {
         Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
-        msg = "Encountered EOF. Most likely due to Master failure during " +
+        msg = "EnLongAddered EOF. Most likely due to Master failure during " +
             "wal splitting, so we have this data in another edit.  " +
             "Continuing, but renaming " + edits + " as " + p;
         LOG.warn(msg, eof);
@@ -4233,7 +4234,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
           Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
-          msg = "File corruption encountered!  " +
+          msg = "File corruption enLongAddered!  " +
               "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
           status.setStatus(msg);
@@ -4403,9 +4404,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               + " of " + lastReplayedOpenRegionSeqId);
           return null;
         }
-        if (numMutationsWithoutWAL.get() > 0) {
-          numMutationsWithoutWAL.set(0);
-          dataInMemoryWithoutWAL.set(0);
+        if (numMutationsWithoutWAL.sum() > 0) {
+          numMutationsWithoutWAL.reset();
+          dataInMemoryWithoutWAL.reset();
         }
 
         if (!writestate.flushing) {
@@ -5961,7 +5962,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         boolean stopRow = isStopRow(current);
         // When has filter row is true it means that the all the cells for a particular row must be
         // read before a filtering decision can be made. This means that filters where hasFilterRow
-        // run the risk of encountering out of memory errors in the case that they are applied to a
+        // run the risk of enLongAddering out of memory errors in the case that they are applied to a
         // table that has very large rows.
         boolean hasFilterRow = this.filter != null && this.filter.hasFilterRow();
 
@@ -6616,9 +6617,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Create the daughter HRegion instance
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
         this.getBaseConf(), hri, this.getTableDesc(), rsServices);
-    r.readRequestsCount.set(this.getReadRequestsCount() / 2);
-    r.filteredReadRequestsCount.set(this.getFilteredReadRequestsCount() / 2);
-    r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
+    r.readRequestsCount.add(this.getReadRequestsCount() / 2);
+    r.filteredReadRequestsCount.add(this.getFilteredReadRequestsCount() / 2);
+    r.writeRequestsCount.add(this.getWriteRequestsCount() / 2);
     return r;
   }
 
@@ -6633,11 +6634,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(),
         fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
         this.getTableDesc(), this.rsServices);
-    r.readRequestsCount.set(this.getReadRequestsCount()
+    r.readRequestsCount.add(this.getReadRequestsCount()
         + region_b.getReadRequestsCount());
-    r.filteredReadRequestsCount.set(this.getFilteredReadRequestsCount()
+    r.filteredReadRequestsCount.add(this.getFilteredReadRequestsCount()
       + region_b.getFilteredReadRequestsCount());
-    r.writeRequestsCount.set(this.getWriteRequestsCount()
+    r.writeRequestsCount.add(this.getWriteRequestsCount()
 
         + region_b.getWriteRequestsCount());
     this.fs.commitMergedRegion(mergedRegionInfo);
@@ -7225,7 +7226,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (walEdit != null && !walEdit.isEmpty()) {
           writeEntry = doWALAppend(walEdit, durability, nonceGroup, nonce);
         } else {
-          // If walEdits is empty, it means we skipped the WAL; update counters and start an mvcc
+          // If walEdits is empty, it means we skipped the WAL; update LongAdders and start an mvcc
           // transaction.
           recordMutationWithoutWal(mutation.getFamilyCellMap());
           writeEntry = mvcc.begin();
@@ -7594,7 +7595,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
-  // 6 x Counter - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
+  // 6 x LongAdder - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
   //   checkAndMutateChecksPassed, checkAndMutateChecksFailed, readRequestsCount,
   //   writeRequestsCount
   // 1 x HRegion$WriteState - writestate
@@ -7897,12 +7898,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Update counters for number of puts without wal and the size of possible data loss.
+   * Update LongAdders for number of puts without wal and the size of possible data loss.
    * These information are exposed by the region server metrics.
    */
   private void recordMutationWithoutWal(final Map<byte [], List<Cell>> familyMap) {
     numMutationsWithoutWAL.increment();
-    if (numMutationsWithoutWAL.get() <= 1) {
+    if (numMutationsWithoutWAL.sum() <= 1) {
       LOG.info("writing data to region " + this +
                " with WAL disabled. Data may be lost in the event of a crash.");
     }

@@ -18,6 +18,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -185,17 +196,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
@@ -2373,11 +2373,11 @@ public class HRegionServer extends HasThread implements
     if (masterServerName == null) return null;
     RegionServerStartupResponse result = null;
     try {
-      rpcServices.requestCount.set(0);
-      rpcServices.rpcGetRequestCount.set(0);
-      rpcServices.rpcScanRequestCount.set(0);
-      rpcServices.rpcMultiRequestCount.set(0);
-      rpcServices.rpcMutateRequestCount.set(0);
+      rpcServices.requestCount.reset();
+      rpcServices.rpcGetRequestCount.reset();
+      rpcServices.rpcScanRequestCount.reset();
+      rpcServices.rpcMultiRequestCount.reset();
+      rpcServices.rpcMutateRequestCount.reset();
       LOG.info("reportForDuty to master=" + masterServerName + " with port="
         + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();

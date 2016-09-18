@@ -18,9 +18,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
-import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -28,9 +30,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class BucketCacheStats extends CacheStats {
-  private final Counter ioHitCount = new Counter(0);
-  private final Counter ioHitTime = new Counter(0);
-  private final static int nanoTime = 1000000;
+  private final LongAdder ioHitCount = new LongAdder();
+  private final LongAdder ioHitTime = new LongAdder();
+  private static final long NANO_TIME = TimeUnit.MILLISECONDS.toNanos(1);
   private long lastLogTime = EnvironmentEdgeManager.currentTime();
 
   BucketCacheStats() {
@@ -52,17 +54,17 @@ public class BucketCacheStats extends CacheStats {
     long now = EnvironmentEdgeManager.currentTime();
     long took = (now - lastLogTime) / 1000;
     lastLogTime = now;
-    return took == 0? 0: ioHitCount.get() / took;
+    return took == 0 ? 0 : ioHitCount.sum() / took;
   }
 
   public double getIOTimePerHit() {
-    long time = ioHitTime.get() / nanoTime;
-    long count = ioHitCount.get();
+    long time = ioHitTime.sum() / NANO_TIME;
+    long count = ioHitCount.sum();
     return ((float) time / (float) count);
   }
 
   public void reset() {
-    ioHitCount.set(0);
-    ioHitTime.set(0);
+    ioHitCount.reset();
+    ioHitTime.reset();
   }
 }

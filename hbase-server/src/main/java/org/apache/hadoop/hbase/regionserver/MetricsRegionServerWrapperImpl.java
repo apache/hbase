@@ -26,12 +26,12 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -215,7 +215,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getTotalRequestCount() {
-    return regionServer.rpcServices.requestCount.get();
+    return regionServer.rpcServices.requestCount.sum();
   }
 
   @Override
@@ -448,22 +448,22 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getRpcGetRequestsCount() {
-    return regionServer.rpcServices.rpcGetRequestCount.get();
+    return regionServer.rpcServices.rpcGetRequestCount.sum();
   }
 
   @Override
   public long getRpcScanRequestsCount() {
-    return regionServer.rpcServices.rpcScanRequestCount.get();
+    return regionServer.rpcServices.rpcScanRequestCount.sum();
   }
 
   @Override
   public long getRpcMultiRequestsCount() {
-    return regionServer.rpcServices.rpcMultiRequestCount.get();
+    return regionServer.rpcServices.rpcMultiRequestCount.sum();
   }
 
   @Override
   public long getRpcMutateRequestsCount() {
-    return regionServer.rpcServices.rpcMutateRequestCount.get();
+    return regionServer.rpcServices.rpcMutateRequestCount.sum();
   }
 
   @Override
@@ -516,7 +516,7 @@ class MetricsRegionServerWrapperImpl
     if (this.regionServer.cacheFlusher == null) {
       return 0;
     }
-    return this.regionServer.cacheFlusher.getUpdatesBlockedMsHighWater().get();
+    return this.regionServer.cacheFlusher.getUpdatesBlockedMsHighWater().sum();
   }
 
   @Override
