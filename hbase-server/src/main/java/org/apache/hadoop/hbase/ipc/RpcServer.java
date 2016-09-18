@@ -514,6 +514,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     public synchronized void sendResponseIfReady() throws IOException {
+      // set param null to reduce memory pressure
+      this.param = null;
       this.responder.doRespond(this);
     }
 
