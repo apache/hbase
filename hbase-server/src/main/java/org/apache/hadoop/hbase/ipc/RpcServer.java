@@ -580,6 +580,8 @@ public class RpcServer implements RpcServerInterface {
      * called by the RPC code in the context of the Handler thread.
      */
     public synchronized void sendResponseIfReady() throws IOException {
+      // set param null to reduce memory pressure
+      this.param = null;
       if (!this.delayResponse) {
         this.responder.doRespond(this);
       }
