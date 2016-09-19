@@ -204,13 +204,18 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    cleanupCalls(ctx, new IOException("Connection closed"));
+    if (!id2Call.isEmpty()) {
+      cleanupCalls(ctx, new IOException("Connection closed"));
+    }
     conn.shutdown();
+    ctx.fireChannelInactive();
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    cleanupCalls(ctx, IPCUtil.toIOE(cause));
+    if (!id2Call.isEmpty()) {
+      cleanupCalls(ctx, IPCUtil.toIOE(cause));
+    }
     conn.shutdown();
   }
 

@@ -31,13 +31,13 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
- * Implement SASL logic for async rpc client.
+ * Implement SASL logic for netty rpc client.
  */
 @InterfaceAudience.Private
-public class AsyncHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
-  private static final Log LOG = LogFactory.getLog(AsyncHBaseSaslRpcClient.class);
+public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
+  private static final Log LOG = LogFactory.getLog(NettyHBaseSaslRpcClient.class);
 
-  public AsyncHBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
+  public NettyHBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
       String serverPrincipal, boolean fallbackAllowed, String rpcProtection) throws IOException {
     super(method, token, serverPrincipal, fallbackAllowed, rpcProtection);
   }

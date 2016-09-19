@@ -26,6 +26,8 @@ import io.netty.channel.CoalescingBufferQueue;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
 
+import java.io.IOException;
+
 import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -39,6 +41,10 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
   private final SaslClient saslClient;
 
   private CoalescingBufferQueue queue;
+
+  public SaslWrapHandler(SaslClient saslClient) {
+    this.saslClient = saslClient;
+  }
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -55,29 +61,26 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
     }
   }
 
-  public SaslWrapHandler(SaslClient saslClient) {
-    this.saslClient = saslClient;
-  }
-
   @Override
   public void flush(ChannelHandlerContext ctx) throws Exception {
+    if (queue.isEmpty()) {
+      return;
+    }
     ByteBuf buf = null;
     try {
-      if (!queue.isEmpty()) {
-        ChannelPromise promise = ctx.newPromise();
-        int readableBytes = queue.readableBytes();
-        buf = queue.remove(readableBytes, promise);
-        byte[] bytes = new byte[readableBytes];
-        buf.readBytes(bytes);
-        byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
-        ChannelPromise lenPromise = ctx.newPromise();
-        ctx.write(ctx.alloc().buffer(4).writeInt(wrapperBytes.length), lenPromise);
-        ChannelPromise contentPromise = ctx.newPromise();
-        ctx.write(Unpooled.wrappedBuffer(wrapperBytes), contentPromise);
-        PromiseCombiner combiner = new PromiseCombiner();
-        combiner.addAll(lenPromise, contentPromise);
-        combiner.finish(promise);
-      }
+      ChannelPromise promise = ctx.newPromise();
+      int readableBytes = queue.readableBytes();
+      buf = queue.remove(readableBytes, promise);
+      byte[] bytes = new byte[readableBytes];
+      buf.readBytes(bytes);
+      byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
+      ChannelPromise lenPromise = ctx.newPromise();
+      ctx.write(ctx.alloc().buffer(4).writeInt(wrapperBytes.length), lenPromise);
+      ChannelPromise contentPromise = ctx.newPromise();
+      ctx.write(Unpooled.wrappedBuffer(wrapperBytes), contentPromise);
+      PromiseCombiner combiner = new PromiseCombiner();
+      combiner.addAll(lenPromise, contentPromise);
+      combiner.finish(promise);
       ctx.flush();
     } finally {
       if (buf != null) {
@@ -88,6 +91,9 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
 
   @Override
   public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-    queue.releaseAndFailAll(new Throwable("Closed"));
+    if (!queue.isEmpty()) {
+      queue.releaseAndFailAll(new IOException("Connection closed"));
+    }
+    ctx.close(promise);
   }
 }

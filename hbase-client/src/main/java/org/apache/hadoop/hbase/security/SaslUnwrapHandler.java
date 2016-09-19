@@ -42,6 +42,7 @@ public class SaslUnwrapHandler extends SimpleChannelInboundHandler<ByteBuf> {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     SaslUtil.safeDispose(saslClient);
+    ctx.fireChannelInactive();
   }
 
   @Override

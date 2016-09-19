@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.security.AsyncHBaseSaslRpcClientHandler;
+import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.Threads;
@@ -190,7 +190,7 @@ class NettyRpcConnection extends RpcConnection {
     Promise<Boolean> saslPromise = ch.eventLoop().newPromise();
     ChannelHandler saslHandler;
     try {
-      saslHandler = new AsyncHBaseSaslRpcClientHandler(saslPromise, ticket, authMethod, token,
+      saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, authMethod, token,
           serverPrincipal, rpcClient.fallbackAllowed, this.rpcClient.conf.get(
             "hbase.rpc.protection", QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
     } catch (IOException e) {
@@ -205,7 +205,7 @@ class NettyRpcConnection extends RpcConnection {
         if (future.isSuccess()) {
           ChannelPipeline p = ch.pipeline();
           p.remove(SaslChallengeDecoder.class);
-          p.remove(AsyncHBaseSaslRpcClientHandler.class);
+          p.remove(NettyHBaseSaslRpcClientHandler.class);
           established(ch);
         } else {
           final Throwable error = future.cause();

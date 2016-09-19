@@ -62,13 +62,16 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
   private static final BufferCallEvent SUCCESS_EVENT = new BufferCallEvent(BufferCallAction.FLUSH,
       null);
 
-  private final Map<Integer, Call> id2Call = new HashMap<Integer, Call>();
+  private final Map<Integer, Call> id2Call = new HashMap<>();
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     if (msg instanceof Call) {
       Call call = (Call) msg;
       id2Call.put(call.id, call);
+      // The call is already in track so here we set the write operation as success.
+      // We will fail the call directly if we can not write it out.
+      promise.trySuccess();
     } else {
       ctx.write(msg, promise);
     }
@@ -99,5 +102,4 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
       ctx.fireUserEventTriggered(evt);
     }
   }
-
 }

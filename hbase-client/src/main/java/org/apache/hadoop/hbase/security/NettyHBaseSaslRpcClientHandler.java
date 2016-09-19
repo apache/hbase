@@ -34,29 +34,29 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
- * Implement SASL logic for async rpc client.
+ * Implement SASL logic for netty rpc client.
  */
 @InterfaceAudience.Private
-public class AsyncHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-  private static final Log LOG = LogFactory.getLog(AsyncHBaseSaslRpcClientHandler.class);
+  private static final Log LOG = LogFactory.getLog(NettyHBaseSaslRpcClientHandler.class);
 
   private final Promise<Boolean> saslPromise;
 
   private final UserGroupInformation ugi;
 
-  private final AsyncHBaseSaslRpcClient saslRpcClient;
+  private final NettyHBaseSaslRpcClient saslRpcClient;
 
   /**
    * @param saslPromise {@code true} if success, {@code false} if server tells us to fallback to
    *          simple.
    */
-  public AsyncHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
+  public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
       AuthMethod method, Token<? extends TokenIdentifier> token, String serverPrincipal,
       boolean fallbackAllowed, String rpcProtection) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
-    this.saslRpcClient = new AsyncHBaseSaslRpcClient(method, token, serverPrincipal,
+    this.saslRpcClient = new NettyHBaseSaslRpcClient(method, token, serverPrincipal,
         fallbackAllowed, rpcProtection);
   }
 
@@ -103,9 +103,9 @@ public class AsyncHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     if (len == SaslUtil.SWITCH_TO_SIMPLE_AUTH) {
       saslRpcClient.dispose();
       if (saslRpcClient.fallbackAllowed) {
-        saslPromise.setSuccess(false);
+        saslPromise.trySuccess(false);
       } else {
-        saslPromise.setFailure(new FallbackDisallowedException());
+        saslPromise.tryFailure(new FallbackDisallowedException());
       }
       return;
     }
@@ -128,8 +128,15 @@ public class AsyncHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
   }
 
   @Override
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    saslRpcClient.dispose();
+    saslPromise.tryFailure(new IOException("Connection closed"));
+    ctx.fireChannelInactive();
+  }
+
+  @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     saslRpcClient.dispose();
-    saslPromise.setFailure(cause);
+    saslPromise.tryFailure(cause);
   }
 }
