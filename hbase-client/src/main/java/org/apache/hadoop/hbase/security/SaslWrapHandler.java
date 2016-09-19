@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
 
 import javax.security.sasl.SaslClient;
@@ -60,21 +61,33 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
 
   @Override
   public void flush(ChannelHandlerContext ctx) throws Exception {
-    if (!queue.isEmpty()) {
-      ChannelPromise promise = ctx.newPromise();
-      int readableBytes = queue.readableBytes();
-      ByteBuf buf = queue.remove(readableBytes, promise);
-      byte[] bytes = new byte[readableBytes];
-      buf.readBytes(bytes);
-      byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
-      ChannelPromise lenPromise = ctx.newPromise();
-      ctx.write(ctx.alloc().buffer(4).writeInt(wrapperBytes.length), lenPromise);
-      ChannelPromise contentPromise = ctx.newPromise();
-      ctx.write(Unpooled.wrappedBuffer(wrapperBytes), contentPromise);
-      PromiseCombiner combiner = new PromiseCombiner();
-      combiner.addAll(lenPromise, contentPromise);
-      combiner.finish(promise);
+    ByteBuf buf = null;
+    try {
+      if (!queue.isEmpty()) {
+        ChannelPromise promise = ctx.newPromise();
+        int readableBytes = queue.readableBytes();
+        buf = queue.remove(readableBytes, promise);
+        byte[] bytes = new byte[readableBytes];
+        buf.readBytes(bytes);
+        byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
+        ChannelPromise lenPromise = ctx.newPromise();
+        ctx.write(ctx.alloc().buffer(4).writeInt(wrapperBytes.length), lenPromise);
+        ChannelPromise contentPromise = ctx.newPromise();
+        ctx.write(Unpooled.wrappedBuffer(wrapperBytes), contentPromise);
+        PromiseCombiner combiner = new PromiseCombiner();
+        combiner.addAll(lenPromise, contentPromise);
+        combiner.finish(promise);
+      }
+      ctx.flush();
+    } finally {
+      if (buf != null) {
+        ReferenceCountUtil.safeRelease(buf);
+      }
     }
-    ctx.flush();
+  }
+
+  @Override
+  public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    queue.releaseAndFailAll(new Throwable("Closed"));
   }
 }

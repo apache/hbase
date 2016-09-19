@@ -215,6 +215,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
           LOG.info("Cleanup idle connection to " + conn.remoteId().address);
           connections.removeValue(conn.remoteId(), conn);
+          conn.cleanupConnection();
         }
       }
     }
@@ -472,6 +473,9 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       conn.shutdown();
     }
     closeInternal();
+    for (T conn : connToClose) {
+      conn.cleanupConnection();
+    }
   }
 
   @Override

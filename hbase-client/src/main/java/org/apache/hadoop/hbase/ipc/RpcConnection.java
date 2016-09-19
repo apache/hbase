@@ -252,4 +252,9 @@ abstract class RpcConnection {
   public abstract void shutdown();
 
   public abstract void sendRequest(Call call, HBaseRpcController hrc) throws IOException;
+
+  /**
+   * Does the clean up work after the connection is removed from the connection pool
+   */
+  public abstract void cleanupConnection();
 }

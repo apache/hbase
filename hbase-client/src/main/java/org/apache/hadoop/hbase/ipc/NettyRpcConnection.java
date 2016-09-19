@@ -36,6 +36,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -117,6 +118,16 @@ class NettyRpcConnection extends RpcConnection {
   @Override
   public synchronized void shutdown() {
     shutdown0();
+  }
+
+  @Override
+  public synchronized void cleanupConnection() {
+    if (connectionHeaderPreamble != null) {
+      ReferenceCountUtil.safeRelease(connectionHeaderPreamble);
+    }
+    if (connectionHeaderWithLength != null) {
+      ReferenceCountUtil.safeRelease(connectionHeaderWithLength);
+    }
   }
 
   private void established(Channel ch) {

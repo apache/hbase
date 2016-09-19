@@ -685,6 +685,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
 
   @Override
+  public void cleanupConnection() {
+    // do nothing
+  }
+
+  @Override
   public synchronized void sendRequest(final Call call, HBaseRpcController pcrc)
       throws IOException {
     pcrc.notifyOnCancel(new RpcCallback<Object>() {
