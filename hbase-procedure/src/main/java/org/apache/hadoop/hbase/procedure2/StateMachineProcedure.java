@@ -105,8 +105,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   protected void setNextState(final TState state) {
     if (aborted.get() && isRollbackSupported(getCurrentState())) {
       setAbortFailure(getClass().getSimpleName(), "abort requested");
+    } else {
+      setNextState(getStateId(state));
     }
-    setNextState(getStateId(state));
   }
 
   /**
