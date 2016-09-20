@@ -630,7 +630,6 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public int onlineConsistencyRepair() throws IOException, KeeperException,
     InterruptedException {
-    clearState();
 
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
@@ -748,8 +747,12 @@ public class HBaseFsck extends Configured implements Closeable {
       throws IOException, KeeperException, InterruptedException, ServiceException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
-    offlineHdfsIntegrityRepair();
 
+    // Clean start
+    clearState();
+    // Do offline check and repair first
+    offlineHdfsIntegrityRepair();
+    offlineReferenceFileRepair();
     // If Master runs maintenance tasks (such as balancer, catalog janitor, etc) during online
     // hbck, it is likely that hbck would be misled and report transient errors.  Therefore, it
     // is better to set Master into maintenance mode during online hbck.
@@ -764,8 +767,6 @@ public class HBaseFsck extends Configured implements Closeable {
     if (checkRegionBoundaries) {
       checkRegionBoundaries();
     }
-
-    offlineReferenceFileRepair();
 
     checkAndFixTableLocks();
 
@@ -1068,6 +1069,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * be fixed before a cluster can start properly.
    */
   private void offlineReferenceFileRepair() throws IOException, InterruptedException {
+    clearState();
     Configuration conf = getConf();
     Path hbaseRoot = FSUtils.getRootDir(conf);
     FileSystem fs = hbaseRoot.getFileSystem(conf);
