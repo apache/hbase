@@ -382,6 +382,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       pool = createExecutorService();
       secureClient = new SecureBulkLoadClient(table.getConfiguration(), table);
+      for (Map.Entry<byte[], List<Path>> entry : map.entrySet()) {
+        for (Path p : entry.getValue()) {
+          fs = p.getFileSystem(table.getConfiguration());
+          break;
+        }
+      }
       performBulkLoad(admin, table, regionLocator, queue, pool, secureClient);
     } finally {
       cleanup(admin, queue, pool, secureClient);
