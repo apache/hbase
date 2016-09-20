@@ -788,7 +788,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(balancerChore);
     this.normalizerChore = new RegionNormalizerChore(this);
     getChoreService().scheduleChore(normalizerChore);
-    this.catalogJanitorChore = new CatalogJanitor(this, this);
+    this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
 
     // Do Metrics periodically

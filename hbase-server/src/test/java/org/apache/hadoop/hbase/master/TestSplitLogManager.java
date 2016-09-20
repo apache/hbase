@@ -46,19 +46,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -66,7 +62,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.R
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -86,17 +81,15 @@ import org.mockito.Mockito;
 @Category({MasterTests.class, MediumTests.class})
 public class TestSplitLogManager {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
-  private final ServerName DUMMY_MASTER = ServerName.valueOf("dummy-master,1,1");
+
   private final ServerManager sm = Mockito.mock(ServerManager.class);
-  private final MasterServices master = Mockito.mock(MasterServices.class);
 
   static {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
 
   private ZooKeeperWatcher zkw;
-  private DummyServer ds;
-  private static boolean stopped = false;
+  private DummyMasterServices master;
   private SplitLogManager slm;
   private Configuration conf;
   private int to;
@@ -104,39 +97,15 @@ public class TestSplitLogManager {
 
   private static HBaseTestingUtility TEST_UTIL;
 
-  class DummyServer implements Server {
+  class DummyMasterServices extends MockNoopMasterServices {
     private ZooKeeperWatcher zkw;
-    private Configuration conf;
     private CoordinatedStateManager cm;
 
-    public DummyServer(ZooKeeperWatcher zkw, Configuration conf) {
+    public DummyMasterServices(ZooKeeperWatcher zkw, Configuration conf) {
+      super(conf);
       this.zkw = zkw;
-      this.conf = conf;
       cm = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
       cm.initialize(this);
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
     }
 
     @Override
@@ -145,48 +114,15 @@ public class TestSplitLogManager {
     }
 
     @Override
-    public ServerName getServerName() {
-      return null;
-    }
-
-    @Override
     public CoordinatedStateManager getCoordinatedStateManager() {
       return cm;
     }
 
     @Override
-    public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
-      return null;
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
-      return null;
+    public ServerManager getServerManager() {
+      return sm;
     }
   }
-
-  static Stoppable stopper = new Stoppable() {
-    @Override
-    public void stop(String why) {
-      stopped = true;
-    }
-
-    @Override
-    public boolean isStopped() {
-      return stopped;
-    }
-  };
 
   @Before
   public void setup() throws Exception {
@@ -196,7 +132,7 @@ public class TestSplitLogManager {
     // Use a different ZK wrapper instance for each tests.
     zkw =
         new ZooKeeperWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
-    ds = new DummyServer(zkw, conf);
+    master = new DummyMasterServices(zkw, conf);
 
     ZKUtil.deleteChildrenRecursively(zkw, zkw.baseZNode);
     ZKUtil.createAndFailSilent(zkw, zkw.baseZNode);
@@ -206,13 +142,11 @@ public class TestSplitLogManager {
     assertTrue(ZKUtil.checkExists(zkw, zkw.splitLogZNode) != -1);
     LOG.debug(zkw.splitLogZNode + " created");
 
-    stopped = false;
     resetCounters();
 
     // By default, we let the test manage the error as before, so the server
     // does not appear as dead from the master point of view, only from the split log pov.
     Mockito.when(sm.isServerOnline(Mockito.any(ServerName.class))).thenReturn(true);
-    Mockito.when(master.getServerManager()).thenReturn(sm);
 
     to = 12000;
     conf.setInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT, to);
@@ -228,7 +162,7 @@ public class TestSplitLogManager {
 
   @After
   public void teardown() throws IOException, KeeperException {
-    stopper.stop("");
+    master.stop("");
     if (slm != null) slm.stop();
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -288,7 +222,7 @@ public class TestSplitLogManager {
   public void testTaskCreation() throws Exception {
 
     LOG.info("TestTaskCreation - test the creation of a task in zk");
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -296,7 +230,7 @@ public class TestSplitLogManager {
     byte[] data = ZKUtil.getData(zkw, tasknode);
     SplitLogTask slt = SplitLogTask.parseFrom(data);
     LOG.info("Task node created " + slt.toString());
-    assertTrue(slt.isUnassigned(DUMMY_MASTER));
+    assertTrue(slt.isUnassigned(master.getServerName()));
   }
 
   @Test (timeout=180000)
@@ -304,11 +238,11 @@ public class TestSplitLogManager {
     LOG.info("TestOrphanTaskAcquisition");
 
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
-    SplitLogTask slt = new SplitLogTask.Owned(DUMMY_MASTER, this.mode);
+    SplitLogTask slt = new SplitLogTask.Owned(master.getServerName(), this.mode);
     zkw.getRecoverableZooKeeper().create(tasknode, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
@@ -329,12 +263,12 @@ public class TestSplitLogManager {
         " startup");
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
     //create an unassigned orphan task
-    SplitLogTask slt = new SplitLogTask.Unassigned(DUMMY_MASTER, this.mode);
+    SplitLogTask slt = new SplitLogTask.Unassigned(master.getServerName(), this.mode);
     zkw.getRecoverableZooKeeper().create(tasknode, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
     int version = ZKUtil.checkExists(zkw, tasknode);
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
@@ -356,7 +290,7 @@ public class TestSplitLogManager {
   public void testMultipleResubmits() throws Exception {
     LOG.info("TestMultipleResbmits - no indefinite resubmissions");
     conf.setInt("hbase.splitlog.max.resubmit", 2);
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -388,7 +322,7 @@ public class TestSplitLogManager {
   public void testRescanCleanup() throws Exception {
     LOG.info("TestRescanCleanup - ensure RESCAN nodes are cleaned up");
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -408,7 +342,7 @@ public class TestSplitLogManager {
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);
-    assertTrue(slt.isUnassigned(DUMMY_MASTER));
+    assertTrue(slt.isUnassigned(master.getServerName()));
 
     waitForCounter(tot_mgr_rescan_deleted, 0, 1, to/2);
   }
@@ -417,7 +351,7 @@ public class TestSplitLogManager {
   public void testTaskDone() throws Exception {
     LOG.info("TestTaskDone - cleanup task node once in DONE state");
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
     final ServerName worker1 = ServerName.valueOf("worker1,1,1");
@@ -437,7 +371,7 @@ public class TestSplitLogManager {
     LOG.info("TestTaskErr - cleanup task node once in ERR state");
 
     conf.setInt("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -459,7 +393,7 @@ public class TestSplitLogManager {
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
     assertEquals(tot_mgr_resubmit.get(), 0);
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     assertEquals(tot_mgr_resubmit.get(), 0);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -478,7 +412,7 @@ public class TestSplitLogManager {
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);
-    assertTrue(slt.isUnassigned(DUMMY_MASTER));
+    assertTrue(slt.isUnassigned(master.getServerName()));
   }
 
   @Test (timeout=180000)
@@ -493,7 +427,7 @@ public class TestSplitLogManager {
     zkw.getRecoverableZooKeeper().create(tasknode1, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
 
     // submit another task which will stay in unassigned mode
@@ -522,7 +456,7 @@ public class TestSplitLogManager {
     LOG.info("testDeadWorker");
 
     conf.setLong("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -541,13 +475,13 @@ public class TestSplitLogManager {
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);
-    assertTrue(slt.isUnassigned(DUMMY_MASTER));
+    assertTrue(slt.isUnassigned(master.getServerName()));
     return;
   }
 
   @Test (timeout=180000)
   public void testWorkerCrash() throws Exception {
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -572,7 +506,7 @@ public class TestSplitLogManager {
   @Test (timeout=180000)
   public void testEmptyLogDir() throws Exception {
     LOG.info("testEmptyLogDir");
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
@@ -584,7 +518,7 @@ public class TestSplitLogManager {
   @Test (timeout = 60000)
   public void testLogFilesAreArchived() throws Exception {
     LOG.info("testLogFilesAreArchived");
-    final SplitLogManager slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testLogFilesAreArchived");
     conf.set(HConstants.HBASE_DIR, dir.toString());
@@ -637,7 +571,7 @@ public class TestSplitLogManager {
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     ZKUtil.createSetData(zkw, nodePath, ZKUtil.positionToByteArray(0L));
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     slm.removeStaleRecoveringRegions(null);
 
     List<String> recoveringRegions =
@@ -659,7 +593,7 @@ public class TestSplitLogManager {
         ServerName.valueOf("mgr,1,1"), RecoveryMode.LOG_SPLITTING).toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(master, conf);
     LOG.info("Mode1=" + slm.getRecoveryMode());
     assertTrue(slm.isLogSplitting());
     zkw.getRecoverableZooKeeper().delete(ZKSplitLog.getEncodedNodeName(zkw, "testRecovery"), -1);

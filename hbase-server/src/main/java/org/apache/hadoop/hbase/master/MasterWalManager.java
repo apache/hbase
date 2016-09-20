@@ -100,8 +100,7 @@ public class MasterWalManager {
     this.conf = conf;
     this.rootDir = rootDir;
     this.services = services;
-    this.splitLogManager = new SplitLogManager(services, conf,
-        services, services, services.getServerName());
+    this.splitLogManager = new SplitLogManager(services, conf);
     this.distributedLogReplay = this.splitLogManager.isLogReplaying();
 
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);

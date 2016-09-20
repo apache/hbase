@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -58,18 +57,17 @@ import org.apache.hadoop.hbase.util.Triple;
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
   private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
-  private final Server server;
+
+  private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
+  private final AtomicBoolean enabled = new AtomicBoolean(true);
   private final MasterServices services;
-  private AtomicBoolean enabled = new AtomicBoolean(true);
-  private AtomicBoolean alreadyRunning = new AtomicBoolean(false);
   private final Connection connection;
 
-  CatalogJanitor(final Server server, final MasterServices services) {
-    super("CatalogJanitor-" + server.getServerName().toShortString(), server, server
-        .getConfiguration().getInt("hbase.catalogjanitor.interval", 300000));
-    this.server = server;
+  CatalogJanitor(final MasterServices services) {
+    super("CatalogJanitor-" + services.getServerName().toShortString(), services,
+      services.getConfiguration().getInt("hbase.catalogjanitor.interval", 300000));
     this.services = services;
-    this.connection = server.getConnection();
+    this.connection = services.getConnection();
   }
 
   @Override
@@ -214,8 +212,7 @@ public class CatalogJanitor extends ScheduledChore {
           + " from fs because merged region no longer holds references");
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
-      MetaTableAccessor.deleteMergeQualifiers(server.getConnection(),
-        mergedRegion);
+      MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
       return true;
     }
     return false;
@@ -414,7 +411,7 @@ public class CatalogJanitor extends ScheduledChore {
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
-      
+
       for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
         if ((references = regionFs.hasReferences(family.getNameAsString()))) {
           break;

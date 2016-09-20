@@ -48,10 +48,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Stoppable;
@@ -100,9 +98,8 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 public class SplitLogManager {
   private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
 
-  private Server server;
+  private final MasterServices server;
 
-  private final Stoppable stopper;
   private final Configuration conf;
   private final ChoreService choreService;
 
@@ -129,26 +126,19 @@ public class SplitLogManager {
   /**
    * Its OK to construct this object even when region-servers are not online. It does lookup the
    * orphan tasks in coordination engine but it doesn't block waiting for them to be done.
-   * @param server the server instance
-   * @param conf the HBase configuration
-   * @param stopper the stoppable in case anything is wrong
    * @param master the master services
-   * @param serverName the master server name
+   * @param conf the HBase configuration
    * @throws IOException
    */
-  public SplitLogManager(Server server, Configuration conf, Stoppable stopper,
-      MasterServices master, ServerName serverName) throws IOException {
-    this.server = server;
+  public SplitLogManager(MasterServices master, Configuration conf)
+      throws IOException {
+    this.server = master;
     this.conf = conf;
-    this.stopper = stopper;
-    this.choreService = new ChoreService(serverName.toString() + "_splitLogManager_");
+    this.choreService = new ChoreService(master.getServerName() + "_splitLogManager_");
     if (server.getCoordinatedStateManager() != null) {
-      SplitLogManagerCoordination coordination =
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitLogManagerCoordination();
+      SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
-      SplitLogManagerDetails details =
-          new SplitLogManagerDetails(tasks, master, failedDeletions, serverName);
+      SplitLogManagerDetails details = new SplitLogManagerDetails(tasks, master, failedDeletions);
       coordination.setDetails(details);
       coordination.init();
       // Determine recovery mode
@@ -157,8 +147,13 @@ public class SplitLogManager {
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
     this.timeoutMonitor =
         new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
-            stopper);
+            master);
     choreService.scheduleChore(timeoutMonitor);
+  }
+
+  private SplitLogManagerCoordination getSplitLogManagerCoordination() {
+    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+        .getSplitLogManagerCoordination();
   }
 
   private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
@@ -325,14 +320,11 @@ public class SplitLogManager {
    */
   boolean enqueueSplitTask(String taskname, TaskBatch batch) {
     lastTaskCreateTime = EnvironmentEdgeManager.currentTime();
-    String task =
-        ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-            .getSplitLogManagerCoordination().prepareTask(taskname);
+    String task = getSplitLogManagerCoordination().prepareTask(taskname);
     Task oldtask = createTaskIfAbsent(task, batch);
     if (oldtask == null) {
       // publish the task in the coordination engine
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitLogManagerCoordination().submitTask(task);
+      getSplitLogManagerCoordination().submitTask(task);
       return true;
     }
     return false;
@@ -349,9 +341,7 @@ public class SplitLogManager {
           if (remaining != actual) {
             LOG.warn("Expected " + remaining + " active tasks, but actually there are " + actual);
           }
-          int remainingTasks =
-              ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-                  .getSplitLogManagerCoordination().remainingTasksInCoordination();
+          int remainingTasks = getSplitLogManagerCoordination().remainingTasksInCoordination();
           if (remainingTasks >= 0 && actual > remainingTasks) {
             LOG.warn("Expected at least" + actual + " tasks remaining, but actually there are "
                 + remainingTasks);
@@ -365,7 +355,7 @@ public class SplitLogManager {
             }
           }
           batch.wait(100);
-          if (stopper.isStopped()) {
+          if (server.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
             return;
           }
@@ -414,9 +404,8 @@ public class SplitLogManager {
 
     this.recoveringRegionLock.lock();
     try {
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitLogManagerCoordination().removeRecoveringRegions(recoveredServerNameSet,
-            isMetaRecovery);
+      getSplitLogManagerCoordination().removeRecoveringRegions(
+        recoveredServerNameSet, isMetaRecovery);
     } catch (IOException e) {
       LOG.warn("removeRecoveringRegions got exception. Will retry", e);
       if (serverNames != null && !serverNames.isEmpty()) {
@@ -445,8 +434,7 @@ public class SplitLogManager {
 
     this.recoveringRegionLock.lock();
     try {
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitLogManagerCoordination().removeStaleRecoveringRegions(knownFailedServers);
+      getSplitLogManagerCoordination().removeStaleRecoveringRegions(knownFailedServers);
     } finally {
       this.recoveringRegionLock.unlock();
     }
@@ -566,9 +554,7 @@ public class SplitLogManager {
    * @throws IOException throws if it's impossible to set recovery mode
    */
   public void setRecoveryMode(boolean isForInitialization) throws IOException {
-    ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination().setRecoveryMode(isForInitialization);
-
+    getSplitLogManagerCoordination().setRecoveryMode(isForInitialization);
   }
 
   public void markRegionsRecovering(ServerName server, Set<HRegionInfo> userRegions)
@@ -579,8 +565,7 @@ public class SplitLogManager {
     try {
       this.recoveringRegionLock.lock();
       // mark that we're creating recovering regions
-      ((BaseCoordinatedStateManager) this.server.getCoordinatedStateManager())
-          .getSplitLogManagerCoordination().markRegionsRecovering(server, userRegions);
+      getSplitLogManagerCoordination().markRegionsRecovering(server, userRegions);
     } finally {
       this.recoveringRegionLock.unlock();
     }
@@ -591,9 +576,8 @@ public class SplitLogManager {
    * @return whether log is replaying
    */
   public boolean isLogReplaying() {
-    CoordinatedStateManager m = server.getCoordinatedStateManager();
-    if (m == null) return false;
-    return ((BaseCoordinatedStateManager)m).getSplitLogManagerCoordination().isReplaying();
+    if (server.getCoordinatedStateManager() == null) return false;
+    return getSplitLogManagerCoordination().isReplaying();
   }
 
   /**
@@ -601,16 +585,14 @@ public class SplitLogManager {
    */
   public boolean isLogSplitting() {
     if (server.getCoordinatedStateManager() == null) return false;
-    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination().isSplitting();
+    return getSplitLogManagerCoordination().isSplitting();
   }
 
   /**
    * @return the current log recovery mode
    */
   public RecoveryMode getRecoveryMode() {
-    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination().getRecoveryMode();
+    return getSplitLogManagerCoordination().getRecoveryMode();
   }
 
   /**
@@ -695,6 +677,8 @@ public class SplitLogManager {
 
     @Override
     protected void chore() {
+      if (server.getCoordinatedStateManager() == null) return;
+
       int resubmitted = 0;
       int unassigned = 0;
       int tot = 0;
@@ -723,16 +707,14 @@ public class SplitLogManager {
         found_assigned_task = true;
         if (localDeadWorkers != null && localDeadWorkers.contains(cur_worker)) {
           SplitLogCounters.tot_mgr_resubmit_dead_server_task.incrementAndGet();
-          if (((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitLogManagerCoordination().resubmitTask(path, task, FORCE)) {
+          if (getSplitLogManagerCoordination().resubmitTask(path, task, FORCE)) {
             resubmitted++;
           } else {
             handleDeadWorker(cur_worker);
             LOG.warn("Failed to resubmit task " + path + " owned by dead " + cur_worker
                 + ", will retry.");
           }
-        } else if (((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-            .getSplitLogManagerCoordination().resubmitTask(path, task, CHECK)) {
+        } else if (getSplitLogManagerCoordination().resubmitTask(path, task, CHECK)) {
           resubmitted++;
         }
       }
@@ -767,25 +749,21 @@ public class SplitLogManager {
           // called unnecessarily for a taskpath
           if (task.isUnassigned() && (task.status != FAILURE)) {
             // We just touch the znode to make sure its still there
-            ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-                .getSplitLogManagerCoordination().checkTaskStillAvailable(key);
+            getSplitLogManagerCoordination().checkTaskStillAvailable(key);
           }
         }
-        ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-            .getSplitLogManagerCoordination().checkTasks();
+        getSplitLogManagerCoordination().checkTasks();
         SplitLogCounters.tot_mgr_resubmit_unassigned.incrementAndGet();
         LOG.debug("resubmitting unassigned task(s) after timeout");
       }
       Set<String> failedDeletions =
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitLogManagerCoordination().getDetails().getFailedDeletions();
+        getSplitLogManagerCoordination().getDetails().getFailedDeletions();
       // Retry previously failed deletes
       if (failedDeletions.size() > 0) {
         List<String> tmpPaths = new ArrayList<String>(failedDeletions);
         for (String tmpPath : tmpPaths) {
           // deleteNode is an async call
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitLogManagerCoordination().deleteTask(tmpPath);
+          getSplitLogManagerCoordination().deleteTask(tmpPath);
         }
         failedDeletions.removeAll(tmpPaths);
       }
@@ -793,8 +771,7 @@ public class SplitLogManager {
       // Garbage collect left-over
       long timeInterval =
           EnvironmentEdgeManager.currentTime()
-              - ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-                  .getSplitLogManagerCoordination().getLastRecoveryTime();
+              - getSplitLogManagerCoordination().getLastRecoveryTime();
       if (!failedRecoveringRegionDeletions.isEmpty()
           || (tot == 0 && tasks.size() == 0 && (timeInterval > checkRecoveringTimeThreshold))) {
         // inside the function there have more checks before GC anything

@@ -32,12 +32,10 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,8 +43,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -75,8 +71,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Triple;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -91,16 +85,16 @@ public class TestCatalogJanitor {
   private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
 
   /**
-   * Pseudo server for below tests.
-   * Be sure to call stop on the way out else could leave some mess around.
+   * Mock MasterServices for tests below.
    */
-  class MockServer implements Server {
+  class MockMasterServices extends MockNoopMasterServices {
     private final ClusterConnection connection;
-    private final Configuration c;
+    private final MasterFileSystem mfs;
+    private final AssignmentManager asm;
 
-    MockServer(final HBaseTestingUtility htu)
-    throws NotAllMetaRegionsOnlineException, IOException, InterruptedException {
-      this.c = htu.getConfiguration();
+    MockMasterServices(final HBaseTestingUtility htu) throws IOException {
+      super(htu.getConfiguration());
+
       ClientProtos.ClientService.BlockingInterface ri =
         Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
       MutateResponse.Builder builder = MutateResponse.newBuilder();
@@ -128,93 +122,16 @@ public class TestCatalogJanitor {
       // ClusterConnection return the HRI.  Have the HRI return a few mocked up responses
       // to make our test work.
       this.connection =
-        HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
+        HConnectionTestingUtility.getMockedConnectionAndDecorate(getConfiguration(),
           Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri,
             ServerName.valueOf("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
-      FileSystem.get(this.c);
-      Path rootdir = FSUtils.getRootDir(this.c);
-      FSUtils.setRootDir(this.c, rootdir);
+      FileSystem.get(getConfiguration());
+      Path rootdir = FSUtils.getRootDir(getConfiguration());
+      FSUtils.setRootDir(getConfiguration(), rootdir);
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
-    }
 
-    @Override
-    public ClusterConnection getConnection() {
-      return this.connection;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
-      return null;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return this.c;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf("mockserver.example.org", 1234, -1L);
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return null;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      BaseCoordinatedStateManager m = Mockito.mock(BaseCoordinatedStateManager.class);
-      SplitLogManagerCoordination c = Mockito.mock(SplitLogManagerCoordination.class);
-      Mockito.when(m.getSplitLogManagerCoordination()).thenReturn(c);
-      SplitLogManagerDetails d = Mockito.mock(SplitLogManagerDetails.class);
-      Mockito.when(c.getDetails()).thenReturn(d);
-      return m;
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      //no-op
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-  }
-
-  /**
-   * Mock MasterServices for tests below.
-   */
-  class MockMasterServices extends MockNoopMasterServices {
-    private final MasterFileSystem mfs;
-    private final AssignmentManager asm;
-    private final Server server;
-
-    MockMasterServices(final Server server) throws IOException {
-      this.server = server;
       this.mfs = new MasterFileSystem(this);
       this.asm = Mockito.mock(AssignmentManager.class);
     }
@@ -230,13 +147,23 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public Configuration getConfiguration() {
-      return server.getConfiguration();
+    public ClusterConnection getConnection() {
+      return this.connection;
     }
 
     @Override
     public ServerName getServerName() {
-      return server.getServerName();
+      return ServerName.valueOf("mockserver.example.org", 1234, -1L);
+    }
+
+    @Override
+    public CoordinatedStateManager getCoordinatedStateManager() {
+      BaseCoordinatedStateManager m = Mockito.mock(BaseCoordinatedStateManager.class);
+      SplitLogManagerCoordination c = Mockito.mock(SplitLogManagerCoordination.class);
+      Mockito.when(m.getSplitLogManagerCoordination()).thenReturn(c);
+      SplitLogManagerDetails d = Mockito.mock(SplitLogManagerDetails.class);
+      Mockito.when(c.getDetails()).thenReturn(d);
+      return m;
     }
 
     @Override
@@ -290,10 +217,9 @@ public class TestCatalogJanitor {
   public void testCleanParent() throws IOException, InterruptedException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
-    Server server = new MockServer(htu);
+    MasterServices services = new MockMasterServices(htu);
     try {
-      MasterServices services = new MockMasterServices(server);
-      CatalogJanitor janitor = new CatalogJanitor(server, services);
+      CatalogJanitor janitor = new CatalogJanitor(services);
       // Create regions.
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
       htd.addFamily(new HColumnDescriptor("f"));
@@ -327,7 +253,7 @@ public class TestCatalogJanitor {
       assertTrue(fs.delete(p, true));
       assertTrue(janitor.cleanParent(parent, r));
     } finally {
-      server.stop("shutdown");
+      services.stop("shutdown");
     }
   }
 
@@ -368,9 +294,8 @@ public class TestCatalogJanitor {
   throws IOException, InterruptedException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, rootDir);
-    Server server = new MockServer(htu);
-    MasterServices services = new MockMasterServices(server);
-    CatalogJanitor janitor = new CatalogJanitor(server, services);
+    MasterServices services = new MockMasterServices(htu);
+    CatalogJanitor janitor = new CatalogJanitor(services);
     final HTableDescriptor htd = createHTableDescriptor();
 
     // Create regions: aaa->{lastEndKey}, aaa->ccc, aaa->bbb, bbb->ccc, etc.
@@ -470,8 +395,7 @@ public class TestCatalogJanitor {
   public void testScanDoesNotCleanRegionsWithExistingParents() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testScanDoesNotCleanRegionsWithExistingParents");
-    Server server = new MockServer(htu);
-    MasterServices services = new MockMasterServices(server);
+    MasterServices services = new MockMasterServices(htu);
 
     final HTableDescriptor htd = createHTableDescriptor();
 
@@ -506,7 +430,7 @@ public class TestCatalogJanitor {
     splitParents.put(splita, createResult(splita, splitaa,splitab));
 
     final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
-    CatalogJanitor janitor = spy(new CatalogJanitor(server, services));
+    CatalogJanitor janitor = spy(new CatalogJanitor(services));
     doReturn(new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
             10, mergedRegions, splitParents)).when(janitor)
         .getMergedRegionsAndSplitParents();
@@ -628,11 +552,10 @@ public class TestCatalogJanitor {
     String table = "table";
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
-    Server server = new MockServer(htu);
-    MasterServices services = new MockMasterServices(server);
+    MasterServices services = new MockMasterServices(htu);
 
     // create the janitor
-    CatalogJanitor janitor = new CatalogJanitor(server, services);
+    CatalogJanitor janitor = new CatalogJanitor(services);
 
     // Create regions.
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
@@ -688,7 +611,6 @@ public class TestCatalogJanitor {
     // cleanup
     FSUtils.delete(fs, rootdir, true);
     services.stop("Test finished");
-    server.stop("Test finished");
     janitor.cancel(true);
   }
 
@@ -712,12 +634,11 @@ public class TestCatalogJanitor {
     String table = "table";
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
-    Server server = new MockServer(htu);
-    MasterServices services = new MockMasterServices(server);
+    MasterServices services = new MockMasterServices(htu);
 
     // create the janitor
 
-    CatalogJanitor janitor = new CatalogJanitor(server, services);
+    CatalogJanitor janitor = new CatalogJanitor(services);
 
     // Create regions.
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
@@ -773,7 +694,6 @@ public class TestCatalogJanitor {
 
     // cleanup
     services.stop("Test finished");
-    server.stop("shutdown");
     janitor.cancel(true);
   }
 

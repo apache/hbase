@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,14 +39,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
@@ -75,32 +72,25 @@ import org.apache.zookeeper.data.Stat;
 public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     SplitLogManagerCoordination {
 
-  public static class ZkSplitLogManagerDetails extends SplitLogManagerDetails {
-
-    ZkSplitLogManagerDetails(ConcurrentMap<String, Task> tasks, MasterServices master,
-        Set<String> failedDeletions, ServerName serverName) {
-      super(tasks, master, failedDeletions, serverName);
-    }
-  }
-
   public static final int DEFAULT_TIMEOUT = 120000;
   public static final int DEFAULT_ZK_RETRIES = 3;
   public static final int DEFAULT_MAX_RESUBMIT = 3;
 
   private static final Log LOG = LogFactory.getLog(SplitLogManagerCoordination.class);
 
-  private Server server;
+  private final TaskFinisher taskFinisher;
+  private final Configuration conf;
+
   private long zkretries;
   private long resubmitThreshold;
   private long timeout;
-  private TaskFinisher taskFinisher;
 
   SplitLogManagerDetails details;
 
   // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
   // whether to GC stale recovering znodes
   private volatile long lastRecoveringNodeCreationTime = 0;
-  private Configuration conf;
+
   public boolean ignoreZKDeleteForTesting = false;
 
   private RecoveryMode recoveryMode;
@@ -122,8 +112,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         return Status.DONE;
       }
     };
-    this.server = manager.getServer();
-    this.conf = server.getConfiguration();
+    this.conf = manager.getServer().getConfiguration();
   }
 
   @Override

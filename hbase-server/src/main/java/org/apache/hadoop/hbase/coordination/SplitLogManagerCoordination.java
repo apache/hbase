@@ -62,14 +62,12 @@ public interface SplitLogManagerCoordination {
     final private ConcurrentMap<String, Task> tasks;
     final private MasterServices master;
     final private Set<String> failedDeletions;
-    final private ServerName serverName;
 
     public SplitLogManagerDetails(ConcurrentMap<String, Task> tasks, MasterServices master,
-        Set<String> failedDeletions, ServerName serverName) {
+        Set<String> failedDeletions) {
       this.tasks = tasks;
       this.master = master;
       this.failedDeletions = failedDeletions;
-      this.serverName = serverName;
     }
 
     /**
@@ -97,7 +95,7 @@ public interface SplitLogManagerCoordination {
      * @return server name
      */
     public ServerName getServerName() {
-      return serverName;
+      return master.getServerName();
     }
   }
 
