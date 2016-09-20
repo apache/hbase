@@ -24,7 +24,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -104,6 +107,15 @@ public class TestLoadIncrementalHFiles {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
+  }
+
+  @Test(timeout = 120000)
+  public void testSimpleLoadWithMap() throws Exception {
+    runTest("testSimpleLoadWithMap", BloomType.NONE,
+        new byte[][][] {
+          new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+          new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
+    },  true);
   }
 
   /**
@@ -250,49 +262,77 @@ public class TestLoadIncrementalHFiles {
   }
 
   private void runTest(String testName, BloomType bloomType,
+      byte[][][] hfileRanges, boolean useMap) throws Exception {
+    runTest(testName, bloomType, null, hfileRanges, useMap);
+  }
+
+  private void runTest(String testName, BloomType bloomType,
       byte[][] tableSplitKeys, byte[][][] hfileRanges) throws Exception {
+    runTest(testName, bloomType, tableSplitKeys, hfileRanges, false);
+  }
+
+  private void runTest(String testName, BloomType bloomType,
+      byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap) throws Exception {
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_"+testName);
     final boolean preCreateTable = tableSplitKeys != null;
 
     // Run the test bulkloading the table to the default namespace
     final TableName TABLE_WITHOUT_NS = TableName.valueOf(TABLE_NAME);
-    runTest(testName, TABLE_WITHOUT_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges);
+    runTest(testName, TABLE_WITHOUT_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
+        useMap);
 
     // Run the test bulkloading the table to the specified namespace
     final TableName TABLE_WITH_NS = TableName.valueOf(Bytes.toBytes(NAMESPACE), TABLE_NAME);
-    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges);
+    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
+        useMap);
   }
 
   private void runTest(String testName, TableName tableName, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges) throws Exception {
+      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap)
+          throws Exception {
     HTableDescriptor htd = buildHTD(tableName, bloomType);
-    runTest(testName, htd, bloomType, preCreateTable, tableSplitKeys, hfileRanges);
+    runTest(testName, htd, bloomType, preCreateTable, tableSplitKeys, hfileRanges, useMap);
   }
 
   private void runTest(String testName, HTableDescriptor htd, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges) throws Exception {
+      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap)
+          throws Exception {
     Path dir = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
     dir = dir.makeQualified(fs);
     Path familyDir = new Path(dir, Bytes.toString(FAMILY));
 
     int hfileIdx = 0;
+    Map<byte[], List<Path>> map = null;
+    List<Path> list = null;
+    if (useMap) {
+      map = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
+      list = new ArrayList<>();
+      map.put(FAMILY, list);
+    }
     for (byte[][] range : hfileRanges) {
       byte[] from = range[0];
       byte[] to = range[1];
-      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
-          + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
+      Path path = new Path(familyDir, "hfile_" + hfileIdx++);
+      HFileTestUtil.createHFile(util.getConfiguration(), fs, path, FAMILY, QUALIFIER, from, to, 1000);
+      if (useMap) {
+        list.add(path);
+      }
     }
     int expectedRows = hfileIdx * 1000;
 
-    if (preCreateTable) {
+    if (preCreateTable || map != null) {
       util.getHBaseAdmin().createTable(htd, tableSplitKeys);
     }
 
     final TableName tableName = htd.getTableName();
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
     String [] args= {dir.toString(), tableName.toString()};
-    loader.run(args);
+    if (useMap) {
+      loader.run(null, map, tableName);
+    } else {
+      loader.run(args);
+    }
 
     Table table = util.getConnection().getTable(tableName);
     try {
@@ -379,7 +419,7 @@ public class TestLoadIncrementalHFiles {
     htd.addFamily(family);
 
     try {
-      runTest(testName, htd, BloomType.NONE, true, SPLIT_KEYS, hFileRanges);
+      runTest(testName, htd, BloomType.NONE, true, SPLIT_KEYS, hFileRanges, false);
       assertTrue("Loading into table with non-existent family should have failed", false);
     } catch (Exception e) {
       assertTrue("IOException expected", e instanceof IOException);
