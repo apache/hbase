@@ -709,8 +709,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         long ll = blockBuffer.getLongAfterPosition(offsetFromPos);
         klen = (int)(ll >> Integer.SIZE);
         vlen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
-        if (klen < 0 || vlen < 0 || klen > blockBuffer.limit()
-            || vlen > blockBuffer.limit()) {
+        if (checkKeyLen(klen) || checkLen(vlen)) {
           throw new IllegalStateException("Invalid klen " + klen + " or vlen "
               + vlen + ". Block offset: "
               + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
@@ -725,7 +724,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // Read short as unsigned, high byte first
           tlen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
               ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
-          if (tlen < 0 || tlen > blockBuffer.limit()) {
+          if (checkLen(tlen)) {
             throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
                 + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
                 + blockBuffer.position() + " (without header).");
@@ -1141,6 +1140,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     /**
      * @param v
+     * @return True if v &lt;= 0 or v &gt; current block buffer limit.
+     */
+    protected final boolean checkKeyLen(final int v) {
+      return v <= 0 || v > this.blockBuffer.limit();
+    }
+
+    /**
+     * @param v
      * @return True if v &lt; 0 or v &gt; current block buffer limit.
      */
     protected final boolean checkLen(final int v) {
@@ -1151,7 +1158,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      * Check key and value lengths are wholesome.
      */
     protected final void checkKeyValueLen() {
-      if (checkLen(this.currKeyLen) || checkLen(this.currValueLen)) {
+      if (checkKeyLen(this.currKeyLen) || checkLen(this.currValueLen)) {
         throw new IllegalStateException("Invalid currKeyLen " + this.currKeyLen
             + " or currValueLen " + this.currValueLen + ". Block offset: "
             + this.curBlock.getOffset() + ", block length: "
