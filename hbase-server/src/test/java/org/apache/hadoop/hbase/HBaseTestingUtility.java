@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -40,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -48,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,6 +105,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
@@ -128,6 +132,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
@@ -4048,5 +4053,40 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     String outputRowString = Bytes.toString(c.getRowArray(), c.getRowOffset(), c.getRowLength());
     int o = outputRowString.indexOf(HConstants.DELIMITER);
     return inputRowString.substring(0, i).equals(outputRowString.substring(0, o));
+  }
+
+  /**
+   * Sets up {@link MiniKdc} for testing security.
+   * Uses {@link HBaseKerberosUtils} to set the given keytab file as
+   * {@link HBaseKerberosUtils#KRB_KEYTAB_FILE}.
+   */
+  public MiniKdc setupMiniKdc(File keytabFile) throws Exception {
+    Properties conf = MiniKdc.createConf();
+    conf.put(MiniKdc.DEBUG, true);
+    MiniKdc kdc = null;
+    File dir = null;
+    // There is time lag between selecting a port and trying to bind with it. It's possible that
+    // another service captures the port in between which'll result in BindException.
+    boolean bindException;
+    int numTries = 0;
+    do {
+      try {
+        bindException = false;
+        dir = new File(getDataTestDir("kdc").toUri().getPath());
+        kdc = new MiniKdc(conf, dir);
+        kdc.start();
+      } catch (BindException e) {
+        FileUtils.deleteDirectory(dir);  // clean directory
+        numTries++;
+        if (numTries == 3) {
+          LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
+          throw e;
+        }
+        LOG.error("BindException encountered when setting up MiniKdc. Trying again.");
+        bindException = true;
+      }
+    } while (bindException);
+    HBaseKerberosUtils.setKeytabFileForTesting(keytabFile.getAbsolutePath());
+    return kdc;
   }
 }

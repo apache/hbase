@@ -34,7 +34,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.StringUtils;
@@ -179,10 +178,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
-    Properties conf = MiniKdc.createConf();
-    conf.put(MiniKdc.DEBUG, true);
-    KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
-    KDC.start();
+    KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
     HTTP_PRINCIPAL = "HTTP/" + HOST;
@@ -190,7 +186,6 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
     setUpKeyProvider(TEST_UTIL.getConfiguration());
     setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
-    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration());
     UserGroupInformation.setConfiguration(TEST_UTIL.getConfiguration());

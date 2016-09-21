@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Properties;
 
 import javax.security.sasl.SaslException;
 
@@ -106,13 +105,9 @@ public class TestSecureIPC {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Properties conf = MiniKdc.createConf();
-    conf.put(MiniKdc.DEBUG, true);
-    KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
-    KDC.start();
+    KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
-    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
   }
 
