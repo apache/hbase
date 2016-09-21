@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -1180,8 +1182,10 @@ public class TestAdmin1 {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
+      // TODO convert this to version that is synchronous (See HBASE-16668)
       TEST_UTIL.getAdmin().mergeRegionsAsync(regions.get(1).getFirst().getEncodedNameAsBytes(),
-          regions.get(2).getFirst().getEncodedNameAsBytes(), true);
+          regions.get(2).getFirst().getEncodedNameAsBytes(), true)
+          .get(60, TimeUnit.SECONDS);
     } catch (IllegalArgumentException m) {
       gotException = true;
     }
@@ -1358,7 +1362,7 @@ public class TestAdmin1 {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMergeRegions() throws Exception {
     TableName tableName = TableName.valueOf("testMergeWithFullRegionName");
     HColumnDescriptor cd = new HColumnDescriptor("d");
@@ -1380,17 +1384,21 @@ public class TestAdmin1 {
       assertEquals(3, admin.getTableRegions(tableName).size());
       regionA = tableRegions.get(0);
       regionB = tableRegions.get(1);
-      admin.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false);
-      Thread.sleep(1000);
+      // TODO convert this to version that is synchronous (See HBASE-16668)
+      admin.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false)
+          .get(60, TimeUnit.SECONDS);
+
       assertEquals(2, admin.getTableRegions(tableName).size());
 
       // merge with encoded name
       tableRegions = admin.getTableRegions(tableName);
       regionA = tableRegions.get(0);
       regionB = tableRegions.get(1);
+      // TODO convert this to version that is synchronous (See HBASE-16668)
       admin.mergeRegionsAsync(
-        regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
-      Thread.sleep(1000);
+        regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false)
+          .get(60, TimeUnit.SECONDS);
+
       assertEquals(1, admin.getTableRegions(tableName).size());
     } finally {
       this.admin.disableTable(tableName);
