@@ -20,12 +20,16 @@
 
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.collect.MinMaxPriorityQueue;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +48,7 @@ import com.google.common.primitives.Ints;
  * when evicting. It manages an array of buckets, each bucket is associated with
  * a size and caches elements up to this size. For a completely empty bucket, this
  * size could be re-specified dynamically.
- * 
+ *
  * This class is not thread safe.
  */
 @InterfaceAudience.Private
@@ -572,4 +576,45 @@ public final class BucketAllocator {
     return sz;
   }
 
+  public int getBucketIndex(long offset) {
+    return (int) (offset / bucketCapacity);
+  }
+
+  /**
+   * Returns a set of indices of the buckets that are least filled
+   * excluding the offsets, we also the fully free buckets for the
+   * BucketSizes where everything is empty and they only have one
+   * completely free bucket as a reserved
+   *
+   * @param excludedBuckets the buckets that need to be excluded due to
+   *                        currently being in used
+   * @param bucketCount     max Number of buckets to return
+   * @return set of bucket indices which could be used for eviction
+   */
+  public Set<Integer> getLeastFilledBuckets(Set<Integer> excludedBuckets,
+                                            int bucketCount) {
+    Queue<Integer> queue = MinMaxPriorityQueue.<Integer>orderedBy(
+        new Comparator<Integer>() {
+          @Override
+          public int compare(Integer left, Integer right) {
+            // We will always get instantiated buckets
+            return Float.compare(
+                ((float) buckets[left].usedCount) / buckets[left].itemCount,
+                ((float) buckets[right].usedCount) / buckets[right].itemCount);
+          }
+        }).maximumSize(bucketCount).create();
+
+    for (int i = 0; i < buckets.length; i ++ ) {
+      if (!excludedBuckets.contains(i) && !buckets[i].isUninstantiated() &&
+          // Avoid the buckets that are the only buckets for a sizeIndex
+          bucketSizeInfos[buckets[i].sizeIndex()].bucketList.size() != 1) {
+        queue.add(i);
+      }
+    }
+
+    Set<Integer> result = new HashSet<>(bucketCount);
+    result.addAll(queue);
+
+    return result;
+  }
 }
