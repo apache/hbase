@@ -970,6 +970,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     /**
      * @param v
+     * @return True if v &lt;= 0 or v &gt; current block buffer limit.
+     */
+    protected final boolean checkKeyLen(final int v) {
+      return v <= 0 || v > this.blockBuffer.limit();
+    }
+
+    /**
+     * @param v
      * @return True if v &lt; 0 or v &gt; current block buffer limit.
      */
     protected final boolean checkLen(final int v) {
@@ -980,7 +988,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
      * Check key and value lengths are wholesome.
      */
     protected final void checkKeyValueLen() {
-      if (checkLen(this.currKeyLen) || checkLen(this.currValueLen)) {
+      if (checkKeyLen(this.currKeyLen) || checkLen(this.currValueLen)) {
         throw new IllegalStateException("Invalid currKeyLen " + this.currKeyLen +
           " or currValueLen " + this.currValueLen + ". Block offset: " + block.getOffset() +
           ", block length: " + this.blockBuffer.limit() + ", position: " +
@@ -1078,6 +1086,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
         vlen = blockBuffer.getInt();
+        if (checkKeyLen(klen) || checkLen(vlen)) {
+          throw new IllegalStateException("Invalid klen " + klen + " or vlen "
+              + vlen + ". Block offset: "
+              + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+              + blockBuffer.position() + " (without header).");
+        }
         blockBuffer.reset();
         if (this.reader.shouldIncludeMemstoreTS()) {
           if (this.reader.decodeMemstoreTS) {
