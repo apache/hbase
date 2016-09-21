@@ -1170,7 +1170,10 @@ public class HBaseFsck extends Configured implements Closeable {
   private void loadHdfsRegioninfo(HbckInfo hbi) throws IOException {
     Path regionDir = hbi.getHdfsRegionDir();
     if (regionDir == null) {
-      LOG.warn("No HDFS region dir found: " + hbi + " meta=" + hbi.metaEntry);
+      if (hbi.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+        // Log warning only for default/ primary replica with no region dir
+        LOG.warn("No HDFS region dir found: " + hbi + " meta=" + hbi.metaEntry);
+      }
       return;
     }
 
