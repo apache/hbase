@@ -506,7 +506,8 @@ public class StoreFileScanner implements KeyValueScanner {
     if (lastRow == null) {
       return false;
     }
-    KeyValue seekKey = KeyValueUtil.createFirstOnRow(lastRow);
+    Cell seekKey = CellUtil
+        .createFirstOnRow(lastRow, 0, (short) lastRow.length);
     if (seek(seekKey)) {
       return true;
     } else {

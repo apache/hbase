@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -138,7 +137,8 @@ public class MultiRowRangeFilter extends FilterBase {
   @Override
   public Cell getNextCellHint(Cell currentKV) {
     // skip to the next range's start row
-    return KeyValueUtil.createFirstOnRow(range.startRow);
+    return CellUtil.createFirstOnRow(range.startRow, 0,
+        (short) range.startRow.length);
   }
 
   /**

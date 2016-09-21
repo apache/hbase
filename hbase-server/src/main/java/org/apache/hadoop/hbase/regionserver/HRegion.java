@@ -6216,7 +6216,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean result = false;
       startRegionOperation();
-      KeyValue kv = KeyValueUtil.createFirstOnRow(row);
+      Cell kv = CellUtil.createFirstOnRow(row, 0, (short) row.length);
       try {
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);

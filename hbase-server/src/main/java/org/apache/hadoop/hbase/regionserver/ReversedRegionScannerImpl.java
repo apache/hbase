@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 
@@ -67,9 +66,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   protected boolean nextRow(ScannerContext scannerContext, Cell curRowCell)
       throws IOException {
     assert super.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
-    byte[] row = new byte[curRowCell.getRowLength()];
-    CellUtil.copyRowTo(curRowCell, row, 0);
-    this.storeHeap.seekToPreviousRow(KeyValueUtil.createFirstOnRow(row));
+    this.storeHeap.seekToPreviousRow(CellUtil.createFirstOnRow(curRowCell));
     resetFilters();
     // Calling the hook in CP which allows it to do a fast forward
     if (this.region.getCoprocessorHost() != null) {
