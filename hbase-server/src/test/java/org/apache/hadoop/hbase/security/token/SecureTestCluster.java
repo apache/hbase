@@ -34,7 +34,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.File;
-import java.util.Properties;
 
 /**
  * The class for set up a security cluster with kerberos, hdfs, hbase.
@@ -85,19 +84,16 @@ public class SecureTestCluster {
    */
   @BeforeClass
   public static void setUp() throws Exception {
-    Properties conf = MiniKdc.createConf();
-    conf.put(MiniKdc.DEBUG, true);
-    KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
-    KDC.start();
+    KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
     HTTP_PRINCIPAL = "HTTP/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
     TEST_UTIL.startMiniZKCluster();
 
-    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration());
+
     setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
     UserGroupInformation.setConfiguration(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
