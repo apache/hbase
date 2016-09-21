@@ -105,17 +105,13 @@ public class TestGenerateDelegationToken {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Properties conf = MiniKdc.createConf();
-    conf.put(MiniKdc.DEBUG, true);
-    KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
-    KDC.start();
+    KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
     HTTP_PRINCIPAL = "HTTP/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
     TEST_UTIL.startMiniZKCluster();
 
-    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration());
     setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
