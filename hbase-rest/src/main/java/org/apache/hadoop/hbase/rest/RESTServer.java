@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.jetty.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -193,7 +193,7 @@ public class RESTServer implements Constants {
 
     Connector connector = new SelectChannelConnector();
     if(conf.getBoolean(REST_SSL_ENABLED, false)) {
-      SslSelectChannelConnector sslConnector = new SslSelectChannelConnector();
+      SslSelectChannelConnectorSecure sslConnector = new SslSelectChannelConnectorSecure();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
       String password = HBaseConfiguration.getPassword(conf,
         REST_SSL_KEYSTORE_PASSWORD, null);
