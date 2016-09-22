@@ -1156,6 +1156,13 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // There is no SHARED type here. Just return
+    // There is no SHARED type here in L1. But the block might have been served from the Victim
+    // handler L2 cache. (when the Combined mode = false). So just try return this block to
+    // L2 victim handler cache.
+    // Note : In case of CombinedBlockCache, we will have this victimHandler configured for L1
+    // cache. But CombinedBlockCache will only call returnBlock on L2 cache.
+    if (this.victimHandler != null) {
+      this.victimHandler.returnBlock(cacheKey, block);
+    }
   }
 }

@@ -358,8 +358,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // A noop
-    this.lruCache.returnBlock(cacheKey, block);
+    // returnBlock is meaningful for L2 cache alone.
     this.l2Cache.returnBlock(cacheKey, block);
   }
 
