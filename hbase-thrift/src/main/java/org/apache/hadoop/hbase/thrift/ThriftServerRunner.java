@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.jetty.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
@@ -125,7 +126,6 @@ import org.apache.thrift.transport.TTransportFactory;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.thread.QueuedThreadPool;
@@ -404,7 +404,7 @@ public class ThriftServerRunner implements Runnable {
     // set up Jetty and run the embedded server
     Connector connector = new SelectChannelConnector();
     if(conf.getBoolean(THRIFT_SSL_ENABLED, false)) {
-      SslSelectChannelConnector sslConnector = new SslSelectChannelConnector();
+      SslSelectChannelConnectorSecure sslConnector = new SslSelectChannelConnectorSecure();
       String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE);
       String password = HBaseConfiguration.getPassword(conf,
           THRIFT_SSL_KEYSTORE_PASSWORD, null);
