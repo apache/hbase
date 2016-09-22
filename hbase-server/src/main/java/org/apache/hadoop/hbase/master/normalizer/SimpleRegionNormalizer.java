@@ -124,16 +124,18 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       ", number of regions: " + tableRegions.size());
 
     long totalSizeMb = 0;
+    int acutalRegionCnt = 0;
 
     for (int i = 0; i < tableRegions.size(); i++) {
       HRegionInfo hri = tableRegions.get(i);
       long regionSize = getRegionSize(hri);
       if (regionSize > 0) {
+        acutalRegionCnt++;
         totalSizeMb += regionSize;
       }
     }
 
-    double avgRegionSize = totalSizeMb / (double) tableRegions.size();
+    double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
 
     LOG.debug("Table " + table + ", total aggregated regions size: " + totalSizeMb);
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
