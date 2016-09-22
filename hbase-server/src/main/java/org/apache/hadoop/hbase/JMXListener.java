@@ -110,8 +110,8 @@ public class JMXListener implements Coprocessor {
         throw new IOException("SSL is enabled. " +
             "rmiConnectorPort cannot share with the rmiRegistryPort!");
       }
-      csf = new SslRMIClientSocketFactory();
-      ssf = new SslRMIServerSocketFactory();
+      csf = new SslRMIClientSocketFactorySecure();
+      ssf = new SslRMIServerSocketFactorySecure();
     }
 
     if (csf != null) {
