@@ -285,7 +285,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
       "Number of requests for a block of primary replica that missed the block cache.";
   String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
   String BLOCK_CACHE_EVICTION_COUNT_DESC =
-      "Count of the number of blocks evicted from the block cache.";
+      "Count of the number of blocks evicted from the block cache."
+      + "(Not including blocks evicted because of HFile removal)";
   String BLOCK_CACHE_PRIMARY_EVICTION_COUNT = "blockCacheEvictionCountPrimary";
   String BLOCK_CACHE_PRIMARY_EVICTION_COUNT_DESC =
       "Count of the number of blocks evicted from primary replica in the block cache.";

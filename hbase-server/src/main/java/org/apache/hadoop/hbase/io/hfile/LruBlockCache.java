@@ -550,15 +550,19 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
-    if (evictedByEvictionProcess && victimHandler != null) {
-      if (victimHandler instanceof BucketCache) {
-        boolean wait = getCurrentSize() < acceptableSize();
-        boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
-        ((BucketCache)victimHandler).cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
-            inMemory, wait);
-      } else {
-        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
+    if (evictedByEvictionProcess) {
+      // When the eviction of the block happened because of invalidation of HFiles, no need to
+      // update the stats counter.
+      stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
+      if (victimHandler != null) {
+        if (victimHandler instanceof BucketCache) {
+          boolean wait = getCurrentSize() < acceptableSize();
+          boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
+          ((BucketCache) victimHandler).cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
+              inMemory, wait);
+        } else {
+          victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
+        }
       }
     }
     return block.heapSize();

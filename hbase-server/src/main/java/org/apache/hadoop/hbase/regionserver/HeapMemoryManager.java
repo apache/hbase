@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
@@ -93,10 +92,9 @@ public class HeapMemoryManager {
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
-    BlockCache blockCache = CacheConfig.instantiateBlockCache(conf);
-    if (blockCache instanceof ResizableBlockCache) {
-      return new HeapMemoryManager((ResizableBlockCache) blockCache, memStoreFlusher, server,
-                 regionServerAccounting);
+    ResizableBlockCache l1Cache = CacheConfig.getL1(conf);
+    if (l1Cache != null) {
+      return new HeapMemoryManager(l1Cache, memStoreFlusher, server, regionServerAccounting);
     }
     return null;
   }

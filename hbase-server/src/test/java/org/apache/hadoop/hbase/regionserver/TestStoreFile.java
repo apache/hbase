@@ -982,11 +982,11 @@ public class TestStoreFile extends HBaseTestCase {
     reader = hsf.createReader();
     reader.close(cacheConf.shouldEvictOnClose());
 
-    // We should have 3 new evictions
+    // We should have 3 new evictions but the evict count stat should not change. Eviction because
+    // of HFile invalidation is not counted along with normal evictions
     assertEquals(startHit, cs.getHitCount());
     assertEquals(startMiss, cs.getMissCount());
-    assertEquals(startEvicted + 3, cs.getEvictedCount());
-    startEvicted += 3;
+    assertEquals(startEvicted, cs.getEvictedCount());
 
     // Let's close the second file with evict on close turned off
     conf.setBoolean("hbase.rs.evictblocksonclose", false);

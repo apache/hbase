@@ -159,14 +159,14 @@ public class TestCacheConfig {
 
   @Before
   public void setUp() throws Exception {
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
     this.conf = HBaseConfiguration.create();
   }
 
   @After
   public void tearDown() throws Exception {
     // Let go of current block cache.
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
   }
 
   /**
@@ -329,7 +329,7 @@ public class TestCacheConfig {
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache)bcs[0];
     assertEquals(CacheConfig.getLruCacheSize(this.conf,
-        ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()), lbc.getMaxSize());
+        ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()), lbc.getMaxSize());
     assertTrue(bcs[1] instanceof BucketCache);
     BucketCache bc = (BucketCache)bcs[1];
     // getMaxSize comes back in bytes but we specified size in MB
@@ -347,7 +347,7 @@ public class TestCacheConfig {
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long lruExpectedSize = CacheConfig.getLruCacheSize(this.conf, mu);
+    long lruExpectedSize = CacheConfig.getLruCacheSize(this.conf, mu.getMax());
     final int bcSize = 100;
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);

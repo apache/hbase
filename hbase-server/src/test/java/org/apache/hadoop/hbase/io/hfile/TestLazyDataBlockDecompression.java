@@ -73,13 +73,13 @@ public class TestLazyDataBlockDecompression {
 
   @Before
   public void setUp() throws IOException {
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
   }
 
   @After
   public void tearDown() {
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
     fs = null;
   }
 

@@ -46,14 +46,14 @@ public class TestBlockCacheReporting {
 
   @Before
   public void setUp() throws Exception {
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
     this.conf = HBaseConfiguration.create();
   }
 
   @After
   public void tearDown() throws Exception {
     // Let go of current block cache.
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
   }
 
   private void addDataAndHits(final BlockCache bc, final int count) {

@@ -91,7 +91,7 @@ public class TestScannerFromBucketCache {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + test_util.getDataTestDir());
     test_util.cleanupTestDir();
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
   }
 
   String getName() {

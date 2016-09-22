@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -532,12 +531,13 @@ public class CacheConfig {
   // Clear this if in tests you'd make more than one block cache instance.
   @VisibleForTesting
   static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
+  private static LruBlockCache GLOBAL_L1_CACHE_INSTANCE;
 
   /** Boolean whether we have disabled the block cache entirely. */
   @VisibleForTesting
   static boolean blockCacheDisabled = false;
 
-  static long getLruCacheSize(final Configuration conf, final MemoryUsage mu) {
+  static long getLruCacheSize(final Configuration conf, final long xmx) {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {
@@ -550,30 +550,41 @@ public class CacheConfig {
     }
 
     // Calculate the amount of heap to give the heap.
-    return (long) (mu.getMax() * cachePercentage);
+    return (long) (xmx * cachePercentage);
   }
 
   /**
    * @param c Configuration to use.
-   * @param mu JMX Memory Bean
    * @return An L1 instance.  Currently an instance of LruBlockCache.
    */
-  private static LruBlockCache getL1(final Configuration c, final MemoryUsage mu) {
-    long lruCacheSize = getLruCacheSize(c, mu);
+  public static LruBlockCache getL1(final Configuration c) {
+    return getL1(c, ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax());
+  }
+
+  /**
+   * @param c Configuration to use.
+   * @param xmx Max heap memory
+   * @return An L1 instance.  Currently an instance of LruBlockCache.
+   */
+  private synchronized static LruBlockCache getL1(final Configuration c, final long xmx) {
+    if (GLOBAL_L1_CACHE_INSTANCE != null) return GLOBAL_L1_CACHE_INSTANCE;
+    if (blockCacheDisabled) return null;
+    long lruCacheSize = getLruCacheSize(c, xmx);
     if (lruCacheSize < 0) return null;
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     LOG.info("Allocating LruBlockCache size=" +
       StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-    return new LruBlockCache(lruCacheSize, blockSize, true, c);
+    GLOBAL_L1_CACHE_INSTANCE = new LruBlockCache(lruCacheSize, blockSize, true, c);
+    return GLOBAL_L1_CACHE_INSTANCE;
   }
 
   /**
    * @param c Configuration to use.
-   * @param mu JMX Memory Bean
+   * @param xmx Max heap memory
    * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
    * or null if not supposed to be a L2.
    */
-  private static BlockCache getL2(final Configuration c, final MemoryUsage mu) {
+  private static BlockCache getL2(final Configuration c, final long xmx) {
     final boolean useExternal = c.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Trying to use " + (useExternal?" External":" Internal") + " l2 cache");
@@ -585,7 +596,7 @@ public class CacheConfig {
     }
 
     // otherwise use the bucket cache.
-    return getBucketCache(c, mu);
+    return getBucketCache(c, xmx);
 
   }
 
@@ -615,14 +626,14 @@ public class CacheConfig {
 
   }
 
-  private static BlockCache getBucketCache(Configuration c, MemoryUsage mu) {
+  private static BlockCache getBucketCache(Configuration c, long xmx) {
     // Check for L2.  ioengine name must be non-null.
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) return null;
 
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     float bucketCachePercentage = c.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
-    long bucketCacheSize = (long) (bucketCachePercentage < 1? mu.getMax() * bucketCachePercentage:
+    long bucketCacheSize = (long) (bucketCachePercentage < 1? xmx * bucketCachePercentage:
       bucketCachePercentage * 1024 * 1024);
     if (bucketCacheSize <= 0) {
       throw new IllegalStateException("bucketCacheSize <= 0; Check " +
@@ -670,11 +681,11 @@ public class CacheConfig {
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
-    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    LruBlockCache l1 = getL1(conf, mu);
+    long xmx = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+    LruBlockCache l1 = getL1(conf, xmx);
     // blockCacheDisabled is set as a side-effect of getL1(), so check it again after the call.
     if (blockCacheDisabled) return null;
-    BlockCache l2 = getL2(conf, mu);
+    BlockCache l2 = getL2(conf, xmx);
     if (l2 == null) {
       GLOBAL_BLOCK_CACHE_INSTANCE = l1;
     } else {
@@ -697,5 +708,12 @@ public class CacheConfig {
       l1.setVictimCache(l2);
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
+  }
+
+  // Supposed to use only from tests. Some tests want to reinit the Global block cache instance
+  @VisibleForTesting
+  static synchronized void clearGlobalInstances() {
+    GLOBAL_L1_CACHE_INSTANCE = null;
+    GLOBAL_BLOCK_CACHE_INSTANCE = null;
   }
 }
