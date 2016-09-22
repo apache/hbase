@@ -1414,12 +1414,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public Table createTable(TableName tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions)
   throws IOException{
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
+    HTableDescriptor desc = createTableDescriptor(tableName, families, numVersions);
+
     getAdmin().createTable(desc, startKey, endKey, numRegions);
     // HBaseAdmin only waits for regions to appear in hbase:meta we
     // should wait until they are assigned
@@ -1782,6 +1778,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
+  public HTableDescriptor createTableDescriptor(final TableName tableName,
+      byte[] family) {
+    return createTableDescriptor(tableName, new byte[][] {family}, 1);
+  }
+
+  public HTableDescriptor createTableDescriptor(final TableName tableName,
+      byte[][] families, int maxVersions) {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(maxVersions);
+      desc.addFamily(hcd);
+    }
+    return desc;
+  }
+
   /**
    * Create an HRegion that writes to the local tmp dirs
    * @param desc
@@ -1999,7 +2011,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
       for (int i = 0; i < f.length; i++) {
         byte[] value1 = value != null ? value : row;
-        put.addColumn(f[i], null, value1);
+        put.addColumn(f[i], f[i], value1);
       }
       puts.add(put);
     }
@@ -3541,6 +3553,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     public PortAllocator(Random random) {
       this.random = random;
       this.portChecker = new AvailablePortChecker() {
+        @Override
         public boolean available(int port) {
           try {
             ServerSocket sock = new ServerSocket(port);
