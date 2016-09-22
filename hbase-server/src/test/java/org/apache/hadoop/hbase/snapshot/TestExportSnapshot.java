@@ -42,14 +42,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,7 +59,7 @@ import org.junit.rules.TestRule;
 /**
  * Test Export Snapshot Tool
  */
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
@@ -128,66 +125,19 @@ public class TestExportSnapshot {
     SnapshotTestingUtils.createPreSplitTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 
+  protected interface RegionPredicate {
+    boolean evaluate(final HRegionInfo regionInfo);
+  }
+
+  protected RegionPredicate getBypassRegionPredicate() {
+    return null;
+  }
+
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(tableName);
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
-  }
-
-
-  /**
-   * Verfy the result of getBalanceSplits() method.
-   * The result are groups of files, used as input list for the "export" mappers.
-   * All the groups should have similar amount of data.
-   *
-   * The input list is a pair of file path and length.
-   * The getBalanceSplits() function sort it by length,
-   * and assign to each group a file, going back and forth through the groups.
-   */
-  @Test
-  public void testBalanceSplit() throws Exception {
-    // Create a list of files
-    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
-    for (long i = 0; i <= 20; i++) {
-      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
-        .setType(SnapshotFileInfo.Type.HFILE)
-        .setHfile("file-" + i)
-        .build();
-      files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, i));
-    }
-
-    // Create 5 groups (total size 210)
-    //    group 0: 20, 11, 10,  1 (total size: 42)
-    //    group 1: 19, 12,  9,  2 (total size: 42)
-    //    group 2: 18, 13,  8,  3 (total size: 42)
-    //    group 3: 17, 12,  7,  4 (total size: 42)
-    //    group 4: 16, 11,  6,  5 (total size: 42)
-    List<List<Pair<SnapshotFileInfo, Long>>> splits = ExportSnapshot.getBalancedSplits(files, 5);
-    assertEquals(5, splits.size());
-
-    String[] split0 = new String[] {"file-20", "file-11", "file-10", "file-1", "file-0"};
-    verifyBalanceSplit(splits.get(0), split0, 42);
-    String[] split1 = new String[] {"file-19", "file-12", "file-9",  "file-2"};
-    verifyBalanceSplit(splits.get(1), split1, 42);
-    String[] split2 = new String[] {"file-18", "file-13", "file-8",  "file-3"};
-    verifyBalanceSplit(splits.get(2), split2, 42);
-    String[] split3 = new String[] {"file-17", "file-14", "file-7",  "file-4"};
-    verifyBalanceSplit(splits.get(3), split3, 42);
-    String[] split4 = new String[] {"file-16", "file-15", "file-6",  "file-5"};
-    verifyBalanceSplit(splits.get(4), split4, 42);
-  }
-
-  private void verifyBalanceSplit(final List<Pair<SnapshotFileInfo, Long>> split,
-      final String[] expected, final long expectedSize) {
-    assertEquals(expected.length, split.size());
-    long totalSize = 0;
-    for (int i = 0; i < expected.length; ++i) {
-      Pair<SnapshotFileInfo, Long> fileInfo = split.get(i);
-      assertEquals(expected[i], fileInfo.getFirst().getHfile());
-      totalSize += fileInfo.getSecond();
-    }
-    assertEquals(expectedSize, totalSize);
   }
 
   /**
@@ -201,7 +151,11 @@ public class TestExportSnapshot {
   @Test
   public void testExportFileSystemStateWithSkipTmp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, true);
-    testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles);
+    try {
+      testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles);
+    } finally {
+      TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, false);
+    }
   }
 
   @Test
@@ -223,57 +177,28 @@ public class TestExportSnapshot {
     testExportFileSystemState(tableName, snapshotName, targetName, tableNumFiles);
   }
 
-  /**
-   * Mock a snapshot with files in the archive dir,
-   * two regions, and one reference file.
-   */
-  @Test
-  public void testSnapshotWithRefsExportFileSystemState() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-
-    Path rootDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    FileSystem fs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-
-    SnapshotMock snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV1",
-      "tableWithRefsV1");
-    testSnapshotWithRefsExportFileSystemState(builder);
-
-    snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-    builder = snapshotMock.createSnapshotV2("tableWithRefsV2", "tableWithRefsV2");
-    testSnapshotWithRefsExportFileSystemState(builder);
-  }
-
-  /**
-   * Generates a couple of regions for the specified SnapshotMock,
-   * and then it will run the export and verification.
-   */
-  private void testSnapshotWithRefsExportFileSystemState(SnapshotMock.SnapshotBuilder builder)
-      throws Exception {
-    Path[] r1Files = builder.addRegion();
-    Path[] r2Files = builder.addRegion();
-    builder.commit();
-    int snapshotFilesCount = r1Files.length + r2Files.length;
-
-    byte[] snapshotName = Bytes.toBytes(builder.getSnapshotDescription().getName());
-    TableName tableName = builder.getTableDescriptor().getTableName();
-    testExportFileSystemState(tableName, snapshotName, snapshotName, snapshotFilesCount);
-  }
-
   private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
       final byte[] targetName, int filesExpected) throws Exception {
-    Path copyDir = getHdfsDestinationDir();
-    testExportFileSystemState(tableName, snapshotName, targetName, filesExpected, copyDir, false);
-    removeExportDir(copyDir);
+    testExportFileSystemState(tableName, snapshotName, targetName,
+      filesExpected, getHdfsDestinationDir(), false);
+  }
+
+  protected void testExportFileSystemState(final TableName tableName,
+      final byte[] snapshotName, final byte[] targetName, int filesExpected,
+      Path copyDir, boolean overwrite) throws Exception {
+    testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, targetName,
+      filesExpected, TEST_UTIL.getDefaultRootDirPath(), copyDir,
+      overwrite, getBypassRegionPredicate());
   }
 
   /**
    * Test ExportSnapshot
    */
-  private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
-      final byte[] targetName, int filesExpected, Path copyDir, boolean overwrite)
-      throws Exception {
-    URI hdfsUri = FileSystem.get(TEST_UTIL.getConfiguration()).getUri();
+  protected static void testExportFileSystemState(final Configuration conf, final TableName tableName,
+      final byte[] snapshotName, final byte[] targetName, final int filesExpected,
+      final Path sourceDir, Path copyDir, final boolean overwrite,
+      final RegionPredicate bypassregionPredicate) throws Exception {
+    URI hdfsUri = FileSystem.get(conf).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
     copyDir = copyDir.makeQualified(fs);
 
@@ -289,8 +214,7 @@ public class TestExportSnapshot {
     if (overwrite) opts.add("-overwrite");
 
     // Export Snapshot
-    int res = ExportSnapshot.innerMain(TEST_UTIL.getConfiguration(),
-        opts.toArray(new String[opts.size()]));
+    int res = ExportSnapshot.innerMain(conf, opts.toArray(new String[opts.size()]));
     assertEquals(0, res);
 
     // Verify File-System state
@@ -304,12 +228,13 @@ public class TestExportSnapshot {
     }
 
     // compare the snapshot metadata and verify the hfiles
-    final FileSystem hdfs = FileSystem.get(hdfsUri, TEST_UTIL.getConfiguration());
+    final FileSystem hdfs = FileSystem.get(hdfsUri, conf);
     final Path snapshotDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(snapshotName));
     final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(targetName));
-    verifySnapshotDir(hdfs, new Path(TEST_UTIL.getDefaultRootDirPath(), snapshotDir),
+    verifySnapshotDir(hdfs, new Path(sourceDir, snapshotDir),
         fs, new Path(copyDir, targetDir));
-    Set<String> snapshotFiles = verifySnapshot(fs, copyDir, tableName, Bytes.toString(targetName));
+    Set<String> snapshotFiles = verifySnapshot(conf, fs, copyDir, tableName,
+      Bytes.toString(targetName), bypassregionPredicate);
     assertEquals(filesExpected, snapshotFiles.size());
   }
 
@@ -358,30 +283,33 @@ public class TestExportSnapshot {
   /*
    * verify if the snapshot folder on file-system 1 match the one on file-system 2
    */
-  private void verifySnapshotDir(final FileSystem fs1, final Path root1,
+  protected static void verifySnapshotDir(final FileSystem fs1, final Path root1,
       final FileSystem fs2, final Path root2) throws IOException {
     assertEquals(listFiles(fs1, root1, root1), listFiles(fs2, root2, root2));
   }
 
-  protected boolean bypassRegion(HRegionInfo regionInfo) {
-    return false;
+  protected Set<String> verifySnapshot(final FileSystem fs, final Path rootDir,
+      final TableName tableName, final String snapshotName) throws IOException {
+    return verifySnapshot(TEST_UTIL.getConfiguration(), fs, rootDir, tableName,
+      snapshotName, getBypassRegionPredicate());
   }
 
   /*
    * Verify if the files exists
    */
-  private Set<String> verifySnapshot(final FileSystem fs, final Path rootDir,
-      final TableName tableName, final String snapshotName) throws IOException {
+  protected static Set<String> verifySnapshot(final Configuration conf, final FileSystem fs,
+      final Path rootDir, final TableName tableName, final String snapshotName,
+      final RegionPredicate bypassregionPredicate) throws IOException {
     final Path exportedSnapshot = new Path(rootDir,
       new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
     final Set<String> snapshotFiles = new HashSet<String>();
     final Path exportedArchive = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    SnapshotReferenceUtil.visitReferencedFiles(TEST_UTIL.getConfiguration(), fs, exportedSnapshot,
+    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, exportedSnapshot,
           new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (bypassRegion(regionInfo))
+          if (bypassregionPredicate != null && bypassregionPredicate.evaluate(regionInfo))
             return;
 
           String hfile = storeFile.getName();
@@ -408,10 +336,10 @@ public class TestExportSnapshot {
     return snapshotFiles;
   }
 
-  private Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
+  private static Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
       throws IOException {
     Set<String> files = new HashSet<String>();
-    int rootPrefix = root.toString().length();
+    int rootPrefix = root.makeQualified(fs).toString().length();
     FileStatus[] list = FSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat: list) {
@@ -419,7 +347,7 @@ public class TestExportSnapshot {
         if (fstat.isDirectory()) {
           files.addAll(listFiles(fs, root, fstat.getPath()));
         } else {
-          files.add(fstat.getPath().toString().substring(rootPrefix));
+          files.add(fstat.getPath().makeQualified(fs).toString().substring(rootPrefix));
         }
       }
     }
@@ -439,7 +367,7 @@ public class TestExportSnapshot {
     return path;
   }
 
-  private void removeExportDir(final Path path) throws IOException {
+  private static void removeExportDir(final Path path) throws IOException {
     FileSystem fs = FileSystem.get(path.toUri(), new Configuration());
     fs.delete(path, true);
   }

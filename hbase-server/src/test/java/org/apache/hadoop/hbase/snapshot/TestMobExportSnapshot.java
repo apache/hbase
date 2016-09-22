@@ -54,7 +54,12 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   }
 
   @Override
-  protected boolean bypassRegion(HRegionInfo regionInfo) {
-    return MobUtils.isMobRegionInfo(regionInfo);
+  protected RegionPredicate getBypassRegionPredicate() {
+    return new RegionPredicate() {
+      @Override
+      public boolean evaluate(final HRegionInfo regionInfo) {
+        return MobUtils.isMobRegionInfo(regionInfo);
+      }
+    };
   }
 }
