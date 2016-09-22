@@ -74,6 +74,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
   protected int tuningPeriod;
 
   private volatile double maxThroughput;
+  private volatile double maxThroughputPerOperation;
 
   protected final ConcurrentMap<String, ActiveOperation> activeOperations =
       new ConcurrentHashMap<String, ActiveOperation>();
@@ -96,6 +97,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
   @Override
   public void start(String opName) {
     activeOperations.put(opName, new ActiveOperation());
+    maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
   }
 
   @Override
@@ -107,8 +109,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
       return 0;
     }
     long now = EnvironmentEdgeManager.currentTime();
-    double maxThroughputPerCompaction = this.getMaxThroughput() / activeOperations.size();
-    long minTimeAllowed = (long) (deltaSize / maxThroughputPerCompaction * 1000); // ms
+    long minTimeAllowed = (long) (deltaSize / maxThroughputPerOperation * 1000); // ms
     long elapsedTime = now - operation.lastControlTime;
     operation.lastControlSize = operation.totalSize;
     if (elapsedTime >= minTimeAllowed) {
@@ -123,7 +124,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
         LOG.debug("deltaSize: " + deltaSize + " bytes; elapseTime: " + elapsedTime + " ns");
         LOG.debug(opName + " sleep " + sleepTime + " ms because current throughput is "
             + throughputDesc(deltaSize, elapsedTime) + ", max allowed is "
-            + throughputDesc(maxThroughputPerCompaction) + ", already slept "
+            + throughputDesc(maxThroughputPerOperation) + ", already slept "
             + operation.numberOfSleeps + " time(s) and total slept time is "
             + operation.totalSleepTime + " ms till now.");
         operation.lastLogTime = now;
@@ -147,6 +148,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
   @Override
   public void finish(String opName) {
     ActiveOperation operation = activeOperations.remove(opName);
+    maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
     long elapsedTime = EnvironmentEdgeManager.currentTime() - operation.startTime;
     LOG.info(opName + " average throughput is "
         + throughputDesc(operation.totalSize, elapsedTime) + ", slept "
@@ -173,5 +175,6 @@ public abstract class PressureAwareThroughputController extends Configured imple
 
   public void setMaxThroughput(double maxThroughput) {
     this.maxThroughput = maxThroughput;
+    maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
   }
 }
