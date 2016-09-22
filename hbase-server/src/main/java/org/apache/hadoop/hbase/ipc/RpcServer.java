@@ -1860,6 +1860,12 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             param = builder.build();
           }
           offset += paramSize;
+        } else {
+          // currently header must have request param, so we directly throw exception here
+          String msg = "Invalid request header: " + TextFormat.shortDebugString(header)
+              + ", should have param set in it";
+          LOG.warn(msg);
+          throw new DoNotRetryIOException(msg);
         }
         if (header.hasCellBlockMeta()) {
           buf.position(offset);
