@@ -26,7 +26,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -38,13 +37,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.log4j.Level;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
@@ -66,8 +66,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -93,11 +96,14 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.DelegatingKeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -630,6 +636,71 @@ public class TestFromClientSide {
     countGreater = countRows(t, createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
+  }
+
+  /**
+   * This is a coprocessor to inject a test failure so that a store scanner.reseek() call will
+   * fail with an IOException() on the first call.
+   */
+  public static class ExceptionInReseekRegionObserver extends BaseRegionObserver {
+    static AtomicLong reqCount = new AtomicLong(0);
+    class MyStoreScanner extends StoreScanner {
+      public MyStoreScanner(Store store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
+          long readPt) throws IOException {
+        super(store, scanInfo, scan, columns, readPt);
+      }
+
+      @Override
+      protected List<KeyValueScanner> selectScannersFrom(
+          List<? extends KeyValueScanner> allScanners) {
+        List<KeyValueScanner> scanners = super.selectScannersFrom(allScanners);
+        List<KeyValueScanner> newScanners = new ArrayList<>(scanners.size());
+        for (KeyValueScanner scanner : scanners) {
+          newScanners.add(new DelegatingKeyValueScanner(scanner) {
+            @Override
+            public boolean reseek(Cell key) throws IOException {
+              if (reqCount.incrementAndGet() == 1) {
+                throw new IOException("Injected exception");
+              }
+              return super.reseek(key);
+            }
+          });
+        }
+        return newScanners;
+      }
+    }
+
+    @Override
+    public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
+        Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s)
+            throws IOException {
+      return new MyStoreScanner(store, store.getScanInfo(), scan, targetCols, Long.MAX_VALUE);
+    }
+  }
+
+  /**
+   * Tests the case where a Scan can throw an IOException in the middle of the seek / reseek
+   * leaving the server side RegionScanner to be in dirty state. The client has to ensure that the
+   * ClientScanner does not get an exception and also sees all the data.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testClientScannerIsResetWhenScanThrowsIOException()
+  throws IOException, InterruptedException {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
+    TableName name = TableName.valueOf("testClientScannerIsResetWhenScanThrowsIOException");
+
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+      int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
+      TEST_UTIL.getHBaseAdmin().flush(name);
+      int actualRowCount = countRows(t, new Scan().addColumn(FAMILY, FAMILY));
+      assertEquals(rowCount, actualRowCount);
+    }
+    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
   }
 
   /*

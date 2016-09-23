@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,25 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
 
+package org.apache.hadoop.hbase.exceptions;
+
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-
 /**
- * Thrown if a region server is passed an unknown scanner id.
- * Usually means the client has take too long between checkins and so the
- * scanner lease on the serverside has expired OR the serverside is closing
- * down and has cancelled all leases.
+ * Thrown when the server side has received an Exception, and asks the Client to reset the scanner
+ * state by closing the current region scanner, and reopening from the start of last seen row.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class UnknownScannerException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 993179627856392526L;
+public class ScannerResetException extends DoNotRetryIOException {
+  private static final long serialVersionUID = -5649728171144849619L;
 
   /** constructor */
-  public UnknownScannerException() {
+  public ScannerResetException() {
     super();
   }
 
@@ -42,11 +40,11 @@ public class UnknownScannerException extends DoNotRetryIOException {
    * Constructor
    * @param s message
    */
-  public UnknownScannerException(String s) {
+  public ScannerResetException(String s) {
     super(s);
   }
 
-  public UnknownScannerException(String s, Exception e) {
+  public ScannerResetException(String s, Exception e) {
     super(s, e);
   }
 }
