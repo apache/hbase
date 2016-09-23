@@ -302,6 +302,9 @@ public final class HConstants {
   /** Like the previous, but for old logs that are about to be deleted */
   public static final String HREGION_OLDLOGDIR_NAME = "oldWALs";
 
+  /** Staging dir used by bulk load */
+  public static final String BULKLOAD_STAGING_DIR_NAME = "staging";
+
   public static final String CORRUPT_DIR_NAME = "corrupt";
 
   /** Used by HBCK to sideline backup data */

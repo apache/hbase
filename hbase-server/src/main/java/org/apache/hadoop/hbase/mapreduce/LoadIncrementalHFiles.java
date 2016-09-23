@@ -133,8 +133,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private int nrThreads;
   private RpcControllerFactory rpcControllerFactory;
 
-  private LoadIncrementalHFiles() {}
-
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     this.rpcControllerFactory = new RpcControllerFactory(conf);
@@ -1199,7 +1197,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    int ret = ToolRunner.run(conf, new LoadIncrementalHFiles(), args);
+    int ret = ToolRunner.run(conf, new LoadIncrementalHFiles(conf), args);
     System.exit(ret);
   }
 

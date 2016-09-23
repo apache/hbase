@@ -118,7 +118,6 @@ public class HBaseCommonTestingUtility {
     if (deleteOnExit()) this.dataTestDir.deleteOnExit();
 
     createSubDir("hbase.local.dir", testPath, "hbase-local-dir");
-    createSubDir("hbase.bulkload.staging.dir", testPath, "staging");
 
     return testPath;
   }

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -82,7 +83,7 @@ public class HFileReplicator {
   private UserProvider userProvider;
   private Configuration conf;
   private Connection connection;
-  private String hbaseStagingDir;
+  private Path hbaseStagingDir;
   private ThreadPoolExecutor exec;
   private int maxCopyThreads;
   private int copiesPerThread;
@@ -100,7 +101,7 @@ public class HFileReplicator {
 
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-    this.hbaseStagingDir = conf.get("hbase.bulkload.staging.dir");
+    this.hbaseStagingDir = new Path(FSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
     this.maxCopyThreads =
         this.conf.getInt(REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY,
           REPLICATION_BULKLOAD_COPY_MAXTHREADS_DEFAULT);
@@ -253,7 +254,7 @@ public class HFileReplicator {
 
         // Create staging directory for each table
         Path stagingDir =
-            createStagingDir(new Path(hbaseStagingDir), user, TableName.valueOf(tableName));
+            createStagingDir(hbaseStagingDir, user, TableName.valueOf(tableName));
 
         familyHFilePathsPairsList = tableEntry.getValue();
         familyHFilePathsPairsListSize = familyHFilePathsPairsList.size();

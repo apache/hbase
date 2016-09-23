@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos;
-import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
@@ -166,7 +165,4 @@ public class SecureBulkLoadEndpointClient {
     }
   }
 
-  public Path getStagingPath(String bulkToken, byte[] family) throws IOException {
-    return SecureBulkLoadUtil.getStagingPath(table.getConfiguration(), bulkToken, family);
-  }
 }

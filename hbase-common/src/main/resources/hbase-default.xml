@@ -70,13 +70,6 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property >
-    <name>hbase.bulkload.staging.dir</name>
-    <value>${hbase.fs.tmp.dir}</value>
-    <description>A staging directory in default file system (HDFS)
-    for bulk loading.
-    </description>
-  </property>
-  <property >
     <name>hbase.cluster.distributed</name>
     <value>false</value>
     <description>The mode the cluster will be in. Possible values are
@@ -1190,7 +1183,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.rootdir.perms</name>
     <value>700</value>
-    <description>FS Permissions for the root directory in a secure (kerberos) setup.
+    <description>FS Permissions for the root data subdirectory in a secure (kerberos) setup.
     When master starts, it creates the rootdir with this permissions or sets the permissions
     if it does not match.</description>
   </property>

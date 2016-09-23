@@ -104,11 +104,6 @@ public class MasterWalManager {
     this.distributedLogReplay = this.splitLogManager.isLogReplaying();
 
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-
-    // Make sure the region servers can archive their old logs
-    if (!this.fs.exists(oldLogDir)) {
-      this.fs.mkdirs(oldLogDir);
-    }
   }
 
   public void stop() {

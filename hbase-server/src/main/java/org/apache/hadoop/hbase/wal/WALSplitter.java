@@ -477,9 +477,11 @@ public class WALSplitter {
       final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf) throws IOException {
-    final Path corruptDir = new Path(FSUtils.getRootDir(conf), conf.get(
-        "hbase.regionserver.hlog.splitlog.corrupt.dir",  HConstants.CORRUPT_DIR_NAME));
-
+    final Path corruptDir = new Path(FSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    if (conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir") != null) {
+      LOG.warn("hbase.regionserver.hlog.splitlog.corrupt.dir is deprecated. Default to "
+          + corruptDir);
+    }
     if (!fs.mkdirs(corruptDir)) {
       LOG.info("Unable to mkdir " + corruptDir);
     }

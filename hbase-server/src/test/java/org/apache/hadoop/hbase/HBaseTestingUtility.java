@@ -1282,7 +1282,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } else {
       LOG.info("The hbase.fs.tmp.dir is set to " + hbaseFsTmpDirInString);
     }
-    this.conf.set("hbase.bulkload.staging.dir", this.conf.get("hbase.fs.tmp.dir"));
   }
 
   /**

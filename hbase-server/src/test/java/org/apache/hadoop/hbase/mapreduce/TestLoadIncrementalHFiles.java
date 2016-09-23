@@ -50,10 +50,10 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -342,7 +342,7 @@ public class TestLoadIncrementalHFiles {
     }
 
     // verify staging folder has been cleaned up
-    Path stagingBasePath = SecureBulkLoadUtil.getBaseStagingDir(util.getConfiguration());
+    Path stagingBasePath = new Path(FSUtils.getRootDir(util.getConfiguration()), HConstants.BULKLOAD_STAGING_DIR_NAME);
     if(fs.exists(stagingBasePath)) {
       FileStatus[] files = fs.listStatus(stagingBasePath);
       for(FileStatus file : files) {

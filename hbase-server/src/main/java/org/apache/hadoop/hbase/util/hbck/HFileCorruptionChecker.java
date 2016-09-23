@@ -141,9 +141,11 @@ public class HFileCorruptionChecker {
     Path regionDir = cfDir.getParent();
     Path tableDir = regionDir.getParent();
 
-    // build up the corrupted dirs strcture
-    Path corruptBaseDir = new Path(FSUtils.getRootDir(conf), conf.get(
-        "hbase.hfile.quarantine.dir", HConstants.CORRUPT_DIR_NAME));
+    // build up the corrupted dirs structure
+    Path corruptBaseDir = new Path(FSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    if (conf.get("hbase.hfile.quarantine.dir") != null) {
+      LOG.warn("hbase.hfile.quarantine.dir is deprecated. Default to " + corruptBaseDir);
+    }
     Path corruptTableDir = new Path(corruptBaseDir, tableDir.getName());
     Path corruptRegionDir = new Path(corruptTableDir, regionDir.getName());
     Path corruptFamilyDir = new Path(corruptRegionDir, cfDir.getName());

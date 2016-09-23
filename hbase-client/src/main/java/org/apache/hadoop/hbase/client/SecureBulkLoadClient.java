@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRe
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 
@@ -124,9 +123,5 @@ public class SecureBulkLoadClient {
     } catch (Exception se) {
       throw ProtobufUtil.handleRemoteException(se);
     }
-  }
-
-  public Path getStagingPath(String bulkToken, byte[] family) throws IOException {
-    return SecureBulkLoadUtil.getStagingPath(table.getConfiguration(), bulkToken, family);
   }
 }

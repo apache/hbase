@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
@@ -38,12 +39,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.regionserver.Region.BulkLoadListener;
-import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -98,7 +99,6 @@ public class SecureBulkLoadManager {
 
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
   private final static FsPermission PERM_HIDDEN = FsPermission.valueOf("-rwx--x--x");
-
   private SecureRandom random;
   private FileSystem fs;
   private Configuration conf;
@@ -113,32 +113,18 @@ public class SecureBulkLoadManager {
     this.conf = conf;
   }
 
-  public void start() {
+  public void start() throws IOException {
     random = new SecureRandom();
-    baseStagingDir = SecureBulkLoadUtil.getBaseStagingDir(conf);
-    this.userProvider = UserProvider.instantiate(conf);
+    userProvider = UserProvider.instantiate(conf);
+    fs = FileSystem.get(conf);
+    baseStagingDir = new Path(FSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
 
-    try {
-      fs = FileSystem.get(conf);
+    if (conf.get("hbase.bulkload.staging.dir") != null) {
+      LOG.warn("hbase.bulkload.staging.dir " + " is deprecated. Bulkload staging directory is "
+          + baseStagingDir);
+    }
+    if (!fs.exists(baseStagingDir)) {
       fs.mkdirs(baseStagingDir, PERM_HIDDEN);
-      fs.setPermission(baseStagingDir, PERM_HIDDEN);
-      FileStatus status = fs.getFileStatus(baseStagingDir);
-      //no sticky bit in hadoop-1.0, making directory nonempty so it never gets erased
-      fs.mkdirs(new Path(baseStagingDir,"DONOTERASE"), PERM_HIDDEN);
-      if (status == null) {
-        throw new IllegalStateException("Failed to create staging directory "
-            + baseStagingDir.toString());
-      }
-      if (!status.getPermission().equals(PERM_HIDDEN)) {
-        throw new IllegalStateException(
-            "Staging directory already exists but permissions aren't set to '-rwx--x--x' "
-                + baseStagingDir.toString());
-      }
-    } catch (IOException e) {
-      LOG.error("Failed to create or set permission on staging directory "
-          + baseStagingDir.toString(), e);
-      throw new IllegalStateException("Failed to create or set permission on staging directory "
-          + baseStagingDir.toString(), e);
     }
   }
 
