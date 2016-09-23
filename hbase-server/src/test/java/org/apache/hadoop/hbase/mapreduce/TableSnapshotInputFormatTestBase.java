@@ -182,7 +182,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     }
 
     for (int j = 0; j < FAMILIES.length; j++) {
-      byte[] actual = result.getValue(FAMILIES[j], null);
+      byte[] actual = result.getValue(FAMILIES[j], FAMILIES[j]);
       Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
         + " ,actual:" + Bytes.toString(actual), row, actual);
     }

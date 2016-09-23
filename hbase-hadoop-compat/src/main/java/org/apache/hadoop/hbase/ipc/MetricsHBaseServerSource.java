@@ -77,6 +77,7 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String EXCEPTIONS_OOO_NAME="exceptions.OutOfOrderScannerNextException";
   String EXCEPTIONS_BUSY_NAME="exceptions.RegionTooBusyException";
   String EXCEPTIONS_UNKNOWN_NAME="exceptions.UnknownScannerException";
+  String EXCEPTIONS_SCANNER_RESET_NAME="exceptions.ScannerResetException";
   String EXCEPTIONS_SANITY_NAME="exceptions.FailedSanityCheckException";
   String EXCEPTIONS_MOVED_NAME="exceptions.RegionMovedException";
   String EXCEPTIONS_NSRE_NAME="exceptions.NotServingRegionException";
@@ -106,6 +107,7 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void movedRegionException();
   void notServingRegionException();
   void unknownScannerException();
+  void scannerResetException();
   void tooBusyException();
   void multiActionTooLargeException();
   void callQueueTooBigException();

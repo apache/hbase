@@ -2007,6 +2007,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return HRegion.createHRegion(info, rootDir, conf, htd);
   }
 
+  public HTableDescriptor createTableDescriptor(final TableName tableName,
+      byte[] family) {
+    return createTableDescriptor(tableName, new byte[][] {family}, 1);
+  }
+
+  public HTableDescriptor createTableDescriptor(final TableName tableName,
+      byte[][] families, int maxVersions) {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(maxVersions);
+      desc.addFamily(hcd);
+    }
+    return desc;
+  }
+
   /**
    * Create an HRegion that writes to the local tmp dirs
    * @param desc
@@ -2221,7 +2237,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Put put = new Put(row);
       put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
       for (int i = 0; i < f.length; i++) {
-        put.add(f[i], null, value != null ? value : row);
+        put.add(f[i], f[i], value != null ? value : row);
       }
       puts.add(put);
     }

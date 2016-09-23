@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
+import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -2730,13 +2731,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             addResults(builder, results, controller, RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()));
           }
         } catch (IOException e) {
-          // if we have an exception on scanner next and we are using the callSeq
-          // we should rollback because the client will retry with the same callSeq
-          // and get an OutOfOrderScannerNextException if we don't do so.
-          if (rsh != null && request.hasNextCallSeq()) {
-            rsh.rollbackNextCallSeq();
+          // The scanner state might be left in a dirty state, so we will tell the Client to
+          // fail this RPC and close the scanner while opening up another one from the start of
+          // row that the client has last seen.
+          closeScanner(region, scanner, scannerName);
+
+          // We closed the scanner already. Instead of throwing the IOException, and client
+          // retrying with the same scannerId only to get USE on the next RPC, we directly throw
+          // a special exception to save an RPC.
+          if (VersionInfoUtil.hasMinimumVersion(context.getClientVersionInfo(), 1, 4)) {
+            // 1.4.0+ clients know how to handle
+            throw new ScannerResetException("Scanner is closed on the server-side", e);
+          } else {
+            // older clients do not know about SRE. Just throw USE, which they will handle
+            throw new UnknownScannerException("Throwing UnknownScannerException to reset the client"
+                + " scanner state for clients older than 1.3.", e);
           }
-          throw e;
         } finally {
           // We're done. On way out re-add the above removed lease.
           // Adding resets expiration time on lease.
@@ -2750,20 +2760,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (!moreResults || closeScanner) {
         ttl = 0;
         moreResults = false;
-        if (region != null && region.getCoprocessorHost() != null) {
-          if (region.getCoprocessorHost().preScannerClose(scanner)) {
-            return builder.build(); // bypass
-          }
-        }
-        rsh = scanners.remove(scannerName);
-        if (rsh != null) {
-          scanner = rsh.s;
-          scanner.close();
-          regionServer.leases.cancelLease(scannerName);
-          if (region != null && region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().postScannerClose(scanner);
-          }
-        }
+        closeScanner(region, scanner, scannerName);
       }
 
       if (ttl > 0) {
@@ -2792,6 +2789,32 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         quota.close();
       }
     }
+  }
+
+  private boolean closeScanner(Region region, RegionScanner scanner, String scannerName)
+      throws IOException {
+    if (region != null && region.getCoprocessorHost() != null) {
+      if (region.getCoprocessorHost().preScannerClose(scanner)) {
+        return true; // bypass
+      }
+    }
+    RegionScannerHolder rsh = scanners.remove(scannerName);
+    if (rsh != null) {
+      scanner = rsh.s;
+      scanner.close();
+      try {
+        regionServer.leases.cancelLease(scannerName);
+      } catch (LeaseException le) {
+        // No problem, ignore
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Un-able to cancel lease of scanner. It could already be closed.");
+        }
+      }
+      if (region != null && region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postScannerClose(scanner);
+      }
+    }
+    return false;
   }
 
   @Override
